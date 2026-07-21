@@ -49,14 +49,14 @@
 - [x] Build AI Pronunciation Scoring service (`POST /nlp/pronunciation-score`) grading spoken audio out of 100 with phonetic breakdown.
 
 ## Phase 5: Global Social Feed ("Moments") with Redis Fan-Out
-- [ ] Create Supabase SQL migration (`005_moments.sql`) for `moments`, `moment_comments`, and `moment_likes` tables.
-- [ ] Build NestJS background worker (`TimelineWorker`) connected to Redis for fan-out processing (`RPUSH timeline_queue:{follower_id}`).
-- [ ] Build NestJS `MomentsController` (`POST /moments` for creation, `GET /moments/feed` fetching IDs from Redis then hydrating from Supabase).
-- [ ] Build filtering endpoints for Moments feed: `"All"`, `"Classmates"` (same target language), and `"Following"`.
-- [ ] Build Angular Social Feed UI (`MomentsFeedComponent`) with multi-modal rendering (text, up to 9 images, 60s voice clips).
-- [ ] Integrate `VisualDiffComponent` into moment comments section, allowing community corrections directly on public timeline posts.
-- [ ] Build one-tap Moment audio reading (`TextToSpeechComponent`) and inline Moment translation.
-- [ ] Build Moment pinning functionality for VIP users (`PATCH /moments/:id/pin`).
+- [x] Create Supabase SQL migration (`005_moments.sql`) for `moments`, `moment_comments`, and `moment_likes` tables.
+- [x] Build NestJS background worker (`TimelineWorker`) connected to Redis for fan-out processing (`RPUSH timeline_queue:{follower_id}`).
+- [x] Build NestJS `MomentsController` (`POST /moments` for creation, `GET /moments/feed` fetching IDs from Redis then hydrating from Supabase).
+- [x] Build filtering endpoints for Moments feed: `"All"`, `"Classmates"` (same target language), and `"Following"`.
+- [x] Build Angular Social Feed UI (`MomentsFeedComponent`) with multi-modal rendering (text, up to 9 images, 60s voice clips).
+- [x] Integrate `VisualDiffComponent` into moment comments section, allowing community corrections directly on public timeline posts.
+- [x] Build one-tap Moment audio reading (`TextToSpeechComponent`) and inline Moment translation.
+- [x] Build Moment pinning functionality for VIP users (`PATCH /moments/:id/pin`).
 
 ## Phase 6: Live Audio & Video Rooms (LiveKit SFU)
 - [ ] Install `livekit-server-sdk` in NestJS `AudioRoomsModule` and configure `RoomServiceClient`.

@@ -12,6 +12,7 @@ import { ProfileVisitsModule } from './profile-visits/profile-visits.module';
 import { ChatModule } from './chat/chat.module';
 import { NlpModule } from './nlp/nlp.module';
 import { FlashcardsModule } from './flashcards/flashcards.module';
+import { MomentsModule } from './moments/moments.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { FlashcardsModule } from './flashcards/flashcards.module';
     ChatModule,
     NlpModule,
     FlashcardsModule,
+    MomentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
