@@ -8,11 +8,21 @@ import { AuthService } from '../../services/auth.service';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { DoodlePadComponent } from '../doodle-pad/doodle-pad.component';
 import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.component';
+import { TokenisedTextComponent } from '../tokenised-text/tokenised-text.component';
+import { WordDefinitionModalComponent } from '../word-definition-modal/word-definition-modal.component';
 
 @Component({
   selector: 'app-chat-room',
   standalone: true,
-  imports: [CommonModule, FormsModule, VisualDiffComponent, DoodlePadComponent, VoiceRecorderComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    VisualDiffComponent,
+    DoodlePadComponent,
+    VoiceRecorderComponent,
+    TokenisedTextComponent,
+    WordDefinitionModalComponent
+  ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss']
 })
@@ -28,6 +38,10 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   readonly showDoodleModal = signal<boolean>(false);
   readonly showVoiceModal = signal<boolean>(false);
   readonly showCorrectionForm = signal<boolean>(false);
+
+  // Selected word token for LingQ definition modal
+  readonly activeWordToken = signal<string | null>(null);
+  readonly activeWordContext = signal<string>('');
 
   roomId = 'global-exchange';
   searchQuery = '';
@@ -81,6 +95,11 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
         setTimeout(() => this.isTyping.set(false), 3000);
       }
     });
+  }
+
+  onWordClicked(event: { token: string; context: string }): void {
+    this.activeWordToken.set(event.token);
+    this.activeWordContext.set(event.context);
   }
 
   async sendTextMessage(): Promise<void> {

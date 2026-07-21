@@ -37,16 +37,16 @@
 - [x] Implement client-side and server-side (`pg_trgm`) message search inside chat rooms.
 
 ## Phase 4: LingQ Interactive Reading Engine & AI/NLP Utilities
-- [ ] Create Supabase SQL migration (`004_flashcards_srs.sql`) for `flashcards` table indexed by `user_id` and `word_token`.
-- [ ] Build the core `TokenisedTextComponent` in Angular using native `Intl.Segmenter` API (`granularity: 'word'`) to render clickable tokens.
-- [ ] Create Angular Signals vocabulary store (`VocabularyStore`) tracking word tokens mapped to SRS levels (`0`=Blue, `1` to `3`=Yellow, `4`=White).
-- [ ] Build click-to-translate & define pop-up modal (`WordDefinitionModalComponent`) in Angular with dictionary definitions and pronunciation audio.
-- [ ] Build NestJS `NlpModule` routing translation and transliteration requests to Azure AI / DeepL.
-- [ ] Implement daily AI usage rate limiting in Redis (`daily_ai_usage:{user_id}:{date}`): cap at 10 requests/day for free users, unlimited for VIP (8 UKP / $10 USD per month).
-- [ ] Build NestJS `FlashcardsController` endpoints (`POST /flashcards`, `PATCH /flashcards/:id/srs`) to save words and update review schedules.
-- [ ] Build Angular SRS Vocabulary Review Dashboard (`VocabularyDashboardComponent`) with flashcard flip animations and review grading.
-- [ ] Build AI Grammar Checker pre-send utility (`POST /nlp/grammar-check`) flagging sentence errors before sending in chat or moments.
-- [ ] Build AI Pronunciation Scoring service (`POST /nlp/pronunciation-score`) grading spoken audio out of 100 with phonetic breakdown.
+- [x] Create Supabase SQL migration (`004_flashcards_srs.sql`) for `flashcards` table indexed by `user_id` and `word_token`.
+- [x] Build the core `TokenisedTextComponent` in Angular using native `Intl.Segmenter` API (`granularity: 'word'`) to render clickable tokens.
+- [x] Create Angular Signals vocabulary store (`VocabularyStore`) tracking word tokens mapped to SRS levels (`0`=Blue, `1` to `3`=Yellow, `4`=White).
+- [x] Build click-to-translate & define pop-up modal (`WordDefinitionModalComponent`) in Angular with dictionary definitions and pronunciation audio.
+- [x] Build NestJS `NlpModule` routing translation and transliteration requests to Azure AI / DeepL.
+- [x] Implement daily AI usage rate limiting in Redis (`daily_ai_usage:{user_id}:{date}`): cap at 10 requests/day for free users, unlimited for VIP (8 UKP / $10 USD per month).
+- [x] Build NestJS `FlashcardsController` endpoints (`POST /flashcards`, `PATCH /flashcards/:id/srs`) to save words and update review schedules.
+- [x] Build Angular SRS Vocabulary Review Dashboard (`VocabularyDashboardComponent`) with flashcard flip animations and review grading.
+- [x] Build AI Grammar Checker pre-send utility (`POST /nlp/grammar-check`) flagging sentence errors before sending in chat or moments.
+- [x] Build AI Pronunciation Scoring service (`POST /nlp/pronunciation-score`) grading spoken audio out of 100 with phonetic breakdown.
 
 ## Phase 5: Global Social Feed ("Moments") with Redis Fan-Out
 - [ ] Create Supabase SQL migration (`005_moments.sql`) for `moments`, `moment_comments`, and `moment_likes` tables.

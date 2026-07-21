@@ -1,0 +1,27 @@
+export interface TranslationResult {
+  original_text: string;
+  translated_text: string;
+  detected_language: string;
+  transliteration?: string;
+  definition?: string;
+  pronunciation_url?: string;
+}
+
+export interface GrammarCheckResult {
+  original: string;
+  corrected: string;
+  explanation: string;
+  errors_found: number;
+}
+
+export interface WordBreakdownItem {
+  word: string;
+  score: number;
+  feedback?: string;
+}
+
+export interface PronunciationScoreResult {
+  overall_score: number;
+  breakdown: WordBreakdownItem[];
+  feedback_summary: string;
+}

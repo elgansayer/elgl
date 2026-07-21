@@ -10,6 +10,8 @@ import { MediaModule } from './media/media.module';
 import { DiscoveryModule } from './discovery/discovery.module';
 import { ProfileVisitsModule } from './profile-visits/profile-visits.module';
 import { ChatModule } from './chat/chat.module';
+import { NlpModule } from './nlp/nlp.module';
+import { FlashcardsModule } from './flashcards/flashcards.module';
 
 @Module({
   imports: [
@@ -50,6 +52,8 @@ import { ChatModule } from './chat/chat.module';
     DiscoveryModule,
     ProfileVisitsModule,
     ChatModule,
+    NlpModule,
+    FlashcardsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

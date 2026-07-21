@@ -15,7 +15,7 @@
             {{ centrifugeService.isConnected() ? '● Centrifugo Live' : '○ Connecting...' }}
           </span>
         </h2>
-        <p class="text-xs text-slate-500 dark:text-slate-400">Real-time chat with typing indicators, interactive corrections, and Canvas doodles</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400">Click any word to translate & save to LingQ SRS deck. Real-time chat with typing indicators.</p>
       </div>
     </div>
 
@@ -65,8 +65,13 @@
           <span>{{ msg.created_at | date:'shortTime' }}</span>
         </div>
 
-        <!-- Text Message -->
-        <p *ngIf="msg.message_type === 'text'" class="whitespace-pre-wrap leading-relaxed">{{ msg.text_content }}</p>
+        <!-- Tokenised Text Message per Rule 3 LingQ Engine -->
+        <div *ngIf="msg.message_type === 'text' && msg.text_content" class="leading-relaxed">
+          <app-tokenised-text
+            [text]="msg.text_content"
+            (wordClicked)="onWordClicked($event)"
+          ></app-tokenised-text>
+        </div>
 
         <!-- Correction Payload -->
         <div *ngIf="msg.message_type === 'correction' && msg.correction_payload">
@@ -104,6 +109,15 @@
     <div *ngIf="isTyping()" class="flex items-center gap-2 text-xs font-bold text-slate-500 animate-pulse px-3 py-1">
       <span>💬 Someone is typing...</span>
     </div>
+  </div>
+
+  <!-- Word Definition LingQ Modal -->
+  <div *ngIf="activeWordToken() as token">
+    <app-word-definition-modal
+      [wordToken]="token"
+      [contextSentence]="activeWordContext()"
+      (closed)="activeWordToken.set(null)"
+    ></app-word-definition-modal>
   </div>
 
   <!-- Interactive Action Modals -->
