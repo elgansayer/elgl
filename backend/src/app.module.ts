@@ -5,6 +5,10 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SupabaseModule } from './supabase/supabase.module';
 import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
+import { MediaModule } from './media/media.module';
+import { DiscoveryModule } from './discovery/discovery.module';
+import { ProfileVisitsModule } from './profile-visits/profile-visits.module';
 
 @Module({
   imports: [
@@ -40,6 +44,10 @@ import { AuthModule } from './auth/auth.module';
     }),
     SupabaseModule,
     AuthModule,
+    UsersModule,
+    MediaModule,
+    DiscoveryModule,
+    ProfileVisitsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

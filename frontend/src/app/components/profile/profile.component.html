@@ -1,0 +1,176 @@
+<div class="max-w-4xl mx-auto p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-xl mt-6 border border-slate-100 dark:border-slate-700">
+  <div *ngIf="isLoading()" class="flex justify-center items-center py-12">
+    <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+  </div>
+
+  <div *ngIf="!isLoading() && profile()" class="space-y-6">
+    <!-- Header Banner & Avatar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-6 gap-4">
+      <div class="flex items-center gap-5">
+        <div class="relative">
+          <img
+            [src]="profile()?.avatar_url || 'https://via.placeholder.com/150'"
+            alt="Avatar"
+            class="w-20 h-20 rounded-full object-cover border-4 border-primary/20 shadow-md"
+          />
+          <span
+            *ngIf="profile()?.is_vip"
+            class="absolute bottom-0 end-0 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow"
+          >
+            VIP
+          </span>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            {{ profile()?.display_name || 'Language Learner' }}
+            <span *ngIf="profile()?.is_serious_learner" class="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 text-xs px-2 py-0.5 rounded-full font-medium">
+              Serious Learner
+            </span>
+          </h1>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Joined {{ profile()?.created_at | date:'mediumDate' }}
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button
+          *ngIf="profile()?.audio_intro_url"
+          (click)="playAudioIntro(profile()?.audio_intro_url)"
+          class="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-100 transition-colors font-medium text-sm"
+        >
+          <span>🎙️ Audio Intro</span>
+        </button>
+        <button
+          (click)="toggleEdit()"
+          class="px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors font-medium text-sm shadow-sm"
+        >
+          {{ isEditing() ? 'Cancel' : 'Edit Profile' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats & Badges Bar -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+      <div class="text-center p-2">
+        <span class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Native Language</span>
+        <span class="text-lg font-bold text-slate-800 dark:text-slate-200 mt-1 uppercase inline-block bg-slate-200 dark:bg-slate-700 px-2.5 py-0.5 rounded">{{ profile()?.native_language }}</span>
+      </div>
+      <div class="text-center p-2 border-s border-slate-200 dark:border-slate-700">
+        <span class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Target Languages</span>
+        <div class="flex justify-center gap-1 mt-1">
+          <span *ngFor="let lang of profile()?.target_languages" class="text-sm font-bold text-primary uppercase bg-primary/10 px-2 py-0.5 rounded">{{ lang }}</span>
+        </div>
+      </div>
+      <div class="text-center p-2 border-s border-slate-200 dark:border-slate-700">
+        <span class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Study Streak</span>
+        <span class="text-lg font-bold text-amber-600 dark:text-amber-400 mt-1 block">🔥 {{ profile()?.study_streak_days }} Days</span>
+      </div>
+      <div class="text-center p-2 border-s border-slate-200 dark:border-slate-700">
+        <span class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Correction Ratio</span>
+        <span class="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-1 block">{{ profile()?.correction_ratio }}x</span>
+      </div>
+    </div>
+
+    <!-- Alerts -->
+    <div *ngIf="errorMessage()" class="p-4 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-xl border border-red-200 dark:border-red-800 text-sm">
+      {{ errorMessage() }}
+    </div>
+    <div *ngIf="successMessage()" class="p-4 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-xl border border-emerald-200 dark:border-emerald-800 text-sm">
+      {{ successMessage() }}
+    </div>
+
+    <!-- Read-only Bio -->
+    <div *ngIf="!isEditing()" class="py-4">
+      <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">About Me</h3>
+      <p class="text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+        {{ profile()?.bio_text || 'No bio provided yet.' }}
+      </p>
+    </div>
+
+    <!-- Edit Profile Form -->
+    <form *ngIf="isEditing()" (ngSubmit)="saveProfile()" class="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Display Name</label>
+        <input
+          type="text"
+          [(ngModel)]="displayName"
+          name="displayName"
+          class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none"
+        />
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Native Language (ISO)</label>
+          <input
+            type="text"
+            [(ngModel)]="nativeLanguage"
+            name="nativeLanguage"
+            class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none uppercase"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            Target Languages (Comma separated)
+            <span *ngIf="!profile()?.is_vip" class="text-xs text-amber-600 dark:text-amber-400 font-normal ms-1">(Free: max 1. VIP: up to 3)</span>
+          </label>
+          <input
+            type="text"
+            [(ngModel)]="targetLanguagesInput"
+            name="targetLanguagesInput"
+            placeholder="es, fr"
+            class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none uppercase"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Bio & Learning Objectives</label>
+        <textarea
+          [(ngModel)]="bioText"
+          name="bioText"
+          rows="4"
+          class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none"
+        ></textarea>
+      </div>
+
+      <div class="space-y-2 pt-2">
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            [(ngModel)]="privacyHideLocation"
+            name="privacyHideLocation"
+            class="w-4 h-4 text-primary rounded border-slate-300 focus:ring-primary"
+          />
+          <span class="text-sm text-slate-700 dark:text-slate-300">Hide my location from nearby discovery</span>
+        </label>
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            [(ngModel)]="privacyHideSearch"
+            name="privacyHideSearch"
+            class="w-4 h-4 text-primary rounded border-slate-300 focus:ring-primary"
+          />
+          <span class="text-sm text-slate-700 dark:text-slate-300">Exclude profile from global search results</span>
+        </label>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-4">
+        <button
+          type="button"
+          (click)="toggleEdit()"
+          class="px-5 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-medium text-sm hover:bg-slate-300 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="px-6 py-2.5 bg-primary text-white rounded-xl font-medium text-sm hover:bg-primary-dark transition-colors shadow-md"
+        >
+          Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

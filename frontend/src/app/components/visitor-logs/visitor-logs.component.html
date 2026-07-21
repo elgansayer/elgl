@@ -1,0 +1,94 @@
+<div class="max-w-4xl mx-auto p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-xl mt-6 border border-slate-100 dark:border-slate-700">
+  <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-4 mb-6">
+    <div>
+      <h2 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+        <span>👀 Who Viewed Me</span>
+      </h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+        See language learners who recently visited your profile.
+      </p>
+    </div>
+  </div>
+
+  <!-- VIP Upgrade Banner for Free Users -->
+  <div *ngIf="profile() && !profile()?.is_vip" class="mb-6 p-6 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <div class="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center text-amber-600 dark:text-amber-400 text-2xl font-bold">
+        🔒
+      </div>
+      <div>
+        <h3 class="font-bold text-slate-900 dark:text-white text-base">Unlock Profile Visitor History</h3>
+        <p class="text-sm text-slate-600 dark:text-slate-300 mt-0.5">
+          Visitor identities and avatars are currently blurred. Upgrade to VIP to instantly reveal all visitor profiles!
+        </p>
+      </div>
+    </div>
+    <div class="flex flex-col items-end gap-1">
+      <span class="text-lg font-extrabold text-amber-600 dark:text-amber-400 whitespace-nowrap">
+        8 UKP / $10 USD
+      </span>
+      <span class="text-xs text-slate-500 dark:text-slate-400">per month</span>
+      <button class="mt-2 px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm rounded-xl shadow-md transition-colors whitespace-nowrap">
+        Upgrade to VIP
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading()" class="flex justify-center items-center py-12">
+    <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+  </div>
+
+  <div *ngIf="!isLoading() && visitors().length === 0" class="text-center py-12 text-slate-500 dark:text-slate-400">
+    <span class="text-4xl block mb-2">🔭</span>
+    <p class="font-medium">No profile visitors yet.</p>
+    <p class="text-sm mt-1">Engage in community moments or voice chat rooms to get discovered!</p>
+  </div>
+
+  <!-- Visitor List -->
+  <div *ngIf="!isLoading() && visitors().length > 0" class="space-y-3">
+    <div
+      *ngFor="let log of visitors()"
+      class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700 transition-all"
+      [ngClass]="{'opacity-80': log.is_blurred}"
+    >
+      <div class="flex items-center gap-4">
+        <div class="relative">
+          <img
+            [src]="log.visitor.avatar_url || 'https://via.placeholder.com/100'"
+            alt="Visitor Avatar"
+            class="w-14 h-14 rounded-full object-cover border-2 border-slate-300 dark:border-slate-600"
+            [ngClass]="{'blur-md select-none': log.is_blurred}"
+          />
+        </div>
+        <div>
+          <h4
+            class="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2"
+            [ngClass]="{'blur-sm select-none': log.is_blurred}"
+          >
+            {{ log.visitor.display_name || 'Language Partner' }}
+          </h4>
+          <div class="flex items-center gap-2 mt-1 text-xs font-semibold text-slate-600 dark:text-slate-400">
+            <span class="uppercase bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">{{ log.visitor.native_language }}</span>
+            <span>→</span>
+            <span *ngFor="let t of log.visitor.target_languages" class="uppercase bg-primary/10 text-primary px-1.5 py-0.5 rounded">{{ t }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-end">
+        <span class="text-xs text-slate-400 dark:text-slate-500 block">
+          {{ log.created_at | date:'shortTime' }} · {{ log.created_at | date:'mediumDate' }}
+        </span>
+        <button
+          *ngIf="!log.is_blurred"
+          class="mt-2 text-xs font-bold text-primary hover:underline"
+        >
+          View Profile →
+        </button>
+        <span *ngIf="log.is_blurred" class="mt-2 inline-block text-xs font-bold text-amber-600 dark:text-amber-400">
+          🔒 VIP Only
+        </span>
+      </div>
+    </div>
+  </div>
+</div>

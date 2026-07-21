@@ -1,0 +1,21 @@
+export interface UserProfile {
+  id: string;
+  display_name?: string;
+  native_language: string;
+  target_languages: string[];
+  bio_text?: string;
+  avatar_url?: string;
+  audio_intro_url?: string;
+  location?: string;
+  mock_location?: string;
+  is_vip: boolean;
+  vip_tier: string;
+  coins_balance: number;
+  study_streak_days: number;
+  correction_ratio: number;
+  is_serious_learner: boolean;
+  privacy_hide_age: boolean;
+  privacy_hide_location: boolean;
+  privacy_hide_from_search: boolean;
+  created_at: string;
+}

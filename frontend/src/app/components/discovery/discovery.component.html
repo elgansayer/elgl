@@ -1,0 +1,145 @@
+<div class="max-w-6xl mx-auto p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-xl mt-6 border border-slate-100 dark:border-slate-700">
+  <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-6 mb-6 gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+        <span>🌍 Partner Discovery & Matchmaking</span>
+      </h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+        Find language exchange partners nearby or around the world using spatial PostGIS queries.
+      </p>
+    </div>
+  </div>
+
+  <!-- Filter Controls Bar -->
+  <div class="bg-slate-50 dark:bg-slate-900/70 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 mb-8 space-y-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div>
+        <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">
+          Proximity Radius: {{ radiusKm }} km
+        </label>
+        <input
+          type="range"
+          min="5"
+          max="500"
+          step="5"
+          [(ngModel)]="radiusKm"
+          (change)="searchPartners()"
+          class="w-full accent-primary h-2 bg-slate-200 dark:bg-slate-700 rounded-lg cursor-pointer"
+        />
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">
+          Partner Native Language
+        </label>
+        <input
+          type="text"
+          [(ngModel)]="nativeLanguage"
+          (keyup.enter)="searchPartners()"
+          placeholder="e.g. es, ja, ar"
+          class="w-full px-3 py-1.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-sm uppercase text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
+        />
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">
+          Partner Target Language
+        </label>
+        <input
+          type="text"
+          [(ngModel)]="targetLanguage"
+          (keyup.enter)="searchPartners()"
+          placeholder="e.g. en, fr, de"
+          class="w-full px-3 py-1.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-sm uppercase text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
+        />
+      </div>
+
+      <div class="flex items-end gap-2">
+        <button
+          (click)="searchPartners()"
+          class="flex-1 py-2 bg-primary hover:bg-primary-dark text-white font-bold text-sm rounded-xl shadow transition-colors"
+        >
+          Apply Filters
+        </button>
+        <button
+          (click)="resetFilters()"
+          class="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-sm rounded-xl font-medium transition-colors"
+        >
+          Reset
+        </button>
+      </div>
+    </div>
+
+    <!-- Algorithmic Serious Learner Toggle -->
+    <div class="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-700">
+      <label class="flex items-center gap-3 cursor-pointer">
+        <input
+          type="checkbox"
+          [(ngModel)]="seriousLearnerOnly"
+          (change)="searchPartners()"
+          class="w-5 h-5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
+        />
+        <div>
+          <span class="text-sm font-bold text-slate-800 dark:text-slate-200">Algorithmic Serious Learner Filter</span>
+          <span class="block text-xs text-slate-500 dark:text-slate-400">Enforces 7+ day study streak & ≥80% community correction ratio</span>
+        </div>
+      </label>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading()" class="flex justify-center items-center py-16">
+    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+  </div>
+
+  <div *ngIf="!isLoading() && partners().length === 0" class="text-center py-16 text-slate-500 dark:text-slate-400">
+    <span class="text-5xl block mb-3">🔍</span>
+    <p class="text-lg font-bold">No partners found matching these exact filters.</p>
+    <p class="text-sm mt-1">Try expanding your search radius or clearing language restrictions.</p>
+  </div>
+
+  <!-- Partner Grid -->
+  <div *ngIf="!isLoading() && partners().length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div
+      *ngFor="let partner of partners()"
+      class="bg-slate-50 dark:bg-slate-900/60 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all flex flex-col justify-between"
+    >
+      <div>
+        <div class="flex items-start justify-between gap-3 mb-4">
+          <div class="flex items-center gap-3.5">
+            <img
+              [src]="partner.avatar_url || 'https://via.placeholder.com/100'"
+              alt="Avatar"
+              class="w-14 h-14 rounded-full object-cover border-2 border-primary/20 shadow-sm"
+            />
+            <div>
+              <h3 class="font-bold text-slate-900 dark:text-white text-base flex items-center gap-1.5">
+                <span>{{ partner.display_name || 'Language Partner' }}</span>
+                <span *ngIf="partner.is_vip" class="bg-amber-500 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-full">VIP</span>
+              </h3>
+              <div class="flex items-center gap-1.5 mt-1 text-xs font-bold text-slate-700 dark:text-slate-300">
+                <span class="uppercase bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">{{ partner.native_language }}</span>
+                <span class="text-slate-400">→</span>
+                <span *ngFor="let t of partner.target_languages" class="uppercase bg-primary/10 text-primary px-1.5 py-0.5 rounded">{{ t }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-sm text-slate-600 dark:text-slate-300 line-clamp-3 mb-4 bg-white dark:bg-slate-800/80 p-3 rounded-xl border border-slate-100 dark:border-slate-700/60 min-h-[64px]">
+          {{ partner.bio_text || 'No bio provided yet.' }}
+        </p>
+      </div>
+
+      <!-- Footer & Action Stats -->
+      <div class="pt-3 border-t border-slate-200 dark:border-slate-700/80 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+        <div class="flex items-center gap-3">
+          <span class="text-amber-600 dark:text-amber-400">🔥 {{ partner.study_streak_days }}d streak</span>
+          <span class="text-emerald-600 dark:text-emerald-400">{{ partner.correction_ratio }}x corrections</span>
+        </div>
+        <button class="px-3.5 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg font-bold transition-colors">
+          Chat →
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

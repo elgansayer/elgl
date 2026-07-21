@@ -13,15 +13,15 @@
 - [x] Verify clean linting across both projects (`npm run lint`).
 
 ## Phase 2: User Profiles, PostGIS Matchmaking & Visitor Tracking
-- [ ] Create NestJS `UsersController` & `UsersService` to handle profile updates (bio, native language, target languages up to 3 for VIP, privacy toggles).
-- [ ] Configure Cloudflare R2 SDK (`@aws-sdk/client-s3`) in NestJS `MediaModule`. Create pre-signed URL upload endpoints for avatars and audio intros.
-- [ ] Build NestJS `DiscoveryController` PostGIS matching algorithm: Find users within customizable radius (`ST_DWithin`).
-- [ ] Implement VIP location spoofing logic in `DiscoveryService` (override real GPS coordinates with `mock_location` when `is_vip === true`).
-- [ ] Build algorithmic "Serious Learner" filtering in discovery (`study_streak_days > 7` and `correction_ratio >= 0.8`).
-- [ ] Build NestJS `ProfileVisitsService` to record profile views and query visitor logs (`GET /users/:id/visitors`).
-- [ ] Build Angular Profile UI (`ProfileComponent`) with native/target language badges, audio intro player, and study streak display.
-- [ ] Build Angular "Who Viewed Me" component (`VisitorLogsComponent`): blur visitor avatars and names if user is on the free tier (`is_vip === false`), showing upgrade prompt for 8 UKP / $10 USD.
-- [ ] Build Angular Matchmaking & Discovery UI (`DiscoveryComponent`) with distance slider, language filters, and "Serious Learner" toggle.
+- [x] Create NestJS `UsersController` & `UsersService` to handle profile updates (bio, native language, target languages up to 3 for VIP, privacy toggles).
+- [x] Configure Cloudflare R2 SDK (`@aws-sdk/client-s3`) in NestJS `MediaModule`. Create pre-signed URL upload endpoints for avatars and audio intros.
+- [x] Build NestJS `DiscoveryController` PostGIS matching algorithm: Find users within customizable radius (`ST_DWithin`).
+- [x] Implement VIP location spoofing logic in `DiscoveryService` (override real GPS coordinates with `mock_location` when `is_vip === true`).
+- [x] Build algorithmic "Serious Learner" filtering in discovery (`study_streak_days > 7` and `correction_ratio >= 0.8`).
+- [x] Build NestJS `ProfileVisitsService` to record profile views and query visitor logs (`GET /users/:id/visitors`).
+- [x] Build Angular Profile UI (`ProfileComponent`) with native/target language badges, audio intro player, and study streak display.
+- [x] Build Angular "Who Viewed Me" component (`VisitorLogsComponent`): blur visitor avatars and names if user is on the free tier (`is_vip === false`), showing upgrade prompt for 8 UKP / $10 USD.
+- [x] Build Angular Matchmaking & Discovery UI (`DiscoveryComponent`) with distance slider, language filters, and "Serious Learner" toggle.
 
 ## Phase 3: Centrifugo Real-Time Chat Engine & Interactive Payloads
 - [ ] Setup Centrifugo server configuration (`config.json`) and connect to Redis instance for pub/sub.
