@@ -73,13 +73,13 @@
 - [x] Build stream recording & replay archive storage (`POST /audio-rooms/archive`) saving LiveKit composite recordings to Cloudflare R2.
 
 ## Phase 7: VIP Monetisation, Virtual Economy, Trust/Safety & 24/7 VPS Deployment
-- [ ] Build NestJS `MonetisationController` handling Stripe & Apple/Google App Store webhooks (`POST /webhooks/stripe`) to toggle `user.is_vip` and `vip_tier`.
-- [ ] Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent): unlimited AI, 3 target languages, location spoofing, incognito profile views.
-- [ ] Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`) adding balance to `users.coins_balance`.
-- [ ] Build Virtual Gift catalog & sending endpoint (`POST /economy/send-gift`), deducting coins and publishing animated Centrifugo broadcast events.
-- [ ] Build Audio Room tipping mechanism allowing listeners to gift coins directly to hosts on stage.
-- [ ] Build Developer Tier (20 UKP / $26 USD per month) API key management and developer analytics dashboard.
-- [ ] Build Trust & Safety reporting system (`POST /safety/report`, `POST /safety/block`), automatically hiding blocked users from feeds and chat lists.
-- [ ] Create production Docker orchestration (`docker-compose.prod.yml`) with Nginx reverse proxy routing (`/api` -> `api:3000`, `/centrifugo` -> `websocket:8000`, `/` -> `web:80`).
-- [ ] Verify LiveKit SFU port forwarding (`7880/tcp`, `7881/tcp`, `50000-60000/udp`) and external IP configuration (`use_external_ip: true`) for 24/7 cloud VPS deployment.
-- [ ] Conduct final end-to-end linting (`npm run lint`), TypeScript compilation (`tsc --noEmit`), Docker container build & health verification (`docker compose up --build -d`), and RTL layout check across all components.
+- [x] Build NestJS `MonetisationController` handling Stripe & Apple/Google App Store webhooks (`POST /webhooks/stripe`) to toggle `user.is_vip` and `vip_tier`.
+- [x] Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent): unlimited AI, 3 target languages, location spoofing, incognito profile views.
+- [x] Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`) adding balance to `users.coins_balance`.
+- [x] Build Virtual Gift catalog & sending endpoint (`POST /economy/send-gift`), deducting coins and publishing animated Centrifugo broadcast events.
+- [x] Build Audio Room tipping mechanism allowing listeners to gift coins directly to hosts on stage.
+- [x] Build Developer Tier (20 UKP / $26 USD per month) API key management and developer analytics dashboard.
+- [x] Build Trust & Safety reporting system (`POST /safety/report`, `POST /safety/block`), automatically hiding blocked users from feeds and chat lists.
+- [x] Create production Docker orchestration (`docker-compose.prod.yml`) with Nginx reverse proxy routing (`/api` -> `api:3000`, `/centrifugo` -> `websocket:8000`, `/` -> `web:80`).
+- [x] Verify LiveKit SFU port forwarding (`7880/tcp`, `7881/tcp`, `50000-60000/udp`) and external IP configuration (`use_external_ip: true`) for 24/7 cloud VPS deployment.
+- [x] Conduct final end-to-end linting (`npm run lint`), TypeScript compilation (`tsc --noEmit`), Docker container build & health verification (`docker compose up --build -d`), and RTL layout check across all components.

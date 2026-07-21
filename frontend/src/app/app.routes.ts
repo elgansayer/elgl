@@ -7,6 +7,7 @@ import { FavouritesComponent } from './components/favourites/favourites.componen
 import { VocabularyDashboardComponent } from './components/vocabulary-dashboard/vocabulary-dashboard.component';
 import { MomentsFeedComponent } from './components/moments-feed/moments-feed.component';
 import { AudioRoomComponent } from './components/audio-room/audio-room.component';
+import { DeveloperDashboardComponent } from './components/developer-dashboard/developer-dashboard.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'discovery', pathMatch: 'full' },
@@ -19,4 +20,5 @@ export const routes: Routes = [
   { path: 'vocabulary', component: VocabularyDashboardComponent },
   { path: 'profile', component: ProfileComponent },
   { path: 'visitors', component: VisitorLogsComponent },
+  { path: 'developer', component: DeveloperDashboardComponent },
 ];

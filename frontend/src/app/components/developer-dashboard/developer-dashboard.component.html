@@ -1,0 +1,110 @@
+<div class="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
+  <!-- Header -->
+  <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-8 rounded-3xl shadow-2xl border border-indigo-800/60 flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div class="space-y-2">
+      <div class="flex items-center gap-2">
+        <span class="px-3 py-1 rounded-full bg-indigo-600 text-white font-black text-xs uppercase tracking-wider">
+          ⚡ Developer Tier & API Access
+        </span>
+        <span *ngIf="store.developerStats()?.tier === 'developer'" class="px-2.5 py-0.5 rounded-full bg-emerald-500 text-white font-extrabold text-[11px]">
+          🟢 Active Subscriber (20 UKP / $26 USD/mo)
+        </span>
+      </div>
+      <h2 class="text-3xl font-black">HelloTalk Programmatic Platform API</h2>
+      <p class="text-sm text-indigo-200/80 max-w-2xl">
+        Build automated language exchange bots, query tokenised vocabulary decks, and stream LiveKit audio events via raw REST and WebSockets.
+      </p>
+    </div>
+
+    <!-- Tier Actions -->
+    <div class="flex flex-col gap-2 self-start md:self-center">
+      <button
+        *ngIf="store.developerStats()?.tier !== 'developer'"
+        (click)="upgrade('developer')"
+        class="px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white font-black rounded-2xl shadow-xl transition-transform hover:scale-105 text-xs flex items-center gap-2"
+      >
+        <span>⚡ Upgrade to Developer Tier (20 UKP / $26 USD per month)</span>
+      </button>
+
+      <button
+        *ngIf="!authService.currentUser()?.is_vip"
+        (click)="upgrade('consumer')"
+        class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold rounded-2xl border border-slate-600 text-xs transition-colors"
+      >
+        🌟 Consumer VIP (8 UKP / $10 USD per month)
+      </button>
+    </div>
+  </div>
+
+  <!-- API Key Management Card -->
+  <div class="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-700 pb-6">
+      <div>
+        <h3 class="font-black text-lg text-slate-900 dark:text-white flex items-center gap-2">
+          <span>🔐 Programmatic API Keys & Authentication</span>
+        </h3>
+        <p class="text-xs text-slate-500 mt-1">
+          Pass your API key in the <code class="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded font-mono text-primary">Authorization: Bearer ht_dev_...</code> header on all requests.
+        </p>
+      </div>
+
+      <button
+        (click)="generateKey()"
+        class="px-5 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-2xl font-extrabold text-xs shadow transition-all self-start"
+      >
+        + Generate New API Key
+      </button>
+    </div>
+
+    <div class="space-y-4">
+      <div *ngIf="store.developerStats()?.api_key as key; else noKey" class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">🔑</span>
+          <div>
+            <span class="text-[10px] uppercase font-extrabold text-slate-400 block">Active Production Key:</span>
+            <code class="text-sm font-mono font-bold text-slate-800 dark:text-emerald-400">{{ key }}</code>
+          </div>
+        </div>
+        <span class="text-xs font-bold px-3 py-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 rounded-xl">
+          Active (600 RPM)
+        </span>
+      </div>
+
+      <ng-template #noKey>
+        <div class="text-center py-8 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-500 text-xs">
+          No active API keys found. Click <strong>Generate New API Key</strong> above after activating your Developer Tier subscription!
+        </div>
+      </ng-template>
+    </div>
+  </div>
+
+  <!-- Analytics & Rate Limits Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 space-y-2">
+      <span class="text-xs font-bold text-slate-400 uppercase block">Total API Calls Today</span>
+      <div class="flex items-baseline gap-2">
+        <span class="text-3xl font-black text-slate-900 dark:text-white">{{ store.developerStats()?.total_api_calls_today || 0 }}</span>
+        <span class="text-xs text-emerald-600 font-bold">↑ +14.2% vs yesterday</span>
+      </div>
+      <p class="text-[11px] text-slate-500 pt-1">Across /nlp, /moments, and /audio-rooms endpoints.</p>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 space-y-2">
+      <span class="text-xs font-bold text-slate-400 uppercase block">Rate Limit Ceiling</span>
+      <div class="flex items-baseline gap-2">
+        <span class="text-3xl font-black text-primary">{{ store.developerStats()?.tier === 'developer' ? '600' : '60' }} RPM</span>
+        <span class="text-xs text-slate-400 font-bold">Requests / Min</span>
+      </div>
+      <p class="text-[11px] text-slate-500 pt-1">Tier: <strong>{{ store.developerStats()?.tier | uppercase }}</strong></p>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 space-y-2">
+      <span class="text-xs font-bold text-slate-400 uppercase block">Average API Latency</span>
+      <div class="flex items-baseline gap-2">
+        <span class="text-3xl font-black text-emerald-600 dark:text-emerald-400">{{ store.developerStats()?.avg_latency_ms || 18 }} ms</span>
+        <span class="text-xs text-slate-400 font-bold">P95: 28 ms</span>
+      </div>
+      <p class="text-[11px] text-slate-500 pt-1">Global edge proxy routing via Cloudflare & Redis.</p>
+    </div>
+  </div>
+</div>

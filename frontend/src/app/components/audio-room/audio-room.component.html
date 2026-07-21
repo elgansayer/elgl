@@ -32,6 +32,22 @@
           <span>✋ Raise Hand to Speak</span>
         </button>
 
+        <!-- Send Virtual Gift to Host -->
+        <button
+          (click)="showGiftModal.set(true)"
+          class="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-400 hover:to-purple-500 text-white rounded-2xl font-extrabold text-xs shadow transition-transform hover:scale-105 flex items-center gap-1"
+        >
+          <span>🎁 Gift Host</span>
+        </button>
+
+        <!-- Trust & Safety Moderation -->
+        <button
+          (click)="showSafetyModal.set(true)"
+          class="px-3 py-2 bg-slate-800 hover:bg-red-900/60 text-slate-300 hover:text-white rounded-2xl font-bold text-xs shadow border border-slate-700 transition-colors"
+        >
+          🛡️ Moderate
+        </button>
+
         <!-- Archive button if Host -->
         <button
           *ngIf="room.host_id === authService.currentUser()?.id"
@@ -121,6 +137,23 @@
         <app-room-chat></app-room-chat>
       </div>
     </div>
+
+    <!-- Virtual Gift Modal -->
+    <app-virtual-gift-modal
+      *ngIf="showGiftModal()"
+      [receiverId]="room.host_id"
+      [receiverName]="room.host?.display_name || 'Host'"
+      [roomId]="room.id"
+      (closed)="showGiftModal.set(false)"
+    ></app-virtual-gift-modal>
+
+    <!-- Trust & Safety Modal -->
+    <app-trust-safety-modal
+      *ngIf="showSafetyModal()"
+      [targetId]="room.host_id"
+      [targetName]="room.host?.display_name || 'Host'"
+      (closed)="showSafetyModal.set(false)"
+    ></app-trust-safety-modal>
   </div>
 
   <!-- Directory Grid View when not joined -->

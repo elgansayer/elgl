@@ -1,4 +1,18 @@
-<div class="min-h-screen flex flex-col bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans">
+<div class="min-h-screen flex flex-col bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans relative overflow-x-hidden">
+  <!-- Global Animated Virtual Gift Broadcast Overlay -->
+  <div
+    *ngIf="economyStore.activeGiftAnimation() as overlay"
+    class="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center animate-bounce duration-1000"
+  >
+    <div class="bg-gradient-to-r from-amber-500 via-purple-600 to-amber-500 text-white px-8 py-6 rounded-3xl shadow-2xl border-4 border-amber-300 flex flex-col items-center gap-2 transform scale-125">
+      <span class="text-6xl animate-pulse">{{ overlay.gift.icon }}</span>
+      <h3 class="text-2xl font-black tracking-wide">{{ overlay.gift.name }} Broadcast!</h3>
+      <p class="text-sm font-extrabold text-amber-100">
+        🎉 <strong class="underline">{{ overlay.sender_name }}</strong> gifted <strong class="underline">{{ overlay.receiver_name }}</strong> a {{ overlay.gift.name }}! (🪙 {{ overlay.gift.cost_coins }} Coins)
+      </p>
+    </div>
+  </div>
+
   <!-- Top Navigation Bar -->
   <header class="sticky top-0 z-50 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -52,11 +66,11 @@
             ⭐ Favourites
           </a>
           <a
-            routerLink="/visitors"
+            routerLink="/developer"
             routerLinkActive="bg-primary/10 text-primary font-bold"
             class="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           >
-            👀 Visitors
+            ⚡ Developer API
           </a>
           <a
             routerLink="/profile"
@@ -68,11 +82,17 @@
         </nav>
       </div>
 
-      <!-- Auth State & VIP Badge -->
+      <!-- Auth State & VIP Badge + Coin Balance -->
       <div class="flex items-center gap-3">
+        <!-- Coin Balance Badge -->
+        <div class="flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 rounded-xl font-extrabold text-xs shadow-sm">
+          <span>🪙</span>
+          <span>{{ economyStore.coinsBalance() }} Coins</span>
+        </div>
+
         <div *ngIf="authService.currentUser() as user; else loginPrompt" class="flex items-center gap-3">
           <span class="text-xs font-bold bg-amber-500 text-white px-2 py-0.5 rounded-full shadow-sm">
-            8 UKP / $10 USD VIP
+            {{ user.vip_tier === 'developer' ? '20 UKP / $26 USD Dev VIP' : '8 UKP / $10 USD VIP' }}
           </span>
           <span class="text-sm font-medium text-slate-700 dark:text-slate-300 hidden md:inline">
             {{ user.email }}

@@ -4,11 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
 import { RoomChatComponent } from '../room-chat/room-chat.component';
+import { VirtualGiftModalComponent } from '../virtual-gift-modal/virtual-gift-modal.component';
+import { TrustSafetyModalComponent } from '../trust-safety-modal/trust-safety-modal.component';
 
 @Component({
   selector: 'app-audio-room',
   standalone: true,
-  imports: [CommonModule, FormsModule, RoomChatComponent],
+  imports: [CommonModule, FormsModule, RoomChatComponent, VirtualGiftModalComponent, TrustSafetyModalComponent],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss']
 })
@@ -17,6 +19,8 @@ export class AudioRoomComponent implements OnInit {
   readonly authService = inject(AuthService);
 
   readonly showCreateModal = signal<boolean>(false);
+  readonly showGiftModal = signal<boolean>(false);
+  readonly showSafetyModal = signal<boolean>(false);
   newTitle = '';
   newTargetLanguage = 'en';
 

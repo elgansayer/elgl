@@ -2,6 +2,12 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { SupabaseService } from './supabase.service';
 
+export interface AppUser extends User {
+  is_vip?: boolean;
+  vip_tier?: string | null;
+  developer_api_key?: string | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -10,7 +16,7 @@ export class AuthService {
   private supabase = this.supabaseService.getClient();
 
   // Reactive Angular Signals for Auth State
-  readonly currentUser = signal<User | null>(null);
+  readonly currentUser = signal<AppUser | null>(null);
   readonly currentSession = signal<Session | null>(null);
   readonly isAuthenticated = computed(() => this.currentUser() !== null);
   readonly isLoading = signal<boolean>(true);
@@ -31,23 +37,23 @@ export class AuthService {
 
   private updateAuthState(session: Session | null): void {
     this.currentSession.set(session);
-    this.currentUser.set(session?.user ?? null);
+    this.currentUser.set((session?.user as AppUser) ?? null);
   }
 
-  async signInWithEmail(email: string, password: string): Promise<{ user: User | null; error: AuthError | null }> {
+  async signInWithEmail(email: string, password: string): Promise<{ user: AppUser | null; error: AuthError | null }> {
     const { data, error } = await this.supabase.auth.signInWithPassword({ email, password });
     if (data.session) {
       this.updateAuthState(data.session);
     }
-    return { user: data.user, error };
+    return { user: (data.user as AppUser) || null, error };
   }
 
-  async signUpWithEmail(email: string, password: string): Promise<{ user: User | null; error: AuthError | null }> {
+  async signUpWithEmail(email: string, password: string): Promise<{ user: AppUser | null; error: AuthError | null }> {
     const { data, error } = await this.supabase.auth.signUp({ email, password });
     if (data.session) {
       this.updateAuthState(data.session);
     }
-    return { user: data.user, error };
+    return { user: (data.user as AppUser) || null, error };
   }
 
   async signInWithGoogle(): Promise<{ error: AuthError | null }> {

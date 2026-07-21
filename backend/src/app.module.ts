@@ -14,6 +14,9 @@ import { NlpModule } from './nlp/nlp.module';
 import { FlashcardsModule } from './flashcards/flashcards.module';
 import { MomentsModule } from './moments/moments.module';
 import { AudioRoomsModule } from './audio-rooms/audio-rooms.module';
+import { MonetisationModule } from './monetisation/monetisation.module';
+import { EconomyModule } from './economy/economy.module';
+import { SafetyModule } from './safety/safety.module';
 
 @Module({
   imports: [
@@ -58,6 +61,9 @@ import { AudioRoomsModule } from './audio-rooms/audio-rooms.module';
     FlashcardsModule,
     MomentsModule,
     AudioRoomsModule,
+    MonetisationModule,
+    EconomyModule,
+    SafetyModule,
   ],
   controllers: [AppController],
   providers: [AppService],
