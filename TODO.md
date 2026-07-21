@@ -1,9 +1,11 @@
 # TODO.md (The Granular Execution Checklist)
 
-## Phase 1: Repository Setup & Supabase Initialisation
+## Phase 1: Repository Setup & Infrastructure Initialisation
 - [ ] Initialise NestJS backend (`nest new backend --package-manager npm`).
 - [ ] Initialise Angular frontend (`ng new frontend --style=scss --routing=true --ssr=false`).
 - [ ] Install and configure Tailwind CSS in the Angular project (`tailwind.config.js` & `styles.scss`) using strictly logical properties (`ps-`, `pe-`, `ms-`, `me-`).
+- [ ] Create Docker Compose orchestration configuration (`docker-compose.yml` & `docker-compose.dev.yml`) orchestrating `api` (NestJS), `web` (Angular), `cache` (Redis 7), `websocket` (Centrifugo v5), and `sfu` (LiveKit v2).
+- [ ] Create comprehensive `.env.example` and setup NestJS `@nestjs/config` environment schema validation (`Joi`/`Zod`) to fail-fast on missing keys or malformed URLs.
 - [ ] Create Supabase SQL migration (`001_initial_schema.sql`) for `users` table with PostGIS geography columns, `is_vip`, `coins_balance`, `study_streak_days`, and `correction_ratio`.
 - [ ] Create Supabase SQL migration (`002_trust_and_safety.sql`) for `profile_visits`, `blocks`, and `reports` tables.
 - [ ] Implement Supabase JWT email/password and OAuth authentication service in Angular (`AuthService`).
@@ -70,7 +72,7 @@
 - [ ] Implement real-time AI speech-to-text subtitles broadcasting closed captions into live rooms.
 - [ ] Build stream recording & replay archive storage (`POST /audio-rooms/archive`) saving LiveKit composite recordings to Cloudflare R2.
 
-## Phase 7: VIP Monetisation, Virtual Economy & Trust/Safety
+## Phase 7: VIP Monetisation, Virtual Economy, Trust/Safety & 24/7 VPS Deployment
 - [ ] Build NestJS `MonetisationController` handling Stripe & Apple/Google App Store webhooks (`POST /webhooks/stripe`) to toggle `user.is_vip` and `vip_tier`.
 - [ ] Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent): unlimited AI, 3 target languages, location spoofing, incognito profile views.
 - [ ] Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`) adding balance to `users.coins_balance`.
@@ -78,4 +80,6 @@
 - [ ] Build Audio Room tipping mechanism allowing listeners to gift coins directly to hosts on stage.
 - [ ] Build Developer Tier (20 UKP / $26 USD per month) API key management and developer analytics dashboard.
 - [ ] Build Trust & Safety reporting system (`POST /safety/report`, `POST /safety/block`), automatically hiding blocked users from feeds and chat lists.
-- [ ] Conduct final end-to-end linting (`npm run lint`), TypeScript compilation (`tsc --noEmit`), and RTL layout verification across all components.
+- [ ] Create production Docker orchestration (`docker-compose.prod.yml`) with Nginx reverse proxy routing (`/api` -> `api:3000`, `/centrifugo` -> `websocket:8000`, `/` -> `web:80`).
+- [ ] Verify LiveKit SFU port forwarding (`7880/tcp`, `7881/tcp`, `50000-60000/udp`) and external IP configuration (`use_external_ip: true`) for 24/7 cloud VPS deployment.
+- [ ] Conduct final end-to-end linting (`npm run lint`), TypeScript compilation (`tsc --noEmit`), Docker container build & health verification (`docker compose up --build -d`), and RTL layout check across all components.

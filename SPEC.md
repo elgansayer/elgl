@@ -215,3 +215,31 @@ export class TokenisedTextComponent {
 ## 6. Globalisation & RTL Mirroring (Tailwind Logical Properties)
 *   All padding, margins, borders, and positioning in Angular templates strictly use `ps-` (padding start), `pe-` (padding end), `ms-`, `me-`, `text-start`, `text-end`, `border-s`, and `border-e`.
 *   When a user whose native language is Arabic (`ar`), Hebrew (`he`), or Persian (`fa`) logs in, the root `<html [dir]="isRtl() ? 'rtl' : 'ltr'">` binding instantly mirrors all UI components, flex rows, and navigation bars.
+
+---
+
+## 7. Infrastructure, Containerisation & 24/7 VPS Autonomous Deployment Blueprint
+To support continuous autonomous development and 24/7 production operation on a cloud Virtual Private Server (VPS), the system architecture enforces rigorous containerisation and configuration guarantees:
+
+### Docker Compose Container Orchestration (`docker-compose.yml`)
+*   **`api` (NestJS Backend):** Runs under Node.js (`20-alpine`) with multi-stage Dockerfile (`target: production`). Restarts on failure (`restart: always`).
+*   **`web` (Angular Frontend):** Built using multi-stage build (`ng build`) served via high-performance Nginx (`nginx:alpine`) with gzip/brotli compression and reverse proxying to `/api`, `/centrifugo`, and `/rtc`.
+*   **`cache` (Redis 7 Alpine):** Dedicated instance with append-only persistence (`--appendonly yes`) for Centrifugo pub/sub, `BullMQ` timeline worker queues, and daily AI rate limiting (`daily_ai_usage`).
+*   **`websocket` (Centrifugo v5):** Runs alongside the API, exposing WebSocket connection ports (`8000`) and internal HTTP API (`8001`) for NestJS message publishing.
+*   **`sfu` (LiveKit Server v2):** WebRTC media router configured with external IP discovery (`use_external_ip: true`) when deployed on cloud VPS.
+
+### Environment Schema & Configuration Validation (`@nestjs/config`)
+*   To prevent autonomous deployment crashes on the VPS, NestJS uses strict environment variable schema validation (`Joi` or `Zod` validation schema in `ConfigModule.forRoot()`).
+*   Required parameters: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `REDIS_URL`, `CENTRIFUGO_API_KEY`, `CENTRIFUGO_SECRET`, `LIVEKIT_API_KEY`, `LIVEKIT_SECRET`, `LIVEKIT_URL`, `CLOUDFLARE_R2_ENDPOINT`, `CLOUDFLARE_R2_ACCESS_KEY`, `CLOUDFLARE_R2_SECRET_KEY`, `DEEPL_API_KEY`, `AZURE_TRANSLATOR_KEY`.
+
+### LiveKit WebRTC SFU Networking & Firewall Rules (24/7 VPS)
+*   When running on a cloud VPS, the following firewall (`ufw`/`iptables`) ports must be open and forwarded directly to the `sfu` container:
+    *   **`7880/tcp`**: LiveKit HTTP & WebSocket API (used by Angular client and NestJS token minting).
+    *   **`7881/tcp`**: LiveKit WebRTC over TCP (fallback when UDP is blocked).
+    *   **`50000-60000/udp`**: WebRTC SFU media routing (essential for low-latency voice rooms and video streams).
+
+### LingQ High-Performance UI Rendering
+*   To maintain 60 FPS on mobile and desktop browsers when rendering large chat histories (`100+` messages) or extensive LingQ reading articles (`2,000+` word tokens):
+    *   **Virtual Scrolling:** Chat message lists and long articles strictly use `@angular/cdk/scrolling` (`cdk-virtual-scroll-viewport`).
+    *   **Memoized Segmenter & Signals:** The `TokenisedTextComponent` caches `Intl.Segmenter` output via computed signals and tracks word nodes with strict `trackBy` / `@for (segment of segments(); track $index)` syntax.
+
