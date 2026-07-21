@@ -1,16 +1,16 @@
 # TODO.md (The Granular Execution Checklist)
 
 ## Phase 1: Repository Setup & Infrastructure Initialisation
-- [ ] Initialise NestJS backend (`nest new backend --package-manager npm`).
-- [ ] Initialise Angular frontend (`ng new frontend --style=scss --routing=true --ssr=false`).
-- [ ] Install and configure Tailwind CSS in the Angular project (`tailwind.config.js` & `styles.scss`) using strictly logical properties (`ps-`, `pe-`, `ms-`, `me-`).
-- [ ] Create Docker Compose orchestration configuration (`docker-compose.yml` & `docker-compose.dev.yml`) orchestrating `api` (NestJS), `web` (Angular), `cache` (Redis 7), `websocket` (Centrifugo v5), and `sfu` (LiveKit v2).
-- [ ] Create comprehensive `.env.example` and setup NestJS `@nestjs/config` environment schema validation (`Joi`/`Zod`) to fail-fast on missing keys or malformed URLs.
-- [ ] Create Supabase SQL migration (`001_initial_schema.sql`) for `users` table with PostGIS geography columns, `is_vip`, `coins_balance`, `study_streak_days`, and `correction_ratio`.
-- [ ] Create Supabase SQL migration (`002_trust_and_safety.sql`) for `profile_visits`, `blocks`, and `reports` tables.
-- [ ] Implement Supabase JWT email/password and OAuth authentication service in Angular (`AuthService`).
-- [ ] Create NestJS `SupabaseAuthGuard` and `CurrentUser` decorator to validate Supabase JWTs on all REST and WebSocket endpoints.
-- [ ] Verify clean linting across both projects (`npm run lint`).
+- [x] Initialise NestJS backend (`nest new backend --package-manager npm`).
+- [x] Initialise Angular frontend (`ng new frontend --style=scss --routing=true --ssr=false`).
+- [x] Install and configure Tailwind CSS in the Angular project (`tailwind.config.js` & `styles.scss`) using strictly logical properties (`ps-`, `pe-`, `ms-`, `me-`).
+- [x] Create Docker Compose orchestration configuration (`docker-compose.yml` & `docker-compose.dev.yml`) orchestrating `api` (NestJS), `web` (Angular), `cache` (Redis 7), `websocket` (Centrifugo v5), and `sfu` (LiveKit v2).
+- [x] Create comprehensive `.env.example` and setup NestJS `@nestjs/config` environment schema validation (`Joi`/`Zod`) to fail-fast on missing keys or malformed URLs.
+- [x] Create Supabase SQL migration (`001_initial_schema.sql`) for `users` table with PostGIS geography columns, `is_vip`, `coins_balance`, `study_streak_days`, and `correction_ratio`.
+- [x] Create Supabase SQL migration (`002_trust_and_safety.sql`) for `profile_visits`, `blocks`, and `reports` tables.
+- [x] Implement Supabase JWT email/password and OAuth authentication service in Angular (`AuthService`).
+- [x] Create NestJS `SupabaseAuthGuard` and `CurrentUser` decorator to validate Supabase JWTs on all REST and WebSocket endpoints.
+- [x] Verify clean linting across both projects (`npm run lint`).
 
 ## Phase 2: User Profiles, PostGIS Matchmaking & Visitor Tracking
 - [ ] Create NestJS `UsersController` & `UsersService` to handle profile updates (bio, native language, target languages up to 3 for VIP, privacy toggles).

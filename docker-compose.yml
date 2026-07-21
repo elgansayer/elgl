@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ./backend
+      target: production
+    restart: always
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    depends_on:
+      - cache
+      - websocket
+
+  web:
+    build:
+      context: ./frontend
+      target: production
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+  cache:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  websocket:
+    image: centrifugo/centrifugo:v5
+    restart: always
+    command: centrifugo -c /centrifugo/config.json
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    volumes:
+      - ./config/centrifugo:/centrifugo
+    depends_on:
+      - cache
+
+  sfu:
+    image: livekit/livekit-server:latest
+    restart: always
+    command: --config /livekit/config.yaml
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50000-60000:50000-60000/udp"
+    volumes:
+      - ./config/livekit:/livekit
+
+volumes:
+  redis_data:

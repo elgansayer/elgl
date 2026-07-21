@@ -1,0 +1,32 @@
+{
+  "v3_use_offset": true,
+  "token_hmac_secret_key": "secret-centrifugo-token-key-change-in-prod",
+  "api_key": "secret-centrifugo-api-key-change-in-prod",
+  "allowed_origins": ["*"],
+  "engine": "redis",
+  "redis_address": "redis://cache:6379",
+  "namespaces": [
+    {
+      "name": "chat",
+      "publish": true,
+      "subscribe_to_publish": true,
+      "presence": true,
+      "history_size": 100,
+      "history_ttl": "30d"
+    },
+    {
+      "name": "room",
+      "publish": true,
+      "subscribe_to_publish": true,
+      "presence": true,
+      "history_size": 50,
+      "history_ttl": "24h"
+    },
+    {
+      "name": "user",
+      "publish": true,
+      "subscribe_to_publish": true,
+      "presence": true
+    }
+  ]
+}

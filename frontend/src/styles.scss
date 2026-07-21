@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global RTL and Logical Property Styles */
+@layer base {
+  html {
+    @apply antialiased text-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-slate-100;
+  }
+
+  /* Support RTL mirroring natively */
+  html[dir="rtl"] {
+    text-align: start;
+  }
+}
+
+/* LingQ Token Classes */
+@layer components {
+  .word-token-new {
+    @apply bg-blue-500/20 text-blue-800 dark:text-blue-300 hover:bg-blue-500/40 border-b border-blue-400 rounded px-0.5 transition-colors cursor-pointer;
+  }
+
+  .word-token-learning {
+    @apply bg-yellow-500/30 text-yellow-800 dark:text-yellow-200 hover:bg-yellow-500/50 border-b border-yellow-400 rounded px-0.5 transition-colors cursor-pointer;
+  }
+
+  .word-token-known {
+    @apply text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700/30 rounded px-0.5 transition-colors cursor-pointer;
+  }
+}
