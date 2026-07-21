@@ -13,6 +13,7 @@ import { ChatModule } from './chat/chat.module';
 import { NlpModule } from './nlp/nlp.module';
 import { FlashcardsModule } from './flashcards/flashcards.module';
 import { MomentsModule } from './moments/moments.module';
+import { AudioRoomsModule } from './audio-rooms/audio-rooms.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { MomentsModule } from './moments/moments.module';
     NlpModule,
     FlashcardsModule,
     MomentsModule,
+    AudioRoomsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,0 +1,36 @@
+export interface AudioRoomRecord {
+  id: string;
+  room_name: string;
+  title: string;
+  target_language: string;
+  host_id: string;
+  is_active: boolean;
+  speakers: string[];
+  raised_hands: string[];
+  listeners_count: number;
+  recording_url?: string | null;
+  created_at: string;
+  host?: {
+    id: string;
+    display_name?: string;
+    avatar_url?: string | null;
+  };
+}
+
+export interface RoomTokenResponse {
+  token: string;
+  room_id: string;
+  room_name: string;
+  livekit_url: string;
+  is_speaker: boolean;
+  user_id: string;
+}
+
+export interface CaptionRecord {
+  id: string;
+  room_id: string;
+  speaker_id: string;
+  speaker_name?: string;
+  text_content: string;
+  created_at: string;
+}

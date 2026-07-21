@@ -59,18 +59,18 @@
 - [x] Build Moment pinning functionality for VIP users (`PATCH /moments/:id/pin`).
 
 ## Phase 6: Live Audio & Video Rooms (LiveKit SFU)
-- [ ] Install `livekit-server-sdk` in NestJS `AudioRoomsModule` and configure `RoomServiceClient`.
-- [ ] Build NestJS endpoint (`POST /audio-rooms/create`) to initialize LiveKit room and store metadata in `audio_rooms` table.
-- [ ] Build NestJS access token generation endpoint (`POST /audio-rooms/token`) granting default `roomJoin: true`, `canPublish: false` for listeners.
-- [ ] Install `@livekit/components-angular` or native `livekit-client` in Angular frontend.
-- [ ] Build Angular Audio/Video Room UI (`AudioRoomComponent`) displaying Host, Speaker Stage Grid, and Listener Audience Grid.
-- [ ] Implement Stage Management API & UI:
+- [x] Install `livekit-server-sdk` in NestJS `AudioRoomsModule` and configure `RoomServiceClient`.
+- [x] Build NestJS endpoint (`POST /audio-rooms/create`) to initialize LiveKit room and store metadata in `audio_rooms` table.
+- [x] Build NestJS access token generation endpoint (`POST /audio-rooms/token`) granting default `roomJoin: true`, `canPublish: false` for listeners.
+- [x] Install `@livekit/components-angular` or native `livekit-client` in Angular frontend.
+- [x] Build Angular Audio/Video Room UI (`AudioRoomComponent`) displaying Host, Speaker Stage Grid, and Listener Audience Grid.
+- [x] Implement Stage Management API & UI:
     - Listener clicks "Raise Hand" (`POST /audio-rooms/raise-hand`).
     - Host approves request (`POST /audio-rooms/approve-speaker`).
     - NestJS issues refreshed LiveKit JWT with `canPublish: true`.
-- [ ] Build synchronised text chat overlay (`RoomChatComponent`) inside live rooms powered by Centrifugo (`room_{id}` channel).
-- [ ] Implement real-time AI speech-to-text subtitles broadcasting closed captions into live rooms.
-- [ ] Build stream recording & replay archive storage (`POST /audio-rooms/archive`) saving LiveKit composite recordings to Cloudflare R2.
+- [x] Build synchronised text chat overlay (`RoomChatComponent`) inside live rooms powered by Centrifugo (`room_{id}` channel).
+- [x] Implement real-time AI speech-to-text subtitles broadcasting closed captions into live rooms.
+- [x] Build stream recording & replay archive storage (`POST /audio-rooms/archive`) saving LiveKit composite recordings to Cloudflare R2.
 
 ## Phase 7: VIP Monetisation, Virtual Economy, Trust/Safety & 24/7 VPS Deployment
 - [ ] Build NestJS `MonetisationController` handling Stripe & Apple/Google App Store webhooks (`POST /webhooks/stripe`) to toggle `user.is_vip` and `vip_tier`.

@@ -83,6 +83,23 @@ export class CentrifugeService {
     }
   }
 
+  async publish(channel: string, data: any): Promise<void> {
+    const sub = this.subscriptions.get(channel);
+    if (sub) {
+      try {
+        await sub.publish(data);
+      } catch (e) {
+        console.error('Centrifuge subscription publish error:', e);
+      }
+    } else if (this.centrifuge) {
+      try {
+        await (this.centrifuge as any).publish(channel, data);
+      } catch (e) {
+        console.error('Centrifuge publish error:', e);
+      }
+    }
+  }
+
   disconnect(): void {
     if (this.centrifuge) {
       this.centrifuge.disconnect();
