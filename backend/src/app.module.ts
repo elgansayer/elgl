@@ -9,6 +9,7 @@ import { UsersModule } from './users/users.module';
 import { MediaModule } from './media/media.module';
 import { DiscoveryModule } from './discovery/discovery.module';
 import { ProfileVisitsModule } from './profile-visits/profile-visits.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { ProfileVisitsModule } from './profile-visits/profile-visits.module';
     MediaModule,
     DiscoveryModule,
     ProfileVisitsModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

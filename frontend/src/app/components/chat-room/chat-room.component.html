@@ -1,0 +1,191 @@
+<div class="max-w-5xl mx-auto p-4 md:p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-xl mt-4 md:mt-6 border border-slate-100 dark:border-slate-700 flex flex-col h-[82vh]">
+  <!-- Header & Search -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-4 mb-4 gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary text-2xl font-bold">
+        💬
+      </div>
+      <div>
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <span>Room: {{ roomId }}</span>
+          <span
+            class="text-xs px-2 py-0.5 rounded-full font-extrabold"
+            [ngClass]="centrifugeService.isConnected() ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'"
+          >
+            {{ centrifugeService.isConnected() ? '● Centrifugo Live' : '○ Connecting...' }}
+          </span>
+        </h2>
+        <p class="text-xs text-slate-500 dark:text-slate-400">Real-time chat with typing indicators, interactive corrections, and Canvas doodles</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <input
+        type="text"
+        [(ngModel)]="searchQuery"
+        (keyup.enter)="onSearch()"
+        placeholder="🔍 Search messages..."
+        class="px-3.5 py-1.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-sm focus:ring-2 focus:ring-primary w-full sm:w-60"
+      />
+      <button (click)="onSearch()" class="px-3.5 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-bold">
+        Search
+      </button>
+    </div>
+  </div>
+
+  <!-- Messages Scroll Area -->
+  <div class="flex-1 overflow-y-auto space-y-4 p-2 md:p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 mb-4">
+    <div *ngIf="isLoading()" class="flex justify-center items-center py-16">
+      <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+    </div>
+
+    <div *ngIf="!isLoading() && messages().length === 0" class="text-center py-16 text-slate-400">
+      <span class="text-4xl block mb-2">📬</span>
+      <p class="font-medium">No messages in this room yet. Break the ice!</p>
+    </div>
+
+    <!-- Message Bubble -->
+    <div
+      *ngFor="let msg of messages()"
+      class="flex gap-3 items-start"
+      [ngClass]="{'flex-row-reverse': msg.sender_id === authService.currentUser()?.id}"
+    >
+      <img
+        [src]="msg.sender?.avatar_url || 'https://via.placeholder.com/80'"
+        alt="Avatar"
+        class="w-10 h-10 rounded-full object-cover border border-slate-300 dark:border-slate-600 flex-shrink-0"
+      />
+
+      <div
+        class="max-w-[80%] sm:max-w-[70%] rounded-2xl p-4 shadow-sm relative group transition-all"
+        [ngClass]="msg.sender_id === authService.currentUser()?.id ? 'bg-primary text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-none border border-slate-200 dark:border-slate-700'"
+      >
+        <div class="flex items-center justify-between gap-4 mb-1 text-xs opacity-75 font-semibold">
+          <span>{{ msg.sender?.display_name || 'Partner' }}</span>
+          <span>{{ msg.created_at | date:'shortTime' }}</span>
+        </div>
+
+        <!-- Text Message -->
+        <p *ngIf="msg.message_type === 'text'" class="whitespace-pre-wrap leading-relaxed">{{ msg.text_content }}</p>
+
+        <!-- Correction Payload -->
+        <div *ngIf="msg.message_type === 'correction' && msg.correction_payload">
+          <app-visual-diff
+            [original]="msg.correction_payload.original"
+            [corrected]="msg.correction_payload.corrected"
+            [explanation]="msg.correction_payload.explanation"
+          ></app-visual-diff>
+        </div>
+
+        <!-- Doodle Canvas Image -->
+        <div *ngIf="msg.message_type === 'doodle' && msg.media_url" class="mt-1">
+          <img [src]="msg.media_url" alt="Doodle" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white max-h-60 w-auto shadow-sm" />
+          <p *ngIf="msg.text_content" class="text-xs opacity-80 mt-1.5">{{ msg.text_content }}</p>
+        </div>
+
+        <!-- Voice Note Audio Player -->
+        <div *ngIf="msg.message_type === 'voice' && msg.media_url" class="mt-1">
+          <audio [src]="msg.media_url" controls class="w-full min-w-[240px] rounded-lg"></audio>
+          <p *ngIf="msg.text_content" class="text-xs opacity-80 mt-1.5">{{ msg.text_content }}</p>
+        </div>
+
+        <!-- Action / Bookmark button -->
+        <button
+          (click)="bookmark(msg)"
+          class="absolute top-2 end-2 opacity-0 group-hover:opacity-100 p-1 bg-black/20 hover:bg-black/40 text-white rounded-lg text-xs font-bold transition-opacity"
+          title="Bookmark to Favourites"
+        >
+          ⭐ Save
+        </button>
+      </div>
+    </div>
+
+    <!-- Typing Indicator -->
+    <div *ngIf="isTyping()" class="flex items-center gap-2 text-xs font-bold text-slate-500 animate-pulse px-3 py-1">
+      <span>💬 Someone is typing...</span>
+    </div>
+  </div>
+
+  <!-- Interactive Action Modals -->
+  <div *ngIf="showDoodleModal()" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+    <app-doodle-pad
+      (doodleSaved)="onDoodleSaved($event)"
+      (cancelled)="showDoodleModal.set(false)"
+    ></app-doodle-pad>
+  </div>
+
+  <div *ngIf="showVoiceModal()" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+    <app-voice-recorder
+      (audioUploaded)="onVoiceUploaded($event)"
+      (cancelled)="showVoiceModal.set(false)"
+    ></app-voice-recorder>
+  </div>
+
+  <!-- Correction Form Drawer -->
+  <div *ngIf="showCorrectionForm()" class="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-2xl border border-amber-300 dark:border-amber-800 mb-3 space-y-3">
+    <div class="flex items-center justify-between">
+      <span class="text-sm font-bold text-amber-900 dark:text-amber-300 flex items-center gap-2">
+        <span>✏️ Suggest a Language Correction</span>
+      </span>
+      <button (click)="showCorrectionForm.set(false)" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Original Sentence (With errors)</label>
+        <input type="text" [(ngModel)]="originalText" placeholder="e.g. He go to store yesterday" class="w-full px-3 py-1.5 border rounded-xl bg-white dark:bg-slate-800 text-sm" />
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Corrected Sentence</label>
+        <input type="text" [(ngModel)]="correctedText" placeholder="e.g. He went to the store yesterday" class="w-full px-3 py-1.5 border rounded-xl bg-white dark:bg-slate-800 text-sm" />
+      </div>
+    </div>
+    <div>
+      <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Explanation (Optional)</label>
+      <input type="text" [(ngModel)]="explanationText" placeholder="e.g. Use past simple 'went' and definite article 'the'" class="w-full px-3 py-1.5 border rounded-xl bg-white dark:bg-slate-800 text-sm" />
+    </div>
+    <div class="flex justify-end gap-2">
+      <button (click)="showCorrectionForm.set(false)" class="px-4 py-1.5 bg-slate-200 dark:bg-slate-700 rounded-xl text-xs font-bold">Cancel</button>
+      <button (click)="sendCorrection()" class="px-5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow">Send Correction</button>
+    </div>
+  </div>
+
+  <!-- Input Area & Tool Trigger Bar -->
+  <div class="bg-white dark:bg-slate-800 pt-2">
+    <div class="flex items-center gap-2 mb-2">
+      <button
+        (click)="showCorrectionForm.set(!showCorrectionForm())"
+        class="px-3 py-1 bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 text-amber-800 dark:text-amber-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+      >
+        <span>✏️ Correct</span>
+      </button>
+      <button
+        (click)="showDoodleModal.set(true)"
+        class="px-3 py-1 bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 text-blue-800 dark:text-blue-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+      >
+        <span>🎨 Doodle</span>
+      </button>
+      <button
+        (click)="showVoiceModal.set(true)"
+        class="px-3 py-1 bg-red-100 dark:bg-red-900/40 hover:bg-red-200 text-red-800 dark:text-red-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+      >
+        <span>🎙️ Voice Note</span>
+      </button>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <input
+        type="text"
+        [(ngModel)]="textInput"
+        (keyup.enter)="sendTextMessage()"
+        placeholder="Type a message or share a sentence..."
+        class="flex-1 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-2xl bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none"
+      />
+      <button
+        (click)="sendTextMessage()"
+        class="px-6 py-3 bg-primary hover:bg-primary-dark text-white rounded-2xl font-bold shadow-md transition-all flex items-center gap-2"
+      >
+        <span>Send</span>
+      </button>
+    </div>
+  </div>
+</div>

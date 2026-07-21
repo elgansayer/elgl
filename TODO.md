@@ -24,17 +24,17 @@
 - [x] Build Angular Matchmaking & Discovery UI (`DiscoveryComponent`) with distance slider, language filters, and "Serious Learner" toggle.
 
 ## Phase 3: Centrifugo Real-Time Chat Engine & Interactive Payloads
-- [ ] Setup Centrifugo server configuration (`config.json`) and connect to Redis instance for pub/sub.
-- [ ] Build NestJS `ChatController` endpoint (`POST /chat/token`) to mint Centrifugo connection JWTs with user sub claims.
-- [ ] Install `centrifuge-js` in Angular and build a resilient global `CentrifugeService` with reconnection and connection state signals.
-- [ ] Create Supabase SQL migration (`003_chat_and_favourites.sql`) for `chat_messages` and `favourites` tables.
-- [ ] Build NestJS endpoint `POST /chat/messages` to validate messages, persist to Supabase `chat_messages` table, and publish to Centrifugo via HTTP API (`/api/publish`).
-- [ ] Build Angular 1-on-1 and Group Chat UI (`ChatRoomComponent`) with real-time message stream, typing indicators, and read receipts.
-- [ ] Implement custom JSON diff rendering (`VisualDiffComponent`) in Angular for language corrections (red strikethrough for original, green for fixed text).
-- [ ] Build HTML5 Canvas Doodle Tool component (`DoodlePadComponent`) in Angular allowing users to draw and transmit visual explanations.
-- [ ] Build hold-to-record voice note recorder (`VoiceRecorderComponent`) in Angular with Cloudflare R2 direct upload and inline audio playback.
-- [ ] Build Favourites bookmarking functionality: `POST /chat/favourites` in NestJS and `FavouritesComponent` in Angular to review saved messages and corrections.
-- [ ] Implement client-side and server-side (`pg_trgm`) message search inside chat rooms.
+- [x] Setup Centrifugo server configuration (`config.json`) and connect to Redis instance for pub/sub.
+- [x] Build NestJS `ChatController` endpoint (`POST /chat/token`) to mint Centrifugo connection JWTs with user sub claims.
+- [x] Install `centrifuge-js` in Angular and build a resilient global `CentrifugeService` with reconnection and connection state signals.
+- [x] Create Supabase SQL migration (`003_chat_and_favourites.sql`) for `chat_messages` and `favourites` tables.
+- [x] Build NestJS endpoint `POST /chat/messages` to validate messages, persist to Supabase `chat_messages` table, and publish to Centrifugo via HTTP API (`/api/publish`).
+- [x] Build Angular 1-on-1 and Group Chat UI (`ChatRoomComponent`) with real-time message stream, typing indicators, and read receipts.
+- [x] Implement custom JSON diff rendering (`VisualDiffComponent`) in Angular for language corrections (red strikethrough for original, green for fixed text).
+- [x] Build HTML5 Canvas Doodle Tool component (`DoodlePadComponent`) in Angular allowing users to draw and transmit visual explanations.
+- [x] Build hold-to-record voice note recorder (`VoiceRecorderComponent`) in Angular with Cloudflare R2 direct upload and inline audio playback.
+- [x] Build Favourites bookmarking functionality: `POST /chat/favourites` in NestJS and `FavouritesComponent` in Angular to review saved messages and corrections.
+- [x] Implement client-side and server-side (`pg_trgm`) message search inside chat rooms.
 
 ## Phase 4: LingQ Interactive Reading Engine & AI/NLP Utilities
 - [ ] Create Supabase SQL migration (`004_flashcards_srs.sql`) for `flashcards` table indexed by `user_id` and `word_token`.
