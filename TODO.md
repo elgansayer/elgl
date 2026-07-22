@@ -110,7 +110,7 @@
 
 ## Phase 11: In-App NLP & Learning Utilities
 - [x] Analyse chat context menu screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
-- [ ] Build in-line Message Context Menu: Translate, Transliterate, Speak, and Correct.
+- [x] Build in-line Message Context Menu: Translate, Transliterate, Speak, and Correct.
 - [ ] Implement Transliteration UI (render Romaji/Pinyin below text in small grey font).
 - [x] Implement Text-to-Speech (TTS) using SpeechSynthesis or Azure Speech API.
 - [x] Implement Voice-to-Text transcription next to audio messages.
