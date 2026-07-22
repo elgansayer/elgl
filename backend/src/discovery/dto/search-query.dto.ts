@@ -50,4 +50,8 @@ export class SearchQueryDto {
   )
   @IsBoolean()
   serious_learner_only?: boolean;
+
+  @IsOptional()
+  @IsString()
+  level?: string;
 }

@@ -12,6 +12,7 @@ export interface SearchFilterParams {
   native_language?: string;
   target_language?: string;
   serious_learner_only?: boolean;
+  level?: string;
 }
 
 @Injectable({
@@ -37,6 +38,7 @@ export class DiscoveryService {
     if (filters.native_language) params = params.set('native_language', filters.native_language);
     if (filters.target_language) params = params.set('target_language', filters.target_language);
     if (filters.serious_learner_only !== undefined) params = params.set('serious_learner_only', filters.serious_learner_only.toString());
+    if (filters.level) params = params.set('level', filters.level);
 
     return firstValueFrom(
       this.http.get<UserProfile[]>(`${this.baseUrl}/partners`, { headers: this.getHeaders(), params })
