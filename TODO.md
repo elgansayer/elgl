@@ -102,7 +102,7 @@
 - [x] Build a Language Selector toggle in settings to dynamically switch UI language.
 
 ## Phase 10: The Moments Engine (Feed & Media)
-- [ ] Analyse Moments feed screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
+- [x] Analyse Moments feed screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
 - [ ] Build Moments Feed UI with infinite scrolling (15 posts per batch).
 - [x] Build multi-media attachments UI: text, up to 9 static images in CSS grid, or a 60s voice note.
 - [ ] Build Audio Player component with waveform visualizer, play/pause, and timestamp tracker.
