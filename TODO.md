@@ -118,8 +118,8 @@
 ## Phase 12: Matchmaking & Discovery UI
 - [ ] Analyse search screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
 - [ ] Build Global Search UI with translated dropdowns for Native Language, Target Language, and Level.
-- [ ] Build Nearby Search PostGIS distance slider for VIP users.
-- [ ] Build VIP Profile Visitor Log UI with blurred cards for free users.
+- [x] Build Nearby Search PostGIS distance slider for VIP users.
+- [x] Build VIP Profile Visitor Log UI with blurred cards for free users.
 
 ## Phase 13: HelloTalk Chat Specifics
 - [ ] Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
@@ -362,6 +362,42 @@
 - [ ] Build "Help & About" page displaying App Version, build number, and open-source licences.
 - [ ] Build "Legal & Privacy Notices" viewer for Terms of Service and Privacy Policy.
 - [ ] Build "Personal Data Collection" GDPR hub with "Request My Data Archive" button and automated "Delete Account" workflow.
+
+## Phase 66: Enhanced Profile & Matchmaking
+- [ ] Add `proficiency_level` (`'a1'` to `'c2'`) to `users` table schema and profile UI.
+- [ ] Implement proficiency level filter in Discovery search.
+- [ ] Build "Interests" tagging UI in profile settings (e.g., "tech", "travel", "movies").
+- [ ] Add "Interests" filter to Discovery search to match users with shared hobbies.
+- [ ] Add "Learning Goals" free-text field to user profile to state user motivations.
+
+## Phase 67: AI-Powered Learning Tools
+- [ ] Design and build AI Conversation Partner chat interface.
+- [ ] Implement NestJS service to proxy chat messages to a Large Language Model (e.g., GPT-4, Llama).
+- [ ] Add "Explain this" context menu option on corrected text to get AI-generated grammar breakdown.
+- [ ] Implement AI-generated suggested replies in chat based on conversation context.
+- [ ] Build "Role-play" scenarios for AI chat (e.g., "ordering coffee", "job interview").
+
+## Phase 68: Gamification & Engagement Hooks
+- [ ] Design database schema for user achievements (`achievements` table, `user_achievements` join table).
+- [ ] Build Achievements service in NestJS to award badges for milestones (e.g., "100 messages sent", "7-day streak").
+- [ ] Build Achievements showcase page on user profiles.
+- [ ] Implement a point-based XP system, granting XP for learning activities.
+- [ ] Build Daily/Weekly Quests feature with coin rewards (e.g., "Correct 3 moments today").
+
+## Phase 69: Structured Learning Content
+- [ ] Build "Lessons" module in Angular.
+- [ ] Create database schema for curated learning content (articles, dialogues by CEFR level).
+- [ ] Build CMS or admin interface to upload and manage lesson content.
+- [ ] Implement "Word of the Day" feature on the app's home screen.
+- [ ] Integrate short cultural etiquette guides for different languages within the app.
+
+## Phase 70: UI/UX Polish & Animation
+- [ ] Implement skeleton loaders (`ngx-skeleton-loader`) for all data-heavy components (feed, chat, profiles).
+- [ ] Add subtle micro-animations (`framer-motion` or CSS) to button clicks and hover states.
+- [ ] Animate Angular route transitions for a smoother navigation feel.
+- [ ] Build an interactive, multi-step product tour for new users using a library like `ngx-joyride`.
+- [ ] Refine chat bubble appearance with distinct sent/received styles and message-tail pointers.
+- [ ] Add haptic feedback on mobile for key actions (e.g., sending message, liking a post).
 
 ## Phase 66: Enhanced Profile & Matchmaking
 - [ ] Add `proficiency_level` (`'a1'` to `'c2'`) to `users` table schema and profile UI.
