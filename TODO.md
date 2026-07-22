@@ -145,7 +145,7 @@
 
 ## Phase 17: Audio & Video Calling (WebRTC / LiveKit)
 - [STUCK] Build Incoming Call modal with ringtone audio and accept/reject controls.
-- [ ] Implement active VoIP Call UI (Mute, Speakerphone, End Call).
+- [STUCK] Implement active VoIP Call UI (Mute, Speakerphone, End Call).
 - [ ] Build 1-on-1 Video Call interface with local preview overlay.
 
 ## Phase 18: Monetisation & VIP Tiers
