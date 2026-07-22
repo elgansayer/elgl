@@ -109,7 +109,7 @@
 - [x] Integrate `VisualDiffComponent` into Moments comment section for corrections.
 
 ## Phase 11: In-App NLP & Learning Utilities
-- [ ] Analyse chat context menu screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
+- [x] Analyse chat context menu screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
 - [ ] Build in-line Message Context Menu: Translate, Transliterate, Speak, and Correct.
 - [ ] Implement Transliteration UI (render Romaji/Pinyin below text in small grey font).
 - [x] Implement Text-to-Speech (TTS) using SpeechSynthesis or Azure Speech API.
