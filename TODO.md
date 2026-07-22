@@ -116,7 +116,7 @@
 - [x] Implement Voice-to-Text transcription next to audio messages.
 
 ## Phase 12: Matchmaking & Discovery UI
-- [ ] Analyse search screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
+- [x] Analyse search screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
 - [ ] Build Global Search UI with translated dropdowns for Native Language, Target Language, and Level.
 - [x] Build Nearby Search PostGIS distance slider for VIP users.
 - [x] Build VIP Profile Visitor Log UI with blurred cards for free users.
