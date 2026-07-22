@@ -419,3 +419,13 @@
 - [ ] Build an interactive, multi-step product tour for new users using a library like `ngx-joyride`.
 - [ ] Refine chat bubble appearance with distinct sent/received styles and message-tail pointers.
 - [ ] Add haptic feedback on mobile for key actions (e.g., sending message, liking a post).
+
+## Phase 73: Deeper Gamification & Retention
+- [ ] Build celebratory full-screen animation/confetti for completing study streaks (e.g., 7, 30, 100 days).
+- [ ] Implement "Partner of the Week" algorithm to highlight highly-rated language partners in the Discovery feed.
+- [ ] Add haptic feedback for grading flashcards (e.g., success buzz for 'Known', gentle pulse for 'Learning').
+
+## Phase 74: Voiceroom Learning Tools
+- [ ] Build shared 'Voiceroom Notes' panel where hosts/speakers can post key vocabulary or discussion topics.
+- [ ] Implement LiveKit EgressClient to generate and save a full transcript of completed audio room sessions for participants to review.
+- [ ] Add AI-generated 'Session Summary' to the archived audio room recording, listing key topics and vocabulary discussed.
