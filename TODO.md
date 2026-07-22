@@ -122,7 +122,7 @@
 - [x] Build VIP Profile Visitor Log UI with blurred cards for free users.
 
 ## Phase 13: HelloTalk Chat Specifics
-- [STUCK] Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
+- [ ] Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
 - [x] Build HTML5 Canvas Doodle Pad component in chat modal.
 - [x] Build Virtual Gift picker modal with coin balance auto-deduction.
 - [x] Build Favourites bookmarking tab for saved messages and corrections.
@@ -135,28 +135,28 @@
 
 ## Phase 15: Advanced User Profiles
 - [x] Build 30-second Audio Introduction recorder and playback card on profile.
-- [STUCK] Implement dynamic Hobbies & Interests tags mapped to target vocabulary.
-- [STUCK] Build Profile Cover Photo uploader with client-side cropping.
+- [ ] Implement dynamic Hobbies & Interests tags mapped to target vocabulary.
+- [ ] Build Profile Cover Photo uploader with client-side cropping.
 
 ## Phase 16: Live Chat Micro-Interactions
 - [x] Implement WebSockets typing indicators ("User is typing...").
 - [x] Build Read Receipts (Sent vs Delivered vs Read checkmarks).
-- [STUCK] Add long-press context menu on mobile to copy, favourite, or report messages.
+- [ ] Add long-press context menu on mobile to copy, favourite, or report messages.
 
 ## Phase 17: Audio & Video Calling (WebRTC / LiveKit)
-- [STUCK] Build Incoming Call modal with ringtone audio and accept/reject controls.
-- [STUCK] Implement active VoIP Call UI (Mute, Speakerphone, End Call).
-- [STUCK] Build 1-on-1 Video Call interface with local preview overlay.
+- [ ] Build Incoming Call modal with ringtone audio and accept/reject controls.
+- [ ] Implement active VoIP Call UI (Mute, Speakerphone, End Call).
+- [ ] Build 1-on-1 Video Call interface with local preview overlay.
 
 ## Phase 18: Monetisation & VIP Tiers
-- [STUCK] Build VIP Subscription showcase page detailing all premium benefits.
-- [STUCK] Integrate Stripe Checkout for Monthly (8 UKP / $10 USD) and Yearly (50 UKP / $63 USD) plans.
-- [STUCK] Build "Restore Purchases" button for app store compliance.
+- [ ] Build VIP Subscription showcase page detailing all premium benefits.
+- [ ] Integrate Stripe Checkout for Monthly (8 UKP / $10 USD) and Yearly (50 UKP / $63 USD) plans.
+- [ ] Build "Restore Purchases" button for app store compliance.
 
 ## Phase 19: Gamification & Study Streaks
-- [STUCK] Build Daily Study Streak counter widget on home screen.
-- [STUCK] Implement NestJS CRON job to reset streaks if inactive for 24 hours.
-- [STUCK] Build "Top Corrector" community leaderboard.
+- [ ] Build Daily Study Streak counter widget on home screen.
+- [ ] Implement NestJS CRON job to reset streaks if inactive for 24 hours.
+- [ ] Build "Top Corrector" community leaderboard.
 
 ## Phase 20: Spaced Repetition (SRS) Flashcards
 - [x] Build Flashcard Deck UI to organize saved vocabulary.
@@ -164,9 +164,9 @@
 - [x] Build interactive Flashcard Review UI (Flip animations and grading buttons).
 
 ## Phase 21: Push Notifications
-- [STUCK] Integrate Firebase Cloud Messaging (FCM) in Angular.
-- [STUCK] Build NestJS event listeners to dispatch push alerts for chats, comments, and profile views.
-- [STUCK] Build Notification Preferences UI with granular category toggles.
+- [ ] Integrate Firebase Cloud Messaging (FCM) in Angular.
+- [ ] Build NestJS event listeners to dispatch push alerts for chats, comments, and profile views.
+- [ ] Build Notification Preferences UI with granular category toggles.
 
 ## Phase 22: Moderation & Trust Engine
 - [ ] Build "Report User" modal with dynamic category selection.
