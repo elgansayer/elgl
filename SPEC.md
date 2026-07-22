@@ -230,7 +230,7 @@ To support continuous autonomous development and 24/7 production operation on a 
 
 ### Environment Schema & Configuration Validation (`@nestjs/config`)
 *   To prevent autonomous deployment crashes on the VPS, NestJS uses strict environment variable schema validation (`Joi` or `Zod` validation schema in `ConfigModule.forRoot()`).
-*   Required parameters: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `REDIS_URL`, `CENTRIFUGO_API_KEY`, `CENTRIFUGO_SECRET`, `LIVEKIT_API_KEY`, `LIVEKIT_SECRET`, `LIVEKIT_URL`, `CLOUDFLARE_R2_ENDPOINT`, `CLOUDFLARE_R2_ACCESS_KEY`, `CLOUDFLARE_R2_SECRET_KEY`, `DEEPL_API_KEY`, `AZURE_TRANSLATOR_KEY`.
+*   Required parameters: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `REDIS_URL`, `CENTRIFUGO_API_KEY`, `CENTRIFUGO_SECRET`, `LIVEKIT_API_KEY`, `LIVEKIT_SECRET`, `LIVEKIT_URL`, `CLOUDFLARE_R2_ENDPOINT`, `CLOUDFLARE_R2_ACCESS_KEY_ID`, `CLOUDFLARE_R2_SECRET_ACCESS_KEY`, `CLOUDFLARE_R2_BUCKET`, `DEEPL_API_KEY`, `AZURE_TRANSLATOR_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
 
 ### LiveKit WebRTC SFU Networking & Firewall Rules (24/7 VPS)
 *   When running on a cloud VPS, the following firewall (`ufw`/`iptables`) ports must be open and forwarded directly to the `sfu` container:
