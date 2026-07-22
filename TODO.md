@@ -423,3 +423,28 @@
 - [ ] Implement real-time translation for the text chat overlay inside Voicerooms.
 - [ ] Build a "Quick Poll" feature for Voiceroom hosts to create multiple-choice questions for the audience.
 - [ ] Add a "Soundboard" feature for hosts to play pre-recorded audio clips (e.g., applause, jingles).
+
+## Phase 71: Enhanced Content Interaction
+- [ ] Implement 'Create Flashcard' context menu option for any text selection within chat messages and moment posts.
+- [ ] Build 'Correction Quality' rating system (up/down votes) for community corrections on Moments.
+- [ ] Implement a user-level 'Corrector Score' based on ratings to display on profiles.
+
+## Phase 72: Advanced AI-Tutor Features
+- [ ] Integrate AI to auto-generate `explanation` field for `correction` payloads in chat if the human corrector leaves it blank.
+- [ ] Build "Simplify this text" AI feature in the message context menu for learners to understand complex sentences.
+- [ ] Implement AI-powered 'Conversation Starter' suggestions in new chat windows based on partner's profile interests.
+
+## Phase 73: Deeper Gamification & Retention
+- [ ] Build celebratory full-screen animation/confetti for completing study streaks (e.g., 7, 30, 100 days).
+- [ ] Implement "Partner of the Week" algorithm to highlight highly-rated language partners in the Discovery feed.
+- [ ] Add haptic feedback for grading flashcards (e.g., success buzz for 'Known', gentle pulse for 'Learning').
+
+## Phase 74: Voiceroom Learning Tools
+- [ ] Build shared 'Voiceroom Notes' panel where hosts/speakers can post key vocabulary or discussion topics.
+- [ ] Implement LiveKit EgressClient to generate and save a full transcript of completed audio room sessions for participants to review.
+- [ ] Add AI-generated 'Session Summary' to the archived audio room recording, listing key topics and vocabulary discussed.
+
+## Phase 75: Advanced Voiceroom Interactivity
+- [ ] Implement real-time translation for the text chat overlay inside Voicerooms.
+- [ ] Build a "Quick Poll" feature for Voiceroom hosts to create multiple-choice questions for the audience.
+- [ ] Add a "Soundboard" feature for hosts to play pre-recorded audio clips (e.g., applause, jingles).
