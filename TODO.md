@@ -136,7 +136,7 @@
 ## Phase 15: Advanced User Profiles
 - [x] Build 30-second Audio Introduction recorder and playback card on profile.
 - [STUCK] Implement dynamic Hobbies & Interests tags mapped to target vocabulary.
-- [ ] Build Profile Cover Photo uploader with client-side cropping.
+- [STUCK] Build Profile Cover Photo uploader with client-side cropping.
 
 ## Phase 16: Live Chat Micro-Interactions
 - [x] Implement WebSockets typing indicators ("User is typing...").
