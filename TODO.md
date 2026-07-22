@@ -124,7 +124,7 @@
 ## Phase 13: HelloTalk Chat Specifics
 - [ ] Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
 - [x] Build HTML5 Canvas Doodle Pad component in chat modal.
-- [ ] Build Virtual Gift picker modal with coin balance auto-deduction.
+- [x] Build Virtual Gift picker modal with coin balance auto-deduction.
 - [x] Build Favourites bookmarking tab for saved messages and corrections.
 
 ## Phase 14: Live Audio Voicerooms UI
@@ -383,6 +383,11 @@
 - [ ] Build shared 'Voiceroom Notes' panel where hosts/speakers can post key vocabulary or discussion topics.
 - [ ] Implement LiveKit EgressClient to generate and save a full transcript of completed audio room sessions for participants to review.
 - [ ] Add AI-generated 'Session Summary' to the archived audio room recording, listing key topics and vocabulary discussed.
+
+## Phase 75: Advanced Voiceroom Interactivity
+- [ ] Implement real-time translation for the text chat overlay inside Voicerooms.
+- [ ] Build a "Quick Poll" feature for Voiceroom hosts to create multiple-choice questions for the audience.
+- [ ] Add a "Soundboard" feature for hosts to play pre-recorded audio clips (e.g., applause, jingles).
 
 ## Phase 66: Enhanced Profile & Matchmaking
 - [ ] Add `proficiency_level` (`'a1'` to `'c2'`) to `users` table schema and profile UI.
