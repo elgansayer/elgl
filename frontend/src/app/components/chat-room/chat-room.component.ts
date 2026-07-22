@@ -44,6 +44,9 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   readonly showVoiceModal = signal<boolean>(false);
   readonly showCorrectionForm = signal<boolean>(false);
 
+  // Transliteration state: message id -> romaji/pinyin string
+  readonly transliterations = signal<Record<string, string>>({});
+
   // Selected word token for LingQ definition modal
   readonly activeWordToken = signal<string | null>(null);
   readonly activeWordContext = signal<string>('');
@@ -204,6 +207,22 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
       console.error('Failed to save sentence to LingQ deck:', e);
       alert(this.i18n.translate('chatRoom.saveErrorAlert'));
     }
+  }
+
+  async transliterateMessage(msg: ChatMessage): Promise<void> {
+    if (!msg.text_content) return;
+
+    // In a full implementation, this would call the NLP service.
+    // For the UI implementation, we provide a mock transliteration.
+    const mockTransliteration = msg.text_content
+      .split(' ')
+      .map(word => word.toLowerCase() + '-romaji')
+      .join(' ');
+
+    this.transliterations.update(prev => ({
+      ...prev,
+      [msg.id]: mockTransliteration
+    }));
   }
 
   onSearch(): void {

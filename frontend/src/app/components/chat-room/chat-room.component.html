@@ -60,6 +60,11 @@
               [text]="msg.text_content"
               (wordClicked)="onWordClicked($event)"
             ></app-tokenised-text>
+            @if (transliterations()[msg.id]) {
+              <p class="mt-1 text-[10px] text-slate-400 italic">
+                {{ transliterations()[msg.id] }}
+              </p>
+            }
           }
           @if (msg.message_type === 'correction' && msg.correction_payload) {
             <app-visual-diff
@@ -85,6 +90,12 @@
                 class="rounded-lg bg-amber-500/90 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-white"
               >
                 {{ 'chatRoom.saveBtn' | t }}
+              </button>
+              <button
+                (click)="transliterateMessage(msg)"
+                class="rounded-lg bg-slate-200 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-slate-700"
+              >
+                {{ 'chatRoom.transliterateBtn' | t }}
               </button>
             }
             <button
