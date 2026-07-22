@@ -1,0 +1,6 @@
+{
+  "audioRoom": {
+    "launchError": "Failed to launch audio room.",
+    "archiveConfirm": "Are you sure you want to archive this room?"
+  }
+}
