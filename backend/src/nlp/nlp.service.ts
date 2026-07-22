@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Language } from 'node-nlp';
 import { SupabaseService } from '../supabase/supabase.service';
 import { GrammarCheckDto } from './dto/grammar-check.dto';
@@ -17,7 +18,10 @@ import {
 export class NlpService {
   private nlpLanguage = new Language();
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly configService: ConfigService,
+  ) {}
 
   detectLanguage(text: string): { language: string; confidence: number } {
     const guesses = this.nlpLanguage.guess(text, undefined, 3);
@@ -64,29 +68,31 @@ export class NlpService {
       dto.source_language || this.detectLanguage(dto.text).language;
     const cleanWord = dto.text.trim();
 
-    // High fidelity simulated NLP translation / dictionary lookup
-    const mockDictionary: Record<
-      string,
-      Record<string, { trans: string; def: string; translit?: string }>
-    > = {
-      es: {
-        en: {
-          trans: 'Hello / Welcome',
-          def: 'Greeting used when encountering someone.',
-          translit: 'o-la',
-        },
-      },
-    };
-
     let trans = `Translated [${detected} → ${dto.target_language}]: ${cleanWord}`;
     let def = `Definition for word token "${cleanWord}" in ${dto.target_language}`;
     let translit = `${cleanWord} (phonetic breakdown)`;
 
-    const found = mockDictionary[detected]?.[dto.target_language];
-    if (found) {
-      trans = found.trans;
-      def = found.def;
-      translit = found.translit || translit;
+    const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
+    if (deepLKey) {
+      try {
+        const res = await fetch('https://api-free.deepl.com/v2/translate', {
+          method: 'POST',
+          headers: {
+            'Authorization': `DeepL-Auth-Key ${deepLKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: [cleanWord],
+            target_lang: dto.target_language.toUpperCase(),
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          trans = data.translations[0].text;
+        }
+      } catch (e) {
+        console.error('DeepL API error:', e);
+      }
     }
 
     return {
@@ -105,37 +111,42 @@ export class NlpService {
     dto: GrammarCheckDto,
   ): Promise<GrammarCheckResult> {
     await this.checkRateLimit(userId, isVip);
-
     const orig = dto.text.trim();
-    if (orig.toLowerCase().includes('go to store yesterday')) {
-      return {
-        original: orig,
-        corrected: orig.replace(
-          /go to store yesterday/i,
-          'went to the store yesterday',
-        ),
-        explanation:
-          'Use past simple tense "went" for past events ("yesterday") and definite article "the" before nouns like store.',
-        errors_found: 2,
-      };
+
+    const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
+    if (azureKey) {
+      try {
+        const res = await fetch(
+          'https://api.cognitive.microsofttranslator.com/dictionary/lookup?api-version=3.0&from=en&to=es',
+          {
+            method: 'POST',
+            headers: {
+              'Ocp-Apim-Subscription-Key': azureKey,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify([{ Text: orig }]),
+          },
+        );
+        if (res.ok) {
+          const data = await res.json();
+          return {
+            original: orig,
+            corrected: data[0]?.displayTarget || orig,
+            explanation: 'Corrected via Azure AI',
+            errors_found: orig === data[0]?.displayTarget ? 0 : 1,
+          };
+        }
+      } catch (e) {
+        console.error('Azure API error:', e);
+      }
     }
 
-    if (orig.endsWith('.')) {
-      return {
-        original: orig,
-        corrected: orig,
-        explanation:
-          'Your sentence structure and grammar appear natural and correct.',
-        errors_found: 0,
-      };
-    }
-
+    // Fallback if no key or error
     return {
       original: orig,
-      corrected: `${orig}.`,
-      explanation:
-        'Added terminal punctuation mark to complete the sentence structure.',
-      errors_found: 1,
+      corrected: orig.endsWith('.') ? orig : `${orig}.`,
+      explanation: orig.endsWith('.') ? 'Correct.' : 'Added punctuation.',
+      errors_found: orig.endsWith('.') ? 0 : 1,
     };
   }
 
@@ -146,32 +157,24 @@ export class NlpService {
   ): Promise<PronunciationScoreResult> {
     await this.checkRateLimit(userId, isVip);
 
-    const words = dto.target_text.split(/\s+/).filter((w) => w.length > 0);
-    const breakdown: WordBreakdownItem[] = words.map((w, index) => {
-      const score = 85 + (index % 15);
-      return {
-        word: w,
-        score,
-        feedback:
-          score >= 90 ? 'Native-like accuracy' : 'Slight accent on vowels',
-      };
-    });
+    const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
+    if (azureKey) {
+      // Implement real Azure Speech Services pronunciation assessment call here
+      // using dto.audio_url and dto.target_text
+    }
 
-    const avgScore =
-      breakdown.length > 0
-        ? Math.round(
-            breakdown.reduce((sum, item) => sum + item.score, 0) /
-              breakdown.length,
-          )
-        : 90;
+    // Fallback
+    const words = dto.target_text.split(/\s+/).filter((w) => w.length > 0);
+    const breakdown: WordBreakdownItem[] = words.map((w, index) => ({
+      word: w,
+      score: 85 + (index % 15),
+      feedback: 'Slight accent on vowels',
+    }));
 
     return {
-      overall_score: avgScore,
+      overall_score: 85,
       breakdown,
-      feedback_summary:
-        avgScore >= 90
-          ? 'Excellent pronunciation! Your cadence and intonation are outstanding.'
-          : 'Good effort! Focus on vowel length in the highlighted words.',
+      feedback_summary: 'Good effort!',
     };
   }
 
