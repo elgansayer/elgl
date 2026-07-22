@@ -154,7 +154,7 @@
 - [STUCK] Build "Restore Purchases" button for app store compliance.
 
 ## Phase 19: Gamification & Study Streaks
-- [ ] Build Daily Study Streak counter widget on home screen.
+- [STUCK] Build Daily Study Streak counter widget on home screen.
 - [ ] Implement NestJS CRON job to reset streaks if inactive for 24 hours.
 - [ ] Build "Top Corrector" community leaderboard.
 
