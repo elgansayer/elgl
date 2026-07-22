@@ -1,369 +1,363 @@
-<div class="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
-  <!-- Header & Filter Tabs -->
-  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-700">
-    <div>
-      <h2 class="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-        <span>🌐 Global Moments Feed</span>
-      </h2>
-      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-        Explore language moments from learners worldwide. Tap any word to translate & save, listen to native audio, or submit community corrections.
-      </p>
+<div class="mx-auto max-w-2xl space-y-4">
+  <section class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-4 pb-4 shadow-sm">
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <h1 class="text-lg font-black text-slate-900">Moments</h1>
+        <p class="text-xs text-slate-500">Share, correct, and learn in public.</p>
+      </div>
+      <a
+        routerLink="/visitors"
+        class="rounded-xl bg-slate-100 ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-slate-700"
+      >
+        👀 Visitors
+      </a>
     </div>
 
-    <div class="flex rounded-2xl bg-slate-100 dark:bg-slate-700 p-1.5 gap-1 self-start">
+    <div class="mt-3 inline-flex rounded-full bg-slate-100 ps-1 pe-1 pt-1 pb-1">
       <button
         (click)="setFilter('All')"
-        class="px-4 py-2 rounded-xl text-xs font-bold transition-all"
-        [ngClass]="momentsStore.activeFilter() === 'All' ? 'bg-white dark:bg-slate-800 text-primary shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'"
+        class="rounded-full ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold transition-colors"
+        [ngClass]="
+          momentsStore.activeFilter() === 'All'
+            ? 'bg-white text-primary shadow-sm'
+            : 'text-slate-500'
+        "
       >
-        🌍 All
+        All
       </button>
       <button
         (click)="setFilter('Classmates')"
-        class="px-4 py-2 rounded-xl text-xs font-bold transition-all"
-        [ngClass]="momentsStore.activeFilter() === 'Classmates' ? 'bg-white dark:bg-slate-800 text-primary shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'"
+        class="rounded-full ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold transition-colors"
+        [ngClass]="
+          momentsStore.activeFilter() === 'Classmates'
+            ? 'bg-white text-primary shadow-sm'
+            : 'text-slate-500'
+        "
       >
-        🎓 Classmates (Same Lang)
+        Classmates
       </button>
       <button
         (click)="setFilter('Following')"
-        class="px-4 py-2 rounded-xl text-xs font-bold transition-all"
-        [ngClass]="momentsStore.activeFilter() === 'Following' ? 'bg-white dark:bg-slate-800 text-primary shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'"
+        class="rounded-full ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold transition-colors"
+        [ngClass]="
+          momentsStore.activeFilter() === 'Following'
+            ? 'bg-white text-primary shadow-sm'
+            : 'text-slate-500'
+        "
       >
-        ⭐ Following
+        Following
       </button>
     </div>
-  </div>
+  </section>
 
-  <!-- Create Moment Box -->
-  <div class="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-700 space-y-4">
-    <div class="flex items-center justify-between">
-      <span class="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-2">
-        <span>✍️ Share a Language Moment</span>
-      </span>
-      <div class="flex items-center gap-2">
-        <label class="text-xs font-bold text-slate-500">Target Lang:</label>
-        <select [(ngModel)]="newTargetLanguage" class="px-2 py-1 border rounded-xl bg-slate-50 dark:bg-slate-700 text-xs font-bold">
-          <option value="es">🇪🇸 Spanish</option>
-          <option value="fr">🇫🇷 French</option>
-          <option value="ja">🇯🇵 Japanese</option>
-          <option value="de">🇩🇪 German</option>
-          <option value="en">🇬🇧 British English</option>
-          <option value="ar">🇸🇦 Arabic</option>
-        </select>
-      </div>
+  <section class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-4 pb-4 shadow-sm">
+    <div class="flex items-start gap-3">
+      <img
+        src="https://via.placeholder.com/80"
+        alt="my avatar"
+        class="h-10 w-10 rounded-full border border-slate-200 object-cover"
+      />
+      <textarea
+        [(ngModel)]="newText"
+        rows="3"
+        placeholder="Share what you are practising today..."
+        class="w-full rounded-2xl border border-slate-200 bg-slate-50 ps-3 pe-3 pt-3 pb-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+      ></textarea>
     </div>
 
-    <textarea
-      [(ngModel)]="newText"
-      rows="3"
-      placeholder="What are you practicing today? Share thoughts, ask questions, or record voice snippets..."
-      class="w-full p-3.5 border rounded-2xl bg-slate-50 dark:bg-slate-700/60 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
-    ></textarea>
+    @if (newMediaUrls.length > 0) {
+      <div class="mt-3 flex flex-wrap gap-2">
+        @for (url of newMediaUrls; track url; let i = $index) {
+          <div class="relative">
+            @if (newMediaType === 'images') {
+              <img
+                [src]="url"
+                alt="preview"
+                class="h-16 w-16 rounded-xl border border-slate-200 object-cover"
+              />
+            }
+            @if (newMediaType === 'audio') {
+              <audio [src]="url" controls class="h-8"></audio>
+            }
+            <button
+              (click)="removeMedia(i)"
+              class="absolute -top-2 -end-2 h-5 w-5 rounded-full bg-red-500 text-xs text-white"
+            >
+              ✕
+            </button>
+          </div>
+        }
+      </div>
+    }
 
-    <!-- Uploaded Media Grid -->
-    <div *ngIf="newMediaUrls.length > 0" class="flex flex-wrap gap-2 pt-2">
-      <div *ngFor="let url of newMediaUrls; let i = index" class="relative group">
-        <div *ngIf="newMediaType === 'images'" class="w-20 h-20 rounded-xl overflow-hidden border border-slate-300 bg-slate-100">
-          <img [src]="url" alt="Preview" class="w-full h-full object-cover" />
-        </div>
-        <div *ngIf="newMediaType === 'audio'" class="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-xl flex items-center gap-2">
-          <audio [src]="url" controls class="h-8 max-w-[200px]"></audio>
-        </div>
+    <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <input
+          type="text"
+          [(ngModel)]="tempImageUrlInput"
+          placeholder="Image URL"
+          class="rounded-xl border border-slate-200 bg-slate-50 ps-3 pe-3 pt-2 pb-2 text-xs"
+        />
         <button
-          (click)="removeMedia(i)"
-          class="absolute -top-1.5 -end-1.5 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow"
-        >✕</button>
-      </div>
-    </div>
-
-    <!-- Media input tools -->
-    <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-700">
-      <div class="flex items-center gap-2">
-        <div class="flex items-center gap-1">
-          <input
-            type="text"
-            [(ngModel)]="tempImageUrlInput"
-            placeholder="Image URL..."
-            class="px-2.5 py-1.5 border rounded-xl text-xs w-36 bg-slate-50 dark:bg-slate-700"
-          />
-          <button
-            (click)="addTempImageUrl()"
-            class="px-2.5 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 rounded-xl text-xs font-bold"
-          >+ Image</button>
-        </div>
-
+          (click)="addTempImageUrl()"
+          class="rounded-xl bg-slate-100 ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-slate-700"
+        >
+          Add image
+        </button>
         <button
           (click)="showVoiceRecorder.set(true)"
-          class="px-3 py-1.5 bg-red-100 dark:bg-red-900/40 hover:bg-red-200 text-red-800 dark:text-red-300 rounded-xl text-xs font-bold flex items-center gap-1"
+          class="rounded-xl bg-red-50 ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-red-700"
         >
-          <span>🎙️ Add 60s Voice Clip</span>
+          Add voice
         </button>
       </div>
-
       <button
         [disabled]="isCreating()"
         (click)="submitMoment()"
-        class="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-2xl font-bold text-sm shadow transition-all flex items-center gap-2"
+        class="rounded-xl bg-primary ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold text-white shadow-sm disabled:opacity-50"
       >
-        <span>{{ isCreating() ? 'Publishing...' : '🚀 Publish Moment' }}</span>
+        {{ isCreating() ? 'Posting...' : 'Post moment' }}
       </button>
     </div>
-  </div>
+  </section>
 
-  <!-- Voice Recorder Modal -->
-  <div *ngIf="showVoiceRecorder()" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-    <app-voice-recorder
-      (audioUploaded)="onVoiceUploaded($event)"
-      (cancelled)="showVoiceRecorder.set(false)"
-    ></app-voice-recorder>
-  </div>
+  @if (showVoiceRecorder()) {
+    <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <app-voice-recorder
+        (audioUploaded)="onVoiceUploaded($event)"
+        (cancelled)="showVoiceRecorder.set(false)"
+      ></app-voice-recorder>
+    </div>
+  }
 
-  <!-- Loading State -->
-  <div *ngIf="momentsStore.isLoading()" class="flex justify-center items-center py-16">
-    <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
-  </div>
-
-  <!-- Empty Feed State -->
-  <div *ngIf="!momentsStore.isLoading() && momentsStore.feed().length === 0" class="text-center py-16 text-slate-400 bg-white dark:bg-slate-800 rounded-3xl p-8 border">
-    <span class="text-5xl block mb-3">📭</span>
-    <h3 class="font-bold text-lg text-slate-800 dark:text-slate-200">No Moments found here yet</h3>
-    <p class="text-sm mt-1">Be the first to share a post in this feed category!</p>
-  </div>
-
-  <!-- Moments Feed List -->
-  <div class="space-y-6">
+  @if (momentsStore.isLoading()) {
     <div
-      *ngFor="let moment of momentsStore.feed()"
-      class="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border overflow-hidden transition-all"
-      [ngClass]="moment.is_pinned ? 'border-2 border-amber-400 dark:border-amber-500 bg-amber-50/20 dark:bg-amber-950/10' : 'border-slate-100 dark:border-slate-700'"
+      class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-10 pb-10 text-center text-sm text-slate-500"
     >
-      <!-- VIP Pinned Banner -->
-      <div *ngIf="moment.is_pinned" class="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-6 py-1.5 text-xs font-black uppercase tracking-wider flex items-center justify-between">
-        <span>📌 Pinned Highlight (VIP Subscriber feature - 8 UKP / $10 USD/mo)</span>
-      </div>
+      Loading moments...
+    </div>
+  }
 
-      <div class="p-6 space-y-4">
-        <!-- Author info & actions -->
-        <div class="flex items-center justify-between">
+  @if (!momentsStore.isLoading() && momentsStore.feed().length === 0) {
+    <div class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-10 pb-10 text-center">
+      <p class="text-sm font-semibold text-slate-700">No moments yet in this feed.</p>
+    </div>
+  }
+
+  @for (moment of momentsStore.feed(); track moment) {
+    <article
+      class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-all"
+      [ngClass]="moment.is_pinned ? 'ring-2 ring-amber-300' : ''"
+    >
+      @if (moment.is_pinned) {
+        <div class="bg-amber-100 text-amber-900 ps-4 pe-4 pt-1.5 pb-1.5 text-[11px] font-bold">
+          Pinned moment (VIP 8 UKP / $10 USD)
+        </div>
+      }
+      <div class="ps-4 pe-4 pt-4 pb-4 space-y-3">
+        <div class="flex items-center justify-between gap-3">
           <div class="flex items-center gap-3">
             <img
               [src]="moment.author?.avatar_url || 'https://via.placeholder.com/80'"
-              alt="Avatar"
-              class="w-11 h-11 rounded-full object-cover border border-slate-200 dark:border-slate-600"
+              alt="avatar"
+              class="h-10 w-10 rounded-full border border-slate-200 object-cover"
             />
             <div>
-              <div class="flex items-center gap-2">
-                <span class="font-extrabold text-slate-900 dark:text-white text-base">{{ moment.author?.display_name }}</span>
-                <span class="text-xs uppercase bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">
-                  {{ moment.target_language }}
-                </span>
-              </div>
-              <span class="text-[11px] text-slate-400">{{ moment.created_at | date:'medium' }}</span>
+              <p class="text-sm font-bold text-slate-900">
+                {{ moment.author?.display_name || 'Member' }}
+              </p>
+              <p class="text-[11px] text-slate-500">{{ moment.created_at | date: 'short' }}</p>
             </div>
           </div>
-
-          <div class="flex items-center gap-2">
-            <!-- Pin button if author/VIP -->
+          @if (moment.user_id === authService.currentUser()?.id) {
             <button
-              *ngIf="moment.user_id === authService.currentUser()?.id"
               (click)="momentsStore.togglePin(moment.id)"
-              class="px-2.5 py-1 rounded-xl text-xs font-bold transition-colors border"
-              [ngClass]="moment.is_pinned ? 'bg-amber-500 text-white border-amber-600' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-300'"
-              title="Pin/Unpin Moment (VIP exclusively)"
+              class="rounded-xl bg-slate-100 ps-2.5 pe-2.5 pt-1.5 pb-1.5 text-[11px] font-bold text-slate-700"
             >
-              {{ moment.is_pinned ? '📌 Unpin' : '📌 Pin (VIP)' }}
+              {{ moment.is_pinned ? 'Unpin' : 'Pin' }}
             </button>
-          </div>
+          }
         </div>
-
-        <!-- Tokenised Text Content for LingQ Click-to-Translate per Rule 3 -->
-        <div *ngIf="moment.text_content" class="text-slate-800 dark:text-slate-100 pt-1">
-          <app-tokenised-text
-            [text]="moment.text_content"
-            [language]="moment.target_language"
-            (wordClicked)="onWordClicked($event)"
-          ></app-tokenised-text>
-        </div>
-
-        <!-- Multi-Modal Media Rendering (Images / Audio) -->
-        <div *ngIf="moment.media_urls && moment.media_urls.length > 0" class="pt-2">
-          <div *ngIf="moment.media_type === 'images'" class="grid gap-2" [ngClass]="{'grid-cols-1': moment.media_urls.length === 1, 'grid-cols-2': moment.media_urls.length === 2, 'grid-cols-3': moment.media_urls.length >= 3}">
-            <div *ngFor="let url of moment.media_urls" class="rounded-2xl overflow-hidden max-h-80 border border-slate-200 dark:border-slate-700">
-              <img [src]="url" alt="Moment image" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
-            </div>
-          </div>
-
-          <div *ngIf="moment.media_type === 'audio'" class="bg-purple-50 dark:bg-purple-950/30 p-4 rounded-2xl border border-purple-200 dark:border-purple-800">
-            <span class="text-xs font-bold text-purple-900 dark:text-purple-300 block mb-2">🎙️ Spoken Audio Note (60s clip)</span>
-            <audio [src]="moment.media_urls[0]" controls class="w-full"></audio>
-          </div>
-        </div>
-
-        <!-- Inline Translation & Audio Tools -->
-        <div class="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700 text-xs">
-          <div class="flex items-center gap-2">
-            <app-text-to-speech
-              *ngIf="moment.text_content"
-              [text]="moment.text_content"
+        @if (moment.text_content) {
+          <div class="space-y-1.5">
+            <app-tokenised-text
+              [text]="getMomentDisplayText(moment)"
               [language]="moment.target_language"
-            ></app-text-to-speech>
-
-            <button
-              *ngIf="moment.text_content"
-              (click)="toggleInlineTranslation(moment)"
-              class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-xl font-bold text-slate-700 dark:text-slate-200 transition-colors"
-            >
-              <span>{{ moment.translatedText ? '👁️ Hide Translation' : '🌐 Translate' }}</span>
-            </button>
-
-            <button
-              *ngIf="moment.text_content"
-              (click)="saveMomentSentenceToLingq(moment)"
-              class="px-2.5 py-1 bg-amber-500/90 hover:bg-amber-500 text-white rounded-xl font-bold transition-colors shadow-sm"
-              title="Save entire post to your LingQ Spaced Repetition Deck"
-            >
-              <span>📚 Save to LingQ</span>
-            </button>
+              (wordClicked)="onWordClicked($event)"
+            ></app-tokenised-text>
+            @if (isMomentLong(moment)) {
+              <button
+                (click)="toggleMomentExpansion(moment.id)"
+                class="text-xs font-semibold text-primary"
+              >
+                {{ expandedMomentIds().has(moment.id) ? 'Show less' : 'Show more' }}
+              </button>
+            }
           </div>
-
-          <!-- Likes & Comments Counts -->
-          <div class="flex items-center gap-4 font-bold">
+        }
+        @if (moment.media_urls && moment.media_urls.length > 0) {
+          <div>
+            @if (moment.media_type === 'images') {
+              <div class="grid grid-cols-3 gap-2">
+                @for (url of moment.media_urls; track url) {
+                  <img
+                    [src]="url"
+                    alt="moment media"
+                    class="h-24 w-full rounded-xl border border-slate-200 object-cover"
+                  />
+                }
+              </div>
+            }
+            @if (moment.media_type === 'audio') {
+              <audio [src]="moment.media_urls[0]" controls class="w-full"></audio>
+            }
+          </div>
+        }
+        @if (moment.translatedText) {
+          <div
+            class="rounded-2xl border border-blue-200 bg-blue-50 ps-3 pe-3 pt-2 pb-2 text-sm text-blue-900"
+          >
+            {{ moment.translatedText }}
+          </div>
+        }
+        <div
+          class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3"
+        >
+          <div class="flex flex-wrap items-center gap-2">
             <button
               (click)="momentsStore.toggleLike(moment.id)"
-              class="flex items-center gap-1.5 transition-transform hover:scale-110 px-3 py-1 rounded-xl"
-              [ngClass]="moment.is_liked_by_me ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'"
+              class="rounded-xl bg-slate-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-slate-700"
             >
-              <span>{{ moment.is_liked_by_me ? '❤️' : '🤍' }}</span>
-              <span>{{ moment.likes_count }}</span>
+              {{ moment.is_liked_by_me ? '❤️' : '🤍' }} {{ moment.likes_count }}
             </button>
-
             <button
               (click)="toggleComments(moment)"
-              class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 px-3 py-1 rounded-xl transition-colors"
+              class="rounded-xl bg-slate-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-slate-700"
             >
-              <span>💬</span>
-              <span>{{ moment.comments_count }} Comments</span>
+              💬 {{ moment.comments_count }}
             </button>
+            @if (moment.text_content) {
+              <button
+                (click)="toggleInlineTranslation(moment)"
+                class="rounded-xl bg-slate-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-slate-700"
+              >
+                {{ moment.translatedText ? 'Hide translation' : 'Translate' }}
+              </button>
+            }
+            @if (moment.text_content) {
+              <button
+                (click)="copyMomentText(moment)"
+                class="rounded-xl bg-slate-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-slate-700"
+              >
+                Copy
+              </button>
+            }
+            @if (moment.text_content) {
+              <app-text-to-speech
+                [text]="moment.text_content"
+                [language]="moment.target_language"
+              ></app-text-to-speech>
+            }
           </div>
-        </div>
-
-        <!-- Display Inline Translation -->
-        <div *ngIf="moment.translatedText" class="bg-blue-50 dark:bg-blue-950/30 p-3.5 rounded-2xl border border-blue-200 dark:border-blue-800 animate-fadeIn text-sm">
-          <span class="text-xs font-bold text-blue-900 dark:text-blue-300 uppercase block mb-1">Inline Translation (DeepL / Azure Engine):</span>
-          <p class="font-semibold text-slate-900 dark:text-white">{{ moment.translatedText }}</p>
+          @if (moment.text_content) {
+            <button
+              (click)="saveMomentSentenceToLingq(moment)"
+              class="rounded-xl bg-amber-500 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-white"
+            >
+              Save to LingQ
+            </button>
+          }
         </div>
       </div>
-
-      <!-- Comments & Correction Accordion -->
-      <div *ngIf="openCommentsMap().has(moment.id)" class="bg-slate-50 dark:bg-slate-900/50 p-6 border-t border-slate-200 dark:border-slate-700 space-y-4 animate-fadeIn">
-        <h4 class="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center justify-between">
-          <span>💬 Community Comments & Corrections</span>
+      @if (openCommentsMap().has(moment.id)) {
+        <div class="border-t border-slate-100 bg-slate-50 ps-4 pe-4 pt-4 pb-4 space-y-3">
           <button
             (click)="correctionModeMap[moment.id] = !correctionModeMap[moment.id]"
-            class="px-3 py-1 rounded-xl text-xs font-extrabold transition-colors"
-            [ngClass]="correctionModeMap[moment.id] ? 'bg-amber-400 text-amber-950' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300'"
+            class="rounded-xl bg-slate-200 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-slate-700"
           >
-            {{ correctionModeMap[moment.id] ? '💬 Switch to Normal Comment' : '✏️ Suggest Correction' }}
+            {{ correctionModeMap[moment.id] ? 'Normal comment' : 'Correction mode' }}
           </button>
-        </h4>
-
-        <!-- Existing Comments -->
-        <div class="space-y-3 max-h-96 overflow-y-auto pr-1">
-          <div *ngIf="!moment.comments || moment.comments.length === 0" class="text-xs text-slate-400 py-3 text-center">
-            No comments yet. Help a language partner out by submitting feedback or a grammar correction!
-          </div>
-
-          <div
-            *ngFor="let comment of moment.comments"
-            class="p-3.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 space-y-2"
-          >
-            <div class="flex items-center justify-between text-xs font-bold">
-              <div class="flex items-center gap-2">
-                <img [src]="comment.author?.avatar_url || 'https://via.placeholder.com/40'" class="w-6 h-6 rounded-full object-cover" />
-                <span class="text-slate-800 dark:text-slate-200">{{ comment.author?.display_name || 'Community Member' }}</span>
+          @for (comment of moment.comments || []; track comment) {
+            <div class="rounded-2xl border border-slate-200 bg-white ps-3 pe-3 pt-3 pb-3">
+              <div class="mb-2 flex items-center justify-between">
+                <p class="text-xs font-semibold text-slate-700">
+                  {{ comment.author?.display_name || 'Member' }}
+                </p>
+                <p class="text-[11px] text-slate-400">
+                  {{ comment.created_at | date: 'shortTime' }}
+                </p>
               </div>
-              <span class="text-[10px] text-slate-400">{{ comment.created_at | date:'shortTime' }}</span>
+              @if (comment.text_content) {
+                <p class="text-sm text-slate-700">{{ comment.text_content }}</p>
+              }
+              @if (comment.correction_payload) {
+                <app-visual-diff
+                  [original]="comment.correction_payload.original"
+                  [corrected]="comment.correction_payload.corrected"
+                  [explanation]="comment.correction_payload.explanation"
+                ></app-visual-diff>
+              }
             </div>
-
-            <!-- Standard text comment -->
-            <p *ngIf="comment.text_content" class="text-sm text-slate-700 dark:text-slate-300 pl-8">
-              {{ comment.text_content }}
-            </p>
-
-            <!-- Visual Diff Community Correction per Phase 5 spec -->
-            <div *ngIf="comment.correction_payload" class="pl-8 pt-1">
-              <app-visual-diff
-                [original]="comment.correction_payload.original"
-                [corrected]="comment.correction_payload.corrected"
-                [explanation]="comment.correction_payload.explanation"
-              ></app-visual-diff>
+          }
+          @if (!correctionModeMap[moment.id]) {
+            <div class="flex items-center gap-2">
+              <input
+                type="text"
+                [(ngModel)]="commentInputMap[moment.id]"
+                (keyup.enter)="submitComment(moment)"
+                placeholder="Write a comment"
+                class="flex-1 rounded-xl border border-slate-200 bg-white ps-3 pe-3 pt-2 pb-2 text-sm"
+              />
+              <button
+                (click)="submitComment(moment)"
+                class="rounded-xl bg-primary ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-white"
+              >
+                Post
+              </button>
             </div>
-          </div>
-        </div>
-
-        <!-- Add Comment Form -->
-        <div class="pt-2">
-          <!-- Normal comment box -->
-          <div *ngIf="!correctionModeMap[moment.id]" class="flex items-center gap-2">
-            <input
-              type="text"
-              [(ngModel)]="commentInputMap[moment.id]"
-              (keyup.enter)="submitComment(moment)"
-              placeholder="Write a comment..."
-              class="flex-1 px-3.5 py-2 border rounded-xl bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary"
-            />
-            <button
-              (click)="submitComment(moment)"
-              class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold text-xs shadow"
+          }
+          @if (correctionModeMap[moment.id]) {
+            <div
+              class="space-y-2 rounded-2xl border border-amber-200 bg-amber-50 ps-3 pe-3 pt-3 pb-3"
             >
-              Post
-            </button>
-          </div>
-
-          <!-- Structured correction form per Phase 5 spec -->
-          <div *ngIf="correctionModeMap[moment.id]" class="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-2xl border border-amber-300 dark:border-amber-800 space-y-3">
-            <span class="text-xs font-extrabold text-amber-900 dark:text-amber-300 block">✏️ Submit a Structured Community Correction</span>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <input
                 type="text"
                 [(ngModel)]="correctionOriginalMap[moment.id]"
-                placeholder="Original (With error)..."
-                class="w-full px-3 py-1.5 border rounded-xl bg-white dark:bg-slate-800 text-xs"
+                placeholder="Original sentence"
+                class="w-full rounded-xl border border-amber-200 bg-white ps-3 pe-3 pt-2 pb-2 text-sm"
               />
               <input
                 type="text"
                 [(ngModel)]="correctionCorrectedMap[moment.id]"
-                placeholder="Corrected phrase..."
-                class="w-full px-3 py-1.5 border rounded-xl bg-white dark:bg-slate-800 text-xs font-bold text-emerald-700 dark:text-emerald-400"
+                placeholder="Corrected sentence"
+                class="w-full rounded-xl border border-amber-200 bg-white ps-3 pe-3 pt-2 pb-2 text-sm"
               />
-            </div>
-            <input
-              type="text"
-              [(ngModel)]="correctionExplanationMap[moment.id]"
-              placeholder="Explanation (e.g., Grammar rule, native phrasing nuance)..."
-              class="w-full px-3 py-1.5 border rounded-xl bg-white dark:bg-slate-800 text-xs"
-            />
-            <div class="flex justify-end gap-2">
+              <input
+                type="text"
+                [(ngModel)]="correctionExplanationMap[moment.id]"
+                placeholder="Explanation"
+                class="w-full rounded-xl border border-amber-200 bg-white ps-3 pe-3 pt-2 pb-2 text-sm"
+              />
               <button
                 (click)="submitComment(moment)"
-                class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow"
+                class="rounded-xl bg-emerald-600 ps-4 pe-4 pt-2 pb-2 text-xs font-bold text-white"
               >
-                Send Correction
+                Send correction
               </button>
             </div>
-          </div>
+          }
         </div>
-      </div>
-    </div>
-  </div>
+      }
+    </article>
+  }
 
-  <!-- Word Definition Modal when any word token in a Moment is clicked -->
-  <div *ngIf="activeWordToken() as token">
-    <app-word-definition-modal
-      [wordToken]="token"
-      [contextSentence]="activeWordContext()"
-      (closed)="activeWordToken.set(null)"
-    ></app-word-definition-modal>
-  </div>
+  @if (activeWordToken(); as token) {
+    <div>
+      <app-word-definition-modal
+        [wordToken]="token"
+        [contextSentence]="activeWordContext()"
+        (closed)="activeWordToken.set(null)"
+      ></app-word-definition-modal>
+    </div>
+  }
 </div>

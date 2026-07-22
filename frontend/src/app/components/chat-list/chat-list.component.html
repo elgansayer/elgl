@@ -1,0 +1,122 @@
+<div class="mx-auto max-w-2xl space-y-4">
+  <section class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-4 pb-4 shadow-sm">
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <h1 class="text-lg font-black text-slate-900">Chats</h1>
+        <p class="text-xs text-slate-500">Open your active language conversations.</p>
+      </div>
+      <a
+        routerLink="/chat/global-exchange"
+        class="rounded-xl bg-primary ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-white"
+      >
+        Open global room
+      </a>
+    </div>
+
+    <input
+      [ngModel]="search()"
+      (ngModelChange)="search.set($event)"
+      type="text"
+      placeholder="Search chats"
+      class="mt-3 w-full rounded-xl border border-slate-200 bg-slate-50 ps-3 pe-3 pt-2.5 pb-2.5 text-sm"
+    />
+  </section>
+
+  @if (isLoading()) {
+    <div
+      class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-10 pb-10 text-center text-sm text-slate-500"
+    >
+      Loading chats...
+    </div>
+  }
+
+  @if (!isLoading() && filteredPreviews().length === 0) {
+    <div
+      class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-10 pb-10 text-center text-sm text-slate-600"
+    >
+      No chat previews match your search.
+    </div>
+  }
+
+  @if (!isLoading() && pinnedPreviews().length > 0) {
+    <section class="space-y-2">
+      <p class="ps-1 text-xs font-bold uppercase tracking-wide text-slate-500">Pinned chats</p>
+      @for (preview of pinnedPreviews(); track preview) {
+        <a
+          [routerLink]="['/chat', preview.id]"
+          class="block rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-4 pb-4 shadow-sm transition-all hover:border-primary/40 hover:shadow"
+        >
+          <div class="flex items-center justify-between gap-3">
+            <div class="min-w-0 flex items-center gap-3">
+              <span
+                class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-sm"
+                >{{ preview.avatar }}</span
+              >
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <p class="truncate text-sm font-bold text-slate-900">{{ preview.title }}</p>
+                  @if (preview.isOnline) {
+                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                  }
+                  @if (preview.unreadCount > 0) {
+                    <span
+                      class="rounded-full bg-red-500 ps-2 pe-2 pt-0.5 pb-0.5 text-[10px] font-bold text-white"
+                    >
+                      {{ preview.unreadCount }}
+                    </span>
+                  }
+                </div>
+                <p class="truncate text-[11px] text-slate-500">{{ preview.subtitle }}</p>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-400">
+              {{ preview.lastMessageAt ? (preview.lastMessageAt | date: 'shortTime') : '' }}
+            </p>
+          </div>
+          <p class="mt-2 truncate text-sm text-slate-700">{{ preview.lastMessageText }}</p>
+        </a>
+      }
+    </section>
+  }
+
+  @if (!isLoading() && regularPreviews().length > 0) {
+    <section class="space-y-2">
+      <p class="ps-1 text-xs font-bold uppercase tracking-wide text-slate-500">All chats</p>
+      @for (preview of regularPreviews(); track preview) {
+        <a
+          [routerLink]="['/chat', preview.id]"
+          class="block rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-4 pb-4 shadow-sm transition-all hover:border-primary/40 hover:shadow"
+        >
+          <div class="flex items-center justify-between gap-3">
+            <div class="min-w-0 flex items-center gap-3">
+              <span
+                class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-sm"
+                >{{ preview.avatar }}</span
+              >
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <p class="truncate text-sm font-bold text-slate-900">{{ preview.title }}</p>
+                  @if (preview.isOnline) {
+                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                  }
+                  @if (preview.unreadCount > 0) {
+                    <span
+                      class="rounded-full bg-red-500 ps-2 pe-2 pt-0.5 pb-0.5 text-[10px] font-bold text-white"
+                    >
+                      {{ preview.unreadCount }}
+                    </span>
+                  }
+                </div>
+                <p class="truncate text-[11px] text-slate-500">{{ preview.subtitle }}</p>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-400">
+              {{ preview.lastMessageAt ? (preview.lastMessageAt | date: 'shortTime') : '' }}
+            </p>
+          </div>
+          <p class="mt-2 truncate text-sm text-slate-700">{{ preview.lastMessageText }}</p>
+        </a>
+      }
+    </section>
+  }
+</div>

@@ -1,214 +1,216 @@
-<div class="max-w-5xl mx-auto p-4 md:p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-xl mt-4 md:mt-6 border border-slate-100 dark:border-slate-700 flex flex-col h-[82vh]">
-  <!-- Header & Search -->
-  <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-4 mb-4 gap-4">
+<div
+  class="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-4 pb-4 shadow-sm h-[78vh] flex flex-col"
+>
+  <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
     <div class="flex items-center gap-3">
-      <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary text-2xl font-bold">
+      <div
+        class="h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center"
+      >
         💬
       </div>
       <div>
-        <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <span>Room: {{ roomId }}</span>
-          <span
-            class="text-xs px-2 py-0.5 rounded-full font-extrabold"
-            [ngClass]="centrifugeService.isConnected() ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'"
-          >
-            {{ centrifugeService.isConnected() ? '● Centrifugo Live' : '○ Connecting...' }}
-          </span>
-        </h2>
-        <p class="text-xs text-slate-500 dark:text-slate-400">Click any word to translate & save to LingQ SRS deck. Real-time chat with typing indicators.</p>
+        <h1 class="text-lg font-black text-slate-900">{{ roomId }}</h1>
+        <p
+          class="text-xs"
+          [ngClass]="centrifugeService.isConnected() ? 'text-emerald-600' : 'text-amber-600'"
+        >
+          {{ centrifugeService.isConnected() ? 'Live now' : 'Connecting...' }}
+        </p>
       </div>
     </div>
-
     <div class="flex items-center gap-2">
       <input
         type="text"
         [(ngModel)]="searchQuery"
         (keyup.enter)="onSearch()"
-        placeholder="🔍 Search messages..."
-        class="px-3.5 py-1.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-sm focus:ring-2 focus:ring-primary w-full sm:w-60"
+        placeholder="Search"
+        class="w-32 sm:w-44 rounded-xl border border-slate-200 bg-slate-50 ps-3 pe-3 pt-2 pb-2 text-xs"
       />
-      <button (click)="onSearch()" class="px-3.5 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-bold">
+      <button
+        (click)="onSearch()"
+        class="rounded-xl bg-slate-100 ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-slate-700"
+      >
         Search
       </button>
     </div>
   </div>
 
-  <!-- Messages Scroll Area -->
-  <div class="flex-1 overflow-y-auto space-y-4 p-2 md:p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 mb-4">
-    <div *ngIf="isLoading()" class="flex justify-center items-center py-16">
-      <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
-    </div>
+  <div
+    class="mt-3 flex-1 overflow-y-auto rounded-2xl border border-slate-100 bg-slate-50 ps-2 pe-2 pt-2 pb-2 space-y-2"
+  >
+    @if (isLoading()) {
+      <div class="pt-10 text-center text-sm text-slate-500">Loading messages...</div>
+    }
+    @if (!isLoading() && messages().length === 0) {
+      <div class="pt-10 text-center text-sm text-slate-500">No messages yet.</div>
+    }
 
-    <div *ngIf="!isLoading() && messages().length === 0" class="text-center py-16 text-slate-400">
-      <span class="text-4xl block mb-2">📬</span>
-      <p class="font-medium">No messages in this room yet. Break the ice!</p>
-    </div>
-
-    <!-- Message Bubble -->
-    <div
-      *ngFor="let msg of messages()"
-      class="flex gap-3 items-start"
-      [ngClass]="{'flex-row-reverse': msg.sender_id === authService.currentUser()?.id}"
-    >
-      <img
-        [src]="msg.sender?.avatar_url || 'https://via.placeholder.com/80'"
-        alt="Avatar"
-        class="w-10 h-10 rounded-full object-cover border border-slate-300 dark:border-slate-600 flex-shrink-0"
-      />
-
+    @for (msg of messages(); track msg) {
       <div
-        class="max-w-[80%] sm:max-w-[70%] rounded-2xl p-4 shadow-sm relative group transition-all"
-        [ngClass]="msg.sender_id === authService.currentUser()?.id ? 'bg-primary text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-none border border-slate-200 dark:border-slate-700'"
+        class="flex gap-2"
+        [ngClass]="
+          msg.sender_id === authService.currentUser()?.id ? 'justify-end' : 'justify-start'
+        "
       >
-        <div class="flex items-center justify-between gap-4 mb-1 text-xs opacity-75 font-semibold">
-          <span>{{ msg.sender?.display_name || 'Partner' }}</span>
-          <span>{{ msg.created_at | date:'shortTime' }}</span>
-        </div>
-
-        <!-- Tokenised Text Message per Rule 3 LingQ Engine -->
-        <div *ngIf="msg.message_type === 'text' && msg.text_content" class="leading-relaxed">
-          <app-tokenised-text
-            [text]="msg.text_content"
-            (wordClicked)="onWordClicked($event)"
-          ></app-tokenised-text>
-        </div>
-
-        <!-- Correction Payload -->
-        <div *ngIf="msg.message_type === 'correction' && msg.correction_payload">
-          <app-visual-diff
-            [original]="msg.correction_payload.original"
-            [corrected]="msg.correction_payload.corrected"
-            [explanation]="msg.correction_payload.explanation"
-          ></app-visual-diff>
-        </div>
-
-        <!-- Doodle Canvas Image -->
-        <div *ngIf="msg.message_type === 'doodle' && msg.media_url" class="mt-1">
-          <img [src]="msg.media_url" alt="Doodle" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white max-h-60 w-auto shadow-sm" />
-          <p *ngIf="msg.text_content" class="text-xs opacity-80 mt-1.5">{{ msg.text_content }}</p>
-        </div>
-
-        <!-- Voice Note Audio Player -->
-        <div *ngIf="msg.message_type === 'voice' && msg.media_url" class="mt-1">
-          <audio [src]="msg.media_url" controls class="w-full min-w-[240px] rounded-lg"></audio>
-          <p *ngIf="msg.text_content" class="text-xs opacity-80 mt-1.5">{{ msg.text_content }}</p>
-        </div>
-
-        <!-- Action / Bookmark / Save Sentence buttons -->
-        <div class="absolute top-2 end-2 opacity-0 group-hover:opacity-100 flex items-center gap-1.5 transition-opacity">
-          <button
-            *ngIf="msg.message_type === 'text' && msg.text_content"
-            (click)="saveSentenceToLingq(msg)"
-            class="p-1.5 bg-amber-500/90 hover:bg-amber-500 text-white rounded-lg text-xs font-bold shadow"
-            title="Save entire sentence to LingQ SRS Deck"
-          >
-            📚 Save Sentence
-          </button>
-          <button
-            (click)="bookmark(msg)"
-            class="p-1.5 bg-black/30 hover:bg-black/50 text-white rounded-lg text-xs font-bold shadow"
-            title="Bookmark to Favourites"
-          >
-            ⭐ Save
-          </button>
+        <div
+          class="max-w-[80%] rounded-2xl ps-3 pe-3 pt-2.5 pb-2.5 text-sm shadow-sm transition-colors"
+          [ngClass]="
+            msg.sender_id === authService.currentUser()?.id
+              ? 'bg-primary text-white'
+              : 'bg-white border border-slate-200 text-slate-800'
+          "
+        >
+          <p class="mb-1 text-[11px] opacity-70">
+            {{ msg.sender?.display_name || 'Partner' }} · {{ msg.created_at | date: 'shortTime' }}
+          </p>
+          @if (msg.message_type === 'text' && msg.text_content) {
+            <app-tokenised-text
+              [text]="msg.text_content"
+              (wordClicked)="onWordClicked($event)"
+            ></app-tokenised-text>
+          }
+          @if (msg.message_type === 'correction' && msg.correction_payload) {
+            <app-visual-diff
+              [original]="msg.correction_payload.original"
+              [corrected]="msg.correction_payload.corrected"
+              [explanation]="msg.correction_payload.explanation"
+            ></app-visual-diff>
+          }
+          @if (msg.message_type === 'doodle' && msg.media_url) {
+            <img
+              [src]="msg.media_url"
+              alt="doodle"
+              class="max-h-52 rounded-xl border border-slate-200"
+            />
+          }
+          @if (msg.message_type === 'voice' && msg.media_url) {
+            <audio [src]="msg.media_url" controls class="w-full min-w-52"></audio>
+          }
+          <div class="mt-2 flex items-center gap-1">
+            @if (msg.message_type === 'text' && msg.text_content) {
+              <button
+                (click)="saveSentenceToLingq(msg)"
+                class="rounded-lg bg-amber-500/90 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-white"
+              >
+                Save
+              </button>
+            }
+            <button
+              (click)="bookmark(msg)"
+              class="rounded-lg bg-black/20 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-white"
+            >
+              Fav
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    }
 
-    <!-- Typing Indicator -->
-    <div *ngIf="isTyping()" class="flex items-center gap-2 text-xs font-bold text-slate-500 animate-pulse px-3 py-1">
-      <span>💬 Someone is typing...</span>
-    </div>
-  </div>
-
-  <!-- Word Definition LingQ Modal -->
-  <div *ngIf="activeWordToken() as token">
-    <app-word-definition-modal
-      [wordToken]="token"
-      [contextSentence]="activeWordContext()"
-      (closed)="activeWordToken.set(null)"
-    ></app-word-definition-modal>
-  </div>
-
-  <!-- Interactive Action Modals -->
-  <div *ngIf="showDoodleModal()" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-    <app-doodle-pad
-      (doodleSaved)="onDoodleSaved($event)"
-      (cancelled)="showDoodleModal.set(false)"
-    ></app-doodle-pad>
-  </div>
-
-  <div *ngIf="showVoiceModal()" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-    <app-voice-recorder
-      (audioUploaded)="onVoiceUploaded($event)"
-      (cancelled)="showVoiceModal.set(false)"
-    ></app-voice-recorder>
-  </div>
-
-  <!-- Correction Form Drawer -->
-  <div *ngIf="showCorrectionForm()" class="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-2xl border border-amber-300 dark:border-amber-800 mb-3 space-y-3">
-    <div class="flex items-center justify-between">
-      <span class="text-sm font-bold text-amber-900 dark:text-amber-300 flex items-center gap-2">
-        <span>✏️ Suggest a Language Correction</span>
-      </span>
-      <button (click)="showCorrectionForm.set(false)" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
-    </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <div>
-        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Original Sentence (With errors)</label>
-        <input type="text" [(ngModel)]="originalText" placeholder="e.g. He go to store yesterday" class="w-full px-3 py-1.5 border rounded-xl bg-white dark:bg-slate-800 text-sm" />
+    @if (isTyping()) {
+      <div class="ps-2 pe-2 pt-1 pb-1 text-xs font-semibold text-slate-500">
+        Someone is typing...
       </div>
-      <div>
-        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Corrected Sentence</label>
-        <input type="text" [(ngModel)]="correctedText" placeholder="e.g. He went to the store yesterday" class="w-full px-3 py-1.5 border rounded-xl bg-white dark:bg-slate-800 text-sm" />
-      </div>
-    </div>
+    }
+  </div>
+
+  @if (activeWordToken(); as token) {
     <div>
-      <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Explanation (Optional)</label>
-      <input type="text" [(ngModel)]="explanationText" placeholder="e.g. Use past simple 'went' and definite article 'the'" class="w-full px-3 py-1.5 border rounded-xl bg-white dark:bg-slate-800 text-sm" />
+      <app-word-definition-modal
+        [wordToken]="token"
+        [contextSentence]="activeWordContext()"
+        (closed)="activeWordToken.set(null)"
+      ></app-word-definition-modal>
     </div>
-    <div class="flex justify-end gap-2">
-      <button (click)="showCorrectionForm.set(false)" class="px-4 py-1.5 bg-slate-200 dark:bg-slate-700 rounded-xl text-xs font-bold">Cancel</button>
-      <button (click)="sendCorrection()" class="px-5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow">Send Correction</button>
-    </div>
-  </div>
+  }
 
-  <!-- Input Area & Tool Trigger Bar -->
-  <div class="bg-white dark:bg-slate-800 pt-2">
-    <div class="flex items-center gap-2 mb-2">
+  @if (showDoodleModal()) {
+    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+      <app-doodle-pad
+        (doodleSaved)="onDoodleSaved($event)"
+        (cancelled)="showDoodleModal.set(false)"
+      ></app-doodle-pad>
+    </div>
+  }
+  @if (showVoiceModal()) {
+    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+      <app-voice-recorder
+        (audioUploaded)="onVoiceUploaded($event)"
+        (cancelled)="showVoiceModal.set(false)"
+      ></app-voice-recorder>
+    </div>
+  }
+
+  @if (showCorrectionForm()) {
+    <div class="mt-2 rounded-2xl border border-amber-200 bg-amber-50 ps-3 pe-3 pt-3 pb-3 space-y-2">
+      <input
+        type="text"
+        [(ngModel)]="originalText"
+        placeholder="Original sentence"
+        class="w-full rounded-xl border border-amber-200 bg-white ps-3 pe-3 pt-2 pb-2 text-sm"
+      />
+      <input
+        type="text"
+        [(ngModel)]="correctedText"
+        placeholder="Corrected sentence"
+        class="w-full rounded-xl border border-amber-200 bg-white ps-3 pe-3 pt-2 pb-2 text-sm"
+      />
+      <input
+        type="text"
+        [(ngModel)]="explanationText"
+        placeholder="Explanation"
+        class="w-full rounded-xl border border-amber-200 bg-white ps-3 pe-3 pt-2 pb-2 text-sm"
+      />
+      <div class="flex gap-2">
+        <button
+          (click)="showCorrectionForm.set(false)"
+          class="rounded-xl bg-slate-200 ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-slate-700"
+        >
+          Cancel
+        </button>
+        <button
+          (click)="sendCorrection()"
+          class="rounded-xl bg-emerald-600 ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-white"
+        >
+          Send correction
+        </button>
+      </div>
+    </div>
+  }
+
+  <div class="mt-3 border-t border-slate-100 pt-3">
+    <div class="mb-2 flex items-center gap-2">
       <button
         (click)="showCorrectionForm.set(!showCorrectionForm())"
-        class="px-3 py-1 bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 text-amber-800 dark:text-amber-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+        class="rounded-xl bg-amber-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-amber-800"
       >
-        <span>✏️ Correct</span>
+        Correct
       </button>
       <button
         (click)="showDoodleModal.set(true)"
-        class="px-3 py-1 bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 text-blue-800 dark:text-blue-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+        class="rounded-xl bg-blue-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-blue-800"
       >
-        <span>🎨 Doodle</span>
+        Doodle
       </button>
       <button
         (click)="showVoiceModal.set(true)"
-        class="px-3 py-1 bg-red-100 dark:bg-red-900/40 hover:bg-red-200 text-red-800 dark:text-red-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+        class="rounded-xl bg-red-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-red-800"
       >
-        <span>🎙️ Voice Note</span>
+        Voice
       </button>
     </div>
-
     <div class="flex items-center gap-2">
       <input
         type="text"
         [(ngModel)]="textInput"
         (keyup.enter)="sendTextMessage()"
-        placeholder="Type a message or share a sentence..."
-        class="flex-1 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-2xl bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none"
+        placeholder="Type your message"
+        class="flex-1 rounded-2xl border border-slate-200 bg-slate-50 ps-4 pe-4 pt-3 pb-3 text-sm"
       />
       <button
         (click)="sendTextMessage()"
-        class="px-6 py-3 bg-primary hover:bg-primary-dark text-white rounded-2xl font-bold shadow-md transition-all flex items-center gap-2"
+        class="rounded-2xl bg-primary ps-5 pe-5 pt-3 pb-3 text-sm font-bold text-white shadow-sm"
       >
-        <span>Send</span>
+        Send
       </button>
     </div>
   </div>

@@ -1,5 +1,5 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
@@ -10,9 +10,9 @@ import { TrustSafetyModalComponent } from '../trust-safety-modal/trust-safety-mo
 @Component({
   selector: 'app-audio-room',
   standalone: true,
-  imports: [CommonModule, FormsModule, RoomChatComponent, VirtualGiftModalComponent, TrustSafetyModalComponent],
+  imports: [FormsModule, RoomChatComponent, VirtualGiftModalComponent, TrustSafetyModalComponent],
   templateUrl: './audio-room.component.html',
-  styleUrls: ['./audio-room.component.scss']
+  styleUrls: ['./audio-room.component.scss'],
 })
 export class AudioRoomComponent implements OnInit {
   readonly store = inject(AudioRoomsStore);
@@ -58,7 +58,10 @@ export class AudioRoomComponent implements OnInit {
   }
 
   async archive(): Promise<void> {
-    if (!confirm('Are you sure you want to end this room and archive the recording to Cloudflare R2?')) return;
+    if (
+      !confirm('Are you sure you want to end this room and archive the recording to Cloudflare R2?')
+    )
+      return;
     await this.store.archiveRoom();
   }
 }

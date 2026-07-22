@@ -1,0 +1,14 @@
+.route-swap {
+  animation: route-fade-slide 180ms ease-out;
+}
+
+@keyframes route-fade-slide {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

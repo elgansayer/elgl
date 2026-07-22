@@ -1,13 +1,13 @@
 import { Component, EventEmitter, Output, signal, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { UserService } from '../../services/user.service';
 
 @Component({
   selector: 'app-voice-recorder',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './voice-recorder.component.html',
-  styleUrls: ['./voice-recorder.component.scss']
+  styleUrls: ['./voice-recorder.component.scss'],
 })
 export class VoiceRecorderComponent {
   private userService = inject(UserService);
@@ -40,7 +40,7 @@ export class VoiceRecorderComponent {
       this.mediaRecorder.onstop = () => {
         this.recordedBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
         this.audioPreviewUrl.set(URL.createObjectURL(this.recordedBlob));
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       };
 
       this.mediaRecorder.start();
@@ -48,7 +48,7 @@ export class VoiceRecorderComponent {
       this.durationSeconds.set(0);
 
       this.timerInterval = setInterval(() => {
-        this.durationSeconds.update(s => s + 1);
+        this.durationSeconds.update((s) => s + 1);
       }, 1000);
     } catch (e) {
       console.error('Microphone access denied or error:', e);
@@ -70,13 +70,17 @@ export class VoiceRecorderComponent {
 
     try {
       const filename = `voice_${Date.now()}.webm`;
-      const presigned = await this.userService.getPresignedUploadUrl(filename, 'audio/webm', 'chat-voice');
+      const presigned = await this.userService.getPresignedUploadUrl(
+        filename,
+        'audio/webm',
+        'chat-voice',
+      );
 
       if (presigned.uploadUrl && presigned.uploadUrl !== 'http://mock-upload-url') {
         await fetch(presigned.uploadUrl, {
           method: 'PUT',
           headers: { 'Content-Type': 'audio/webm' },
-          body: this.recordedBlob
+          body: this.recordedBlob,
         });
       }
 

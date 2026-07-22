@@ -1,5 +1,5 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { DiscoveryService } from '../../services/discovery.service';
 import { UserProfile } from '../../services/user.service';
@@ -7,9 +7,9 @@ import { UserProfile } from '../../services/user.service';
 @Component({
   selector: 'app-discovery',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   templateUrl: './discovery.component.html',
-  styleUrls: ['./discovery.component.scss']
+  styleUrls: ['./discovery.component.scss'],
 })
 export class DiscoveryComponent implements OnInit {
   private discoveryService = inject(DiscoveryService);
@@ -34,7 +34,7 @@ export class DiscoveryComponent implements OnInit {
         radius_metres: this.radiusKm * 1000,
         native_language: this.nativeLanguage ? this.nativeLanguage.toLowerCase().trim() : undefined,
         target_language: this.targetLanguage ? this.targetLanguage.toLowerCase().trim() : undefined,
-        serious_learner_only: this.seriousLearnerOnly
+        serious_learner_only: this.seriousLearnerOnly,
       });
       this.partners.set(results);
     } catch (e) {

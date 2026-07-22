@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, computed, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UserService, VisitorLog, UserProfile } from '../../services/user.service';
 
@@ -15,6 +15,17 @@ export class VisitorLogsComponent implements OnInit {
   readonly visitors = signal<VisitorLog[]>([]);
   readonly profile = signal<UserProfile | null>(null);
   readonly isLoading = signal<boolean>(true);
+  readonly hideBlurred = signal<boolean>(false);
+
+  readonly visibleVisitorsCount = computed(() =>
+    this.visitors().filter((visitor) => !visitor.is_blurred).length
+  );
+  readonly blurredVisitorsCount = computed(() =>
+    this.visitors().filter((visitor) => visitor.is_blurred).length
+  );
+  readonly filteredVisitors = computed(() =>
+    this.hideBlurred() ? this.visitors().filter((visitor) => !visitor.is_blurred) : this.visitors()
+  );
 
   async ngOnInit(): Promise<void> {
     await this.loadData();
@@ -34,5 +45,9 @@ export class VisitorLogsComponent implements OnInit {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  toggleHideBlurred(): void {
+    this.hideBlurred.update((value) => !value);
   }
 }

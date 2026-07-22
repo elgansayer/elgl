@@ -1,5 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from './services/auth.service';
 import { EconomyStore } from './services/economy.store';
@@ -8,9 +8,9 @@ import { CentrifugeService } from './services/centrifuge.service';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive],
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
+  styleUrls: ['./app.component.scss'],
 })
 export class AppComponent implements OnInit {
   title = 'HelloTalk Clone';
@@ -30,7 +30,7 @@ export class AppComponent implements OnInit {
           this.economyStore.triggerGiftAnimation({
             gift: data.gift,
             sender_name: data.sender_name || 'Language Partner',
-            receiver_name: 'You'
+            receiver_name: 'You',
           });
         }
       });

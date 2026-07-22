@@ -1,5 +1,4 @@
 import { Component, Input, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 
 interface DiffSegment {
   type: 'unchanged' | 'removed' | 'added';
@@ -9,9 +8,9 @@ interface DiffSegment {
 @Component({
   selector: 'app-visual-diff',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './visual-diff.component.html',
-  styleUrls: ['./visual-diff.component.scss']
+  styleUrls: ['./visual-diff.component.scss'],
 })
 export class VisualDiffComponent implements OnInit {
   @Input({ required: true }) original = '';
@@ -31,8 +30,8 @@ export class VisualDiffComponent implements OnInit {
 
     if (typeof Intl !== 'undefined' && Intl.Segmenter) {
       const segmenter = new Intl.Segmenter('en', { granularity: 'word' });
-      origTokens = Array.from(segmenter.segment(this.original)).map(s => s.segment);
-      corrTokens = Array.from(segmenter.segment(this.corrected)).map(s => s.segment);
+      origTokens = Array.from(segmenter.segment(this.original)).map((s) => s.segment);
+      corrTokens = Array.from(segmenter.segment(this.corrected)).map((s) => s.segment);
     } else {
       origTokens = this.original.split(/(\s+)/);
       corrTokens = this.corrected.split(/(\s+)/);
@@ -44,11 +43,18 @@ export class VisualDiffComponent implements OnInit {
     let j = 0;
 
     while (i < origTokens.length || j < corrTokens.length) {
-      if (i < origTokens.length && j < corrTokens.length && origTokens[i].toLowerCase() === corrTokens[j].toLowerCase()) {
+      if (
+        i < origTokens.length &&
+        j < corrTokens.length &&
+        origTokens[i].toLowerCase() === corrTokens[j].toLowerCase()
+      ) {
         result.push({ type: 'unchanged', text: corrTokens[j] });
         i++;
         j++;
-      } else if (i < origTokens.length && !corrTokens.slice(j, j + 5).some(t => t.toLowerCase() === origTokens[i].toLowerCase())) {
+      } else if (
+        i < origTokens.length &&
+        !corrTokens.slice(j, j + 5).some((t) => t.toLowerCase() === origTokens[i].toLowerCase())
+      ) {
         result.push({ type: 'removed', text: origTokens[i] });
         i++;
       } else if (j < corrTokens.length) {

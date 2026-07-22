@@ -1,173 +1,222 @@
 <div class="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
   <!-- Active Room View if Joined -->
-  <div *ngIf="store.currentRoom() as room; else directoryView" class="space-y-6 animate-fadeIn">
-    <!-- Room Top Banner -->
-    <div class="bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 text-white p-6 rounded-3xl shadow-2xl border border-purple-800/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div class="space-y-1">
-        <div class="flex items-center gap-2">
-          <span class="px-2.5 py-0.5 rounded-full bg-red-600 text-white font-black text-[11px] animate-pulse uppercase tracking-wider">
-            🔴 Live SFU Room
-          </span>
-          <span class="px-2.5 py-0.5 rounded-full bg-purple-700/80 text-purple-200 font-bold text-[11px] uppercase">
-            {{ room.target_language }} Practice
-          </span>
-          <span *ngIf="store.isConnectedToLiveKit()" class="text-xs text-emerald-400 font-bold flex items-center gap-1">
-            <span>🟢 WebRTC Connected</span>
-          </span>
-        </div>
-        <h2 class="text-2xl font-black">{{ room.title }}</h2>
-        <p class="text-xs text-purple-200/80">
-          Host: <span class="font-bold text-white">{{ room.host?.display_name }}</span> | Listeners: <span class="font-bold text-white">{{ room.listeners_count }}</span>
-        </p>
-      </div>
-
-      <!-- Action Buttons -->
-      <div class="flex flex-wrap items-center gap-2 self-start md:self-center">
-        <!-- Raise hand button if listener -->
-        <button
-          *ngIf="!store.isSpeaker()"
-          (click)="raiseHand()"
-          class="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-amber-950 rounded-2xl font-extrabold text-xs shadow transition-transform hover:scale-105 flex items-center gap-1.5"
-        >
-          <span>✋ Raise Hand to Speak</span>
-        </button>
-
-        <!-- Send Virtual Gift to Host -->
-        <button
-          (click)="showGiftModal.set(true)"
-          class="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-400 hover:to-purple-500 text-white rounded-2xl font-extrabold text-xs shadow transition-transform hover:scale-105 flex items-center gap-1"
-        >
-          <span>🎁 Gift Host</span>
-        </button>
-
-        <!-- Trust & Safety Moderation -->
-        <button
-          (click)="showSafetyModal.set(true)"
-          class="px-3 py-2 bg-slate-800 hover:bg-red-900/60 text-slate-300 hover:text-white rounded-2xl font-bold text-xs shadow border border-slate-700 transition-colors"
-        >
-          🛡️ Moderate
-        </button>
-
-        <!-- Archive button if Host -->
-        <button
-          *ngIf="room.host_id === authService.currentUser()?.id"
-          (click)="archive()"
-          class="px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-2xl font-bold text-xs shadow transition-colors flex items-center gap-1.5 border border-red-400"
-        >
-          <span>💾 End & Archive (R2 Storage)</span>
-        </button>
-
-        <button
-          (click)="leave()"
-          class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-2xl font-bold text-xs shadow border border-slate-700 transition-colors"
-        >
-          👋 Leave Stage
-        </button>
-      </div>
-    </div>
-
-    <!-- Main Stage Grid & Sidebar -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Left 2 Cols: Speaker Stage & Audience Grid -->
-      <div class="lg:col-span-2 space-y-6">
-        <!-- Speaker Stage -->
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 space-y-4">
-          <h3 class="font-black text-sm text-slate-800 dark:text-slate-200 flex items-center justify-between">
-            <span>🎙️ Speaker Stage (Active Audio & Video Pods)</span>
-            <span class="text-xs text-slate-400 font-normal">{{ room.speakers.length }} Speaker(s)</span>
-          </h3>
-
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div
-              *ngFor="let speakerId of room.speakers"
-              class="bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border-2 border-purple-500/40 flex flex-col items-center text-center space-y-2 relative group"
+  @if (store.currentRoom(); as room) {
+    <div class="space-y-6 animate-fadeIn">
+      <!-- Room Top Banner -->
+      <div
+        class="bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 text-white p-6 rounded-3xl shadow-2xl border border-purple-800/60 flex flex-col md:flex-row md:items-center justify-between gap-4"
+      >
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span
+              class="px-2.5 py-0.5 rounded-full bg-red-600 text-white font-black text-[11px] animate-pulse uppercase tracking-wider"
             >
-              <div class="relative">
-                <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white text-xl font-bold shadow-lg ring-4 ring-purple-300 dark:ring-purple-900 animate-pulse">
-                  🎙️
-                </div>
-                <span class="absolute -bottom-1 -end-1 bg-emerald-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow">🔊</span>
-              </div>
-              <div>
-                <span class="font-bold text-xs text-slate-800 dark:text-slate-200 block truncate max-w-[120px]">
-                  {{ speakerId === room.host_id ? (room.host?.display_name + ' (Host)') : ('Speaker ' + speakerId.slice(0,6)) }}
-                </span>
-                <span class="text-[10px] text-purple-600 dark:text-purple-400 font-semibold">Stage Speaker</span>
-              </div>
-            </div>
+              🔴 Live SFU Room
+            </span>
+            <span
+              class="px-2.5 py-0.5 rounded-full bg-purple-700/80 text-purple-200 font-bold text-[11px] uppercase"
+            >
+              {{ room.target_language }} Practice
+            </span>
+            @if (store.isConnectedToLiveKit()) {
+              <span class="text-xs text-emerald-400 font-bold flex items-center gap-1">
+                <span>🟢 WebRTC Connected</span>
+              </span>
+            }
           </div>
+          <h2 class="text-2xl font-black">{{ room.title }}</h2>
+          <p class="text-xs text-purple-200/80">
+            Host: <span class="font-bold text-white">{{ room.host?.display_name }}</span> |
+            Listeners: <span class="font-bold text-white">{{ room.listeners_count }}</span>
+          </p>
         </div>
-
-        <!-- Stage Request Queue for Host -->
-        <div *ngIf="room.host_id === authService.currentUser()?.id && room.raised_hands && room.raised_hands.length > 0" class="bg-amber-50 dark:bg-amber-950/30 p-6 rounded-3xl border border-amber-300 dark:border-amber-800 space-y-3 animate-fadeIn">
-          <h4 class="font-black text-sm text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
-            <span>✋ Stage Speaker Requests (Raised Hands)</span>
-          </h4>
-          <div class="space-y-2">
-            <div *ngFor="let reqId of room.raised_hands" class="bg-white dark:bg-slate-800 p-3 rounded-2xl border flex items-center justify-between text-xs">
-              <span class="font-bold text-slate-800 dark:text-slate-200">Learner ({{ reqId.slice(0, 8) }}...) wants to join the stage</span>
-              <button
-                (click)="approve(reqId)"
-                class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl shadow transition-transform hover:scale-105"
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap items-center gap-2 self-start md:self-center">
+          <!-- Raise hand button if listener -->
+          @if (!store.isSpeaker()) {
+            <button
+              (click)="raiseHand()"
+              class="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-amber-950 rounded-2xl font-extrabold text-xs shadow transition-transform hover:scale-105 flex items-center gap-1.5"
+            >
+              <span>✋ Raise Hand to Speak</span>
+            </button>
+          }
+          <!-- Send Virtual Gift to Host -->
+          <button
+            (click)="showGiftModal.set(true)"
+            class="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-400 hover:to-purple-500 text-white rounded-2xl font-extrabold text-xs shadow transition-transform hover:scale-105 flex items-center gap-1"
+          >
+            <span>🎁 Gift Host</span>
+          </button>
+          <!-- Trust & Safety Moderation -->
+          <button
+            (click)="showSafetyModal.set(true)"
+            class="px-3 py-2 bg-slate-800 hover:bg-red-900/60 text-slate-300 hover:text-white rounded-2xl font-bold text-xs shadow border border-slate-700 transition-colors"
+          >
+            🛡️ Moderate
+          </button>
+          <!-- Archive button if Host -->
+          @if (room.host_id === authService.currentUser()?.id) {
+            <button
+              (click)="archive()"
+              class="px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-2xl font-bold text-xs shadow transition-colors flex items-center gap-1.5 border border-red-400"
+            >
+              <span>💾 End & Archive (R2 Storage)</span>
+            </button>
+          }
+          <button
+            (click)="leave()"
+            class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-2xl font-bold text-xs shadow border border-slate-700 transition-colors"
+          >
+            👋 Leave Stage
+          </button>
+        </div>
+      </div>
+      <!-- Main Stage Grid & Sidebar -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left 2 Cols: Speaker Stage & Audience Grid -->
+        <div class="lg:col-span-2 space-y-6">
+          <!-- Speaker Stage -->
+          <div
+            class="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 space-y-4"
+          >
+            <h3
+              class="font-black text-sm text-slate-800 dark:text-slate-200 flex items-center justify-between"
+            >
+              <span>🎙️ Speaker Stage (Active Audio & Video Pods)</span>
+              <span class="text-xs text-slate-400 font-normal"
+                >{{ room.speakers.length }} Speaker(s)</span
               >
-                ✅ Approve to Stage
-              </button>
+            </h3>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              @for (speakerId of room.speakers; track speakerId) {
+                <div
+                  class="bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border-2 border-purple-500/40 flex flex-col items-center text-center space-y-2 relative group"
+                >
+                  <div class="relative">
+                    <div
+                      class="w-16 h-16 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white text-xl font-bold shadow-lg ring-4 ring-purple-300 dark:ring-purple-900 animate-pulse"
+                    >
+                      🎙️
+                    </div>
+                    <span
+                      class="absolute -bottom-1 -end-1 bg-emerald-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow"
+                      >🔊</span
+                    >
+                  </div>
+                  <div>
+                    <span
+                      class="font-bold text-xs text-slate-800 dark:text-slate-200 block truncate max-w-[120px]"
+                    >
+                      {{
+                        speakerId === room.host_id
+                          ? room.host?.display_name + ' (Host)'
+                          : 'Speaker ' + speakerId.slice(0, 6)
+                      }}
+                    </span>
+                    <span class="text-[10px] text-purple-600 dark:text-purple-400 font-semibold"
+                      >Stage Speaker</span
+                    >
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+          <!-- Stage Request Queue for Host -->
+          @if (
+            room.host_id === authService.currentUser()?.id &&
+            room.raised_hands &&
+            room.raised_hands.length > 0
+          ) {
+            <div
+              class="bg-amber-50 dark:bg-amber-950/30 p-6 rounded-3xl border border-amber-300 dark:border-amber-800 space-y-3 animate-fadeIn"
+            >
+              <h4
+                class="font-black text-sm text-amber-900 dark:text-amber-300 flex items-center gap-1.5"
+              >
+                <span>✋ Stage Speaker Requests (Raised Hands)</span>
+              </h4>
+              <div class="space-y-2">
+                @for (reqId of room.raised_hands; track reqId) {
+                  <div
+                    class="bg-white dark:bg-slate-800 p-3 rounded-2xl border flex items-center justify-between text-xs"
+                  >
+                    <span class="font-bold text-slate-800 dark:text-slate-200"
+                      >Learner ({{ reqId.slice(0, 8) }}...) wants to join the stage</span
+                    >
+                    <button
+                      (click)="approve(reqId)"
+                      class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl shadow transition-transform hover:scale-105"
+                    >
+                      ✅ Approve to Stage
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+          <!-- Audience Listeners Grid -->
+          <div
+            class="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 space-y-3"
+          >
+            <h3
+              class="font-black text-sm text-slate-800 dark:text-slate-200 flex items-center justify-between"
+            >
+              <span>🎧 Listener Audience</span>
+              <span class="text-xs text-slate-400 font-normal"
+                >{{ room.listeners_count }} Listener(s) in room</span
+              >
+            </h3>
+            <div class="flex flex-wrap gap-3 pt-1">
+              @for (i of [1, 2, 3, 4, 5, 6, 7, 8].slice(0, room.listeners_count || 3); track i) {
+                <div
+                  class="flex items-center gap-2 bg-slate-100 dark:bg-slate-700/60 px-3 py-1.5 rounded-xl text-xs"
+                >
+                  <span class="text-sm">🎧</span>
+                  <span class="font-medium text-slate-700 dark:text-slate-300"
+                    >Audience Member #{{ i }}</span
+                  >
+                </div>
+              }
             </div>
           </div>
         </div>
-
-        <!-- Audience Listeners Grid -->
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 space-y-3">
-          <h3 class="font-black text-sm text-slate-800 dark:text-slate-200 flex items-center justify-between">
-            <span>🎧 Listener Audience</span>
-            <span class="text-xs text-slate-400 font-normal">{{ room.listeners_count }} Listener(s) in room</span>
-          </h3>
-
-          <div class="flex flex-wrap gap-3 pt-1">
-            <div *ngFor="let i of [1,2,3,4,5,6,7,8].slice(0, room.listeners_count || 3)" class="flex items-center gap-2 bg-slate-100 dark:bg-slate-700/60 px-3 py-1.5 rounded-xl text-xs">
-              <span class="text-sm">🎧</span>
-              <span class="font-medium text-slate-700 dark:text-slate-300">Audience Member #{{ i }}</span>
-            </div>
-          </div>
+        <!-- Right 1 Col: Synchronised Room Chat & Subtitle Panel -->
+        <div class="space-y-6">
+          <app-room-chat></app-room-chat>
         </div>
       </div>
-
-      <!-- Right 1 Col: Synchronised Room Chat & Subtitle Panel -->
-      <div class="space-y-6">
-        <app-room-chat></app-room-chat>
-      </div>
+      <!-- Virtual Gift Modal -->
+      @if (showGiftModal()) {
+        <app-virtual-gift-modal
+          [receiverId]="room.host_id"
+          [receiverName]="room.host?.display_name || 'Host'"
+          [roomId]="room.id"
+          (closed)="showGiftModal.set(false)"
+        ></app-virtual-gift-modal>
+      }
+      <!-- Trust & Safety Modal -->
+      @if (showSafetyModal()) {
+        <app-trust-safety-modal
+          [targetId]="room.host_id"
+          [targetName]="room.host?.display_name || 'Host'"
+          (closed)="showSafetyModal.set(false)"
+        ></app-trust-safety-modal>
+      }
     </div>
-
-    <!-- Virtual Gift Modal -->
-    <app-virtual-gift-modal
-      *ngIf="showGiftModal()"
-      [receiverId]="room.host_id"
-      [receiverName]="room.host?.display_name || 'Host'"
-      [roomId]="room.id"
-      (closed)="showGiftModal.set(false)"
-    ></app-virtual-gift-modal>
-
-    <!-- Trust & Safety Modal -->
-    <app-trust-safety-modal
-      *ngIf="showSafetyModal()"
-      [targetId]="room.host_id"
-      [targetName]="room.host?.display_name || 'Host'"
-      (closed)="showSafetyModal.set(false)"
-    ></app-trust-safety-modal>
-  </div>
-
-  <!-- Directory Grid View when not joined -->
-  <ng-template #directoryView>
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700">
+  } @else {
+    <div
+      class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700"
+    >
       <div>
         <h2 class="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
           <span>🎙️ Live Audio & Video Rooms (LiveKit SFU)</span>
         </h2>
         <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          Join high-quality WebRTC language practice rooms. Raise your hand to jump on stage, enjoy real-time AI closed subtitles, or launch your own room!
+          Join high-quality WebRTC language practice rooms. Raise your hand to jump on stage, enjoy
+          real-time AI closed subtitles, or launch your own room!
         </p>
       </div>
-
       <button
         (click)="showCreateModal.set(true)"
         class="px-5 py-3 bg-primary hover:bg-primary-dark text-white rounded-2xl font-bold text-xs shadow transition-transform hover:scale-105 self-start"
@@ -175,109 +224,138 @@
         + Launch Live Room
       </button>
     </div>
-
     <!-- Loading State -->
-    <div *ngIf="store.isLoading()" class="flex justify-center items-center py-16">
-      <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
-    </div>
-
+    @if (store.isLoading()) {
+      <div class="flex justify-center items-center py-16">
+        <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    }
     <!-- Empty Rooms State -->
-    <div *ngIf="!store.isLoading() && store.activeRooms().length === 0" class="text-center py-16 text-slate-400 bg-white dark:bg-slate-800 rounded-3xl p-8 border">
-      <span class="text-5xl block mb-3">📴</span>
-      <h3 class="font-bold text-lg text-slate-800 dark:text-slate-200">No active rooms open right now</h3>
-      <p class="text-sm mt-1">Be the pioneer! Click Launch Live Room above to start speaking practice.</p>
-    </div>
-
+    @if (!store.isLoading() && store.activeRooms().length === 0) {
+      <div
+        class="text-center py-16 text-slate-400 bg-white dark:bg-slate-800 rounded-3xl p-8 border"
+      >
+        <span class="text-5xl block mb-3">📴</span>
+        <h3 class="font-bold text-lg text-slate-800 dark:text-slate-200">
+          No active rooms open right now
+        </h3>
+        <p class="text-sm mt-1">
+          Be the pioneer! Click Launch Live Room above to start speaking practice.
+        </p>
+      </div>
+    }
     <!-- Active Rooms Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div
-        *ngFor="let room of store.activeRooms()"
-        class="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-2xl transition-all flex flex-col justify-between p-6 space-y-4"
-      >
-        <div class="space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="px-2.5 py-0.5 rounded-full bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400 font-extrabold text-[10px] uppercase">
-              🔴 Live Room
-            </span>
-            <span class="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold text-xs uppercase">
-              {{ room.target_language }}
-            </span>
+      @for (room of store.activeRooms(); track room) {
+        <div
+          class="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-2xl transition-all flex flex-col justify-between p-6 space-y-4"
+        >
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span
+                class="px-2.5 py-0.5 rounded-full bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400 font-extrabold text-[10px] uppercase"
+              >
+                🔴 Live Room
+              </span>
+              <span
+                class="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold text-xs uppercase"
+              >
+                {{ room.target_language }}
+              </span>
+            </div>
+            <h3 class="font-black text-lg text-slate-900 dark:text-white line-clamp-2">
+              {{ room.title }}
+            </h3>
+            <div class="flex items-center gap-2.5 pt-1 text-xs text-slate-600 dark:text-slate-300">
+              <img
+                [src]="room.host?.avatar_url || 'https://via.placeholder.com/40'"
+                alt="Host"
+                class="w-7 h-7 rounded-full object-cover border"
+              />
+              <span
+                >Host:
+                <strong class="text-slate-900 dark:text-white">{{
+                  room.host?.display_name
+                }}</strong></span
+              >
+            </div>
           </div>
-
-          <h3 class="font-black text-lg text-slate-900 dark:text-white line-clamp-2">{{ room.title }}</h3>
-
-          <div class="flex items-center gap-2.5 pt-1 text-xs text-slate-600 dark:text-slate-300">
-            <img
-              [src]="room.host?.avatar_url || 'https://via.placeholder.com/40'"
-              alt="Host"
-              class="w-7 h-7 rounded-full object-cover border"
-            />
-            <span>Host: <strong class="text-slate-900 dark:text-white">{{ room.host?.display_name }}</strong></span>
+          <div
+            class="pt-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between"
+          >
+            <span class="text-xs font-bold text-slate-500">
+              🎧 {{ room.listeners_count }} Listener(s)
+            </span>
+            <button
+              (click)="join(room)"
+              class="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-extrabold text-xs shadow transition-all"
+            >
+              Join Room →
+            </button>
           </div>
         </div>
+      }
+    </div>
+  }
 
-        <div class="pt-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
-          <span class="text-xs font-bold text-slate-500">
-            🎧 {{ room.listeners_count }} Listener(s)
-          </span>
+  <!-- Directory Grid View when not joined -->
 
+  <!-- Create Room Modal -->
+  @if (showCreateModal()) {
+    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+      <div
+        class="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 animate-fadeIn"
+      >
+        <h3 class="font-black text-lg text-slate-900 dark:text-white">
+          🎙️ Launch Live Language Room
+        </h3>
+        <p class="text-xs text-slate-500">
+          Host an interactive audio/video room powered by LiveKit WebRTC SFU.
+        </p>
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1"
+              >Room Topic / Title:</label
+            >
+            <input
+              type="text"
+              [(ngModel)]="newTitle"
+              placeholder="e.g., Casual Friday Spanish Conversation Practice!"
+              class="w-full px-3.5 py-2 border rounded-xl bg-slate-50 dark:bg-slate-700/60 font-medium"
+            />
+          </div>
+          <div>
+            <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1"
+              >Target Language:</label
+            >
+            <select
+              [(ngModel)]="newTargetLanguage"
+              class="w-full px-3.5 py-2 border rounded-xl bg-slate-50 dark:bg-slate-700/60 font-bold"
+            >
+              <option value="en">🇬🇧 British English</option>
+              <option value="es">🇪🇸 Spanish</option>
+              <option value="fr">🇫🇷 French</option>
+              <option value="ja">🇯🇵 Japanese</option>
+              <option value="de">🇩🇪 German</option>
+              <option value="ar">🇸🇦 Arabic</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-3">
           <button
-            (click)="join(room)"
-            class="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-extrabold text-xs shadow transition-all"
+            (click)="showCreateModal.set(false)"
+            class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-xl font-bold text-xs"
           >
-            Join Room →
+            Cancel
+          </button>
+          <button
+            (click)="createRoom()"
+            class="px-5 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl font-extrabold text-xs shadow"
+          >
+            🚀 Launch Stage
           </button>
         </div>
       </div>
     </div>
-  </ng-template>
-
-  <!-- Create Room Modal -->
-  <div *ngIf="showCreateModal()" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 animate-fadeIn">
-      <h3 class="font-black text-lg text-slate-900 dark:text-white">🎙️ Launch Live Language Room</h3>
-      <p class="text-xs text-slate-500">
-        Host an interactive audio/video room powered by LiveKit WebRTC SFU.
-      </p>
-
-      <div class="space-y-3 text-xs">
-        <div>
-          <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Room Topic / Title:</label>
-          <input
-            type="text"
-            [(ngModel)]="newTitle"
-            placeholder="e.g., Casual Friday Spanish Conversation Practice!"
-            class="w-full px-3.5 py-2 border rounded-xl bg-slate-50 dark:bg-slate-700/60 font-medium"
-          />
-        </div>
-
-        <div>
-          <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Target Language:</label>
-          <select [(ngModel)]="newTargetLanguage" class="w-full px-3.5 py-2 border rounded-xl bg-slate-50 dark:bg-slate-700/60 font-bold">
-            <option value="en">🇬🇧 British English</option>
-            <option value="es">🇪🇸 Spanish</option>
-            <option value="fr">🇫🇷 French</option>
-            <option value="ja">🇯🇵 Japanese</option>
-            <option value="de">🇩🇪 German</option>
-            <option value="ar">🇸🇦 Arabic</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="flex justify-end gap-2 pt-3">
-        <button
-          (click)="showCreateModal.set(false)"
-          class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-xl font-bold text-xs"
-        >
-          Cancel
-        </button>
-        <button
-          (click)="createRoom()"
-          class="px-5 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl font-extrabold text-xs shadow"
-        >
-          🚀 Launch Stage
-        </button>
-      </div>
-    </div>
-  </div>
+  }
 </div>

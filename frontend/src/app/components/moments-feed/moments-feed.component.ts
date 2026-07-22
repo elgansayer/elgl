@@ -1,6 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { MomentsStore, MomentRecord } from '../../services/moments.store';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { AuthService } from '../../services/auth.service';
@@ -16,6 +17,7 @@ import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.compone
   imports: [
     CommonModule,
     FormsModule,
+    RouterLink,
     TokenisedTextComponent,
     WordDefinitionModalComponent,
     TextToSpeechComponent,
@@ -35,6 +37,7 @@ export class MomentsFeedComponent implements OnInit {
   readonly activeWordToken = signal<string | null>(null);
   readonly activeWordContext = signal<string>('');
   readonly openCommentsMap = signal<Set<string>>(new Set());
+  readonly expandedMomentIds = signal<Set<string>>(new Set());
 
   // New Moment form state
   newText = '';
@@ -187,6 +190,42 @@ export class MomentsFeedComponent implements OnInit {
         text_content: text
       });
       this.commentInputMap[moment.id] = '';
+    }
+  }
+
+  isMomentLong(moment: MomentRecord): boolean {
+    return Boolean(moment.text_content && moment.text_content.length > 140);
+  }
+
+  getMomentDisplayText(moment: MomentRecord): string {
+    const text = moment.text_content || '';
+    if (!this.isMomentLong(moment)) {
+      return text;
+    }
+    if (this.expandedMomentIds().has(moment.id)) {
+      return text;
+    }
+    return `${text.slice(0, 140)}...`;
+  }
+
+  toggleMomentExpansion(momentId: string): void {
+    const next = new Set(this.expandedMomentIds());
+    if (next.has(momentId)) {
+      next.delete(momentId);
+    } else {
+      next.add(momentId);
+    }
+    this.expandedMomentIds.set(next);
+  }
+
+  async copyMomentText(moment: MomentRecord): Promise<void> {
+    if (!moment.text_content) return;
+    try {
+      await navigator.clipboard.writeText(moment.text_content);
+      alert('Moment text copied.');
+    } catch (error) {
+      console.error('Failed to copy moment text:', error);
+      alert('Could not copy text right now.');
     }
   }
 }
