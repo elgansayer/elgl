@@ -96,7 +96,7 @@
 - [x] Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azure AI API calls.
 
 ## Phase 9: Internationalisation (i18n) Foundation
-- [ ] Install `@ngx-translate/core` and `@ngx-translate/http-loader` in Angular.
+- [x] Install `@ngx-translate/core` and `@ngx-translate/http-loader` in Angular.
 - [ ] Create `en.json` and `ja.json` translation files in `assets/i18n/`.
 - [ ] Refactor all Angular components to replace raw strings with `{{ 'KEY' | translate }}` pipes.
 - [ ] Build a Language Selector toggle in settings to dynamically switch UI language.
