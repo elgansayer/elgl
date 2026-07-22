@@ -113,7 +113,7 @@
 - [ ] Build in-line Message Context Menu: Translate, Transliterate, Speak, and Correct.
 - [ ] Implement Transliteration UI (render Romaji/Pinyin below text in small grey font).
 - [ ] Implement Text-to-Speech (TTS) using SpeechSynthesis or Azure Speech API.
-- [ ] Implement Voice-to-Text transcription next to audio messages.
+- [x] Implement Voice-to-Text transcription next to audio messages.
 
 ## Phase 12: Matchmaking & Discovery UI
 - [ ] Analyse search screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
@@ -128,13 +128,13 @@
 - [x] Build Favourites bookmarking tab for saved messages and corrections.
 
 ## Phase 14: Live Audio Voicerooms UI
-- [ ] Categorise active Voicerooms by target language pair.
-- [ ] Build Stage UI with circular avatar grid for Speakers and audience list for Listeners.
-- [ ] Implement Raise Hand button and Approve Speaker modal for Hosts.
-- [ ] Build real-time text chat overlay inside live rooms.
+- [x] Categorise active Voicerooms by target language pair.
+- [x] Build Stage UI with circular avatar grid for Speakers and audience list for Listeners.
+- [x] Implement Raise Hand button and Approve Speaker modal for Hosts.
+- [x] Build real-time text chat overlay inside live rooms.
 
 ## Phase 15: Advanced User Profiles
-- [ ] Build 30-second Audio Introduction recorder and playback card on profile.
+- [x] Build 30-second Audio Introduction recorder and playback card on profile.
 - [ ] Implement dynamic Hobbies & Interests tags mapped to target vocabulary.
 - [ ] Build Profile Cover Photo uploader with client-side cropping.
 
@@ -363,41 +363,25 @@
 - [ ] Build "Legal & Privacy Notices" viewer for Terms of Service and Privacy Policy.
 - [ ] Build "Personal Data Collection" GDPR hub with "Request My Data Archive" button and automated "Delete Account" workflow.
 
-## Phase 66: Enhanced Profile & Matchmaking
-- [ ] Add `proficiency_level` (`'a1'` to `'c2'`) to `users` table schema and profile UI.
-- [ ] Implement proficiency level filter in Discovery search.
-- [ ] Build "Interests" tagging UI in profile settings (e.g., "tech", "travel", "movies").
-- [ ] Add "Interests" filter to Discovery search to match users with shared hobbies.
-- [ ] Add "Learning Goals" free-text field to user profile to state user motivations.
+## Phase 71: Enhanced Content Interaction
+- [ ] Implement 'Create Flashcard' context menu option for any text selection within chat messages and moment posts.
+- [ ] Build 'Correction Quality' rating system (up/down votes) for community corrections on Moments.
+- [ ] Implement a user-level 'Corrector Score' based on ratings to display on profiles.
 
-## Phase 67: AI-Powered Learning Tools
-- [ ] Design and build AI Conversation Partner chat interface.
-- [ ] Implement NestJS service to proxy chat messages to a Large Language Model (e.g., GPT-4, Llama).
-- [ ] Add "Explain this" context menu option on corrected text to get AI-generated grammar breakdown.
-- [ ] Implement AI-generated suggested replies in chat based on conversation context.
-- [ ] Build "Role-play" scenarios for AI chat (e.g., "ordering coffee", "job interview").
+## Phase 72: Advanced AI-Tutor Features
+- [ ] Integrate AI to auto-generate `explanation` field for `correction` payloads in chat if the human corrector leaves it blank.
+- [ ] Build "Simplify this text" AI feature in the message context menu for learners to understand complex sentences.
+- [ ] Implement AI-powered 'Conversation Starter' suggestions in new chat windows based on partner's profile interests.
 
-## Phase 68: Gamification & Engagement Hooks
-- [ ] Design database schema for user achievements (`achievements` table, `user_achievements` join table).
-- [ ] Build Achievements service in NestJS to award badges for milestones (e.g., "100 messages sent", "7-day streak").
-- [ ] Build Achievements showcase page on user profiles.
-- [ ] Implement a point-based XP system, granting XP for learning activities.
-- [ ] Build Daily/Weekly Quests feature with coin rewards (e.g., "Correct 3 moments today").
+## Phase 73: Deeper Gamification & Retention
+- [ ] Build celebratory full-screen animation/confetti for completing study streaks (e.g., 7, 30, 100 days).
+- [ ] Implement "Partner of the Week" algorithm to highlight highly-rated language partners in the Discovery feed.
+- [ ] Add haptic feedback for grading flashcards (e.g., success buzz for 'Known', gentle pulse for 'Learning').
 
-## Phase 69: Structured Learning Content
-- [ ] Build "Lessons" module in Angular.
-- [ ] Create database schema for curated learning content (articles, dialogues by CEFR level).
-- [ ] Build CMS or admin interface to upload and manage lesson content.
-- [ ] Implement "Word of the Day" feature on the app's home screen.
-- [ ] Integrate short cultural etiquette guides for different languages within the app.
-
-## Phase 70: UI/UX Polish & Animation
-- [ ] Implement skeleton loaders (`ngx-skeleton-loader`) for all data-heavy components (feed, chat, profiles).
-- [ ] Add subtle micro-animations (`framer-motion` or CSS) to button clicks and hover states.
-- [ ] Animate Angular route transitions for a smoother navigation feel.
-- [ ] Build an interactive, multi-step product tour for new users using a library like `ngx-joyride`.
-- [ ] Refine chat bubble appearance with distinct sent/received styles and message-tail pointers.
-- [ ] Add haptic feedback on mobile for key actions (e.g., sending message, liking a post).
+## Phase 74: Voiceroom Learning Tools
+- [ ] Build shared 'Voiceroom Notes' panel where hosts/speakers can post key vocabulary or discussion topics.
+- [ ] Implement LiveKit EgressClient to generate and save a full transcript of completed audio room sessions for participants to review.
+- [ ] Add AI-generated 'Session Summary' to the archived audio room recording, listing key topics and vocabulary discussed.
 
 ## Phase 66: Enhanced Profile & Matchmaking
 - [ ] Add `proficiency_level` (`'a1'` to `'c2'`) to `users` table schema and profile UI.
