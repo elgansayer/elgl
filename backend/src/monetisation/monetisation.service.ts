@@ -99,6 +99,18 @@ export class MonetisationService {
     return { received: true, status: 'processed' };
   }
 
+  async handleAppleWebhook(payload: any): Promise<{ received: boolean; status: string }> {
+    this.logger.log(`Received Apple webhook: ${JSON.stringify(payload)}`);
+    // TODO: Implement actual Apple App Store Server Notifications verification using jsonwebtoken and Apple's public keys
+    return { received: true, status: 'processed' };
+  }
+
+  async handleGoogleWebhook(payload: any): Promise<{ received: boolean; status: string }> {
+    this.logger.log(`Received Google webhook: ${JSON.stringify(payload)}`);
+    // TODO: Implement actual Google Play Billing webhook verification using googleapis
+    return { received: true, status: 'processed' };
+  }
+
   async generateApiKey(
     userId: string,
   ): Promise<{ api_key: string; tier: string; rate_limit_rpm: number }> {
