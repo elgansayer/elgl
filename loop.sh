@@ -77,9 +77,9 @@ while true; do
     run_aider_with_fallback "Execute task: '$CURRENT_TASK'. Write the code." "--architect --read SPEC.md"
 
     echo "========================================"
-    echo "STAGE 3: CLEAN UP (Linting & Formatting)"
+    echo "STAGE 3: CLEAN UP (Lint & Test)"
     echo "========================================"
-    run_aider_with_fallback "Run 'cd frontend && npm run lint' and 'cd backend && npm run lint'. If there are any TypeScript or formatting errors, fix them automatically." ""
+    run_aider_with_fallback "Run the codebase verifications: 'cd frontend && npm run lint' and 'cd backend && npm run lint'. Then run the test suites: 'cd backend && npm test' and 'cd frontend && npm test -- --watch=false'. If ANY tests fail, you MUST fix the code until all tests pass." ""
 
     echo "========================================"
     echo "STAGE 4: POST-MANAGEMENT (Verification)"

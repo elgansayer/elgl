@@ -1,0 +1,17 @@
+# .aider.conf.yml
+read:
+  - SPEC.md
+  - AGENTS.md
+
+# Silence model proxy warnings globally
+show-model-warnings: false
+
+# Prevent Aider from stopping to ask human permission
+yes-always: true
+
+# Native Linting & Testing hooks
+auto-lint: true
+lint-cmd:
+  - "cd frontend && npm run lint"
+  - "cd backend && npm run lint"
+test-cmd: "cd backend && npm test && cd ../frontend && npm test -- --watch=false"
