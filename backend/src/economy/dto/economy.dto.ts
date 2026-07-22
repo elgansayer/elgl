@@ -11,9 +11,9 @@ export class PurchaseCoinsDto {
   @IsNotEmpty()
   package_id!: string;
 
-  @IsInt()
-  @IsPositive()
-  amount!: number;
+  @IsString()
+  @IsNotEmpty()
+  receipt_token!: string;
 }
 
 export class SendGiftDto {

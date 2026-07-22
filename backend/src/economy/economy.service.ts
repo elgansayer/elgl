@@ -59,14 +59,32 @@ export class EconomyService {
     userId: string,
     dto: PurchaseCoinsDto,
   ): Promise<{ coins_balance: number; package_id: string }> {
+    // 1. Verify receipt token (Mock implementation for now)
+    if (!dto.receipt_token || dto.receipt_token === 'invalid_receipt') {
+      throw new BadRequestException('Invalid purchase receipt');
+    }
+
+    // 2. Derive amount server-side based on package_id
+    const packageCoinMap: Record<string, number> = {
+      'tier_1_coins': 100,
+      'tier_2_coins': 500,
+      'tier_3_coins': 1200,
+    };
+
+    const amountToAdd = packageCoinMap[dto.package_id];
+    if (!amountToAdd) {
+      throw new BadRequestException('Invalid package ID');
+    }
+
     const supabase = this.supabaseService.getClient();
     const { coins_balance } = await this.getBalance(userId);
-    const newBalance = coins_balance + dto.amount;
+    const newBalance = coins_balance + amountToAdd;
 
     await supabase
       .from('users')
       .update({ coins_balance: newBalance })
       .eq('id', userId);
+      
     return { coins_balance: newBalance, package_id: dto.package_id };
   }
 
