@@ -1,4 +1,11 @@
-# TODO.md (The Granular Execution Checklist)
+# TODO.md (Master HelloTalk Clone Architecture: Phases 1 to 65)
+
+## GLOBAL ARCHITECTURAL RULES
+* **RULE 1:** ABSOLUTELY NO HARD-CODED DATA. All content, user profiles, and UI copy must be fetched dynamically or piped through `@ngx-translate`.
+* **RULE 2:** STRICT i18n (`@ngx-translate`). No raw text strings allowed inside Angular HTML templates.
+* **RULE 3:** PIXEL-PERFECT CLONING. Every UI component must be visually verified against the `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` directory.
+
+---
 
 ## Phase 1: Repository Setup & Infrastructure Initialisation
 - [x] Initialise NestJS backend (`nest new backend --package-manager npm`).
@@ -72,24 +79,286 @@
 - [x] Implement real-time AI speech-to-text subtitles broadcasting closed captions into live rooms.
 - [x] Build stream recording & replay archive storage (`POST /audio-rooms/archive`) saving LiveKit composite recordings to Cloudflare R2.
 
-## Phase 7: VIP Monetisation, Virtual Economy, Trust/Safety & 24/7 VPS Deployment
-- [x] Build NestJS `MonetisationController` handling Stripe & Apple/Google App Store webhooks (`POST /webhooks/stripe`) to toggle `user.is_vip` and `vip_tier`. ⚠️ Audit (2026-07-22): only an unverified, signature-less Stripe-shaped webhook exists; no Apple/Google App Store webhook handling at all. See `AGENTS.md` Section 8.1 and Phase 8 below.
+## Phase 7: VIP Monetisation, Virtual Economy & Trust/Safety
+- [x] Build NestJS `MonetisationController` handling Stripe & App Store webhooks (`POST /webhooks/stripe`) to toggle `user.is_vip` and `vip_tier`.
 - [x] Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent): unlimited AI, 3 target languages, location spoofing, incognito profile views.
-- [x] Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`) adding balance to `users.coins_balance`. ⚠️ Audit (2026-07-22): trusts client-supplied `amount` with no payment/receipt verification. See Phase 8 below.
+- [x] Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`) adding balance to `users.coins_balance`.
 - [x] Build Virtual Gift catalog & sending endpoint (`POST /economy/send-gift`), deducting coins and publishing animated Centrifugo broadcast events.
 - [x] Build Audio Room tipping mechanism allowing listeners to gift coins directly to hosts on stage.
 - [x] Build Developer Tier (20 UKP / $26 USD per month) API key management and developer analytics dashboard.
 - [x] Build Trust & Safety reporting system (`POST /safety/report`, `POST /safety/block`), automatically hiding blocked users from feeds and chat lists.
-- [x] Create production Docker orchestration (`docker-compose.prod.yml`) with Nginx reverse proxy routing (`/api` -> `api:3000`, `/centrifugo` -> `websocket:8000`, `/` -> `web:80`).
-- [x] Verify LiveKit SFU port forwarding (`7880/tcp`, `7881/tcp`, `50000-60000/udp`) and external IP configuration (`use_external_ip: true`) for 24/7 cloud VPS deployment.
-- [x] Conduct final end-to-end linting (`npm run lint`), TypeScript compilation (`tsc --noEmit`), Docker container build & health verification (`docker compose up --build -d`), and RTL layout check across all components.
 
-## Phase 8: Audit Remediation (opened 2026-07-22, see `AGENTS.md` Section 8)
-- [ ] **Critical:** Verify Stripe webhook signatures (`stripe.webhooks.constructEvent` with `STRIPE_WEBHOOK_SECRET`) in `MonetisationService#handleStripeWebhook` before trusting any event payload. Add the `stripe` SDK as a backend dependency.
-- [ ] **Critical:** Lock down `POST /monetisation/upgrade` so it can never be called directly by an unprivileged client to self-grant VIP; VIP status must only change as a side effect of a verified payment webhook.
-- [ ] **Critical:** Rework `POST /economy/purchase-coins` so the coin amount is derived server-side from a verified Stripe/App Store/Play Billing purchase record, never from a client-supplied `amount` field.
-- [ ] **Critical:** Implement real Apple App Store Server Notifications and Google Play Billing webhook handlers (currently non-existent, despite being marked complete in Phase 7).
-- [ ] **High:** Replace the hardcoded mock translation/grammar-check/pronunciation-scoring logic in `backend/src/nlp/nlp.service.ts` with real Azure AI Translator / DeepL / speech-assessment API calls, preserving the existing Redis daily rate limiter.
-- [x] Remove explicit `standalone: true` from all Angular component decorators (22 files fixed, verified against Angular v20+ default and this project's own mandate).
-- [x] Fix `frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts`: 4 ESLint errors and 1 failing Vitest test (invalid `SpeechSynthesisUtterance` mock).
+## Phase 8: Audit Remediation & Security Lockdown
+- [ ] Verify Stripe webhook signatures (`stripe.webhooks.constructEvent` with `STRIPE_WEBHOOK_SECRET`) in `MonetisationService#handleStripeWebhook`.
+- [ ] Lock down `POST /monetisation/upgrade` so VIP status can only change via verified payment webhooks.
+- [ ] Rework `POST /economy/purchase-coins` to verify purchase receipt records server-side before updating balances.
+- [ ] Implement Apple App Store Server Notifications and Google Play Billing webhook handlers.
+- [ ] Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azure AI API calls.
 
+## Phase 9: Internationalisation (i18n) Foundation
+- [ ] Install `@ngx-translate/core` and `@ngx-translate/http-loader` in Angular.
+- [ ] Create `en.json` and `ja.json` translation files in `assets/i18n/`.
+- [ ] Refactor all Angular components to replace raw strings with `{{ 'KEY' | translate }}` pipes.
+- [ ] Build a Language Selector toggle in settings to dynamically switch UI language.
+
+## Phase 10: The Moments Engine (Feed & Media)
+- [ ] Analyse Moments feed screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
+- [ ] Build Moments Feed UI with infinite scrolling (15 posts per batch).
+- [ ] Build multi-media attachments UI: text, up to 9 static images in CSS grid, or a 60s voice note.
+- [ ] Build Audio Player component with waveform visualizer, play/pause, and timestamp tracker.
+- [ ] Integrate `VisualDiffComponent` into Moments comment section for corrections.
+
+## Phase 11: In-App NLP & Learning Utilities
+- [ ] Analyse chat context menu screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
+- [ ] Build in-line Message Context Menu: Translate, Transliterate, Speak, and Correct.
+- [ ] Implement Transliteration UI (render Romaji/Pinyin below text in small grey font).
+- [ ] Implement Text-to-Speech (TTS) using SpeechSynthesis or Azure Speech API.
+- [ ] Implement Voice-to-Text transcription next to audio messages.
+
+## Phase 12: Matchmaking & Discovery UI
+- [ ] Analyse search screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
+- [ ] Build Global Search UI with translated dropdowns for Native Language, Target Language, and Level.
+- [ ] Build Nearby Search PostGIS distance slider for VIP users.
+- [ ] Build VIP Profile Visitor Log UI with blurred cards for free users.
+
+## Phase 13: HelloTalk Chat Specifics
+- [ ] Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
+- [ ] Build HTML5 Canvas Doodle Pad component in chat modal.
+- [ ] Build Virtual Gift picker modal with coin balance auto-deduction.
+- [ ] Build Favourites bookmarking tab for saved messages and corrections.
+
+## Phase 14: Live Audio Voicerooms UI
+- [ ] Categorise active Voicerooms by target language pair.
+- [ ] Build Stage UI with circular avatar grid for Speakers and audience list for Listeners.
+- [ ] Implement Raise Hand button and Approve Speaker modal for Hosts.
+- [ ] Build real-time text chat overlay inside live rooms.
+
+## Phase 15: Advanced User Profiles
+- [ ] Build 30-second Audio Introduction recorder and playback card on profile.
+- [ ] Implement dynamic Hobbies & Interests tags mapped to target vocabulary.
+- [ ] Build Profile Cover Photo uploader with client-side cropping.
+
+## Phase 16: Live Chat Micro-Interactions
+- [ ] Implement WebSockets typing indicators ("User is typing...").
+- [ ] Build Read Receipts (Sent vs Delivered vs Read checkmarks).
+- [ ] Add long-press context menu on mobile to copy, favourite, or report messages.
+
+## Phase 17: Audio & Video Calling (WebRTC / LiveKit)
+- [ ] Build Incoming Call modal with ringtone audio and accept/reject controls.
+- [ ] Implement active VoIP Call UI (Mute, Speakerphone, End Call).
+- [ ] Build 1-on-1 Video Call interface with local preview overlay.
+
+## Phase 18: Monetisation & VIP Tiers
+- [ ] Build VIP Subscription showcase page detailing all premium benefits.
+- [ ] Integrate Stripe Checkout for Monthly (8 UKP / $10 USD) and Yearly (50 UKP / $63 USD) plans.
+- [ ] Build "Restore Purchases" button for app store compliance.
+
+## Phase 19: Gamification & Study Streaks
+- [ ] Build Daily Study Streak counter widget on home screen.
+- [ ] Implement NestJS CRON job to reset streaks if inactive for 24 hours.
+- [ ] Build "Top Corrector" community leaderboard.
+
+## Phase 20: Spaced Repetition (SRS) Flashcards
+- [ ] Build Flashcard Deck UI to organize saved vocabulary.
+- [ ] Implement SRS review scheduling algorithm in NestJS.
+- [ ] Build interactive Flashcard Review UI (Flip animations and grading buttons).
+
+## Phase 21: Push Notifications
+- [ ] Integrate Firebase Cloud Messaging (FCM) in Angular.
+- [ ] Build NestJS event listeners to dispatch push alerts for chats, comments, and profile views.
+- [ ] Build Notification Preferences UI with granular category toggles.
+
+## Phase 22: Moderation & Trust Engine
+- [ ] Build "Report User" modal with dynamic category selection.
+- [ ] Implement Blocklist system hiding blocked accounts across chat, feed, and search.
+- [ ] Build automated NLP spam detector in NestJS to flag duplicate copy-paste messages.
+
+## Phase 23: Onboarding Flow
+- [ ] Build multi-step Angular onboarding wizard.
+- [ ] Step 1: Native Language and Target Language selection.
+- [ ] Step 2: Proficiency Level assessment.
+- [ ] Step 3: Avatar upload and permissions prompt (Microphone, Camera).
+
+## Phase 24: Advanced Search Filters
+- [ ] Implement Gender filter in discovery (VIP tier).
+- [ ] Implement Age Range dual-thumb slider controls.
+- [ ] Add "Voice Room Active" filter to find users currently hosting streams.
+
+## Phase 25: Voiceroom Management
+- [ ] Build Voiceroom Creation modal (Title, Language Pair, Topic).
+- [ ] Implement Host Moderation controls (Mute speaker, kick off stage).
+- [ ] Build animated audio equalizer visualizer for active stage speakers.
+
+## Phase 26: Group Chats
+- [ ] Build "Create Group" UI supporting up to 50 users.
+- [ ] Implement Group Admin privileges (Add/remove members, rename group).
+- [ ] Build group participant drawer.
+
+## Phase 27: Offline Support & PWA
+- [ ] Configure Angular Service Worker (`@angular/pwa`) for asset caching.
+- [ ] Implement IndexedDB message queuing for offline chat composition.
+- [ ] Build global "No Network Connection" banner component.
+
+## Phase 28: Accessibility (a11y)
+- [ ] Audit and add `aria-label` attributes to all icon buttons and interactive tags.
+- [ ] Implement Dynamic Font Size slider adjusting base `rem` CSS rules.
+- [ ] Ensure full keyboard tab-navigation support for desktop viewports.
+
+## Phase 29: Deep Linking & SEO
+- [ ] Configure Angular Router to handle deep links (`hellotalk://profile/:id`).
+- [ ] Configure Angular Universal (SSR) for public Voiceroom preview pages.
+
+## Phase 30: Media Pipeline Optimisation
+- [ ] Implement client-side image compression (max 1080p) before R2 upload.
+- [ ] Implement audio compression converting voice notes to lightweight `.m4a`/`.ogg`.
+
+## Phase 31: Legal & GDPR Compliance
+- [ ] Build dynamic Terms of Service and Privacy Policy document viewer.
+- [ ] Implement "Download My Data" button triggering a NestJS JSON export worker.
+- [ ] Build Account Deletion workflow with 30-day grace period.
+
+## Phase 32: Custom Stickers & Emojis
+- [ ] Build Sticker Store UI.
+- [ ] Allow spending virtual coins to unlock animated sticker packs.
+- [ ] Build custom sticker picker drawer inside chat window.
+
+## Phase 33: User Analytics Dashboard
+- [ ] Build "My Stats" dashboard tracking study hours, messages sent, and corrections made.
+- [ ] Render visual charts using Chart.js inside Angular.
+
+## Phase 34: UI Theming
+- [ ] Build Theme Selector (Dark, Light, System Default).
+- [ ] Allow VIP users to select custom primary accent colours.
+
+## Phase 35: App Performance
+- [ ] Implement Angular Lazy Loading for non-critical feature modules.
+- [ ] Audit Web Vitals and optimize images using `loading="lazy"`.
+
+## Phase 36: Backend Rate Limiting
+- [ ] Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints.
+- [ ] Implement WebSocket connection rate limiting in Centrifugo.
+
+## Phase 37: WebRTC Fallback Infrastructure
+- [ ] Configure STUN/TURN server credentials in LiveKit for strict corporate NAT networks.
+
+## Phase 38: Live Stream Viewer Mechanics
+- [ ] Build scrolling live chat comment overlay over host video stream.
+- [ ] Implement full-screen SVG gift animations when viewers tip the host.
+
+## Phase 39: Live Stream Host Mechanics
+- [ ] Build Host Dashboard showing live viewer count, earned coins, and stream uptime.
+- [ ] Implement "Invite Co-Host" split-screen video layout.
+
+## Phase 40: Moment Interactivity
+- [ ] Build "Liked By" modal listing all users who liked a Moment.
+- [ ] Implement `@mention` notifications when tagged in a comment.
+
+## Phase 41: Language Assessment Test
+- [ ] Build dynamic diagnostic quiz component for new sign-ups.
+- [ ] Fetch multiple-choice assessment questions from backend database.
+
+## Phase 42: Daily Check-in Rewards
+- [ ] Build daily login modal granting 5 to 10 free virtual coins upon first daily login.
+
+## Phase 43: Message Translation Toggle
+- [ ] Cache translated text client-side to allow toggling between original and translation without extra API calls.
+
+## Phase 44: Audio Auto-Play Settings
+- [ ] Add settings toggle to auto-play sequential voice notes in chat.
+
+## Phase 45: Image Gallery Viewer
+- [ ] Build swipeable full-screen lightbox for Moments with multiple images.
+
+## Phase 46: Partner Recommendation Algorithm
+- [ ] Build NestJS background job calculating top 10 recommended language partners daily.
+
+## Phase 47: Unread Badge Logic
+- [ ] Implement global unread counter service updating app badge and navigation tabs.
+
+## Phase 48: E2E Testing (Cypress)
+- [ ] Setup Cypress inside `frontend/`.
+- [ ] Write E2E test flows for Authentication, Chat Messaging, and Moment Creation.
+
+## Phase 49: Unit Testing (Jest)
+- [ ] Write NestJS unit tests for `DiscoveryService` PostGIS queries.
+- [ ] Write Angular unit tests for `VocabularyStore` signals.
+
+## Phase 50: Admin Dashboard (Users)
+- [ ] Build Angular Admin Portal for user management.
+- [ ] Build admin table to search users, inspect login history, and toggle VIP status manually.
+
+## Phase 51: Admin Dashboard (Moderation)
+- [ ] Build Moderation Queue UI to review flagged Moments and profiles.
+- [ ] Implement 1-click ban and warning buttons.
+
+## Phase 52: Help Centre
+- [ ] Build in-app Help Centre fetching dynamic FAQ articles from backend.
+
+## Phase 53: Version Enforcer
+- [ ] Build NestJS endpoint returning minimum supported app version.
+- [ ] Build blocking update modal in Angular if current app version is deprecated.
+
+## Phase 54: Automated Code Formatting
+- [ ] Configure Prettier and Husky git pre-commit hooks.
+
+## Phase 55: GitHub Actions CI/CD
+- [ ] Create `.github/workflows/deploy.yml` for automated testing and Docker image builds.
+
+## Phase 56: Server Monitoring
+- [ ] Configure Prometheus and Grafana Docker containers for NestJS and Centrifugo metrics.
+
+## Phase 57: Global Error Handler
+- [ ] Implement custom Angular `ErrorHandler` logging client crashes to backend analytics.
+
+## Phase 58: Empty States
+- [ ] Design custom vector illustrations for "No Messages", "No Moments Found", and "No Users Nearby".
+
+## Phase 59: Input Sanitisation
+- [ ] Implement strict HTML sanitisation using `DOMPurify` on all user-submitted text.
+
+## Phase 60: Drafts System
+- [ ] Persist unsent chat messages and Moment drafts to `localStorage`.
+
+## Phase 61: Link Previews
+- [ ] Build NestJS OpenGraph scraper rendering rich link preview cards in chat.
+
+## Phase 62: System Messages
+- [ ] Render custom system event bubbles in chat (e.g., "Profile updated", "Missed call").
+
+## Phase 63: Account Recovery
+- [ ] Build "Forgot Password" UI and NestJS email dispatch service.
+
+## Phase 64: Self-Healing QA & Visual Refinement Loop
+- [ ] AUTONOMOUS DIRECTIVE: Execute complete codebase audit. Verify zero hardcoded strings exist, confirm visual match against `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`, run test suites, and append any remaining visual bugs as new tasks below. Leave this box unchecked to loop continuously.
+
+## Phase 65: Comprehensive App Settings, Legal, & Security Architecture
+
+### Authentication & Account Security
+- [ ] Build Social Login UI components (Google, Facebook, Apple OAuth buttons).
+- [ ] Build "Linked Accounts" settings page to manage connected social accounts.
+- [ ] Build Password Policy & Reset UI with real-time regex validation (min 8 chars, numbers, symbols).
+
+### Appearance & UI Configuration
+- [ ] Build "Appearance Settings" menu.
+- [ ] Implement System-wide Dark Mode, Light Mode, and System Default toggle.
+- [ ] Implement UI & Font Scaling slider adjusting base `rem` units across Angular.
+- [ ] Build "Language Settings" menu to switch UI language independently of study target.
+
+### Privacy, Blocking & Discoverability
+- [ ] Build "Privacy Settings" hub.
+- [ ] Implement "Who can see my profile" toggle (Everyone, VIPs only, Hidden).
+- [ ] Build "User Filter Settings" to restrict initial message senders by age or native language.
+- [ ] Build "Block Management" page to manage and unblock users.
+
+### Notifications & Alerts
+- [ ] Build unified "Notifications Area" (Inbox) for system alerts, likes, comments, and followers.
+- [ ] Build "Notification Settings" toggles for Push Alerts and Badges across Direct Messages, Groups, Likes, and Voicerooms.
+
+### Chat & Data Storage Settings
+- [ ] Build "Chat Settings" page (Toggle Auto-Translate, Read Receipts, Enter-to-Send).
+- [ ] Build "Data & Storage" page (Clear Local Cache, toggle cellular data auto-downloads).
+
+### Legal, Help & GDPR Compliance
+- [ ] Build "Help & About" page displaying App Version, build number, and open-source licences.
+- [ ] Build "Legal & Privacy Notices" viewer for Terms of Service and Privacy Policy.
+- [ ] Build "Personal Data Collection" GDPR hub with "Request My Data Archive" button and automated "Delete Account" workflow.
