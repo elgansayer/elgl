@@ -122,7 +122,7 @@
 - [x] Build VIP Profile Visitor Log UI with blurred cards for free users.
 
 ## Phase 13: HelloTalk Chat Specifics
-- [ ] Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
+- [STUCK] Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
 - [x] Build HTML5 Canvas Doodle Pad component in chat modal.
 - [x] Build Virtual Gift picker modal with coin balance auto-deduction.
 - [x] Build Favourites bookmarking tab for saved messages and corrections.
