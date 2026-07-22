@@ -15,24 +15,36 @@ run_aider_with_fallback() {
     local FILES_AND_ARGS="$2"
 
     echo "Attempting 1: Claude (via Copilot)..."
-    timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model openai/claude-opus-4.7 --editor-model openai/claude-sonnet-4.5 --message "$MESSAGE"
-    if [ $? -eq 0 ]; then return 0; fi
-    echo "Claude failed. Reverting and attempting 2: Copilot GPT..."
-    git reset --hard HEAD
+    > claude.log
+    
+    # Background watcher: kills Aider instantly if the quota is hit
+    ( tail -f claude.log 2>/dev/null | grep -m 1 "quota exceeded" && pkill -f "aider.*claude" ) &
+    WATCHER_PID=$!
 
-    timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model openai/gpt-5.5 --editor-model openai/gpt-4o --message "$MESSAGE"
-    if [ $? -eq 0 ]; then return 0; fi
-    echo "Copilot failed. Reverting and attempting 3: Gemini 3 Pro..."
-    git reset --hard HEAD
-
-    timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model gemini/gemini-3.1-pro-preview --editor-model gemini/gemini-3.1-pro-preview --message "$MESSAGE"
-    if [ $? -eq 0 ]; then return 0; fi
-    echo "Gemini 3 Pro failed. Reverting and attempting 4: DeepSeek..."
+    # Run Aider and pipe output to both the terminal and the log file
+    timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model openai/claude-opus-4.7 --editor-model openai/claude-sonnet-4.5 --message "$MESSAGE" 2>&1 | tee claude.log
+    AIDER_EXIT=${PIPESTATUS[0]}
+    
+    # Clean up the watcher
+    kill -9 $WATCHER_PID 2>/dev/null || true
+    
+    if [ $AIDER_EXIT -eq 0 ]; then return 0; fi
+    echo "Claude failed or hit quota limit. Reverting and attempting 2: DeepSeek..."
     git reset --hard HEAD
 
     timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model deepseek/deepseek-chat --editor-model deepseek/deepseek-coder --message "$MESSAGE"
     if [ $? -eq 0 ]; then return 0; fi
-    echo "DeepSeek failed. Reverting and attempting 5: Gemini Flash..."
+    echo "DeepSeek failed. Reverting and attempting 3: Copilot GPT..."
+    git reset --hard HEAD
+
+    timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model openai/gpt-5.5 --editor-model openai/gpt-4o --message "$MESSAGE"
+    if [ $? -eq 0 ]; then return 0; fi
+    echo "Copilot GPT failed. Reverting and attempting 4: Gemini 3 Pro..."
+    git reset --hard HEAD
+
+    timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model gemini/gemini-3.1-pro-preview --editor-model gemini/gemini-3.1-pro-preview --message "$MESSAGE"
+    if [ $? -eq 0 ]; then return 0; fi
+    echo "Gemini 3 Pro failed. Reverting and attempting 5: Gemini Flash..."
     git reset --hard HEAD
 
     timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model gemini/gemini-3.5-flash --editor-model gemini/gemini-3.5-flash --message "$MESSAGE"
