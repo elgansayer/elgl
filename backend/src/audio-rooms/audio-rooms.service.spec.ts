@@ -475,6 +475,71 @@ describe('AudioRoomsService', () => {
     });
   });
 
+  describe('demoteSpeaker', () => {
+    it('should throw ForbiddenException if user is not host', async () => {
+      const roomRow: any = { id: 'room-1', host_id: 'host-1' };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await expect(
+        service.demoteSpeaker('other-user', {
+          room_id: 'room-1',
+          target_user_id: 'user-2',
+        }),
+      ).rejects.toThrow(
+        new ForbiddenException('Only the host can demote a stage speaker.'),
+      );
+    });
+
+    it('should throw ForbiddenException when attempting to demote the host', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        speakers: ['host-1'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await expect(
+        service.demoteSpeaker('host-1', {
+          room_id: 'room-1',
+          target_user_id: 'host-1',
+        }),
+      ).rejects.toThrow(new ForbiddenException('The host cannot be demoted.'));
+    });
+
+    it('should remove user from speakers and publish speaker_demoted event', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        speakers: ['host-1', 'user-2'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      const result = await service.demoteSpeaker('host-1', {
+        room_id: 'room-1',
+        target_user_id: 'user-2',
+      });
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        speakers: ['host-1'],
+      });
+      expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+        type: 'speaker_demoted',
+        target_user_id: 'user-2',
+        room_id: 'room-1',
+      });
+      expect(result.id).toBe('room-1');
+    });
+  });
+
   describe('sendCaption', () => {
     it('should save caption and broadcast via Centrifugo', async () => {
       const dto: any = { room_id: 'room-1', text_content: 'Welcome everyone' };

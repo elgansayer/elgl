@@ -9,7 +9,6 @@ import { LanguageSelectorComponent } from './components/language-selector/langua
 
 @Component({
   selector: 'app-root',
-  standalone: true,
   imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, LanguageSelectorComponent],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],

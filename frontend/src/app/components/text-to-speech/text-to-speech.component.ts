@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-text-to-speech',
-  standalone: true,
   imports: [CommonModule],
   template: `
     <button

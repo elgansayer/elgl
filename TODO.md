@@ -73,9 +73,9 @@
 - [x] Build stream recording & replay archive storage (`POST /audio-rooms/archive`) saving LiveKit composite recordings to Cloudflare R2.
 
 ## Phase 7: VIP Monetisation, Virtual Economy, Trust/Safety & 24/7 VPS Deployment
-- [x] Build NestJS `MonetisationController` handling Stripe & Apple/Google App Store webhooks (`POST /webhooks/stripe`) to toggle `user.is_vip` and `vip_tier`.
+- [x] Build NestJS `MonetisationController` handling Stripe & Apple/Google App Store webhooks (`POST /webhooks/stripe`) to toggle `user.is_vip` and `vip_tier`. ⚠️ Audit (2026-07-22): only an unverified, signature-less Stripe-shaped webhook exists; no Apple/Google App Store webhook handling at all. See `AGENTS.md` Section 8.1 and Phase 8 below.
 - [x] Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent): unlimited AI, 3 target languages, location spoofing, incognito profile views.
-- [x] Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`) adding balance to `users.coins_balance`.
+- [x] Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`) adding balance to `users.coins_balance`. ⚠️ Audit (2026-07-22): trusts client-supplied `amount` with no payment/receipt verification. See Phase 8 below.
 - [x] Build Virtual Gift catalog & sending endpoint (`POST /economy/send-gift`), deducting coins and publishing animated Centrifugo broadcast events.
 - [x] Build Audio Room tipping mechanism allowing listeners to gift coins directly to hosts on stage.
 - [x] Build Developer Tier (20 UKP / $26 USD per month) API key management and developer analytics dashboard.
@@ -83,3 +83,13 @@
 - [x] Create production Docker orchestration (`docker-compose.prod.yml`) with Nginx reverse proxy routing (`/api` -> `api:3000`, `/centrifugo` -> `websocket:8000`, `/` -> `web:80`).
 - [x] Verify LiveKit SFU port forwarding (`7880/tcp`, `7881/tcp`, `50000-60000/udp`) and external IP configuration (`use_external_ip: true`) for 24/7 cloud VPS deployment.
 - [x] Conduct final end-to-end linting (`npm run lint`), TypeScript compilation (`tsc --noEmit`), Docker container build & health verification (`docker compose up --build -d`), and RTL layout check across all components.
+
+## Phase 8: Audit Remediation (opened 2026-07-22, see `AGENTS.md` Section 8)
+- [ ] **Critical:** Verify Stripe webhook signatures (`stripe.webhooks.constructEvent` with `STRIPE_WEBHOOK_SECRET`) in `MonetisationService#handleStripeWebhook` before trusting any event payload. Add the `stripe` SDK as a backend dependency.
+- [ ] **Critical:** Lock down `POST /monetisation/upgrade` so it can never be called directly by an unprivileged client to self-grant VIP; VIP status must only change as a side effect of a verified payment webhook.
+- [ ] **Critical:** Rework `POST /economy/purchase-coins` so the coin amount is derived server-side from a verified Stripe/App Store/Play Billing purchase record, never from a client-supplied `amount` field.
+- [ ] **Critical:** Implement real Apple App Store Server Notifications and Google Play Billing webhook handlers (currently non-existent, despite being marked complete in Phase 7).
+- [ ] **High:** Replace the hardcoded mock translation/grammar-check/pronunciation-scoring logic in `backend/src/nlp/nlp.service.ts` with real Azure AI Translator / DeepL / speech-assessment API calls, preserving the existing Redis daily rate limiter.
+- [x] Remove explicit `standalone: true` from all Angular component decorators (22 files fixed, verified against Angular v20+ default and this project's own mandate).
+- [x] Fix `frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts`: 4 ESLint errors and 1 failing Vitest test (invalid `SpeechSynthesisUtterance` mock).
+

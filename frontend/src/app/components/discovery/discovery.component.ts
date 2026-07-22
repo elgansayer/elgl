@@ -1,13 +1,13 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
-
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { DiscoveryService } from '../../services/discovery.service';
 import { UserProfile } from '../../services/user.service';
 
 @Component({
   selector: 'app-discovery',
-  standalone: true,
-  imports: [FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
 })
@@ -18,37 +18,37 @@ export class DiscoveryComponent implements OnInit {
   readonly isLoading = signal<boolean>(true);
 
   readonly nativeLanguageOptions = [
-    { value: '', label: 'Any native language' },
-    { value: 'en', label: 'English' },
-    { value: 'es', label: 'Spanish' },
-    { value: 'fr', label: 'French' },
-    { value: 'de', label: 'German' },
-    { value: 'it', label: 'Italian' },
-    { value: 'pt', label: 'Portuguese' },
-    { value: 'ja', label: 'Japanese' },
-    { value: 'ko', label: 'Korean' },
-    { value: 'zh', label: 'Chinese' },
-    { value: 'ar', label: 'Arabic' },
-    { value: 'ru', label: 'Russian' },
-    { value: 'hi', label: 'Hindi' },
-    { value: 'tr', label: 'Turkish' },
+    { value: '', labelKey: 'lang.anyNative' },
+    { value: 'en', labelKey: 'lang.en' },
+    { value: 'es', labelKey: 'lang.es' },
+    { value: 'fr', labelKey: 'lang.fr' },
+    { value: 'de', labelKey: 'lang.de' },
+    { value: 'it', labelKey: 'lang.it' },
+    { value: 'pt', labelKey: 'lang.pt' },
+    { value: 'ja', labelKey: 'lang.ja' },
+    { value: 'ko', labelKey: 'lang.ko' },
+    { value: 'zh', labelKey: 'lang.zh' },
+    { value: 'ar', labelKey: 'lang.ar' },
+    { value: 'ru', labelKey: 'lang.ru' },
+    { value: 'hi', labelKey: 'lang.hi' },
+    { value: 'tr', labelKey: 'lang.tr' },
   ] as const;
 
   readonly targetLanguageOptions = [
-    { value: '', label: 'Any target language' },
-    { value: 'en', label: 'English' },
-    { value: 'es', label: 'Spanish' },
-    { value: 'fr', label: 'French' },
-    { value: 'de', label: 'German' },
-    { value: 'it', label: 'Italian' },
-    { value: 'pt', label: 'Portuguese' },
-    { value: 'ja', label: 'Japanese' },
-    { value: 'ko', label: 'Korean' },
-    { value: 'zh', label: 'Chinese' },
-    { value: 'ar', label: 'Arabic' },
-    { value: 'ru', label: 'Russian' },
-    { value: 'hi', label: 'Hindi' },
-    { value: 'tr', label: 'Turkish' },
+    { value: '', labelKey: 'lang.anyTarget' },
+    { value: 'en', labelKey: 'lang.en' },
+    { value: 'es', labelKey: 'lang.es' },
+    { value: 'fr', labelKey: 'lang.fr' },
+    { value: 'de', labelKey: 'lang.de' },
+    { value: 'it', labelKey: 'lang.it' },
+    { value: 'pt', labelKey: 'lang.pt' },
+    { value: 'ja', labelKey: 'lang.ja' },
+    { value: 'ko', labelKey: 'lang.ko' },
+    { value: 'zh', labelKey: 'lang.zh' },
+    { value: 'ar', labelKey: 'lang.ar' },
+    { value: 'ru', labelKey: 'lang.ru' },
+    { value: 'hi', labelKey: 'lang.hi' },
+    { value: 'tr', labelKey: 'lang.tr' },
   ] as const;
 
   readonly distanceBandsKm = [10, 25, 50, 100, 250] as const;

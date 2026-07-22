@@ -4,7 +4,6 @@ import { UserService, VisitorLog, UserProfile } from '../../services/user.servic
 
 @Component({
   selector: 'app-visitor-logs',
-  standalone: true,
   imports: [CommonModule],
   templateUrl: './visitor-logs.component.html',
   styleUrls: ['./visitor-logs.component.scss']

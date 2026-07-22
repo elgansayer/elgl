@@ -14,6 +14,7 @@ import {
   ApproveSpeakerDto,
   ArchiveRoomDto,
   CreateAudioRoomDto,
+  DemoteSpeakerDto,
   JoinRoomDto,
   RaiseHandDto,
   SendCaptionDto,
@@ -318,6 +319,46 @@ export class AudioRoomsService implements OnModuleInit {
     // Notify user via Centrifugo to refresh LiveKit token with canPublish: true
     void this.centrifugoService.publish(`room_${room.id}`, {
       type: 'speaker_approved',
+      target_user_id: dto.target_user_id,
+      room_id: room.id,
+    });
+
+    return this.getRoom(room.id);
+  }
+
+  async demoteSpeaker(
+    hostId: string,
+    dto: DemoteSpeakerDto,
+  ): Promise<AudioRoomRecord> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', dto.room_id)
+      .single();
+    if (!response.data) throw new NotFoundException('Room not found');
+    const room = response.data as AudioRoomRow;
+
+    if (room.host_id !== hostId) {
+      throw new ForbiddenException('Only the host can demote a stage speaker.');
+    }
+
+    if (room.host_id === dto.target_user_id) {
+      throw new ForbiddenException('The host cannot be demoted.');
+    }
+
+    const updatedSpeakers = room.speakers.filter(
+      (id) => id !== dto.target_user_id,
+    );
+
+    await supabase
+      .from('audio_rooms')
+      .update({ speakers: updatedSpeakers })
+      .eq('id', room.id);
+
+    // Notify user via Centrifugo to drop LiveKit publish permission (canPublish: false)
+    void this.centrifugoService.publish(`room_${room.id}`, {
+      type: 'speaker_demoted',
       target_user_id: dto.target_user_id,
       room_id: room.id,
     });

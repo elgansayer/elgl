@@ -1,6 +1,8 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
-
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
 import { RoomChatComponent } from '../room-chat/room-chat.component';
@@ -9,14 +11,14 @@ import { TrustSafetyModalComponent } from '../trust-safety-modal/trust-safety-mo
 
 @Component({
   selector: 'app-audio-room',
-  standalone: true,
-  imports: [FormsModule, RoomChatComponent, VirtualGiftModalComponent, TrustSafetyModalComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, RoomChatComponent, VirtualGiftModalComponent, TrustSafetyModalComponent],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],
 })
 export class AudioRoomComponent implements OnInit {
   readonly store = inject(AudioRoomsStore);
   readonly authService = inject(AuthService);
+  private readonly i18n = inject(I18nService);
 
   readonly showCreateModal = signal<boolean>(false);
   readonly showGiftModal = signal<boolean>(false);
@@ -37,7 +39,7 @@ export class AudioRoomComponent implements OnInit {
       await this.store.joinRoom(room);
     } catch (e) {
       console.error('Error creating live room:', e);
-      alert('Failed to launch audio room.');
+      alert(this.i18n.translate('audioRoom.launchError'));
     }
   }
 
@@ -57,9 +59,13 @@ export class AudioRoomComponent implements OnInit {
     await this.store.approveSpeaker(targetUserId);
   }
 
+  async demote(targetUserId: string): Promise<void> {
+    await this.store.demoteSpeaker(targetUserId);
+  }
+
   async archive(): Promise<void> {
     if (
-      !confirm('Are you sure you want to end this room and archive the recording to Cloudflare R2?')
+      !confirm(this.i18n.translate('audioRoom.archiveConfirm'))
     )
       return;
     await this.store.archiveRoom();

@@ -172,6 +172,20 @@ export class AudioRoomsStore {
           }
           alert('🎉 Host approved your request to speak! Your microphone is now live on stage.');
         }
+      } else if (payload.type === 'speaker_demoted' && payload.target_user_id) {
+        this.currentRoom.update(r => {
+          if (!r) return r;
+          return { ...r, speakers: r.speakers.filter(id => id !== payload.target_user_id) };
+        });
+
+        // If target user is me, drop publish permission and mute the microphone
+        if (payload.target_user_id === this.authService.currentUser()?.id) {
+          this.isSpeaker.set(false);
+          if (this.livekitRoom) {
+            void this.livekitRoom.localParticipant.setMicrophoneEnabled(false);
+          }
+          alert('The host moved you back to the listener audience.');
+        }
       } else if (payload.type === 'subtitle' && payload.caption) {
         this.captions.update(list => [...list.slice(-49), payload.caption!]);
       } else if (payload.type === 'chat_message' && payload.message) {
@@ -210,6 +224,22 @@ export class AudioRoomsStore {
       this.currentRoom.set(updated);
     } catch (e) {
       console.error('Approve speaker error:', e);
+    }
+  }
+
+  async demoteSpeaker(targetUserId: string): Promise<void> {
+    const room = this.currentRoom();
+    if (!room) return;
+    try {
+      const updated = await firstValueFrom(
+        this.http.post<AudioRoomRecord>(`${this.baseUrl}/demote-speaker`, {
+          room_id: room.id,
+          target_user_id: targetUserId
+        }, { headers: this.getHeaders() })
+      );
+      this.currentRoom.set(updated);
+    } catch (e) {
+      console.error('Demote speaker error:', e);
     }
   }
 

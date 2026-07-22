@@ -63,3 +63,12 @@ In addition to the Angular and TypeScript best practices above, you must adhere 
 - **Globalisation, RTL & Zero Hard-Coded Strings:** Support ANY language with 0 hard-coded UI strings. Never write raw hard-coded text inside Angular templates (`*.html`) or component code (`*.ts`). Always pipe UI text through `TranslatePipe` (`{{ 'key' | t }}`) and use `I18nService.translate('key', params)` inside code (`src/app/services/i18n.service.ts`). Use native `Intl.Segmenter` for word tokenisation and strictly use Tailwind logical properties (`ps-4`, `me-2`, `border-s`) for RTL layout compatibility.
 - **API First:** Never connect Angular directly to the database; every request must route through NestJS REST API or Centrifugo WebSockets.
 - **Verification:** Always run `npm run lint` and verify no compiler errors exist before marking tasks complete in `TODO.md`.
+
+## Known Issues (see AGENTS.md Section 8 for full detail)
+`TODO.md` marks every phase as complete, but an audit (2026-07-22) found real gaps. Do not trust checked-off items blindly:
+- **Critical security:** the Stripe webhook, `/monetisation/upgrade`, and `/economy/purchase-coins` endpoints all grant VIP status / coins without verifying any real payment (no webhook signature check, no receipt validation). Do not build on top of these without fixing them first; see the `payment-webhook-security` skill.
+- **Mocked AI:** `backend/src/nlp/nlp.service.ts` translation/grammar/pronunciation endpoints are hardcoded stand-ins, not real Azure/DeepL/speech-API calls.
+- Already fixed during the audit: 22 components had a banned explicit `standalone: true`, and one frontend spec had lint errors plus a failing test.
+
+## Skills System
+Before starting recurring, well-defined workflows (new API module, new component, new migration, new realtime channel, LiveKit flow, i18n keys, or the pre-completion verification gate), check `.github/skills/<name>/SKILL.md` for the established convention rather than re-deriving it.

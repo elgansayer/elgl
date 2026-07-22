@@ -7,7 +7,6 @@ interface DiffSegment {
 
 @Component({
   selector: 'app-visual-diff',
-  standalone: true,
   imports: [],
   templateUrl: './visual-diff.component.html',
   styleUrls: ['./visual-diff.component.scss'],

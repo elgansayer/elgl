@@ -4,7 +4,6 @@ import { UserService } from '../../services/user.service';
 
 @Component({
   selector: 'app-voice-recorder',
-  standalone: true,
   imports: [],
   templateUrl: './voice-recorder.component.html',
   styleUrls: ['./voice-recorder.component.scss'],

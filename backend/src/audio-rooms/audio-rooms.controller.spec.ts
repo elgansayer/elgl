@@ -20,6 +20,7 @@ describe('AudioRoomsController', () => {
             getRoom: jest.fn(),
             raiseHand: jest.fn(),
             approveSpeaker: jest.fn(),
+            demoteSpeaker: jest.fn(),
             sendCaption: jest.fn(),
             archiveRoom: jest.fn(),
           },
@@ -143,6 +144,30 @@ describe('AudioRoomsController', () => {
         dto,
       );
       expect(audioRoomsService.approveSpeaker).toHaveBeenCalledWith(
+        'user-1',
+        dto,
+      );
+      expect(result).toEqual(room);
+    });
+  });
+
+  describe('demoteSpeaker', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.demoteSpeaker(null, {} as any);
+      expect(result).toBeNull();
+      expect(audioRoomsService.demoteSpeaker).not.toHaveBeenCalled();
+    });
+
+    it('should call service demoteSpeaker when user is provided', async () => {
+      const dto: any = { room_id: 'room-1', target_user_id: 'user-2' };
+      const room: any = { id: 'room-1' };
+      (audioRoomsService.demoteSpeaker as jest.Mock).mockResolvedValue(room);
+
+      const result = await controller.demoteSpeaker(
+        { id: 'user-1' } as any,
+        dto,
+      );
+      expect(audioRoomsService.demoteSpeaker).toHaveBeenCalledWith(
         'user-1',
         dto,
       );

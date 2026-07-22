@@ -2,6 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
 import { ChatMessage, ChatRoom, ChatService } from '../../services/chat.service';
 
@@ -19,13 +21,13 @@ interface ChatRoomPreview {
 
 @Component({
   selector: 'app-chat-list',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
   templateUrl: './chat-list.component.html'
 })
 export class ChatListComponent implements OnInit {
   private readonly chatService = inject(ChatService);
   private readonly authService = inject(AuthService);
+  private readonly i18n = inject(I18nService);
 
   readonly isLoading = signal<boolean>(true);
   readonly previews = signal<ChatRoomPreview[]>([]);
@@ -113,17 +115,17 @@ export class ChatListComponent implements OnInit {
 
   private toMessagePreview(message: ChatMessage | null): string {
     if (!message) {
-      return 'No messages yet. Start a chat.';
+      return this.i18n.translate('chatList.noMessagesYet');
     }
     if (message.message_type === 'text') {
-      return message.text_content || 'Text message';
+      return message.text_content || this.i18n.translate('chatList.textMessage');
     }
     if (message.message_type === 'correction') {
-      return 'Sent a correction';
+      return this.i18n.translate('chatList.sentCorrection');
     }
     if (message.message_type === 'voice') {
-      return 'Sent a voice note';
+      return this.i18n.translate('chatList.sentVoice');
     }
-    return 'Sent a doodle';
+    return this.i18n.translate('chatList.sentDoodle');
   }
 }

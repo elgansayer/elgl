@@ -9,7 +9,7 @@
       <div>
         <h1 class="text-base font-black text-slate-900 sm:text-lg">{{ roomId }}</h1>
         <p class="text-xs" [class]="centrifugeService.isConnected() ? 'text-xs text-emerald-600' : 'text-xs text-amber-600'">
-          {{ centrifugeService.isConnected() ? 'Live now' : 'Connecting...' }}
+          {{ centrifugeService.isConnected() ? ('chatRoom.liveStatus' | t) : ('chatRoom.connectingStatus' | t) }}
         </p>
       </div>
     </div>
@@ -18,11 +18,11 @@
         type="text"
         [(ngModel)]="searchQuery"
         (keyup.enter)="onSearch()"
-        placeholder="Search messages"
+        [placeholder]="'chatRoom.searchPlaceholder' | t"
         class="app-input w-28 sm:w-44 text-xs pt-2 pb-2"
       />
       <button (click)="onSearch()" class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs">
-        Search
+        {{ 'chatRoom.searchBtn' | t }}
       </button>
     </div>
   </div>
@@ -31,10 +31,10 @@
     class="mt-2.5 flex-1 overflow-y-auto rounded-card border border-slate-100 bg-slate-50 ps-2 pe-2 pt-2 pb-2 space-y-2"
   >
     @if (isLoading()) {
-      <div class="pt-10 text-center text-sm text-slate-500">Loading messages...</div>
+      <div class="pt-10 text-center text-sm text-slate-500">{{ 'chatRoom.loadingMessages' | t }}</div>
     }
     @if (!isLoading() && messages().length === 0) {
-      <div class="pt-10 text-center text-sm text-slate-500">No messages yet.</div>
+      <div class="pt-10 text-center text-sm text-slate-500">{{ 'chatRoom.noMessages' | t }}</div>
     }
 
     @for (msg of messages(); track msg.id) {
@@ -53,7 +53,7 @@
           "
         >
           <p class="mb-1 text-[11px] opacity-70">
-            {{ msg.sender?.display_name || 'Partner' }} · {{ msg.created_at | date: 'shortTime' }}
+            {{ msg.sender?.display_name || ('chatRoom.partnerFallback' | t) }} · {{ msg.created_at | date: 'shortTime' }}
           </p>
           @if (msg.message_type === 'text' && msg.text_content) {
             <app-tokenised-text
@@ -84,14 +84,14 @@
                 (click)="saveSentenceToLingq(msg)"
                 class="rounded-lg bg-amber-500/90 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-white"
               >
-                Save
+                {{ 'chatRoom.saveBtn' | t }}
               </button>
             }
             <button
               (click)="bookmark(msg)"
               class="rounded-lg bg-slate-200 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-slate-700"
             >
-              Fav
+              {{ 'chatRoom.favBtn' | t }}
             </button>
           </div>
         </div>
@@ -100,7 +100,7 @@
 
     @if (isTyping()) {
       <div class="ps-2 pe-2 pt-1 pb-1 text-xs font-semibold text-slate-500">
-        Someone is typing...
+        {{ 'chatRoom.someoneTyping' | t }}
       </div>
     }
   </div>
@@ -137,19 +137,19 @@
       <input
         type="text"
         [(ngModel)]="originalText"
-        placeholder="Original sentence"
+        [placeholder]="'chatRoom.originalSentence' | t"
         class="app-input w-full bg-white border-amber-200 pt-2 pb-2"
       />
       <input
         type="text"
         [(ngModel)]="correctedText"
-        placeholder="Corrected sentence"
+        [placeholder]="'chatRoom.correctedSentence' | t"
         class="app-input w-full bg-white border-amber-200 pt-2 pb-2"
       />
       <input
         type="text"
         [(ngModel)]="explanationText"
-        placeholder="Explanation"
+        [placeholder]="'chatRoom.explanation' | t"
         class="app-input w-full bg-white border-amber-200 pt-2 pb-2"
       />
       <div class="flex gap-2">
@@ -157,13 +157,13 @@
           (click)="showCorrectionForm.set(false)"
           class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
         >
-          Cancel
+          {{ 'chatRoom.cancelBtn' | t }}
         </button>
         <button
           (click)="sendCorrection()"
           class="rounded-app bg-emerald-600 ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-white"
         >
-          Send correction
+          {{ 'chatRoom.sendCorrection' | t }}
         </button>
       </div>
     </div>
@@ -175,19 +175,19 @@
         (click)="showCorrectionForm.set(!showCorrectionForm())"
         class="app-button-secondary bg-amber-100 text-amber-800 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
       >
-        Correct
+        {{ 'chatRoom.correctBtn' | t }}
       </button>
       <button
         (click)="showDoodleModal.set(true)"
         class="app-button-secondary bg-blue-100 text-blue-800 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
       >
-        Doodle
+        {{ 'chatRoom.doodleBtn' | t }}
       </button>
       <button
         (click)="showVoiceModal.set(true)"
         class="app-button-secondary bg-red-100 text-red-800 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
       >
-        Voice
+        {{ 'chatRoom.voiceBtn' | t }}
       </button>
     </div>
     <div class="flex items-center gap-2">
@@ -195,11 +195,11 @@
         type="text"
         [(ngModel)]="textInput"
         (keyup.enter)="sendTextMessage()"
-        placeholder="Type your message"
+        [placeholder]="'chatRoom.typePlaceholder' | t"
         class="app-input flex-1 pt-3 pb-3"
       />
       <button (click)="sendTextMessage()" class="app-button-primary ps-5 pe-5 pt-3 pb-3 text-sm">
-        Send
+        {{ 'chatRoom.sendBtn' | t }}
       </button>
     </div>
   </div>

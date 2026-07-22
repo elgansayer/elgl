@@ -95,19 +95,22 @@ export class VocabularyStore {
     }
   }
 
-  getWordStatus(word: string): { level: number; colorClass: string; flashcard?: Flashcard } {
+  getWordStatus(word: string): { level: number; colorClass: string; colourClass: string; flashcard?: Flashcard } {
     const clean = word.toLowerCase().trim();
     const fc = this.flashcardMap().get(clean);
     if (!fc) {
       // Level 0 = New / Blue
-      return { level: 0, colorClass: 'bg-blue-100 text-blue-900 border-b-2 border-blue-400 cursor-pointer hover:bg-blue-200' };
+      const cls = 'bg-blue-100 text-blue-900 border-b-2 border-blue-400 cursor-pointer hover:bg-blue-200';
+      return { level: 0, colorClass: cls, colourClass: cls };
     }
     if (fc.srs_level >= 4) {
       // Level 4+ = Known / White (normal text appearance)
-      return { level: fc.srs_level, colorClass: 'text-slate-800 dark:text-slate-200 cursor-pointer hover:underline', flashcard: fc };
+      const cls = 'text-slate-800 dark:text-slate-200 cursor-pointer hover:underline';
+      return { level: fc.srs_level, colorClass: cls, colourClass: cls, flashcard: fc };
     }
     // Level 1 to 3 = Learning / Yellow
-    return { level: fc.srs_level, colorClass: 'bg-amber-100 text-amber-900 border-b-2 border-amber-500 cursor-pointer hover:bg-amber-200 font-medium', flashcard: fc };
+    const cls = 'bg-amber-100 text-amber-900 border-b-2 border-amber-500 cursor-pointer hover:bg-amber-200 font-medium';
+    return { level: fc.srs_level, colorClass: cls, colourClass: cls, flashcard: fc };
   }
 
   async saveWord(payload: {

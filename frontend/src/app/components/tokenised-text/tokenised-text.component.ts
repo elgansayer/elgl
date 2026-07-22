@@ -10,7 +10,6 @@ export interface TokenSegment {
 
 @Component({
   selector: 'app-tokenised-text',
-  standalone: true,
   imports: [CommonModule],
   templateUrl: './tokenised-text.component.html',
   styleUrls: ['./tokenised-text.component.scss']

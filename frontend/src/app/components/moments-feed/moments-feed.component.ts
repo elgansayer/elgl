@@ -2,6 +2,8 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
 import { MomentsStore, MomentRecord } from '../../services/moments.store';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { AuthService } from '../../services/auth.service';
@@ -13,11 +15,11 @@ import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.compone
 
 @Component({
   selector: 'app-moments-feed',
-  standalone: true,
   imports: [
     CommonModule,
     FormsModule,
     RouterLink,
+    TranslatePipe,
     TokenisedTextComponent,
     WordDefinitionModalComponent,
     TextToSpeechComponent,
@@ -31,6 +33,7 @@ export class MomentsFeedComponent implements OnInit {
   readonly momentsStore = inject(MomentsStore);
   readonly vocabStore = inject(VocabularyStore);
   readonly authService = inject(AuthService);
+  private readonly i18n = inject(I18nService);
 
   readonly isCreating = signal<boolean>(false);
   readonly showVoiceRecorder = signal<boolean>(false);
@@ -64,7 +67,7 @@ export class MomentsFeedComponent implements OnInit {
   addTempImageUrl(): void {
     if (!this.tempImageUrlInput.trim()) return;
     if (this.newMediaUrls.length >= 9) {
-      alert('You may upload a maximum of 9 media items per Moment.');
+      alert(this.i18n.translate('moments.maxMediaAlert'));
       return;
     }
     this.newMediaUrls.push(this.tempImageUrlInput.trim());
@@ -100,7 +103,7 @@ export class MomentsFeedComponent implements OnInit {
       this.newMediaType = 'none';
     } catch (e) {
       console.error('Error submitting moment:', e);
-      alert('Failed to publish Moment.');
+      alert(this.i18n.translate('moments.publishError'));
     } finally {
       this.isCreating.set(false);
     }
@@ -125,7 +128,7 @@ export class MomentsFeedComponent implements OnInit {
       moment.translatedText = res.translated_text;
     } catch (e) {
       console.error('Inline translation error:', e);
-      moment.translatedText = 'Could not fetch translation right now.';
+      moment.translatedText = this.i18n.translate('moments.transError');
     } finally {
       moment.isTranslating = false;
     }
@@ -142,10 +145,10 @@ export class MomentsFeedComponent implements OnInit {
         definition: 'Saved full social feed moment to LingQ Spaced Repetition deck.'
       });
       await this.vocabStore.updateSrsLevel(created.id, 1);
-      alert(`📚 Saved Moment text to your LingQ SRS Learning Deck:\n"${moment.text_content}"`);
+      alert(this.i18n.translate('moments.savedLingqAlert', { text: moment.text_content }));
     } catch (e) {
       console.error('Failed to save moment text to LingQ deck:', e);
-      alert('Failed to save or already in your SRS deck.');
+      alert(this.i18n.translate('moments.saveErrorAlert'));
     }
   }
 
@@ -222,10 +225,10 @@ export class MomentsFeedComponent implements OnInit {
     if (!moment.text_content) return;
     try {
       await navigator.clipboard.writeText(moment.text_content);
-      alert('Moment text copied.');
+      alert(this.i18n.translate('moments.copiedAlert'));
     } catch (error) {
       console.error('Failed to copy moment text:', error);
-      alert('Could not copy text right now.');
+      alert(this.i18n.translate('moments.copyErrorAlert'));
     }
   }
 }

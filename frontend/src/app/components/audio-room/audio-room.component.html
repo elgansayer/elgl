@@ -3,48 +3,53 @@
     <section class="app-card app-padded space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p class="app-muted font-bold uppercase tracking-wide">🔴 Live SFU room</p>
+          <p class="app-muted font-bold uppercase tracking-wide">{{ 'audioRoom.liveSfuBadge' | t }}</p>
           <h2 class="app-section-title">{{ room.title }}</h2>
           <p class="app-muted">
-            Host: {{ room.host?.display_name }} · Listeners: {{ room.listeners_count }} ·
+            {{ 'audioRoom.hostLabel' | t }}: {{ room.host?.display_name || ('audioRoom.hostFallback' | t) }} · {{ 'audioRoom.listenersCount' | t: { count: room.listeners_count } }} ·
             {{ room.target_language }}
           </p>
         </div>
         <div class="flex flex-wrap gap-2">
           @if (!store.isSpeaker()) {
             <button (click)="raiseHand()" class="rounded-app bg-amber-400 ps-4 pe-4 pt-2 pb-2 text-xs font-bold text-amber-950">
-              ✋ Raise hand
+              {{ 'audioRoom.raiseHandBtn' | t }}
             </button>
           }
-          <button (click)="showGiftModal.set(true)" class="rounded-app bg-purple-600 ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-white">🎁 Gift host</button>
-          <button (click)="showSafetyModal.set(true)" class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs">🛡️ Moderate</button>
+          <button (click)="showGiftModal.set(true)" class="rounded-app bg-purple-600 ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-white">{{ 'audioRoom.giftHostBtn' | t }}</button>
+          <button (click)="showSafetyModal.set(true)" class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs">{{ 'audioRoom.moderateBtn' | t }}</button>
           @if (room.host_id === authService.currentUser()?.id) {
-            <button (click)="archive()" class="rounded-app bg-red-600 ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-white">💾 End and archive</button>
+            <button (click)="archive()" class="rounded-app bg-red-600 ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-white">{{ 'audioRoom.endArchiveBtn' | t }}</button>
           }
-          <button (click)="leave()" class="app-button-secondary ps-3.5 pe-3.5 pt-2 pb-2 text-xs">👋 Leave</button>
+          <button (click)="leave()" class="app-button-secondary ps-3.5 pe-3.5 pt-2 pb-2 text-xs">{{ 'audioRoom.leaveBtn' | t }}</button>
         </div>
       </div>
 
       <div class="flex flex-wrap gap-1.5">
-        <span class="app-chip">🎧 Live listening</span>
-        <span class="app-chip">✋ Raise hand queue</span>
-        <span class="app-chip">💬 Synchronous subtitles</span>
+        <span class="app-chip">{{ 'audioRoom.chipListening' | t }}</span>
+        <span class="app-chip">{{ 'audioRoom.chipQueue' | t }}</span>
+        <span class="app-chip">{{ 'audioRoom.chipSubtitles' | t }}</span>
       </div>
 
       <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div class="lg:col-span-2 space-y-4">
           <section class="app-card app-padded">
             <div class="mb-3 flex items-center justify-between">
-              <h3 class="text-sm font-black text-slate-800">🎙️ Speaker stage</h3>
-              <span class="app-muted">{{ room.speakers.length }} speaker(s)</span>
+              <h3 class="text-sm font-black text-slate-800">{{ 'audioRoom.speakerStage' | t }}</h3>
+              <span class="app-muted">{{ 'audioRoom.speakerCount' | t: { count: room.speakers.length } }}</span>
             </div>
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
               @for (speakerId of room.speakers; track speakerId) {
                 <div class="rounded-card border border-purple-300 bg-purple-50 p-3 text-center">
                   <div class="mx-auto h-12 w-12 rounded-full bg-purple-600 text-white flex items-center justify-center">🎙️</div>
                   <p class="mt-2 truncate text-xs font-bold text-slate-800">
-                    {{ speakerId === room.host_id ? room.host?.display_name + ' (Host)' : 'Speaker ' + speakerId.slice(0, 6) }}
+                    {{ speakerId === room.host_id ? (room.host?.display_name + ' (' + ('audioRoom.hostLabel' | t) + ')') : ('audioRoom.speakerPrefix' | t: { id: speakerId.slice(0, 6) }) }}
                   </p>
+                  @if (room.host_id === authService.currentUser()?.id && speakerId !== room.host_id) {
+                    <button (click)="demote(speakerId)" class="mt-2 rounded-app bg-slate-200 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-slate-700">
+                      {{ 'audioRoom.demoteBtn' | t }}
+                    </button>
+                  }
                 </div>
               }
             </div>
@@ -52,21 +57,21 @@
 
           @if (room.host_id === authService.currentUser()?.id && room.raised_hands && room.raised_hands.length > 0) {
             <section class="rounded-sheet border border-amber-300 bg-amber-50 p-4 shadow-card space-y-2">
-              <h4 class="text-sm font-black text-amber-900">✋ Raised hands</h4>
+              <h4 class="text-sm font-black text-amber-900">{{ 'audioRoom.raisedHandsTitle' | t }}</h4>
               @for (reqId of room.raised_hands; track reqId) {
                 <div class="flex items-center justify-between rounded-card border border-amber-200 bg-white p-3 text-xs">
-                  <span class="font-semibold text-slate-700">Learner {{ reqId.slice(0, 8) }}... wants stage access</span>
-                  <button (click)="approve(reqId)" class="rounded-app bg-emerald-600 ps-3 pe-3 pt-1.5 pb-1.5 font-bold text-white">Approve</button>
+                  <span class="font-semibold text-slate-700">{{ 'audioRoom.learnerAccess' | t: { id: reqId.slice(0, 8) } }}</span>
+                  <button (click)="approve(reqId)" class="rounded-app bg-emerald-600 ps-3 pe-3 pt-1.5 pb-1.5 font-bold text-white">{{ 'audioRoom.approveBtn' | t }}</button>
                 </div>
               }
             </section>
           }
 
           <section class="app-card app-padded">
-            <h3 class="text-sm font-black text-slate-800">🎧 Listener audience</h3>
+            <h3 class="text-sm font-black text-slate-800">{{ 'audioRoom.listenerAudience' | t }}</h3>
             <div class="mt-3 flex flex-wrap gap-2">
               @for (i of [1, 2, 3, 4, 5, 6, 7, 8].slice(0, room.listeners_count || 3); track i) {
-                <span class="app-chip">🎧 Member #{{ i }}</span>
+                <span class="app-chip">{{ 'audioRoom.memberPrefix' | t: { num: i } }}</span>
               }
             </div>
           </section>
@@ -81,7 +86,7 @@
     @if (showGiftModal()) {
       <app-virtual-gift-modal
         [receiverId]="room.host_id"
-        [receiverName]="room.host?.display_name || 'Host'"
+        [receiverName]="room.host?.display_name || ('audioRoom.hostFallback' | t)"
         [roomId]="room.id"
         (closed)="showGiftModal.set(false)"
       ></app-virtual-gift-modal>
@@ -90,35 +95,35 @@
     @if (showSafetyModal()) {
       <app-trust-safety-modal
         [targetId]="room.host_id"
-        [targetName]="room.host?.display_name || 'Host'"
+        [targetName]="room.host?.display_name || ('audioRoom.hostFallback' | t)"
         (closed)="showSafetyModal.set(false)"
       ></app-trust-safety-modal>
     }
   } @else {
     <section class="app-card app-padded flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h2 class="app-section-title">🎙️ Live audio and video rooms</h2>
-        <p class="app-muted">Join language rooms, raise your hand to speak, or launch your own room.</p>
+        <h2 class="app-section-title">{{ 'audioRoom.roomsTitle' | t }}</h2>
+        <p class="app-muted">{{ 'audioRoom.roomsSubtitle' | t }}</p>
       </div>
       <button (click)="showCreateModal.set(true)" class="app-button-primary ps-5 pe-5 pt-3 pb-3 text-xs self-start">
-        + Launch live room
+        {{ 'audioRoom.launchRoomBtn' | t }}
       </button>
     </section>
 
     <div class="flex flex-wrap gap-1.5">
-      <span class="app-chip">🌍 Language exchange</span>
-      <span class="app-chip">🔴 Host-led stages</span>
-      <span class="app-chip">🛡️ Safety moderation</span>
+      <span class="app-chip">{{ 'audioRoom.chipExchange' | t }}</span>
+      <span class="app-chip">{{ 'audioRoom.chipStages' | t }}</span>
+      <span class="app-chip">{{ 'audioRoom.chipModeration' | t }}</span>
     </div>
 
     @if (store.isLoading()) {
-      <div class="app-empty-state text-slate-500">Loading live rooms...</div>
+      <div class="app-empty-state text-slate-500">{{ 'audioRoom.loading' | t }}</div>
     }
 
     @if (!store.isLoading() && store.activeRooms().length === 0) {
       <div class="app-empty-state">
-        <p class="text-lg font-bold text-slate-800">No active rooms right now</p>
-        <p class="mt-1 text-sm">Be first to launch one.</p>
+        <p class="text-lg font-bold text-slate-800">{{ 'audioRoom.noActiveRooms' | t }}</p>
+        <p class="mt-1 text-sm">{{ 'audioRoom.beFirst' | t }}</p>
       </div>
     }
 
@@ -126,14 +131,14 @@
       @for (room of store.activeRooms(); track room.id) {
         <article class="app-card app-padded space-y-3">
           <div class="flex items-center justify-between">
-            <span class="app-chip bg-red-100 text-red-700">🔴 Live</span>
+            <span class="app-chip bg-red-100 text-red-700">{{ 'audioRoom.liveTag' | t }}</span>
             <span class="app-chip text-primary">{{ room.target_language }}</span>
           </div>
           <h3 class="text-base font-black text-slate-900">{{ room.title }}</h3>
-          <p class="text-xs text-slate-500">Host: <span class="font-semibold text-slate-700">{{ room.host?.display_name }}</span></p>
+          <p class="text-xs text-slate-500">{{ 'audioRoom.hostLabel' | t }}: <span class="font-semibold text-slate-700">{{ room.host?.display_name || ('audioRoom.hostFallback' | t) }}</span></p>
           <div class="flex items-center justify-between border-t border-slate-100 pt-3">
-            <span class="app-muted">🎧 {{ room.listeners_count }} listener(s)</span>
-            <button (click)="join(room)" class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs">Join room</button>
+            <span class="app-muted">{{ 'audioRoom.listenersCount' | t: { count: room.listeners_count } }}</span>
+            <button (click)="join(room)" class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs">{{ 'audioRoom.joinRoomBtn' | t }}</button>
           </div>
         </article>
       }
@@ -143,30 +148,30 @@
   @if (showCreateModal()) {
     <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div class="app-card p-6 max-w-md w-full shadow-lift space-y-4">
-        <h3 class="app-section-title">🎙️ Launch live language room</h3>
-        <p class="app-muted">Start a hosted room powered by LiveKit SFU.</p>
+        <h3 class="app-section-title">{{ 'audioRoom.modalTitle' | t }}</h3>
+        <p class="app-muted">{{ 'audioRoom.modalSubtitle' | t }}</p>
 
         <div class="space-y-3">
           <div>
-            <label class="app-muted font-bold block mb-1">Room title</label>
-            <input type="text" [(ngModel)]="newTitle" placeholder="Conversation practice room" class="app-input" />
+            <label class="app-muted font-bold block mb-1">{{ 'audioRoom.roomTitleLabel' | t }}</label>
+            <input type="text" [(ngModel)]="newTitle" [placeholder]="'audioRoom.roomTitlePlaceholder' | t" class="app-input" />
           </div>
           <div>
-            <label class="app-muted font-bold block mb-1">Target language</label>
+            <label class="app-muted font-bold block mb-1">{{ 'audioRoom.targetLangLabel' | t }}</label>
             <select [(ngModel)]="newTargetLanguage" class="app-input font-bold">
-              <option value="en">🇬🇧 British English</option>
-              <option value="es">🇪🇸 Spanish</option>
-              <option value="fr">🇫🇷 French</option>
-              <option value="ja">🇯🇵 Japanese</option>
-              <option value="de">🇩🇪 German</option>
-              <option value="ar">🇸🇦 Arabic</option>
+              <option value="en">{{ 'lang.en' | t }}</option>
+              <option value="es">{{ 'lang.es' | t }}</option>
+              <option value="fr">{{ 'lang.fr' | t }}</option>
+              <option value="ja">{{ 'lang.ja' | t }}</option>
+              <option value="de">{{ 'lang.de' | t }}</option>
+              <option value="ar">{{ 'lang.ar' | t }}</option>
             </select>
           </div>
         </div>
 
         <div class="flex justify-end gap-2 pt-2">
-          <button (click)="showCreateModal.set(false)" class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs">Cancel</button>
-          <button (click)="createRoom()" class="app-button-primary ps-5 pe-5 pt-2 pb-2 text-xs">Launch stage</button>
+          <button (click)="showCreateModal.set(false)" class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs">{{ 'audioRoom.cancelBtn' | t }}</button>
+          <button (click)="createRoom()" class="app-button-primary ps-5 pe-5 pt-2 pb-2 text-xs">{{ 'audioRoom.launchStageBtn' | t }}</button>
         </div>
       </div>
     </div>

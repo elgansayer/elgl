@@ -33,6 +33,16 @@ export class ApproveSpeakerDto {
   target_user_id!: string;
 }
 
+export class DemoteSpeakerDto {
+  @IsString()
+  @IsNotEmpty()
+  room_id!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  target_user_id!: string;
+}
+
 export class SendCaptionDto {
   @IsString()
   @IsNotEmpty()

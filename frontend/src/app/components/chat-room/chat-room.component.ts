@@ -2,6 +2,8 @@ import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
 import { ChatService, ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
@@ -14,10 +16,10 @@ import { WordDefinitionModalComponent } from '../word-definition-modal/word-defi
 
 @Component({
   selector: 'app-chat-room',
-  standalone: true,
   imports: [
     CommonModule,
     FormsModule,
+    TranslatePipe,
     VisualDiffComponent,
     DoodlePadComponent,
     VoiceRecorderComponent,
@@ -33,6 +35,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   private chatService = inject(ChatService);
   readonly authService = inject(AuthService);
   readonly vocabStore = inject(VocabularyStore);
+  private readonly i18n = inject(I18nService);
 
   readonly messages = signal<ChatMessage[]>([]);
   readonly isLoading = signal<boolean>(true);
@@ -152,7 +155,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
         room_id: this.roomId,
         message_type: 'doodle',
         media_url: dataUrl,
-        text_content: '🎨 Visual explanation doodle'
+        text_content: this.i18n.translate('chatRoom.doodleCaption')
       });
       this.messages.update(list => list.some(m => m.id === sent.id) ? list : [...list, sent]);
     } catch (e) {
@@ -167,7 +170,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
         room_id: this.roomId,
         message_type: 'voice',
         media_url: mediaUrl,
-        text_content: '🎙️ Voice note'
+        text_content: this.i18n.translate('chatRoom.voiceNoteCaption')
       });
       this.messages.update(list => list.some(m => m.id === sent.id) ? list : [...list, sent]);
     } catch (e) {
@@ -178,10 +181,10 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   async bookmark(msg: ChatMessage): Promise<void> {
     try {
       await this.chatService.addFavourite(msg.id, `Saved from room ${this.roomId}`);
-      alert('Message bookmarked to Favourites!');
+      alert(this.i18n.translate('chatRoom.bookmarkedAlert'));
     } catch (e) {
       console.error('Failed to bookmark message:', e);
-      alert('Already bookmarked or failed.');
+      alert(this.i18n.translate('chatRoom.bookmarkErrorAlert'));
     }
   }
 
@@ -196,10 +199,10 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
         definition: 'Saved full chat sentence to LingQ Spaced Repetition deck.'
       });
       await this.vocabStore.updateSrsLevel(created.id, 1);
-      alert(`📚 Saved sentence to your LingQ SRS Learning Deck:\n"${msg.text_content}"`);
+      alert(this.i18n.translate('chatRoom.savedLingqAlert', { text: msg.text_content }));
     } catch (e) {
       console.error('Failed to save sentence to LingQ deck:', e);
-      alert('Failed to save sentence or already in your SRS deck.');
+      alert(this.i18n.translate('chatRoom.saveErrorAlert'));
     }
   }
 

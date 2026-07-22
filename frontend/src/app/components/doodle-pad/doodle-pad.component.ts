@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-doodle-pad',
-  standalone: true,
   imports: [CommonModule],
   templateUrl: './doodle-pad.component.html',
   styleUrls: ['./doodle-pad.component.scss']

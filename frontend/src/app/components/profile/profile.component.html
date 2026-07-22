@@ -1,6 +1,6 @@
 <div class="app-screen">
   @if (isLoading()) {
-    <div class="app-empty-state text-slate-500">Loading profile...</div>
+    <div class="app-empty-state text-slate-500">{{ 'profile.loading' | t }}</div>
   }
 
   @if (!isLoading() && profile()) {
@@ -14,64 +14,64 @@
           />
           <div>
             <div class="flex items-center gap-2">
-              <h1 class="app-section-title">{{ profile()?.display_name || 'Language learner' }}</h1>
+              <h1 class="app-section-title">{{ profile()?.display_name || ('profile.defaultName' | t) }}</h1>
               @if (profile()?.is_vip) {
-                <span class="rounded-full bg-amber-100 ps-2 pe-2 pt-0.5 pb-0.5 text-[10px] font-bold text-amber-900">VIP</span>
+                <span class="rounded-full bg-amber-100 ps-2 pe-2 pt-0.5 pb-0.5 text-[10px] font-bold text-amber-900">{{ 'profile.vipBadge' | t }}</span>
               }
             </div>
-            <p class="app-muted">Joined {{ profile()?.created_at | date: 'mediumDate' }}</p>
+            <p class="app-muted">{{ 'profile.joinedPrefix' | t }} {{ profile()?.created_at | date: 'mediumDate' }}</p>
           </div>
         </div>
 
         <div class="flex items-center gap-2">
-          <a routerLink="/visitors" class="app-pill">Visitors</a>
+          <a routerLink="/visitors" class="app-pill">{{ 'profile.visitorsLink' | t }}</a>
           @if (profile()?.audio_intro_url) {
             <button (click)="playAudioIntro(profile()?.audio_intro_url)" class="app-button-secondary bg-blue-50 text-blue-700 ps-3 pe-3 pt-2 pb-2 text-xs">
-              Audio intro
+              {{ 'profile.audioIntroBtn' | t }}
             </button>
           }
           <button (click)="toggleEdit()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs">
-            {{ isEditing() ? 'Cancel' : 'Edit profile' }}
+            {{ isEditing() ? ('profile.cancelBtn' | t) : ('profile.editBtn' | t) }}
           </button>
         </div>
       </div>
 
       <div class="mt-4 grid grid-cols-2 gap-2 rounded-card border border-slate-200 bg-slate-50 ps-3 pe-3 pt-3 pb-3 text-center sm:grid-cols-4">
         <div>
-          <p class="text-[10px] font-semibold uppercase text-slate-500">Native</p>
+          <p class="text-[10px] font-semibold uppercase text-slate-500">{{ 'profile.statNative' | t }}</p>
           <p class="text-sm font-bold uppercase text-slate-800">{{ profile()?.native_language }}</p>
         </div>
         <div>
-          <p class="text-[10px] font-semibold uppercase text-slate-500">Target</p>
+          <p class="text-[10px] font-semibold uppercase text-slate-500">{{ 'profile.statTarget' | t }}</p>
           <p class="text-sm font-bold uppercase text-primary">{{ profile()?.target_languages?.join(', ') }}</p>
         </div>
         <div>
-          <p class="text-[10px] font-semibold uppercase text-slate-500">Streak</p>
+          <p class="text-[10px] font-semibold uppercase text-slate-500">{{ 'profile.statStreak' | t }}</p>
           <p class="text-sm font-bold text-amber-600">🔥 {{ profile()?.study_streak_days }}d</p>
         </div>
         <div>
-          <p class="text-[10px] font-semibold uppercase text-slate-500">Corrections</p>
+          <p class="text-[10px] font-semibold uppercase text-slate-500">{{ 'profile.statCorrections' | t }}</p>
           <p class="text-sm font-bold text-emerald-600">{{ profile()?.correction_ratio }}x</p>
         </div>
       </div>
 
       <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <a routerLink="/favourites" class="app-pill text-center">⭐ Favourites</a>
-        <a routerLink="/vocabulary" class="app-pill text-center">📚 Vocabulary</a>
-        <a routerLink="/audio-rooms" class="app-pill text-center">🎙️ Live rooms</a>
-        <a routerLink="/developer" class="app-pill text-center">⚡ Developer</a>
+        <a routerLink="/favourites" class="app-pill text-center">{{ 'profile.navFav' | t }}</a>
+        <a routerLink="/vocabulary" class="app-pill text-center">{{ 'profile.navVocab' | t }}</a>
+        <a routerLink="/audio-rooms" class="app-pill text-center">{{ 'profile.navRooms' | t }}</a>
+        <a routerLink="/developer" class="app-pill text-center">{{ 'profile.navDev' | t }}</a>
       </div>
 
       <div class="mt-3 flex flex-wrap gap-1.5">
-        <span class="app-chip">🛡️ Safety controls</span>
-        <span class="app-chip">🔐 Privacy-first profile</span>
-        <span class="app-chip">🌐 Exchange matching</span>
+        <span class="app-chip">{{ 'profile.chipSafety' | t }}</span>
+        <span class="app-chip">{{ 'profile.chipPrivacy' | t }}</span>
+        <span class="app-chip">{{ 'profile.chipExchange' | t }}</span>
       </div>
 
       @if (!profile()?.is_vip) {
         <div class="mt-4 rounded-card border border-amber-200 bg-amber-50 ps-3 pe-3 pt-3 pb-3">
-          <p class="text-xs font-semibold text-amber-900">Upgrade for full visitor identities and advanced features</p>
-          <p class="mt-1 text-sm font-black text-amber-900">8 UKP / $10 USD per month</p>
+          <p class="text-xs font-semibold text-amber-900">{{ 'profile.vipBannerTitle' | t }}</p>
+          <p class="mt-1 text-sm font-black text-amber-900">{{ 'profile.vipBannerPrice' | t }}</p>
         </div>
       }
 
@@ -88,36 +88,36 @@
 
       @if (!isEditing()) {
         <div class="mt-4">
-          <h3 class="text-xs font-semibold uppercase text-slate-500">About me</h3>
+          <h3 class="text-xs font-semibold uppercase text-slate-500">{{ 'profile.aboutMe' | t }}</h3>
           <p class="mt-2 rounded-card bg-slate-50 ps-3 pe-3 pt-3 pb-3 text-sm text-slate-700">
-            {{ profile()?.bio_text || 'No bio provided yet.' }}
+            {{ profile()?.bio_text || ('profile.noBio' | t) }}
           </p>
         </div>
       }
 
       @if (isEditing()) {
         <form (ngSubmit)="saveProfile()" class="mt-4 space-y-3 border-t border-slate-100 pt-4">
-          <input type="text" [(ngModel)]="displayName" name="displayName" placeholder="Display name" class="app-input" />
+          <input type="text" [(ngModel)]="displayName" name="displayName" [placeholder]="'profile.displayNamePlaceholder' | t" class="app-input" />
 
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <input type="text" [(ngModel)]="nativeLanguage" name="nativeLanguage" placeholder="Native language (ISO)" class="app-input uppercase" />
-            <input type="text" [(ngModel)]="targetLanguagesInput" name="targetLanguagesInput" placeholder="Target languages (comma separated)" class="app-input uppercase" />
+            <input type="text" [(ngModel)]="nativeLanguage" name="nativeLanguage" [placeholder]="'profile.nativeLangPlaceholder' | t" class="app-input uppercase" />
+            <input type="text" [(ngModel)]="targetLanguagesInput" name="targetLanguagesInput" [placeholder]="'profile.targetLangPlaceholder' | t" class="app-input uppercase" />
           </div>
 
-          <textarea [(ngModel)]="bioText" name="bioText" rows="4" placeholder="Bio and learning goals" class="app-textarea"></textarea>
+          <textarea [(ngModel)]="bioText" name="bioText" rows="4" [placeholder]="'profile.bioPlaceholder' | t" class="app-textarea"></textarea>
 
           <label class="flex items-center gap-2 text-sm text-slate-700">
             <input type="checkbox" [(ngModel)]="privacyHideLocation" name="privacyHideLocation" class="h-4 w-4 rounded border-slate-300 text-primary" />
-            Hide my location in discovery
+            {{ 'profile.hideLocation' | t }}
           </label>
           <label class="flex items-center gap-2 text-sm text-slate-700">
             <input type="checkbox" [(ngModel)]="privacyHideSearch" name="privacyHideSearch" class="h-4 w-4 rounded border-slate-300 text-primary" />
-            Hide my profile in search
+            {{ 'profile.hideSearch' | t }}
           </label>
 
           <div class="flex justify-end gap-2 pt-1">
-            <button type="button" (click)="toggleEdit()" class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs">Cancel</button>
-            <button type="submit" class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs">Save changes</button>
+            <button type="button" (click)="toggleEdit()" class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs">{{ 'profile.cancelBtn' | t }}</button>
+            <button type="submit" class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs">{{ 'profile.saveBtn' | t }}</button>
           </div>
         </form>
       }

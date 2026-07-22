@@ -5,7 +5,6 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
 
 @Component({
   selector: 'app-room-chat',
-  standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
     <div

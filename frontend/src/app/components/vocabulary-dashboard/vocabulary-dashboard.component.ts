@@ -1,31 +1,34 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
 import { VocabularyStore, PronunciationScoreResult, GrammarCheckResult } from '../../services/vocabulary.store';
 import { TokenisedTextComponent } from '../tokenised-text/tokenised-text.component';
 
 @Component({
   selector: 'app-vocabulary-dashboard',
-  standalone: true,
-  imports: [CommonModule, FormsModule, TokenisedTextComponent],
+  imports: [CommonModule, FormsModule, TokenisedTextComponent, TranslatePipe],
   templateUrl: './vocabulary-dashboard.component.html',
   styleUrls: ['./vocabulary-dashboard.component.scss']
 })
 export class VocabularyDashboardComponent implements OnInit {
   readonly vocabStore = inject(VocabularyStore);
+  private readonly i18n = inject(I18nService);
 
   readonly activeTab = signal<'review' | 'all' | 'ai-practice'>('review');
   readonly currentReviewIndex = signal<number>(0);
   readonly isCardFlipped = signal<boolean>(false);
 
   // AI Practice fields
-  practiceText = 'I want to improve my English fluency and native pronunciation.';
+  practiceText = '';
   practiceAudioUrl = '';
   readonly grammarResult = signal<GrammarCheckResult | null>(null);
   readonly pronunciationResult = signal<PronunciationScoreResult | null>(null);
   readonly isAiLoading = signal<boolean>(false);
 
   async ngOnInit(): Promise<void> {
+    this.practiceText = this.i18n.translate('vocab.defaultPracticeText');
     await this.vocabStore.loadAllFlashcards();
     await this.vocabStore.loadDueReviews();
   }
@@ -61,7 +64,7 @@ export class VocabularyDashboardComponent implements OnInit {
       this.grammarResult.set(res);
     } catch (e) {
       console.error('Grammar check error:', e);
-      alert('AI Rate limit reached or error checking grammar.');
+      alert(this.i18n.translate('vocab.grammarErrorAlert'));
     } finally {
       this.isAiLoading.set(false);
     }
@@ -77,7 +80,7 @@ export class VocabularyDashboardComponent implements OnInit {
       this.pronunciationResult.set(res);
     } catch (e) {
       console.error('Pronunciation score error:', e);
-      alert('AI Rate limit reached or error scoring pronunciation.');
+      alert(this.i18n.translate('vocab.pronunciationErrorAlert'));
     } finally {
       this.isAiLoading.set(false);
     }

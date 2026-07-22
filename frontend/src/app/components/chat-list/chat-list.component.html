@@ -2,12 +2,12 @@
   <section class="app-card app-padded">
     <div class="flex items-center justify-between gap-3">
       <div>
-        <h1 class="text-lg font-black text-slate-900">Chats</h1>
-        <p class="text-xs text-slate-500">Messages, corrections, and instant language exchange.</p>
+        <h1 class="text-lg font-black text-slate-900">{{ 'chatList.title' | t }}</h1>
+        <p class="text-xs text-slate-500">{{ 'chatList.subtitle' | t }}</p>
       </div>
       @if (filteredPreviews()[0]; as firstRoom) {
         <a [routerLink]="['/chat', firstRoom.id]" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs">
-          + Open first room
+          {{ 'chatList.openFirstRoom' | t }}
         </a>
       }
     </div>
@@ -18,7 +18,7 @@
         [ngModel]="search()"
         (ngModelChange)="search.set($event)"
         type="text"
-        placeholder="Search chats"
+        [placeholder]="'chatList.searchPlaceholder' | t"
         class="w-full bg-transparent text-sm text-slate-700 outline-none"
       />
     </div>
@@ -26,19 +26,19 @@
 
   @if (isLoading()) {
     <div class="app-empty-state text-slate-500">
-      Loading chats...
+      {{ 'chatList.loading' | t }}
     </div>
   }
 
   @if (!isLoading() && filteredPreviews().length === 0) {
     <div class="app-empty-state">
-      No chat previews match your search.
+      {{ 'chatList.empty' | t }}
     </div>
   }
 
   @if (!isLoading() && pinnedPreviews().length > 0) {
     <section class="space-y-2">
-      <p class="ps-1 text-xs font-bold uppercase tracking-wide text-slate-500">Pinned chats</p>
+      <p class="ps-1 text-xs font-bold uppercase tracking-wide text-slate-500">{{ 'chatList.pinnedChats' | t }}</p>
       @for (preview of pinnedPreviews(); track preview.id) {
         <a
           [routerLink]="['/chat', preview.id]"
@@ -79,7 +79,7 @@
 
   @if (!isLoading() && regularPreviews().length > 0) {
     <section class="space-y-2">
-      <p class="ps-1 text-xs font-bold uppercase tracking-wide text-slate-500">All chats</p>
+      <p class="ps-1 text-xs font-bold uppercase tracking-wide text-slate-500">{{ 'chatList.allChats' | t }}</p>
       @for (preview of regularPreviews(); track preview.id) {
         <a
           [routerLink]="['/chat', preview.id]"

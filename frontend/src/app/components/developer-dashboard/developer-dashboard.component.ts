@@ -9,7 +9,6 @@ import { UserProfile } from '../../services/user.service';
 
 @Component({
   selector: 'app-developer-dashboard',
-  standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './developer-dashboard.component.html',
   styleUrls: ['./developer-dashboard.component.scss']
@@ -69,7 +68,7 @@ export class DeveloperDashboardComponent implements OnInit {
         serious_learner_only: false
       };
       await this.addLog('POSTGIS', `Executing ST_DWithin query: Lat ${params.latitude}, Lon ${params.longitude}, Radius: ${params.radius_metres}m (VIP Spoofing: ${this.spoofVipLocation() ? 'ON' : 'OFF'}).`, 'info');
-      
+
       const results = await this.discoveryService.findPartners(params);
       this.discoveryResults.set(results);
       await this.addLog('POSTGIS', `Spatial query completed in P95 latency. Found ${results.length} learners within geography boundary.`, 'success');

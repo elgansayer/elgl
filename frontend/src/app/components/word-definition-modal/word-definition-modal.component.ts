@@ -4,7 +4,6 @@ import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vo
 
 @Component({
   selector: 'app-word-definition-modal',
-  standalone: true,
   imports: [],
   templateUrl: './word-definition-modal.component.html',
   styleUrls: ['./word-definition-modal.component.scss'],

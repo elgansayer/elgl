@@ -7,6 +7,7 @@ import {
   ApproveSpeakerDto,
   ArchiveRoomDto,
   CreateAudioRoomDto,
+  DemoteSpeakerDto,
   JoinRoomDto,
   RaiseHandDto,
   SendCaptionDto,
@@ -66,6 +67,15 @@ export class AudioRoomsController {
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
     return await this.audioRoomsService.approveSpeaker(user.id, dto);
+  }
+
+  @Post('demote-speaker')
+  async demoteSpeaker(
+    @CurrentUser() user: User | null,
+    @Body() dto: DemoteSpeakerDto,
+  ): Promise<AudioRoomRecord | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.demoteSpeaker(user.id, dto);
   }
 
   @Post('captions')

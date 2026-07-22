@@ -1,12 +1,12 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { ChatService, FavouriteRecord } from '../../services/chat.service';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 
 @Component({
   selector: 'app-favourites',
-  standalone: true,
-  imports: [CommonModule, VisualDiffComponent],
+  imports: [CommonModule, VisualDiffComponent, TranslatePipe],
   templateUrl: './favourites.component.html',
   styleUrls: ['./favourites.component.scss']
 })

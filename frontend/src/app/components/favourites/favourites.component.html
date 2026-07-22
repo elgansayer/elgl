@@ -1,23 +1,23 @@
 <div class="app-screen">
   <section class="app-card app-padded">
-    <h1 class="app-section-title">Favourites</h1>
-    <p class="app-muted">Saved chat highlights for spaced revision.</p>
+    <h1 class="app-section-title">{{ 'favourites.title' | t }}</h1>
+    <p class="app-muted">{{ 'favourites.subtitle' | t }}</p>
     <div class="mt-2 flex flex-wrap gap-1.5">
-      <span class="app-chip">📌 Important phrases</span>
-      <span class="app-chip">✏️ Corrections</span>
-      <span class="app-chip">📚 Review queue</span>
+      <span class="app-chip">{{ 'favourites.chipPhrases' | t }}</span>
+      <span class="app-chip">{{ 'favourites.chipCorrections' | t }}</span>
+      <span class="app-chip">{{ 'favourites.chipQueue' | t }}</span>
     </div>
   </section>
 
   @if (isLoading()) {
     <div class="app-empty-state text-slate-500">
-      Loading favourites...
+      {{ 'favourites.loading' | t }}
     </div>
   }
 
   @if (!isLoading() && favourites().length === 0) {
     <div class="app-empty-state">
-      No favourites saved yet.
+      {{ 'favourites.empty' | t }}
     </div>
   }
 
@@ -31,7 +31,7 @@
             class="h-8 w-8 rounded-full border border-slate-200 object-cover"
           />
           <p class="text-xs font-semibold text-slate-700">
-            {{ fav.message?.sender?.display_name || 'Language partner' }}
+            {{ fav.message?.sender?.display_name || ('favourites.partnerFallback' | t) }}
           </p>
         </div>
         <p class="text-[11px] text-slate-400">{{ fav.created_at | date: 'short' }}</p>

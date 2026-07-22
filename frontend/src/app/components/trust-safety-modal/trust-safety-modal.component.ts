@@ -5,7 +5,6 @@ import { EconomyStore } from '../../services/economy.store';
 
 @Component({
   selector: 'app-trust-safety-modal',
-  standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
     <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">

@@ -2,17 +2,19 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
 import { UserService, UserProfile } from '../../services/user.service';
 
 @Component({
   selector: 'app-profile',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.scss']
 })
 export class ProfileComponent implements OnInit {
   private userService = inject(UserService);
+  private readonly i18n = inject(I18nService);
 
   readonly profile = signal<UserProfile | null>(null);
   readonly isLoading = signal<boolean>(true);
@@ -47,7 +49,7 @@ export class ProfileComponent implements OnInit {
       }
     } catch (e: unknown) {
       const err = e as { message?: string };
-      this.errorMessage.set(err.message || 'Failed to load profile');
+      this.errorMessage.set(err.message || this.i18n.translate('profile.loadError'));
     } finally {
       this.isLoading.set(false);
     }
@@ -78,10 +80,10 @@ export class ProfileComponent implements OnInit {
       });
       this.profile.set(updated);
       this.isEditing.set(false);
-      this.successMessage.set('Profile updated successfully.');
+      this.successMessage.set(this.i18n.translate('profile.successUpdate'));
     } catch (e: unknown) {
       const err = e as { message?: string; error?: { message?: string } };
-      this.errorMessage.set(err.error?.message || err.message || 'Failed to update profile');
+      this.errorMessage.set(err.error?.message || err.message || this.i18n.translate('profile.updateError'));
     }
   }
 
