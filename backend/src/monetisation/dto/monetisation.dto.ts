@@ -23,3 +23,19 @@ export class StripeWebhookDto {
     };
   };
 }
+
+export class CreateDiagnosticLogDto {
+  @IsString()
+  @IsNotEmpty()
+  @IsIn(['POSTGIS', 'CENTRIFUGO', 'REDIS', 'LIVEKIT'])
+  category!: 'POSTGIS' | 'CENTRIFUGO' | 'REDIS' | 'LIVEKIT';
+
+  @IsString()
+  @IsNotEmpty()
+  @IsIn(['info', 'success', 'warn'])
+  status!: 'info' | 'success' | 'warn';
+
+  @IsString()
+  @IsNotEmpty()
+  message!: string;
+}

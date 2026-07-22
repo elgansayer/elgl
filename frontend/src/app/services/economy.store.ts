@@ -27,6 +27,22 @@ export interface ActiveGiftOverlay {
   receiver_name: string;
 }
 
+export interface DiagnosticLog {
+  id: string;
+  timestamp: string;
+  category: 'POSTGIS' | 'CENTRIFUGO' | 'REDIS' | 'LIVEKIT';
+  message: string;
+  status: 'info' | 'success' | 'warn';
+}
+
+interface DiagnosticLogApiRecord {
+  id: string;
+  category: 'POSTGIS' | 'CENTRIFUGO' | 'REDIS' | 'LIVEKIT';
+  message: string;
+  status: 'info' | 'success' | 'warn';
+  created_at: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -43,6 +59,7 @@ export class EconomyStore {
   readonly developerStats = signal<DeveloperAnalytics | null>(null);
   readonly activeGiftAnimation = signal<ActiveGiftOverlay | null>(null);
   readonly blockedUserIds = signal<Set<string>>(new Set());
+  readonly diagnosticLogs = signal<DiagnosticLog[]>([]);
   readonly isLoading = signal<boolean>(false);
 
   private getHeaders() {
@@ -99,9 +116,10 @@ export class EconomyStore {
       );
       this.coinsBalance.set(res.coins_remaining);
       return true;
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Send gift error:', e);
-      alert(e?.error?.message || 'Failed to send virtual gift. Ensure you have sufficient coin balance.');
+      const err = e as { error?: { message?: string } };
+      alert(err?.error?.message || 'Failed to send virtual gift. Ensure you have sufficient coin balance.');
       return false;
     }
   }
@@ -134,6 +152,38 @@ export class EconomyStore {
     }
   }
 
+  async loadDiagnosticLogs(): Promise<void> {
+      try {
+        const logs = await firstValueFrom(
+          this.http.get<DiagnosticLogApiRecord[]>(`${this.monetisationUrl}/diagnostics/logs`, {
+            headers: this.getHeaders()
+          })
+        );
+        this.diagnosticLogs.set(logs.map((log) => this.mapDiagnosticLog(log)));
+      } catch (e) {
+        console.error('Load diagnostic logs error:', e);
+        this.diagnosticLogs.set([]);
+      }
+    }
+
+    async createDiagnosticLog(payload: {
+      category: 'POSTGIS' | 'CENTRIFUGO' | 'REDIS' | 'LIVEKIT';
+      status: 'info' | 'success' | 'warn';
+      message: string;
+    }): Promise<void> {
+      try {
+        const created = await firstValueFrom(
+          this.http.post<DiagnosticLogApiRecord>(`${this.monetisationUrl}/diagnostics/logs`, payload, {
+            headers: this.getHeaders()
+          })
+        );
+        const mapped = this.mapDiagnosticLog(created);
+        this.diagnosticLogs.update((current) => [mapped, ...current].slice(0, 20));
+      } catch (e) {
+        console.error('Create diagnostic log error:', e);
+      }
+    }
+
   async generateApiKey(): Promise<string | null> {
     try {
       const res = await firstValueFrom(
@@ -146,9 +196,10 @@ export class EconomyStore {
       await this.loadDeveloperAnalytics();
       alert(`🔐 Developer API Key generated: ${res.api_key}\nRate Limit: ${res.rate_limit_rpm} RPM`);
       return res.api_key;
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Generate API key error:', e);
-      alert(e?.error?.message || 'Failed to generate API key. Requires Developer Tier subscription (20 UKP / $26 USD per month).');
+      const err = e as { error?: { message?: string } };
+      alert(err?.error?.message || 'Failed to generate API key. Requires Developer Tier subscription (20 UKP / $26 USD per month).');
       return null;
     }
   }
@@ -185,5 +236,15 @@ export class EconomyStore {
     setTimeout(() => {
       this.activeGiftAnimation.set(null);
     }, 4500);
+  }
+
+  private mapDiagnosticLog(log: DiagnosticLogApiRecord): DiagnosticLog {
+    return {
+      id: log.id,
+      category: log.category,
+      message: log.message,
+      status: log.status,
+      timestamp: new Date(log.created_at).toLocaleTimeString('en-GB')
+    };
   }
 }

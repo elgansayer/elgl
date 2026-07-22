@@ -1,0 +1,188 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { AudioRoomsController } from './audio-rooms.controller';
+import { AudioRoomsService } from './audio-rooms.service';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+
+describe('AudioRoomsController', () => {
+  let controller: AudioRoomsController;
+  let audioRoomsService: AudioRoomsService;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [AudioRoomsController],
+      providers: [
+        {
+          provide: AudioRoomsService,
+          useValue: {
+            createRoom: jest.fn(),
+            generateToken: jest.fn(),
+            listActiveRooms: jest.fn(),
+            getRoom: jest.fn(),
+            raiseHand: jest.fn(),
+            approveSpeaker: jest.fn(),
+            sendCaption: jest.fn(),
+            archiveRoom: jest.fn(),
+          },
+        },
+      ],
+    })
+      .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .compile();
+
+    controller = module.get<AudioRoomsController>(AudioRoomsController);
+    audioRoomsService = module.get<AudioRoomsService>(AudioRoomsService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
+  });
+
+  describe('createRoom', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.createRoom(null, {} as any);
+      expect(result).toBeNull();
+      expect(audioRoomsService.createRoom).not.toHaveBeenCalled();
+    });
+
+    it('should call service createRoom when user is provided', async () => {
+      const dto: any = { title: 'Test Room', target_language: 'EN' };
+      const room: any = { id: 'room-1', title: 'Test Room' };
+      (audioRoomsService.createRoom as jest.Mock).mockResolvedValue(room);
+
+      const result = await controller.createRoom({ id: 'user-1' } as any, dto);
+      expect(audioRoomsService.createRoom).toHaveBeenCalledWith('user-1', dto);
+      expect(result).toEqual(room);
+    });
+  });
+
+  describe('generateToken', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.generateToken(null, {} as any);
+      expect(result).toBeNull();
+      expect(audioRoomsService.generateToken).not.toHaveBeenCalled();
+    });
+
+    it('should call service generateToken when user is provided', async () => {
+      const dto: any = { room_name: 'room-1' };
+      const tokenResponse: any = { token: 'jwt-token' };
+      (audioRoomsService.generateToken as jest.Mock).mockResolvedValue(
+        tokenResponse,
+      );
+
+      const result = await controller.generateToken(
+        { id: 'user-1' } as any,
+        dto,
+      );
+      expect(audioRoomsService.generateToken).toHaveBeenCalledWith(
+        'user-1',
+        dto,
+      );
+      expect(result).toEqual(tokenResponse);
+    });
+  });
+
+  describe('listActiveRooms', () => {
+    it('should return active rooms from service', async () => {
+      const rooms: any[] = [{ id: 'room-1' }];
+      (audioRoomsService.listActiveRooms as jest.Mock).mockResolvedValue(rooms);
+
+      const result = await controller.listActiveRooms();
+      expect(audioRoomsService.listActiveRooms).toHaveBeenCalled();
+      expect(result).toEqual(rooms);
+    });
+  });
+
+  describe('getRoom', () => {
+    it('should return specific room by ID', async () => {
+      const room: any = { id: 'room-1' };
+      (audioRoomsService.getRoom as jest.Mock).mockResolvedValue(room);
+
+      const result = await controller.getRoom('room-1');
+      expect(audioRoomsService.getRoom).toHaveBeenCalledWith('room-1');
+      expect(result).toEqual(room);
+    });
+  });
+
+  describe('raiseHand', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.raiseHand(null, {} as any);
+      expect(result).toBeNull();
+      expect(audioRoomsService.raiseHand).not.toHaveBeenCalled();
+    });
+
+    it('should call service raiseHand when user is provided', async () => {
+      const dto: any = { room_id: 'room-1' };
+      const room: any = { id: 'room-1' };
+      (audioRoomsService.raiseHand as jest.Mock).mockResolvedValue(room);
+
+      const result = await controller.raiseHand({ id: 'user-1' } as any, dto);
+      expect(audioRoomsService.raiseHand).toHaveBeenCalledWith('user-1', dto);
+      expect(result).toEqual(room);
+    });
+  });
+
+  describe('approveSpeaker', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.approveSpeaker(null, {} as any);
+      expect(result).toBeNull();
+      expect(audioRoomsService.approveSpeaker).not.toHaveBeenCalled();
+    });
+
+    it('should call service approveSpeaker when user is provided', async () => {
+      const dto: any = { room_id: 'room-1', target_user_id: 'user-2' };
+      const room: any = { id: 'room-1' };
+      (audioRoomsService.approveSpeaker as jest.Mock).mockResolvedValue(room);
+
+      const result = await controller.approveSpeaker(
+        { id: 'user-1' } as any,
+        dto,
+      );
+      expect(audioRoomsService.approveSpeaker).toHaveBeenCalledWith(
+        'user-1',
+        dto,
+      );
+      expect(result).toEqual(room);
+    });
+  });
+
+  describe('sendCaption', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.sendCaption(null, {} as any);
+      expect(result).toBeNull();
+      expect(audioRoomsService.sendCaption).not.toHaveBeenCalled();
+    });
+
+    it('should call service sendCaption when user is provided', async () => {
+      const dto: any = { room_id: 'room-1', text_content: 'Caption text' };
+      const caption: any = { id: 'cap-1', text_content: 'Caption text' };
+      (audioRoomsService.sendCaption as jest.Mock).mockResolvedValue(caption);
+
+      const result = await controller.sendCaption({ id: 'user-1' } as any, dto);
+      expect(audioRoomsService.sendCaption).toHaveBeenCalledWith('user-1', dto);
+      expect(result).toEqual(caption);
+    });
+  });
+
+  describe('archiveRoom', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.archiveRoom(null, {} as any);
+      expect(result).toBeNull();
+      expect(audioRoomsService.archiveRoom).not.toHaveBeenCalled();
+    });
+
+    it('should call service archiveRoom when user is provided', async () => {
+      const dto: any = { room_id: 'room-1' };
+      const room: any = { id: 'room-1', is_active: false };
+      (audioRoomsService.archiveRoom as jest.Mock).mockResolvedValue(room);
+
+      const result = await controller.archiveRoom({ id: 'user-1' } as any, dto);
+      expect(audioRoomsService.archiveRoom).toHaveBeenCalledWith('user-1', dto);
+      expect(result).toEqual(room);
+    });
+  });
+});

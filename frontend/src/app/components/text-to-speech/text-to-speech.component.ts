@@ -9,8 +9,12 @@ import { CommonModule } from '@angular/common';
     <button
       (click)="speak($event)"
       [disabled]="isPlaying()"
-      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all"
-      [ngClass]="isPlaying() ? 'bg-primary text-white animate-pulse' : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200'"
+      [class]="
+        'inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all ' +
+        (isPlaying()
+          ? 'bg-primary text-white animate-pulse'
+          : 'bg-slate-100 hover:bg-slate-200 text-slate-700')
+      "
       [title]="'Listen to native pronunciation of this text (' + language + ')'"
     >
       <span>{{ isPlaying() ? '🔊 Speaking...' : '🔊 Listen' }}</span>

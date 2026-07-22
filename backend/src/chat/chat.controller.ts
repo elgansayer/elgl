@@ -14,6 +14,7 @@ import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import {
   ChatMessage,
+  ChatRoomRecord,
   FavouriteRecord,
 } from './interfaces/chat-message.interface';
 import { ChatService } from './chat.service';
@@ -38,6 +39,11 @@ export class ChatController {
   ): Promise<ChatMessage | null> {
     if (!user) return null;
     return await this.chatService.sendMessage(user.id, dto);
+  }
+
+  @Get('rooms')
+  async getRooms(): Promise<ChatRoomRecord[]> {
+    return await this.chatService.getRooms();
   }
 
   @Get('messages/:roomId')

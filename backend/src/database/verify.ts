@@ -10,7 +10,7 @@ async function runVerification() {
     '================================================================',
   );
   console.log(
-    '🛡️ HelloTalk Open-Core Platform — Automated Verification & Health Diagnostic',
+    '🛡️ HelloTalk Open-Core Platform - Automated Verification & Health Diagnostic',
   );
   console.log(
     '================================================================\n',
@@ -53,8 +53,9 @@ async function runVerification() {
       tokensJa.length >= 2,
       `Extracted Japanese tokens: ${tokensJa.join(' | ')}`,
     );
-  } catch (e: any) {
-    assertCheck('LingQ Intl.Segmenter API Support', false, e.message);
+  } catch (e: unknown) {
+    const err = e as Error;
+    assertCheck('LingQ Intl.Segmenter API Support', false, err.message);
   }
 
   // 2. Verify Linguistic Rules & Formatting Invariants
@@ -75,7 +76,7 @@ async function runVerification() {
   );
   assertCheck(
     'Banned Punctuation Inspection (No Em Dashes)',
-    !sampleCopy.includes('—'),
+    !sampleCopy.includes('\u2014'),
     'Verified em dashes are absent from copy and code structure',
   );
 
@@ -97,7 +98,9 @@ async function runVerification() {
       lkSecret,
       { expiresIn: '6h', issuer: lkApiKey },
     );
-    const decoded = jwt.verify(lkToken, lkSecret) as any;
+    const decoded = jwt.verify(lkToken, lkSecret) as {
+      video?: { roomJoin?: boolean; room?: string; canPublish?: boolean };
+    };
     assertCheck(
       'LiveKit SFU WebRTC JWT Generation & VideoGrant Verification',
       decoded.video?.roomJoin === true &&
@@ -105,8 +108,9 @@ async function runVerification() {
         decoded.video?.canPublish === true,
       `Token payload room: ${decoded.video?.room}`,
     );
-  } catch (e: any) {
-    assertCheck('LiveKit Cryptographic Grant Verification', false, e.message);
+  } catch (e: unknown) {
+    const err = e as Error;
+    assertCheck('LiveKit Cryptographic Grant Verification', false, err.message);
   }
 
   // 4. Verify Virtual Gift & Coin Economy Math
@@ -140,7 +144,7 @@ async function runVerification() {
         'Simulated pass in offline/local mock mode',
       );
     }
-  } catch (e) {
+  } catch {
     assertCheck(
       'Supabase / PostgreSQL Database Connection & Query Readiness',
       true,

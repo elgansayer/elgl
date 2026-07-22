@@ -1,29 +1,22 @@
-<div class="mx-auto max-w-2xl space-y-4">
-  <section class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-4 pb-4 shadow-sm">
-    <h1 class="text-lg font-black text-slate-900">Who viewed me</h1>
-    <p class="text-xs text-slate-500">Recent profile visitors and language matches.</p>
+<div class="app-screen">
+  <section class="app-card app-padded">
+    <h1 class="app-section-title">Who viewed me</h1>
+    <p class="app-muted">Recent profile visitors and language matches.</p>
     <div class="mt-3 flex flex-wrap items-center gap-2">
-      <span
-        class="rounded-xl bg-slate-100 ps-2.5 pe-2.5 pt-1 pb-1 text-[11px] font-semibold text-slate-700"
-      >
+      <span class="app-chip text-[11px]">
         Visible: {{ visibleVisitorsCount() }}
       </span>
-      <span
-        class="rounded-xl bg-slate-100 ps-2.5 pe-2.5 pt-1 pb-1 text-[11px] font-semibold text-slate-700"
-      >
+      <span class="app-chip text-[11px]">
         Blurred: {{ blurredVisitorsCount() }}
       </span>
-      <button
-        (click)="toggleHideBlurred()"
-        class="rounded-xl bg-slate-100 ps-2.5 pe-2.5 pt-1 pb-1 text-[11px] font-semibold text-slate-700"
-      >
+      <button (click)="toggleHideBlurred()" class="app-button-secondary ps-2.5 pe-2.5 pt-1 pb-1 text-[11px]">
         {{ hideBlurred() ? 'Show all' : 'Hide blurred' }}
       </button>
     </div>
   </section>
 
   @if (profile() && !profile()?.is_vip) {
-    <section class="rounded-3xl border border-amber-200 bg-amber-50 ps-4 pe-4 pt-4 pb-4">
+    <section class="rounded-sheet border border-amber-200 bg-amber-50 ps-4 pe-4 pt-4 pb-4 shadow-card">
       <p class="text-sm font-bold text-amber-900">Unlock full visitor identities with VIP</p>
       <p class="mt-1 text-xs text-amber-800">Visitor details are blurred on the free tier.</p>
       <p class="mt-2 text-sm font-black text-amber-900">8 UKP / $10 USD per month</p>
@@ -31,35 +24,30 @@
   }
 
   @if (isLoading()) {
-    <div
-      class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-10 pb-10 text-center text-sm text-slate-500"
-    >
+    <div class="app-empty-state text-slate-500">
       Loading visitors...
     </div>
   }
 
   @if (!isLoading() && filteredVisitors().length === 0) {
-    <div
-      class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-10 pb-10 text-center text-sm text-slate-600"
-    >
+    <div class="app-empty-state">
       No visitors yet.
     </div>
   }
 
-  @for (log of filteredVisitors(); track log) {
-    <article
-      class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-4 pb-4 shadow-sm"
-      [ngClass]="log.is_blurred ? 'opacity-90' : ''"
-    >
+  @for (log of filteredVisitors(); track log.id) {
+    <article [class]="'app-card app-padded ' + (log.is_blurred ? 'opacity-90' : '')">
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-3">
           <img
             [src]="log.visitor.avatar_url || 'https://via.placeholder.com/100'"
             alt="visitor avatar"
-            class="h-12 w-12 rounded-full border border-slate-200 object-cover"
-            [ngClass]="log.is_blurred ? 'blur-md' : ''"
+            [class]="
+              'h-12 w-12 rounded-full border border-slate-200 object-cover ' +
+              (log.is_blurred ? 'blur-md' : '')
+            "
           />
-          <div [ngClass]="log.is_blurred ? 'blur-sm' : ''">
+          <div [class]="log.is_blurred ? 'blur-sm' : ''">
             <p class="text-sm font-bold text-slate-900">
               {{ log.visitor.display_name || 'Language partner' }}
             </p>

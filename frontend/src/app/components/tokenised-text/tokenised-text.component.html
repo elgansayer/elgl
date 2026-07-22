@@ -1,9 +1,11 @@
 <div class="inline leading-relaxed select-text font-medium text-base">
-  @for (token of tokens(); track token) {
+  @for (token of tokens(); track token.index) {
     <span
       (click)="onTokenClick(token)"
-      class="transition-colors rounded px-0.5"
-      [ngClass]="token.isWordLike ? vocabStore.getWordStatus(token.segment).colorClass : ''"
+      [class]="
+        'transition-colors rounded px-0.5 ' +
+        (token.isWordLike ? vocabStore.getWordStatus(token.segment).colorClass : '')
+      "
     >
       {{ token.segment }}
     </span>

@@ -17,11 +17,45 @@ export class DiscoveryComponent implements OnInit {
   readonly partners = signal<UserProfile[]>([]);
   readonly isLoading = signal<boolean>(true);
 
-  // Filter criteria
-  radiusKm = 50;
-  nativeLanguage = '';
-  targetLanguage = '';
-  seriousLearnerOnly = false;
+  readonly nativeLanguageOptions = [
+    { value: '', label: 'Any native language' },
+    { value: 'en', label: 'English' },
+    { value: 'es', label: 'Spanish' },
+    { value: 'fr', label: 'French' },
+    { value: 'de', label: 'German' },
+    { value: 'it', label: 'Italian' },
+    { value: 'pt', label: 'Portuguese' },
+    { value: 'ja', label: 'Japanese' },
+    { value: 'ko', label: 'Korean' },
+    { value: 'zh', label: 'Chinese' },
+    { value: 'ar', label: 'Arabic' },
+    { value: 'ru', label: 'Russian' },
+    { value: 'hi', label: 'Hindi' },
+    { value: 'tr', label: 'Turkish' },
+  ] as const;
+
+  readonly targetLanguageOptions = [
+    { value: '', label: 'Any target language' },
+    { value: 'en', label: 'English' },
+    { value: 'es', label: 'Spanish' },
+    { value: 'fr', label: 'French' },
+    { value: 'de', label: 'German' },
+    { value: 'it', label: 'Italian' },
+    { value: 'pt', label: 'Portuguese' },
+    { value: 'ja', label: 'Japanese' },
+    { value: 'ko', label: 'Korean' },
+    { value: 'zh', label: 'Chinese' },
+    { value: 'ar', label: 'Arabic' },
+    { value: 'ru', label: 'Russian' },
+    { value: 'hi', label: 'Hindi' },
+    { value: 'tr', label: 'Turkish' },
+  ] as const;
+
+  readonly distanceBandsKm = [10, 25, 50, 100, 250] as const;
+  readonly selectedDistanceKm = signal<number>(50);
+  readonly selectedNativeLanguage = signal<string>('');
+  readonly selectedTargetLanguage = signal<string>('');
+  readonly seriousLearnerOnly = signal<boolean>(false);
 
   async ngOnInit(): Promise<void> {
     await this.searchPartners();
@@ -31,10 +65,10 @@ export class DiscoveryComponent implements OnInit {
     this.isLoading.set(true);
     try {
       const results = await this.discoveryService.findPartners({
-        radius_metres: this.radiusKm * 1000,
-        native_language: this.nativeLanguage ? this.nativeLanguage.toLowerCase().trim() : undefined,
-        target_language: this.targetLanguage ? this.targetLanguage.toLowerCase().trim() : undefined,
-        serious_learner_only: this.seriousLearnerOnly,
+        radius_metres: this.selectedDistanceKm() * 1000,
+        native_language: this.selectedNativeLanguage() || undefined,
+        target_language: this.selectedTargetLanguage() || undefined,
+        serious_learner_only: this.seriousLearnerOnly(),
       });
       this.partners.set(results);
     } catch (e) {
@@ -45,10 +79,10 @@ export class DiscoveryComponent implements OnInit {
   }
 
   resetFilters(): void {
-    this.radiusKm = 50;
-    this.nativeLanguage = '';
-    this.targetLanguage = '';
-    this.seriousLearnerOnly = false;
+    this.selectedDistanceKm.set(50);
+    this.selectedNativeLanguage.set('');
+    this.selectedTargetLanguage.set('');
+    this.seriousLearnerOnly.set(false);
     void this.searchPartners();
   }
 }

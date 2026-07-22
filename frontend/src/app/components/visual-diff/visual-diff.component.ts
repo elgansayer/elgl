@@ -25,8 +25,8 @@ export class VisualDiffComponent implements OnInit {
 
   private computeWordDiff(): void {
     // Universal tokenisation: use native Intl.Segmenter (word granularity) per Rule 3
-    let origTokens: string[] = [];
-    let corrTokens: string[] = [];
+    let origTokens: string[];
+    let corrTokens: string[];
 
     if (typeof Intl !== 'undefined' && Intl.Segmenter) {
       const segmenter = new Intl.Segmenter('en', { granularity: 'word' });

@@ -6,10 +6,12 @@ import { UsersService } from '../users/users.service';
 import { GrammarCheckDto } from './dto/grammar-check.dto';
 import { PronunciationScoreDto } from './dto/pronunciation-score.dto';
 import { TranslateDto } from './dto/translate.dto';
+import { TranslateUiDto } from './dto/translate-ui.dto';
 import {
   GrammarCheckResult,
   PronunciationScoreResult,
   TranslationResult,
+  TranslateUiResult,
 } from './interfaces/nlp-results.interface';
 import { NlpService } from './nlp.service';
 
@@ -41,6 +43,11 @@ export class NlpController {
       profile?.is_vip ?? false,
       dto,
     );
+  }
+
+  @Post('translate-ui')
+  async translateUi(@Body() dto: TranslateUiDto): Promise<TranslateUiResult> {
+    return await this.nlpService.translateUi(dto);
   }
 
   @Post('grammar-check')

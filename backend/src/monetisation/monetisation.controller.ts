@@ -9,7 +9,11 @@ import {
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { StripeWebhookDto, UpgradeVipDto } from './dto/monetisation.dto';
+import {
+  CreateDiagnosticLogDto,
+  StripeWebhookDto,
+  UpgradeVipDto,
+} from './dto/monetisation.dto';
 import { MonetisationService } from './monetisation.service';
 
 @Controller('monetisation')
@@ -44,5 +48,21 @@ export class MonetisationController {
   async getAnalytics(@CurrentUser() user: User | null) {
     if (!user) return null;
     return await this.monetisationService.getDeveloperAnalytics(user.id);
+  }
+
+  @Get('diagnostics/logs')
+  @UseGuards(SupabaseAuthGuard)
+  async getDiagnosticLogs() {
+    return await this.monetisationService.getDiagnosticLogs();
+  }
+
+  @Post('diagnostics/logs')
+  @UseGuards(SupabaseAuthGuard)
+  async createDiagnosticLog(
+    @CurrentUser() user: User | null,
+    @Body() dto: CreateDiagnosticLogDto,
+  ) {
+    if (!user) return null;
+    return await this.monetisationService.createDiagnosticLog(user.id, dto);
   }
 }

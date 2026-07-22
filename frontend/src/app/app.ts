@@ -19,7 +19,7 @@ export class App implements OnInit {
   private readonly router = inject(Router);
 
   readonly navItems = [
-    { path: '/discovery', label: 'Nearby', icon: '🧭' },
+    { path: '/discovery', label: 'Partners', icon: '🔎' },
     { path: '/moments', label: 'Moments', icon: '📝' },
     { path: '/chat', label: 'Chats', icon: '💬' },
     { path: '/audio-rooms', label: 'Live', icon: '🎙️' },

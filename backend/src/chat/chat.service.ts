@@ -5,6 +5,7 @@ import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import {
   ChatMessage,
+  ChatRoomRecord,
   FavouriteRecord,
 } from './interfaces/chat-message.interface';
 
@@ -17,6 +18,21 @@ export class ChatService {
 
   generateConnectionToken(userId: string): { token: string } {
     return this.centrifugoService.generateConnectionToken(userId);
+  }
+
+  async getRooms(): Promise<ChatRoomRecord[]> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('chat_rooms')
+      .select('id, title, subtitle, avatar, is_online, is_pinned, created_at')
+      .order('is_pinned', { ascending: false })
+      .order('created_at', { ascending: true });
+
+    if (response.error || !response.data) {
+      return [];
+    }
+
+    return response.data;
   }
 
   async sendMessage(

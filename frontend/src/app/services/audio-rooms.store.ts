@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { Room, RoomEvent, RemoteAudioTrack, RemoteParticipant } from 'livekit-client';
+import { Room } from 'livekit-client';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { CentrifugeService } from './centrifuge.service';
@@ -61,7 +61,7 @@ export class AudioRoomsStore {
   readonly isLoading = signal<boolean>(false);
 
   private livekitRoom: Room | null = null;
-  private roomSubscription: any = null;
+  private roomSubscription: unknown = null;
 
   private getHeaders() {
     const token = this.authService.getAccessToken();
@@ -141,33 +141,42 @@ export class AudioRoomsStore {
       this.centrifugeService.unsubscribe(`room_${room.id}`);
     }
 
-    this.roomSubscription = this.centrifugeService.subscribe(`room_${room.id}`, (data: any) => {
-      if (data.type === 'raise_hand') {
+    this.roomSubscription = this.centrifugeService.subscribe(`room_${room.id}`, (data: unknown) => {
+      const payload = data as {
+        type?: string;
+        user_id?: string;
+        target_user_id?: string;
+        caption?: CaptionRecord;
+        message?: RoomChatMessage;
+      } | null;
+      if (!payload) return;
+
+      if (payload.type === 'raise_hand' && payload.user_id) {
         this.currentRoom.update(r => {
-          if (!r || r.raised_hands.includes(data.user_id)) return r;
-          return { ...r, raised_hands: [...r.raised_hands, data.user_id] };
+          if (!r || r.raised_hands.includes(payload.user_id!)) return r;
+          return { ...r, raised_hands: [...r.raised_hands, payload.user_id!] };
         });
-      } else if (data.type === 'speaker_approved') {
+      } else if (payload.type === 'speaker_approved' && payload.target_user_id) {
         this.currentRoom.update(r => {
           if (!r) return r;
-          const updatedHands = r.raised_hands.filter(id => id !== data.target_user_id);
-          const updatedSpeakers = r.speakers.includes(data.target_user_id) ? r.speakers : [...r.speakers, data.target_user_id];
+          const updatedHands = r.raised_hands.filter(id => id !== payload.target_user_id);
+          const updatedSpeakers = r.speakers.includes(payload.target_user_id!) ? r.speakers : [...r.speakers, payload.target_user_id!];
           return { ...r, raised_hands: updatedHands, speakers: updatedSpeakers };
         });
 
         // If target user is me, refresh token and enable mic
-        if (data.target_user_id === this.authService.currentUser()?.id) {
+        if (payload.target_user_id === this.authService.currentUser()?.id) {
           this.isSpeaker.set(true);
           if (this.livekitRoom) {
             void this.livekitRoom.localParticipant.setMicrophoneEnabled(true);
           }
           alert('🎉 Host approved your request to speak! Your microphone is now live on stage.');
         }
-      } else if (data.type === 'subtitle' && data.caption) {
-        this.captions.update(list => [...list.slice(-49), data.caption]);
-      } else if (data.type === 'chat_message' && data.message) {
-        this.roomMessages.update(list => [...list.slice(-99), data.message]);
-      } else if (data.type === 'room_ended') {
+      } else if (payload.type === 'subtitle' && payload.caption) {
+        this.captions.update(list => [...list.slice(-49), payload.caption!]);
+      } else if (payload.type === 'chat_message' && payload.message) {
+        this.roomMessages.update(list => [...list.slice(-99), payload.message!]);
+      } else if (payload.type === 'room_ended') {
         alert('This audio/video room has ended and been archived to Cloudflare R2.');
         this.leaveRoom();
       }

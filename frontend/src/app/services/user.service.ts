@@ -21,6 +21,7 @@ export interface UserProfile {
   privacy_hide_age: boolean;
   privacy_hide_location: boolean;
   privacy_hide_from_search: boolean;
+  distance_metres?: number;
   created_at: string;
 }
 
@@ -74,7 +75,7 @@ export class UserService {
     );
   }
 
-  async recordVisit(viewedUserId: string): Promise<any> {
+  async recordVisit(viewedUserId: string): Promise<unknown> {
     return firstValueFrom(
       this.http.post(`${this.visitsUrl}/${viewedUserId}`, {}, { headers: this.getHeaders() })
     );

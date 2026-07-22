@@ -29,3 +29,13 @@ export interface FavouriteRecord {
   created_at: string;
   message?: ChatMessage;
 }
+
+export interface ChatRoomRecord {
+  id: string;
+  title: string;
+  subtitle: string;
+  avatar: string;
+  is_online: boolean;
+  is_pinned: boolean;
+  created_at: string;
+}

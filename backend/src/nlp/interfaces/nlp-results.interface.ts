@@ -25,3 +25,9 @@ export interface PronunciationScoreResult {
   breakdown: WordBreakdownItem[];
   feedback_summary: string;
 }
+
+export interface TranslateUiResult {
+  target_language: string;
+  translations: Record<string, string>;
+  cached: boolean;
+}

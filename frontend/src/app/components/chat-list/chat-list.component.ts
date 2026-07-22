@@ -3,7 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
-import { ChatMessage, ChatService } from '../../services/chat.service';
+import { ChatMessage, ChatRoom, ChatService } from '../../services/chat.service';
 
 interface ChatRoomPreview {
   id: string;
@@ -52,64 +52,30 @@ export class ChatListComponent implements OnInit {
 
   async loadPreviews(): Promise<void> {
     this.isLoading.set(true);
-    const rooms: Array<{
-      id: string;
-      title: string;
-      subtitle: string;
-      avatar: string;
-      isOnline: boolean;
-      isPinned: boolean;
-    }> = [
-      {
-        id: 'global-exchange',
-        title: 'Global Exchange',
-        subtitle: 'General language room',
-        avatar: '🌍',
-        isOnline: true,
-        isPinned: true
-      },
-      {
-        id: 'english-spanish',
-        title: 'English ↔ Spanish',
-        subtitle: 'Partner corrections',
-        avatar: '🇬🇧🇪🇸',
-        isOnline: true,
-        isPinned: true
-      },
-      {
-        id: 'japanese-beginners',
-        title: 'Japanese Beginners',
-        subtitle: 'Short sentence practice',
-        avatar: '🇯🇵',
-        isOnline: false,
-        isPinned: false
-      },
-      {
-        id: 'arabic-english',
-        title: 'Arabic ↔ English',
-        subtitle: 'Pronunciation help',
-        avatar: '🇸🇦🇬🇧',
-        isOnline: false,
-        isPinned: false
-      }
-    ];
+    try {
+      const rooms = await this.chatService.getRooms();
 
-    const previewList = await Promise.all(
-      rooms.map(async (room) => {
-        const messages = await this.loadRoomMessages(room.id);
-        return this.toPreview(room, messages);
-      })
-    );
+      const previewList = await Promise.all(
+        rooms.map(async (room) => {
+          const messages = await this.loadRoomMessages(room.id);
+          return this.toPreview(room, messages);
+        })
+      );
 
-    previewList.sort((a, b) => {
-      if (!a.lastMessageAt && !b.lastMessageAt) return 0;
-      if (!a.lastMessageAt) return 1;
-      if (!b.lastMessageAt) return -1;
-      return b.lastMessageAt.localeCompare(a.lastMessageAt);
-    });
+      previewList.sort((a, b) => {
+        if (!a.lastMessageAt && !b.lastMessageAt) return 0;
+        if (!a.lastMessageAt) return 1;
+        if (!b.lastMessageAt) return -1;
+        return b.lastMessageAt.localeCompare(a.lastMessageAt);
+      });
 
-    this.previews.set(previewList);
-    this.isLoading.set(false);
+      this.previews.set(previewList);
+    } catch (error) {
+      console.error('Failed to load chat rooms:', error);
+      this.previews.set([]);
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   private async loadRoomMessages(roomId: string): Promise<ChatMessage[]> {
@@ -122,14 +88,7 @@ export class ChatListComponent implements OnInit {
   }
 
   private toPreview(
-    room: {
-      id: string;
-      title: string;
-      subtitle: string;
-      avatar: string;
-      isOnline: boolean;
-      isPinned: boolean;
-    },
+    room: ChatRoom,
     messages: ChatMessage[]
   ): ChatRoomPreview {
     const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
@@ -144,8 +103,8 @@ export class ChatListComponent implements OnInit {
       title: room.title,
       subtitle: room.subtitle,
       avatar: room.avatar,
-      isOnline: room.isOnline,
-      isPinned: room.isPinned,
+      isOnline: room.is_online,
+      isPinned: room.is_pinned,
       lastMessageText: this.toMessagePreview(lastMessage),
       lastMessageAt: lastMessage?.created_at ?? null,
       unreadCount

@@ -1,112 +1,117 @@
-<div class="mx-auto max-w-2xl space-y-4">
-  <section class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-4 pb-4 shadow-sm">
-    <h1 class="text-lg font-black text-slate-900">Nearby learners</h1>
-    <p class="mt-1 text-xs text-slate-500">Find language partners by distance and goals.</p>
+<div class="app-screen">
+  <section class="app-card app-padded space-y-4">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h1 class="text-lg font-black text-slate-900">Find partners</h1>
+        <p class="mt-1 text-xs text-slate-500">Filter learners by language goals and learning style.</p>
+      </div>
+      <span class="app-chip bg-primary/10 text-primary">🔎 Discovery</span>
+    </div>
 
-    <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <label
-        class="rounded-2xl bg-slate-50 ps-3 pe-3 pt-2.5 pb-2.5 text-xs font-semibold text-slate-600"
-      >
-        Radius: {{ radiusKm }} km
-        <input
-          type="range"
-          min="5"
-          max="500"
-          step="5"
-          [(ngModel)]="radiusKm"
-          (change)="searchPartners()"
-          class="mt-2 w-full accent-primary"
-        />
+    <div class="flex flex-wrap gap-1.5">
+      <span class="app-chip">🌍 Global partners</span>
+      <span class="app-chip">🔥 Active streaks</span>
+      <span class="app-chip">✅ Correction-friendly</span>
+    </div>
+
+    <div class="space-y-2">
+      <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Distance preference</p>
+      <div class="grid grid-cols-5 gap-1.5">
+        @for (km of distanceBandsKm; track km) {
+          <button
+            (click)="selectedDistanceKm.set(km); searchPartners()"
+            [class]="
+              'rounded-app border pt-2 pb-2 text-xs font-bold ' +
+              (selectedDistanceKm() === km
+                ? 'border-primary bg-primary text-white'
+                : 'border-slate-200 bg-white text-slate-600')
+            "
+          >
+            {{ km }} km
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <label class="rounded-card border border-slate-200 bg-slate-50 ps-3 pe-3 pt-2.5 pb-2.5">
+        <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Native language</span>
+        <select
+          [ngModel]="selectedNativeLanguage()"
+          (ngModelChange)="selectedNativeLanguage.set($event); searchPartners()"
+          class="mt-1 w-full rounded-app border border-slate-200 bg-white ps-2.5 pe-2.5 pt-2 pb-2 text-sm font-semibold text-slate-700"
+        >
+          @for (language of nativeLanguageOptions; track language.value) {
+            <option [value]="language.value">{{ language.label }}</option>
+          }
+        </select>
       </label>
 
-      <label
-        class="rounded-2xl bg-slate-50 ps-3 pe-3 pt-2.5 pb-2.5 text-xs font-semibold text-slate-600"
-      >
-        Native language
-        <input
-          type="text"
-          [(ngModel)]="nativeLanguage"
-          (keyup.enter)="searchPartners()"
-          placeholder="en, es, ja"
-          class="mt-2 w-full rounded-xl border border-slate-200 bg-white ps-3 pe-3 pt-2 pb-2 text-sm uppercase"
-        />
-      </label>
-
-      <label
-        class="rounded-2xl bg-slate-50 ps-3 pe-3 pt-2.5 pb-2.5 text-xs font-semibold text-slate-600"
-      >
-        Target language
-        <input
-          type="text"
-          [(ngModel)]="targetLanguage"
-          (keyup.enter)="searchPartners()"
-          placeholder="en, fr, ar"
-          class="mt-2 w-full rounded-xl border border-slate-200 bg-white ps-3 pe-3 pt-2 pb-2 text-sm uppercase"
-        />
-      </label>
-
-      <label
-        class="flex items-center gap-2 rounded-2xl bg-slate-50 ps-3 pe-3 pt-2.5 pb-2.5 text-xs font-semibold text-slate-700"
-      >
-        <input
-          type="checkbox"
-          [(ngModel)]="seriousLearnerOnly"
-          (change)="searchPartners()"
-          class="h-4 w-4 rounded border-slate-300 text-primary"
-        />
-        Serious learners only
+      <label class="rounded-card border border-slate-200 bg-slate-50 ps-3 pe-3 pt-2.5 pb-2.5">
+        <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Target language</span>
+        <select
+          [ngModel]="selectedTargetLanguage()"
+          (ngModelChange)="selectedTargetLanguage.set($event); searchPartners()"
+          class="mt-1 w-full rounded-app border border-slate-200 bg-white ps-2.5 pe-2.5 pt-2 pb-2 text-sm font-semibold text-slate-700"
+        >
+          @for (language of targetLanguageOptions; track language.value) {
+            <option [value]="language.value">{{ language.label }}</option>
+          }
+        </select>
       </label>
     </div>
 
-    <div class="mt-4 flex items-center gap-2">
+    <div class="flex items-center justify-between gap-2 rounded-card border border-slate-200 bg-slate-50 ps-3 pe-3 pt-2.5 pb-2.5">
+      <p class="text-xs font-semibold text-slate-700">Serious learners only</p>
       <button
-        (click)="searchPartners()"
-        class="rounded-xl bg-primary ps-4 pe-4 pt-2 pb-2 text-xs font-bold text-white shadow-sm"
+        (click)="seriousLearnerOnly.set(!seriousLearnerOnly()); searchPartners()"
+        [class]="
+          'rounded-full ps-3 pe-3 pt-1.5 pb-1.5 text-[11px] font-bold ' +
+          (seriousLearnerOnly() ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700')
+        "
       >
-        Apply
+        {{ seriousLearnerOnly() ? 'On' : 'Off' }}
       </button>
-      <button
-        (click)="resetFilters()"
-        class="rounded-xl bg-slate-100 ps-4 pe-4 pt-2 pb-2 text-xs font-bold text-slate-700"
-      >
-        Reset
-      </button>
+    </div>
+
+    <div class="flex items-center justify-end gap-2">
+      <button (click)="resetFilters()" class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs">Reset filters</button>
     </div>
   </section>
 
   @if (isLoading()) {
-    <div
-      class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-10 pb-10 text-center text-sm text-slate-500"
-    >
-      Searching partners...
-    </div>
+    <div class="app-empty-state text-slate-500">Searching partners...</div>
   }
 
   @if (!isLoading() && partners().length === 0) {
-    <div class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-10 pb-10 text-center">
+    <div class="app-empty-state">
       <p class="text-sm font-semibold text-slate-700">No partner matches yet.</p>
+      <p class="mt-1 text-xs text-slate-500">Try broadening distance or language filters.</p>
     </div>
   }
 
-  @for (partner of partners(); track partner) {
-    <article class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-4 pb-4 shadow-sm">
+  @if (!isLoading() && partners().length > 0) {
+    <p class="ps-1 text-xs font-bold uppercase tracking-wide text-slate-500">
+      {{ partners().length }} partner match(es)
+    </p>
+  }
+
+  @for (partner of partners(); track partner.id) {
+    <article class="app-card app-padded">
       <div class="flex items-start justify-between gap-3">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 min-w-0">
           <img
             [src]="partner.avatar_url || 'https://via.placeholder.com/100'"
             alt="avatar"
             class="h-12 w-12 rounded-full border border-slate-200 object-cover"
           />
-          <div>
+          <div class="min-w-0">
             <div class="flex items-center gap-2">
-              <p class="text-sm font-bold text-slate-900">
+              <p class="truncate text-sm font-bold text-slate-900">
                 {{ partner.display_name || 'Language partner' }}
               </p>
               @if (partner.is_vip) {
-                <span
-                  class="rounded-full bg-amber-100 ps-2 pe-2 pt-0.5 pb-0.5 text-[10px] font-bold text-amber-900"
-                  >VIP</span
-                >
+                <span class="rounded-full bg-amber-100 ps-2 pe-2 pt-0.5 pb-0.5 text-[10px] font-bold text-amber-900">VIP</span>
               }
             </div>
             <p class="text-[11px] text-slate-500">
@@ -116,13 +121,11 @@
             </p>
           </div>
         </div>
-        <button
-          class="rounded-xl bg-primary/10 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-primary"
-        >
-          Chat
+        <button class="rounded-app bg-primary/10 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-primary">
+          Start chat
         </button>
       </div>
-      <p class="mt-3 rounded-2xl bg-slate-50 ps-3 pe-3 pt-2.5 pb-2.5 text-sm text-slate-700">
+      <p class="mt-3 rounded-card bg-slate-50 ps-3 pe-3 pt-2.5 pb-2.5 text-sm text-slate-700">
         {{ partner.bio_text || 'No profile bio yet.' }}
       </p>
       <div class="mt-3 flex items-center gap-3 text-[11px] font-semibold text-slate-500">

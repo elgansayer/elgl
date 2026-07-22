@@ -1,27 +1,28 @@
-<div class="mx-auto max-w-2xl space-y-4">
-  <section class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-4 pb-4 shadow-sm">
-    <h1 class="text-lg font-black text-slate-900">Favourites</h1>
-    <p class="text-xs text-slate-500">Saved messages and corrections for revision.</p>
+<div class="app-screen">
+  <section class="app-card app-padded">
+    <h1 class="app-section-title">Favourites</h1>
+    <p class="app-muted">Saved chat highlights for spaced revision.</p>
+    <div class="mt-2 flex flex-wrap gap-1.5">
+      <span class="app-chip">📌 Important phrases</span>
+      <span class="app-chip">✏️ Corrections</span>
+      <span class="app-chip">📚 Review queue</span>
+    </div>
   </section>
 
   @if (isLoading()) {
-    <div
-      class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-10 pb-10 text-center text-sm text-slate-500"
-    >
+    <div class="app-empty-state text-slate-500">
       Loading favourites...
     </div>
   }
 
   @if (!isLoading() && favourites().length === 0) {
-    <div
-      class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-10 pb-10 text-center text-sm text-slate-600"
-    >
+    <div class="app-empty-state">
       No favourites saved yet.
     </div>
   }
 
-  @for (fav of favourites(); track fav) {
-    <article class="rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-4 pb-4 shadow-sm">
+  @for (fav of favourites(); track fav.id) {
+    <article class="app-card app-padded">
       <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-2.5">
           <img
@@ -36,7 +37,7 @@
         <p class="text-[11px] text-slate-400">{{ fav.created_at | date: 'short' }}</p>
       </div>
       @if (fav.message?.message_type === 'text') {
-        <p class="mt-3 rounded-2xl bg-slate-50 ps-3 pe-3 pt-2.5 pb-2.5 text-sm text-slate-700">
+        <p class="mt-3 rounded-card bg-slate-50 ps-3 pe-3 pt-2.5 pb-2.5 text-sm text-slate-700">
           {{ fav.message?.text_content }}
         </p>
       }

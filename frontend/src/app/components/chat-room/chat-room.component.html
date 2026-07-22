@@ -1,19 +1,14 @@
-<div
-  class="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white ps-4 pe-4 pt-4 pb-4 shadow-sm h-[78vh] flex flex-col"
->
-  <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
+<div class="mx-auto max-w-3xl app-card app-padded h-[78vh] flex flex-col">
+  <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
     <div class="flex items-center gap-3">
       <div
-        class="h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center"
+        class="h-10 w-10 rounded-card bg-primary/10 text-primary flex items-center justify-center"
       >
         💬
       </div>
       <div>
-        <h1 class="text-lg font-black text-slate-900">{{ roomId }}</h1>
-        <p
-          class="text-xs"
-          [ngClass]="centrifugeService.isConnected() ? 'text-emerald-600' : 'text-amber-600'"
-        >
+        <h1 class="text-base font-black text-slate-900 sm:text-lg">{{ roomId }}</h1>
+        <p class="text-xs" [class]="centrifugeService.isConnected() ? 'text-xs text-emerald-600' : 'text-xs text-amber-600'">
           {{ centrifugeService.isConnected() ? 'Live now' : 'Connecting...' }}
         </p>
       </div>
@@ -23,20 +18,17 @@
         type="text"
         [(ngModel)]="searchQuery"
         (keyup.enter)="onSearch()"
-        placeholder="Search"
-        class="w-32 sm:w-44 rounded-xl border border-slate-200 bg-slate-50 ps-3 pe-3 pt-2 pb-2 text-xs"
+        placeholder="Search messages"
+        class="app-input w-28 sm:w-44 text-xs pt-2 pb-2"
       />
-      <button
-        (click)="onSearch()"
-        class="rounded-xl bg-slate-100 ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-slate-700"
-      >
+      <button (click)="onSearch()" class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs">
         Search
       </button>
     </div>
   </div>
 
   <div
-    class="mt-3 flex-1 overflow-y-auto rounded-2xl border border-slate-100 bg-slate-50 ps-2 pe-2 pt-2 pb-2 space-y-2"
+    class="mt-2.5 flex-1 overflow-y-auto rounded-card border border-slate-100 bg-slate-50 ps-2 pe-2 pt-2 pb-2 space-y-2"
   >
     @if (isLoading()) {
       <div class="pt-10 text-center text-sm text-slate-500">Loading messages...</div>
@@ -45,19 +37,19 @@
       <div class="pt-10 text-center text-sm text-slate-500">No messages yet.</div>
     }
 
-    @for (msg of messages(); track msg) {
+    @for (msg of messages(); track msg.id) {
       <div
-        class="flex gap-2"
-        [ngClass]="
-          msg.sender_id === authService.currentUser()?.id ? 'justify-end' : 'justify-start'
+        [class]="
+          'flex gap-2 ' +
+          (msg.sender_id === authService.currentUser()?.id ? 'justify-end' : 'justify-start')
         "
       >
         <div
-          class="max-w-[80%] rounded-2xl ps-3 pe-3 pt-2.5 pb-2.5 text-sm shadow-sm transition-colors"
-          [ngClass]="
-            msg.sender_id === authService.currentUser()?.id
+          [class]="
+            'max-w-[80%] rounded-2xl ps-3 pe-3 pt-2.5 pb-2.5 text-sm shadow-sm transition-colors ' +
+            (msg.sender_id === authService.currentUser()?.id
               ? 'bg-primary text-white'
-              : 'bg-white border border-slate-200 text-slate-800'
+              : 'bg-white border border-slate-200 text-slate-800')
           "
         >
           <p class="mb-1 text-[11px] opacity-70">
@@ -97,7 +89,7 @@
             }
             <button
               (click)="bookmark(msg)"
-              class="rounded-lg bg-black/20 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-white"
+              class="rounded-lg bg-slate-200 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-slate-700"
             >
               Fav
             </button>
@@ -141,35 +133,35 @@
   }
 
   @if (showCorrectionForm()) {
-    <div class="mt-2 rounded-2xl border border-amber-200 bg-amber-50 ps-3 pe-3 pt-3 pb-3 space-y-2">
+    <div class="mt-2 rounded-card border border-amber-200 bg-amber-50 ps-3 pe-3 pt-3 pb-3 space-y-2">
       <input
         type="text"
         [(ngModel)]="originalText"
         placeholder="Original sentence"
-        class="w-full rounded-xl border border-amber-200 bg-white ps-3 pe-3 pt-2 pb-2 text-sm"
+        class="app-input w-full bg-white border-amber-200 pt-2 pb-2"
       />
       <input
         type="text"
         [(ngModel)]="correctedText"
         placeholder="Corrected sentence"
-        class="w-full rounded-xl border border-amber-200 bg-white ps-3 pe-3 pt-2 pb-2 text-sm"
+        class="app-input w-full bg-white border-amber-200 pt-2 pb-2"
       />
       <input
         type="text"
         [(ngModel)]="explanationText"
         placeholder="Explanation"
-        class="w-full rounded-xl border border-amber-200 bg-white ps-3 pe-3 pt-2 pb-2 text-sm"
+        class="app-input w-full bg-white border-amber-200 pt-2 pb-2"
       />
       <div class="flex gap-2">
         <button
           (click)="showCorrectionForm.set(false)"
-          class="rounded-xl bg-slate-200 ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-slate-700"
+          class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
         >
           Cancel
         </button>
         <button
           (click)="sendCorrection()"
-          class="rounded-xl bg-emerald-600 ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-white"
+          class="rounded-app bg-emerald-600 ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-white"
         >
           Send correction
         </button>
@@ -181,19 +173,19 @@
     <div class="mb-2 flex items-center gap-2">
       <button
         (click)="showCorrectionForm.set(!showCorrectionForm())"
-        class="rounded-xl bg-amber-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-amber-800"
+        class="app-button-secondary bg-amber-100 text-amber-800 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
       >
         Correct
       </button>
       <button
         (click)="showDoodleModal.set(true)"
-        class="rounded-xl bg-blue-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-blue-800"
+        class="app-button-secondary bg-blue-100 text-blue-800 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
       >
         Doodle
       </button>
       <button
         (click)="showVoiceModal.set(true)"
-        class="rounded-xl bg-red-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-red-800"
+        class="app-button-secondary bg-red-100 text-red-800 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
       >
         Voice
       </button>
@@ -204,12 +196,9 @@
         [(ngModel)]="textInput"
         (keyup.enter)="sendTextMessage()"
         placeholder="Type your message"
-        class="flex-1 rounded-2xl border border-slate-200 bg-slate-50 ps-4 pe-4 pt-3 pb-3 text-sm"
+        class="app-input flex-1 pt-3 pb-3"
       />
-      <button
-        (click)="sendTextMessage()"
-        class="rounded-2xl bg-primary ps-5 pe-5 pt-3 pb-3 text-sm font-bold text-white shadow-sm"
-      >
+      <button (click)="sendTextMessage()" class="app-button-primary ps-5 pe-5 pt-3 pb-3 text-sm">
         Send
       </button>
     </div>

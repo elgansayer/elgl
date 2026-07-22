@@ -1,0 +1,20 @@
+{
+  "name": "hellotalk-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HelloTalk Open-Core Platform (Angular v22 + NestJS + Supabase + Centrifugo + LiveKit)",
+  "scripts": {
+    "check:constitution": "node scripts/verify-constitution.mjs",
+    "check:control-flow": "cd frontend && npm run check:control-flow",
+    "lint": "npm run check:constitution && cd backend && npm run lint",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npx ng build",
+    "build:backend": "cd backend && npm run build",
+    "test": "cd frontend && npm run test -- --watch=false && cd ../backend && npm run test",
+    "verify": "npm run check:constitution && npm run build && cd backend && npm run verify",
+    "prepare": "if [ -d .git ]; then npx husky || true; fi"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}

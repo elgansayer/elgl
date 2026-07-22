@@ -45,8 +45,9 @@ export class ProfileComponent implements OnInit {
         this.privacyHideLocation = Boolean(data.privacy_hide_location);
         this.privacyHideSearch = Boolean(data.privacy_hide_from_search);
       }
-    } catch (e: any) {
-      this.errorMessage.set(e.message || 'Failed to load profile');
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      this.errorMessage.set(err.message || 'Failed to load profile');
     } finally {
       this.isLoading.set(false);
     }
@@ -78,8 +79,9 @@ export class ProfileComponent implements OnInit {
       this.profile.set(updated);
       this.isEditing.set(false);
       this.successMessage.set('Profile updated successfully.');
-    } catch (e: any) {
-      this.errorMessage.set(e.error?.message || e.message || 'Failed to update profile');
+    } catch (e: unknown) {
+      const err = e as { message?: string; error?: { message?: string } };
+      this.errorMessage.set(err.error?.message || err.message || 'Failed to update profile');
     }
   }
 

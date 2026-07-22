@@ -16,8 +16,8 @@
     </div>
   }
 
-  <header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur">
-    <div class="mx-auto max-w-4xl ps-4 pe-4 pt-3 pb-3 flex items-center justify-between gap-3">
+  <header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur">
+    <div class="mx-auto max-w-4xl ps-4 pe-4 pt-2.5 pb-2.5 flex items-center justify-between gap-3">
       <a routerLink="/discovery" class="flex items-center gap-2.5">
         <span
           class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20"
@@ -31,20 +31,14 @@
 
       <div class="flex items-center gap-2.5">
         <span
-          class="rounded-xl bg-amber-100 text-amber-900 text-xs font-bold ps-2 pe-2 pt-1 pb-1 ring-1 ring-amber-200"
+          class="rounded-full bg-amber-100 text-amber-900 text-xs font-bold ps-2.5 pe-2.5 pt-1 pb-1 ring-1 ring-amber-200"
         >
           🪙 {{ economyStore.coinsBalance() }}
         </span>
-        <a
-          routerLink="/visitors"
-          class="hidden sm:inline rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold ps-2.5 pe-2.5 pt-2 pb-2"
-        >
+        <a routerLink="/visitors" class="app-pill hidden sm:inline text-slate-600">
           👀 Visitors
         </a>
-        <a
-          routerLink="/profile"
-          class="hidden sm:inline rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold ps-3 pe-3 pt-2 pb-2"
-        >
+        <a routerLink="/profile" class="app-pill hidden sm:inline">
           {{ authService.currentUser()?.email || 'Guest' }}
         </a>
       </div>
@@ -59,11 +53,15 @@
 
   <nav class="fixed bottom-0 inset-x-0 z-40 border-t border-slate-200/80 bg-white/95 backdrop-blur">
     <div class="mx-auto max-w-4xl grid grid-cols-5 ps-2 pe-2 pt-2 pb-2">
-      @for (item of navItems; track item) {
+      @for (item of navItems; track item.path) {
         <a
           [routerLink]="item.path"
-          class="flex flex-col items-center justify-center gap-1 rounded-2xl pt-2 pb-2 text-[11px] font-semibold transition-all duration-200"
-          [ngClass]="isRouteActive(item.path) ? 'bg-primary/10 text-primary' : 'text-slate-500'"
+          [class]="
+            'flex flex-col items-center justify-center gap-0.5 rounded-2xl pt-2 pb-2 text-[11px] font-semibold transition-all duration-200 ' +
+            (isRouteActive(item.path)
+              ? 'bg-primary/10 text-primary'
+              : 'text-slate-500 hover:bg-slate-100/80')
+          "
         >
           <span class="text-lg">{{ item.icon }}</span>
           <span>{{ item.label }}</span>

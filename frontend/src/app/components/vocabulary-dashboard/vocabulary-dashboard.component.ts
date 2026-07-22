@@ -1,7 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { VocabularyStore, Flashcard, PronunciationScoreResult, GrammarCheckResult } from '../../services/vocabulary.store';
+import { VocabularyStore, PronunciationScoreResult, GrammarCheckResult } from '../../services/vocabulary.store';
 import { TokenisedTextComponent } from '../tokenised-text/tokenised-text.component';
 
 @Component({
@@ -21,9 +21,9 @@ export class VocabularyDashboardComponent implements OnInit {
   // AI Practice fields
   practiceText = 'I want to improve my English fluency and native pronunciation.';
   practiceAudioUrl = '';
-  grammarResult = signal<GrammarCheckResult | null>(null);
-  pronunciationResult = signal<PronunciationScoreResult | null>(null);
-  isAiLoading = signal<boolean>(false);
+  readonly grammarResult = signal<GrammarCheckResult | null>(null);
+  readonly pronunciationResult = signal<PronunciationScoreResult | null>(null);
+  readonly isAiLoading = signal<boolean>(false);
 
   async ngOnInit(): Promise<void> {
     await this.vocabStore.loadAllFlashcards();

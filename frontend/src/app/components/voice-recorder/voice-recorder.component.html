@@ -1,25 +1,25 @@
-<div
-  class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 border border-slate-200 dark:border-slate-700 max-w-md mx-auto text-center space-y-4"
->
-  <div
-    class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-3"
-  >
-    <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+<div class="app-card p-6 max-w-md mx-auto text-center space-y-4">
+  <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+    <h3 class="app-section-title flex items-center gap-2">
       <span>🎙️ Voice Note Recorder</span>
     </h3>
     <button
       (click)="cancel()"
-      class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold"
+      class="text-slate-400 hover:text-slate-600 font-bold"
     >
       ✕
     </button>
   </div>
 
-  <!-- Recording Animation & Timer -->
+  <div class="flex justify-center gap-1.5">
+    <span class="app-chip">🎙️ Speak clearly</span>
+    <span class="app-chip">📤 Send to chat</span>
+  </div>
+
   <div class="py-6 flex flex-col items-center justify-center">
     @if (isRecording()) {
       <div
-        class="w-24 h-24 rounded-full bg-red-100 dark:bg-red-900/40 border-4 border-red-500 flex items-center justify-center animate-pulse shadow-lg"
+        class="w-24 h-24 rounded-full bg-red-100 border-4 border-red-500 flex items-center justify-center animate-pulse shadow-lg"
       >
         <span class="text-3xl">🔴</span>
       </div>
@@ -27,7 +27,7 @@
 
     @if (!isRecording() && !audioPreviewUrl()) {
       <div
-        class="w-24 h-24 rounded-full bg-slate-100 dark:bg-slate-700 border-4 border-slate-300 dark:border-slate-600 flex items-center justify-center text-3xl"
+        class="w-24 h-24 rounded-full bg-slate-100 border-4 border-slate-300 flex items-center justify-center text-3xl"
       >
         🎙️
       </div>
@@ -39,7 +39,7 @@
       </div>
     }
 
-    <div class="mt-4 text-2xl font-mono font-bold text-slate-800 dark:text-slate-200">
+    <div class="mt-4 text-2xl font-mono font-bold text-slate-800">
       {{ formatDuration(durationSeconds()) }}
     </div>
   </div>
@@ -48,34 +48,34 @@
     @if (!isRecording() && !audioPreviewUrl()) {
       <button
         (click)="startRecording()"
-        class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2"
+        class="px-6 py-3 rounded-app bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2"
       >
-        <span>⏺️ Start Recording</span>
+        <span>⏺️ Start recording</span>
       </button>
     }
 
     @if (isRecording()) {
       <button
         (click)="stopRecording()"
-        class="px-6 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2"
+        class="px-6 py-3 rounded-app bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2"
       >
-        <span>⏹️ Stop Recording</span>
+        <span>⏹️ Stop recording</span>
       </button>
     }
 
     @if (audioPreviewUrl() && !isUploading()) {
       <button
         (click)="uploadAndSend()"
-        class="px-6 py-3 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2"
+        class="app-button-primary px-6 py-3 text-sm flex items-center gap-2"
       >
-        <span>📤 Send Voice Note</span>
+        <span>📤 Send voice note</span>
       </button>
     }
 
     @if (isUploading()) {
       <button
         disabled
-        class="px-6 py-3 bg-slate-400 text-white rounded-xl font-bold text-sm flex items-center gap-2 cursor-not-allowed"
+        class="px-6 py-3 bg-slate-400 text-white rounded-app font-bold text-sm flex items-center gap-2 cursor-not-allowed"
       >
         <span>⏳ Uploading to Cloudflare R2...</span>
       </button>

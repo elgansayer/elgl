@@ -36,6 +36,16 @@ export interface FavouriteRecord {
   message?: ChatMessage;
 }
 
+export interface ChatRoom {
+  id: string;
+  title: string;
+  subtitle: string;
+  avatar: string;
+  is_online: boolean;
+  is_pinned: boolean;
+  created_at: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -68,8 +78,15 @@ export class ChatService {
     if (search && search.trim().length > 0) {
       params = params.set('search', search.trim());
     }
+
     return firstValueFrom(
       this.http.get<ChatMessage[]>(`${this.baseUrl}/messages/${roomId}`, { headers: this.getHeaders(), params })
+    );
+  }
+
+  async getRooms(): Promise<ChatRoom[]> {
+    return firstValueFrom(
+      this.http.get<ChatRoom[]>(`${this.baseUrl}/rooms`, { headers: this.getHeaders() })
     );
   }
 

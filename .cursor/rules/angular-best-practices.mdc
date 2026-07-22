@@ -26,7 +26,7 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 ## Accessibility Requirements
 
 - It MUST pass all AXE checks.
-- It MUST follow all WCAG AA minimums, including focus management, color contrast, and ARIA attributes.
+- It MUST follow all WCAG AA minimums, including focus management, colour contrast, and ARIA attributes.
 
 ### Components
 
@@ -66,6 +66,6 @@ In addition to the Angular and TypeScript best practices above, you must adhere 
 - **British English:** Always use British English spelling (`colour`, `favourite`, `monetisation`, `tokenise`, etc.).
 - **Banned Punctuation:** Never use an em dash in code, comments, or documentation. Use standard hyphens or colons instead.
 - **Monetary Display:** Always display both currencies (`8 UKP / $10 USD`).
-- **Globalisation & RTL:** Use native `Intl.Segmenter` for word tokenisation and strictly use Tailwind logical properties (`ps-4`, `me-2`, `border-s`) for RTL layout compatibility.
+- **Globalisation, RTL & Zero Hard-Coded Strings:** Support ANY language with 0 hard-coded UI strings. Never write raw hard-coded text inside Angular templates (`*.html`) or component code (`*.ts`). Always pipe UI text through `TranslatePipe` (`{{ 'key' | t }}`) and use `I18nService.translate('key', params)` inside code (`src/app/services/i18n.service.ts`). Use native `Intl.Segmenter` for word tokenisation and strictly use Tailwind logical properties (`ps-4`, `me-2`, `border-s`) for RTL layout compatibility.
 - **API First:** Never connect Angular directly to the database; every request must route through NestJS REST API or Centrifugo WebSockets.
 - **Verification:** Always run `npm run lint` and verify no compiler errors exist before marking tasks complete in `TODO.md`.

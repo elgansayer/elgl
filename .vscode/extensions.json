@@ -1,0 +1,23 @@
+{
+  "recommendations": [
+    // Angular & TypeScript
+    "angular.ng-template",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+
+    // AI & Copilot
+    "github.copilot",
+    "github.copilot-chat",
+
+    // Tailwind CSS (Logical Properties & RTL)
+    "bradlc.vscode-tailwindcss",
+
+    // Database & Architecture (Supabase / PostgreSQL & Docker)
+    "mtxr.sqltools",
+    "mtxr.sqltools-driver-pg",
+    "ms-azuretools.vscode-docker"
+  ],
+  "unwantedRecommendations": [
+    "johnpapa.angular2" // Legacy / deprecated angular snippets
+  ]
+}

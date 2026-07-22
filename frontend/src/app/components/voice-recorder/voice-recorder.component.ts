@@ -22,7 +22,7 @@ export class VoiceRecorderComponent {
 
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
-  private timerInterval: any = null;
+  private timerInterval: ReturnType<typeof setInterval> | null = null;
   private recordedBlob: Blob | null = null;
 
   async startRecording(): Promise<void> {

@@ -1,0 +1,107 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { EconomyController } from './economy.controller';
+import { EconomyService } from './economy.service';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+
+describe('EconomyController', () => {
+  let controller: EconomyController;
+  let economyService: EconomyService;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [EconomyController],
+      providers: [
+        {
+          provide: EconomyService,
+          useValue: {
+            getCatalog: jest.fn(),
+            getBalance: jest.fn(),
+            purchaseCoins: jest.fn(),
+            sendGift: jest.fn(),
+          },
+        },
+      ],
+    })
+      .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .compile();
+
+    controller = module.get<EconomyController>(EconomyController);
+    economyService = module.get<EconomyService>(EconomyService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
+  });
+
+  describe('getCatalog', () => {
+    it('should return catalog from service', async () => {
+      const catalog: any[] = [{ id: 'gift-1' }];
+      (economyService.getCatalog as jest.Mock).mockResolvedValue(catalog);
+
+      const result = await controller.getCatalog();
+      expect(economyService.getCatalog).toHaveBeenCalled();
+      expect(result).toEqual(catalog);
+    });
+  });
+
+  describe('getBalance', () => {
+    it('should return 0 balance if user is not provided', async () => {
+      const result = await controller.getBalance(null);
+      expect(result).toEqual({ coins_balance: 0 });
+      expect(economyService.getBalance).not.toHaveBeenCalled();
+    });
+
+    it('should call service getBalance when user is provided', async () => {
+      const balance = { coins_balance: 150 };
+      (economyService.getBalance as jest.Mock).mockResolvedValue(balance);
+
+      const result = await controller.getBalance({ id: 'user-1' } as any);
+      expect(economyService.getBalance).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(balance);
+    });
+  });
+
+  describe('purchaseCoins', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.purchaseCoins(null, {} as any);
+      expect(result).toBeNull();
+      expect(economyService.purchaseCoins).not.toHaveBeenCalled();
+    });
+
+    it('should call service purchaseCoins when user is provided', async () => {
+      const dto: any = { amount: 100, package_id: 'pkg-1' };
+      const response: any = { coins_balance: 200, package_id: 'pkg-1' };
+      (economyService.purchaseCoins as jest.Mock).mockResolvedValue(response);
+
+      const result = await controller.purchaseCoins(
+        { id: 'user-1' } as any,
+        dto,
+      );
+      expect(economyService.purchaseCoins).toHaveBeenCalledWith('user-1', dto);
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('sendGift', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.sendGift(null, {} as any);
+      expect(result).toBeNull();
+      expect(economyService.sendGift).not.toHaveBeenCalled();
+    });
+
+    it('should call service sendGift when user is provided', async () => {
+      const dto: any = { gift_id: 'gift-1', receiver_id: 'user-2' };
+      const response: any = { success: true, coins_remaining: 50 };
+      (economyService.sendGift as jest.Mock).mockResolvedValue(response);
+
+      const result = await controller.sendGift({ id: 'user-1' } as any, dto);
+      expect(economyService.sendGift).toHaveBeenCalledWith('user-1', dto);
+      expect(result).toEqual(response);
+    });
+  });
+});

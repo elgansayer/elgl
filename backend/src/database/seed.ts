@@ -144,11 +144,12 @@ async function runSeed() {
 
     let userId = authUser?.user?.id;
     if (authErr && authErr.message.includes('already exists')) {
-      const { data: existing } = await supabase
+      const res = await supabase
         .from('users')
         .select('id')
         .eq('email', u.email)
         .single();
+      const existing: { id: string } | null = res.data;
       userId = existing?.id;
     }
 
@@ -187,7 +188,70 @@ async function runSeed() {
     const host = usersList[0];
     const partner = usersList[1];
 
-    const { data: momentData } = await supabase
+    await supabase.from('chat_rooms').upsert(
+      [
+        {
+          id: 'global-exchange',
+          title: 'Global Exchange',
+          subtitle: 'General language room',
+          avatar: '🌍',
+          is_online: true,
+          is_pinned: true,
+        },
+        {
+          id: 'english-spanish',
+          title: 'English to Spanish',
+          subtitle: 'Partner corrections',
+          avatar: '🇬🇧🇪🇸',
+          is_online: true,
+          is_pinned: true,
+        },
+        {
+          id: 'japanese-beginners',
+          title: 'Japanese Beginners',
+          subtitle: 'Short sentence practice',
+          avatar: '🇯🇵',
+          is_online: false,
+          is_pinned: false,
+        },
+        {
+          id: 'arabic-english',
+          title: 'Arabic to English',
+          subtitle: 'Pronunciation help',
+          avatar: '🇸🇦🇬🇧',
+          is_online: false,
+          is_pinned: false,
+        },
+      ],
+      { onConflict: 'id' },
+    );
+
+    await supabase.from('developer_metrics').upsert(
+      {
+        user_id: host.id,
+        total_api_calls_today: 1420,
+        avg_latency_ms: 18,
+      },
+      { onConflict: 'user_id' },
+    );
+
+    await supabase.from('developer_diagnostic_logs').insert([
+      {
+        user_id: host.id,
+        category: 'POSTGIS',
+        status: 'info',
+        message: 'Initialised ST_DWithin geography index checking (SRID 4326).',
+      },
+      {
+        user_id: host.id,
+        category: 'CENTRIFUGO',
+        status: 'success',
+        message:
+          'Centrifugo v5 client ready. Redis pub/sub channel sync active.',
+      },
+    ]);
+
+    const momentRes = await supabase
       .from('moments')
       .insert({
         user_id: host.id,
@@ -202,6 +266,7 @@ async function runSeed() {
       })
       .select()
       .single();
+    const momentData = momentRes.data as { id: string } | null;
 
     if (momentData) {
       await supabase.from('moment_comments').insert({

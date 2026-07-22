@@ -61,7 +61,7 @@ export class CentrifugeService {
     }
   }
 
-  subscribe(channel: string, onMessage: (data: any) => void): Subscription | null {
+  subscribe(channel: string, onMessage: (data: unknown) => void): Subscription | null {
     if (!this.centrifuge) return null;
     let sub = this.subscriptions.get(channel);
     if (!sub) {
@@ -83,7 +83,7 @@ export class CentrifugeService {
     }
   }
 
-  async publish(channel: string, data: any): Promise<void> {
+  async publish(channel: string, data: unknown): Promise<void> {
     const sub = this.subscriptions.get(channel);
     if (sub) {
       try {
@@ -93,7 +93,7 @@ export class CentrifugeService {
       }
     } else if (this.centrifuge) {
       try {
-        await (this.centrifuge as any).publish(channel, data);
+        await (this.centrifuge as unknown as { publish: (ch: string, d: unknown) => Promise<void> }).publish(channel, data);
       } catch (e) {
         console.error('Centrifuge publish error:', e);
       }

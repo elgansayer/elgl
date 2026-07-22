@@ -45,7 +45,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   readonly activeWordToken = signal<string | null>(null);
   readonly activeWordContext = signal<string>('');
 
-  roomId = 'global-exchange';
+  roomId = '';
   searchQuery = '';
   textInput = '';
 
@@ -54,7 +54,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   correctedText = '';
   explanationText = '';
 
-  private subscription: any = null;
+  private subscription: unknown = null;
 
   async ngOnInit(): Promise<void> {
     this.route.params.subscribe(async params => {
@@ -89,10 +89,11 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     if (this.subscription) {
       this.centrifugeService.unsubscribe(`chat:${this.roomId}`);
     }
-    this.subscription = this.centrifugeService.subscribe(`chat:${this.roomId}`, (data: any) => {
-      if (data.message) {
-        this.messages.update(list => [...list, data.message]);
-      } else if (data.typing) {
+    this.subscription = this.centrifugeService.subscribe(`chat:${this.roomId}`, (data: unknown) => {
+      const payload = data as { message?: ChatMessage; typing?: boolean } | null;
+      if (payload?.message) {
+        this.messages.update(list => [...list, payload.message!]);
+      } else if (payload?.typing) {
         this.isTyping.set(true);
         setTimeout(() => this.isTyping.set(false), 3000);
       }

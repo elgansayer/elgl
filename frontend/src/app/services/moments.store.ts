@@ -171,9 +171,10 @@ export class MomentsStore {
           return a.is_pinned ? -1 : 1;
         });
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to pin moment:', e);
-      alert(e?.error?.message || 'Error pinning Moment. Ensure you have an active VIP subscription (8 UKP / $10 USD).');
+      const err = e as { error?: { message?: string } };
+      alert(err?.error?.message || 'Error pinning Moment. Ensure you have an active VIP subscription (8 UKP / $10 USD).');
     }
   }
 }

@@ -1,0 +1,233 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { ProfileVisitsService } from './profile-visits.service';
+import { SupabaseService } from '../supabase/supabase.service';
+
+describe('ProfileVisitsService', () => {
+  let service: ProfileVisitsService;
+  let mockSupabaseClient: any;
+  let mockQueryBuilder: any;
+
+  beforeEach(async () => {
+    mockQueryBuilder = {
+      insert: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      order: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      single: jest.fn(),
+    };
+
+    mockSupabaseClient = {
+      from: jest.fn().mockReturnValue(mockQueryBuilder),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ProfileVisitsService,
+        {
+          provide: SupabaseService,
+          useValue: {
+            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+          },
+        },
+      ],
+    }).compile();
+
+    service = module.get<ProfileVisitsService>(ProfileVisitsService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('recordVisit', () => {
+    it('should ignore visit when visitor views their own profile', async () => {
+      const result = await service.recordVisit('user-1', 'user-1', false);
+      expect(result).toEqual({ ignored: true });
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    });
+
+    it('should ignore visit when VIP visitor has incognito mode (privacy_hide_from_search) enabled', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { privacy_hide_from_search: true },
+        error: null,
+      });
+
+      const result = await service.recordVisit('vip-user', 'target-user', true);
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
+        'privacy_hide_from_search',
+      );
+      expect(result).toEqual({ incognito: true, ignored: true });
+    });
+
+    it('should record visit for VIP visitor when incognito mode is disabled', async () => {
+      // 1st single call: user lookup for privacy setting
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { privacy_hide_from_search: false },
+        error: null,
+      });
+      // 2nd single call: profile_visits insert
+      const visitRow = {
+        id: 'visit-1',
+        visitor_id: 'vip-user',
+        viewed_id: 'target-user',
+      };
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: visitRow,
+        error: null,
+      });
+
+      const result = await service.recordVisit('vip-user', 'target-user', true);
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('profile_visits');
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
+        visitor_id: 'vip-user',
+        viewed_id: 'target-user',
+      });
+      expect(result).toEqual(visitRow);
+    });
+
+    it('should record visit for regular non-VIP visitor without checking privacy setting', async () => {
+      const visitRow = {
+        id: 'visit-2',
+        visitor_id: 'free-user',
+        viewed_id: 'target-user',
+      };
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: visitRow,
+        error: null,
+      });
+
+      const result = await service.recordVisit(
+        'free-user',
+        'target-user',
+        false,
+      );
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('profile_visits');
+      expect(result).toEqual(visitRow);
+    });
+
+    it('should throw Error when insert visit fails', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'Insert constraint violation' },
+      });
+
+      await expect(
+        service.recordVisit('free-user', 'target-user', false),
+      ).rejects.toThrow('Failed to record visit: Insert constraint violation');
+    });
+  });
+
+  describe('getVisitors', () => {
+    it('should return unblurred visitor records when profile owner is VIP', async () => {
+      const rows = [
+        {
+          id: 'v-1',
+          created_at: '2026-07-22T10:00:00Z',
+          visitor: {
+            id: 'visitor-1',
+            display_name: 'John',
+            avatar_url: 'avatar.png',
+            native_language: 'en',
+            target_languages: ['fr'],
+          },
+        },
+      ];
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: rows,
+        error: null,
+      });
+
+      const result = await service.getVisitors('owner-1', true);
+
+      expect(result).toEqual([
+        {
+          id: 'v-1',
+          created_at: '2026-07-22T10:00:00Z',
+          is_blurred: false,
+          visitor: {
+            id: 'visitor-1',
+            display_name: 'John',
+            avatar_url: 'avatar.png',
+            native_language: 'en',
+            target_languages: ['fr'],
+          },
+        },
+      ]);
+    });
+
+    it('should return blurred visitor records when profile owner is not VIP', async () => {
+      const rows = [
+        {
+          id: 'v-2',
+          created_at: '2026-07-22T11:00:00Z',
+          visitor: {
+            id: 'visitor-2',
+            display_name: 'Secret User',
+            avatar_url: 'secret.png',
+            native_language: 'ja',
+            target_languages: ['en'],
+          },
+        },
+      ];
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: rows,
+        error: null,
+      });
+
+      const result = await service.getVisitors('owner-free', false);
+
+      expect(result).toEqual([
+        {
+          id: 'v-2',
+          created_at: '2026-07-22T11:00:00Z',
+          is_blurred: true,
+          visitor: {
+            id: 'hidden-vip-only',
+            display_name: 'Someone near you',
+            avatar_url: null,
+            native_language: 'ja',
+            target_languages: ['en'],
+          },
+        },
+      ]);
+    });
+
+    it('should use default native_language and target_languages if visitor fields are null or undefined when blurring', async () => {
+      const rows = [
+        {
+          id: 'v-3',
+          created_at: '2026-07-22T12:00:00Z',
+          visitor: null,
+        },
+      ];
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: rows,
+        error: null,
+      });
+
+      const result = await service.getVisitors('owner-free', false);
+
+      expect(result[0].visitor.native_language).toBe('en');
+      expect(result[0].visitor.target_languages).toEqual(['es']);
+    });
+
+    it('should return empty array when query returns error or null data', async () => {
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: null,
+        error: { message: 'DB query error' },
+      });
+
+      const result = await service.getVisitors('owner-1', true);
+      expect(result).toEqual([]);
+    });
+  });
+});

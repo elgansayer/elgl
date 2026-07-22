@@ -10,11 +10,9 @@
         class="bg-gradient-to-r from-amber-500 via-purple-600 to-amber-500 text-white px-8 py-6 rounded-3xl shadow-2xl border-4 border-amber-300 flex flex-col items-center gap-2 transform scale-125"
       >
         <span class="text-6xl animate-pulse">{{ overlay.gift.icon }}</span>
-        <h3 class="text-2xl font-black tracking-wide">{{ overlay.gift.name }} Broadcast!</h3>
+        <h3 class="text-2xl font-black tracking-wide">{{ 'gift.broadcastTitle' | t: { giftName: overlay.gift.name } }}</h3>
         <p class="text-sm font-extrabold text-amber-100">
-          🎉 <strong class="underline">{{ overlay.sender_name }}</strong> gifted
-          <strong class="underline">{{ overlay.receiver_name }}</strong> a {{ overlay.gift.name }}!
-          (🪙 {{ overlay.gift.cost_coins }} Coins)
+          {{ 'gift.broadcastDesc' | t: { sender: overlay.sender_name, receiver: overlay.receiver_name, giftName: overlay.gift.name, cost: overlay.gift.cost_coins } }}
         </p>
       </div>
     </div>
@@ -31,12 +29,12 @@
           class="flex items-center gap-2 text-xl font-extrabold text-primary tracking-tight"
         >
           <span class="text-2xl">🗣️</span>
-          <span
-            >HelloTalk
-            <span class="text-xs uppercase bg-primary/10 text-primary px-1.5 py-0.5 rounded"
-              >Open-Core</span
-            ></span
-          >
+          <span>
+            {{ 'app.title' | t }}
+            <span class="text-xs uppercase bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+              {{ 'app.badgeOpenCore' | t }}
+            </span>
+          </span>
         </a>
 
         <nav class="hidden sm:flex items-center gap-1">
@@ -45,68 +43,71 @@
             routerLinkActive="bg-primary/10 text-primary font-bold"
             class="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           >
-            🌍 Discover
+            {{ 'nav.discover' | t }}
           </a>
           <a
             routerLink="/moments"
             routerLinkActive="bg-primary/10 text-primary font-bold"
             class="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           >
-            🌐 Moments
+            {{ 'nav.moments' | t }}
           </a>
           <a
             routerLink="/audio-rooms"
             routerLinkActive="bg-primary/10 text-primary font-bold"
             class="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           >
-            🎙️ Live Rooms
+            {{ 'nav.liveRooms' | t }}
           </a>
           <a
-            routerLink="/chat/global-exchange"
+            routerLink="/chat"
             routerLinkActive="bg-primary/10 text-primary font-bold"
             class="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           >
-            💬 Chat Room
+            {{ 'nav.chatRoom' | t }}
           </a>
           <a
             routerLink="/vocabulary"
             routerLinkActive="bg-primary/10 text-primary font-bold"
             class="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           >
-            📚 LingQ Reader
+            {{ 'nav.lingqReader' | t }}
           </a>
           <a
             routerLink="/favourites"
             routerLinkActive="bg-primary/10 text-primary font-bold"
             class="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           >
-            ⭐ Favourites
+            {{ 'nav.favourites' | t }}
           </a>
           <a
             routerLink="/developer"
             routerLinkActive="bg-primary/10 text-primary font-bold"
             class="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           >
-            ⚡ Developer API
+            {{ 'nav.developerApi' | t }}
           </a>
           <a
             routerLink="/profile"
             routerLinkActive="bg-primary/10 text-primary font-bold"
             class="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           >
-            👤 Profile
+            {{ 'nav.profile' | t }}
           </a>
         </nav>
       </div>
 
-      <!-- Auth State & VIP Badge + Coin Balance -->
+      <!-- Auth State & VIP Badge + Coin Balance + Language Selector -->
       <div class="flex items-center gap-3">
+        <!-- Language Selector -->
+        <app-language-selector />
+
         <!-- Coin Balance Badge -->
         <div
           class="flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 rounded-xl font-extrabold text-xs shadow-sm"
         >
           <span>🪙</span>
-          <span>{{ economyStore.coinsBalance() }} Coins</span>
+          <span>{{ 'common.coinsBalance' | t: { coins: economyStore.coinsBalance() } }}</span>
         </div>
 
         @if (authService.currentUser(); as user) {
@@ -114,25 +115,24 @@
             <span
               class="text-xs font-bold bg-amber-500 text-white px-2 py-0.5 rounded-full shadow-sm"
             >
-              {{
-                user.vip_tier === 'developer' ? '20 UKP / $26 USD Dev VIP' : '8 UKP / $10 USD VIP'
-              }}
+              {{ user.vip_tier === 'developer' ? ('common.vipDevLabel' | t) : ('common.vipStdLabel' | t) }}
             </span>
             <span class="text-sm font-medium text-slate-700 dark:text-slate-300 hidden md:inline">
               {{ user.email }}
             </span>
             <button
+              type="button"
               (click)="authService.signOut()"
               class="text-xs font-bold text-red-600 dark:text-red-400 hover:underline px-2 py-1"
             >
-              Sign out
+              {{ 'common.signOut' | t }}
             </button>
           </div>
         } @else {
           <span
             class="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-200 dark:bg-slate-700 px-2.5 py-1 rounded-lg"
           >
-            Demo / Mock Auth Active
+            {{ 'common.demoActive' | t }}
           </span>
         }
       </div>

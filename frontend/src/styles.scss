@@ -4,6 +4,13 @@
 
 /* Global RTL and Logical Property Styles */
 @layer base {
+  :root {
+    --app-motion-fast: 140ms;
+    --app-motion-base: 180ms;
+    --app-motion-slow: 260ms;
+    --app-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
   html {
     @apply antialiased text-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-slate-100;
   }
@@ -16,6 +23,54 @@
 
 /* LingQ Token Classes */
 @layer components {
+  .app-card {
+    @apply rounded-sheet border border-slate-200 bg-white shadow-card;
+  }
+
+  .app-screen {
+    @apply mx-auto max-w-2xl space-y-4;
+  }
+
+  .app-padded {
+    @apply ps-4 pe-4 pt-4 pb-4;
+  }
+
+  .app-section-title {
+    @apply text-lg font-black text-slate-900;
+  }
+
+  .app-muted {
+    @apply text-xs text-slate-500;
+  }
+
+  .app-empty-state {
+    @apply app-card app-padded pt-10 pb-10 text-center text-sm text-slate-600;
+  }
+
+  .app-input {
+    @apply w-full rounded-app border border-slate-200 bg-surface-50 ps-3 pe-3 pt-2.5 pb-2.5 text-sm;
+  }
+
+  .app-textarea {
+    @apply w-full rounded-card border border-slate-200 bg-surface-50 ps-3 pe-3 pt-3 pb-3 text-sm;
+  }
+
+  .app-button-primary {
+    @apply rounded-app bg-primary text-white font-bold shadow-sm transition-all duration-base ease-app hover:bg-primary-dark;
+  }
+
+  .app-button-secondary {
+    @apply rounded-app bg-slate-100 text-slate-700 font-semibold transition-all duration-base ease-app hover:bg-slate-200;
+  }
+
+  .app-chip {
+    @apply rounded-full bg-slate-100 text-slate-600 text-xs font-semibold ps-2.5 pe-2.5 pt-1 pb-1;
+  }
+
+  .app-pill {
+    @apply rounded-app bg-slate-100 text-slate-700 text-xs font-bold ps-3 pe-3 pt-2 pb-2;
+  }
+
   .word-token-new {
     @apply bg-blue-500/20 text-blue-800 dark:text-blue-300 hover:bg-blue-500/40 border-b border-blue-400 rounded px-0.5 transition-colors cursor-pointer;
   }

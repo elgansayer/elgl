@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -6,7 +7,11 @@ import {
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { SupabaseService } from '../supabase/supabase.service';
-import { StripeWebhookDto, UpgradeVipDto } from './dto/monetisation.dto';
+import {
+  CreateDiagnosticLogDto,
+  StripeWebhookDto,
+  UpgradeVipDto,
+} from './dto/monetisation.dto';
 
 export interface UserVipRow {
   id: string;
@@ -14,6 +19,21 @@ export interface UserVipRow {
   vip_tier?: string | null;
   developer_api_key?: string | null;
   email?: string;
+}
+
+interface DeveloperMetricRow {
+  user_id: string;
+  total_api_calls_today: number;
+  avg_latency_ms: number;
+}
+
+export interface DeveloperDiagnosticLogRow {
+  id: string;
+  user_id: string | null;
+  category: 'POSTGIS' | 'CENTRIFUGO' | 'REDIS' | 'LIVEKIT';
+  status: 'info' | 'success' | 'warn';
+  message: string;
+  created_at: string;
 }
 
 @Injectable()
@@ -120,13 +140,60 @@ export class MonetisationService {
     if (!response.data) throw new NotFoundException('User not found');
     const user = response.data as UserVipRow;
 
+    const metricResponse = await supabase
+      .from('developer_metrics')
+      .select('user_id, total_api_calls_today, avg_latency_ms')
+      .eq('user_id', userId)
+      .single();
+    const metric: DeveloperMetricRow | null = metricResponse.data;
+
     return {
       api_key: user.developer_api_key || null,
       tier: user.vip_tier || (user.is_vip ? 'consumer' : 'free'),
-      total_api_calls_today: user.developer_api_key ? 1420 : 0,
-      avg_latency_ms: 18,
+      total_api_calls_today: metric?.total_api_calls_today ?? 0,
+      avg_latency_ms: metric?.avg_latency_ms ?? 0,
       pricing_info:
         'Developer Tier: 20 UKP / $26 USD per month | Consumer VIP: 8 UKP / $10 USD per month',
     };
+  }
+
+  async getDiagnosticLogs(): Promise<DeveloperDiagnosticLogRow[]> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('developer_diagnostic_logs')
+      .select('id, user_id, category, status, message, created_at')
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (response.error || !response.data) {
+      return [];
+    }
+
+    return response.data;
+  }
+
+  async createDiagnosticLog(
+    userId: string,
+    dto: CreateDiagnosticLogDto,
+  ): Promise<DeveloperDiagnosticLogRow> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('developer_diagnostic_logs')
+      .insert({
+        user_id: userId,
+        category: dto.category,
+        status: dto.status,
+        message: dto.message,
+      })
+      .select('id, user_id, category, status, message, created_at')
+      .single();
+
+    if (response.error || !response.data) {
+      throw new BadRequestException(
+        `Failed to create diagnostic log: ${response.error?.message ?? 'Unknown error'}`,
+      );
+    }
+
+    return response.data;
   }
 }

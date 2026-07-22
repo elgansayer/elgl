@@ -89,8 +89,8 @@ export class DoodlePadComponent implements AfterViewInit {
     if (!this.canvasRef) return null;
     const canvas = this.canvasRef.nativeElement;
     const rect = canvas.getBoundingClientRect();
-    let clientX = 0;
-    let clientY = 0;
+    let clientX: number;
+    let clientY: number;
 
     if ('touches' in event && event.touches.length > 0) {
       clientX = event.touches[0].clientX;
