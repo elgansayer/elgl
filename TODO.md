@@ -112,7 +112,7 @@
 - [ ] Analyse chat context menu screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
 - [ ] Build in-line Message Context Menu: Translate, Transliterate, Speak, and Correct.
 - [ ] Implement Transliteration UI (render Romaji/Pinyin below text in small grey font).
-- [ ] Implement Text-to-Speech (TTS) using SpeechSynthesis or Azure Speech API.
+- [x] Implement Text-to-Speech (TTS) using SpeechSynthesis or Azure Speech API.
 - [x] Implement Voice-to-Text transcription next to audio messages.
 
 ## Phase 12: Matchmaking & Discovery UI
@@ -139,8 +139,8 @@
 - [ ] Build Profile Cover Photo uploader with client-side cropping.
 
 ## Phase 16: Live Chat Micro-Interactions
-- [ ] Implement WebSockets typing indicators ("User is typing...").
-- [ ] Build Read Receipts (Sent vs Delivered vs Read checkmarks).
+- [x] Implement WebSockets typing indicators ("User is typing...").
+- [x] Build Read Receipts (Sent vs Delivered vs Read checkmarks).
 - [ ] Add long-press context menu on mobile to copy, favourite, or report messages.
 
 ## Phase 17: Audio & Video Calling (WebRTC / LiveKit)
@@ -363,32 +363,6 @@
 - [ ] Build "Legal & Privacy Notices" viewer for Terms of Service and Privacy Policy.
 - [ ] Build "Personal Data Collection" GDPR hub with "Request My Data Archive" button and automated "Delete Account" workflow.
 
-
-## Phase 71: Enhanced Content Interaction
-- [ ] Implement 'Create Flashcard' context menu option for any text selection within chat messages and moment posts.
-- [ ] Build 'Correction Quality' rating system (up/down votes) for community corrections on Moments.
-- [ ] Implement a user-level 'Corrector Score' based on ratings to display on profiles.
-
-## Phase 72: Advanced AI-Tutor Features
-- [ ] Integrate AI to auto-generate `explanation` field for `correction` payloads in chat if the human corrector leaves it blank.
-- [ ] Build "Simplify this text" AI feature in the message context menu for learners to understand complex sentences.
-- [ ] Implement AI-powered 'Conversation Starter' suggestions in new chat windows based on partner's profile interests.
-
-## Phase 73: Deeper Gamification & Retention
-- [ ] Build celebratory full-screen animation/confetti for completing study streaks (e.g., 7, 30, 100 days).
-- [ ] Implement "Partner of the Week" algorithm to highlight highly-rated language partners in the Discovery feed.
-- [ ] Add haptic feedback for grading flashcards (e.g., success buzz for 'Known', gentle pulse for 'Learning').
-
-## Phase 74: Voiceroom Learning Tools
-- [ ] Build shared 'Voiceroom Notes' panel where hosts/speakers can post key vocabulary or discussion topics.
-- [ ] Implement LiveKit EgressClient to generate and save a full transcript of completed audio room sessions for participants to review.
-- [ ] Add AI-generated 'Session Summary' to the archived audio room recording, listing key topics and vocabulary discussed.
-
-## Phase 75: Advanced Voiceroom Interactivity
-- [ ] Implement real-time translation for the text chat overlay inside Voicerooms.
-- [ ] Build a "Quick Poll" feature for Voiceroom hosts to create multiple-choice questions for the audience.
-- [ ] Add a "Soundboard" feature for hosts to play pre-recorded audio clips (e.g., applause, jingles).
-
 ## Phase 66: Enhanced Profile & Matchmaking
 - [ ] Add `proficiency_level` (`'a1'` to `'c2'`) to `users` table schema and profile UI.
 - [ ] Implement proficiency level filter in Discovery search.
@@ -425,6 +399,16 @@
 - [ ] Refine chat bubble appearance with distinct sent/received styles and message-tail pointers.
 - [ ] Add haptic feedback on mobile for key actions (e.g., sending message, liking a post).
 
+## Phase 71: Enhanced Content Interaction
+- [ ] Implement 'Create Flashcard' context menu option for any text selection within chat messages and moment posts.
+- [ ] Build 'Correction Quality' rating system (up/down votes) for community corrections on Moments.
+- [ ] Implement a user-level 'Corrector Score' based on ratings to display on profiles.
+
+## Phase 72: Advanced AI-Tutor Features
+- [ ] Integrate AI to auto-generate `explanation` field for `correction` payloads in chat if the human corrector leaves it blank.
+- [ ] Build "Simplify this text" AI feature in the message context menu for learners to understand complex sentences.
+- [ ] Implement AI-powered 'Conversation Starter' suggestions in new chat windows based on partner's profile interests.
+
 ## Phase 73: Deeper Gamification & Retention
 - [ ] Build celebratory full-screen animation/confetti for completing study streaks (e.g., 7, 30, 100 days).
 - [ ] Implement "Partner of the Week" algorithm to highlight highly-rated language partners in the Discovery feed.
@@ -434,3 +418,8 @@
 - [ ] Build shared 'Voiceroom Notes' panel where hosts/speakers can post key vocabulary or discussion topics.
 - [ ] Implement LiveKit EgressClient to generate and save a full transcript of completed audio room sessions for participants to review.
 - [ ] Add AI-generated 'Session Summary' to the archived audio room recording, listing key topics and vocabulary discussed.
+
+## Phase 75: Advanced Voiceroom Interactivity
+- [ ] Implement real-time translation for the text chat overlay inside Voicerooms.
+- [ ] Build a "Quick Poll" feature for Voiceroom hosts to create multiple-choice questions for the audience.
+- [ ] Add a "Soundboard" feature for hosts to play pre-recorded audio clips (e.g., applause, jingles).
