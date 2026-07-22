@@ -104,9 +104,9 @@
 ## Phase 10: The Moments Engine (Feed & Media)
 - [ ] Analyse Moments feed screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
 - [ ] Build Moments Feed UI with infinite scrolling (15 posts per batch).
-- [ ] Build multi-media attachments UI: text, up to 9 static images in CSS grid, or a 60s voice note.
+- [x] Build multi-media attachments UI: text, up to 9 static images in CSS grid, or a 60s voice note.
 - [ ] Build Audio Player component with waveform visualizer, play/pause, and timestamp tracker.
-- [ ] Integrate `VisualDiffComponent` into Moments comment section for corrections.
+- [x] Integrate `VisualDiffComponent` into Moments comment section for corrections.
 
 ## Phase 11: In-App NLP & Learning Utilities
 - [ ] Analyse chat context menu screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
@@ -123,9 +123,9 @@
 
 ## Phase 13: HelloTalk Chat Specifics
 - [ ] Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
-- [ ] Build HTML5 Canvas Doodle Pad component in chat modal.
+- [x] Build HTML5 Canvas Doodle Pad component in chat modal.
 - [ ] Build Virtual Gift picker modal with coin balance auto-deduction.
-- [ ] Build Favourites bookmarking tab for saved messages and corrections.
+- [x] Build Favourites bookmarking tab for saved messages and corrections.
 
 ## Phase 14: Live Audio Voicerooms UI
 - [ ] Categorise active Voicerooms by target language pair.
@@ -159,9 +159,9 @@
 - [ ] Build "Top Corrector" community leaderboard.
 
 ## Phase 20: Spaced Repetition (SRS) Flashcards
-- [ ] Build Flashcard Deck UI to organize saved vocabulary.
-- [ ] Implement SRS review scheduling algorithm in NestJS.
-- [ ] Build interactive Flashcard Review UI (Flip animations and grading buttons).
+- [x] Build Flashcard Deck UI to organize saved vocabulary.
+- [x] Implement SRS review scheduling algorithm in NestJS.
+- [x] Build interactive Flashcard Review UI (Flip animations and grading buttons).
 
 ## Phase 21: Push Notifications
 - [ ] Integrate Firebase Cloud Messaging (FCM) in Angular.
