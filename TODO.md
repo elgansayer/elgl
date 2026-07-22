@@ -81,19 +81,19 @@
 
 ## Phase 7: VIP Monetisation, Virtual Economy & Trust/Safety
 - [x] Build NestJS `MonetisationController` handling Stripe & App Store webhooks (`POST /webhooks/stripe`) to toggle `user.is_vip` and `vip_tier`.
-- [x] Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent): unlimited AI, 3 target languages, location spoofing, incognito profile views.
-- [x] Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`) adding balance to `users.coins_balance`.
-- [x] Build Virtual Gift catalog & sending endpoint (`POST /economy/send-gift`), deducting coins and publishing animated Centrifugo broadcast events.
-- [x] Build Audio Room tipping mechanism allowing listeners to gift coins directly to hosts on stage.
-- [x] Build Developer Tier (20 UKP / $26 USD per month) API key management and developer analytics dashboard.
-- [x] Build Trust & Safety reporting system (`POST /safety/report`, `POST /safety/block`), automatically hiding blocked users from feeds and chat lists.
+- [x] Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent).
+- [ ] Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`) adding balance to `users.coins_balance`. (Requires receipt validation to prevent infinite coin exploit).
+- [x] Build Virtual Gift catalog & sending endpoint (`POST /economy/send-gift`).
+- [x] Build Audio Room tipping mechanism.
+- [x] Build Developer Tier (20 UKP / $26 USD per month) API key management.
+- [x] Build Trust & Safety reporting system (`POST /safety/report`, `POST /safety/block`).
 
 ## Phase 8: Audit Remediation & Security Lockdown
-- [x] Verify Stripe webhook signatures (`stripe.webhooks.constructEvent` with `STRIPE_WEBHOOK_SECRET`) in `MonetisationService#handleStripeWebhook`.
-- [x] Lock down `POST /monetisation/upgrade` so VIP status can only change via verified payment webhooks.
-- [x] Rework `POST /economy/purchase-coins` to verify purchase receipt records server-side before updating balances.
-- [x] Implement Apple App Store Server Notifications and Google Play Billing webhook handlers.
-- [x] Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azure AI API calls.
+- [ ] Verify Stripe webhook signatures (`stripe.webhooks.constructEvent` with `STRIPE_WEBHOOK_SECRET`) in `MonetisationService#handleStripeWebhook`.
+- [ ] Lock down `POST /monetisation/upgrade` so VIP status can only change via verified payment webhooks.
+- [ ] Rework `POST /economy/purchase-coins` to verify purchase receipt records server-side before updating balances.
+- [ ] Implement Apple App Store Server Notifications and Google Play Billing webhook handlers.
+- [ ] Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azure AI API calls.
 
 ## Phase 9: Internationalisation (i18n) Foundation
 - [x] Install `@ngx-translate/core` and `@ngx-translate/http-loader` in Angular.
