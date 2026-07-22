@@ -1,5 +1,5 @@
 #!/bin/bash
-# loop.sh (5-Stage Waterfall Architecture with Supported Copilot Models)
+# loop.sh (5-Stage Waterfall Architecture with Warning Fixes & Context Bounds)
 
 echo "Starting 24/7 autonomous 5-stage pipeline with global fallbacks..."
 
@@ -10,30 +10,30 @@ MAX_RETRIES=3
 
 run_aider_with_fallback() {
     local MESSAGE="$1"
-    local EXTRA_ARGS="$2"
+    local FILES_AND_ARGS="$2"
 
     echo "Attempting 1: Claude (via Copilot)..."
-    timeout 12m aider --yes $EXTRA_ARGS --model openai/claude-opus-4.7 --editor-model openai/claude-sonnet-4.5 --message "$MESSAGE"
+    timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model openai/claude-opus-4.7 --editor-model openai/claude-sonnet-4.5 --message "$MESSAGE"
     if [ $? -eq 0 ]; then return 0; fi
     echo "Claude failed. Reverting and attempting 2: Copilot GPT..."
     git reset --hard HEAD
 
-    timeout 12m aider --yes $EXTRA_ARGS --model openai/gpt-5.5 --editor-model openai/gpt-4o --message "$MESSAGE"
+    timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model openai/gpt-5.5 --editor-model openai/gpt-4o --message "$MESSAGE"
     if [ $? -eq 0 ]; then return 0; fi
     echo "Copilot failed. Reverting and attempting 3: Gemini 3 Pro..."
     git reset --hard HEAD
 
-    timeout 12m aider --yes $EXTRA_ARGS --model gemini/gemini-3.1-pro-preview --editor-model gemini/gemini-3.1-pro-preview --message "$MESSAGE"
+    timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model gemini/gemini-3.1-pro-preview --editor-model gemini/gemini-3.1-pro-preview --message "$MESSAGE"
     if [ $? -eq 0 ]; then return 0; fi
     echo "Gemini 3 Pro failed. Reverting and attempting 4: DeepSeek..."
     git reset --hard HEAD
 
-    timeout 12m aider --yes $EXTRA_ARGS --model deepseek/deepseek-chat --editor-model deepseek/deepseek-coder --message "$MESSAGE"
+    timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model deepseek/deepseek-chat --editor-model deepseek/deepseek-coder --message "$MESSAGE"
     if [ $? -eq 0 ]; then return 0; fi
     echo "DeepSeek failed. Reverting and attempting 5: Gemini Flash..."
     git reset --hard HEAD
 
-    timeout 12m aider --yes $EXTRA_ARGS --model gemini/gemini-3.5-flash --editor-model gemini/gemini-3.5-flash --message "$MESSAGE"
+    timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model gemini/gemini-3.5-flash --editor-model gemini/gemini-3.5-flash --message "$MESSAGE"
     if [ $? -eq 0 ]; then return 0; fi
 
     echo "CRITICAL: All 5 models failed for this step."
@@ -84,7 +84,7 @@ while true; do
     echo "========================================"
     echo "STAGE 4: POST-MANAGEMENT (Verification)"
     echo "========================================"
-    run_aider_with_fallback "Review the git diff. Did we successfully complete: '$CURRENT_TASK'? If yes, change [ ] to [x] in TODO.md. If we missed requirements, add a new [ ] task below it." ""
+    run_aider_with_fallback "Review the git diff. Did we successfully complete: '$CURRENT_TASK'? If yes, change [ ] to [x] in TODO.md. If we missed requirements, add a new [ ] task below it." "TODO.md"
 
     echo "========================================"
     echo "STAGE 5: NEXT (Git Sync & Cooldown)"
