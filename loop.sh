@@ -1,5 +1,7 @@
 #!/bin/bash
 # loop.sh (5-Stage Waterfall Architecture with Warning Fixes & Context Bounds)
+export OPENAI_MAX_RETRIES=0
+export LITELLM_NUM_RETRIES=0
 
 echo "Starting 24/7 autonomous 5-stage pipeline with global fallbacks..."
 
