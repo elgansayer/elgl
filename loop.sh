@@ -1,5 +1,5 @@
 #!/bin/bash
-# loop.sh (5-Stage Waterfall Architecture with Global Fallbacks)
+# loop.sh (5-Stage Waterfall Architecture with Supported Copilot Models)
 
 echo "Starting 24/7 autonomous 5-stage pipeline with global fallbacks..."
 
@@ -8,18 +8,17 @@ LAST_TASK=""
 RETRY_COUNT=0
 MAX_RETRIES=3
 
-# Centralised fallback function to ensure no task ever stalls
 run_aider_with_fallback() {
     local MESSAGE="$1"
     local EXTRA_ARGS="$2"
 
-    echo "Attempting 1: Claude..."
-    timeout 12m aider --yes $EXTRA_ARGS --model openai/claude-fable-5 --editor-model openai/claude-sonnet-5 --message "$MESSAGE"
+    echo "Attempting 1: Claude (via Copilot)..."
+    timeout 12m aider --yes $EXTRA_ARGS --model openai/claude-opus-4.7 --editor-model openai/claude-sonnet-4.5 --message "$MESSAGE"
     if [ $? -eq 0 ]; then return 0; fi
-    echo "Claude failed. Reverting and attempting 2: Copilot..."
+    echo "Claude failed. Reverting and attempting 2: Copilot GPT..."
     git reset --hard HEAD
 
-    timeout 12m aider --yes $EXTRA_ARGS --model openai/gpt-4o --editor-model openai/gpt-4o --message "$MESSAGE"
+    timeout 12m aider --yes $EXTRA_ARGS --model openai/gpt-5.5 --editor-model openai/gpt-4o --message "$MESSAGE"
     if [ $? -eq 0 ]; then return 0; fi
     echo "Copilot failed. Reverting and attempting 3: Gemini 3 Pro..."
     git reset --hard HEAD
