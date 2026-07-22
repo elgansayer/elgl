@@ -165,7 +165,7 @@
 
 ## Phase 21: Push Notifications
 - [STUCK] Integrate Firebase Cloud Messaging (FCM) in Angular.
-- [ ] Build NestJS event listeners to dispatch push alerts for chats, comments, and profile views.
+- [STUCK] Build NestJS event listeners to dispatch push alerts for chats, comments, and profile views.
 - [ ] Build Notification Preferences UI with granular category toggles.
 
 ## Phase 22: Moderation & Trust Engine
