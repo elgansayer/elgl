@@ -216,6 +216,15 @@
             >
               <span>{{ moment.translatedText ? '👁️ Hide Translation' : '🌐 Translate' }}</span>
             </button>
+
+            <button
+              *ngIf="moment.text_content"
+              (click)="saveMomentSentenceToLingq(moment)"
+              class="px-2.5 py-1 bg-amber-500/90 hover:bg-amber-500 text-white rounded-xl font-bold transition-colors shadow-sm"
+              title="Save entire post to your LingQ Spaced Repetition Deck"
+            >
+              <span>📚 Save to LingQ</span>
+            </button>
           </div>
 
           <!-- Likes & Comments Counts -->

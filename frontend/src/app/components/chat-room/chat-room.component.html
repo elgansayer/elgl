@@ -94,14 +94,24 @@
           <p *ngIf="msg.text_content" class="text-xs opacity-80 mt-1.5">{{ msg.text_content }}</p>
         </div>
 
-        <!-- Action / Bookmark button -->
-        <button
-          (click)="bookmark(msg)"
-          class="absolute top-2 end-2 opacity-0 group-hover:opacity-100 p-1 bg-black/20 hover:bg-black/40 text-white rounded-lg text-xs font-bold transition-opacity"
-          title="Bookmark to Favourites"
-        >
-          ⭐ Save
-        </button>
+        <!-- Action / Bookmark / Save Sentence buttons -->
+        <div class="absolute top-2 end-2 opacity-0 group-hover:opacity-100 flex items-center gap-1.5 transition-opacity">
+          <button
+            *ngIf="msg.message_type === 'text' && msg.text_content"
+            (click)="saveSentenceToLingq(msg)"
+            class="p-1.5 bg-amber-500/90 hover:bg-amber-500 text-white rounded-lg text-xs font-bold shadow"
+            title="Save entire sentence to LingQ SRS Deck"
+          >
+            📚 Save Sentence
+          </button>
+          <button
+            (click)="bookmark(msg)"
+            class="p-1.5 bg-black/30 hover:bg-black/50 text-white rounded-lg text-xs font-bold shadow"
+            title="Bookmark to Favourites"
+          >
+            ⭐ Save
+          </button>
+        </div>
       </div>
     </div>
 

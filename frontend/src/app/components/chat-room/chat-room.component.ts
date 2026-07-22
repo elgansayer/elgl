@@ -5,6 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { CentrifugeService } from '../../services/centrifuge.service';
 import { ChatService, ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
+import { VocabularyStore } from '../../services/vocabulary.store';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { DoodlePadComponent } from '../doodle-pad/doodle-pad.component';
 import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.component';
@@ -31,6 +32,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   readonly centrifugeService = inject(CentrifugeService);
   private chatService = inject(ChatService);
   readonly authService = inject(AuthService);
+  readonly vocabStore = inject(VocabularyStore);
 
   readonly messages = signal<ChatMessage[]>([]);
   readonly isLoading = signal<boolean>(true);
@@ -179,6 +181,24 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     } catch (e) {
       console.error('Failed to bookmark message:', e);
       alert('Already bookmarked or failed.');
+    }
+  }
+
+  async saveSentenceToLingq(msg: ChatMessage): Promise<void> {
+    if (!msg.text_content) return;
+    try {
+      const trans = await this.vocabStore.translateWordOrSentence(msg.text_content, 'en');
+      const created = await this.vocabStore.saveWord({
+        word_token: msg.text_content,
+        translation: trans?.translated_text || `Sentence: ${msg.text_content}`,
+        original_context: `Chat room: ${this.roomId}`,
+        definition: 'Saved full chat sentence to LingQ Spaced Repetition deck.'
+      });
+      await this.vocabStore.updateSrsLevel(created.id, 1);
+      alert(`📚 Saved sentence to your LingQ SRS Learning Deck:\n"${msg.text_content}"`);
+    } catch (e) {
+      console.error('Failed to save sentence to LingQ deck:', e);
+      alert('Failed to save sentence or already in your SRS deck.');
     }
   }
 

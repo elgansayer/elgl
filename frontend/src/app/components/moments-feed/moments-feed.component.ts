@@ -128,6 +128,24 @@ export class MomentsFeedComponent implements OnInit {
     }
   }
 
+  async saveMomentSentenceToLingq(moment: MomentRecord): Promise<void> {
+    if (!moment.text_content) return;
+    try {
+      const trans = await this.vocabStore.translateWordOrSentence(moment.text_content, 'en');
+      const created = await this.vocabStore.saveWord({
+        word_token: moment.text_content,
+        translation: trans?.translated_text || `Post: ${moment.text_content}`,
+        original_context: `Moment by ${moment.author?.display_name || 'Community Member'}`,
+        definition: 'Saved full social feed moment to LingQ Spaced Repetition deck.'
+      });
+      await this.vocabStore.updateSrsLevel(created.id, 1);
+      alert(`📚 Saved Moment text to your LingQ SRS Learning Deck:\n"${moment.text_content}"`);
+    } catch (e) {
+      console.error('Failed to save moment text to LingQ deck:', e);
+      alert('Failed to save or already in your SRS deck.');
+    }
+  }
+
   async toggleComments(moment: MomentRecord): Promise<void> {
     const map = new Set(this.openCommentsMap());
     if (map.has(moment.id)) {
