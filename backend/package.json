@@ -36,6 +36,7 @@
     "jsonwebtoken": "^9.0.3",
     "livekit-server-sdk": "^2.17.0",
     "node-nlp": "^5.0.0-alpha.5",
+    "stripe": "^14.20.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },

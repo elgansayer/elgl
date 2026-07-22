@@ -5,7 +5,9 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
+import Stripe from 'stripe';
 import { SupabaseService } from '../supabase/supabase.service';
 import {
   CreateDiagnosticLogDto,
@@ -40,7 +42,10 @@ export interface DeveloperDiagnosticLogRow {
 export class MonetisationService {
   private readonly logger = new Logger(MonetisationService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly configService: ConfigService,
+  ) {}
 
   async upgradeUser(userId: string, dto: UpgradeVipDto): Promise<UserVipRow> {
     const supabase = this.supabaseService.getClient();
@@ -61,16 +66,35 @@ export class MonetisationService {
   }
 
   async handleStripeWebhook(
-    dto: StripeWebhookDto,
+    rawBody: Buffer,
+    signature: string,
   ): Promise<{ received: boolean; status: string }> {
-    this.logger.log(`Received Stripe Webhook event: ${dto.type}`);
+    const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
+    if (!webhookSecret) {
+      throw new Error('STRIPE_WEBHOOK_SECRET is not configured');
+    }
+
+    const stripe = new Stripe(this.configService.get<string>('STRIPE_SECRET_KEY') || '', {
+      apiVersion: '2023-10-16' as any,
+    });
+
+    let event: Stripe.Event;
+    try {
+      event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+    } catch (err: any) {
+      this.logger.error(`Webhook signature verification failed: ${err.message}`);
+      throw new BadRequestException(`Webhook Error: ${err.message}`);
+    }
+
+    this.logger.log(`Received verified Stripe Webhook event: ${event.type}`);
     const supabase = this.supabaseService.getClient();
 
     if (
-      dto.type === 'checkout.session.completed' ||
-      dto.type === 'customer.subscription.created'
+      event.type === 'checkout.session.completed' ||
+      event.type === 'customer.subscription.created'
     ) {
-      const metadata = dto.data?.object?.metadata;
+      const session = event.data.object as any;
+      const metadata = session.metadata;
       if (metadata?.userId && metadata?.tier) {
         await supabase
           .from('users')
@@ -80,8 +104,9 @@ export class MonetisationService {
           `Upgraded user ${metadata.userId} to VIP tier ${metadata.tier} via webhook.`,
         );
       }
-    } else if (dto.type === 'customer.subscription.deleted') {
-      const metadata = dto.data?.object?.metadata;
+    } else if (event.type === 'customer.subscription.deleted') {
+      const subscription = event.data.object as any;
+      const metadata = subscription.metadata;
       if (metadata?.userId) {
         await supabase
           .from('users')

@@ -5,7 +5,12 @@ import {
   HttpCode,
   Post,
   UseGuards,
+  Headers,
+  Req,
+  RawBodyRequest,
+  BadRequestException,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -32,8 +37,14 @@ export class MonetisationController {
 
   @Post('webhooks/stripe')
   @HttpCode(200)
-  async handleWebhook(@Body() dto: StripeWebhookDto) {
-    return await this.monetisationService.handleStripeWebhook(dto);
+  async handleWebhook(
+    @Headers('stripe-signature') signature: string,
+    @Req() req: RawBodyRequest<Request>,
+  ) {
+    if (!signature || !req.rawBody) {
+      throw new BadRequestException('Missing stripe signature or raw body');
+    }
+    return await this.monetisationService.handleStripeWebhook(req.rawBody, signature);
   }
 
   @Post('generate-api-key')
