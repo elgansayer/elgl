@@ -98,8 +98,8 @@
 ## Phase 9: Internationalisation (i18n) Foundation
 - [x] Install `@ngx-translate/core` and `@ngx-translate/http-loader` in Angular.
 - [x] Create `en.json` and `ja.json` translation files in `assets/i18n/`.
-- [ ] Refactor all Angular components to replace raw strings with `{{ 'KEY' | translate }}` pipes.
-- [ ] Build a Language Selector toggle in settings to dynamically switch UI language.
+- [x] Refactor all Angular components to replace raw strings with `{{ 'KEY' | translate }}` pipes.
+- [x] Build a Language Selector toggle in settings to dynamically switch UI language.
 
 ## Phase 10: The Moments Engine (Feed & Media)
 - [ ] Analyse Moments feed screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
