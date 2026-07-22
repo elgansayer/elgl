@@ -423,3 +423,20 @@
 - [ ] Implement real-time translation for the text chat overlay inside Voicerooms.
 - [ ] Build a "Quick Poll" feature for Voiceroom hosts to create multiple-choice questions for the audience.
 - [ ] Add a "Soundboard" feature for hosts to play pre-recorded audio clips (e.g., applause, jingles).
+
+## Phase 76: Advanced Discovery & Onboarding
+- [ ] Build "Audio Intros" feed in Discovery to browse users by listening to their spoken introductions.
+- [ ] Implement "Translate Bio" button on user profile cards and pages.
+
+## Phase 77: Collaborative Learning Tools
+- [ ] Build UI for threaded replies in chat to preserve conversation context.
+- [ ] Implement "Request Correction from Group" feature/message type for group chats.
+- [ ] Add a "Mute Word" client-side filter for the Moments feed to hide posts with specific keywords.
+
+## Phase 78: Proactive AI Tutor
+- [ ] Implement AI-powered "Daily Learning Tip" push notification or chat message.
+- [ ] Build "Suggest Flashcards" feature to auto-detect and suggest new vocabulary from a user's conversations.
+
+## Phase 79: Economy-Driven Learning
+- [ ] Allow spending virtual coins to unlock premium one-off AI services (e.g., "Conversation Analysis Report").
+- [ ] Build "Language Challenge" system with coin-based entry fees and prize pools (e.g., "7-day writing streak challenge").
