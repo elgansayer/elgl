@@ -1,12 +1,9 @@
-version: '3.8'
-
 services:
   nginx:
     image: nginx:alpine
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
     volumes:
       - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
@@ -24,8 +21,6 @@ services:
       - PORT=3000
     env_file:
       - .env
-    ports:
-      - "3000:3000"
     depends_on:
       - cache
       - websocket
@@ -35,8 +30,6 @@ services:
       context: ./frontend
       target: production
     restart: always
-    ports:
-      - "8080:80"
     depends_on:
       - api
 
@@ -44,8 +37,6 @@ services:
     image: redis:7-alpine
     restart: always
     command: redis-server --appendonly yes
-    ports:
-      - "6379:6379"
     volumes:
       - redis_prod_data:/data
 
@@ -53,9 +44,6 @@ services:
     image: centrifugo/centrifugo:v5
     restart: always
     command: centrifugo -c /centrifugo/config.json
-    ports:
-      - "8000:8000"
-      - "8001:8001"
     volumes:
       - ./config/centrifugo:/centrifugo
     depends_on:
@@ -65,9 +53,14 @@ services:
     image: livekit/livekit-server:latest
     restart: always
     command: --config /livekit/config.yaml
-    network_mode: host
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "58000-58100:58000-58100/udp"
     volumes:
       - ./config/livekit:/livekit
+    depends_on:
+      - cache
 
 volumes:
   redis_prod_data:

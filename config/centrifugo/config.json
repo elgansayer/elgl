@@ -12,7 +12,7 @@
       "subscribe_to_publish": true,
       "presence": true,
       "history_size": 100,
-      "history_ttl": "30d"
+      "history_ttl": "720h"
     },
     {
       "name": "room",
