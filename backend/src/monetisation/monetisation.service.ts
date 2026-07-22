@@ -12,7 +12,6 @@ import { SupabaseService } from '../supabase/supabase.service';
 import {
   CreateDiagnosticLogDto,
   StripeWebhookDto,
-  UpgradeVipDto,
 } from './dto/monetisation.dto';
 
 export interface UserVipRow {
@@ -46,24 +45,6 @@ export class MonetisationService {
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
   ) {}
-
-  async upgradeUser(userId: string, dto: UpgradeVipDto): Promise<UserVipRow> {
-    const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('users')
-      .update({ is_vip: true, vip_tier: dto.tier })
-      .eq('id', userId)
-      .select('id, is_vip, vip_tier, developer_api_key, email')
-      .single();
-
-    if (response.error || !response.data) {
-      throw new Error(
-        `Failed to upgrade VIP status: ${response.error?.message ?? 'Unknown error'}`,
-      );
-    }
-
-    return response.data;
-  }
 
   async handleStripeWebhook(
     rawBody: Buffer,

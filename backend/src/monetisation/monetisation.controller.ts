@@ -17,23 +17,12 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   CreateDiagnosticLogDto,
   StripeWebhookDto,
-  UpgradeVipDto,
 } from './dto/monetisation.dto';
 import { MonetisationService } from './monetisation.service';
 
 @Controller('monetisation')
 export class MonetisationController {
   constructor(private readonly monetisationService: MonetisationService) {}
-
-  @Post('upgrade')
-  @UseGuards(SupabaseAuthGuard)
-  async upgradeVip(
-    @CurrentUser() user: User | null,
-    @Body() dto: UpgradeVipDto,
-  ) {
-    if (!user) return null;
-    return await this.monetisationService.upgradeUser(user.id, dto);
-  }
 
   @Post('webhooks/stripe')
   @HttpCode(200)
