@@ -20,3 +20,17 @@ export interface UserProfile {
   privacy_hide_from_search: boolean;
   created_at: string;
 }
+
+export interface ProfileVisitor {
+  id: string;
+  visitor_id: string;
+  viewed_id: string;
+  created_at: string;
+  visitor?: {
+    id: string;
+    display_name?: string;
+    avatar_url?: string;
+    native_language?: string;
+    target_languages?: string[];
+  };
+}

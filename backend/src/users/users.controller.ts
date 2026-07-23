@@ -3,7 +3,7 @@ import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import { UserProfile } from './interfaces/user-profile.interface';
+import { UserProfile, ProfileVisitor } from './interfaces/user-profile.interface';
 import { UsersService } from './users.service';
 import { MediaService } from '../media/media.service';
 
@@ -62,6 +62,16 @@ export class UsersController {
       { cover_photo_url: coverPhotoUrl } as UpdateProfileDto,
       profile?.is_vip ?? false,
     );
+  }
+
+  @Get('me/visitors')
+  async getMyVisitors(
+    @CurrentUser() user: User | null,
+  ): Promise<ProfileVisitor[]> {
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    return this.usersService.getVisitors(user.id);
   }
 
   @Get(':id')

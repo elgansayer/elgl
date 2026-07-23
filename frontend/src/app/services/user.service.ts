@@ -41,6 +41,20 @@ export interface VisitorLog {
   };
 }
 
+export interface ProfileVisitor {
+  id: string;
+  visitor_id: string;
+  viewed_id: string;
+  created_at: string;
+  visitor?: {
+    id: string;
+    display_name?: string;
+    avatar_url?: string;
+    native_language?: string;
+    target_languages?: string[];
+  };
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -73,6 +87,12 @@ export class UserService {
   async getMyVisitors(): Promise<VisitorLog[]> {
     return firstValueFrom(
       this.http.get<VisitorLog[]>(`${this.visitsUrl}/my-visitors`, { headers: this.getHeaders() })
+    );
+  }
+
+  async getProfileVisitors(): Promise<ProfileVisitor[]> {
+    return firstValueFrom(
+      this.http.get<ProfileVisitor[]>(`${this.baseUrl}/me/visitors`, { headers: this.getHeaders() })
     );
   }
 

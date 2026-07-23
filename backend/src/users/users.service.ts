@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -24,6 +25,35 @@ export class UsersService {
     }
 
     return response.data as UserProfile;
+  }
+
+  async getVisitors(userId: string): Promise<ProfileVisitor[]> {
+    const supabase = this.supabaseService.getClient();
+    
+    const { data, error } = await supabase
+      .from('profile_visits')
+      .select(`
+        id,
+        visitor_id,
+        viewed_id,
+        created_at,
+        visitor:visitor_id (
+          id,
+          display_name,
+          avatar_url,
+          native_language,
+          target_languages
+        )
+      `)
+      .eq('viewed_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      throw new InternalServerErrorException('Failed to fetch visitors');
+    }
+
+    return (data || []) as ProfileVisitor[];
   }
 
   async updateProfile(
