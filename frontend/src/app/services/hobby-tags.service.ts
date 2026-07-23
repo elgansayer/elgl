@@ -1,5 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface HobbyTag {
@@ -7,6 +8,7 @@ export interface HobbyTag {
   name: string;
   category: string;
   icon: string;
+  target_vocabulary: Array<{ word: string; translation: string; language: string }>;
   created_at: string;
 }
 
@@ -14,111 +16,53 @@ export interface UserHobbyTag {
   id: string;
   user_id: string;
   hobby_tag_id: string;
-  proficiency_level: 'beginner' | 'intermediate' | 'advanced' | 'native';
-  hobby_tag: HobbyTag;
+  proficiency_level: number;
   created_at: string;
+  hobby_tag?: HobbyTag;
 }
 
-export interface HobbyVocabulary {
-  id: string;
-  hobby_tag_id: string;
+export interface VocabularyItem {
   word: string;
   translation: string;
-  language: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  context_sentence: string | null;
-  hobby_tag?: { name: string; icon: string };
+  hobbyTagName: string;
 }
 
 @Injectable({
   providedIn: 'root',
 })
 export class HobbyTagsService {
-  private apiUrl = `${environment.apiUrl}/hobby-tags`;
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = `${environment.apiUrl}/hobby-tags`;
 
-  readonly allTags = signal<HobbyTag[]>([]);
-  readonly userTags = signal<UserHobbyTag[]>([]);
-  readonly userVocabulary = signal<HobbyVocabulary[]>([]);
-  readonly loading = signal<boolean>(false);
+  getAllTags(category?: string): Observable<HobbyTag[]> {
+    const params = category ? { category } : {};
+    return this.http.get<HobbyTag[]>(this.apiUrl, { params });
+  }
 
-  constructor(private http: HttpClient) {}
+  getMyTags(): Observable<UserHobbyTag[]> {
+    return this.http.get<UserHobbyTag[]>(`${this.apiUrl}/my`);
+  }
 
-  fetchAllTags(): void {
-    this.loading.set(true);
-    this.http.get<HobbyTag[]>(this.apiUrl).subscribe({
-      next: (tags) => {
-        this.allTags.set(tags);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
+  addMyTag(hobbyTagId: string, proficiencyLevel?: number): Observable<UserHobbyTag> {
+    return this.http.post<UserHobbyTag>(`${this.apiUrl}/my`, {
+      hobby_tag_id: hobbyTagId,
+      proficiency_level: proficiencyLevel,
     });
   }
 
-  fetchUserTags(): void {
-    this.loading.set(true);
-    this.http.get<UserHobbyTag[]>(`${this.apiUrl}/my`).subscribe({
-      next: (tags) => {
-        this.userTags.set(tags);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
+  removeMyTag(hobbyTagId: string): Observable<{ success: boolean }> {
+    return this.http.delete<{ success: boolean }>(`${this.apiUrl}/my/${hobbyTagId}`);
+  }
+
+  updateProficiency(hobbyTagId: string, level: number): Observable<UserHobbyTag> {
+    return this.http.patch<UserHobbyTag>(`${this.apiUrl}/my/${hobbyTagId}/proficiency`, {
+      proficiency_level: level,
     });
   }
 
-  addTag(hobbyTagId: string, proficiencyLevel?: string): void {
-    this.http
-      .post<UserHobbyTag>(`${this.apiUrl}/my`, {
-        hobby_tag_id: hobbyTagId,
-        proficiency_level: proficiencyLevel,
-      })
-      .subscribe({
-        next: (newTag) => {
-          this.userTags.update((tags) => [...tags, newTag]);
-        },
-      });
-  }
-
-  removeTag(hobbyTagId: string): void {
-    this.http.delete(`${this.apiUrl}/my/${hobbyTagId}`).subscribe({
-      next: () => {
-        this.userTags.update((tags) =>
-          tags.filter((t) => t.hobby_tag_id !== hobbyTagId)
-        );
-      },
+  getVocabulary(language: string): Observable<VocabularyItem[]> {
+    return this.http.get<VocabularyItem[]>(`${this.apiUrl}/vocabulary`, {
+      params: { language },
     });
-  }
-
-  updateProficiency(hobbyTagId: string, level: string): void {
-    this.http
-      .patch<UserHobbyTag>(`${this.apiUrl}/my/${hobbyTagId}`, {
-        proficiency_level: level,
-      })
-      .subscribe({
-        next: (updated) => {
-          this.userTags.update((tags) =>
-            tags.map((t) =>
-              t.hobby_tag_id === hobbyTagId ? updated : t
-            )
-          );
-        },
-      });
-  }
-
-  fetchUserVocabulary(): void {
-    this.http
-      .get<HobbyVocabulary[]>(`${this.apiUrl}/my/vocabulary`)
-      .subscribe({
-        next: (vocab) => this.userVocabulary.set(vocab),
-      });
-  }
-
-  getVocabularyForHobby(hobbyTagId: string, language?: string): void {
-    this.http
-      .get<HobbyVocabulary[]>(`${this.apiUrl}/${hobbyTagId}/vocabulary`, {
-        params: language ? { language } : {},
-      })
-      .subscribe({
-        next: (vocab) => this.userVocabulary.set(vocab),
-      });
   }
 }

@@ -1,0 +1,134 @@
+import { Injectable, inject, signal, computed } from '@angular/core';
+import { HobbyTagsService, HobbyTag, UserHobbyTag, VocabularyItem } from './hobby-tags.service';
+import { AuthService } from './auth.service';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class HobbyTagsStore {
+  private readonly hobbyTagsService = inject(HobbyTagsService);
+  private readonly authService = inject(AuthService);
+
+  readonly allTags = signal<HobbyTag[]>([]);
+  readonly userTags = signal<UserHobbyTag[]>([]);
+  readonly vocabulary = signal<VocabularyItem[]>([]);
+  readonly loading = signal(false);
+  readonly error = signal<string | null>(null);
+
+  readonly tagsByCategory = computed(() => {
+    const tags = this.allTags();
+    const map = new Map<string, HobbyTag[]>();
+    for (const tag of tags) {
+      const existing = map.get(tag.category) || [];
+      existing.push(tag);
+      map.set(tag.category, existing);
+    }
+    return map;
+  });
+
+  readonly userTagIds = computed(() => new Set(this.userTags().map(ut => ut.hobby_tag_id)));
+
+  readonly vocabularyByTag = computed(() => {
+    const vocab = this.vocabulary();
+    const map = new Map<string, VocabularyItem[]>();
+    for (const item of vocab) {
+      const existing = map.get(item.hobbyTagName) || [];
+      existing.push(item);
+      map.set(item.hobbyTagName, existing);
+    }
+    return map;
+  });
+
+  constructor() {
+    this.loadAllTags();
+  }
+
+  loadAllTags(): void {
+    this.loading.set(true);
+    this.hobbyTagsService.getAllTags().subscribe({
+      next: (tags) => {
+        this.allTags.set(tags);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set(err.message);
+        this.loading.set(false);
+      },
+    });
+  }
+
+  loadUserTags(): void {
+    const user = this.authService.currentUser();
+    if (!user) return;
+
+    this.loading.set(true);
+    this.hobbyTagsService.getMyTags().subscribe({
+      next: (tags) => {
+        this.userTags.set(tags);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set(err.message);
+        this.loading.set(false);
+      },
+    });
+  }
+
+  addTag(hobbyTagId: string, proficiencyLevel?: number): void {
+    this.loading.set(true);
+    this.hobbyTagsService.addMyTag(hobbyTagId, proficiencyLevel).subscribe({
+      next: (userTag) => {
+        this.userTags.update(tags => [...tags, userTag]);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set(err.message);
+        this.loading.set(false);
+      },
+    });
+  }
+
+  removeTag(hobbyTagId: string): void {
+    this.loading.set(true);
+    this.hobbyTagsService.removeMyTag(hobbyTagId).subscribe({
+      next: () => {
+        this.userTags.update(tags => tags.filter(t => t.hobby_tag_id !== hobbyTagId));
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set(err.message);
+        this.loading.set(false);
+      },
+    });
+  }
+
+  updateProficiency(hobbyTagId: string, level: number): void {
+    this.loading.set(true);
+    this.hobbyTagsService.updateProficiency(hobbyTagId, level).subscribe({
+      next: (updated) => {
+        this.userTags.update(tags =>
+          tags.map(t => t.hobby_tag_id === hobbyTagId ? updated : t)
+        );
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set(err.message);
+        this.loading.set(false);
+      },
+    });
+  }
+
+  loadVocabulary(language: string): void {
+    this.loading.set(true);
+    this.hobbyTagsService.getVocabulary(language).subscribe({
+      next: (vocab) => {
+        this.vocabulary.set(vocab);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set(err.message);
+        this.loading.set(false);
+      },
+    });
+  }
+}
