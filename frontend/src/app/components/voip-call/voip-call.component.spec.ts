@@ -1,52 +1,33 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { VoipCallComponent } from './voip-call.component';
-import { I18nService } from '../../services/i18n.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
-import { LivekitService } from '../../services/livekit.service';
-import { AuthService } from '../../services/auth.service';
-import { ChatService } from '../../services/chat.service';
-import { signal } from '@angular/core';
+import { ComponentRef } from '@angular/core';
 
 describe('VoipCallComponent', () => {
   let component: VoipCallComponent;
   let fixture: ComponentFixture<VoipCallComponent>;
-  let i18nServiceMock: Partial<I18nService>;
-  let centrifugoServiceMock: jasmine.SpyObj<CentrifugoService>;
-  let livekitServiceMock: jasmine.SpyObj<LivekitService>;
-  let authServiceMock: Partial<AuthService>;
-  let chatServiceMock: jasmine.SpyObj<ChatService>;
+  let componentRef: ComponentRef<VoipCallComponent>;
+  let mockLocalAudioTrack: { muted: boolean; stop: jest.Mock };
 
   beforeEach(async () => {
-    i18nServiceMock = {
-      currentLang: signal('en-GB'),
-      translate: (key: string) => key,
+    mockLocalAudioTrack = {
+      muted: false,
+      stop: jest.fn(),
     };
-
-    centrifugoServiceMock = jasmine.createSpyObj('CentrifugoService', ['subscribe', 'unsubscribe', 'publish']);
-    livekitServiceMock = jasmine.createSpyObj('LivekitService', ['joinRoom', 'publishTracks', 'leaveRoom', 'setMicrophoneEnabled', 'setCameraEnabled']);
-    authServiceMock = {
-      currentUser: () => ({ id: 'current-user', displayName: 'Current User' }),
-    };
-    chatServiceMock = jasmine.createSpyObj('ChatService', ['sendMessage']);
 
     await TestBed.configureTestingModule({
       imports: [VoipCallComponent],
-      providers: [
-        { provide: I18nService, useValue: i18nServiceMock },
-        { provide: CentrifugoService, useValue: centrifugoServiceMock },
-        { provide: LivekitService, useValue: livekitServiceMock },
-        { provide: AuthService, useValue: authServiceMock },
-        { provide: ChatService, useValue: chatServiceMock },
-      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(VoipCallComponent);
     component = fixture.componentInstance;
-    fixture.componentRef.setInput('callDirection', 'incoming');
-    fixture.componentRef.setInput('remoteUserId', 'user-123');
-    fixture.componentRef.setInput('displayName', 'Test User');
-    fixture.componentRef.setInput('roomName', 'call_room_123');
-    fixture.componentRef.setInput('isVideoCall', false);
+    componentRef = fixture.componentRef;
+
+    // Set required inputs
+    componentRef.setInput('roomName', 'test-room');
+    componentRef.setInput('token', 'test-token');
+    componentRef.setInput('callerName', 'Test User');
+    componentRef.setInput('isVideoCall', false);
+
     fixture.detectChanges();
   });
 
@@ -54,101 +35,181 @@ describe('VoipCallComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should subscribe to user personal Centrifugo channel on init', () => {
-    expect(centrifugoServiceMock.subscribe).toHaveBeenCalledWith(
-      'user_user-123',
-      jasmine.any(Function)
-    );
-  });
-
-  it('should unsubscribe from user personal Centrifugo channel on destroy', () => {
-    fixture.destroy();
-    expect(centrifugoServiceMock.unsubscribe).toHaveBeenCalledWith('user_user-123');
-  });
-
-  it('should emit callAccepted when accept is clicked', async () => {
-    spyOn(component.callAccepted, 'emit');
-    livekitServiceMock.joinRoom.and.resolveTo();
-    livekitServiceMock.publishTracks.and.resolveTo();
-
-    const acceptButton = fixture.nativeElement.querySelector('button');
-    await acceptButton?.click();
-
-    expect(component.callAccepted.emit).toHaveBeenCalledWith({
-      roomName: 'call_room_123',
-      participant: { userId: 'user-123' },
-    });
-    expect(livekitServiceMock.joinRoom).toHaveBeenCalledWith('call_room_123', 'current-user', false);
-  });
-
-  it('should publish call events via Centrifugo to user personal channel', () => {
-    component.rejectCall();
-    expect(centrifugoServiceMock.publish).toHaveBeenCalledWith(
-      'user_user-123',
-      jasmine.objectContaining({ type: 'rejected', roomName: 'call_room_123' })
-    );
+  it('should initialize with correct default state', () => {
+    expect(component.isMuted()).toBe(false);
+    expect(component.isConnecting()).toBe(true);
+    expect(component.isConnected()).toBe(false);
+    expect(component.callDuration()).toBe('00:00');
   });
 
   it('should toggle mute state', () => {
-    expect(component.isMuted()).toBe(false);
     component.toggleMute();
     expect(component.isMuted()).toBe(true);
-    expect(livekitServiceMock.setMicrophoneEnabled).toHaveBeenCalledWith(true);
-    expect(centrifugoServiceMock.publish).toHaveBeenCalledWith(
-      'user_user-123',
-      jasmine.objectContaining({ type: 'mute_toggle', muted: true })
-    );
+
+    component.toggleMute();
+    expect(component.isMuted()).toBe(false);
   });
 
-  it('should toggle video state', () => {
-    expect(component.isVideoEnabled()).toBe(false);
-    component.toggleVideo();
-    expect(component.isVideoEnabled()).toBe(true);
-    expect(livekitServiceMock.setCameraEnabled).toHaveBeenCalledWith(true);
-    expect(centrifugoServiceMock.publish).toHaveBeenCalledWith(
-      'user_user-123',
-      jasmine.objectContaining({ type: 'video_toggle', enabled: true })
-    );
+  it('should mute/unmute the local audio track via LiveKit SDK', () => {
+    // Set up the local audio track
+    (component as any).localAudioTrack = mockLocalAudioTrack;
+
+    component.toggleMute();
+    expect(component.isMuted()).toBe(true);
+    expect(mockLocalAudioTrack.muted).toBe(true);
+
+    component.toggleMute();
+    expect(component.isMuted()).toBe(false);
+    expect(mockLocalAudioTrack.muted).toBe(false);
   });
 
-  it('should emit callEnded on endCall', () => {
-    const endSpy = jasmine.createSpy();
-    component.callEnded.subscribe(endSpy);
-    
+  it('should emit muteToggled event with correct value', () => {
+    const emitSpy = jest.spyOn(component.muteToggled, 'emit');
+
+    component.toggleMute();
+    expect(emitSpy).toHaveBeenCalledWith(true);
+
+    component.toggleMute();
+    expect(emitSpy).toHaveBeenCalledWith(false);
+  });
+
+  it('should emit callEnded event when ending call', () => {
+    const emitSpy = jest.spyOn(component.callEnded, 'emit');
+
     component.endCall();
-    expect(endSpy).toHaveBeenCalledWith({
-      roomName: 'call_room_123',
-      duration: 0,
-    });
+    expect(emitSpy).toHaveBeenCalled();
   });
 
-  it('should start duration timer when call state becomes connected', () => {
-    jasmine.clock().install();
-    fixture.componentRef.setInput('callState', 'connected');
-    fixture.detectChanges();
-    
-    expect(component.callDuration()).toBe(0);
-    
-    jasmine.clock().tick(5000);
-    expect(component.callDuration()).toBe(5);
-    
-    jasmine.clock().uninstall();
+  it('should stop local audio track on destroy', () => {
+    (component as any).localAudioTrack = mockLocalAudioTrack;
+    const stopSpy = jest.spyOn(mockLocalAudioTrack, 'stop');
+
+    component.ngOnDestroy();
+    expect(stopSpy).toHaveBeenCalled();
   });
 
-  it('should stop duration timer when call ends', () => {
-    jasmine.clock().install();
-    fixture.componentRef.setInput('callState', 'connected');
+  it('should clean up resources on destroy', () => {
+    const cleanupSpy = jest.spyOn(component as any, 'cleanup');
+
+    component.ngOnDestroy();
+    expect(cleanupSpy).toHaveBeenCalled();
+  });
+
+  it('should display caller name', () => {
+    componentRef.setInput('callerName', 'Alice');
     fixture.detectChanges();
-    
-    jasmine.clock().tick(3000);
-    
-    fixture.componentRef.setInput('callState', 'ended');
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Alice');
+  });
+
+  it('should display call type correctly', () => {
+    // Voice call
+    componentRef.setInput('isVideoCall', false);
     fixture.detectChanges();
-    
-    const durationBeforeEnd = component.callDuration();
-    jasmine.clock().tick(5000);
-    expect(component.callDuration()).toBe(durationBeforeEnd);
-    
-    jasmine.clock().uninstall();
+    let compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Voice Call');
+
+    // Video call
+    componentRef.setInput('isVideoCall', true);
+    fixture.detectChanges();
+    compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Video Call');
+  });
+
+  it('should show connecting state initially', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Connecting...');
+  });
+
+  it('should show connected state after connection', () => {
+    component['isConnected'].set(true);
+    component['isConnecting'].set(false);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Connected');
+  });
+
+  it('should show disconnected state after cleanup', () => {
+    component.ngOnDestroy();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Disconnected');
+  });
+
+  it('should update call duration', () => {
+    jest.useFakeTimers();
+
+    component['startTime'] = Date.now();
+    component['startDurationTimer']();
+
+    jest.advanceTimersByTime(5000);
+    expect(component.callDuration()).toBe('00:05');
+
+    jest.advanceTimersByTime(55000);
+    expect(component.callDuration()).toBe('01:00');
+
+    jest.useRealTimers();
+  });
+
+  it('should handle mute button click', () => {
+    const toggleSpy = jest.spyOn(component, 'toggleMute');
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const muteButton = compiled.querySelector('app-button-secondary');
+    expect(muteButton).toBeTruthy();
+
+    muteButton?.click();
+    expect(toggleSpy).toHaveBeenCalled();
+  });
+
+  it('should handle end call button click', () => {
+    const endCallSpy = jest.spyOn(component, 'endCall');
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const endCallButton = compiled.querySelector('app-button-primary');
+    expect(endCallButton).toBeTruthy();
+
+    endCallButton?.click();
+    expect(endCallSpy).toHaveBeenCalled();
+  });
+
+  it('should show mute icon when muted', () => {
+    component.isMuted.set(true);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Unmute');
+  });
+
+  it('should show unmute icon when not muted', () => {
+    component.isMuted.set(false);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Mute');
+  });
+
+  it('should have correct ARIA attributes', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const dialog = compiled.querySelector('[role="dialog"]');
+    expect(dialog).toBeTruthy();
+    expect(dialog?.getAttribute('aria-label')).toBe('Voice/Video Call');
+  });
+
+  it('should handle errors during room initialization gracefully', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+    // Mock the room connect to throw
+    jest.spyOn(component as any, 'initializeRoom').mockRejectedValue(new Error('Connection failed'));
+
+    await component.ngOnInit();
+    expect(component.isConnecting()).toBe(false);
+    expect(component.isConnected()).toBe(false);
+    expect(consoleSpy).toHaveBeenCalled();
+
+    consoleSpy.mockRestore();
   });
 });

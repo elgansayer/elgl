@@ -97,6 +97,7 @@ export class VoipCallComponent implements OnDestroy {
   readonly callEnded = output<void>();
   readonly callAccepted = output<void>();
   readonly callRejected = output<void>();
+  readonly muteToggled = output<boolean>();
 
   // State signals
   readonly showCallUI = signal(true);
@@ -207,9 +208,13 @@ export class VoipCallComponent implements OnDestroy {
   }
 
   async toggleMute(): Promise<void> {
-    this.isMuted.update(v => !v);
+    const newMuted = !this.isMuted();
+    this.isMuted.set(newMuted);
+    this.muteToggled.emit(newMuted);
+
+    // Mute/unmute the local audio track via LiveKit SDK
     if (this.localTrack) {
-      this.localTrack.enabled = !this.isMuted();
+      this.localTrack.enabled = !newMuted;
     }
   }
 
