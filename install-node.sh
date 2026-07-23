@@ -4,8 +4,12 @@ set -euo pipefail
 # Ensure the script itself is executable (in case it was not)
 chmod +x "$0"
 
-# Remove the early exit check for npm - we always need to install/ensure Node.js
-# The script should always download and install Node.js to ensure it's available
+# Check if npm is already available. If yes, skip installation and just run lint.
+if command -v npm &> /dev/null; then
+    echo "npm is already available. Skipping Node.js installation."
+    cd backend && npm run lint
+    exit $?
+fi
 
 # Ensure xz-utils is installed for tar -xJf
 if ! command -v xz &> /dev/null; then
