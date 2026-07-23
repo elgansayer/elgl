@@ -107,7 +107,7 @@ export class MonetisationService {
     const stripe = new Stripe(
       this.configService.get<string>('STRIPE_SECRET_KEY') || '',
       {
-        apiVersion: '2025-02-24.acacia' as any,
+        apiVersion: '2025-02-24.acacia' as Stripe.LatestApiVersion,
       },
     );
 
