@@ -28,7 +28,6 @@ interface AppleTransactionInfo {
   purchaseDate: number;
 }
 
-
 @Injectable()
 export class AppleNotificationService {
   private readonly logger = new Logger(AppleNotificationService.name);
@@ -51,7 +50,7 @@ export class AppleNotificationService {
   ): Promise<{ received: boolean; status: string }> {
     this.logger.log(`Received Apple App Store Server Notification`);
 
-    const signedPayload = (payload as any)?.signedPayload;
+    const signedPayload = payload?.signedPayload;
     if (!signedPayload) {
       this.logger.warn('Apple notification missing signedPayload');
       return { received: true, status: 'ignored' };
@@ -142,7 +141,7 @@ export class AppleNotificationService {
     data: any,
   ): Promise<void> {
     const transactionInfo = await this.decodeTransactionInfo(
-      (data as any)?.signedTransactionInfo,
+      data?.signedTransactionInfo,
     );
     if (!transactionInfo) {
       this.logger.warn('No transaction info in subscription active event');
@@ -176,7 +175,7 @@ export class AppleNotificationService {
     data: any,
   ): Promise<void> {
     const transactionInfo = await this.decodeTransactionInfo(
-      (data as any)?.signedTransactionInfo,
+      data?.signedTransactionInfo,
     );
     if (!transactionInfo) {
       this.logger.warn('No transaction info in subscription expired event');
@@ -209,7 +208,7 @@ export class AppleNotificationService {
 
     // Decode header to get the key ID and algorithm
     const headerStr = Buffer.from(headerB64, 'base64url').toString('utf-8');
-    const header = JSON.parse(headerStr) as any;
+    const header = JSON.parse(headerStr);
 
     // Verify the signature using Apple's root CA
     const verified = await this.verifySignature(
@@ -224,7 +223,7 @@ export class AppleNotificationService {
 
     // Decode payload
     const payloadStr = Buffer.from(payloadB64, 'base64url').toString('utf-8');
-    return JSON.parse(payloadStr) as any;
+    return JSON.parse(payloadStr);
   }
 
   private verifySignature(
@@ -235,7 +234,7 @@ export class AppleNotificationService {
     try {
       // Apple uses ES256 (ECDSA with P-256) for JWS signatures
       // The x5c header contains the certificate chain
-      const x5c = (header as any).x5c;
+      const x5c = header.x5c;
       if (!x5c || !Array.isArray(x5c) || x5c.length === 0) {
         this.logger.warn('No x5c certificate chain in JWS header');
         return false;
@@ -298,7 +297,7 @@ export class AppleNotificationService {
 
       return verify.verify(leafCert.publicKey, signature);
     } catch (error: any) {
-      this.logger.error(`Signature verification error: ${(error as any).message}`);
+      this.logger.error(`Signature verification error: ${error.message}`);
       return false;
     }
   }
@@ -313,15 +312,15 @@ export class AppleNotificationService {
       if (parts.length !== 3) return null;
 
       const payloadStr = Buffer.from(parts[1], 'base64url').toString('utf-8');
-      const payload = JSON.parse(payloadStr) as any;
+      const payload = JSON.parse(payloadStr);
 
       return {
-        originalTransactionId: (payload as any).originalTransactionId,
-        productId: (payload as any).productId,
-        appAccountToken: (payload as any).appAccountToken,
-        transactionId: (payload as any).transactionId,
-        expiresDate: (payload as any).expiresDate,
-        purchaseDate: (payload as any).purchaseDate,
+        originalTransactionId: payload.originalTransactionId,
+        productId: payload.productId,
+        appAccountToken: payload.appAccountToken,
+        transactionId: payload.transactionId,
+        expiresDate: payload.expiresDate,
+        purchaseDate: payload.purchaseDate,
       };
     } catch {
       return null;

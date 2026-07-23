@@ -7,6 +7,6 @@ import { SupabaseModule } from '../supabase/supabase.module';
   imports: [SupabaseModule],
   controllers: [FavouritesController],
   providers: [FavouritesService],
-  exports: [FavouritesService]
+  exports: [FavouritesService],
 })
 export class FavouritesModule {}

@@ -1,4 +1,11 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { GooglePlayNotificationService } from './google-play-notification.service';
 
 @Controller('economy/google-play-notifications')
@@ -18,9 +25,7 @@ export class GooglePlayNotificationController {
    */
   @Post()
   @HttpCode(HttpStatus.OK)
-  async handleNotification(
-    @Body() body: any,
-  ): Promise<{ status: string }> {
+  async handleNotification(@Body() body: any): Promise<{ status: string }> {
     this.logger.log('Received Google Play notification');
 
     try {

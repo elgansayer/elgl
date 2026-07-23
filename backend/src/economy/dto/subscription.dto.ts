@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsBoolean, IsNumber, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsNumber,
+  IsEnum,
+} from 'class-validator';
 
 /**
  * DTO for verifying a subscription receipt.
@@ -23,7 +29,8 @@ export class UpdateSubscriptionDto {
   product_id: string;
 
   @IsString()
-  status: 'active' | 'canceled' | 'expired' | 'on_hold' | 'grace_period' | 'revoked';
+  status:
+    'active' | 'canceled' | 'expired' | 'on_hold' | 'grace_period' | 'revoked';
 
   @IsOptional()
   @IsString()

@@ -230,14 +230,14 @@ describe('ChatService', () => {
         item_payload: message,
         notes: 'My favourite note',
       });
-      
+
       // Restore insert mock
       mockQueryBuilder.insert.mockReturnThis();
     });
 
     it('should throw Error when addFavourite fails with error message', async () => {
       const dto: any = { message_id: 'msg-1' };
-      
+
       // Simulate message not found
       mockQueryBuilder.single.mockResolvedValue({
         data: null,

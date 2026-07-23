@@ -56,20 +56,22 @@ export class GooglePlayNotificationService {
 
     try {
       // Google Play Developer Notifications come as a Pub/Sub message wrapper
-      const message = (payload as any)?.message;
+      const message = payload?.message;
       if (!message) {
         this.logger.warn('Google notification missing message');
         return { received: true, status: 'ignored' };
       }
 
       // Decode base64-encoded data
-      const data = (message as any).data;
+      const data = message.data;
       if (!data) {
         this.logger.warn('Google notification missing data');
         return { received: true, status: 'ignored' };
       }
 
-      const decodedData = Buffer.from(data as string, 'base64').toString('utf-8');
+      const decodedData = Buffer.from(data as string, 'base64').toString(
+        'utf-8',
+      );
       const notificationData: GooglePlayNotification = JSON.parse(decodedData);
 
       // Handle test notification
@@ -104,7 +106,8 @@ export class GooglePlayNotificationService {
   ): Promise<void> {
     if (!notification) return;
 
-    const { notificationType, purchaseToken, subscriptionId } = notification as any;
+    const { notificationType, purchaseToken, subscriptionId } =
+      notification as any;
 
     // notificationType mapping:
     // 1 = SUBSCRIBED (new subscription)

@@ -21,22 +21,17 @@ export class SafetyService {
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async reportMessage(
-    reporterId: string,
-    dto: ReportUserDto,
-  ): Promise<void> {
+  async reportMessage(reporterId: string, dto: ReportUserDto): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
-    const { error } = await supabase
-      .from('reports')
-      .insert({
-        reporter_id: reporterId,
-        reported_user_id: dto.reported_id,
-        reason_category: 'message_content',
-        description: dto.reason,
-        context_url: dto.context_url || null,
-        status: 'pending',
-      });
+    const { error } = await supabase.from('reports').insert({
+      reporter_id: reporterId,
+      reported_user_id: dto.reported_id,
+      reason_category: 'message_content',
+      description: dto.reason,
+      context_url: dto.context_url || null,
+      status: 'pending',
+    });
 
     if (error) {
       throw new Error('Failed to submit report');

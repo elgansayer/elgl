@@ -26,18 +26,20 @@ export class GooglePlayNotificationService {
   async handleNotification(message: any): Promise<void> {
     try {
       // 1. Decode the Pub/Sub message
-      const data = (message as any)?.message?.data;
+      const data = message?.message?.data;
       if (!data) {
         this.logger.warn('Google Play notification missing data');
         return;
       }
 
       // 2. Decode base64-encoded data
-      const decodedData = Buffer.from(data as string, 'base64').toString('utf-8');
-      const notification = JSON.parse(decodedData) as any;
+      const decodedData = Buffer.from(data as string, 'base64').toString(
+        'utf-8',
+      );
+      const notification = JSON.parse(decodedData);
 
       // 3. Extract subscription notification details
-      const subscriptionNotification = (notification as any).subscriptionNotification;
+      const subscriptionNotification = notification.subscriptionNotification;
       if (!subscriptionNotification) {
         this.logger.warn(
           'Google Play notification missing subscriptionNotification',
@@ -45,9 +47,9 @@ export class GooglePlayNotificationService {
         return;
       }
 
-      const notificationType = (subscriptionNotification as any).notificationType;
-      const purchaseToken = (subscriptionNotification as any).purchaseToken;
-      const subscriptionId = (subscriptionNotification as any).subscriptionId;
+      const notificationType = subscriptionNotification.notificationType;
+      const purchaseToken = subscriptionNotification.purchaseToken;
+      const subscriptionId = subscriptionNotification.subscriptionId;
 
       this.logger.log(
         `Google Play notification: type=${notificationType}, subscriptionId=${subscriptionId}`,

@@ -38,12 +38,14 @@ describe('SafetyController', () => {
   });
 
   describe('reportMessage', () => {
-
     it('should call service reportMessage when user is provided', async () => {
       const dto: any = { reported_id: 'bad-1', reason: 'spam' };
       (safetyService.reportMessage as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await controller.reportMessage({ user: { id: 'user-1' } } as any, dto);
+      const result = await controller.reportMessage(
+        { user: { id: 'user-1' } } as any,
+        dto,
+      );
       expect(safetyService.reportMessage).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual({ success: true });
     });
@@ -59,7 +61,10 @@ describe('SafetyController', () => {
       const response: any = { success: true, blocked_id: 'bad-2' };
       (safetyService.blockUser as jest.Mock).mockResolvedValue(response);
 
-      const result = await controller.blockUser({ user: { id: 'user-1' } } as any, dto);
+      const result = await controller.blockUser(
+        { user: { id: 'user-1' } } as any,
+        dto,
+      );
       expect(safetyService.blockUser).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual(response);
     });
@@ -74,7 +79,9 @@ describe('SafetyController', () => {
       const ids = ['bad-1', 'bad-2'];
       (safetyService.getBlockedIds as jest.Mock).mockResolvedValue(ids);
 
-      const result = await controller.getBlockedIds({ user: { id: 'user-1' } } as any);
+      const result = await controller.getBlockedIds({
+        user: { id: 'user-1' },
+      } as any);
       expect(safetyService.getBlockedIds).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(ids);
     });

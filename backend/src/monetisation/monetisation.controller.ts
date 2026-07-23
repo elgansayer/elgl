@@ -42,7 +42,10 @@ export class MonetisationController {
     if (!signature || !req.rawBody) {
       throw new BadRequestException('Missing stripe signature or raw body');
     }
-    return await this.monetisationService.handleStripeWebhook(req.rawBody, signature);
+    return await this.monetisationService.handleStripeWebhook(
+      req.rawBody,
+      signature,
+    );
   }
 
   @Post('webhooks/apple')

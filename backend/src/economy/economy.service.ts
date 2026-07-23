@@ -273,7 +273,7 @@ export class EconomyService {
       }),
     );
 
-    const body = response.data as any;
+    const body = response.data;
 
     if (body.status !== 0 && body.status !== 21007) {
       throw new BadRequestException(
@@ -281,15 +281,15 @@ export class EconomyService {
       );
     }
 
-    const latestReceiptInfo = (body as any).latest_receipt_info?.[0];
+    const latestReceiptInfo = body.latest_receipt_info?.[0];
     if (!latestReceiptInfo) {
       throw new BadRequestException('No purchase information in receipt');
     }
 
     return {
       valid: true,
-      productId: (latestReceiptInfo as any).product_id,
-      transactionId: (latestReceiptInfo as any).transaction_id,
+      productId: latestReceiptInfo.product_id,
+      transactionId: latestReceiptInfo.transaction_id,
       platform: 'ios',
     };
   }
@@ -326,7 +326,7 @@ export class EconomyService {
       }),
     );
 
-    const body = response.data as any;
+    const body = response.data;
 
     if (body.purchaseState !== 0) {
       throw new BadRequestException('Google Play purchase not completed');
@@ -334,8 +334,8 @@ export class EconomyService {
 
     return {
       valid: true,
-      productId: (body as any).productId,
-      transactionId: (body as any).orderId,
+      productId: body.productId,
+      transactionId: body.orderId,
       platform: 'android',
     };
   }
@@ -363,13 +363,13 @@ export class EconomyService {
       ),
     );
 
-    const session = response.data as any;
+    const session = response.data;
 
     if (session.payment_status !== 'paid') {
       throw new BadRequestException('Stripe payment not completed');
     }
 
-    const productId = (session as any).metadata?.product_id;
+    const productId = session.metadata?.product_id;
     if (!productId) {
       throw new BadRequestException(
         'Stripe session metadata missing product_id',
@@ -387,7 +387,7 @@ export class EconomyService {
     return {
       valid: true,
       productId,
-      transactionId: (session as any).payment_intent,
+      transactionId: session.payment_intent,
       platform: 'web',
     };
   }

@@ -6,7 +6,10 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import { UserProfile, ProfileVisitor } from './interfaces/user-profile.interface';
+import {
+  UserProfile,
+  ProfileVisitor,
+} from './interfaces/user-profile.interface';
 
 @Injectable()
 export class UsersService {

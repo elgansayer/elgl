@@ -127,7 +127,8 @@ describe('NlpService', () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve({ translations: [{ text: 'Hello / Welcome' }] }), // translation
+          json: () =>
+            Promise.resolve({ translations: [{ text: 'Hello / Welcome' }] }), // translation
         })
         .mockResolvedValueOnce({
           ok: true, // glossary check
@@ -160,16 +161,18 @@ describe('NlpService', () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve({
-            translations: [{ text: 'Translated [ja → en]: Konnichiwa' }],
-          }),
+          json: () =>
+            Promise.resolve({
+              translations: [{ text: 'Translated [ja → en]: Konnichiwa' }],
+            }),
         })
         .mockResolvedValueOnce({
           ok: true,
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve({ translations: [{ text: 'Konnichiwa' }] }),
+          json: () =>
+            Promise.resolve({ translations: [{ text: 'Konnichiwa' }] }),
         });
       mockGuess.mockReturnValue([{ alpha2: 'ja', score: 0.99 }]);
 
@@ -195,15 +198,17 @@ describe('NlpService', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve([
-            { displayTarget: 'I went to the store yesterday.' },
-          ]),
+          json: () =>
+            Promise.resolve([
+              { displayTarget: 'I went to the store yesterday.' },
+            ]),
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve([
-            { translations: [{ text: 'Grammar correction' }] },
-          ]),
+          json: () =>
+            Promise.resolve([
+              { translations: [{ text: 'Grammar correction' }] },
+            ]),
         });
       const dto = { text: 'I go to store yesterday.' };
       const result = await service.grammarCheck('user-1', true, dto);
@@ -220,13 +225,15 @@ describe('NlpService', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve([{ displayTarget: 'Everything is fine.' }]),
+          json: () =>
+            Promise.resolve([{ displayTarget: 'Everything is fine.' }]),
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve([
-            { translations: [{ text: 'Grammar correction' }] },
-          ]),
+          json: () =>
+            Promise.resolve([
+              { translations: [{ text: 'Grammar correction' }] },
+            ]),
         });
       const dto = { text: 'Everything is fine.' };
       const result = await service.grammarCheck('user-1', true, dto);
@@ -247,9 +254,10 @@ describe('NlpService', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve([
-            { translations: [{ text: 'Grammar correction' }] },
-          ]),
+          json: () =>
+            Promise.resolve([
+              { translations: [{ text: 'Grammar correction' }] },
+            ]),
         });
       const dto = { text: 'Needs a period' };
       const result = await service.grammarCheck('user-1', true, dto);
@@ -268,20 +276,21 @@ describe('NlpService', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve({
-            RecognitionStatus: 'Success',
-            NBest: [
-              {
-                PronunciationAssessment: {
-                  PronScore: 90,
-                  AccuracyScore: 95,
-                  FluencyScore: 85,
-                  CompletenessScore: 90,
+          json: () =>
+            Promise.resolve({
+              RecognitionStatus: 'Success',
+              NBest: [
+                {
+                  PronunciationAssessment: {
+                    PronScore: 90,
+                    AccuracyScore: 95,
+                    FluencyScore: 85,
+                    CompletenessScore: 90,
+                  },
+                  Words: [],
                 },
-                Words: [],
-              },
-            ],
-          }),
+              ],
+            }),
         });
       const dto = { target_text: 'Hello world test', audio_url: 'http://test' };
       const result = await service.pronunciationScore('user-1', true, dto);
@@ -300,20 +309,21 @@ describe('NlpService', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve({
-            RecognitionStatus: 'Success',
-            NBest: [
-              {
-                PronunciationAssessment: {
-                  PronScore: 90,
-                  AccuracyScore: 95,
-                  FluencyScore: 85,
-                  CompletenessScore: 90,
+          json: () =>
+            Promise.resolve({
+              RecognitionStatus: 'Success',
+              NBest: [
+                {
+                  PronunciationAssessment: {
+                    PronScore: 90,
+                    AccuracyScore: 95,
+                    FluencyScore: 85,
+                    CompletenessScore: 90,
+                  },
+                  Words: [],
                 },
-                Words: [],
-              },
-            ],
-          }),
+              ],
+            }),
         });
       const dto = { target_text: '   ', audio_url: 'http://test' };
       const result = await service.pronunciationScore('user-1', true, dto);
