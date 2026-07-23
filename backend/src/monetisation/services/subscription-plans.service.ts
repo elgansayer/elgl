@@ -88,7 +88,7 @@ export class SubscriptionPlansService {
     return this.plans.find((plan) => plan.id === id);
   }
 
-  async getHighlightedBenefits(planId: string): Promise<string[]> {
+  getHighlightedBenefits(planId: string): string[] {
     const plan = this.findById(planId);
     return plan?.highlighted_benefits || [];
   }

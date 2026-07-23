@@ -9,19 +9,19 @@ export class SubscriptionPlansController {
   ) {}
 
   @Get()
-  async findAll(): Promise<SubscriptionPlan[]> {
+  findAll(): SubscriptionPlan[] {
     return this.subscriptionPlansService.findAll();
   }
 
   @Get(':id')
-  async findById(
+  findById(
     @Param('id') id: string,
-  ): Promise<SubscriptionPlan | undefined> {
+  ): SubscriptionPlan | undefined {
     return this.subscriptionPlansService.findById(id);
   }
 
   @Get(':id/benefits')
-  async getHighlightedBenefits(@Param('id') id: string): Promise<string[]> {
+  getHighlightedBenefits(@Param('id') id: string): string[] {
     return this.subscriptionPlansService.getHighlightedBenefits(id);
   }
 }
