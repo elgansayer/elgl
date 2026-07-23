@@ -52,3 +52,6 @@ echo "npm version: $(npm --version)"
 if [ -f /etc/profile ]; then
     . /etc/profile
 fi
+
+# Ensure npm is in PATH for subsequent commands
+export PATH="$PATH:/usr/bin:/usr/local/bin"
