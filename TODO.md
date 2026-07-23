@@ -21,6 +21,7 @@
 - [x] Ensure Node.js and npm are installed in the environment (e.g., `apt install nodejs npm` on Debian/Ubuntu, or use `nvm` to install a specific version). After installation, verify with `node --version` and `npm --version`. (Current environment lacks npm, causing `cd backend && npm run lint` to fail.)
 - [ ] Install Node.js and npm in the environment (e.g., `apt install nodejs npm` on Debian/Ubuntu, or use `nvm` to install a specific version). After installation, verify with `node --version` and `npm --version`. (Current environment lacks npm, causing `cd backend && npm run lint` to fail.)
 - [ ] Install Node.js and npm in the environment (e.g., `apt install nodejs npm` on Debian/Ubuntu, or use `nvm` to install a specific version). After installation, verify with `node --version` and `npm --version`. (Current environment lacks npm, causing `cd backend && npm run lint` to fail.)
+- [ ] Install Node.js and npm in the environment (e.g., `apt install nodejs npm` on Debian/Ubuntu, or use `nvm` to install a specific version). After installation, verify with `node --version` and `npm --version`. (Current environment lacks npm, causing `cd backend && npm run lint` to fail.)
 - [ ] After Node.js and npm are installed, run `cd backend && npm install` to install backend dependencies, then `cd backend && npm run lint` to verify lint passes.
 
 ## Phase 2: User Profiles, PostGIS Matchmaking & Visitor Tracking
