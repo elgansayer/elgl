@@ -16,3 +16,9 @@ apt update && apt install -y nodejs npm
 
 # Verify installation
 node --version && npm --version
+
+# Now run the lint command in the backend directory
+cd backend && npm run lint
+
+# Now run the lint command in the backend directory
+cd backend && npm run lint
