@@ -56,10 +56,11 @@ export class UsersController {
     @Body('cover_photo_url') coverPhotoUrl: string,
   ): Promise<UserProfile | null> {
     if (!user) return null;
+    const profile = await this.usersService.getProfile(user.id);
     return this.usersService.updateProfile(
       user.id,
       { cover_photo_url: coverPhotoUrl },
-      false,
+      profile?.is_vip ?? false,
     );
   }
 
