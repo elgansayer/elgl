@@ -1,19 +1,19 @@
-import { Component, input, output, computed, signal, effect, inject, DestroyRef } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, input, output, computed, signal, effect, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { I18nService } from '../../services/i18n.service';
-import { CentrifugoService, CentrifugoEvent } from '../../services/centrifugo.service';
+import { CentrifugoService } from '../../services/centrifugo.service';
 
 export type CallState = 'connecting' | 'ringing' | 'connected' | 'ended';
 
 @Component({
   selector: 'app-voip-call',
   standalone: true,
-  imports: [AppButtonPrimaryComponent, AppButtonSecondaryComponent],
+  imports: [CommonModule, AppButtonPrimaryComponent, AppButtonSecondaryComponent],
   template: `
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" 
-         [attr.dir]="i18nService.currentLang() | rtlDir">
+         [attr.dir]="dirValue()">
       <div class="bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden border border-slate-700">
         <!-- Call Header -->
         <div class="ps-6 pe-6 pt-8 pb-4 text-center">
@@ -21,7 +21,7 @@ export type CallState = 'connecting' | 'ringing' | 'connected' | 'ended';
             {{ callerName() | slice:0:1 | uppercase }}
           </div>
           <h2 class="text-xl font-bold text-white mb-1">{{ callerName() }}</h2>
-          <p class="text-sm text-slate-400">{{ callStatusText() }}</p>
+          <p class="text-sm text-slate-400">{{ callStatusText }}</p>
           @if (callDuration()) {
             <p class="text-xs text-slate-500 mt-1">{{ callDuration() }}</p>
           }
@@ -112,7 +112,6 @@ export type CallState = 'connecting' | 'ringing' | 'connected' | 'ended';
 export class VoipCallComponent {
   readonly i18nService = inject(I18nService);
   private centrifugoService = inject(CentrifugoService);
-  private destroyRef = inject(DestroyRef);
 
   // Inputs
   readonly callerName = input.required<string>();
@@ -133,6 +132,12 @@ export class VoipCallComponent {
   private durationInterval: ReturnType<typeof setInterval> | null = null;
   private callStartTime: number | null = null;
 
+  readonly dirValue = computed(() => {
+    const lang = this.i18nService.currentLang();
+    const rtlLangs = ['ar', 'he', 'fa', 'ur'];
+    return rtlLangs.includes(lang.toLowerCase()) ? 'rtl' : 'ltr';
+  });
+
   constructor() {
     // Listen for call state changes to start/stop duration timer
     effect(() => {
@@ -146,15 +151,17 @@ export class VoipCallComponent {
     });
 
     // Listen for remote mute/unmute events via Centrifugo
-    this.centrifugoService.events.pipe(
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe((event: CentrifugoEvent) => {
-      if (event.channel === `room_${this.roomId()}`) {
-        const data = event.data as Record<string, unknown>;
-        if (data?.type === 'remote_mute') {
-          this.muted.set(true);
-        } else if (data?.type === 'remote_unmute') {
-          this.muted.set(false);
+    effect(() => {
+      const events = this.centrifugoService.events();
+      const roomChannel = `room_${this.roomId()}`;
+      for (const event of events) {
+        if (event.channel === roomChannel) {
+          const data = event.data as Record<string, unknown>;
+          if (data?.type === 'remote_mute') {
+            this.muted.set(true);
+          } else if (data?.type === 'remote_unmute') {
+            this.muted.set(false);
+          }
         }
       }
     });
