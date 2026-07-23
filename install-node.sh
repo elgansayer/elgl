@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e  # Exit on first error
 
 # Ensure the script itself is executable (in case it was not)
 chmod +x "$0"
@@ -9,7 +10,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Check if npm is already available. If yes, skip installation and just run lint.
 if command -v npm &> /dev/null; then
     echo "npm is already available. Skipping Node.js installation."
-    cd "$SCRIPT_DIR/backend" && npm run lint || true
+    cd "$SCRIPT_DIR/backend"
+    npm run lint
     exit 0
 fi
 
@@ -19,22 +21,24 @@ fi
 # Ensure xz-utils is installed for tar -xJf
 if ! command -v xz &> /dev/null; then
     echo "xz not found, installing xz-utils..."
-    apt-get update -qq && apt-get install -y -qq xz-utils || true
+    apt-get update -qq
+    apt-get install -y -qq xz-utils
 fi
 
 # Ensure curl is installed for downloading Node.js
 if ! command -v curl &> /dev/null; then
     echo "curl not found, installing curl..."
-    apt-get update -qq && apt-get install -y -qq curl || true
+    apt-get update -qq
+    apt-get install -y -qq curl
 fi
 
 # Download Node.js v22.14.0 (LTS)
 echo "Downloading Node.js v22.14.0..."
-curl -fsSL https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz -o /tmp/node.tar.xz || true
+curl -fsSL https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz -o /tmp/node.tar.xz
 
 echo "Extracting..."
-tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 || true
-rm /tmp/node.tar.xz || true
+tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1
+rm /tmp/node.tar.xz
 
 # Ensure /usr/local/bin is in PATH for this session
 export PATH="/usr/local/bin:$PATH"
@@ -50,23 +54,27 @@ fi
 
 # Verify npm is accessible
 echo "Verifying npm is accessible..."
-which npm || true
+which npm
 
 # Ensure /usr/local/bin is in PATH for subsequent commands (in case sourcing failed)
 export PATH="/usr/local/bin:$PATH"
 
 echo "Verifying..."
-node --version || true
-npm --version || true
+node --version
+npm --version
 echo "Node.js and npm installed successfully."
 
 # Install backend dependencies before linting
 echo "Installing backend dependencies..."
-cd "$SCRIPT_DIR/backend" || true
-npm install || true
+cd "$SCRIPT_DIR/backend"
+if [ ! -f package.json ]; then
+    echo "Error: backend/package.json not found. Cannot install dependencies."
+    exit 1
+fi
+npm install
 
 # Now run lint in backend
-npm run lint || true
+npm run lint
 echo "Lint completed."
 
 # Ensure PATH is exported for the parent shell (if sourced)
