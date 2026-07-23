@@ -26,4 +26,5 @@ This skill enforces universal coding and project management best practices acros
 *   **Continuous Verification:** Ensure all tests pass locally before committing.
 
 ## 5. Agent Instructions
+*   **MANDATORY TESTING RULE:** For absolutely everything we do, we must build a test. Code should never be generated, modified, or considered complete without a corresponding test verifying its functionality.
 *   Whenever generating code or refactoring, ensure strict adherence to these rules without exception.
