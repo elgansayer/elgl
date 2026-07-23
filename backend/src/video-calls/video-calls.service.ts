@@ -9,13 +9,13 @@ export class VideoCallsService {
 
   constructor(private configService: ConfigService) {
     this.roomService = new RoomServiceClient(
-      this.configService.get<string>('LIVEKIT_URL'),
-      this.configService.get<string>('LIVEKIT_API_KEY'),
-      this.configService.get<string>('LIVEKIT_SECRET'),
+      this.configService.get<string>('LIVEKIT_URL') as string,
+      this.configService.get<string>('LIVEKIT_API_KEY') as string,
+      this.configService.get<string>('LIVEKIT_SECRET') as string,
     );
   }
 
-  async createRoom(userId: string, remoteUserId: string) {
+  async createRoom(userId: string, _remoteUserId: string) {
     const roomName = `video_${uuidv4()}`;
 
     await this.roomService.createRoom({
@@ -40,8 +40,8 @@ export class VideoCallsService {
     canPublish: boolean,
   ): string {
     const at = new AccessToken(
-      this.configService.get<string>('LIVEKIT_API_KEY'),
-      this.configService.get<string>('LIVEKIT_SECRET'),
+      this.configService.get<string>('LIVEKIT_API_KEY') as string,
+      this.configService.get<string>('LIVEKIT_SECRET') as string,
       {
         identity: userId,
         ttl: '1h',

@@ -76,6 +76,7 @@ import { VideoCallsModule } from './video-calls/video-calls.module';
     SafetyModule,
     HobbyTagsModule,
     FavouritesModule,
+    VideoCallsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
