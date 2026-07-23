@@ -5,10 +5,11 @@ import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { UserService, UserProfile } from '../../services/user.service';
+import { CoverPhotoUploaderComponent } from '../cover-photo-uploader/cover-photo-uploader.component';
 
 @Component({
   selector: 'app-profile',
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, CoverPhotoUploaderComponent],
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.scss']
 })
@@ -91,5 +92,10 @@ export class ProfileComponent implements OnInit {
     if (!url) return;
     const audio = new Audio(url);
     audio.play();
+  }
+
+  onCoverUploaded(coverUrl: string): void {
+    this.profile.update(p => p ? { ...p, cover_photo_url: coverUrl } : p);
+    this.successMessage.set(this.i18n.translate('profile.coverUpdated'));
   }
 }

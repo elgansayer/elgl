@@ -4,6 +4,10 @@
   }
 
   @if (!isLoading() && profile()) {
+    <app-cover-photo-uploader
+      [currentCoverUrl]="profile()?.cover_photo_url"
+      (coverPhotoUploaded)="onCoverUploaded($event)"
+    />
     <section class="app-card app-padded">
       <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
         <div class="flex items-center gap-3">

@@ -4,6 +4,7 @@ import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import * as crypto from 'crypto';
 import { PresignedUrlDto } from './dto/presigned-url.dto';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class MediaService implements OnModuleInit {
@@ -11,7 +12,10 @@ export class MediaService implements OnModuleInit {
   private bucket!: string;
   private publicDomain!: string;
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly supabaseService: SupabaseService,
+  ) {}
 
   onModuleInit() {
     const endpoint = this.configService.get<string>('CLOUDFLARE_R2_ENDPOINT')!;
@@ -60,5 +64,32 @@ export class MediaService implements OnModuleInit {
       mediaUrl,
       objectKey,
     };
+  }
+
+  async generateCoverPresignedUrl(
+    userId: string,
+    dto: PresignedUrlDto,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    const coverDto = { ...dto, folder: 'covers' };
+    return this.generatePresignedUrl(userId, coverDto);
+  }
+
+  async confirmCoverUpload(
+    userId: string,
+    objectKey: string,
+  ): Promise<{ coverUrl: string }> {
+    const supabase = this.supabaseService.getClient();
+    const coverUrl = `${this.publicDomain}/${objectKey}`;
+
+    const { error } = await supabase
+      .from('users')
+      .update({ cover_photo_url: coverUrl })
+      .eq('id', userId);
+
+    if (error) {
+      throw new Error('Failed to update cover photo URL');
+    }
+
+    return { coverUrl };
   }
 }
