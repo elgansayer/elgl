@@ -1,5 +1,19 @@
-import { Injectable } from '@nestjs/common';
-import { SubscriptionPlan } from '../interfaces/subscription-plan.interface';
+import { Injectable, NotFoundException } from '@nestjs/common';
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  description: string;
+  price_ukp: number;
+  price_usd: number;
+  currency: string;
+  interval: 'month' | 'year';
+  features: string[];
+  is_popular?: boolean;
+  stripe_price_id?: string;
+  highlighted_benefits?: string[];
+  badge_text?: string;
+}
 
 @Injectable()
 export class SubscriptionPlansService {
@@ -7,89 +21,116 @@ export class SubscriptionPlansService {
     {
       id: 'free',
       name: 'Free',
-      description: 'Get started with basic features',
+      description: 'Get started with basic language exchange features',
       price_ukp: 0,
       price_usd: 0,
       currency: 'USD',
       interval: 'month',
       features: [
         '1 target language',
-        'Basic profile',
+        'Basic profile with bio',
+        'Text chat only',
         '10 AI translations per day',
-        'Standard search radius',
+        'Standard search radius (10km)',
         'Basic moments feed',
+        'Standard support',
       ],
-      highlighted_benefits: [],
+      highlighted_benefits: [
+        'Start learning immediately',
+        'Connect with native speakers',
+        'Access global community',
+      ],
     },
     {
       id: 'consumer_8_ukp_10_usd',
-      name: 'VIP Consumer',
-      description: 'Unlock premium language learning features',
+      name: 'Consumer VIP',
+      description: 'Unlock premium features for serious learners',
       price_ukp: 8,
       price_usd: 10,
       currency: 'USD',
       interval: 'month',
       is_popular: true,
+      stripe_price_id: 'price_consumer_vip_monthly',
+      badge_text: 'Most Popular',
       features: [
         'Up to 3 target languages',
         'Unlimited AI translations & corrections',
-        'Location spoofing (appear anywhere)',
-        'Extended search radius (global)',
-        'Priority in discovery algorithm',
-        'Ad-free experience',
+        'Voice & video messages',
+        'Location spoofing (mock location)',
+        'Priority in search results',
         'Advanced profile customization',
-        'Unlimited voice notes',
-        'Priority customer support',
+        'See who viewed your profile',
+        'Ad-free experience',
+        'Extended moments feed',
+        'Premium support',
         'Early access to new features',
       ],
       highlighted_benefits: [
-        'Unlimited AI translations',
-        'Location spoofing',
-        'Global discovery',
-        'Ad-free',
+        'Unlimited AI translations & corrections',
+        'Mock your location anywhere in the world',
+        'Priority visibility in discovery',
+        'Voice & video messaging',
+        'Ad-free experience',
       ],
-      stripe_price_id: 'price_vip_consumer_monthly',
     },
     {
       id: 'developer_20_ukp_26_usd',
-      name: 'VIP Developer',
-      description: 'For serious language learners and power users',
+      name: 'Developer Tier',
+      description: 'For power users who want programmatic access',
       price_ukp: 20,
       price_usd: 26,
       currency: 'USD',
       interval: 'month',
+      stripe_price_id: 'price_developer_tier_monthly',
+      badge_text: 'Power User',
       features: [
-        'Everything in VIP Consumer',
-        'API access for custom integrations',
-        'Advanced analytics dashboard',
-        'Custom study streak goals',
-        'Priority feature requests',
-        'Beta program access',
-        'Dedicated account manager',
-        'Custom pronunciation scoring models',
-        'Bulk export of vocabulary & flashcards',
-        'White-label profile options',
+        'Everything in Consumer VIP',
+        'Developer API key generation',
+        '600 API calls per minute rate limit',
+        'Developer analytics dashboard',
+        'Diagnostic logging access',
+        'Webhook integration support',
+        'Priority API support',
+        'Early access to new features',
+        'Custom integrations',
+        'Bulk vocabulary export',
       ],
       highlighted_benefits: [
-        'API access',
-        'Advanced analytics',
+        'Full API access with 600 RPM rate limit',
+        'Build integrations on top of HelloTalk',
+        'Real-time diagnostic logs & analytics',
+        'Priority developer support',
         'Custom integrations',
-        'Priority support',
       ],
-      stripe_price_id: 'price_vip_developer_monthly',
     },
   ];
 
-  findAll(): SubscriptionPlan[] {
+  getAllPlans(): SubscriptionPlan[] {
     return this.plans;
   }
 
-  findById(id: string): SubscriptionPlan | undefined {
-    return this.plans.find((plan) => plan.id === id);
+  getPlanById(id: string): SubscriptionPlan {
+    const plan = this.plans.find((p) => p.id === id);
+    if (!plan) {
+      throw new NotFoundException(`Subscription plan with id "${id}" not found`);
+    }
+    return plan;
   }
 
   getHighlightedBenefits(planId: string): string[] {
-    const plan = this.findById(planId);
-    return plan?.highlighted_benefits || [];
+    const plan = this.getPlanById(planId);
+    return plan.highlighted_benefits || [];
+  }
+
+  getPopularPlan(): SubscriptionPlan | undefined {
+    return this.plans.find((p) => p.is_popular);
+  }
+
+  getNonFreePlans(): SubscriptionPlan[] {
+    return this.plans.filter((p) => p.id !== 'free');
+  }
+
+  getFreePlan(): SubscriptionPlan | undefined {
+    return this.plans.find((p) => p.id === 'free');
   }
 }

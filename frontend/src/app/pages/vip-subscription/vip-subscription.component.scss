@@ -2,6 +2,18 @@
   display: block;
 }
 
+details summary::-webkit-details-marker {
+  display: none;
+}
+
+details summary {
+  list-style: none;
+}
+
+details[open] summary svg {
+  transform: rotate(180deg);
+}
+
 .overflow-x-auto {
   scrollbar-width: thin;
   scrollbar-color: rgba(168, 85, 247, 0.3) transparent;
@@ -18,11 +30,6 @@
     background-color: rgba(168, 85, 247, 0.3);
     border-radius: 3px;
   }
-}
-
-.rounded-2xl {
-  backdrop-filter: blur(12px);
-  background: linear-gradient(135deg, rgba(30, 27, 75, 0.8), rgba(15, 23, 42, 0.8));
 }
 
 table {

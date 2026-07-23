@@ -1,25 +1,23 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
-import { SubscriptionPlan, SubscriptionPlansService } from '../../services/subscription-plans.service';
-import { I18nService } from '../../services/i18n.service';
+import { RouterLink } from '@angular/router';
+import { SubscriptionPlansService, SubscriptionPlan } from '../../services/subscription-plans.service';
 
 @Component({
   selector: 'app-vip-subscription',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './vip-subscription.component.html',
   styleUrls: ['./vip-subscription.component.scss'],
 })
 export class VipSubscriptionComponent implements OnInit {
   private subscriptionPlansService = inject(SubscriptionPlansService);
-  private i18nService = inject(I18nService);
 
   readonly plans = signal<SubscriptionPlan[]>([]);
   readonly selectedPlanId = signal<string | null>(null);
   readonly isLoading = signal(true);
   readonly error = signal<string | null>(null);
-  readonly currentLang = this.i18nService.currentLang;
+  readonly billingInterval = signal<'month' | 'year'>('month');
 
   ngOnInit(): void {
     this.loadPlans();
@@ -46,13 +44,26 @@ export class VipSubscriptionComponent implements OnInit {
     this.selectedPlanId.set(planId);
   }
 
+  getPopularPlan(): SubscriptionPlan | undefined {
+    return this.plans().find((p) => p.is_popular);
+  }
+
+  getNonFreePlans(): SubscriptionPlan[] {
+    return this.plans().filter((p) => p.id !== 'free');
+  }
+
+  getFreePlan(): SubscriptionPlan | undefined {
+    return this.plans().find((p) => p.id === 'free');
+  }
+
   getPriceDisplay(plan: SubscriptionPlan): string {
-    if (plan.price_usd === 0) {
-      return 'Free';
-    }
-    const currencySymbol = plan.currency === 'USD' ? '$' : '£';
-    const price = plan.currency === 'USD' ? plan.price_usd : plan.price_ukp;
-    return `${currencySymbol}${price}/${plan.interval}`;
+    if (plan.price_usd === 0) return 'Free';
+    return `$${plan.price_usd}/mo`;
+  }
+
+  getPriceUkpDisplay(plan: SubscriptionPlan): string {
+    if (plan.price_ukp === 0) return 'Free';
+    return `£${plan.price_ukp}/mo`;
   }
 
   getPlanIcon(planId: string): string {
@@ -84,24 +95,31 @@ export class VipSubscriptionComponent implements OnInit {
   getBenefitIcon(benefit: string): string {
     const lower = benefit.toLowerCase();
     if (lower.includes('unlimited') || lower.includes('ai')) return '🤖';
-    if (lower.includes('location') || lower.includes('spoof')) return '📍';
-    if (lower.includes('global') || lower.includes('discovery')) return '🌍';
-    if (lower.includes('ad-free')) return '🚫';
+    if (lower.includes('location') || lower.includes('spoof') || lower.includes('mock')) return '📍';
+    if (lower.includes('global') || lower.includes('discovery') || lower.includes('search')) return '🌍';
+    if (lower.includes('ad-free') || lower.includes('ad')) return '🚫';
     if (lower.includes('api')) return '🔌';
-    if (lower.includes('analytics')) return '📊';
+    if (lower.includes('analytics') || lower.includes('diagnostic')) return '📊';
     if (lower.includes('support')) return '💬';
     if (lower.includes('early') || lower.includes('beta')) return '🔬';
-    if (lower.includes('export')) return '📤';
-    if (lower.includes('custom')) return '⚙️';
+    if (lower.includes('export') || lower.includes('bulk')) return '📤';
+    if (lower.includes('custom') || lower.includes('integration')) return '⚙️';
+    if (lower.includes('voice') || lower.includes('video')) return '🎤';
+    if (lower.includes('profile') || lower.includes('visitor')) return '👤';
+    if (lower.includes('priority')) return '⭐';
     return '✅';
   }
 
   subscribe(plan: SubscriptionPlan): void {
     if (plan.price_usd === 0) {
-      window.location.href = '/dashboard';
+      window.location.href = '/discovery';
       return;
     }
-    console.log(`Subscribing to plan: ${plan.id}`);
     // TODO: Implement Stripe checkout redirect
+    console.log(`Subscribing to plan: ${plan.id}`);
+  }
+
+  retry(): void {
+    this.loadPlans();
   }
 }

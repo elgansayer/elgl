@@ -1,6 +1,5 @@
-import { Controller, Get, Param } from '@nestjs/common';
-import { SubscriptionPlansService } from '../services/subscription-plans.service';
-import { SubscriptionPlan } from '../interfaces/subscription-plan.interface';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { SubscriptionPlansService, SubscriptionPlan } from '../services/subscription-plans.service';
 
 @Controller('subscription-plans')
 export class SubscriptionPlansController {
@@ -9,13 +8,28 @@ export class SubscriptionPlansController {
   ) {}
 
   @Get()
-  findAll(): SubscriptionPlan[] {
-    return this.subscriptionPlansService.findAll();
+  getAllPlans(): SubscriptionPlan[] {
+    return this.subscriptionPlansService.getAllPlans();
+  }
+
+  @Get('popular')
+  getPopularPlan(): SubscriptionPlan | undefined {
+    return this.subscriptionPlansService.getPopularPlan();
+  }
+
+  @Get('free')
+  getFreePlan(): SubscriptionPlan | undefined {
+    return this.subscriptionPlansService.getFreePlan();
+  }
+
+  @Get('paid')
+  getPaidPlans(): SubscriptionPlan[] {
+    return this.subscriptionPlansService.getNonFreePlans();
   }
 
   @Get(':id')
-  findById(@Param('id') id: string): SubscriptionPlan | undefined {
-    return this.subscriptionPlansService.findById(id);
+  getPlanById(@Param('id') id: string): SubscriptionPlan {
+    return this.subscriptionPlansService.getPlanById(id);
   }
 
   @Get(':id/benefits')
