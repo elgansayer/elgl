@@ -48,6 +48,7 @@
 - [ ] Install Node.js and npm in the environment (e.g., `apt install nodejs npm` on Debian/Ubuntu, or use `nvm` to install a specific version). After installation, verify with `node --version` and `npm --version`.
 - [x] Actually install Node.js and npm in the environment (e.g., `apt install nodejs npm` on Debian/Ubuntu, or use `nvm` to install a specific version). After installation, verify with `node --version` and `npm --version`.
 - [ ] Install Node.js and npm using nvm (recommended) or apt. After installation, verify with `node --version` and `npm --version`. (Current environment lacks npm, causing `cd backend && npm run lint` to fail.)
+- [ ] Actually install Node.js and npm in the environment (e.g., `apt install nodejs npm` on Debian/Ubuntu, or use `nvm` to install a specific version). After installation, verify with `node --version` and `npm --version`. (Current environment lacks npm, causing `cd backend && npm run lint` to fail.)
 
 ## Phase 2: User Profiles, PostGIS Matchmaking & Visitor Tracking
 - [x] Create NestJS `UsersController` & `UsersService` to handle profile updates (bio, native language, target languages up to 3 for VIP, privacy toggles).
