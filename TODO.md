@@ -238,6 +238,13 @@
   - RTL-safe logical CSS classes.
   - i18n translation keys for menu labels.
 - [ ] Verify that the long-press context menu component is fully functional and passes lint/tests.
+- [ ] Implement the `LongPressContextMenuComponent` with:
+  - Long-press detection (touchstart/touchend with timer) on message bubbles.
+  - Popup menu with options: Copy, Favourite, Report.
+  - Integration with existing services (copy to clipboard, favourite service, report service).
+  - Unit tests for the component.
+  - RTL-safe logical CSS classes.
+  - i18n translation keys for menu labels.
 
 ## Phase 17: Audio & Video Calling (WebRTC / LiveKit)
 - [ ] Build Incoming Call modal with ringtone audio and accept/reject controls.
