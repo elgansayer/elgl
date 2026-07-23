@@ -41,14 +41,15 @@
 
   <!-- Error State -->
   @if (error()) {
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-8 text-center">
-        <p class="text-red-600 dark:text-red-400 text-lg mb-4">{{ error() }}</p>
-        <app-button-primary (clicked)="loadPlans()">
+    <div class="max-w-md mx-auto px-4 py-8">
+      <div class="bg-red-900/50 border border-red-700 rounded-lg p-4 text-center">
+        <p class="text-red-200">{{ error() }}</p>
+        <button (click)="loadPlans()" 
+                class="mt-3 px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded transition-colors">
           Try Again
-        </app-button-primary>
+        </button>
       </div>
-    </section>
+    </div>
   }
 
   <!-- Plans Section -->
