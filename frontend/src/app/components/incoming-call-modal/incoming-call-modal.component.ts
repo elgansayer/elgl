@@ -1,4 +1,4 @@
-import { Component, effect, input, output } from '@angular/core';
+import { Component, input, output, effect, OnDestroy, viewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 export interface IncomingCallData {
@@ -14,31 +14,31 @@ export interface IncomingCallData {
   standalone: true,
   imports: [CommonModule],
   template: `
-    @if (callData()) {
+    @if (callData(); as data) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
         <div class="bg-slate-900 border border-slate-700 rounded-3xl p-8 w-full max-w-sm mx-4 shadow-2xl animate-in zoom-in-95 duration-200">
           <!-- Caller Info -->
           <div class="flex flex-col items-center space-y-4 mb-8">
             <div class="relative">
-              @if (callData()!.callerAvatarUrl) {
+              @if (data.callerAvatarUrl) {
                 <img
-                  [src]="callData()!.callerAvatarUrl"
-                  [alt]="callData()!.callerName"
+                  [src]="data.callerAvatarUrl"
+                  [alt]="data.callerName"
                   class="w-24 h-24 rounded-full object-cover ring-4 ring-purple-500/50"
                 />
               } @else {
                 <div class="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center ring-4 ring-purple-500/50">
                   <span class="text-4xl font-bold text-white">
-                    {{ callData()!.callerName.charAt(0).toUpperCase() }}
+                    {{ data.callerName.charAt(0).toUpperCase() }}
                   </span>
                 </div>
               }
               <div class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-green-500 border-4 border-slate-900"></div>
             </div>
             <div class="text-center">
-              <h2 class="text-2xl font-bold text-white">{{ callData()!.callerName }}</h2>
+              <h2 class="text-2xl font-bold text-white">{{ data.callerName }}</h2>
               <p class="text-slate-400 mt-1">
-                {{ callData()!.isVideoCall ? 'Incoming video call...' : 'Incoming voice call...' }}
+                {{ data.isVideoCall ? 'Incoming video call...' : 'Incoming voice call...' }}
               </p>
             </div>
           </div>
@@ -67,7 +67,7 @@ export interface IncomingCallData {
               aria-label="Accept call"
             >
               <div class="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center group-hover:bg-green-500/40 transition-colors duration-150 animate-pulse">
-                @if (callData()!.isVideoCall) {
+                @if (data.isVideoCall) {
                   <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polygon points="23 7 16 12 23 17 23 7"></polygon>
                     <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
@@ -86,7 +86,7 @@ export interface IncomingCallData {
     }
 
     <!-- Hidden audio element for ringtone -->
-    @if (callData() && ringtoneUrl()) {
+    @if (callData()) {
       <audio #ringtoneAudio [src]="ringtoneUrl()" loop autoplay class="hidden"></audio>
     }
   `,
@@ -100,12 +100,12 @@ export interface IncomingCallData {
     }
   `]
 })
-export class IncomingCallModalComponent {
+export class IncomingCallModalComponent implements OnDestroy {
   /** Input: The incoming call invitation data */
   callData = input<IncomingCallData | null>(null);
 
   /** Input: URL to a ringtone audio file (optional, defaults to a built-in beep) */
-  ringtoneUrl = input<string>('');
+  ringtoneUrl = input<string>('/assets/audio/ringtone.mp3');
 
   /** Emits when user accepts the call */
   acceptCall = output<IncomingCallData>();
@@ -113,8 +113,12 @@ export class IncomingCallModalComponent {
   /** Emits when user declines the call */
   declineCall = output<IncomingCallData>();
 
-  /** Internal signal to track the audio element for cleanup */
-  private audioElement: HTMLAudioElement | null = null;
+  /** Reference to the audio element in the template */
+  private ringtoneAudioRef = viewChild<ElementRef<HTMLAudioElement>>('ringtoneAudio');
+
+  private audioContext: AudioContext | null = null;
+  private oscillator: OscillatorNode | null = null;
+  private gainNode: GainNode | null = null;
 
   constructor() {
     // Auto-play ringtone when callData appears
@@ -131,52 +135,70 @@ export class IncomingCallModalComponent {
   private playRingtone(): void {
     const url = this.ringtoneUrl();
     if (!url) {
-      // Fallback: generate a simple beep using Web Audio API
       this.playFallbackBeep();
       return;
     }
-    this.audioElement = new Audio(url);
-    this.audioElement.loop = true;
-    this.audioElement.play().catch(() => {
-      // Autoplay may be blocked; fallback to beep
+
+    // Try to play the audio file via the template audio element
+    const audioEl = this.ringtoneAudioRef()?.nativeElement;
+    if (audioEl) {
+      audioEl.loop = true;
+      audioEl.volume = 0.5;
+      audioEl.play().catch(() => {
+        // Autoplay may be blocked; fallback to beep
+        this.playFallbackBeep();
+      });
+    } else {
+      // Fallback if template element not available
       this.playFallbackBeep();
-    });
+    }
   }
 
   private playFallbackBeep(): void {
     try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      oscillator.frequency.value = 440; // A4 note
-      oscillator.type = 'sine';
-      gainNode.gain.value = 0.3;
-      oscillator.start();
-      // Store reference to stop later
-      (this as any).__oscillator = oscillator;
-      (this as any).__audioCtx = audioCtx;
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.oscillator = this.audioContext.createOscillator();
+      this.gainNode = this.audioContext.createGain();
+      
+      this.oscillator.connect(this.gainNode);
+      this.gainNode.connect(this.audioContext.destination);
+      
+      this.oscillator.frequency.value = 440; // A4 note
+      this.oscillator.type = 'sine';
+      this.gainNode.gain.value = 0.3;
+      
+      this.oscillator.start();
     } catch {
       // Silently fail if audio context not available
     }
   }
 
   private stopRingtone(): void {
-    if (this.audioElement) {
-      this.audioElement.pause();
-      this.audioElement = null;
+    // Stop HTML audio element
+    const audioEl = this.ringtoneAudioRef()?.nativeElement;
+    if (audioEl) {
+      audioEl.pause();
+      audioEl.currentTime = 0;
     }
+
     // Stop fallback beep
-    const osc = (this as any).__oscillator;
-    const ctx = (this as any).__audioCtx;
-    if (osc) {
-      osc.stop();
-      (this as any).__oscillator = null;
+    if (this.oscillator) {
+      try {
+        this.oscillator.stop();
+      } catch {
+        // Already stopped
+      }
+      this.oscillator = null;
     }
-    if (ctx && ctx.state !== 'closed') {
-      ctx.close();
-      (this as any).__audioCtx = null;
+
+    if (this.gainNode) {
+      this.gainNode.disconnect();
+      this.gainNode = null;
+    }
+
+    if (this.audioContext && this.audioContext.state !== 'closed') {
+      this.audioContext.close();
+      this.audioContext = null;
     }
   }
 
@@ -194,5 +216,9 @@ export class IncomingCallModalComponent {
       this.stopRingtone();
       this.declineCall.emit(data);
     }
+  }
+
+  ngOnDestroy(): void {
+    this.stopRingtone();
   }
 }

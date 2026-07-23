@@ -143,4 +143,10 @@
   <main class="flex-1 pb-12">
     <router-outlet></router-outlet>
   </main>
+  <!-- Incoming Call Modal -->
+  <app-incoming-call-modal
+    [callData]="incomingCallData()"
+    (acceptCall)="onAcceptCall($event)"
+    (declineCall)="onDeclineCall($event)"
+  />
 </div>
