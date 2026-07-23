@@ -24,4 +24,11 @@ export const routes: Routes = [
   { path: 'visitors', component: VisitorLogsComponent },
   { path: 'developer', component: DeveloperDashboardComponent },
   { path: 'settings', component: SettingsComponent },
+  {
+    path: 'hobby-tags',
+    loadComponent: () =>
+      import('./components/hobby-tags/hobby-tags.component').then(
+        (m) => m.HobbyTagsComponent
+      ),
+  },
 ];

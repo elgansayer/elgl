@@ -17,6 +17,7 @@ import { AudioRoomsModule } from './audio-rooms/audio-rooms.module';
 import { MonetisationModule } from './monetisation/monetisation.module';
 import { EconomyModule } from './economy/economy.module';
 import { SafetyModule } from './safety/safety.module';
+import { HobbyTagsModule } from './hobby-tags/hobby-tags.module';
 
 @Module({
   imports: [
@@ -69,6 +70,7 @@ import { SafetyModule } from './safety/safety.module';
     MonetisationModule,
     EconomyModule,
     SafetyModule,
+    HobbyTagsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
