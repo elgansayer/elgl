@@ -270,20 +270,6 @@
 
 ## Phase 18: Monetisation & VIP Tiers
 - [ ] Build VIP Subscription showcase page detailing all premium benefits.
-- [ ] Actually implement the VIP Subscription showcase page (`SubscriptionShowcaseComponent`) with:
-  - Display of all three tiers (Free, Consumer 8 UKP / $10 USD, Developer 20 UKP / $26 USD) with feature comparison.
-  - Dual currency pricing display (UKP / USD) per AGENTS.md Rule 2.
-  - "Most Popular" badge on Consumer tier.
-  - CTA buttons that integrate with Stripe Checkout (or trigger "Not Implemented" toast if Stripe integration is pending).
-  - RTL-safe logical CSS classes.
-  - i18n translation keys for all text.
-  - Unit tests for the component.
-  - Route configuration in Angular router.
-  - Backend endpoint (`GET /monetisation/plans`) returning subscription plan data from `SubscriptionPlansService`.
-  - Integration with existing `SubscriptionPlansService` in frontend to fetch plan data.
-  - Pixel-perfect dark theme matching HelloTalk screenshots (`#121212` backgrounds, neon accents).
-  - No hardcoded strings (all text via `TranslatePipe`).
-  - No dead buttons (every button must have a functional handler or "Not Implemented" toast).
 - [ ] Integrate Stripe Checkout for Monthly (8 UKP / $10 USD) and Yearly (50 UKP / $63 USD) plans.
 - [ ] Build "Restore Purchases" button for app store compliance.
 
