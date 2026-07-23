@@ -15,6 +15,7 @@ export interface SubscriptionPlan {
   is_popular?: boolean;
   stripe_price_id?: string;
   highlighted_benefits?: string[];
+  badge_text?: string;
 }
 
 @Injectable({
