@@ -4,6 +4,8 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
@@ -43,7 +45,9 @@ export class MonetisationService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
+    @Inject(forwardRef(() => AppleNotificationService))
     private readonly appleNotificationService: AppleNotificationService,
+    @Inject(forwardRef(() => GooglePlayNotificationService))
     private readonly googlePlayNotificationService: GooglePlayNotificationService,
   ) {}
 

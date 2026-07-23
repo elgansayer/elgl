@@ -1,11 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
+import { MediaService } from '../media/media.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
 describe('UsersController', () => {
   let controller: UsersController;
   let usersService: UsersService;
+  let mediaService: MediaService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -16,6 +18,14 @@ describe('UsersController', () => {
           useValue: {
             getProfile: jest.fn(),
             updateProfile: jest.fn(),
+          },
+        },
+        {
+          provide: MediaService,
+          useValue: {
+            generatePresignedUrl: jest.fn(),
+            generateCoverPresignedUrl: jest.fn(),
+            confirmCoverUpload: jest.fn(),
           },
         },
       ],

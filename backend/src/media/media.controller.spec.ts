@@ -14,7 +14,8 @@ describe('MediaController', () => {
         {
           provide: MediaService,
           useValue: {
-            generatePresignedUrl: jest.fn(),
+            generateCoverPresignedUrl: jest.fn(),
+            confirmCoverUpload: jest.fn(),
           },
         },
       ],
@@ -35,37 +36,53 @@ describe('MediaController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('getPresignedUrl', () => {
-    it('should return null if user is not provided', async () => {
-      const result = await controller.getPresignedUrl(null, {} as any);
-      expect(result).toBeNull();
-      expect(mediaService.generatePresignedUrl).not.toHaveBeenCalled();
-    });
-
-    it('should call service generatePresignedUrl when user is provided', async () => {
+  describe('getCoverPresignedUrl', () => {
+    it('should call service generateCoverPresignedUrl', async () => {
       const dto: any = {
         filename: 'test.jpg',
-        folder: 'posts',
         contentType: 'image/jpeg',
       };
       const expectedResponse = {
         uploadUrl: 'https://upload.url',
         mediaUrl: 'https://media.url',
-        objectKey: 'posts/user-1/test.jpg',
+        objectKey: 'covers/user-1/test.jpg',
       };
 
-      (mediaService.generatePresignedUrl as jest.Mock).mockResolvedValue(
+      (mediaService.generateCoverPresignedUrl as jest.Mock).mockResolvedValue(
         expectedResponse,
       );
 
-      const result = await controller.getPresignedUrl(
-        { id: 'user-1' } as any,
+      const result = await controller.getCoverPresignedUrl(
+        { user: { id: 'user-1' } } as any,
         dto,
       );
 
-      expect(mediaService.generatePresignedUrl).toHaveBeenCalledWith(
+      expect(mediaService.generateCoverPresignedUrl).toHaveBeenCalledWith(
         'user-1',
         dto,
+      );
+      expect(result).toEqual(expectedResponse);
+    });
+  });
+
+  describe('confirmCoverUpload', () => {
+    it('should call service confirmCoverUpload', async () => {
+      const expectedResponse = {
+        coverUrl: 'https://media.url/covers/user-1/test.jpg',
+      };
+
+      (mediaService.confirmCoverUpload as jest.Mock).mockResolvedValue(
+        expectedResponse,
+      );
+
+      const result = await controller.confirmCoverUpload(
+        { user: { id: 'user-1' } } as any,
+        'covers/user-1/test.jpg',
+      );
+
+      expect(mediaService.confirmCoverUpload).toHaveBeenCalledWith(
+        'user-1',
+        'covers/user-1/test.jpg',
       );
       expect(result).toEqual(expectedResponse);
     });

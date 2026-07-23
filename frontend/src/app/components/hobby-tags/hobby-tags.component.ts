@@ -58,7 +58,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
 
       <!-- User's Hobby Tags -->
       <div class="flex flex-wrap gap-3">
-        @for (userTag of hobbyTagsService.userTags(); track userTag.id) {
+        @for (userTag of userTags(); track userTag.id) {
           <div class="group relative">
             <app-pill
               [colour]="getProficiencyColour(userTag.proficiency_level)"
@@ -66,8 +66,8 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
               [customClass]="'pr-8 cursor-pointer hover:ring-2 hover:ring-indigo-400'"
             >
               <span class="flex items-center gap-1.5">
-                <span>{{ userTag.hobby_tag.icon }}</span>
-                <span>{{ userTag.hobby_tag.name }}</span>
+                <span>{{ userTag.hobby_tag?.icon }}</span>
+                <span>{{ userTag.hobby_tag?.name }}</span>
                 <span class="text-xs opacity-60">{{ userTag.proficiency_level }}</span>
               </span>
             </app-pill>
@@ -111,13 +111,13 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
       }
 
       <!-- Vocabulary Section -->
-      @if (hobbyTagsService.userVocabulary().length > 0) {
+      @if (userVocabulary().length > 0) {
         <div class="mt-6">
           <h3 class="text-lg font-semibold text-slate-200 mb-3">
             Vocabulary from Your Hobbies
           </h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            @for (word of hobbyTagsService.userVocabulary(); track word.id) {
+            @for (word of userVocabulary(); track word.id) {
               <app-card variant="outlined" customClass="p-3">
                 <div class="flex items-start justify-between">
                   <div>
@@ -153,11 +153,15 @@ export class HobbyTagsComponent implements OnInit {
   readonly searchQuery = signal('');
   readonly selectedTagForProficiency = signal<string | null>(null);
 
+  readonly allTags = signal<HobbyTag[]>([]);
+  readonly userTags = signal<UserHobbyTag[]>([]);
+  readonly userVocabulary = signal<any[]>([]); // Using any for simplicity as VocabularyItem isn't exported from the component
+
   readonly proficiencyLevels = ['beginner', 'intermediate', 'advanced', 'native'];
 
   readonly filteredTags = computed(() => {
     const query = this.searchQuery().toLowerCase();
-    return this.hobbyTagsService.allTags().filter(
+    return this.allTags().filter(
       (tag) =>
         tag.name.toLowerCase().includes(query) ||
         tag.category.toLowerCase().includes(query)
@@ -167,55 +171,71 @@ export class HobbyTagsComponent implements OnInit {
   constructor(public hobbyTagsService: HobbyTagsService) {}
 
   ngOnInit(): void {
-    this.hobbyTagsService.fetchAllTags();
-    this.hobbyTagsService.fetchUserTags();
-    this.hobbyTagsService.fetchUserVocabulary();
+    this.fetchAllTags();
+    this.fetchUserTags();
+    this.fetchUserVocabulary();
+  }
+
+  fetchAllTags(): void {
+    this.hobbyTagsService.getAllTags().subscribe(tags => this.allTags.set(tags));
+  }
+
+  fetchUserTags(): void {
+    this.hobbyTagsService.getMyTags().subscribe(tags => this.userTags.set(tags));
+  }
+
+  fetchUserVocabulary(): void {
+    this.hobbyTagsService.getVocabulary('en').subscribe(vocab => this.userVocabulary.set(vocab));
   }
 
   isTagAdded(tagId: string): boolean {
-    return this.hobbyTagsService.userTags().some((t) => t.hobby_tag_id === tagId);
+    return this.userTags().some((t) => t.hobby_tag_id === tagId);
   }
 
   addTag(tagId: string): void {
-    this.hobbyTagsService.addTag(tagId);
+    this.hobbyTagsService.addMyTag(tagId, 0).subscribe(() => this.fetchUserTags());
   }
 
   removeTag(tagId: string): void {
-    this.hobbyTagsService.removeTag(tagId);
-    if (this.selectedTagForProficiency() === tagId) {
-      this.selectedTagForProficiency.set(null);
-    }
+    this.hobbyTagsService.removeMyTag(tagId).subscribe(() => {
+      this.fetchUserTags();
+      if (this.selectedTagForProficiency() === tagId) {
+        this.selectedTagForProficiency.set(null);
+      }
+    });
   }
 
   updateProficiency(tagId: string, level: string): void {
-    this.hobbyTagsService.updateProficiency(tagId, level);
+    const levelNum = this.proficiencyLevels.indexOf(level);
+    this.hobbyTagsService.updateProficiency(tagId, levelNum).subscribe(() => this.fetchUserTags());
   }
 
   getTagName(tagId: string): string {
-    const tag = this.hobbyTagsService.userTags().find(
+    const tag = this.userTags().find(
       (t) => t.hobby_tag_id === tagId
     );
-    return tag?.hobby_tag.name || '';
+    return tag?.hobby_tag?.name || '';
   }
 
   getCurrentProficiency(tagId: string): string {
-    const tag = this.hobbyTagsService.userTags().find(
+    const tag = this.userTags().find(
       (t) => t.hobby_tag_id === tagId
     );
-    return tag?.proficiency_level || 'beginner';
+    const lvl = tag?.proficiency_level || 0;
+    return this.proficiencyLevels[lvl] || 'beginner';
   }
 
-  getProficiencyColour(level: string): 'success' | 'warning' | 'info' | 'primary' {
+  getProficiencyColour(level: number): 'success' | 'warning' | 'info' | 'primary' | 'neutral' {
     switch (level) {
-      case 'beginner': return 'success';
-      case 'intermediate': return 'warning';
-      case 'advanced': return 'info';
-      case 'native': return 'primary';
+      case 0: return 'success';
+      case 1: return 'warning';
+      case 2: return 'info';
+      case 3: return 'primary';
       default: return 'neutral';
     }
   }
 
-  getDifficultyColour(difficulty: string): 'success' | 'warning' | 'danger' {
+  getDifficultyColour(difficulty: string): 'success' | 'warning' | 'danger' | 'neutral' {
     switch (difficulty) {
       case 'easy': return 'success';
       case 'medium': return 'warning';

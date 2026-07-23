@@ -209,40 +209,43 @@ describe('ChatService', () => {
   });
 
   describe('addFavourite', () => {
-    it('should save favourite record and return it', async () => {
+    it('should save favourite record and return void', async () => {
       const dto: any = { message_id: 'msg-1', note_text: 'My favourite note' };
-      const savedFavourite = {
-        id: 'fav-1',
-        user_id: 'user-1',
-        message_id: 'msg-1',
-        note_text: 'My favourite note',
-      };
+      const message = { id: 'msg-1', text_content: 'Hello' };
 
       mockQueryBuilder.single.mockResolvedValue({
-        data: savedFavourite,
+        data: message,
         error: null,
       });
+      // Override insert to return a promise resolving to { error: null }
+      mockQueryBuilder.insert.mockResolvedValueOnce({ error: null });
 
-      const result = await service.addFavourite('user-1', dto);
+      await service.addFavourite('user-1', dto);
 
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('chat_messages');
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('favourites');
       expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
         user_id: 'user-1',
-        message_id: 'msg-1',
-        note_text: 'My favourite note',
+        item_type: 'message',
+        item_payload: message,
+        notes: 'My favourite note',
       });
-      expect(result).toEqual(savedFavourite);
+      
+      // Restore insert mock
+      mockQueryBuilder.insert.mockReturnThis();
     });
 
     it('should throw Error when addFavourite fails with error message', async () => {
       const dto: any = { message_id: 'msg-1' };
+      
+      // Simulate message not found
       mockQueryBuilder.single.mockResolvedValue({
         data: null,
-        error: { message: 'Duplicate record' },
+        error: { message: 'Message not found error' },
       });
 
       await expect(service.addFavourite('user-1', dto)).rejects.toThrow(
-        'Failed to add favourite: Duplicate record',
+        'Message not found',
       );
     });
   });

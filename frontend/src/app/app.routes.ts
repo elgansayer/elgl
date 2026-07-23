@@ -9,7 +9,6 @@ import { VocabularyDashboardComponent } from './components/vocabulary-dashboard/
 import { MomentsFeedComponent } from './components/moments-feed/moments-feed.component';
 import { AudioRoomComponent } from './components/audio-room/audio-room.component';
 import { DeveloperDashboardComponent } from './components/developer-dashboard/developer-dashboard.component';
-import { SettingsComponent } from './components/settings/settings.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'discovery', pathMatch: 'full' },
@@ -23,7 +22,6 @@ export const routes: Routes = [
   { path: 'profile', component: ProfileComponent },
   { path: 'visitors', component: VisitorLogsComponent },
   { path: 'developer', component: DeveloperDashboardComponent },
-  { path: 'settings', component: SettingsComponent },
   {
     path: 'hobby-tags',
     loadComponent: () =>

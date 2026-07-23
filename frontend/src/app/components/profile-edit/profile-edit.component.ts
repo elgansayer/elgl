@@ -63,9 +63,9 @@ import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-c
       </button>
     </div>
 
-    @if (showCropper()) {
+    @if (showCropper() && selectedFile()) {
       <app-cover-photo-cropper
-        [imageFile]="selectedFile()"
+        [imageFile]="selectedFile()!"
         (saveCover)="onSaveCroppedCover($event)"
         (cancel)="showCropper.set(false)"
       />

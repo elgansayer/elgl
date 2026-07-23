@@ -15,6 +15,8 @@
   "private": true,
   "packageManager": "npm@11.12.1",
   "dependencies": {
+    "@angular/animations": "^22.0.8",
+    "@angular/cdk": "^22.0.6",
     "@angular/common": "^22.0.0",
     "@angular/compiler": "^22.0.0",
     "@angular/core": "^22.0.0",
@@ -24,6 +26,7 @@
     "@supabase/supabase-js": "^2.110.8",
     "centrifuge": "^5.7.0",
     "livekit-client": "^2.20.2",
+    "ngx-image-cropper": "^9.1.6",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

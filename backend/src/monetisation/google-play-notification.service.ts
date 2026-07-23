@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
@@ -46,6 +46,7 @@ export class GooglePlayNotificationService {
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
     private readonly supabaseService: SupabaseService,
+    @Inject(forwardRef(() => MonetisationService))
     private readonly monetisationService: MonetisationService,
   ) {}
 

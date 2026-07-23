@@ -16,7 +16,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           <input type="text"
                  [(ngModel)]="query"
                  (input)="onSearch()"
-                 placeholder="{{ 'chatSearch.placeholder' | translate }}"
+                 placeholder="{{ 'chatSearch.placeholder' | t }}"
                  class="w-full bg-gray-700 text-white text-sm rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-400" />
           <span class="absolute left-3 top-2.5 text-gray-400 text-sm">🔍</span>
         </div>
@@ -35,11 +35,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
       <!-- Results -->
       <div class="overflow-y-auto max-h-64">
         <div *ngIf="isSearching()" class="p-4 text-center text-sm text-gray-400">
-          {{ 'chatSearch.searching' | translate }}
+          {{ 'chatSearch.searching' | t }}
         </div>
         <div *ngIf="!isSearching() && results().length === 0 && query().length > 0"
              class="p-4 text-center text-sm text-gray-400">
-          {{ 'chatSearch.noResults' | translate }}
+          {{ 'chatSearch.noResults' | t }}
         </div>
         <button *ngFor="let msg of results()"
                 (click)="onMessageSelect.emit(msg)"
@@ -101,27 +101,3 @@ export class ChatSearchComponent {
     }, 300);
   }
 }
-````
-
-Now let me refactor the ChatRoomComponent to use the new sub-components:
-
-frontend/src/app/components/chat-room/chat-room.component.ts
-````typescript
-<<<<<<< SEARCH
-import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
-import { TranslatePipe } from '../../services/translate.pipe';
-import { I18nService } from '../../services/i18n.service';
-import { CentrifugeService } from '../../services/centrifuge.service';
-import { ChatService, ChatMessage } from '../../services/chat.service';
-import { AuthService } from '../../services/auth.service';
-import { VocabularyStore } from '../../services/vocabulary.store';
-import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
-import { DoodlePadComponent } from '../doodle-pad/doodle-pad.component';
-import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.component';
-import { TokenisedTextComponent } from '../tokenised-text/tokenised-text.component';
-import { WordDefinitionModalComponent } from '../word-definition-modal/word-definition-modal.component';
-
-@Component({

@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -38,6 +38,7 @@ export class AppleNotificationService {
   constructor(
     private readonly configService: ConfigService,
     private readonly supabaseService: SupabaseService,
+    @Inject(forwardRef(() => MonetisationService))
     private readonly monetisationService: MonetisationService,
   ) {
     this.rootCAs = [

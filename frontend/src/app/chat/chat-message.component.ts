@@ -1,24 +1,24 @@
 import { Component, input, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { LongPressContextMenuComponent } from '../shared/long-press-context-menu/long-press-context-menu.component';
+import { LongPressContextMenuComponent } from '../components/long-press-context-menu/long-press-context-menu.component';
 import { ChatMessage } from '../services/chat.service';
 import { FavouriteService } from '../services/favourite.service';
 import { SafetyService } from '../services/safety.service';
 
 @Component({
-  selector: 'app-chat-message',
+  selector: 'app-chat-message-alt',
   standalone: true,
   imports: [LongPressContextMenuComponent, DatePipe],
   template: `
     <div class="flex flex-col" [class.items-end]="isOwnMessage()" [class.items-start]="!isOwnMessage()">
       <app-long-press-context-menu 
-        [message]="message()" 
-        [channelId]="channelId()"
-        [showCopy]="true"
-        [showFavourite]="true"
-        [showReport]="!isOwnMessage()"
-        (favouriteAdded)="onFavouriteAdded($event)"
-        (reportSubmitted)="onReportSubmitted($event)"
+        [messageId]="message().id"
+        [messageContent]="message().text_content ?? ''"
+        [messageType]="message().message_type"
+        [senderId]="message().sender_id"
+        [roomId]="channelId()"
+        (favourite)="onFavouriteAdded($event.messageId)"
+        (report)="onReportSubmitted($event.messageId)"
       >
         <div 
           class="message-bubble p-3 rounded-lg cursor-pointer select-none"

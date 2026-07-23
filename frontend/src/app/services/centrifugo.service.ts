@@ -30,11 +30,11 @@ export class CentrifugoService {
       token,
     });
 
-    this.centrifuge.on('connect', () => {
+    this.centrifuge.on('connected', () => {
       this.connected.set(true);
     });
 
-    this.centrifuge.on('disconnect', () => {
+    this.centrifuge.on('disconnected', () => {
       this.connected.set(false);
     });
 

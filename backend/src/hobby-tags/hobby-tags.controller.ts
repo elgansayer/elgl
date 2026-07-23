@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { HobbyTagsService } from './hobby-tags.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { Request } from 'express';
+import type { Request } from 'express';
 
 @Controller('hobby-tags')
 export class HobbyTagsController {
