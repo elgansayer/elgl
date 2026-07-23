@@ -61,6 +61,8 @@ export class UsersService {
     if (dto.avatar_url !== undefined) updatePayload.avatar_url = dto.avatar_url;
     if (dto.audio_intro_url !== undefined)
       updatePayload.audio_intro_url = dto.audio_intro_url;
+    if (dto.cover_photo_url !== undefined)
+      updatePayload.cover_photo_url = dto.cover_photo_url;
     if (dto.privacy_hide_age !== undefined)
       updatePayload.privacy_hide_age = dto.privacy_hide_age;
     if (dto.privacy_hide_location !== undefined)

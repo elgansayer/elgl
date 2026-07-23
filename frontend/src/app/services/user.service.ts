@@ -111,4 +111,24 @@ export class UserService {
       )
     );
   }
+
+  async uploadCoverPhoto(file: File): Promise<string> {
+    const { uploadUrl, mediaUrl } = await this.getPresignedUploadUrl(
+      file.name,
+      file.type,
+      'cover-photos'
+    );
+
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type },
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error('Failed to upload cover photo');
+    }
+
+    return mediaUrl;
+  }
 }

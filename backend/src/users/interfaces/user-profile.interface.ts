@@ -6,6 +6,7 @@ export interface UserProfile {
   bio_text?: string;
   avatar_url?: string;
   audio_intro_url?: string;
+  cover_photo_url?: string;
   location?: string;
   mock_location?: string;
   is_vip: boolean;

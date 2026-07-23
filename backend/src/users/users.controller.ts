@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards, UnauthorizedException } from '@nestjs/common';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -60,6 +60,33 @@ export class UsersController {
     return this.usersService.updateProfile(
       user.id,
       { cover_photo_url: coverPhotoUrl },
+      profile?.is_vip ?? false,
+    );
+  }
+
+  @Post('me/cover-photo/presigned-url')
+  async getCoverPhotoPresignedUrl(
+    @CurrentUser() user: User | null,
+    @Body() dto: { filename: string; contentType: string },
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    if (!user) throw new UnauthorizedException();
+    return this.mediaService.generatePresignedUrl(user.id, {
+      filename: dto.filename,
+      contentType: dto.contentType,
+      folder: 'cover-photos',
+    });
+  }
+
+  @Patch('me/cover-photo')
+  async updateCoverPhoto(
+    @CurrentUser() user: User | null,
+    @Body('cover_photo_url') coverPhotoUrl: string,
+  ): Promise<UserProfile | null> {
+    if (!user) return null;
+    const profile = await this.usersService.getProfile(user.id);
+    return this.usersService.updateProfile(
+      user.id,
+      { cover_photo_url: coverPhotoUrl } as UpdateProfileDto,
       profile?.is_vip ?? false,
     );
   }

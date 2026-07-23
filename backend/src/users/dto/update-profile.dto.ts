@@ -47,6 +47,10 @@ export class UpdateProfileDto {
   audio_intro_url?: string;
 
   @IsOptional()
+  @IsString()
+  cover_photo_url?: string;
+
+  @IsOptional()
   @ValidateNested()
   @Type(() => CoordinatesDto)
   location?: CoordinatesDto;
