@@ -201,7 +201,7 @@
 - [x] Refactor Discovery UI to match screenshots: implement dark theme aesthetics, horizontal scrollable filter pills, and banner ads.
 - [x] Build custom Angular primitives for horizontal scrollable filter pills and language buttons instead of using native `<select>`.
 - [x] Rebuild user cards to feature tight visual fluency indicators (flags and language codes) and gradient action buttons.
-- [ ] Build Nearby Search PostGIS distance slider for VIP users.
+- [x] Build Nearby Search PostGIS distance slider for VIP users.
 - [ ] Build VIP Profile Visitor Log UI with blurred cards for free users.
 
 ## Phase 13: HelloTalk Chat Specifics (Requires Refactor for Pixel-Perfect Clone)
