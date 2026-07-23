@@ -44,16 +44,12 @@ async function runSeed() {
       developer_api_key: 'ht_dev_8f3a1b2c4d5e6f7a8b9c0d1e2f3a4b5c',
       profile: {
         display_name: 'Oliver Smith 🇬🇧',
-        bio: 'Senior Full-Stack Engineer and language enthusiast! Learning Japanese and Spanish. British English native speaker. Feel free to ask about grammar or tech!',
+        bio_text: 'Senior Full-Stack Engineer and language enthusiast! Learning Japanese and Spanish. British English native speaker. Feel free to ask about grammar or tech!',
         avatar_url:
           'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
         native_language: 'en',
         target_languages: ['ja', 'es'],
-        proficiency_level: 'intermediate',
-        country: 'GB',
-        city: 'London',
-        latitude: 51.5074,
-        longitude: -0.1278,
+        location: `POINT(-0.1278 51.5074)`,
       },
     },
     {
@@ -63,16 +59,12 @@ async function runSeed() {
       coins_balance: 420,
       profile: {
         display_name: 'Sofía García 🇪🇸',
-        bio: '¡Hola a todos! Architect from Madrid. Seeking British English practice partners. I love coffee, literature, and travelling across Europe.',
+        bio_text: '¡Hola a todos! Architect from Madrid. Seeking British English practice partners. I love coffee, literature, and travelling across Europe.',
         avatar_url:
           'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
         native_language: 'es',
         target_languages: ['en'],
-        proficiency_level: 'advanced',
-        country: 'ES',
-        city: 'Madrid',
-        latitude: 40.4168,
-        longitude: -3.7038,
+        location: `POINT(-3.7038 40.4168)`,
       },
     },
     {
@@ -81,16 +73,12 @@ async function runSeed() {
       coins_balance: 80,
       profile: {
         display_name: 'Yuki Tanaka 🇯🇵',
-        bio: 'こんにちは！ Tokyo-based UX designer. Want to practice casual conversational English and French. Happy to correct your Japanese Kanji & grammar!',
+        bio_text: 'こんにちは！ Tokyo-based UX designer. Want to practice casual conversational English and French. Happy to correct your Japanese Kanji & grammar!',
         avatar_url:
           'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
         native_language: 'ja',
         target_languages: ['en', 'fr'],
-        proficiency_level: 'beginner',
-        country: 'JP',
-        city: 'Tokyo',
-        latitude: 35.6762,
-        longitude: 139.6503,
+        location: `POINT(139.6503 35.6762)`,
       },
     },
     {
@@ -100,16 +88,12 @@ async function runSeed() {
       coins_balance: 310,
       profile: {
         display_name: 'Claire Dubois 🇫🇷',
-        bio: 'Bonjour ! Art historian living in Paris. Learning Arabic and British English. Let us exchange voice notes and cultural recommendations.',
+        bio_text: 'Bonjour ! Art historian living in Paris. Learning Arabic and British English. Let us exchange voice notes and cultural recommendations.',
         avatar_url:
           'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
         native_language: 'fr',
         target_languages: ['ar', 'en'],
-        proficiency_level: 'intermediate',
-        country: 'FR',
-        city: 'Paris',
-        latitude: 48.8566,
-        longitude: 2.3522,
+        location: `POINT(2.3522 48.8566)`,
       },
     },
     {
@@ -120,16 +104,12 @@ async function runSeed() {
       developer_api_key: 'ht_dev_1a2b3c4d5e6f7a8b9c0d1e2f3a4b5d',
       profile: {
         display_name: 'Ahmed Al-Mansoor 🇸🇦',
-        bio: 'مرحباً بكم! AI researcher and entrepreneur in Riyadh. Fluent in Arabic, mastering German and English. Proud supporter of open language education.',
+        bio_text: 'مرحباً بكم! AI researcher and entrepreneur in Riyadh. Fluent in Arabic, mastering German and English. Proud supporter of open language education.',
         avatar_url:
           'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
         native_language: 'ar',
         target_languages: ['de', 'en'],
-        proficiency_level: 'advanced',
-        country: 'SA',
-        city: 'Riyadh',
-        latitude: 24.7136,
-        longitude: 46.6753,
+        location: `POINT(46.6753 24.7136)`,
       },
     },
   ];
@@ -154,6 +134,7 @@ async function runSeed() {
     }
 
     if (userId) {
+      // Update the users table directly (no separate user_profiles table)
       await supabase
         .from('users')
         .update({
@@ -161,21 +142,14 @@ async function runSeed() {
           vip_tier: u.vip_tier || null,
           coins_balance: u.coins_balance,
           developer_api_key: u.developer_api_key || null,
+          display_name: u.profile.display_name,
+          bio_text: u.profile.bio_text,
+          avatar_url: u.profile.avatar_url,
+          native_language: u.profile.native_language,
+          target_languages: u.profile.target_languages,
+          location: supabase.rpc('st_geomfromtext', { text: u.profile.location }),
         })
         .eq('id', userId);
-
-      await supabase.from('user_profiles').upsert({
-        id: userId,
-        ...u.profile,
-      });
-
-      await supabase.from('discovery_settings').upsert({
-        user_id: userId,
-        target_country: 'ALL',
-        only_serious_learners: false,
-        only_vip_users: false,
-        max_distance_km: 10000,
-      });
     }
   }
 
@@ -188,77 +162,14 @@ async function runSeed() {
     const host = usersList[0];
     const partner = usersList[1];
 
-    await supabase.from('chat_rooms').upsert(
-      [
-        {
-          id: 'global-exchange',
-          title: 'Global Exchange',
-          subtitle: 'General language room',
-          avatar: '🌍',
-          is_online: true,
-          is_pinned: true,
-        },
-        {
-          id: 'english-spanish',
-          title: 'English to Spanish',
-          subtitle: 'Partner corrections',
-          avatar: '🇬🇧🇪🇸',
-          is_online: true,
-          is_pinned: true,
-        },
-        {
-          id: 'japanese-beginners',
-          title: 'Japanese Beginners',
-          subtitle: 'Short sentence practice',
-          avatar: '🇯🇵',
-          is_online: false,
-          is_pinned: false,
-        },
-        {
-          id: 'arabic-english',
-          title: 'Arabic to English',
-          subtitle: 'Pronunciation help',
-          avatar: '🇸🇦🇬🇧',
-          is_online: false,
-          is_pinned: false,
-        },
-      ],
-      { onConflict: 'id' },
-    );
-
-    await supabase.from('developer_metrics').upsert(
-      {
-        user_id: host.id,
-        total_api_calls_today: 1420,
-        avg_latency_ms: 18,
-      },
-      { onConflict: 'user_id' },
-    );
-
-    await supabase.from('developer_diagnostic_logs').insert([
-      {
-        user_id: host.id,
-        category: 'POSTGIS',
-        status: 'info',
-        message: 'Initialised ST_DWithin geography index checking (SRID 4326).',
-      },
-      {
-        user_id: host.id,
-        category: 'CENTRIFUGO',
-        status: 'success',
-        message:
-          'Centrifugo v5 client ready. Redis pub/sub channel sync active.',
-      },
-    ]);
-
     const momentRes = await supabase
       .from('moments')
       .insert({
-        user_id: host.id,
-        text_content:
+        author_id: host.id,
+        content_text:
           'Just arrived at the British Library in London! Exploring historical Japanese manuscripts today. Can anyone recommend a good idiom for "continuous learning" in Japanese?',
-        language_tag: 'en',
-        images: [
+        detected_language: 'en',
+        media_urls: [
           'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=600',
         ],
         likes_count: 14,
@@ -271,12 +182,12 @@ async function runSeed() {
     if (momentData) {
       await supabase.from('moment_comments').insert({
         moment_id: momentData.id,
-        user_id: partner.id,
-        text_content:
+        author_id: partner.id,
+        content_text:
           'In Japanese, we say 「継続は力なり」 (Keizoku wa chikara nari), which means "Continuation is power" or consistency is key!',
-        visual_diff: {
+        correction_payload: {
           original: 'continuous learning',
-          corrected: '継続は力なり (Keizoku wa chikara nari)',
+          fixed: '継続は力なり (Keizoku wa chikara nari)',
           explanation: 'Standard Japanese proverb for continuous effort.',
         },
       });
@@ -286,23 +197,19 @@ async function runSeed() {
     await supabase.from('audio_rooms').insert([
       {
         room_name: 'room_global_en_ja',
-        title: '🇬🇧 & 🇯🇵 Casual Weekend Language Exchange Pod!',
-        target_language: 'ja',
         host_id: host.id,
+        language_pair: 'en-ja',
+        topic_tag: 'Casual Weekend Language Exchange',
         is_active: true,
-        speakers: [host.id, partner.id],
-        raised_hands: [],
-        listeners_count: 12,
+        participants_count: 12,
       },
       {
         room_name: 'room_arabic_de',
-        title: '🇸🇦 Arabic & 🇩🇪 German Fluency Stage & AI Subtitles',
-        target_language: 'ar',
         host_id: partner.id,
+        language_pair: 'ar-de',
+        topic_tag: 'Arabic & German Fluency Stage',
         is_active: true,
-        speakers: [partner.id],
-        raised_hands: [],
-        listeners_count: 8,
+        participants_count: 8,
       },
     ]);
   }
