@@ -11,6 +11,9 @@ if command -v npm &> /dev/null; then
     exit $?
 fi
 
+# If npm is not available, this script will install Node.js and npm.
+# After installation, it will run the lint command.
+
 # Ensure xz-utils is installed for tar -xJf
 if ! command -v xz &> /dev/null; then
     echo "xz not found, installing xz-utils..."
