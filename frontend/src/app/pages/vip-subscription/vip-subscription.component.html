@@ -1,418 +1,311 @@
-<div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900">
+<div class="min-h-screen bg-gradient-to-b from-surface-50 to-surface-100 dark:from-gray-900 dark:to-gray-800">
   <!-- Hero Section -->
-  <header class="relative overflow-hidden">
-    <div class="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-blue-600/20"></div>
-    <div class="relative max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-8 text-center">
-      <h1 class="text-4xl md:text-6xl font-bold text-white mb-4">
-        Unlock Your
-        <span class="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-          Premium Experience
-        </span>
-      </h1>
-      <p class="text-xl text-slate-300 max-w-2xl mx-auto mb-8">
-        Supercharge your language learning journey with VIP features. 
-        Unlimited translations, location spoofing, developer API access, and more.
-      </p>
-      <div class="flex justify-center gap-4">
-        <a href="#pricing" 
-           class="px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-full font-semibold transition-all duration-200 shadow-lg hover:shadow-purple-500/25">
-          See Plans
-        </a>
-        <a routerLink="/discovery" 
-           class="px-8 py-3 border border-slate-500 text-slate-300 hover:text-white hover:border-white rounded-full font-semibold transition-all duration-200">
-          Continue Free
-        </a>
-      </div>
-    </div>
-  </header>
-
-  <!-- Benefits Grid -->
-  <section class="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
-    <h2 class="text-3xl font-bold text-white text-center mb-12">
-      Everything You Get with VIP
-    </h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <!-- Benefit Card 1: Unlimited AI Translations -->
-      <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300">
-        <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-4">
-          <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m0 4h6m-6 4h8m-8 4h4M5 3v18"/>
-          </svg>
+  <section class="relative overflow-hidden bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 text-white">
+    <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-30"></div>
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 lg:py-32">
+      <div class="text-center">
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-4">
+          Unlock Your Language Learning Potential
+        </h1>
+        <p class="text-xl sm:text-2xl text-purple-200 max-w-3xl mx-auto mb-8">
+          Choose the plan that fits your learning journey. From free basics to premium power tools.
+        </p>
+        <div class="flex flex-wrap justify-center gap-4">
+          <app-gradient-button
+            size="lg"
+            customClass="text-lg px-8 py-4"
+            (clicked)="scrollToPlans()"
+          >
+            See Plans
+          </app-gradient-button>
+          <app-button-primary
+            size="lg"
+            customClass="bg-white text-purple-700 hover:bg-purple-50 px-8 py-4 text-lg"
+            [routerLink]="['/discovery']"
+          >
+            Start Free
+          </app-button-primary>
         </div>
-        <h3 class="text-lg font-semibold text-white mb-2">Unlimited AI Translations</h3>
-        <p class="text-slate-400 text-sm">Translate text, voice notes, and moments without daily limits. Get instant corrections and explanations powered by advanced NLP.</p>
-      </div>
-
-      <!-- Benefit Card 2: Location Spoofing -->
-      <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300">
-        <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mb-4">
-          <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-          </svg>
-        </div>
-        <h3 class="text-lg font-semibold text-white mb-2">Location Spoofing</h3>
-        <p class="text-slate-400 text-sm">Set your location anywhere in the world. Connect with speakers from specific regions and cultures using mock GPS coordinates.</p>
-      </div>
-
-      <!-- Benefit Card 3: Voice & Video -->
-      <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300">
-        <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mb-4">
-          <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
-          </svg>
-        </div>
-        <h3 class="text-lg font-semibold text-white mb-2">Voice & Video Messages</h3>
-        <p class="text-slate-400 text-sm">Send voice notes, video messages, and doodles. Practice pronunciation with native speakers in real-time.</p>
-      </div>
-
-      <!-- Benefit Card 4: Profile Visitors -->
-      <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300">
-        <div class="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center mb-4">
-          <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-          </svg>
-        </div>
-        <h3 class="text-lg font-semibold text-white mb-2">Profile Visitors</h3>
-        <p class="text-slate-400 text-sm">See who viewed your profile. Know who's interested in connecting with you and track your profile engagement.</p>
-      </div>
-
-      <!-- Benefit Card 5: Priority Discovery -->
-      <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300">
-        <div class="w-12 h-12 bg-pink-500/20 rounded-lg flex items-center justify-center mb-4">
-          <svg class="w-6 h-6 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-          </svg>
-        </div>
-        <h3 class="text-lg font-semibold text-white mb-2">Priority Discovery</h3>
-        <p class="text-slate-400 text-sm">Get featured in search results with global radius. More visibility means more language exchange opportunities.</p>
-      </div>
-
-      <!-- Benefit Card 6: Developer API -->
-      <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300">
-        <div class="w-12 h-12 bg-indigo-500/20 rounded-lg flex items-center justify-center mb-4">
-          <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
-          </svg>
-        </div>
-        <h3 class="text-lg font-semibold text-white mb-2">Developer API Access</h3>
-        <p class="text-slate-400 text-sm">Build integrations with our API. 600 requests per minute, webhooks, diagnostic tools, and analytics dashboard.</p>
       </div>
     </div>
   </section>
 
-  <!-- Pricing Section -->
-  <section id="pricing" class="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
-    <h2 class="text-3xl font-bold text-white text-center mb-4">
-      Choose Your Plan
-    </h2>
-    <p class="text-slate-400 text-center mb-12 max-w-2xl mx-auto">
-      Start free and upgrade when you're ready. All plans include access to our global language learning community.
-    </p>
-
-    <!-- Loading State -->
-    @if (isLoading()) {
-      <div class="flex justify-center py-12">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+  <!-- Loading State -->
+  @if (loading()) {
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div class="flex justify-center items-center min-h-[400px]">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
       </div>
-    }
+    </section>
+  }
 
-    <!-- Error State -->
-    @if (error()) {
-      <div class="max-w-md mx-auto bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center">
-        <p class="text-red-300 mb-4">{{ error() }}</p>
-        <button (click)="retry()" 
-                class="px-6 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-200 rounded-lg transition-colors">
+  <!-- Error State -->
+  @if (error()) {
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-8 text-center">
+        <p class="text-red-600 dark:text-red-400 text-lg mb-4">{{ error() }}</p>
+        <app-button-primary (clicked)="loadPlans()">
           Try Again
-        </button>
+        </app-button-primary>
       </div>
-    }
+    </section>
+  }
 
-    <!-- Pricing Cards -->
-    @if (!isLoading() && !error()) {
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <!-- Free Plan -->
-        @if (getFreePlan(); as freePlan) {
-          <div class="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-8 border border-slate-700/50 hover:border-slate-600 transition-all duration-300">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-2xl font-bold text-white">{{ freePlan.name }}</h3>
-              <span class="text-3xl">{{ getPlanIcon(freePlan.id) }}</span>
+  <!-- Plans Section -->
+  @if (!loading() && !error()) {
+    <section id="plans" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <!-- Free Plan -->
+      @if (freePlan(); as plan) {
+        <div class="mb-16">
+          <h2 class="text-3xl font-bold text-center mb-8 text-gray-900 dark:text-white">
+            Start Free, Upgrade Anytime
+          </h2>
+          <div class="max-w-lg mx-auto">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8">
+              <div class="flex items-center justify-between mb-6">
+                <div>
+                  <h3 class="text-2xl font-bold text-gray-900 dark:text-white">{{ plan.name }}</h3>
+                  <p class="text-gray-600 dark:text-gray-400 mt-1">{{ plan.description }}</p>
+                </div>
+                <span class="text-4xl">{{ getPlanIcon(plan.id) }}</span>
+              </div>
+              <div class="text-4xl font-bold text-gray-900 dark:text-white mb-6">
+                {{ getPriceDisplay(plan) }}
+              </div>
+              <ul class="space-y-3 mb-8">
+                @for (feature of plan.features; track feature) {
+                  <li class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span class="text-gray-700 dark:text-gray-300">{{ feature }}</span>
+                  </li>
+                }
+              </ul>
+              <app-button-primary
+                size="lg"
+                customClass="w-full"
+                [routerLink]="['/discovery']"
+              >
+                Get Started Free
+              </app-button-primary>
             </div>
-            <p class="text-slate-400 mb-6">{{ freePlan.description }}</p>
-            <div class="mb-6">
-              <span class="text-4xl font-bold text-white">Free</span>
-            </div>
-            <ul class="space-y-3 mb-8">
-              @for (feature of freePlan.features; track feature) {
-                <li class="flex items-start gap-3 text-slate-300">
-                  <span class="flex-shrink-0 mt-0.5">{{ getBenefitIcon(feature) }}</span>
-                  <span>{{ feature }}</span>
-                </li>
-              }
-            </ul>
-            <button routerLink="/discovery" 
-                    class="w-full py-3 border border-slate-500 text-slate-300 hover:text-white hover:border-white rounded-xl font-semibold transition-all duration-200">
-              Get Started Free
-            </button>
           </div>
-        }
+        </div>
+      }
 
-        <!-- Paid Plans -->
-        @for (plan of getNonFreePlans(); track plan.id) {
-          <div class="relative bg-gradient-to-b from-purple-900/40 to-slate-800/50 backdrop-blur-sm rounded-2xl p-8 border-2 transition-all duration-300 hover:scale-105"
-               [class.border-purple-500/50]="plan.is_popular"
-               [class.border-slate-700/50]="!plan.is_popular"
-               [class.shadow-xl]="plan.is_popular"
-               [class.shadow-purple-500/10]="plan.is_popular">
-            
+      <!-- Premium Plans -->
+      <div class="mb-12 text-center">
+        <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+          Premium Plans
+        </h2>
+        <p class="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+          Unlock advanced features and accelerate your language learning journey
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        @for (plan of paidPlans(); track plan.id) {
+          <div
+            class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg border-2 transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+            [class.border-purple-500]="plan.is_popular"
+            [class.border-gray-200]="!plan.is_popular"
+            [class.dark:border-purple-600]="plan.is_popular"
+            [class.dark:border-gray-700]="!plan.is_popular"
+          >
             <!-- Popular Badge -->
             @if (plan.is_popular) {
               <div class="absolute -top-4 left-1/2 -translate-x-1/2">
-                <span class="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-6 py-1 rounded-full text-sm font-semibold shadow-lg">
+                <span class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-1.5 rounded-full text-sm font-semibold shadow-lg">
                   Most Popular
                 </span>
               </div>
             }
 
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h3 class="text-2xl font-bold text-white">{{ plan.name }}</h3>
-                <p class="text-slate-400 text-sm mt-1">{{ plan.description }}</p>
+            <!-- Badge Text -->
+            @if (plan.badge_text && !plan.is_popular) {
+              <div class="absolute -top-4 left-1/2 -translate-x-1/2">
+                <span class="bg-gray-800 dark:bg-gray-600 text-white px-6 py-1.5 rounded-full text-sm font-semibold shadow-lg">
+                  {{ plan.badge_text }}
+                </span>
               </div>
-              <span class="text-3xl">{{ getPlanIcon(plan.id) }}</span>
-            </div>
+            }
 
-            <div class="mb-6">
-              <span class="text-4xl font-bold text-white">{{ getPriceDisplay(plan) }}</span>
-              <span class="text-slate-400 ml-2">/ month</span>
-              <div class="text-sm text-slate-500 mt-1">{{ getPriceUkpDisplay(plan) }}</div>
-            </div>
+            <div class="p-8 pt-10">
+              <!-- Header -->
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h3 class="text-2xl font-bold text-gray-900 dark:text-white">{{ plan.name }}</h3>
+                  <p class="text-gray-600 dark:text-gray-400 mt-1 text-sm">{{ plan.description }}</p>
+                </div>
+                <span class="text-4xl">{{ getPlanIcon(plan.id) }}</span>
+              </div>
 
-            <ul class="space-y-3 mb-8">
-              @for (feature of plan.features; track feature) {
-                <li class="flex items-start gap-3 text-slate-300">
-                  <span class="flex-shrink-0 mt-0.5">{{ getBenefitIcon(feature) }}</span>
-                  <span>{{ feature }}</span>
-                </li>
+              <!-- Price -->
+              <div class="mb-6">
+                <span class="text-4xl font-bold text-gray-900 dark:text-white">
+                  {{ getPriceDisplay(plan) }}
+                </span>
+                @if (plan.price_usd > 0) {
+                  <span class="text-gray-500 dark:text-gray-400 ml-2">billed monthly</span>
+                }
+              </div>
+
+              <!-- Highlighted Benefits -->
+              @if (plan.highlighted_benefits && plan.highlighted_benefits.length > 0) {
+                <div class="mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+                  <h4 class="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-3 uppercase tracking-wide">
+                    Key Benefits
+                  </h4>
+                  <ul class="space-y-2">
+                    @for (benefit of plan.highlighted_benefits; track benefit) {
+                      <li class="flex items-start gap-2">
+                        <svg class="w-5 h-5 text-purple-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="text-purple-800 dark:text-purple-200 font-medium">{{ benefit }}</span>
+                      </li>
+                    }
+                  </ul>
+                </div>
               }
-            </ul>
 
-            <button (click)="subscribe(plan)"
-                    class="w-full py-3 rounded-xl font-semibold text-white transition-all duration-200 shadow-lg"
-                    [class.bg-gradient-to-r]="true"
-                    [class]="getPlanColor(plan.id)"
-                    [class.hover:opacity-90]="true"
-                    [class.hover:shadow-purple-500/25]="plan.is_popular">
-              Subscribe Now
-            </button>
+              <!-- Full Features List -->
+              <div class="mb-8">
+                <h4 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">
+                  All Features
+                </h4>
+                <ul class="space-y-3">
+                  @for (feature of plan.features; track feature) {
+                    <li class="flex items-start gap-3">
+                      <svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      <span class="text-gray-700 dark:text-gray-300">{{ feature }}</span>
+                    </li>
+                  }
+                </ul>
+              </div>
+
+              <!-- CTA Button -->
+              @if (plan.is_popular) {
+                <app-gradient-button
+                  size="lg"
+                  customClass="w-full text-base py-3"
+                  (clicked)="onSubscribe(plan.id)"
+                >
+                  Subscribe Now
+                </app-gradient-button>
+              } @else {
+                <app-button-primary
+                  size="lg"
+                  customClass="w-full text-base py-3"
+                  (clicked)="onSubscribe(plan.id)"
+                >
+                  Choose {{ plan.name }}
+                </app-button-primary>
+              }
+            </div>
           </div>
         }
       </div>
-    }
-  </section>
+    </section>
 
-  <!-- Feature Comparison Table -->
-  <section class="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
-    <h2 class="text-3xl font-bold text-white text-center mb-12">
-      Compare All Features
-    </h2>
-    <div class="overflow-x-auto rounded-2xl bg-slate-800/30 backdrop-blur-sm border border-slate-700/50">
-      <table class="w-full text-left">
-        <thead>
-          <tr class="border-b border-slate-700">
-            <th class="py-4 px-6 text-slate-400 font-semibold">Feature</th>
-            @for (plan of plans(); track plan.id) {
-              <th class="py-4 px-6 text-white font-semibold text-center">
-                <div class="flex items-center justify-center gap-2">
-                  <span>{{ getPlanIcon(plan.id) }}</span>
-                  <span>{{ plan.name }}</span>
-                </div>
-              </th>
-            }
-          </tr>
-        </thead>
-        <tbody>
-          <tr class="border-b border-slate-800">
-            <td class="py-4 px-6 text-slate-300">Target Languages</td>
-            <td class="py-4 px-6 text-center text-slate-400">1</td>
-            <td class="py-4 px-6 text-center text-green-400 font-semibold">Up to 3</td>
-            <td class="py-4 px-6 text-center text-green-400 font-semibold">Up to 3</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="py-4 px-6 text-slate-300">AI Translations / Day</td>
-            <td class="py-4 px-6 text-center text-slate-400">10</td>
-            <td class="py-4 px-6 text-center text-green-400 font-semibold">Unlimited</td>
-            <td class="py-4 px-6 text-center text-green-400 font-semibold">Unlimited</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="py-4 px-6 text-slate-300">Location Spoofing</td>
-            <td class="py-4 px-6 text-center text-red-400">✗</td>
-            <td class="py-4 px-6 text-center text-green-400">✓</td>
-            <td class="py-4 px-6 text-center text-green-400">✓</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="py-4 px-6 text-slate-300">Search Radius</td>
-            <td class="py-4 px-6 text-center text-slate-400">Local (10km)</td>
-            <td class="py-4 px-6 text-center text-green-400 font-semibold">Global</td>
-            <td class="py-4 px-6 text-center text-green-400 font-semibold">Global</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="py-4 px-6 text-slate-300">Voice & Video Messages</td>
-            <td class="py-4 px-6 text-center text-red-400">✗</td>
-            <td class="py-4 px-6 text-center text-green-400">✓</td>
-            <td class="py-4 px-6 text-center text-green-400">✓</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="py-4 px-6 text-slate-300">Profile Visitors</td>
-            <td class="py-4 px-6 text-center text-red-400">✗</td>
-            <td class="py-4 px-6 text-center text-green-400">✓</td>
-            <td class="py-4 px-6 text-center text-green-400">✓</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="py-4 px-6 text-slate-300">Ad Experience</td>
-            <td class="py-4 px-6 text-center text-slate-400">With ads</td>
-            <td class="py-4 px-6 text-center text-green-400 font-semibold">Ad-free</td>
-            <td class="py-4 px-6 text-center text-green-400 font-semibold">Ad-free</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="py-4 px-6 text-slate-300">API Access</td>
-            <td class="py-4 px-6 text-center text-red-400">✗</td>
-            <td class="py-4 px-6 text-center text-red-400">✗</td>
-            <td class="py-4 px-6 text-center text-green-400">✓</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="py-4 px-6 text-slate-300">API Rate Limit</td>
-            <td class="py-4 px-6 text-center text-slate-400">N/A</td>
-            <td class="py-4 px-6 text-center text-slate-400">N/A</td>
-            <td class="py-4 px-6 text-center text-green-400 font-semibold">600 RPM</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="py-4 px-6 text-slate-300">Advanced Analytics</td>
-            <td class="py-4 px-6 text-center text-red-400">✗</td>
-            <td class="py-4 px-6 text-center text-red-400">✗</td>
-            <td class="py-4 px-6 text-center text-green-400">✓</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="py-4 px-6 text-slate-300">Diagnostic Logging</td>
-            <td class="py-4 px-6 text-center text-red-400">✗</td>
-            <td class="py-4 px-6 text-center text-red-400">✗</td>
-            <td class="py-4 px-6 text-center text-green-400">✓</td>
-          </tr>
-          <tr>
-            <td class="py-4 px-6 text-slate-300">Support Level</td>
-            <td class="py-4 px-6 text-center text-slate-400">Standard</td>
-            <td class="py-4 px-6 text-center text-green-400 font-semibold">Priority</td>
-            <td class="py-4 px-6 text-center text-green-400 font-semibold">Dedicated</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- FAQ Section -->
-  <section class="max-w-3xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
-    <h2 class="text-3xl font-bold text-white text-center mb-12">
-      Frequently Asked Questions
-    </h2>
-    <div class="space-y-4">
-      <details class="bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700/50 group">
-        <summary class="flex items-center justify-between cursor-pointer text-white font-semibold p-6">
-          <span>Can I switch between plans?</span>
-          <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-          </svg>
-        </summary>
-        <div class="px-6 pb-6 text-slate-400">
-          Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately. 
-          If you downgrade, you'll retain premium features until the end of your billing period.
+    <!-- Feature Comparison Section -->
+    <section class="bg-gray-50 dark:bg-gray-900/50 py-16">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white">
+          Compare All Features
+        </h2>
+        <div class="overflow-x-auto">
+          <table class="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
+            <thead>
+              <tr class="border-b border-gray-200 dark:border-gray-700">
+                <th class="text-start p-4 font-semibold text-gray-900 dark:text-white">Feature</th>
+                @for (plan of plans(); track plan.id) {
+                  <th class="p-4 text-center font-semibold">
+                    <span class="text-gray-900 dark:text-white">{{ plan.name }}</span>
+                    @if (plan.is_popular) {
+                      <span class="block text-xs text-purple-600 dark:text-purple-400 mt-1">Popular</span>
+                    }
+                  </th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (feature of getAllFeatures(); track feature) {
+                <tr class="border-b border-gray-100 dark:border-gray-700/50">
+                  <td class="p-4 text-gray-700 dark:text-gray-300">{{ feature }}</td>
+                  @for (plan of plans(); track plan.id) {
+                    <td class="p-4 text-center">
+                      @if (planHasFeature(plan, feature)) {
+                        <svg class="w-5 h-5 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                      } @else {
+                        <span class="text-gray-300 dark:text-gray-600">—</span>
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
         </div>
-      </details>
-
-      <details class="bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700/50 group">
-        <summary class="flex items-center justify-between cursor-pointer text-white font-semibold p-6">
-          <span>How does location spoofing work?</span>
-          <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-          </svg>
-        </summary>
-        <div class="px-6 pb-6 text-slate-400">
-          VIP users can set a mock location in their profile settings. This overrides your real GPS coordinates 
-          in discovery searches, allowing you to connect with speakers from specific cities or regions worldwide. 
-          Your real location remains private.
-        </div>
-      </details>
-
-      <details class="bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700/50 group">
-        <summary class="flex items-center justify-between cursor-pointer text-white font-semibold p-6">
-          <span>What's included in the Developer Tier?</span>
-          <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-          </svg>
-        </summary>
-        <div class="px-6 pb-6 text-slate-400">
-          The Developer Tier includes everything from Consumer VIP plus API key generation, 
-          600 requests per minute rate limit, webhook integration, diagnostic logging, 
-          developer analytics dashboard, and priority developer support. Perfect for building custom integrations.
-        </div>
-      </details>
-
-      <details class="bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700/50 group">
-        <summary class="flex items-center justify-between cursor-pointer text-white font-semibold p-6">
-          <span>Can I cancel anytime?</span>
-          <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-          </svg>
-        </summary>
-        <div class="px-6 pb-6 text-slate-400">
-          Absolutely. You can cancel your subscription at any time from your account settings. 
-          No long-term contracts or hidden fees. Your premium features remain active until the end of your billing period.
-        </div>
-      </details>
-
-      <details class="bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700/50 group">
-        <summary class="flex items-center justify-between cursor-pointer text-white font-semibold p-6">
-          <span>What payment methods do you accept?</span>
-          <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-          </svg>
-        </summary>
-        <div class="px-6 pb-6 text-slate-400">
-          We accept all major credit cards, PayPal, and Apple Pay. All payments are processed securely through Stripe. 
-          Your payment information is never stored on our servers.
-        </div>
-      </details>
-    </div>
-  </section>
-
-  <!-- CTA Section -->
-  <section class="max-w-4xl mx-auto px-4 py-16 sm:px-6 lg:px-8 text-center">
-    <div class="bg-gradient-to-r from-purple-900/40 to-blue-900/40 rounded-3xl p-12 border border-purple-500/20">
-      <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
-        Ready to Accelerate Your Learning?
-      </h2>
-      <p class="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
-        Join thousands of language learners who have upgraded their experience. 
-        Start with a free account and upgrade when you're ready.
-      </p>
-      <div class="flex justify-center gap-4">
-        <a href="#pricing" 
-           class="px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-full font-semibold transition-all duration-200 shadow-lg hover:shadow-purple-500/25">
-          View Plans
-        </a>
-        <a routerLink="/discovery" 
-           class="px-8 py-3 border border-slate-500 text-slate-300 hover:text-white hover:border-white rounded-full font-semibold transition-all duration-200">
-          Explore Free
-        </a>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- Footer -->
-  <footer class="border-t border-slate-800 py-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-slate-500 text-sm">
-      <p>© 2025 HelloTalk. All rights reserved.</p>
-      <p class="mt-2">Prices in USD. UKP prices shown for reference. All plans billed monthly.</p>
-    </div>
-  </footer>
+    <!-- FAQ Section -->
+    <section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <h2 class="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white">
+        Frequently Asked Questions
+      </h2>
+      <div class="space-y-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Can I switch plans anytime?</h3>
+          <p class="text-gray-600 dark:text-gray-400">Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately.</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Is there a free trial for premium plans?</h3>
+          <p class="text-gray-600 dark:text-gray-400">We offer a 7-day free trial for our Consumer VIP plan. No credit card required to start.</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">What payment methods do you accept?</h3>
+          <p class="text-gray-600 dark:text-gray-400">We accept all major credit cards, PayPal, and in-app purchases on iOS and Android.</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Can I cancel my subscription?</h3>
+          <p class="text-gray-600 dark:text-gray-400">Absolutely. You can cancel anytime from your account settings. Your benefits continue until the end of the billing period.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="bg-gradient-to-r from-purple-600 to-indigo-700 text-white py-16">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 class="text-3xl sm:text-4xl font-bold mb-4">
+          Ready to Accelerate Your Learning?
+        </h2>
+        <p class="text-xl text-purple-200 mb-8 max-w-2xl mx-auto">
+          Join thousands of language learners who have unlocked their full potential with HelloTalk Premium.
+        </p>
+        <div class="flex flex-wrap justify-center gap-4">
+          <app-gradient-button
+            size="lg"
+            customClass="text-lg px-8 py-4 bg-white text-purple-700 hover:bg-purple-50"
+            (clicked)="scrollToPlans()"
+          >
+            View Plans
+          </app-gradient-button>
+          <app-button-primary
+            size="lg"
+            customClass="bg-transparent border-2 border-white text-white hover:bg-white/10 px-8 py-4 text-lg"
+            [routerLink]="['/discovery']"
+          >
+            Continue Free
+          </app-button-primary>
+        </div>
+      </div>
+    </section>
+  }
 </div>

@@ -35,4 +35,8 @@ export class SubscriptionPlansService {
   getHighlightedBenefits(planId: string): Observable<string[]> {
     return this.http.get<string[]>(`${this.apiUrl}/${planId}/benefits`);
   }
+
+  getShowcasePlans(): Observable<SubscriptionPlan[]> {
+    return this.http.get<SubscriptionPlan[]>(`${this.apiUrl}/showcase`);
+  }
 }

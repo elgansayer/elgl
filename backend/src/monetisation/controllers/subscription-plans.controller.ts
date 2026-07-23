@@ -39,4 +39,9 @@ export class SubscriptionPlansController {
   getHighlightedBenefits(@Param('id') id: string): string[] {
     return this.subscriptionPlansService.getHighlightedBenefits(id);
   }
+
+  @Get('showcase')
+  getShowcasePlans(): SubscriptionPlan[] {
+    return this.subscriptionPlansService.getShowcasePlans();
+  }
 }

@@ -137,4 +137,11 @@ export class SubscriptionPlansService {
   getFreePlan(): SubscriptionPlan | undefined {
     return this.plans.find((p) => p.id === 'free');
   }
+
+  getShowcasePlans(): SubscriptionPlan[] {
+    return this.plans.map((plan) => ({
+      ...plan,
+      highlighted_benefits: plan.highlighted_benefits || [],
+    }));
+  }
 }
