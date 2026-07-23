@@ -67,7 +67,7 @@ describe('AppChipComponent', () => {
     expect(chipElement.classList.contains('inline-flex')).toBe(true);
     expect(chipElement.classList.contains('ps-3')).toBe(true);
     expect(chipElement.classList.contains('pe-3')).toBe(true);
-    expect(chipElement.classList.contains('bg-slate-100')).toBe(true);
+    expect(chipElement.classList.contains('bg-surface-100')).toBe(true);
   });
 
   it('should emit clicked event when span is clicked', () => {

@@ -193,7 +193,7 @@ export class AudioSyncReaderComponent implements OnDestroy {
 
   getWordClass(token: TokenSegmentSpan): string {
     if (!token.isWordLike) {
-      return 'text-slate-500 font-normal px-0.5';
+      return 'text-text-secondary font-normal px-0.5';
     }
     const status = this.vocabStore.getWordStatus(token.segment);
     return `rounded px-1 py-0.5 transition-all duration-150 ${status.colourClass}`;

@@ -93,16 +93,16 @@ interface CropBox {
                   (touchstart)="onCropBoxTouchStart($event)"
                 >
                   <!-- Corner handles -->
-                  <div class="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white rounded-full cursor-nw-resize"
+                  <div class="absolute -top-1.5 -left-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-nw-resize"
                        (mousedown)="onHandleMouseDown($event, 'nw')"
                        (touchstart)="onHandleTouchStart($event, 'nw')"></div>
-                  <div class="absolute -top-1.5 -right-1.5 w-3 h-3 bg-white rounded-full cursor-ne-resize"
+                  <div class="absolute -top-1.5 -right-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-ne-resize"
                        (mousedown)="onHandleMouseDown($event, 'ne')"
                        (touchstart)="onHandleTouchStart($event, 'ne')"></div>
-                  <div class="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white rounded-full cursor-sw-resize"
+                  <div class="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-sw-resize"
                        (mousedown)="onHandleMouseDown($event, 'sw')"
                        (touchstart)="onHandleTouchStart($event, 'sw')"></div>
-                  <div class="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-white rounded-full cursor-se-resize"
+                  <div class="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-se-resize"
                        (mousedown)="onHandleMouseDown($event, 'se')"
                        (touchstart)="onHandleTouchStart($event, 'se')"></div>
                 </div>
@@ -113,7 +113,7 @@ interface CropBox {
           <!-- Action buttons -->
           <div class="flex gap-2 mt-4">
             @if (!isCropping()) {
-              <button (click)="startCropping()" class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors text-sm">
+              <button (click)="startCropping()" class="px-4 py-2 bg-surface-200 text-white rounded-lg hover:bg-slate-600 transition-colors text-sm">
                 Crop
               </button>
             } @else {
@@ -135,7 +135,7 @@ interface CropBox {
           <!-- Preview -->
           @if (croppedPreviewUrl()) {
             <div class="mt-4">
-              <p class="text-sm text-slate-400 mb-2">Preview:</p>
+              <p class="text-sm text-text-muted mb-2">Preview:</p>
               <img [src]="croppedPreviewUrl()" class="w-full rounded-lg" />
             </div>
           }

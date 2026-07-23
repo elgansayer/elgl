@@ -1,6 +1,6 @@
 <div class="app-screen">
   @if (isLoading()) {
-    <div class="app-empty-state text-slate-500">{{ 'profile.loading' | t }}</div>
+    <div class="app-empty-state text-text-secondary">{{ 'profile.loading' | t }}</div>
   }
 
   @if (!isLoading() && profile()) {
@@ -9,12 +9,12 @@
       (coverPhotoUploaded)="onCoverUploaded($event)"
     />
     <section class="app-card app-padded">
-      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-surface-100 pb-4">
         <div class="flex items-center gap-3">
           <img
             [src]="profile()?.avatar_url || 'https://via.placeholder.com/150'"
             alt="avatar"
-            class="h-16 w-16 rounded-full border border-slate-200 object-cover"
+            class="h-16 w-16 rounded-full border border-surface-100 object-cover"
           />
           <div>
             <div class="flex items-center gap-2">
@@ -40,21 +40,21 @@
         </div>
       </div>
 
-      <div class="mt-4 grid grid-cols-2 gap-2 rounded-card border border-slate-200 bg-slate-50 ps-3 pe-3 pt-3 pb-3 text-center sm:grid-cols-4">
+      <div class="mt-4 grid grid-cols-2 gap-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-3 pb-3 text-center sm:grid-cols-4">
         <div>
-          <p class="text-[10px] font-semibold uppercase text-slate-500">{{ 'profile.statNative' | t }}</p>
-          <p class="text-sm font-bold uppercase text-slate-800">{{ profile()?.native_language }}</p>
+          <p class="text-[10px] font-semibold uppercase text-text-secondary">{{ 'profile.statNative' | t }}</p>
+          <p class="text-sm font-bold uppercase text-text-primary">{{ profile()?.native_language }}</p>
         </div>
         <div>
-          <p class="text-[10px] font-semibold uppercase text-slate-500">{{ 'profile.statTarget' | t }}</p>
+          <p class="text-[10px] font-semibold uppercase text-text-secondary">{{ 'profile.statTarget' | t }}</p>
           <p class="text-sm font-bold uppercase text-primary">{{ profile()?.target_languages?.join(', ') }}</p>
         </div>
         <div>
-          <p class="text-[10px] font-semibold uppercase text-slate-500">{{ 'profile.statStreak' | t }}</p>
+          <p class="text-[10px] font-semibold uppercase text-text-secondary">{{ 'profile.statStreak' | t }}</p>
           <p class="text-sm font-bold text-amber-600">🔥 {{ profile()?.study_streak_days }}d</p>
         </div>
         <div>
-          <p class="text-[10px] font-semibold uppercase text-slate-500">{{ 'profile.statCorrections' | t }}</p>
+          <p class="text-[10px] font-semibold uppercase text-text-secondary">{{ 'profile.statCorrections' | t }}</p>
           <p class="text-sm font-bold text-emerald-600">{{ profile()?.correction_ratio }}x</p>
         </div>
       </div>
@@ -92,15 +92,15 @@
 
       @if (!isEditing()) {
         <div class="mt-4">
-          <h3 class="text-xs font-semibold uppercase text-slate-500">{{ 'profile.aboutMe' | t }}</h3>
-          <p class="mt-2 rounded-card bg-slate-50 ps-3 pe-3 pt-3 pb-3 text-sm text-slate-700">
+          <h3 class="text-xs font-semibold uppercase text-text-secondary">{{ 'profile.aboutMe' | t }}</h3>
+          <p class="mt-2 rounded-card bg-surface-300 ps-3 pe-3 pt-3 pb-3 text-sm text-text-primary">
             {{ profile()?.bio_text || ('profile.noBio' | t) }}
           </p>
         </div>
       }
 
       @if (isEditing()) {
-        <form (ngSubmit)="saveProfile()" class="mt-4 space-y-3 border-t border-slate-100 pt-4">
+        <form (ngSubmit)="saveProfile()" class="mt-4 space-y-3 border-t border-surface-100 pt-4">
           <input type="text" [(ngModel)]="displayName" name="displayName" [placeholder]="'profile.displayNamePlaceholder' | t" class="app-input" />
 
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -110,12 +110,12 @@
 
           <textarea [(ngModel)]="bioText" name="bioText" rows="4" [placeholder]="'profile.bioPlaceholder' | t" class="app-textarea"></textarea>
 
-          <label class="flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" [(ngModel)]="privacyHideLocation" name="privacyHideLocation" class="h-4 w-4 rounded border-slate-300 text-primary" />
+          <label class="flex items-center gap-2 text-sm text-text-primary">
+            <input type="checkbox" [(ngModel)]="privacyHideLocation" name="privacyHideLocation" class="h-4 w-4 rounded border-surface-100 text-primary" />
             {{ 'profile.hideLocation' | t }}
           </label>
-          <label class="flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" [(ngModel)]="privacyHideSearch" name="privacyHideSearch" class="h-4 w-4 rounded border-slate-300 text-primary" />
+          <label class="flex items-center gap-2 text-sm text-text-primary">
+            <input type="checkbox" [(ngModel)]="privacyHideSearch" name="privacyHideSearch" class="h-4 w-4 rounded border-surface-100 text-primary" />
             {{ 'profile.hideSearch' | t }}
           </label>
 

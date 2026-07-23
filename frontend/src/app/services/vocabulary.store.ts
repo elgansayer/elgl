@@ -105,7 +105,7 @@ export class VocabularyStore {
     }
     if (fc.srs_level >= 4) {
       // Level 4+ = Known / White (normal text appearance)
-      const cls = 'text-slate-800 dark:text-slate-200 cursor-pointer hover:underline';
+      const cls = 'text-text-primary  cursor-pointer hover:underline';
       return { level: fc.srs_level, colorClass: cls, colourClass: cls, flashcard: fc };
     }
     // Level 1 to 3 = Learning / Yellow

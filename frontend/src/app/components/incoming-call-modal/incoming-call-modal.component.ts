@@ -16,7 +16,7 @@ export interface IncomingCallData {
   template: `
     @if (callData(); as data) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-8 w-full max-w-sm mx-4 shadow-2xl animate-in zoom-in-95 duration-200">
+        <div class="bg-surface-800 border border-slate-700 rounded-3xl p-8 w-full max-w-sm mx-4 shadow-2xl animate-in zoom-in-95 duration-200">
           <!-- Caller Info -->
           <div class="flex flex-col items-center space-y-4 mb-8">
             <div class="relative">
@@ -37,7 +37,7 @@ export interface IncomingCallData {
             </div>
             <div class="text-center">
               <h2 class="text-2xl font-bold text-white">{{ data.callerName }}</h2>
-              <p class="text-slate-400 mt-1">
+              <p class="text-text-muted mt-1">
                 {{ data.isVideoCall ? 'Incoming video call...' : 'Incoming voice call...' }}
               </p>
             </div>
@@ -57,7 +57,7 @@ export interface IncomingCallData {
                   <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
               </div>
-              <span class="text-sm text-slate-400 group-hover:text-slate-300">Decline</span>
+              <span class="text-sm text-text-muted group-hover:text-slate-300">Decline</span>
             </button>
 
             <!-- Accept Button -->

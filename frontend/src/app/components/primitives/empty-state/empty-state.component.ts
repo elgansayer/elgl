@@ -6,10 +6,10 @@ import { Component, input, output, computed } from '@angular/core';
     <div [class]="containerClasses()">
       <div class="text-4xl mb-3" aria-hidden="true">{{ icon() }}</div>
       @if (title()) {
-        <h3 class="font-bold text-base text-slate-800 mb-1">{{ title() }}</h3>
+        <h3 class="font-bold text-base text-text-primary mb-1">{{ title() }}</h3>
       }
       @if (description()) {
-        <p class="text-xs text-slate-500 max-w-sm mb-4">{{ description() }}</p>
+        <p class="text-xs text-text-secondary max-w-sm mb-4">{{ description() }}</p>
       }
       @if (actionLabel()) {
         <button
@@ -43,7 +43,7 @@ export class AppEmptyStateComponent {
   });
 
   readonly containerClasses = computed(() => {
-    const base = 'flex flex-col items-center justify-center text-center p-6 rounded-2xl bg-slate-50 border border-dashed border-slate-200';
+    const base = 'flex flex-col items-center justify-center text-center p-6 rounded-2xl bg-surface-300 border border-dashed border-surface-100';
     const extra = this.customClass();
     return `${base}${extra ? ' ' + extra : ''}`.trim();
   });

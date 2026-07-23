@@ -24,7 +24,7 @@
   }
 
   @if (isLoading()) {
-    <div class="app-empty-state text-slate-500">
+    <div class="app-empty-state text-text-secondary">
       Loading visitors...
     </div>
   }
@@ -43,15 +43,15 @@
             [src]="log.visitor.avatar_url || 'https://via.placeholder.com/100'"
             alt="visitor avatar"
             [class]="
-              'h-12 w-12 rounded-full border border-slate-200 object-cover ' +
+              'h-12 w-12 rounded-full border border-surface-100 object-cover ' +
               (log.is_blurred ? 'blur-md' : '')
             "
           />
           <div [class]="log.is_blurred ? 'blur-sm' : ''">
-            <p class="text-sm font-bold text-slate-900">
+            <p class="text-sm font-bold text-text-primary">
               {{ log.visitor.display_name || 'Language partner' }}
             </p>
-            <p class="text-[11px] text-slate-500">
+            <p class="text-[11px] text-text-secondary">
               <span class="uppercase">{{ log.visitor.native_language }}</span>
               <span class="ps-1 pe-1">→</span>
               <span class="uppercase">{{ log.visitor.target_languages.join(', ') }}</span>
@@ -59,7 +59,7 @@
           </div>
         </div>
         <div class="text-end">
-          <p class="text-[11px] text-slate-400">{{ log.created_at | date: 'short' }}</p>
+          <p class="text-[11px] text-text-muted">{{ log.created_at | date: 'short' }}</p>
           @if (log.is_blurred) {
             <p class="mt-1 text-[11px] font-bold text-amber-700">VIP only</p>
           }

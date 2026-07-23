@@ -16,14 +16,14 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
   template: `
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
          *ngIf="showCallUI()">
-      <div class="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center border border-slate-700">
+      <div class="bg-surface-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center border border-slate-700">
         <!-- Caller/Callee Info -->
         <div class="mb-6">
           <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-3xl font-bold text-white mb-3">
             {{ displayName()[0]?.toUpperCase() || '?' }}
           </div>
           <h2 class="text-xl font-semibold text-white">{{ displayName() }}</h2>
-          <p class="text-slate-400 text-sm mt-1">{{ callStatusText }}</p>
+          <p class="text-text-muted text-sm mt-1">{{ callStatusText }}</p>
         </div>
 
         <!-- Call Timer (when connected) -->
@@ -53,14 +53,14 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
           @if (callDirection() === 'outgoing' || callState() === 'connected' || callState() === 'connecting') {
             <button (click)="toggleMute()"
                     class="w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg"
-                    [ngClass]="isMuted() ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-slate-700 hover:bg-slate-600'">
+                    [ngClass]="isMuted() ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-surface-200 hover:bg-slate-600'">
               <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
               </svg>
             </button>
             <button (click)="toggleVideo()"
                     class="w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg"
-                    [ngClass]="isVideoEnabled() ? 'bg-slate-700 hover:bg-slate-600' : 'bg-yellow-500 hover:bg-yellow-600'">
+                    [ngClass]="isVideoEnabled() ? 'bg-surface-200 hover:bg-slate-600' : 'bg-yellow-500 hover:bg-yellow-600'">
               <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
               </svg>

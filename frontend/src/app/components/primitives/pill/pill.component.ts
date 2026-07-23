@@ -46,7 +46,7 @@ export class AppPillComponent {
         colourClass = 'bg-sky-100 text-sky-800 border border-sky-200';
         break;
       case 'neutral':
-        colourClass = 'bg-slate-100 text-slate-700 border border-slate-200';
+        colourClass = 'bg-surface-100 text-text-primary border border-surface-100';
         break;
     }
 

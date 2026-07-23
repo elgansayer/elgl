@@ -12,7 +12,7 @@ import { CommonModule } from '@angular/common';
         'inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all ' +
         (isPlaying()
           ? 'bg-primary text-white animate-pulse'
-          : 'bg-slate-100 hover:bg-slate-200 text-slate-700')
+          : 'bg-surface-100 hover:bg-surface-100 text-text-primary')
       "
       [title]="'Listen to native pronunciation of this text (' + language + ')'"
     >

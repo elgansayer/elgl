@@ -12,9 +12,9 @@
           [class.bg-primary]="activeTab() === 'review'"
           [class.text-white]="activeTab() === 'review'"
           [class.border-primary]="activeTab() === 'review'"
-          [class.bg-white]="activeTab() !== 'review'"
-          [class.text-slate-600]="activeTab() !== 'review'"
-          [class.border-slate-200]="activeTab() !== 'review'"
+          [class.bg-surface-200]="activeTab() !== 'review'"
+          [class.text-text-secondary]="activeTab() !== 'review'"
+          [class.border-surface-100]="activeTab() !== 'review'"
         >
           {{ 'vocab.tabReview' | t: { count: vocabStore.dueReviews().length } }}
         </button>
@@ -24,9 +24,9 @@
           [class.bg-primary]="activeTab() === 'all'"
           [class.text-white]="activeTab() === 'all'"
           [class.border-primary]="activeTab() === 'all'"
-          [class.bg-white]="activeTab() !== 'all'"
-          [class.text-slate-600]="activeTab() !== 'all'"
-          [class.border-slate-200]="activeTab() !== 'all'"
+          [class.bg-surface-200]="activeTab() !== 'all'"
+          [class.text-text-secondary]="activeTab() !== 'all'"
+          [class.border-surface-100]="activeTab() !== 'all'"
         >
           {{ 'vocab.tabDeck' | t: { count: vocabStore.allFlashcards().length } }}
         </button>
@@ -36,9 +36,9 @@
           [class.bg-primary]="activeTab() === 'ai-practice'"
           [class.text-white]="activeTab() === 'ai-practice'"
           [class.border-primary]="activeTab() === 'ai-practice'"
-          [class.bg-white]="activeTab() !== 'ai-practice'"
-          [class.text-slate-600]="activeTab() !== 'ai-practice'"
-          [class.border-slate-200]="activeTab() !== 'ai-practice'"
+          [class.bg-surface-200]="activeTab() !== 'ai-practice'"
+          [class.text-text-secondary]="activeTab() !== 'ai-practice'"
+          [class.border-surface-100]="activeTab() !== 'ai-practice'"
         >
           {{ 'vocab.tabAiPractice' | t }}
         </button>
@@ -68,9 +68,9 @@
             </div>
             @if (!isCardFlipped()) {
               <div class="space-y-3 text-center">
-                <h3 class="text-3xl font-black text-slate-900">{{ card.word_token }}</h3>
+                <h3 class="text-3xl font-black text-text-primary">{{ card.word_token }}</h3>
                 @if (card.original_context) {
-                  <p class="text-xs italic text-slate-500">
+                  <p class="text-xs italic text-text-secondary">
                     "<app-tokenised-text [text]="card.original_context"></app-tokenised-text>"
                   </p>
                 }
@@ -80,7 +80,7 @@
               <div class="space-y-3 text-center animate-fadeIn">
                 <h3 class="text-2xl font-black text-emerald-700">{{ card.translation }}</h3>
                 @if (card.definition) {
-                  <p class="text-sm text-slate-700">{{ card.definition }}</p>
+                  <p class="text-sm text-text-primary">{{ card.definition }}</p>
                 }
               </div>
             }
@@ -104,18 +104,18 @@
       } @else {
         <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
           @for (fc of vocabStore.allFlashcards(); track fc.id) {
-            <article class="rounded-card border border-slate-200 bg-slate-50 p-4">
+            <article class="rounded-card border border-surface-100 bg-surface-300 p-4">
               <div class="mb-1 flex items-center gap-2">
-                <h3 class="text-lg font-black text-slate-900">{{ fc.word_token }}</h3>
+                <h3 class="text-lg font-black text-text-primary">{{ fc.word_token }}</h3>
                 <span class="app-chip">L{{ fc.srs_level }}</span>
               </div>
               <p class="text-sm font-bold text-emerald-700">{{ fc.translation }}</p>
               @if (fc.original_context) {
-                <p class="mt-1 text-xs italic text-slate-500">
+                <p class="mt-1 text-xs italic text-text-secondary">
                   "<app-tokenised-text [text]="fc.original_context"></app-tokenised-text>"
                 </p>
               }
-              <p class="mt-2 text-[11px] text-slate-400">{{ 'vocab.nextReviewPrefix' | t }} {{ fc.next_review_at | date: 'shortDate' }}</p>
+              <p class="mt-2 text-[11px] text-text-muted">{{ 'vocab.nextReviewPrefix' | t }} {{ fc.next_review_at | date: 'shortDate' }}</p>
             </article>
           }
         </div>
@@ -133,7 +133,7 @@
       </div>
 
       <div>
-        <label class="mb-1 block text-xs font-bold text-slate-700">{{ 'vocab.practiceLabel' | t }}</label>
+        <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'vocab.practiceLabel' | t }}</label>
         <textarea [(ngModel)]="practiceText" rows="3" class="app-textarea" [placeholder]="'vocab.practicePlaceholder' | t"></textarea>
       </div>
 
@@ -145,16 +145,16 @@
       @if (grammarResult(); as gram) {
         <article class="rounded-card border border-amber-300 bg-amber-50 p-4 text-sm">
           <p class="font-bold text-amber-900">{{ 'vocab.grammarAnalysisTitle' | t: { count: gram.errors_found } }}</p>
-          <p class="mt-1 text-slate-700"><span class="font-bold">{{ 'vocab.originalPrefix' | t }}</span> <span class="line-through text-rose-700">{{ gram.original }}</span></p>
-          <p class="text-slate-700"><span class="font-bold">{{ 'vocab.correctedPrefix' | t }}</span> <span class="font-bold text-emerald-700">{{ gram.corrected }}</span></p>
-          <p class="mt-2 border-t border-amber-200 pt-2 text-xs text-slate-600">{{ gram.explanation }}</p>
+          <p class="mt-1 text-text-primary"><span class="font-bold">{{ 'vocab.originalPrefix' | t }}</span> <span class="line-through text-rose-700">{{ gram.original }}</span></p>
+          <p class="text-text-primary"><span class="font-bold">{{ 'vocab.correctedPrefix' | t }}</span> <span class="font-bold text-emerald-700">{{ gram.corrected }}</span></p>
+          <p class="mt-2 border-t border-amber-200 pt-2 text-xs text-text-secondary">{{ gram.explanation }}</p>
         </article>
       }
 
       @if (pronunciationResult(); as pron) {
         <article class="rounded-card border border-purple-300 bg-purple-50 p-4">
           <p class="font-bold text-purple-900">{{ 'vocab.pronunciationScorePrefix' | t }} <span class="text-xl font-black">{{ pron.overall_score }} / 100</span></p>
-          <p class="mt-1 text-xs text-slate-600">{{ pron.feedback_summary }}</p>
+          <p class="mt-1 text-xs text-text-secondary">{{ pron.feedback_summary }}</p>
           <div class="mt-3 flex flex-wrap gap-2 border-t border-purple-200 pt-3">
             @for (item of pron.breakdown; track item.word) {
               <span

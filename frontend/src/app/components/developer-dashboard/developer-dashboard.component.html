@@ -21,7 +21,7 @@
           </button>
         }
         @if (!authService.currentUser()?.is_vip) {
-          <button (click)="upgrade('consumer')" class="rounded-app border border-slate-500 bg-slate-800 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold text-slate-100">
+          <button (click)="upgrade('consumer')" class="rounded-app border border-slate-500 bg-surface-800 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold text-slate-100">
             Consumer VIP (8 UKP / $10 USD)
           </button>
         }
@@ -30,36 +30,36 @@
   </section>
 
   <!-- Interactive Sandbox Navigation Tabs -->
-  <nav class="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
+  <nav class="flex flex-wrap gap-2 border-b border-surface-100 pb-2">
     <button (click)="setTab('overview')"
-            [class.bg-slate-900]="activeTab() === 'overview'"
+            [class.bg-surface-800]="activeTab() === 'overview'"
             [class.text-white]="activeTab() === 'overview'"
-            [class.bg-slate-100]="activeTab() !== 'overview'"
-            [class.text-slate-700]="activeTab() !== 'overview'"
+            [class.bg-surface-100]="activeTab() !== 'overview'"
+            [class.text-text-primary]="activeTab() !== 'overview'"
             class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors">
       📊 Telemetry Overview
     </button>
     <button (click)="setTab('postgis')"
-            [class.bg-slate-900]="activeTab() === 'postgis'"
+            [class.bg-surface-800]="activeTab() === 'postgis'"
             [class.text-white]="activeTab() === 'postgis'"
-            [class.bg-slate-100]="activeTab() !== 'postgis'"
-            [class.text-slate-700]="activeTab() !== 'postgis'"
+            [class.bg-surface-100]="activeTab() !== 'postgis'"
+            [class.text-text-primary]="activeTab() !== 'postgis'"
             class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors">
       🗺️ PostGIS Spatial Sandbox
     </button>
     <button (click)="setTab('centrifugo')"
-            [class.bg-slate-900]="activeTab() === 'centrifugo'"
+            [class.bg-surface-800]="activeTab() === 'centrifugo'"
             [class.text-white]="activeTab() === 'centrifugo'"
-            [class.bg-slate-100]="activeTab() !== 'centrifugo'"
-            [class.text-slate-700]="activeTab() !== 'centrifugo'"
+            [class.bg-surface-100]="activeTab() !== 'centrifugo'"
+            [class.text-text-primary]="activeTab() !== 'centrifugo'"
             class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors">
       ⚡ Centrifugo & Redis Fan-Out
     </button>
     <button (click)="setTab('livekit')"
-            [class.bg-slate-900]="activeTab() === 'livekit'"
+            [class.bg-surface-800]="activeTab() === 'livekit'"
             [class.text-white]="activeTab() === 'livekit'"
-            [class.bg-slate-100]="activeTab() !== 'livekit'"
-            [class.text-slate-700]="activeTab() !== 'livekit'"
+            [class.bg-surface-100]="activeTab() !== 'livekit'"
+            [class.text-text-primary]="activeTab() !== 'livekit'"
             class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors">
       🎙️ LiveKit SFU Stage Simulator
     </button>
@@ -69,19 +69,19 @@
   @if (activeTab() === 'overview') {
     <div class="space-y-4">
       <section class="app-card app-padded space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-surface-100 pb-3">
           <div>
-            <h3 class="text-base font-black text-slate-900">🔐 API key management</h3>
-            <p class="app-muted">Send key in <code class="rounded bg-slate-100 px-1.5 py-0.5 text-primary">Authorization</code> header.</p>
+            <h3 class="text-base font-black text-text-primary">🔐 API key management</h3>
+            <p class="app-muted">Send key in <code class="rounded bg-surface-100 px-1.5 py-0.5 text-primary">Authorization</code> header.</p>
           </div>
           <button (click)="generateKey()" class="app-button-primary ps-4 pe-4 pt-2.5 pb-2.5 text-xs">+ Generate key</button>
         </div>
 
         @if (store.developerStats()?.api_key; as key) {
-          <div class="rounded-card border border-slate-200 bg-slate-50 p-4 flex flex-wrap items-center justify-between gap-2">
+          <div class="rounded-card border border-surface-100 bg-surface-300 p-4 flex flex-wrap items-center justify-between gap-2">
             <div>
               <p class="app-muted font-bold uppercase">Active production key</p>
-              <code class="text-sm font-black text-slate-900">{{ key }}</code>
+              <code class="text-sm font-black text-text-primary">{{ key }}</code>
             </div>
             <span class="app-chip bg-emerald-100 text-emerald-800">Active (600 RPM)</span>
           </div>
@@ -93,18 +93,18 @@
       <section class="grid grid-cols-1 gap-3 md:grid-cols-3">
         <article class="app-card app-padded space-y-1">
           <p class="app-muted font-bold uppercase">Total API calls today</p>
-          <p class="text-3xl font-black text-slate-900">{{ store.developerStats()?.total_api_calls_today || 0 }}</p>
-          <p class="text-[11px] text-slate-500">Across NLP, moments, and live rooms.</p>
+          <p class="text-3xl font-black text-text-primary">{{ store.developerStats()?.total_api_calls_today || 0 }}</p>
+          <p class="text-[11px] text-text-secondary">Across NLP, moments, and live rooms.</p>
         </article>
         <article class="app-card app-padded space-y-1">
           <p class="app-muted font-bold uppercase">Rate limit</p>
           <p class="text-3xl font-black text-primary">{{ store.developerStats()?.tier === 'developer' ? '600 RPM' : '60 RPM' }}</p>
-          <p class="text-[11px] text-slate-500">Tier: {{ store.developerStats()?.tier | uppercase }}</p>
+          <p class="text-[11px] text-text-secondary">Tier: {{ store.developerStats()?.tier | uppercase }}</p>
         </article>
         <article class="app-card app-padded space-y-1">
           <p class="app-muted font-bold uppercase">Average latency</p>
           <p class="text-3xl font-black text-emerald-700">{{ store.developerStats()?.avg_latency_ms || 18 }} ms</p>
-          <p class="text-[11px] text-slate-500">P95 baseline: 28 ms</p>
+          <p class="text-[11px] text-text-secondary">P95 baseline: 28 ms</p>
         </article>
       </section>
     </div>
@@ -113,33 +113,33 @@
   <!-- TAB 2: PostGIS Spatial Sandbox -->
   @if (activeTab() === 'postgis') {
     <section class="app-card app-padded space-y-4">
-      <div class="border-b border-slate-100 pb-3">
-        <h3 class="text-base font-black text-slate-900">🗺️ PostGIS Geography Query Simulator (`ST_DWithin`)</h3>
+      <div class="border-b border-surface-100 pb-3">
+        <h3 class="text-base font-black text-text-primary">🗺️ PostGIS Geography Query Simulator (`ST_DWithin`)</h3>
         <p class="app-muted">Simulate spatial indexing calculations and VIP location spoofing without modifying production data.</p>
       </div>
 
       <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div class="space-y-1">
-          <label class="text-xs font-bold text-slate-700">Search Latitude (SRID 4326)</label>
+          <label class="text-xs font-bold text-text-primary">Search Latitude (SRID 4326)</label>
           <input type="number" step="0.0001" [ngModel]="searchLatitude()" (ngModelChange)="searchLatitude.set($event)"
                  class="app-input w-full text-sm">
         </div>
         <div class="space-y-1">
-          <label class="text-xs font-bold text-slate-700">Search Longitude (SRID 4326)</label>
+          <label class="text-xs font-bold text-text-primary">Search Longitude (SRID 4326)</label>
           <input type="number" step="0.0001" [ngModel]="searchLongitude()" (ngModelChange)="searchLongitude.set($event)"
                  class="app-input w-full text-sm">
         </div>
         <div class="space-y-1">
-          <label class="text-xs font-bold text-slate-700">Radius (Metres): {{ searchRadiusMetres() }}m</label>
+          <label class="text-xs font-bold text-text-primary">Radius (Metres): {{ searchRadiusMetres() }}m</label>
           <input type="range" min="1000" max="50000" step="1000" [ngModel]="searchRadiusMetres()" (ngModelChange)="searchRadiusMetres.set($event)"
                  class="w-full accent-primary">
         </div>
       </div>
 
       <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
-        <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
+        <label class="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer">
           <input type="checkbox" [ngModel]="spoofVipLocation()" (ngModelChange)="spoofVipLocation.set($event)"
-                 class="rounded border-slate-300 text-primary focus:ring-primary">
+                 class="rounded border-surface-100 text-primary focus:ring-primary">
           <span>Enable VIP mock location spoofing override (8 UKP / $10 USD feature)</span>
         </label>
         <button (click)="runPostGisSearch()" [disabled]="isSearching()" class="app-button-primary ps-5 pe-5 pt-2 pb-2 text-xs">
@@ -148,14 +148,14 @@
       </div>
 
       @if (discoveryResults().length > 0) {
-        <div class="space-y-2 pt-3 border-t border-slate-100">
-          <p class="text-xs font-bold text-slate-700">Query Results: {{ discoveryResults().length }} matching learners</p>
+        <div class="space-y-2 pt-3 border-t border-surface-100">
+          <p class="text-xs font-bold text-text-primary">Query Results: {{ discoveryResults().length }} matching learners</p>
           <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
             @for (partner of discoveryResults(); track partner.id) {
-              <div class="rounded-card border border-slate-200 bg-slate-50 p-3 flex items-center justify-between">
+              <div class="rounded-card border border-surface-100 bg-surface-300 p-3 flex items-center justify-between">
                 <div>
-                  <p class="text-sm font-black text-slate-900">{{ partner.display_name }} @if (partner.is_vip) { <span class="app-chip bg-amber-100 text-amber-800">VIP</span> }</p>
-                  <p class="text-xs text-slate-500">Native: {{ partner.native_language }} | Target: {{ partner.target_languages?.join(', ') }}</p>
+                  <p class="text-sm font-black text-text-primary">{{ partner.display_name }} @if (partner.is_vip) { <span class="app-chip bg-amber-100 text-amber-800">VIP</span> }</p>
+                  <p class="text-xs text-text-secondary">Native: {{ partner.native_language }} | Target: {{ partner.target_languages?.join(', ') }}</p>
                 </div>
                 <span class="text-xs font-bold text-emerald-700">{{ partner.distance_metres ? partner.distance_metres + 'm away' : 'Near point' }}</span>
               </div>
@@ -171,16 +171,16 @@
   <!-- TAB 3: Centrifugo & Redis Fan-Out -->
   @if (activeTab() === 'centrifugo') {
     <section class="app-card app-padded space-y-4">
-      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-surface-100 pb-3">
         <div>
-          <h3 class="text-base font-black text-slate-900">⚡ Centrifugo v5 & Redis 7 Fan-Out Diagnostics</h3>
+          <h3 class="text-base font-black text-text-primary">⚡ Centrifugo v5 & Redis 7 Fan-Out Diagnostics</h3>
           <p class="app-muted">Inspect real-time WebSocket connection signals and simulated Redis queue broadcasts.</p>
         </div>
         <div class="flex items-center gap-2">
           <span class="app-chip" [class.bg-emerald-100]="centrifugeService.isConnected()"
                                  [class.text-emerald-800]="centrifugeService.isConnected()"
-                                 [class.bg-slate-200]="!centrifugeService.isConnected()"
-                                 [class.text-slate-700]="!centrifugeService.isConnected()">
+                                 [class.bg-surface-100]="!centrifugeService.isConnected()"
+                                 [class.text-text-primary]="!centrifugeService.isConnected()">
             Status: {{ centrifugeService.connectionStatus() | uppercase }}
           </span>
           <button (click)="toggleCentrifugo()" class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs">
@@ -189,10 +189,10 @@
         </div>
       </div>
 
-      <div class="rounded-card border border-slate-200 bg-slate-50 p-4 space-y-3">
-        <h4 class="text-xs font-black uppercase text-slate-700">Redis Timeline Queue Fan-Out Simulation</h4>
-        <p class="text-xs text-slate-600">
-          When a user publishes a Moment, <code class="rounded bg-slate-200 px-1 text-slate-800">TimelineWorker</code> executes <code class="rounded bg-slate-200 px-1 text-primary">RPUSH timeline_queue:[id]</code> to distribute IDs to all subscribers asynchronously.
+      <div class="rounded-card border border-surface-100 bg-surface-300 p-4 space-y-3">
+        <h4 class="text-xs font-black uppercase text-text-primary">Redis Timeline Queue Fan-Out Simulation</h4>
+        <p class="text-xs text-text-secondary">
+          When a user publishes a Moment, <code class="rounded bg-surface-100 px-1 text-text-primary">TimelineWorker</code> executes <code class="rounded bg-surface-100 px-1 text-primary">RPUSH timeline_queue:[id]</code> to distribute IDs to all subscribers asynchronously.
         </p>
         <button (click)="simulateRedisTimelineFanout()" class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs">
           🚀 Trigger Simulated Redis Fan-Out (<code class="font-mono">RPUSH</code>)
@@ -204,18 +204,18 @@
   <!-- TAB 4: LiveKit Stage Simulator -->
   @if (activeTab() === 'livekit') {
     <section class="app-card app-padded space-y-4">
-      <div class="border-b border-slate-100 pb-3">
-        <h3 class="text-base font-black text-slate-900">🎙️ LiveKit WebRTC SFU Stage Permissions (`RoomServiceClient`)</h3>
+      <div class="border-b border-surface-100 pb-3">
+        <h3 class="text-base font-black text-text-primary">🎙️ LiveKit WebRTC SFU Stage Permissions (`RoomServiceClient`)</h3>
         <p class="app-muted">Simulate stage hand-raising workflows and token `canPublish` claims inside live audio/video rooms.</p>
       </div>
 
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div class="rounded-card border border-slate-200 bg-slate-50 p-4 space-y-3">
+        <div class="rounded-card border border-surface-100 bg-surface-300 p-4 space-y-3">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-black uppercase text-slate-700">Simulated Stage Role</span>
+            <span class="text-xs font-black uppercase text-text-primary">Simulated Stage Role</span>
             <span class="app-chip bg-indigo-100 text-indigo-800 font-bold uppercase">{{ simulatedStageRole() }}</span>
           </div>
-          <p class="text-xs text-slate-600">
+          <p class="text-xs text-text-secondary">
             Publish Permission (`canPublish` JWT Claim): <strong [class.text-emerald-600]="simulatedCanPublish()" [class.text-amber-600]="!simulatedCanPublish()">{{ simulatedCanPublish() ? 'GRANTED (Microphone ON)' : 'RESTRICTED (Listener only)' }}</strong>
           </p>
           <div class="flex flex-wrap gap-2 pt-2">
@@ -231,20 +231,20 @@
           </div>
         </div>
 
-        <div class="rounded-card border border-slate-200 bg-slate-50 p-4 space-y-3">
+        <div class="rounded-card border border-surface-100 bg-surface-300 p-4 space-y-3">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-black uppercase text-slate-700">Composite Recording Engine</span>
-            <span class="app-chip" [class.bg-emerald-100]="isRecordingActive()" [class.text-emerald-800]="isRecordingActive()" [class.bg-slate-200]="!isRecordingActive()" [class.text-slate-700]="!isRecordingActive()">
+            <span class="text-xs font-black uppercase text-text-primary">Composite Recording Engine</span>
+            <span class="app-chip" [class.bg-emerald-100]="isRecordingActive()" [class.text-emerald-800]="isRecordingActive()" [class.bg-surface-100]="!isRecordingActive()" [class.text-text-primary]="!isRecordingActive()">
               {{ isRecordingActive() ? '🔴 RECORDING ACTIVE' : '⚪ IDLE' }}
             </span>
           </div>
-          <p class="text-xs text-slate-600">
+          <p class="text-xs text-text-secondary">
             Archive live stage audio/video composites directly to Cloudflare R2 bucket with zero egress fees.
           </p>
           <button (click)="toggleRecordingArchive()"
                   [class.bg-red-600]="!isRecordingActive()"
                   [class.text-white]="!isRecordingActive()"
-                  [class.bg-slate-700]="isRecordingActive()"
+                  [class.bg-surface-200]="isRecordingActive()"
                   [class.text-white]="isRecordingActive()"
                   class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors">
             {{ isRecordingActive() ? '⏹️ Stop & Save R2 Archive' : '🔴 Start Composite Recording' }}
@@ -258,13 +258,13 @@
   <section class="app-card app-padded space-y-3 bg-slate-950 text-slate-100 border border-slate-800">
     <div class="flex items-center justify-between border-b border-slate-800 pb-2">
       <h4 class="text-xs font-black uppercase tracking-wider text-indigo-400">🛡️ Live Architectural Diagnostics Stream</h4>
-      <span class="text-[11px] text-slate-400">Showing last {{ logs().length }} events</span>
+      <span class="text-[11px] text-text-muted">Showing last {{ logs().length }} events</span>
     </div>
 
     <div class="space-y-1.5 max-h-52 overflow-y-auto font-mono text-xs">
       @for (log of logs(); track log.id) {
-        <div class="flex items-start gap-2 rounded bg-slate-900/60 p-1.5 border border-slate-800/80">
-          <span class="text-slate-400 shrink-0">[{{ log.timestamp }}]</span>
+        <div class="flex items-start gap-2 rounded bg-surface-800/60 p-1.5 border border-slate-800/80">
+          <span class="text-text-muted shrink-0">[{{ log.timestamp }}]</span>
           <span class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase shrink-0"
                 [class.bg-indigo-900]="log.category === 'POSTGIS'" [class.text-indigo-200]="log.category === 'POSTGIS'"
                 [class.bg-emerald-900]="log.category === 'CENTRIFUGO'" [class.text-emerald-200]="log.category === 'CENTRIFUGO'"

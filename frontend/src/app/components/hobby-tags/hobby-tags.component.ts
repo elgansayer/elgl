@@ -31,7 +31,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                 type="text"
                 [(ngModel)]="searchQuery"
                 placeholder="Search hobbies..."
-                class="w-full px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                class="w-full px-4 py-2 bg-surface-800 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
@@ -40,16 +40,16 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                 @if (!isTagAdded(tag.id)) {
                   <button
                     (click)="addTag(tag.id)"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-indigo-600 text-slate-200 rounded-full text-sm transition-colors"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-200 hover:bg-indigo-600 text-slate-200 rounded-full text-sm transition-colors"
                   >
                     <span>{{ tag.icon }}</span>
                     <span>{{ tag.name }}</span>
-                    <span class="text-xs text-slate-400">+</span>
+                    <span class="text-xs text-text-muted">+</span>
                   </button>
                 }
               }
               @empty {
-                <p class="text-slate-400 text-sm">No hobbies found</p>
+                <p class="text-text-muted text-sm">No hobbies found</p>
               }
             </div>
           </div>
@@ -81,7 +81,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
           </div>
         }
         @empty {
-          <p class="text-slate-400 text-sm italic">
+          <p class="text-text-muted text-sm italic">
             No hobbies added yet. Click "Add Hobby" to get started!
           </p>
         }
@@ -99,7 +99,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                 (click)="updateProficiency(selectedTagForProficiency()!, level)"
                 class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
                 [class.bg-indigo-600]="getCurrentProficiency(selectedTagForProficiency()!) === level"
-                [class.bg-slate-700]="getCurrentProficiency(selectedTagForProficiency()!) !== level"
+                [class.bg-surface-200]="getCurrentProficiency(selectedTagForProficiency()!) !== level"
                 [class.text-white]="getCurrentProficiency(selectedTagForProficiency()!) === level"
                 [class.text-slate-300]="getCurrentProficiency(selectedTagForProficiency()!) !== level"
               >
@@ -122,7 +122,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                 <div class="flex items-start justify-between">
                   <div>
                     <span class="text-sm font-semibold text-slate-100">{{ word.word }}</span>
-                    <span class="text-xs text-slate-400 ml-2">{{ word.translation }}</span>
+                    <span class="text-xs text-text-muted ml-2">{{ word.translation }}</span>
                   </div>
                   <app-pill
                     [colour]="getDifficultyColour(word.difficulty)"
@@ -132,10 +132,10 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                   </app-pill>
                 </div>
                 @if (word.context_sentence) {
-                  <p class="text-xs text-slate-400 mt-1 italic">{{ word.context_sentence }}</p>
+                  <p class="text-xs text-text-muted mt-1 italic">{{ word.context_sentence }}</p>
                 }
                 @if (word.hobby_tag) {
-                  <div class="flex items-center gap-1 mt-2 text-xs text-slate-500">
+                  <div class="flex items-center gap-1 mt-2 text-xs text-text-secondary">
                     <span>{{ word.hobby_tag.icon }}</span>
                     <span>{{ word.hobby_tag.name }}</span>
                   </div>
