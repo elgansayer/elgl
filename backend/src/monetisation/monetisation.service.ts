@@ -14,6 +14,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { CreateDiagnosticLogDto } from './dto/monetisation.dto';
 import { AppleNotificationService } from './apple-notification.service';
 import { GooglePlayNotificationService } from './google-play-notification.service';
+import { SubscriptionPlansService } from './services/subscription-plans.service';
 
 export interface UserVipRow {
   id: string;
@@ -42,6 +43,8 @@ export interface DeveloperDiagnosticLogRow {
 export class MonetisationService {
   private readonly logger = new Logger(MonetisationService.name);
 
+  private readonly stripe: Stripe;
+
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
@@ -49,7 +52,15 @@ export class MonetisationService {
     private readonly appleNotificationService: AppleNotificationService,
     @Inject(forwardRef(() => GooglePlayNotificationService))
     private readonly googlePlayNotificationService: GooglePlayNotificationService,
-  ) {}
+    private readonly subscriptionPlansService: SubscriptionPlansService,
+  ) {
+    this.stripe = new Stripe(
+      this.configService.get<string>('STRIPE_SECRET_KEY') || '',
+      {
+        apiVersion: '2025-02-24.acacia' as Stripe.LatestApiVersion,
+      },
+    );
+  }
 
   /**
    * PRIVATE: VIP status must only be changed via verified payment webhooks.
@@ -93,6 +104,50 @@ export class MonetisationService {
     return this.updateVipStatus(userId, isVip, vipTier);
   }
 
+  async createCheckoutSession(
+    userId: string,
+    planId: string,
+    interval: 'month' | 'year',
+  ): Promise<{ sessionUrl: string; sessionId: string }> {
+    const plan = this.subscriptionPlansService.getPlanById(planId);
+    if (!plan) {
+      throw new NotFoundException(`Plan "${planId}" not found`);
+    }
+
+    const priceId =
+      interval === 'year' && plan.stripe_price_id_yearly
+        ? plan.stripe_price_id_yearly
+        : plan.stripe_price_id;
+
+    if (!priceId) {
+      throw new BadRequestException(
+        `No Stripe price ID configured for plan "${planId}" (interval: ${interval})`,
+      );
+    }
+
+    const session = await this.stripe.checkout.sessions.create({
+      mode: 'subscription',
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        userId,
+        planId,
+        interval,
+      },
+      success_url: `${this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4200'}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4200'}/subscription/cancel`,
+    });
+
+    return {
+      sessionUrl: session.url || '',
+      sessionId: session.id,
+    };
+  }
+
   async handleStripeWebhook(
     rawBody: Buffer,
     signature: string,
@@ -104,16 +159,9 @@ export class MonetisationService {
       throw new Error('STRIPE_WEBHOOK_SECRET is not configured');
     }
 
-    const stripe = new Stripe(
-      this.configService.get<string>('STRIPE_SECRET_KEY') || '',
-      {
-        apiVersion: '2025-02-24.acacia' as Stripe.LatestApiVersion,
-      },
-    );
-
     let event: Stripe.Event;
     try {
-      event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+      event = this.stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
     } catch (err: any) {
       this.logger.error(
         `Webhook signature verification failed: ${(err as Error).message}`,

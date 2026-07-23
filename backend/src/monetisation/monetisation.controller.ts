@@ -9,6 +9,7 @@ import {
   Req,
   BadRequestException,
 } from '@nestjs/common';
+import { IsString, IsIn, IsNotEmpty } from 'class-validator';
 import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
 import { User } from '@supabase/supabase-js';
@@ -101,6 +102,28 @@ export class MonetisationController {
       user.id,
       dto.receipt_data,
       dto.exclude_old_transactions,
+    );
+  }
+
+  @Post('create-checkout-session')
+  @UseGuards(SupabaseAuthGuard)
+  async createCheckoutSession(
+    @CurrentUser() user: User | null,
+    @Body()
+    body: {
+      @IsString()
+      @IsNotEmpty()
+      planId: string;
+      @IsString()
+      @IsIn(['month', 'year'])
+      interval: 'month' | 'year';
+    },
+  ) {
+    if (!user) return null;
+    return await this.monetisationService.createCheckoutSession(
+      user.id,
+      body.planId,
+      body.interval,
     );
   }
 }

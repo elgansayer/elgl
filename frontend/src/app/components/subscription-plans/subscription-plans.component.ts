@@ -68,11 +68,11 @@ import { environment } from '../../../environments/environment';
                     <span class="text-4xl font-bold text-white">
                       {{ getDisplayPrice(plan) }}
                     </span>
-                    <span class="text-slate-400 ml-2">/{{ billingInterval() }}</span>
+                    <span class="text-slate-400 ms-2">/{{ billingInterval() }}</span>
                   </div>
                   @if (billingInterval() === 'year' && plan.price_usd > 0) {
                     <p class="text-green-400 text-sm mt-1">
-                      ${{ plan.price_usd }}/month if paid monthly
+                      {{ plan.price_ukp }} UKP / ${{ plan.price_usd }} USD per month if paid monthly
                     </p>
                   }
                 </div>
@@ -165,10 +165,10 @@ export class SubscriptionPlansComponent {
     if (plan.price_usd === 0) return 'Free';
     if (this.billingInterval() === 'year') {
       // Yearly price: £50 / $63 USD
-      return '£50';
+      return '£50 / $63 USD';
     }
     // Monthly price: £8 / $10 USD
-    return '£8';
+    return `£${plan.price_ukp} / $${plan.price_usd} USD`;
   }
 
   onSelectPlan(plan: SubscriptionPlan): void {
@@ -176,12 +176,9 @@ export class SubscriptionPlansComponent {
     
     this.loading.set(true);
     
-    // Map plan to interval type
-    const planType = this.billingInterval() === 'year' ? 'yearly' : 'monthly';
-    
     this.http.post<{ sessionUrl: string; sessionId: string }>(
-      `${environment.apiUrl}/stripe/create-checkout-session`,
-      { planType }
+      `${environment.apiUrl}/monetisation/create-checkout-session`,
+      { planId: plan.id, interval: this.billingInterval() }
     ).subscribe({
       next: (response) => {
         // Redirect to Stripe Checkout
