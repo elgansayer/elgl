@@ -124,7 +124,7 @@ export class MonetisationService {
     this.logger.log(`Received verified Stripe Webhook event: ${event.type}`);
 
     if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
+      const session = event.data.object as Stripe.Checkout.Session;
       const metadata = session.metadata;
       if (metadata?.userId) {
         // Determine tier based on interval
@@ -136,7 +136,7 @@ export class MonetisationService {
         await this.updateVipStatusFromWebhook(metadata.userId, true, tier);
       }
     } else if (event.type === 'customer.subscription.deleted') {
-      const subscription = event.data.object;
+      const subscription = event.data.object as Stripe.Subscription;
       const metadata = subscription.metadata;
       if (metadata?.userId) {
         await this.updateVipStatusFromWebhook(metadata.userId, false, null);
