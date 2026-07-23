@@ -61,3 +61,15 @@ echo "If you need to run 'npm' commands manually in this shell, run:"
 echo "  export PATH=\"/usr/local/bin:\$PATH\""
 echo "Or source your bashrc:"
 echo "  source ~/.bashrc"
+
+# Also write a small helper script that sets PATH for the parent shell
+cat > /tmp/setup-node-path.sh << 'EOF'
+#!/bin/bash
+export PATH="/usr/local/bin:$PATH"
+echo "PATH updated. You can now run npm commands."
+EOF
+chmod +x /tmp/setup-node-path.sh
+echo ""
+echo "A helper script has been created at /tmp/setup-node-path.sh"
+echo "Run it in your current shell with:"
+echo "  source /tmp/setup-node-path.sh"
