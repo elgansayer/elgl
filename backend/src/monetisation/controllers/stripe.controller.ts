@@ -42,7 +42,7 @@ export class StripeController {
 
   @Post('webhook')
   async handleWebhook(
-    @Req() req: Request,
+    @Req() req: Request & { rawBody?: Buffer },
     @Headers('stripe-signature') signature: string,
   ) {
     if (!signature) {
@@ -50,12 +50,12 @@ export class StripeController {
     }
 
     // Get raw body from request
-    const rawBody = (req as any).rawBody;
+    const rawBody = req.rawBody;
     if (!rawBody) {
       throw new BadRequestException('Missing request body');
     }
 
-    const event = await this.stripeService.constructWebhookEvent(
+    const event = this.stripeService.constructWebhookEvent(
       Buffer.from(rawBody),
       signature,
     );

@@ -113,10 +113,10 @@ export class StripeService {
     }
   }
 
-  async constructWebhookEvent(
+  constructWebhookEvent(
     payload: Buffer,
     signature: string,
-  ): Promise<Stripe.Event> {
+  ): Stripe.Event {
     const webhookSecret = this.configService.get<string>(
       'STRIPE_WEBHOOK_SECRET',
     );
@@ -136,7 +136,7 @@ export class StripeService {
     }
   }
 
-  async handleSubscriptionCreated(event: Stripe.Event): Promise<void> {
+  handleSubscriptionCreated(event: Stripe.Event): void {
     const subscription = event.data.object as Stripe.Subscription;
     const metadata = subscription.metadata;
     const userId = metadata.userId;
@@ -151,7 +151,7 @@ export class StripeService {
     // This will be handled by the MonetisationService
   }
 
-  async handleSubscriptionUpdated(event: Stripe.Event): Promise<void> {
+  handleSubscriptionUpdated(event: Stripe.Event): void {
     const subscription = event.data.object as Stripe.Subscription;
     const metadata = subscription.metadata;
     const userId = metadata.userId;
@@ -162,7 +162,7 @@ export class StripeService {
     );
   }
 
-  async handleSubscriptionDeleted(event: Stripe.Event): Promise<void> {
+  handleSubscriptionDeleted(event: Stripe.Event): void {
     const subscription = event.data.object as Stripe.Subscription;
     const metadata = subscription.metadata;
     const userId = metadata.userId;

@@ -9,7 +9,7 @@ async function bootstrap() {
   // Ensure raw body is preserved for Stripe webhook
   app.use(
     json({
-      verify: (req: any, _res, buf) => {
+      verify: (req: { rawBody?: Buffer }, _res, buf) => {
         req.rawBody = buf;
       },
     }),
@@ -17,7 +17,7 @@ async function bootstrap() {
   app.use(
     urlencoded({
       extended: true,
-      verify: (req: any, _res, buf) => {
+      verify: (req: { rawBody?: Buffer }, _res, buf) => {
         req.rawBody = buf;
       },
     }),
