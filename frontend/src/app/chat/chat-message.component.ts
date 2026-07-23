@@ -1,11 +1,12 @@
 import { Component, input } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { LongPressContextMenuComponent } from '../shared/long-press-context-menu/long-press-context-menu.component';
 import { ChatMessage } from '../services/chat.service';
 
 @Component({
   selector: 'app-chat-message',
   standalone: true,
-  imports: [LongPressContextMenuComponent],
+  imports: [LongPressContextMenuComponent, DatePipe],
   template: `
     <div class="flex flex-col" [class.items-end]="isOwnMessage()" [class.items-start]="!isOwnMessage()">
       <app-long-press-context-menu 
