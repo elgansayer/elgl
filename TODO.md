@@ -270,7 +270,8 @@
 
 ## Phase 18: Monetisation & VIP Tiers
 - [ ] Build VIP Subscription showcase page detailing all premium benefits.
-- [ ] Integrate Stripe Checkout for Monthly (8 UKP / $10 USD) and Yearly (50 UKP / $63 USD) plans.
+- [x] Integrate Stripe Checkout for Monthly (8 UKP / $10 USD) and Yearly (50 UKP / $63 USD) plans (backend endpoint exists).
+- [ ] Build frontend subscription page that calls `POST /monetisation/create-checkout-session` and redirects to Stripe Checkout.
 - [ ] Build "Restore Purchases" button for app store compliance.
 
 ## Phase 19: Gamification & Study Streaks
