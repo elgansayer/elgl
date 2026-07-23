@@ -4,10 +4,13 @@ set -euo pipefail
 # Ensure the script itself is executable (in case it was not)
 chmod +x "$0"
 
+# Determine the directory where this script resides
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 # Check if npm is already available. If yes, skip installation and just run lint.
 if command -v npm &> /dev/null; then
     echo "npm is already available. Skipping Node.js installation."
-    cd backend && npm run lint
+    cd "$SCRIPT_DIR/backend" && npm run lint
     exit $?
 fi
 
@@ -38,15 +41,12 @@ rm /tmp/node.tar.xz
 export PATH="/usr/local/bin:$PATH"
 
 # Persist PATH in ~/.bashrc so that future shell sessions also have /usr/local/bin
-# Use a more robust check that handles the case where the file doesn't exist
 if [ ! -f ~/.bashrc ] || ! grep -q 'export PATH="/usr/local/bin:$PATH"' ~/.bashrc 2>/dev/null; then
-    # Create ~/.bashrc if it doesn't exist
     touch ~/.bashrc
     echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.bashrc
 fi
 
 # Source the updated bashrc so the current shell also sees the change
-# Use || true to avoid errors if bashrc has issues
 . ~/.bashrc 2>/dev/null || true
 
 # Verify npm is accessible
@@ -63,54 +63,24 @@ echo "Node.js and npm installed successfully."
 
 # Install backend dependencies before linting
 echo "Installing backend dependencies..."
-cd backend
+cd "$SCRIPT_DIR/backend"
 npm install
 
 # Now run lint in backend
-npm run lint || true
+npm run lint
 echo "Lint passed successfully."
 
 # Ensure PATH is exported for the parent shell (if sourced)
-# This line is only effective if the script is sourced, but we also print instructions.
 echo ""
 echo "If you need to run 'npm' commands manually in this shell, run:"
 echo "  export PATH=\"/usr/local/bin:\$PATH\""
 echo "Or source your bashrc:"
 echo "  source ~/.bashrc"
 
-# Also write a small helper script that sets PATH for the parent shell
-cat > /tmp/setup-node-path.sh << 'EOF'
-#!/bin/bash
-export PATH="/usr/local/bin:$PATH"
-echo "PATH updated. You can now run npm commands."
-EOF
-chmod +x /tmp/setup-node-path.sh
-echo ""
-echo "A helper script has been created at /tmp/setup-node-path.sh"
-echo "Run it in your current shell with:"
-echo "  source /tmp/setup-node-path.sh"
-
 # Persist PATH globally so that non‑interactive shells also find npm
 if [ "$(id -u)" -eq 0 ]; then
-    # Append to /etc/environment (read by all processes) if not already present
     if ! grep -q '/usr/local/bin' /etc/environment 2>/dev/null; then
         echo 'PATH="/usr/local/bin:$PATH"' >> /etc/environment
         echo "Global PATH updated in /etc/environment."
     fi
 fi
-
-# Also create a symlink from /usr/local/bin/node to /usr/bin/node if /usr/bin is in PATH
-if [ -d /usr/bin ] && [ ! -f /usr/bin/node ]; then
-    ln -sf /usr/local/bin/node /usr/bin/node
-    ln -sf /usr/local/bin/npm /usr/bin/npm
-    echo "Symlinks created in /usr/bin for node and npm."
-fi
-
-# Source the bashrc again to ensure PATH is set for the current shell
-. ~/.bashrc 2>/dev/null || true
-
-# Ensure PATH includes /usr/local/bin for the current shell
-export PATH="/usr/local/bin:$PATH"
-
-# Run the lint command that was failing
-cd backend && npm run lint
