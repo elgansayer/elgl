@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import { UserProfile } from './interfaces/user-profile.interface';
+import { UserProfile, ProfileVisitor } from './interfaces/user-profile.interface';
 
 @Injectable()
 export class UsersService {
@@ -32,7 +32,7 @@ export class UsersService {
 
     type SupabaseResponse = { data: ProfileVisitor[] | null; error: any };
 
-    const { data, error } = (await supabase
+    const { data, error }: SupabaseResponse = (await supabase
       .from('profile_visits')
       .select(
         `
