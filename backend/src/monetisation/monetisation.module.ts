@@ -7,6 +7,8 @@ import { AppleNotificationService } from './apple-notification.service';
 import { AppleNotificationController } from './apple-notification.controller';
 import { GooglePlayNotificationService } from './google-play-notification.service';
 import { GooglePlayNotificationController } from './google-play-notification.controller';
+import { SubscriptionPlansController } from './controllers/subscription-plans.controller';
+import { SubscriptionPlansService } from './services/subscription-plans.service';
 
 @Module({
   imports: [HttpModule],
@@ -14,18 +16,21 @@ import { GooglePlayNotificationController } from './google-play-notification.con
     MonetisationController,
     AppleNotificationController,
     GooglePlayNotificationController,
+    SubscriptionPlansController,
   ],
   providers: [
     MonetisationService,
     AppleReceiptValidatorService,
     AppleNotificationService,
     GooglePlayNotificationService,
+    SubscriptionPlansService,
   ],
   exports: [
     MonetisationService,
     AppleReceiptValidatorService,
     AppleNotificationService,
     GooglePlayNotificationService,
+    SubscriptionPlansService,
   ],
 })
 export class MonetisationModule {}

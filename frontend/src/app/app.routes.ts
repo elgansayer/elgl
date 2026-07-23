@@ -35,4 +35,12 @@ export const routes: Routes = [
         (m) => m.HobbyTagsComponent
       ),
   },
+  {
+    path: 'vip',
+    loadComponent: () =>
+      import('./pages/vip-subscription/vip-subscription.component').then(
+        (m) => m.VipSubscriptionComponent
+      ),
+    title: 'VIP Subscription - HelloTalk',
+  },
 ];
