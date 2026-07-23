@@ -272,6 +272,7 @@
 - [x] Build VIP Subscription showcase page detailing all premium benefits.
 - [x] Integrate Stripe Checkout for Monthly (8 UKP / $10 USD) and Yearly (50 UKP / $63 USD) plans (backend endpoint exists).
 - [ ] Build frontend subscription page that calls `POST /monetisation/create-checkout-session` and redirects to Stripe Checkout.
+- [ ] Create backend endpoint `POST /monetisation/create-checkout-session` that creates a Stripe Checkout session and returns the session URL. The frontend `SubscriptionPlansComponent` currently calls `/stripe/create-checkout-session` which does not exist; update it to call the correct endpoint.
 - [ ] Build "Restore Purchases" button for app store compliance.
 - [ ] Refine `SubscriptionPlansComponent` to use dynamic pricing from plan data (price_ukp/price_usd) instead of hardcoded values, display dual-currency format "8 UKP / $10 USD" per AGENTS.md rules, and properly handle free plan display.
 
