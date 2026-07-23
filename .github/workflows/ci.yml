@@ -21,10 +21,11 @@ jobs:
           cache: 'npm'
           cache-dependency-path: '**/package-lock.json'
 
-      - name: Verify npm installation
+      - name: Verify Node.js and npm
         run: |
           node --version
           npm --version
+          echo "✅ Node.js and npm verified"
 
       - name: Install dependencies
         run: npm ci

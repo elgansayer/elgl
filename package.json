@@ -12,6 +12,7 @@
     "build:backend": "cd backend && npm run build",
     "test": "cd frontend && npm run test -- --watch=false && cd ../backend && npm run test",
     "verify": "npm run check:constitution && npm run build && cd backend && npm run verify",
+    "verify:node": "node --version && npm --version && echo '✅ Node.js and npm verified'",
     "prepare": "if [ -d .git ]; then npx husky || true; fi"
   },
   "devDependencies": {
