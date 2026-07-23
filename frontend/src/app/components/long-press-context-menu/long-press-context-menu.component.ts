@@ -22,33 +22,31 @@ export interface ContextMenuOption {
     >
       <ng-content />
 
-      @if (isOpen()) {
+      <div
+        *ngIf="isOpen()"
+        #menuPanel
+        class="fixed z-50"
+        [style.left.px]="position().x"
+        [style.top.px]="position().y"
+        (click)="$event.stopPropagation()"
+      >
         <div
-          #menuPanel
-          class="fixed z-50"
-          [style.left.px]="position().x"
-          [style.top.px]="position().y"
-          (click)="$event.stopPropagation()"
+          class="bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[160px] overflow-hidden"
+          role="menu"
+          [attr.aria-label]="'Context menu'"
         >
-          <div
-            class="bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[160px] overflow-hidden"
-            role="menu"
-            [attr.aria-label]="'Context menu'"
+          <button
+            *ngFor="let option of options(); trackBy: trackByOptionId"
+            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-gray-800 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+            [disabled]="option.disabled"
+            (click)="onOptionClick(option.id)"
+            role="menuitem"
           >
-            @for (option of options(); track option.id) {
-              <button
-                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-gray-800 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-                [disabled]="option.disabled"
-                (click)="onOptionClick(option.id)"
-                role="menuitem"
-              >
-                <span class="text-base w-5 text-center">{{ option.icon }}</span>
-                <span>{{ option.label }}</span>
-              </button>
-            }
-          </div>
+            <span class="text-base w-5 text-center">{{ option.icon }}</span>
+            <span>{{ option.label }}</span>
+          </button>
         </div>
-      }
+      </div>
     </div>
   `,
   styles: [`
@@ -208,5 +206,9 @@ export class LongPressContextMenuComponent implements AfterViewInit {
 
   private close(): void {
     this.isOpen.set(false);
+  }
+
+  private trackByOptionId(_index: number, option: ContextMenuOption): string {
+    return option.id;
   }
 }
