@@ -5,12 +5,13 @@ import { HttpClient } from '@angular/common/http';
 import { SubscriptionPlansService, SubscriptionPlan } from '../../services/subscription-plans.service';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
+import { RestorePurchasesButtonComponent } from '../restore-purchases-button/restore-purchases-button.component';
 import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-subscription-plans',
   standalone: true,
-  imports: [CommonModule, AppButtonPrimaryComponent, AppButtonSecondaryComponent],
+  imports: [CommonModule, AppButtonPrimaryComponent, AppButtonSecondaryComponent, RestorePurchasesButtonComponent],
   template: `
     <div class="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 py-12 px-4">
       <div class="max-w-6xl mx-auto">
@@ -124,6 +125,13 @@ import { environment } from '../../../environments/environment';
             </div>
           }
         </div>
+      </div>
+      <!-- Restore Purchases Section -->
+      <div class="mt-6 text-center">
+        <p class="text-xs text-slate-400 mb-2">
+          Already purchased? Restore your previous purchases below.
+        </p>
+        <app-restore-purchases-button />
       </div>
     </div>
   `,
