@@ -230,10 +230,10 @@ export class VoipCallComponent implements OnDestroy {
 
   async toggleVideo(): Promise<void> {
     this.isVideoEnabled.update(v => !v);
-    // Re-publish tracks with updated video state
-    const tracks = await this.livekitService.publishTracks(this.isVideoEnabled());
-    this.localAudioTrack = tracks.audioTrack;
-    this.localVideoTrack = tracks.videoTrack;
+    // Toggle the camera on the local participant
+    if (this.room) {
+      await this.room.localParticipant.setCameraEnabled(this.isVideoEnabled());
+    }
   }
 
   private startDurationTimer(): void {
