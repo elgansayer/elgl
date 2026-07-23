@@ -262,6 +262,7 @@
   - RTL-safe logical CSS classes.
   - i18n translation keys for all button labels.
   - Unit tests for the component.
+- [ ] Add LiveKit audio track management to `VoipCallComponent` (mute/unmute local audio track via LiveKit SDK), replace physical CSS classes with logical RTL-safe equivalents, and create unit tests (`voip-call.component.spec.ts`).
 - [ ] Build 1-on-1 Video Call interface with local preview overlay.
 - [ ] Implement IncomingCallComponent with ringtone audio playback, accept/reject buttons, and integration with LiveKit for incoming call detection.
 
