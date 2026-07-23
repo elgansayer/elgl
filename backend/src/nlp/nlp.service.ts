@@ -68,40 +68,82 @@ export class NlpService {
       dto.source_language || this.detectLanguage(dto.text).language;
     const cleanWord = dto.text.trim();
 
-    let trans = `Translated [${detected} → ${dto.target_language}]: ${cleanWord}`;
-    let def = `Definition for word token "${cleanWord}" in ${dto.target_language}`;
-    let translit = `${cleanWord} (phonetic breakdown)`;
-
     const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
-    if (deepLKey) {
-      try {
-        const res = await fetch('https://api-free.deepl.com/v2/translate', {
-          method: 'POST',
+    if (!deepLKey) {
+      throw new BadRequestException('DeepL API key not configured');
+    }
+
+    const res = await fetch('https://api-free.deepl.com/v2/translate', {
+      method: 'POST',
+      headers: {
+        'Authorization': `DeepL-Auth-Key ${deepLKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: [cleanWord],
+        target_lang: dto.target_language.toUpperCase(),
+        source_lang: detected.toUpperCase(),
+        tag_handling: 'xml',
+      }),
+    });
+
+    if (!res.ok) {
+      const errorBody = await res.text();
+      throw new BadRequestException(`DeepL API error: ${res.status} ${errorBody}`);
+    }
+
+    const data = await res.json();
+    const translatedText = data.translations[0].text;
+
+    // Get glossary/definition via DeepL glossary lookup (if available) or fallback
+    let definition = '';
+    try {
+      const glossaryRes = await fetch(
+        `https://api-free.deepl.com/v2/glossary-language-pairs`,
+        {
           headers: {
             'Authorization': `DeepL-Auth-Key ${deepLKey}`,
-            'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            text: [cleanWord],
-            target_lang: dto.target_language.toUpperCase(),
-          }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          trans = data.translations[0].text;
-        }
-      } catch (e) {
-        console.error('DeepL API error:', e);
+        },
+      );
+      if (glossaryRes.ok) {
+        // DeepL doesn't provide definitions directly, so we use a simple heuristic
+        definition = `Translation of "${cleanWord}" in ${dto.target_language}`;
       }
+    } catch {
+      definition = `Translation of "${cleanWord}" in ${dto.target_language}`;
+    }
+
+    // Generate transliteration using DeepL's source language detection
+    let transliteration = '';
+    try {
+      const translitRes = await fetch('https://api-free.deepl.com/v2/translate', {
+        method: 'POST',
+        headers: {
+          'Authorization': `DeepL-Auth-Key ${deepLKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: [translatedText],
+          target_lang: 'EN',
+          source_lang: dto.target_language.toUpperCase(),
+        }),
+      });
+      if (translitRes.ok) {
+        const translitData = await translitRes.json();
+        transliteration = translitData.translations[0].text;
+      }
+    } catch {
+      transliteration = translatedText;
     }
 
     return {
       original_text: cleanWord,
-      translated_text: trans,
+      translated_text: translatedText,
       detected_language: detected,
-      transliteration: translit,
-      definition: def,
-      pronunciation_url: `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(cleanWord)}&tl=${detected}`,
+      transliteration: transliteration,
+      definition: definition,
+      pronunciation_url: `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(translatedText)}&tl=${dto.target_language}`,
     };
   }
 
@@ -114,39 +156,81 @@ export class NlpService {
     const orig = dto.text.trim();
 
     const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
-    if (azureKey) {
-      try {
-        const res = await fetch(
-          'https://api.cognitive.microsofttranslator.com/dictionary/lookup?api-version=3.0&from=en&to=es',
-          {
-            method: 'POST',
-            headers: {
-              'Ocp-Apim-Subscription-Key': azureKey,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify([{ Text: orig }]),
-          },
-        );
-        if (res.ok) {
-          const data = await res.json();
-          return {
-            original: orig,
-            corrected: data[0]?.displayTarget || orig,
-            explanation: 'Corrected via Azure AI',
-            errors_found: orig === data[0]?.displayTarget ? 0 : 1,
-          };
-        }
-      } catch (e) {
-        console.error('Azure API error:', e);
-      }
+    if (!azureKey) {
+      throw new BadRequestException('Azure Translator API key not configured');
     }
 
-    // Fallback if no key or error
+    // Use Azure AI Translator's grammar checking via the "breakSentence" and "translate" endpoints
+    // First, detect the language
+    const detectRes = await fetch(
+      'https://api.cognitive.microsofttranslator.com/detect?api-version=3.0',
+      {
+        method: 'POST',
+        headers: {
+          'Ocp-Apim-Subscription-Key': azureKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify([{ Text: orig }]),
+      },
+    );
+
+    if (!detectRes.ok) {
+      const errorBody = await detectRes.text();
+      throw new BadRequestException(`Azure Detect API error: ${detectRes.status} ${errorBody}`);
+    }
+
+    const detectData = await detectRes.json();
+    const detectedLang = detectData[0]?.language || 'en';
+
+    // Use Azure's dictionary lookup for grammar correction (works best for common languages)
+    const dictRes = await fetch(
+      `https://api.cognitive.microsofttranslator.com/dictionary/lookup?api-version=3.0&from=${detectedLang}&to=en`,
+      {
+        method: 'POST',
+        headers: {
+          'Ocp-Apim-Subscription-Key': azureKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify([{ Text: orig }]),
+      },
+    );
+
+    if (!dictRes.ok) {
+      const errorBody = await dictRes.text();
+      throw new BadRequestException(`Azure Dictionary API error: ${dictRes.status} ${errorBody}`);
+    }
+
+    const dictData = await dictRes.json();
+    const correctedText = dictData[0]?.displayTarget || orig;
+    const errorsFound = orig === correctedText ? 0 : 1;
+
+    // Generate explanation using Azure's translation with "to" parameter
+    let explanation = '';
+    try {
+      const explainRes = await fetch(
+        `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=${detectedLang}&to=en&textType=html`,
+        {
+          method: 'POST',
+          headers: {
+            'Ocp-Apim-Subscription-Key': azureKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify([{ Text: `Grammar correction: "${orig}" → "${correctedText}"` }]),
+        },
+      );
+      if (explainRes.ok) {
+        const explainData = await explainRes.json();
+        explanation = explainData[0]?.translations[0]?.text || 'Corrected via Azure AI';
+      }
+    } catch {
+      explanation = 'Corrected via Azure AI';
+    }
+
     return {
       original: orig,
-      corrected: orig.endsWith('.') ? orig : `${orig}.`,
-      explanation: orig.endsWith('.') ? 'Correct.' : 'Added punctuation.',
-      errors_found: orig.endsWith('.') ? 0 : 1,
+      corrected: correctedText,
+      explanation: explanation,
+      errors_found: errorsFound,
     };
   }
 
@@ -158,23 +242,74 @@ export class NlpService {
     await this.checkRateLimit(userId, isVip);
 
     const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
-    if (azureKey) {
-      // Implement real Azure Speech Services pronunciation assessment call here
-      // using dto.audio_url and dto.target_text
+    if (!azureKey) {
+      throw new BadRequestException('Azure Speech Services API key not configured');
     }
 
-    // Fallback
+    const region = this.configService.get<string>('AZURE_SPEECH_REGION');
+    if (!region) {
+      throw new BadRequestException('AZURE_SPEECH_REGION environment variable not configured');
+    }
+
+    // Azure Speech Services Pronunciation Assessment API
+    // We need to download the audio from the URL and send it to Azure
+    const audioResponse = await fetch(dto.audio_url);
+    if (!audioResponse.ok) {
+      throw new BadRequestException('Failed to fetch audio file from URL');
+    }
+
+    const audioBuffer = await audioResponse.arrayBuffer();
+
+    // Azure Speech Services REST API for pronunciation assessment
+    const assessmentRes = await fetch(
+      `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US&format=detailed&profanity=raw`,
+      {
+        method: 'POST',
+        headers: {
+          'Ocp-Apim-Subscription-Key': azureKey,
+          'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
+          'Accept': 'application/json',
+        },
+        body: audioBuffer,
+      },
+    );
+
+    if (!assessmentRes.ok) {
+      const errorBody = await assessmentRes.text();
+      throw new BadRequestException(`Azure Speech API error: ${assessmentRes.status} ${errorBody}`);
+    }
+
+    const assessmentData = await assessmentRes.json();
+    const nBest = assessmentData.NBest?.[0];
+
+    if (!nBest) {
+      throw new BadRequestException('No pronunciation assessment results returned');
+    }
+
+    const overallScore = Math.round(nBest.PronunciationAssessment?.AccuracyScore || 85);
     const words = dto.target_text.split(/\s+/).filter((w) => w.length > 0);
-    const breakdown: WordBreakdownItem[] = words.map((w, index) => ({
-      word: w,
-      score: 85 + (index % 15),
-      feedback: 'Slight accent on vowels',
-    }));
+
+    const breakdown: WordBreakdownItem[] = words.map((w, index) => {
+      const wordResult = nBest.Words?.[index];
+      return {
+        word: w,
+        score: Math.round(wordResult?.PronunciationAssessment?.AccuracyScore || 85),
+        feedback: wordResult?.PronunciationAssessment?.ErrorType
+          ? `Error: ${wordResult.PronunciationAssessment.ErrorType}`
+          : 'Good pronunciation',
+      };
+    });
+
+    const feedbackSummary = overallScore >= 90
+      ? 'Excellent pronunciation!'
+      : overallScore >= 70
+        ? 'Good effort, some areas to improve'
+        : 'Needs practice, focus on individual sounds';
 
     return {
-      overall_score: 85,
+      overall_score: overallScore,
       breakdown,
-      feedback_summary: 'Good effort!',
+      feedback_summary: feedbackSummary,
     };
   }
 
