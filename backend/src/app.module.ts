@@ -18,6 +18,7 @@ import { MonetisationModule } from './monetisation/monetisation.module';
 import { EconomyModule } from './economy/economy.module';
 import { SafetyModule } from './safety/safety.module';
 import { HobbyTagsModule } from './hobby-tags/hobby-tags.module';
+import { FavouritesModule } from './favourites/favourites.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { HobbyTagsModule } from './hobby-tags/hobby-tags.module';
     EconomyModule,
     SafetyModule,
     HobbyTagsModule,
+    FavouritesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

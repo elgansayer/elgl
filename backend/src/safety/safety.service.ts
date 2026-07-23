@@ -27,12 +27,13 @@ export class SafetyService {
   ): Promise<SafetyReportRow> {
     const supabase = this.supabaseService.getClient();
     const response = await supabase
-      .from('safety_reports')
+      .from('reports')
       .insert({
         reporter_id: reporterId,
-        reported_id: dto.reported_id,
-        reason: dto.reason,
-        details: dto.details ?? null,
+        reported_user_id: dto.reported_id,
+        reason_category: 'inappropriate_message',
+        description: dto.reason,
+        context_url: dto.details || null,
         status: 'pending',
       })
       .select()
@@ -55,10 +56,14 @@ export class SafetyService {
     dto: BlockUserDto,
   ): Promise<{ success: boolean; blocked_id: string }> {
     const supabase = this.supabaseService.getClient();
-    await supabase.from('user_blocks').insert({
+    const { error } = await supabase.from('blocks').insert({
       blocker_id: blockerId,
       blocked_id: dto.blocked_id,
     });
+
+    if (error) {
+      throw new Error(`Failed to block user: ${error.message}`);
+    }
 
     this.logger.log(`User ${blockerId} blocked ${dto.blocked_id}`);
     return { success: true, blocked_id: dto.blocked_id };
@@ -67,7 +72,7 @@ export class SafetyService {
   async getBlockedIds(userId: string): Promise<string[]> {
     const supabase = this.supabaseService.getClient();
     const response = await supabase
-      .from('user_blocks')
+      .from('blocks')
       .select('blocked_id')
       .eq('blocker_id', userId);
     if (!response.data || response.data.length === 0) return [];

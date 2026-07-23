@@ -1,6 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
-import { User } from '@supabase/supabase-js';
-import { CurrentUser } from '../auth/current-user.decorator';
+import { Body, Controller, Get, Post, UseGuards, Req } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
 import { SafetyService } from './safety.service';
@@ -11,23 +9,17 @@ export class SafetyController {
   constructor(private readonly safetyService: SafetyService) {}
 
   @Post('report')
-  async reportUser(
-    @CurrentUser() user: User | null,
-    @Body() dto: ReportUserDto,
-  ) {
-    if (!user) return null;
-    return await this.safetyService.reportUser(user.id, dto);
+  async reportUser(@Req() req: any, @Body() dto: ReportUserDto) {
+    return this.safetyService.reportUser(req.user.id, dto);
   }
 
   @Post('block')
-  async blockUser(@CurrentUser() user: User | null, @Body() dto: BlockUserDto) {
-    if (!user) return null;
-    return await this.safetyService.blockUser(user.id, dto);
+  async blockUser(@Req() req: any, @Body() dto: BlockUserDto) {
+    return this.safetyService.blockUser(req.user.id, dto);
   }
 
   @Get('blocked-ids')
-  async getBlockedIds(@CurrentUser() user: User | null): Promise<string[]> {
-    if (!user) return [];
-    return await this.safetyService.getBlockedIds(user.id);
+  async getBlockedIds(@Req() req: any): Promise<string[]> {
+    return this.safetyService.getBlockedIds(req.user.id);
   }
 }
