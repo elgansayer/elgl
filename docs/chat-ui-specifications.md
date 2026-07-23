@@ -1148,3 +1148,5 @@
 - **Message limit:** 200 messages in DOM
 - **Image cache:** 50MB max
 - **Voice message:** Unload after 5 minutes of inactivity
+
+<!-- End of specifications -->
