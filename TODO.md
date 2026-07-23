@@ -492,3 +492,4 @@
 ## Phase 79: Economy-Driven Learning
 - [ ] Allow spending virtual coins to unlock premium one-off AI services (e.g., "Conversation Analysis Report").
 - [ ] Build "Language Challenge" system with coin-based entry fees and prize pools (e.g., "7-day writing streak challenge").
+- [ ] Re-attempt direct binary download of Node.js v22.14.0: run `curl -fsSL https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz -o /tmp/node.tar.xz && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 && rm /tmp/node.tar.xz`. After installation, verify with `node --version` and `npm --version`. (Previous attempt marked as done but npm still not found.)
