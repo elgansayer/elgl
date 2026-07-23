@@ -1,6 +1,7 @@
-import { Component, signal, computed, output, input, inject } from '@angular/core';
+import { Component, signal, computed, output, input, inject, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { UserService } from '../../services/user.service';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 interface CropBox {
   x: number;
@@ -19,7 +20,7 @@ interface CropBox {
       <input
         #fileInput
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp"
         (change)="onFileSelected($event)"
         class="hidden"
       />
@@ -64,6 +65,7 @@ interface CropBox {
             
             @if (isCropping()) {
               <div class="absolute inset-0">
+                <!-- Dark overlay with crop window -->
                 <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
                   <defs>
                     <mask id="cropMask">
@@ -80,6 +82,7 @@ interface CropBox {
                   <rect width="100" height="100" fill="rgba(0,0,0,0.5)" mask="url(#cropMask)" />
                 </svg>
 
+                <!-- Crop box with handles -->
                 <div
                   class="absolute border-2 border-white cursor-move"
                   [style.left.px]="cropBox().x"
@@ -89,6 +92,7 @@ interface CropBox {
                   (mousedown)="onCropBoxMouseDown($event)"
                   (touchstart)="onCropBoxTouchStart($event)"
                 >
+                  <!-- Corner handles -->
                   <div class="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white rounded-full cursor-nw-resize"
                        (mousedown)="onHandleMouseDown($event, 'nw')"
                        (touchstart)="onHandleTouchStart($event, 'nw')"></div>
@@ -106,19 +110,29 @@ interface CropBox {
             }
           </div>
 
+          <!-- Action buttons -->
           <div class="flex gap-2 mt-4">
             @if (!isCropping()) {
-              <button (click)="startCropping()" class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors text-sm">Crop</button>
+              <button (click)="startCropping()" class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors text-sm">
+                Crop
+              </button>
             } @else {
-              <button (click)="applyCrop()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors text-sm">Apply Crop</button>
-              <button (click)="cancelCrop()" class="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors text-sm">Cancel</button>
+              <button (click)="applyCrop()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors text-sm">
+                Apply Crop
+              </button>
+              <button (click)="cancelCrop()" class="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors text-sm">
+                Cancel
+              </button>
             }
             <button (click)="uploadCropped()" [disabled]="isUploading()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors text-sm disabled:opacity-50">
               {{ isUploading() ? 'Uploading...' : 'Upload' }}
             </button>
-            <button (click)="reset()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors text-sm">Cancel</button>
+            <button (click)="reset()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors text-sm">
+              Cancel
+            </button>
           </div>
 
+          <!-- Preview -->
           @if (croppedPreviewUrl()) {
             <div class="mt-4">
               <p class="text-sm text-slate-400 mb-2">Preview:</p>
@@ -131,7 +145,7 @@ interface CropBox {
   `,
 })
 export class CoverPhotoUploaderComponent {
-  private userService = inject(UserService);
+  private http = inject(HttpClient);
 
   readonly currentCoverUrl = input<string>('');
   readonly coverPhotoUploaded = output<string>();
@@ -175,8 +189,16 @@ export class CoverPhotoUploaderComponent {
     this.imageWidth.set(img.naturalWidth);
     this.imageHeight.set(img.naturalHeight);
 
-    const cropWidth = Math.min(img.naturalWidth, 800);
-    const cropHeight = cropWidth / 3;
+    // Set initial crop to center with 3:1 aspect ratio
+    const aspectRatio = 3;
+    let cropWidth = Math.min(img.naturalWidth * 0.8, 800);
+    let cropHeight = cropWidth / aspectRatio;
+
+    if (cropHeight > img.naturalHeight * 0.8) {
+      cropHeight = img.naturalHeight * 0.8;
+      cropWidth = cropHeight * aspectRatio;
+    }
+
     this.cropBox.set({
       x: (img.naturalWidth - cropWidth) / 2,
       y: (img.naturalHeight - cropHeight) / 2,
@@ -216,17 +238,37 @@ export class CoverPhotoUploaderComponent {
       const blob = this.dataUrlToBlob(this.croppedPreviewUrl()!);
       const filename = `cover-${Date.now()}.jpg`;
 
-      const { uploadUrl, mediaUrl } = await this.userService.getPresignedCoverPhotoUrl(filename, 'image/jpeg');
+      // Get presigned URL from backend
+      const presignedResponse = await this.http.post<{ uploadUrl: string; mediaUrl: string; objectKey: string }>(
+        `${environment.apiUrl}/media/cover/presigned-url`,
+        {
+          filename,
+          contentType: 'image/jpeg',
+          folder: 'covers',
+        }
+      ).toPromise();
 
-      await fetch(uploadUrl, {
+      if (!presignedResponse) throw new Error('Failed to get presigned URL');
+
+      // Upload to Cloudflare R2
+      const uploadResponse = await fetch(presignedResponse.uploadUrl, {
         method: 'PUT',
         body: blob,
         headers: { 'Content-Type': 'image/jpeg' },
       });
 
-      await this.userService.updateCoverPhotoUrl(mediaUrl);
+      if (!uploadResponse.ok) throw new Error('Upload failed');
 
-      this.coverPhotoUploaded.emit(mediaUrl);
+      // Confirm upload with backend
+      const confirmResponse = await this.http.post<{ coverUrl: string }>(
+        `${environment.apiUrl}/media/cover/confirm`,
+        { objectKey: presignedResponse.objectKey }
+      ).toPromise();
+
+      if (confirmResponse) {
+        this.coverPhotoUploaded.emit(confirmResponse.coverUrl);
+      }
+
       this.reset();
     } catch (error) {
       console.error('Upload failed:', error);
@@ -390,6 +432,7 @@ export class CoverPhotoUploaderComponent {
         break;
     }
 
+    // Clamp to image bounds
     newX = Math.max(0, Math.min(imgW - newW, newX));
     newY = Math.max(0, Math.min(imgH - newH, newY));
     newW = Math.min(newW, imgW - newX);

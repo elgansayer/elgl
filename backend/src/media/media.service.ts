@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -19,16 +19,10 @@ export class MediaService implements OnModuleInit {
 
   onModuleInit() {
     const endpoint = this.configService.get<string>('CLOUDFLARE_R2_ENDPOINT')!;
-    const accessKeyId = this.configService.get<string>(
-      'CLOUDFLARE_R2_ACCESS_KEY_ID',
-    )!;
-    const secretAccessKey = this.configService.get<string>(
-      'CLOUDFLARE_R2_SECRET_ACCESS_KEY',
-    )!;
+    const accessKeyId = this.configService.get<string>('CLOUDFLARE_R2_ACCESS_KEY_ID')!;
+    const secretAccessKey = this.configService.get<string>('CLOUDFLARE_R2_SECRET_ACCESS_KEY')!;
     this.bucket = this.configService.get<string>('CLOUDFLARE_R2_BUCKET')!;
-    this.publicDomain = this.configService.get<string>(
-      'CLOUDFLARE_R2_PUBLIC_DOMAIN',
-    )!;
+    this.publicDomain = this.configService.get<string>('CLOUDFLARE_R2_PUBLIC_DOMAIN')!;
 
     this.s3Client = new S3Client({
       region: 'auto',
@@ -54,22 +48,21 @@ export class MediaService implements OnModuleInit {
       ContentType: dto.contentType,
     });
 
-    const uploadUrl = await getSignedUrl(this.s3Client, command, {
-      expiresIn: 3600,
-    });
+    const uploadUrl = await getSignedUrl(this.s3Client, command, { expiresIn: 3600 });
     const mediaUrl = `${this.publicDomain}/${objectKey}`;
 
-    return {
-      uploadUrl,
-      mediaUrl,
-      objectKey,
-    };
+    return { uploadUrl, mediaUrl, objectKey };
   }
 
   async generateCoverPresignedUrl(
     userId: string,
     dto: PresignedUrlDto,
   ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(dto.contentType)) {
+      throw new BadRequestException('Only JPEG, PNG, and WebP images are allowed');
+    }
+
     const coverDto = { ...dto, folder: 'covers' };
     return this.generatePresignedUrl(userId, coverDto);
   }
@@ -83,7 +76,7 @@ export class MediaService implements OnModuleInit {
 
     const { error } = await supabase
       .from('users')
-      .update({ cover_photo_url: coverUrl })
+      .update({ cover_url: coverUrl })
       .eq('id', userId);
 
     if (error) {
