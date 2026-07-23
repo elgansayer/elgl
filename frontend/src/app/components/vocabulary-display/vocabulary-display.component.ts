@@ -1,7 +1,6 @@
-import { Component, inject, computed, effect } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HobbyTagsStore } from '../../services/hobby-tags.store';
-import { I18nService } from '../../services/i18n.service';
 
 @Component({
   selector: 'app-vocabulary-display',
@@ -61,7 +60,6 @@ import { I18nService } from '../../services/i18n.service';
 })
 export class VocabularyDisplayComponent {
   private readonly store = inject(HobbyTagsStore);
-  private readonly i18nService = inject(I18nService);
 
   readonly loading = computed(() => this.store.loading());
   readonly vocabularyByTag = computed(() => this.store.vocabularyByTag());
@@ -77,15 +75,11 @@ export class VocabularyDisplayComponent {
   });
 
   constructor() {
-    effect(() => {
-      const lang = this.i18nService.currentLang();
-      this.store.loadVocabulary(lang);
-    });
+    this.store.loadVocabulary('en');
   }
 
   refreshVocabulary(): void {
-    const lang = this.i18nService.currentLang();
-    this.store.loadVocabulary(lang);
+    this.store.loadVocabulary('en');
   }
 
   getTagIcon(tagName: string): string {

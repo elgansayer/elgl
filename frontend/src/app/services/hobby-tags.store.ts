@@ -1,13 +1,11 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HobbyTagsService, HobbyTag, UserHobbyTag, VocabularyItem } from './hobby-tags.service';
-import { AuthService } from './auth.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class HobbyTagsStore {
   private readonly hobbyTagsService = inject(HobbyTagsService);
-  private readonly authService = inject(AuthService);
 
   readonly allTags = signal<HobbyTag[]>([]);
   readonly userTags = signal<UserHobbyTag[]>([]);
@@ -58,9 +56,6 @@ export class HobbyTagsStore {
   }
 
   loadUserTags(): void {
-    const user = this.authService.currentUser();
-    if (!user) return;
-
     this.loading.set(true);
     this.hobbyTagsService.getMyTags().subscribe({
       next: (tags) => {
