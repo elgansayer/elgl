@@ -18,10 +18,7 @@ export class VideoCallsController {
   }
 
   @Post('accept')
-  async acceptCall(
-    @Req() req: Request,
-    @Body('roomName') roomName: string,
-  ) {
+  async acceptCall(@Req() req: Request, @Body('roomName') roomName: string) {
     const userId = (req as any).user.id;
     return this.videoCallsService.joinRoom(userId, roomName);
   }

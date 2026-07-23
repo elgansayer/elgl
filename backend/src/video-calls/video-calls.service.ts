@@ -34,7 +34,11 @@ export class VideoCallsService {
     return { token, roomName };
   }
 
-  private generateToken(userId: string, roomName: string, canPublish: boolean): string {
+  private generateToken(
+    userId: string,
+    roomName: string,
+    canPublish: boolean,
+  ): string {
     const at = new AccessToken(
       this.configService.get<string>('LIVEKIT_API_KEY'),
       this.configService.get<string>('LIVEKIT_SECRET'),
