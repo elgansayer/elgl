@@ -52,6 +52,7 @@ import { SafetyModule } from './safety/safety.module';
         APPLE_SHARED_SECRET: Joi.string().required(),
         APPLE_ROOT_CA_CERT_1: Joi.string().required(),
         APPLE_ROOT_CA_CERT_2: Joi.string().optional().allow(''),
+        APPLE_VERIFICATION_URL: Joi.string().uri().default('https://sandbox.itunes.apple.com/verifyReceipt'),
       }),
     }),
     SupabaseModule,
