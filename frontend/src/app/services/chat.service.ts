@@ -30,10 +30,10 @@ export interface ChatMessage {
 export interface FavouriteRecord {
   id: string;
   user_id: string;
-  message_id: string;
-  note_text?: string;
+  item_type: string;
+  item_payload: ChatMessage;
+  notes?: string;
   created_at: string;
-  message?: ChatMessage;
 }
 
 export interface ChatRoom {
