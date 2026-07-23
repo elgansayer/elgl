@@ -75,6 +75,8 @@ export class LongPressContextMenuComponent {
   readonly menuClosed = output<void>();
   readonly favouriteAdded = output<string>();
   readonly reportSubmitted = output<string>();
+  readonly copyTextOutput = output<string>();
+  readonly copyMediaUrlOutput = output<string>();
 
   readonly isMenuOpen = signal(false);
   readonly menuPosition = signal<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -148,6 +150,7 @@ export class LongPressContextMenuComponent {
     const text = this.message()?.text_content;
     if (text) {
       this.clipboard.copy(text);
+      this.copyTextOutput.emit(text);
     }
     this.closeMenu();
   }
@@ -156,6 +159,7 @@ export class LongPressContextMenuComponent {
     const url = this.message()?.media_url;
     if (url) {
       this.clipboard.copy(url);
+      this.copyMediaUrlOutput.emit(url);
     }
     this.closeMenu();
   }

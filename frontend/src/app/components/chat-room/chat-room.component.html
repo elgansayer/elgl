@@ -38,75 +38,82 @@
     }
 
     @for (msg of messages(); track msg.id) {
-      <div
-        [class]="
-          'flex gap-2 ' +
-          (msg.sender_id === authService.currentUser()?.id ? 'justify-end' : 'justify-start')
-        "
+      <app-long-press-context-menu
+        [message]="msg"
+        [channelId]="roomId"
+        (favouriteAdded)="bookmark(msg)"
+        (reportSubmitted)="reportMessage(msg)"
       >
         <div
           [class]="
-            'max-w-[80%] rounded-2xl ps-3 pe-3 pt-2.5 pb-2.5 text-sm shadow-sm transition-colors ' +
-            (msg.sender_id === authService.currentUser()?.id
-              ? 'bg-primary text-white'
-              : 'bg-white border border-slate-200 text-slate-800')
+            'flex gap-2 ' +
+            (msg.sender_id === authService.currentUser()?.id ? 'justify-end' : 'justify-start')
           "
         >
-          <p class="mb-1 text-[11px] opacity-70">
-            {{ msg.sender?.display_name || ('chatRoom.partnerFallback' | t) }} · {{ msg.created_at | date: 'shortTime' }}
-          </p>
-          @if (msg.message_type === 'text' && msg.text_content) {
-            <app-tokenised-text
-              [text]="msg.text_content"
-              (wordClicked)="onWordClicked($event)"
-            ></app-tokenised-text>
-            @if (transliterations()[msg.id]) {
-              <p class="mt-1 text-[10px] text-slate-400 italic">
-                {{ transliterations()[msg.id] }}
-              </p>
-            }
-          }
-          @if (msg.message_type === 'correction' && msg.correction_payload) {
-            <app-visual-diff
-              [original]="msg.correction_payload.original"
-              [corrected]="msg.correction_payload.corrected"
-              [explanation]="msg.correction_payload.explanation"
-            ></app-visual-diff>
-          }
-          @if (msg.message_type === 'doodle' && msg.media_url) {
-            <img
-              [src]="msg.media_url"
-              alt="doodle"
-              class="max-h-52 rounded-xl border border-slate-200"
-            />
-          }
-          @if (msg.message_type === 'voice' && msg.media_url) {
-            <audio [src]="msg.media_url" controls class="w-full min-w-52"></audio>
-          }
-          <div class="mt-2 flex items-center gap-1">
+          <div
+            [class]="
+              'max-w-[80%] rounded-2xl ps-3 pe-3 pt-2.5 pb-2.5 text-sm shadow-sm transition-colors ' +
+              (msg.sender_id === authService.currentUser()?.id
+                ? 'bg-primary text-white'
+                : 'bg-white border border-slate-200 text-slate-800')
+            "
+          >
+            <p class="mb-1 text-[11px] opacity-70">
+              {{ msg.sender?.display_name || ('chatRoom.partnerFallback' | t) }} · {{ msg.created_at | date: 'shortTime' }}
+            </p>
             @if (msg.message_type === 'text' && msg.text_content) {
+              <app-tokenised-text
+                [text]="msg.text_content"
+                (wordClicked)="onWordClicked($event)"
+              ></app-tokenised-text>
+              @if (transliterations()[msg.id]) {
+                <p class="mt-1 text-[10px] text-slate-400 italic">
+                  {{ transliterations()[msg.id] }}
+                </p>
+              }
+            }
+            @if (msg.message_type === 'correction' && msg.correction_payload) {
+              <app-visual-diff
+                [original]="msg.correction_payload.original"
+                [corrected]="msg.correction_payload.corrected"
+                [explanation]="msg.correction_payload.explanation"
+              ></app-visual-diff>
+            }
+            @if (msg.message_type === 'doodle' && msg.media_url) {
+              <img
+                [src]="msg.media_url"
+                alt="doodle"
+                class="max-h-52 rounded-xl border border-slate-200"
+              />
+            }
+            @if (msg.message_type === 'voice' && msg.media_url) {
+              <audio [src]="msg.media_url" controls class="w-full min-w-52"></audio>
+            }
+            <div class="mt-2 flex items-center gap-1">
+              @if (msg.message_type === 'text' && msg.text_content) {
+                <button
+                  (click)="saveSentenceToLingq(msg)"
+                  class="rounded-lg bg-amber-500/90 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-white"
+                >
+                  {{ 'chatRoom.saveBtn' | t }}
+                </button>
+                <button
+                  (click)="transliterateMessage(msg)"
+                  class="rounded-lg bg-slate-200 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-slate-700"
+                >
+                  {{ 'chatRoom.transliterateBtn' | t }}
+                </button>
+              }
               <button
-                (click)="saveSentenceToLingq(msg)"
-                class="rounded-lg bg-amber-500/90 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-white"
-              >
-                {{ 'chatRoom.saveBtn' | t }}
-              </button>
-              <button
-                (click)="transliterateMessage(msg)"
+                (click)="bookmark(msg)"
                 class="rounded-lg bg-slate-200 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-slate-700"
               >
-                {{ 'chatRoom.transliterateBtn' | t }}
+                {{ 'chatRoom.favBtn' | t }}
               </button>
-            }
-            <button
-              (click)="bookmark(msg)"
-              class="rounded-lg bg-slate-200 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-slate-700"
-            >
-              {{ 'chatRoom.favBtn' | t }}
-            </button>
+            </div>
           </div>
         </div>
-      </div>
+      </app-long-press-context-menu>
     }
 
     @if (isTyping()) {

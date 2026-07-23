@@ -18,6 +18,8 @@ import { ChatInputComponent } from '../chat-input/chat-input.component';
 import { ChatHeaderComponent } from '../chat-header/chat-header.component';
 import { TypingIndicatorComponent } from '../typing-indicator/typing-indicator.component';
 import { ChatSearchComponent } from '../chat-search/chat-search.component';
+import { LongPressContextMenuComponent } from '../../shared/long-press-context-menu/long-press-context-menu.component';
+import { SafetyService } from '../../services/safety.service';
 
 @Component({
   selector: 'app-chat-room',
@@ -34,7 +36,8 @@ import { ChatSearchComponent } from '../chat-search/chat-search.component';
     ChatInputComponent,
     ChatHeaderComponent,
     TypingIndicatorComponent,
-    ChatSearchComponent
+    ChatSearchComponent,
+    LongPressContextMenuComponent
   ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss']
@@ -46,6 +49,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   readonly authService = inject(AuthService);
   readonly vocabStore = inject(VocabularyStore);
   private readonly i18n = inject(I18nService);
+  private readonly safetyService = inject(SafetyService);
 
   readonly messages = signal<ChatMessage[]>([]);
   readonly isLoading = signal<boolean>(true);
@@ -199,6 +203,20 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     } catch (e) {
       console.error('Failed to bookmark message:', e);
       alert(this.i18n.translate('chatRoom.bookmarkErrorAlert'));
+    }
+  }
+
+  async reportMessage(msg: ChatMessage): Promise<void> {
+    try {
+      await this.safetyService.reportUser({
+        reported_id: msg.sender_id,
+        reason: 'Inappropriate message content',
+        context_url: `${window.location.origin}/chat/${this.roomId}`
+      }).toPromise();
+      alert(this.i18n.translate('chatRoom.reportedAlert'));
+    } catch (e) {
+      console.error('Failed to report message:', e);
+      alert(this.i18n.translate('chatRoom.reportErrorAlert'));
     }
   }
 
