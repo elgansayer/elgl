@@ -21,6 +21,8 @@ fi
 # Verify npm is accessible
 echo "Verifying npm is accessible..."
 which npm || { echo "npm not found in PATH"; exit 1; }
+# Ensure /usr/local/bin is in PATH for subsequent commands
+export PATH="/usr/local/bin:$PATH"
 echo "Verifying..."
 node --version
 npm --version
