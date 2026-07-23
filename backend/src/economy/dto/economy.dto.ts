@@ -1,24 +1,16 @@
 import {
-  IsInt,
   IsNotEmpty,
   IsOptional,
-  IsPositive,
   IsString,
-  IsIn,
 } from 'class-validator';
 
 export class PurchaseCoinsDto {
-  @IsString()
-  @IsNotEmpty()
-  package_id!: string;
-
   @IsString()
   @IsNotEmpty()
   receipt_token!: string;
 
   @IsOptional()
   @IsString()
-  @IsIn(['ios', 'android', 'web'])
   platform?: 'ios' | 'android' | 'web';
 }
 
