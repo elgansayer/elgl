@@ -14,8 +14,8 @@ describe('AudioSyncReaderComponent', () => {
       flashcardMap: signal(new Map()),
       getWordStatus: () => ({
         level: 0,
-        colorClass: 'bg-blue-100 text-blue-900',
-        colourClass: 'bg-blue-100 text-blue-900'
+        colorClass: 'bg-blue-500/20 text-blue-900',
+        colourClass: 'bg-blue-500/20 text-blue-900'
       })
     };
 

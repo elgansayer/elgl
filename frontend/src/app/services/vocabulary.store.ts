@@ -100,7 +100,7 @@ export class VocabularyStore {
     const fc = this.flashcardMap().get(clean);
     if (!fc) {
       // Level 0 = New / Blue
-      const cls = 'bg-blue-100 text-blue-900 border-b-2 border-blue-400 cursor-pointer hover:bg-blue-200';
+      const cls = 'bg-blue-500/20 text-blue-900 border-b-2 border-blue-400 cursor-pointer hover:bg-blue-200';
       return { level: 0, colorClass: cls, colourClass: cls };
     }
     if (fc.srs_level >= 4) {
@@ -109,7 +109,7 @@ export class VocabularyStore {
       return { level: fc.srs_level, colorClass: cls, colourClass: cls, flashcard: fc };
     }
     // Level 1 to 3 = Learning / Yellow
-    const cls = 'bg-amber-100 text-amber-900 border-b-2 border-amber-500 cursor-pointer hover:bg-amber-200 font-medium';
+    const cls = 'bg-amber-500/20 text-amber-400 border-b-2 border-amber-500 cursor-pointer hover:bg-amber-200 font-medium';
     return { level: fc.srs_level, colorClass: cls, colourClass: cls, flashcard: fc };
   }
 

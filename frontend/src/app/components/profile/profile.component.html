@@ -20,7 +20,7 @@
             <div class="flex items-center gap-2">
               <h1 class="app-section-title">{{ profile()?.display_name || ('profile.defaultName' | t) }}</h1>
               @if (profile()?.is_vip) {
-                <span class="rounded-full bg-amber-100 ps-2 pe-2 pt-0.5 pb-0.5 text-[10px] font-bold text-amber-900">{{ 'profile.vipBadge' | t }}</span>
+                <span class="rounded-full bg-amber-500/20 ps-2 pe-2 pt-0.5 pb-0.5 text-[10px] font-bold text-amber-400">{{ 'profile.vipBadge' | t }}</span>
               }
             </div>
             <p class="app-muted">{{ 'profile.joinedPrefix' | t }} {{ profile()?.created_at | date: 'mediumDate' }}</p>
@@ -30,7 +30,7 @@
         <div class="flex items-center gap-2">
           <a routerLink="/visitors" class="app-pill">{{ 'profile.visitorsLink' | t }}</a>
           @if (profile()?.audio_intro_url) {
-            <button (click)="playAudioIntro(profile()?.audio_intro_url)" class="app-button-secondary bg-blue-50 text-blue-700 ps-3 pe-3 pt-2 pb-2 text-xs">
+            <button (click)="playAudioIntro(profile()?.audio_intro_url)" class="app-button-secondary bg-blue-500/10 text-blue-400 ps-3 pe-3 pt-2 pb-2 text-xs">
               {{ 'profile.audioIntroBtn' | t }}
             </button>
           }
@@ -73,19 +73,19 @@
       </div>
 
       @if (!profile()?.is_vip) {
-        <div class="mt-4 rounded-card border border-amber-200 bg-amber-50 ps-3 pe-3 pt-3 pb-3">
-          <p class="text-xs font-semibold text-amber-900">{{ 'profile.vipBannerTitle' | t }}</p>
-          <p class="mt-1 text-sm font-black text-amber-900">{{ 'profile.vipBannerPrice' | t }}</p>
+        <div class="mt-4 rounded-card border border-amber-500/30 bg-amber-500/10 ps-3 pe-3 pt-3 pb-3">
+          <p class="text-xs font-semibold text-amber-400">{{ 'profile.vipBannerTitle' | t }}</p>
+          <p class="mt-1 text-sm font-black text-amber-400">{{ 'profile.vipBannerPrice' | t }}</p>
         </div>
       }
 
       @if (errorMessage()) {
-        <div class="mt-4 rounded-card border border-red-200 bg-red-50 ps-3 pe-3 pt-2 pb-2 text-sm text-red-700">
+        <div class="mt-4 rounded-card border border-red-500/30 bg-red-500/10 ps-3 pe-3 pt-2 pb-2 text-sm text-red-400">
           {{ errorMessage() }}
         </div>
       }
       @if (successMessage()) {
-        <div class="mt-4 rounded-card border border-emerald-200 bg-emerald-50 ps-3 pe-3 pt-2 pb-2 text-sm text-emerald-700">
+        <div class="mt-4 rounded-card border border-emerald-500/30 bg-emerald-500/10 ps-3 pe-3 pt-2 pb-2 text-sm text-emerald-400">
           {{ successMessage() }}
         </div>
       }

@@ -28,13 +28,13 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
         </div>
 
         <div
-          class="bg-amber-50 p-4 rounded-2xl border border-amber-300 flex items-center justify-between"
+          class="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/30 flex items-center justify-between"
         >
           <div class="flex items-center gap-2">
             <span class="text-2xl">💰</span>
             <div>
               <span
-                class="text-[10px] uppercase font-black text-amber-800 block"
+                class="text-[10px] uppercase font-black text-amber-400 block"
                 >Your coin balance:</span
               >
               <span class="text-lg font-extrabold text-amber-950"
@@ -79,7 +79,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                 </button>
               </div>
               <div
-                class="p-3.5 rounded-2xl border-2 border-amber-400 bg-amber-50/30 flex items-center justify-between"
+                class="p-3.5 rounded-2xl border-2 border-amber-400 bg-amber-500/10/30 flex items-center justify-between"
               >
                 <div class="flex items-center gap-3">
                   <span class="text-2xl">💰</span>

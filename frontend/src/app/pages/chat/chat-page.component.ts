@@ -17,8 +17,8 @@ import { ChatMessageComponent } from '../../components/chat-message/chat-message
           <h2 class="text-lg font-semibold mb-4">Chats</h2>
           <div *ngFor="let room of rooms()" 
                (click)="selectRoom(room)"
-               class="cursor-pointer p-3 rounded-lg hover:bg-surface-300 :bg-gray-800 transition-colors"
-               [class.bg-blue-50]="selectedRoom()?.id === room.id">
+               class="cursor-pointer p-3 rounded-lg hover:bg-surface-300 :bg-surface-200 transition-colors"
+               [class.bg-blue-500/10]="selectedRoom()?.id === room.id">
             <div class="flex items-center gap-3">
               <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt="">
               <div class="flex-1 min-w-0">

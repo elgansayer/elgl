@@ -23,7 +23,7 @@ import { SafetyService } from '../services/safety.service';
         <div 
           class="message-bubble p-3 rounded-lg cursor-pointer select-none"
           [class.bg-blue-600]="isOwnMessage()"
-          [class.bg-gray-700]="!isOwnMessage()"
+          [class.bg-surface-100]="!isOwnMessage()"
         >
           <p class="text-white text-sm">{{ message().text_content }}</p>
           @if (message().media_url) {

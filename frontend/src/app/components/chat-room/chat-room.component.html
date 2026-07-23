@@ -154,24 +154,24 @@
   }
 
   @if (showCorrectionForm()) {
-    <div class="mt-2 rounded-card border border-amber-200 bg-amber-50 ps-3 pe-3 pt-3 pb-3 space-y-2">
+    <div class="mt-2 rounded-card border border-amber-500/30 bg-amber-500/10 ps-3 pe-3 pt-3 pb-3 space-y-2">
       <input
         type="text"
         [(ngModel)]="originalText"
         [placeholder]="'chatRoom.originalSentence' | t"
-        class="app-input w-full bg-surface-200 border-amber-200 pt-2 pb-2"
+        class="app-input w-full bg-surface-200 border-amber-500/30 pt-2 pb-2"
       />
       <input
         type="text"
         [(ngModel)]="correctedText"
         [placeholder]="'chatRoom.correctedSentence' | t"
-        class="app-input w-full bg-surface-200 border-amber-200 pt-2 pb-2"
+        class="app-input w-full bg-surface-200 border-amber-500/30 pt-2 pb-2"
       />
       <input
         type="text"
         [(ngModel)]="explanationText"
         [placeholder]="'chatRoom.explanation' | t"
-        class="app-input w-full bg-surface-200 border-amber-200 pt-2 pb-2"
+        class="app-input w-full bg-surface-200 border-amber-500/30 pt-2 pb-2"
       />
       <div class="flex gap-2">
         <button
@@ -194,19 +194,19 @@
     <div class="mb-2 flex items-center gap-2">
       <button
         (click)="showCorrectionForm.set(!showCorrectionForm())"
-        class="app-button-secondary bg-amber-100 text-amber-800 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+        class="app-button-secondary bg-amber-500/20 text-amber-400 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
       >
         {{ 'chatRoom.correctBtn' | t }}
       </button>
       <button
         (click)="showDoodleModal.set(true)"
-        class="app-button-secondary bg-blue-100 text-blue-800 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+        class="app-button-secondary bg-blue-500/20 text-blue-400 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
       >
         {{ 'chatRoom.doodleBtn' | t }}
       </button>
       <button
         (click)="showVoiceModal.set(true)"
-        class="app-button-secondary bg-red-100 text-red-800 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+        class="app-button-secondary bg-red-500/20 text-red-400 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
       >
         {{ 'chatRoom.voiceBtn' | t }}
       </button>

@@ -40,7 +40,7 @@
             </div>
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
               @for (speakerId of room.speakers; track speakerId) {
-                <div class="rounded-card border border-purple-300 bg-purple-50 p-3 text-center">
+                <div class="rounded-card border border-purple-500/30 bg-purple-500/10 p-3 text-center">
                   <div class="mx-auto h-12 w-12 rounded-full bg-purple-600 text-white flex items-center justify-center">🎙️</div>
                   <p class="mt-2 truncate text-xs font-bold text-text-primary">
                     {{ speakerId === room.host_id ? (room.host?.display_name + ' (' + ('audioRoom.hostLabel' | t) + ')') : ('audioRoom.speakerPrefix' | t: { id: speakerId.slice(0, 6) }) }}
@@ -56,10 +56,10 @@
           </section>
 
           @if (room.host_id === authService.currentUser()?.id && room.raised_hands && room.raised_hands.length > 0) {
-            <section class="rounded-sheet border border-amber-300 bg-amber-50 p-4 shadow-card space-y-2">
-              <h4 class="text-sm font-black text-amber-900">{{ 'audioRoom.raisedHandsTitle' | t }}</h4>
+            <section class="rounded-sheet border border-amber-500/30 bg-amber-500/10 p-4 shadow-card space-y-2">
+              <h4 class="text-sm font-black text-amber-400">{{ 'audioRoom.raisedHandsTitle' | t }}</h4>
               @for (reqId of room.raised_hands; track reqId) {
-                <div class="flex items-center justify-between rounded-card border border-amber-200 bg-surface-200 p-3 text-xs">
+                <div class="flex items-center justify-between rounded-card border border-amber-500/30 bg-surface-200 p-3 text-xs">
                   <span class="font-semibold text-text-primary">{{ 'audioRoom.learnerAccess' | t: { id: reqId.slice(0, 8) } }}</span>
                   <button (click)="approve(reqId)" class="rounded-app bg-emerald-600 ps-3 pe-3 pt-1.5 pb-1.5 font-bold text-white">{{ 'audioRoom.approveBtn' | t }}</button>
                 </div>
@@ -131,7 +131,7 @@
       @for (room of store.activeRooms(); track room.id) {
         <article class="app-card app-padded space-y-3">
           <div class="flex items-center justify-between">
-            <span class="app-chip bg-red-100 text-red-700">{{ 'audioRoom.liveTag' | t }}</span>
+            <span class="app-chip bg-red-500/20 text-red-400">{{ 'audioRoom.liveTag' | t }}</span>
             <span class="app-chip text-primary">{{ room.target_language }}</span>
           </div>
           <h3 class="text-base font-black text-text-primary">{{ room.title }}</h3>

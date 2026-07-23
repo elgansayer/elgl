@@ -21,7 +21,7 @@
           </button>
         }
         @if (!authService.currentUser()?.is_vip) {
-          <button (click)="upgrade('consumer')" class="rounded-app border border-slate-500 bg-surface-800 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold text-slate-100">
+          <button (click)="upgrade('consumer')" class="rounded-app border border-slate-500 bg-surface-800 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold text-text-primary">
             Consumer VIP (8 UKP / $10 USD)
           </button>
         }
@@ -83,7 +83,7 @@
               <p class="app-muted font-bold uppercase">Active production key</p>
               <code class="text-sm font-black text-text-primary">{{ key }}</code>
             </div>
-            <span class="app-chip bg-emerald-100 text-emerald-800">Active (600 RPM)</span>
+            <span class="app-chip bg-emerald-500/20 text-emerald-400">Active (600 RPM)</span>
           </div>
         } @else {
           <div class="app-empty-state">No API key yet. Activate developer tier and generate one.</div>
@@ -103,7 +103,7 @@
         </article>
         <article class="app-card app-padded space-y-1">
           <p class="app-muted font-bold uppercase">Average latency</p>
-          <p class="text-3xl font-black text-emerald-700">{{ store.developerStats()?.avg_latency_ms || 18 }} ms</p>
+          <p class="text-3xl font-black text-emerald-400">{{ store.developerStats()?.avg_latency_ms || 18 }} ms</p>
           <p class="text-[11px] text-text-secondary">P95 baseline: 28 ms</p>
         </article>
       </section>
@@ -154,10 +154,10 @@
             @for (partner of discoveryResults(); track partner.id) {
               <div class="rounded-card border border-surface-100 bg-surface-300 p-3 flex items-center justify-between">
                 <div>
-                  <p class="text-sm font-black text-text-primary">{{ partner.display_name }} @if (partner.is_vip) { <span class="app-chip bg-amber-100 text-amber-800">VIP</span> }</p>
+                  <p class="text-sm font-black text-text-primary">{{ partner.display_name }} @if (partner.is_vip) { <span class="app-chip bg-amber-500/20 text-amber-400">VIP</span> }</p>
                   <p class="text-xs text-text-secondary">Native: {{ partner.native_language }} | Target: {{ partner.target_languages?.join(', ') }}</p>
                 </div>
-                <span class="text-xs font-bold text-emerald-700">{{ partner.distance_metres ? partner.distance_metres + 'm away' : 'Near point' }}</span>
+                <span class="text-xs font-bold text-emerald-400">{{ partner.distance_metres ? partner.distance_metres + 'm away' : 'Near point' }}</span>
               </div>
             }
           </div>
@@ -177,8 +177,8 @@
           <p class="app-muted">Inspect real-time WebSocket connection signals and simulated Redis queue broadcasts.</p>
         </div>
         <div class="flex items-center gap-2">
-          <span class="app-chip" [class.bg-emerald-100]="centrifugeService.isConnected()"
-                                 [class.text-emerald-800]="centrifugeService.isConnected()"
+          <span class="app-chip" [class.bg-emerald-500/20]="centrifugeService.isConnected()"
+                                 [class.text-emerald-400]="centrifugeService.isConnected()"
                                  [class.bg-surface-100]="!centrifugeService.isConnected()"
                                  [class.text-text-primary]="!centrifugeService.isConnected()">
             Status: {{ centrifugeService.connectionStatus() | uppercase }}
@@ -213,7 +213,7 @@
         <div class="rounded-card border border-surface-100 bg-surface-300 p-4 space-y-3">
           <div class="flex items-center justify-between">
             <span class="text-xs font-black uppercase text-text-primary">Simulated Stage Role</span>
-            <span class="app-chip bg-indigo-100 text-indigo-800 font-bold uppercase">{{ simulatedStageRole() }}</span>
+            <span class="app-chip bg-indigo-500/20 text-indigo-400 font-bold uppercase">{{ simulatedStageRole() }}</span>
           </div>
           <p class="text-xs text-text-secondary">
             Publish Permission (`canPublish` JWT Claim): <strong [class.text-emerald-600]="simulatedCanPublish()" [class.text-amber-600]="!simulatedCanPublish()">{{ simulatedCanPublish() ? 'GRANTED (Microphone ON)' : 'RESTRICTED (Listener only)' }}</strong>
@@ -234,7 +234,7 @@
         <div class="rounded-card border border-surface-100 bg-surface-300 p-4 space-y-3">
           <div class="flex items-center justify-between">
             <span class="text-xs font-black uppercase text-text-primary">Composite Recording Engine</span>
-            <span class="app-chip" [class.bg-emerald-100]="isRecordingActive()" [class.text-emerald-800]="isRecordingActive()" [class.bg-surface-100]="!isRecordingActive()" [class.text-text-primary]="!isRecordingActive()">
+            <span class="app-chip" [class.bg-emerald-500/20]="isRecordingActive()" [class.text-emerald-400]="isRecordingActive()" [class.bg-surface-100]="!isRecordingActive()" [class.text-text-primary]="!isRecordingActive()">
               {{ isRecordingActive() ? '🔴 RECORDING ACTIVE' : '⚪ IDLE' }}
             </span>
           </div>
@@ -255,15 +255,15 @@
   }
 
   <!-- Live Diagnostic Stream Log Console -->
-  <section class="app-card app-padded space-y-3 bg-slate-950 text-slate-100 border border-slate-800">
-    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+  <section class="app-card app-padded space-y-3 bg-surface-500 text-text-primary border border-surface-100">
+    <div class="flex items-center justify-between border-b border-surface-100 pb-2">
       <h4 class="text-xs font-black uppercase tracking-wider text-indigo-400">🛡️ Live Architectural Diagnostics Stream</h4>
       <span class="text-[11px] text-text-muted">Showing last {{ logs().length }} events</span>
     </div>
 
     <div class="space-y-1.5 max-h-52 overflow-y-auto font-mono text-xs">
       @for (log of logs(); track log.id) {
-        <div class="flex items-start gap-2 rounded bg-surface-800/60 p-1.5 border border-slate-800/80">
+        <div class="flex items-start gap-2 rounded bg-surface-800/60 p-1.5 border border-surface-100/80">
           <span class="text-text-muted shrink-0">[{{ log.timestamp }}]</span>
           <span class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase shrink-0"
                 [class.bg-indigo-900]="log.category === 'POSTGIS'" [class.text-indigo-200]="log.category === 'POSTGIS'"

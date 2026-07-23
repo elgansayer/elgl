@@ -27,7 +27,7 @@ import { CommonModule } from '@angular/common';
         <div class="flex justify-end gap-3">
           <button
             (click)="cancel.emit()"
-            class="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+            class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-white bg-surface-200 hover:bg-surface-100 rounded-lg transition-colors"
           >
             Cancel
           </button>

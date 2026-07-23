@@ -19,21 +19,21 @@ const EMOJI_CATEGORIES = [
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl w-72 max-h-80 overflow-hidden">
+    <div class="bg-surface-200 border border-surface-100 rounded-xl shadow-2xl w-72 max-h-80 overflow-hidden">
       <!-- Search -->
-      <div class="p-2 border-b border-gray-700">
+      <div class="p-2 border-b border-surface-100">
         <input type="text"
                [(ngModel)]="searchQuery"
                placeholder="Search emoji..."
-               class="w-full bg-gray-700 text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-400" />
+               class="w-full bg-surface-100 text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-400" />
       </div>
 
       <!-- Category tabs -->
-      <div class="flex overflow-x-auto gap-1 p-2 border-b border-gray-700 scrollbar-hide">
+      <div class="flex overflow-x-auto gap-1 p-2 border-b border-surface-100 scrollbar-hide">
         <button *ngFor="let cat of categories"
                 (click)="selectedCategory.set(cat.name)"
                 class="px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors"
-                [ngClass]="selectedCategory() === cat.name ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'">
+                [ngClass]="selectedCategory() === cat.name ? 'bg-blue-600 text-white' : 'bg-surface-100 text-text-secondary hover:bg-gray-600'">
           {{ cat.name }}
         </button>
       </div>
@@ -43,7 +43,7 @@ const EMOJI_CATEGORIES = [
         <div class="grid grid-cols-8 gap-1">
           <button *ngFor="let emoji of filteredEmojis()"
                   (click)="selectEmoji(emoji)"
-                  class="w-8 h-8 flex items-center justify-center text-lg hover:bg-gray-700 rounded transition-colors"
+                  class="w-8 h-8 flex items-center justify-center text-lg hover:bg-surface-100 rounded transition-colors"
                   [attr.aria-label]="'Emoji ' + emoji">
             {{ emoji }}
           </button>

@@ -13,7 +13,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
     <div class="space-y-6">
       <!-- Header -->
       <div class="flex items-center justify-between">
-        <h2 class="text-xl font-bold text-slate-100">Hobbies & Interests</h2>
+        <h2 class="text-xl font-bold text-text-primary">Hobbies & Interests</h2>
         <button
           (click)="showAddPanel.set(!showAddPanel())"
           class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition-colors"
@@ -31,7 +31,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                 type="text"
                 [(ngModel)]="searchQuery"
                 placeholder="Search hobbies..."
-                class="w-full px-4 py-2 bg-surface-800 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                class="w-full px-4 py-2 bg-surface-800 border border-slate-600 rounded-lg text-text-primary placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
@@ -121,7 +121,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
               <app-card variant="outlined" customClass="p-3">
                 <div class="flex items-start justify-between">
                   <div>
-                    <span class="text-sm font-semibold text-slate-100">{{ word.word }}</span>
+                    <span class="text-sm font-semibold text-text-primary">{{ word.word }}</span>
                     <span class="text-xs text-text-muted ml-2">{{ word.translation }}</span>
                   </div>
                   <app-pill

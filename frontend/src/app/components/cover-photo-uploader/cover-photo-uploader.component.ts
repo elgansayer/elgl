@@ -113,14 +113,14 @@ interface CropBox {
           <!-- Action buttons -->
           <div class="flex gap-2 mt-4">
             @if (!isCropping()) {
-              <button (click)="startCropping()" class="px-4 py-2 bg-surface-200 text-white rounded-lg hover:bg-slate-600 transition-colors text-sm">
+              <button (click)="startCropping()" class="px-4 py-2 bg-surface-200 text-white rounded-lg hover:bg-surface-100 transition-colors text-sm">
                 Crop
               </button>
             } @else {
               <button (click)="applyCrop()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors text-sm">
                 Apply Crop
               </button>
-              <button (click)="cancelCrop()" class="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors text-sm">
+              <button (click)="cancelCrop()" class="px-4 py-2 bg-surface-100 text-white rounded-lg hover:bg-slate-500 transition-colors text-sm">
                 Cancel
               </button>
             }

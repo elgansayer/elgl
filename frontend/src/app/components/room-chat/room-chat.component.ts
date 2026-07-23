@@ -66,7 +66,7 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
           }
           @for (cap of store.captions(); track cap.id) {
             <div
-              class="p-2.5 rounded-xl bg-purple-50 border border-purple-200"
+              class="p-2.5 rounded-xl bg-purple-500/10 border border-purple-200"
             >
               <span class="font-bold text-[10px] text-purple-900 block mb-1"
                 >🎙️ {{ cap.speaker_name }} (Live AI caption):</span
@@ -101,7 +101,7 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
 
       @if (activeTab() === 'subtitles' && store.isSpeaker()) {
         <div
-          class="p-3 bg-purple-50 border-t border-purple-200 flex gap-2"
+          class="p-3 bg-purple-500/10 border-t border-purple-200 flex gap-2"
         >
           <input
             type="text"

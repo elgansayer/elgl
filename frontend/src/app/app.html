@@ -2,7 +2,7 @@
   @if (economyStore.activeGiftAnimation(); as overlay) {
     <div class="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center p-4">
       <div
-        class="rounded-3xl bg-surface-200 shadow-2xl border border-amber-200 ps-6 pe-6 pt-5 pb-5 text-center max-w-sm"
+        class="rounded-3xl bg-surface-200 shadow-2xl border border-amber-500/30 ps-6 pe-6 pt-5 pb-5 text-center max-w-sm"
       >
         <div class="text-5xl">{{ overlay.gift.icon }}</div>
         <h3 class="mt-2 text-lg font-black">{{ overlay.gift.name }}</h3>
@@ -31,7 +31,7 @@
 
       <div class="flex items-center gap-2.5">
         <span
-          class="rounded-full bg-amber-100 text-amber-900 text-xs font-bold ps-2.5 pe-2.5 pt-1 pb-1 ring-1 ring-amber-200"
+          class="rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold ps-2.5 pe-2.5 pt-1 pb-1 ring-1 ring-amber-200"
         >
           🪙 {{ economyStore.coinsBalance() }}
         </span>
