@@ -14,9 +14,7 @@ export class SubscriptionPlansController {
   }
 
   @Get(':id')
-  findById(
-    @Param('id') id: string,
-  ): SubscriptionPlan | undefined {
+  findById(@Param('id') id: string): SubscriptionPlan | undefined {
     return this.subscriptionPlansService.findById(id);
   }
 
