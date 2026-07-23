@@ -47,6 +47,10 @@ describe('IncomingCallComponent', () => {
       isVideo: false,
     };
 
+    // The subscribe method returns a cleanup function
+    mockCentrifugoService.subscribe.and.returnValue(jasmine.createSpy('unsubscribe'));
+
+    // Trigger the effect by calling the subscribe callback
     const subscribeCallback = mockCentrifugoService.subscribe.calls.argsFor(0)[1];
     subscribeCallback({ type: 'incoming_call', callInfo });
 
@@ -61,6 +65,8 @@ describe('IncomingCallComponent', () => {
       roomName: 'room-789',
       isVideo: false,
     };
+
+    mockCentrifugoService.subscribe.and.returnValue(jasmine.createSpy('unsubscribe'));
 
     const subscribeCallback = mockCentrifugoService.subscribe.calls.argsFor(0)[1];
     subscribeCallback({ type: 'incoming_call', callInfo });
@@ -88,6 +94,8 @@ describe('IncomingCallComponent', () => {
       roomName: 'room-789',
       isVideo: false,
     };
+
+    mockCentrifugoService.subscribe.and.returnValue(jasmine.createSpy('unsubscribe'));
 
     const subscribeCallback = mockCentrifugoService.subscribe.calls.argsFor(0)[1];
     subscribeCallback({ type: 'incoming_call', callInfo });
