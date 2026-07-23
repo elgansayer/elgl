@@ -20,6 +20,7 @@ import { TypingIndicatorComponent } from '../typing-indicator/typing-indicator.c
 import { ChatSearchComponent } from '../chat-search/chat-search.component';
 import { LongPressContextMenuComponent } from '../../shared/long-press-context-menu/long-press-context-menu.component';
 import { SafetyService } from '../../services/safety.service';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-chat-room',
@@ -208,11 +209,11 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
 
   async reportMessage(msg: ChatMessage): Promise<void> {
     try {
-      await this.safetyService.reportUser({
+      await firstValueFrom(this.safetyService.reportUser({
         reported_id: msg.sender_id,
         reason: 'Inappropriate message content',
         context_url: `${window.location.origin}/chat/${this.roomId}`
-      }).toPromise();
+      }));
       alert(this.i18n.translate('chatRoom.reportedAlert'));
     } catch (e) {
       console.error('Failed to report message:', e);
