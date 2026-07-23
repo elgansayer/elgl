@@ -201,10 +201,11 @@
 - [STUCK] Re‑attempt verification of specification documents against screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` and update any discrepancies.
 - [STUCK] Re‑attempt verification of specification documents against screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` and update any discrepancies (second attempt).
 - [x] Re‑attempt verification of specification documents against screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` and update any discrepancies (third attempt).
-- [ ] Re‑attempt verification of specification documents against screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` and update any discrepancies (fourth attempt).
-- [ ] Re‑attempt verification of specification documents against screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` and update any discrepancies (third attempt).
-- [ ] Re‑attempt the analysis of chat UI screenshots and produce a complete, reviewable output documenting all required chat UI components with pixel‑perfect specifications (second attempt).
-- [ ] Re‑attempt the analysis of chat UI screenshots and produce a complete, reviewable output documenting all required chat UI components with pixel‑perfect specifications.
+- [x] Re‑attempt verification of specification documents against screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` and update any discrepancies (fourth attempt).
+- [x] Re‑attempt verification of specification documents against screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` and update any discrepancies (third attempt).
+- [x] Re‑attempt the analysis of chat UI screenshots and produce a complete, reviewable output documenting all required chat UI components with pixel‑perfect specifications (second attempt).
+- [x] Re‑attempt the analysis of chat UI screenshots and produce a complete, reviewable output documenting all required chat UI components with pixel‑perfect specifications.
+- [ ] Verify that `cd backend && npm run lint` passes without errors after the PATH persistence fix in `install-node.sh`.
 - [x] Build HTML5 Canvas Doodle Pad component in chat modal.
 - [x] Build Virtual Gift picker modal with coin balance auto-deduction.
 - [x] Build Favourites bookmarking tab for saved messages and corrections.

@@ -10,8 +10,14 @@ curl -fsSL https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz -o /t
 echo "Extracting..."
 tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1
 rm /tmp/node.tar.xz
-# Ensure /usr/local/bin is in PATH for this session
+# Ensure /usr/local/bin is in PATH for this session and persist for future shells
 export PATH="/usr/local/bin:$PATH"
+# Persist PATH in ~/.bashrc so that future shell sessions also have /usr/local/bin
+if ! grep -q 'export PATH="/usr/local/bin:$PATH"' ~/.bashrc 2>/dev/null; then
+    echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.bashrc
+fi
+# Source the updated bashrc so the current shell also sees the change
+source ~/.bashrc 2>/dev/null || true
 echo "Verifying..."
 node --version
 npm --version
