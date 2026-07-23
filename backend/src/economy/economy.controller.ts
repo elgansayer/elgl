@@ -15,6 +15,11 @@ export class EconomyController {
     return await this.economyService.getCatalog();
   }
 
+  @Get('packages')
+  async getPackages() {
+    return await this.economyService.getPackages();
+  }
+
   @Get('balance')
   async getBalance(@CurrentUser() user: User | null) {
     if (!user) return { coins_balance: 0 };

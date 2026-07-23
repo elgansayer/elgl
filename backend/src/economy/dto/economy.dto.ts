@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  IsIn,
 } from 'class-validator';
 
 export class PurchaseCoinsDto {
@@ -14,6 +15,11 @@ export class PurchaseCoinsDto {
   @IsString()
   @IsNotEmpty()
   receipt_token!: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['ios', 'android', 'web'])
+  platform?: 'ios' | 'android' | 'web';
 }
 
 export class SendGiftDto {

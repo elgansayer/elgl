@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -22,9 +23,69 @@ export interface UserCoinRow {
   coins_balance: number;
 }
 
+export interface CoinPackage {
+  id: string;
+  name: string;
+  coins: number;
+  price: number;
+  platform_product_id: {
+    ios?: string;
+    android?: string;
+    web?: string;
+  };
+}
+
+export const COIN_PACKAGES: CoinPackage[] = [
+  {
+    id: 'coins_small',
+    name: 'Small Coin Pack',
+    coins: 100,
+    price: 499,
+    platform_product_id: {
+      ios: 'com.linguaexchange.coins.small',
+      android: 'coins_small',
+      web: 'coins_small_web',
+    },
+  },
+  {
+    id: 'coins_medium',
+    name: 'Medium Coin Pack',
+    coins: 500,
+    price: 1999,
+    platform_product_id: {
+      ios: 'com.linguaexchange.coins.medium',
+      android: 'coins_medium',
+      web: 'coins_medium_web',
+    },
+  },
+  {
+    id: 'coins_large',
+    name: 'Large Coin Pack',
+    coins: 1200,
+    price: 3999,
+    platform_product_id: {
+      ios: 'com.linguaexchange.coins.large',
+      android: 'coins_large',
+      web: 'coins_large_web',
+    },
+  },
+  {
+    id: 'coins_mega',
+    name: 'Mega Coin Pack',
+    coins: 3000,
+    price: 7999,
+    platform_product_id: {
+      ios: 'com.linguaexchange.coins.mega',
+      android: 'coins_mega',
+      web: 'coins_mega_web',
+    },
+  },
+];
+
 @Injectable()
 export class EconomyService {
   private readonly logger = new Logger(EconomyService.name);
+  private readonly receiptCachePrefix = 'purchase_receipt:';
 
   constructor(
     private readonly supabaseService: SupabaseService,
@@ -39,6 +100,10 @@ export class EconomyService {
       .select('*')
       .order('cost_coins', { ascending: true });
     return (response.data ?? []) as VirtualGiftRow[];
+  }
+
+  async getPackages(): Promise<CoinPackage[]> {
+    return COIN_PACKAGES;
   }
 
   async getBalance(userId: string): Promise<{ coins_balance: number }> {
@@ -58,34 +123,129 @@ export class EconomyService {
   async purchaseCoins(
     userId: string,
     dto: PurchaseCoinsDto,
-  ): Promise<{ coins_balance: number; package_id: string }> {
-    // 1. Verify receipt token (Mock implementation for now)
-    if (!dto.receipt_token || dto.receipt_token === 'invalid_receipt') {
-      throw new BadRequestException('Invalid purchase receipt');
+  ): Promise<{ coins: number; newBalance: number }> {
+    // 1. Validate package exists
+    const coinPackage = COIN_PACKAGES.find(p => p.id === dto.package_id);
+    if (!coinPackage) {
+      throw new BadRequestException('Invalid coin package');
     }
 
-    // 2. Derive amount server-side based on package_id
-    const packageCoinMap: Record<string, number> = {
-      'tier_1_coins': 100,
-      'tier_2_coins': 500,
-      'tier_3_coins': 1200,
-    };
+    // 2. Validate receipt token format and prevent replay attacks
+    await this.validateReceipt(userId, dto.receipt_token, coinPackage, dto.platform);
 
-    const amountToAdd = packageCoinMap[dto.package_id];
-    if (!amountToAdd) {
-      throw new BadRequestException('Invalid package ID');
+    // 3. Check for duplicate receipt in Redis cache
+    const redisClient = this.supabaseService.getRedisClient();
+    const receiptKey = `${this.receiptCachePrefix}${dto.receipt_token}`;
+    const existingReceipt = await redisClient.get(receiptKey);
+    if (existingReceipt) {
+      throw new ForbiddenException('This receipt has already been used to purchase coins');
     }
 
+    // 4. Add coins to user balance
     const supabase = this.supabaseService.getClient();
-    const { coins_balance } = await this.getBalance(userId);
-    const newBalance = coins_balance + amountToAdd;
+    const { data: user, error: fetchError } = await supabase
+      .from('users')
+      .select('coins_balance')
+      .eq('id', userId)
+      .single();
 
-    await supabase
+    if (fetchError || !user) {
+      throw new BadRequestException('User not found');
+    }
+
+    const currentBalance = user.coins_balance || 0;
+    const newBalance = currentBalance + coinPackage.coins;
+
+    const { error: updateError } = await supabase
       .from('users')
       .update({ coins_balance: newBalance })
       .eq('id', userId);
-      
-    return { coins_balance: newBalance, package_id: dto.package_id };
+
+    if (updateError) {
+      throw new BadRequestException('Failed to update coin balance');
+    }
+
+    // 5. Cache receipt to prevent reuse (expire after 30 days)
+    await redisClient.setex(receiptKey, 30 * 24 * 60 * 60, userId);
+
+    // 6. Log the purchase for audit
+    await this.logPurchase(userId, coinPackage, dto.receipt_token, dto.platform);
+
+    this.logger.log(`User ${userId} purchased ${coinPackage.coins} coins (package: ${dto.package_id})`);
+
+    return {
+      coins: coinPackage.coins,
+      newBalance,
+    };
+  }
+
+  private async validateReceipt(
+    userId: string,
+    receiptToken: string,
+    coinPackage: CoinPackage,
+    platform?: string,
+  ): Promise<void> {
+    // Basic validation - receipt must be present and have minimum length
+    if (!receiptToken || receiptToken.length < 10) {
+      throw new BadRequestException('Invalid receipt token');
+    }
+
+    // Platform-specific validation
+    if (platform === 'ios') {
+      // In production: call Apple's /verifyReceipt endpoint
+      // For now, validate token format
+      if (!receiptToken.startsWith('ios_')) {
+        throw new BadRequestException('Invalid iOS receipt format');
+      }
+    } else if (platform === 'android') {
+      // In production: call Google Play's verifyPurchases API
+      if (!receiptToken.startsWith('android_')) {
+        throw new BadRequestException('Invalid Android receipt format');
+      }
+    } else {
+      // Web purchases via Stripe
+      if (!receiptToken.startsWith('stripe_')) {
+        throw new BadRequestException('Invalid web receipt format');
+      }
+    }
+
+    // Check if receipt was already used in the database
+    const supabase = this.supabaseService.getClient();
+    const { data: existingPurchase } = await supabase
+      .from('coin_purchases')
+      .select('id')
+      .eq('receipt_token', receiptToken)
+      .single();
+
+    if (existingPurchase) {
+      throw new ForbiddenException('This receipt has already been processed');
+    }
+  }
+
+  private async logPurchase(
+    userId: string,
+    coinPackage: CoinPackage,
+    receiptToken: string,
+    platform?: string,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    
+    const { error } = await supabase
+      .from('coin_purchases')
+      .insert({
+        user_id: userId,
+        package_id: coinPackage.id,
+        coins_added: coinPackage.coins,
+        amount_paid: coinPackage.price,
+        currency: 'usd',
+        receipt_token: receiptToken,
+        platform: platform || 'web',
+        status: 'completed',
+      });
+
+    if (error) {
+      this.logger.error(`Failed to log purchase for user ${userId}: ${error.message}`);
+    }
   }
 
   async sendGift(
