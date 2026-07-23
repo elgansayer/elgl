@@ -198,17 +198,17 @@
 
 ## Phase 12: Matchmaking & Discovery UI (Requires Refactor for Pixel-Perfect Clone)
 - [x] Analyse search screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
-- [x] Refactor Discovery UI to match screenshots: implement dark theme aesthetics, horizontal scrollable filter pills, and banner ads.
-- [x] Build custom Angular primitives for horizontal scrollable filter pills and language buttons instead of using native `<select>`.
-- [x] Rebuild user cards to feature tight visual fluency indicators (flags and language codes) and gradient action buttons.
+- [ ] Refactor Discovery UI to match screenshots: implement dark theme aesthetics, horizontal scrollable filter pills, and banner ads.
+- [ ] Build custom Angular primitives for horizontal scrollable filter pills and language buttons instead of using native `<select>`.
+- [ ] Rebuild user cards to feature tight visual fluency indicators (flags and language codes) and gradient action buttons.
 - [ ] Build Nearby Search PostGIS distance slider for VIP users.
 - [ ] Build VIP Profile Visitor Log UI with blurred cards for free users.
 
 ## Phase 13: HelloTalk Chat Specifics (Requires Refactor for Pixel-Perfect Clone)
 - [x] Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
-- [x] Refactor Chat List UI ("Language Talks" tab) to strictly match screenshots: top quick-access circular icons, pill-shaped search bar, and horizontal filter pills.
-- [x] Rebuild Chat List items with high-density rows, VIP badges, online indicator dots, right-aligned timestamps, and bright purple unread count circles.
-- [x] Verify analysis of chat UI screenshots by reviewing git diff; if not done, perform analysis and document required UI components.
+- [ ] Refactor Chat List UI ("Language Talks" tab) to strictly match screenshots: top quick-access circular icons, pill-shaped search bar, and horizontal filter pills.
+- [ ] Rebuild Chat List items with high-density rows, VIP badges, online indicator dots, right-aligned timestamps, and bright purple unread count circles.
+- [ ] Verify analysis of chat UI screenshots by reviewing git diff; if not done, perform analysis and document required UI components.
 - [x] Create pixel‑perfect specification documents for all chat UI components listed in the review task.
 - [x] Build HTML5 Canvas Doodle Pad component in chat modal.
 - [x] Build Virtual Gift picker modal with coin balance auto-deduction.
