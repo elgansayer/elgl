@@ -132,6 +132,7 @@
 - [x] Perform detailed analysis of chat UI screenshots and document required UI components (re‑attempt after previous `[STUCK]`).
 - [STUCK] Perform detailed analysis of chat UI screenshots and document required UI components (re‑attempt after previous `[STUCK]`).
 - [ ] Review the analysis output and ensure all chat UI components (message bubbles, input bar, emoji picker, attachment menu, voice note recorder, doodle pad, gift picker, favourites tab, search bar, typing indicator, read receipts, context menu) are documented with pixel-perfect specifications.
+- [ ] Create pixel‑perfect specification documents for the following missing chat UI components: voice note recorder, doodle pad, favourites tab, typing indicator, read receipts, context menu, message bubbles, input bar, attachment menu. Also ensure the existing components (emoji picker, gift picker, search bar) have corresponding specification documents.
 - [x] Build HTML5 Canvas Doodle Pad component in chat modal.
 - [x] Build Virtual Gift picker modal with coin balance auto-deduction.
 - [x] Build Favourites bookmarking tab for saved messages and corrections.
