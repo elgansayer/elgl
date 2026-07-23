@@ -56,7 +56,7 @@ export class MonetisationService {
     }
 
     const stripe = new Stripe(this.configService.get<string>('STRIPE_SECRET_KEY') || '', {
-      apiVersion: '2023-10-16' as any,
+      apiVersion: '2025-02-24.acacia',
     });
 
     let event: Stripe.Event;
