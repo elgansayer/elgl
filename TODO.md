@@ -562,5 +562,6 @@
 - [x] Run the direct binary download script: `bash install-node.sh`. After installation, verify with `node --version` and `npm --version`. (This script performs the same commands as the previous re-attempt task.)
 - [x] Ensure `install-node.sh` is executable: run `chmod +x install-node.sh`. Then run `bash install-node.sh` to install Node.js and npm. After installation, verify with `node --version` and `npm --version`. Then run `cd backend && npm run lint` to verify lint passes.
 - [x] Run `bash install-node.sh` to install Node.js and npm. The script automatically runs `cd backend && npm run lint` and will exit with an error if lint fails. No separate lint command is needed.
+- [x] Verify that the direct binary download and lint command actually succeeded by checking `node --version` and `npm --version` and running `cd backend && npm run lint`.
 - [x] Ensure `install-node.sh` is executable: run `chmod +x install-node.sh`. Then run `bash install-node.sh` to install Node.js and npm. The script automatically runs `cd backend && npm run lint` and will exit with an error if lint fails. No separate lint command is needed.
 - [x] Run `bash install-node.sh` to install Node.js and npm. The script automatically runs `cd backend && npm run lint` and will exit with an error if lint fails. No separate lint command is needed.
