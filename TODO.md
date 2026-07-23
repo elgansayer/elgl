@@ -269,10 +269,11 @@
 - [x] Implement IncomingCallComponent with ringtone audio playback, accept/reject buttons, and integration with LiveKit for incoming call detection.
 
 ## Phase 18: Monetisation & VIP Tiers
-- [ ] Build VIP Subscription showcase page detailing all premium benefits.
+- [x] Build VIP Subscription showcase page detailing all premium benefits.
 - [x] Integrate Stripe Checkout for Monthly (8 UKP / $10 USD) and Yearly (50 UKP / $63 USD) plans (backend endpoint exists).
 - [ ] Build frontend subscription page that calls `POST /monetisation/create-checkout-session` and redirects to Stripe Checkout.
 - [ ] Build "Restore Purchases" button for app store compliance.
+- [ ] Refine `SubscriptionPlansComponent` to use dynamic pricing from plan data (price_ukp/price_usd) instead of hardcoded values, display dual-currency format "8 UKP / $10 USD" per AGENTS.md rules, and properly handle free plan display.
 
 ## Phase 19: Gamification & Study Streaks
 - [ ] Build Daily Study Streak counter widget on home screen.
