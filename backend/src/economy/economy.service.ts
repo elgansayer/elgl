@@ -205,6 +205,23 @@ export class EconomyService {
     return 'web';
   }
 
+  private parseAndroidReceiptToken(
+    receiptToken: string,
+  ): { productId: string; purchaseToken: string } | null {
+    // Expected format: android_{productId}_{purchaseToken}
+    const parts = receiptToken.split('_');
+    if (parts.length < 3 || parts[0] !== 'android') {
+      return null;
+    }
+    // productId is the second part, purchaseToken is the rest (may contain underscores)
+    const productId = parts[1];
+    const purchaseToken = parts.slice(2).join('_');
+    if (!productId || !purchaseToken) {
+      return null;
+    }
+    return { productId, purchaseToken };
+  }
+
   private async verifyReceipt(
     receiptToken: string,
     platform: string,
@@ -276,10 +293,15 @@ export class EconomyService {
       );
     }
 
-    // The receipt token for Android is typically the purchaseToken
-    const purchaseToken = receiptToken.replace(/^android_/, '');
+    // Expected format: android_{productId}_{purchaseToken}
+    const parsed = this.parseAndroidReceiptToken(receiptToken);
+    if (!parsed) {
+      throw new BadRequestException('Invalid Android receipt token format');
+    }
 
-    const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/products/${purchaseToken}/tokens/${purchaseToken}`;
+    const { productId, purchaseToken } = parsed;
+
+    const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/products/${productId}/tokens/${purchaseToken}`;
 
     const response = await firstValueFrom(
       this.httpService.get(url, {
@@ -332,9 +354,24 @@ export class EconomyService {
       throw new BadRequestException('Stripe payment not completed');
     }
 
+    const productId = session.metadata?.product_id;
+    if (!productId) {
+      throw new BadRequestException(
+        'Stripe session metadata missing product_id',
+      );
+    }
+
+    // Verify that the product ID matches one of our known packages
+    const coinPackage = this.getCoinPackageByProductId(productId);
+    if (!coinPackage) {
+      throw new BadRequestException(
+        `Unknown product ID in Stripe metadata: ${productId}`,
+      );
+    }
+
     return {
       valid: true,
-      productId: session.metadata?.product_id ?? 'coins_small',
+      productId,
       transactionId: session.payment_intent,
       platform: 'web',
     };
