@@ -297,7 +297,9 @@ export class AppleNotificationService {
 
       return verify.verify(leafCert.publicKey, signature);
     } catch (error: any) {
-      this.logger.error(`Signature verification error: ${(error as Error).message}`);
+      this.logger.error(
+        `Signature verification error: ${(error as Error).message}`,
+      );
       return false;
     }
   }
@@ -364,7 +366,9 @@ export class AppleNotificationService {
     );
 
     if (error) {
-      this.logger.error(`Failed to store Apple transaction: ${(error as Error).message}`);
+      this.logger.error(
+        `Failed to store Apple transaction: ${(error as Error).message}`,
+      );
     }
   }
 }
