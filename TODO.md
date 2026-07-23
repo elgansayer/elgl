@@ -90,6 +90,7 @@
 - [x] Actually execute the command `export PATH=$PATH:/usr/local/bin && cd backend && npm run lint` in the environment and confirm it exits with code 0.
 - [x] Run `bash install-node.sh` to install Node.js and npm, then run `export PATH=$PATH:/usr/local/bin && cd backend && npm run lint` and confirm it exits with code 0.
 - [ ] Actually execute the command `bash install-node.sh` in the environment and confirm it exits with code 0, then run `cd backend && npm run lint` and confirm it exits with code 0.
+- [ ] Run `bash install-node.sh` in the environment and confirm it exits with code 0, then run `cd backend && npm run lint` and confirm it exits with code 0.
 
 ## Phase 2: User Profiles, PostGIS Matchmaking & Visitor Tracking
 - [x] Create NestJS `UsersController` & `UsersService` to handle profile updates (bio, native language, target languages up to 3 for VIP, privacy toggles).
