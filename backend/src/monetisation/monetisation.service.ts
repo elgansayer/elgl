@@ -128,10 +128,11 @@ export class MonetisationService {
       const metadata = session.metadata;
       if (metadata?.userId) {
         // Determine tier based on interval
-        const tier = metadata.interval === 'year' 
-          ? 'developer_20_ukp_26_usd' 
-          : 'consumer_8_ukp_10_usd';
-        
+        const tier =
+          metadata.interval === 'year'
+            ? 'developer_20_ukp_26_usd'
+            : 'consumer_8_ukp_10_usd';
+
         await this.updateVipStatusFromWebhook(
           metadata.userId as string,
           true,

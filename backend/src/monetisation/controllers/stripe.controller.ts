@@ -33,12 +33,8 @@ export class StripeController {
     // Map planType to planId and interval
     const planId = dto.planType === 'yearly' ? 'yearly_vip' : 'monthly_vip';
     const interval = dto.planType === 'yearly' ? 'year' : 'month';
-    
-    return this.stripeService.createCheckoutSession(
-      planId,
-      user.id,
-      interval,
-    );
+
+    return this.stripeService.createCheckoutSession(planId, user.id, interval);
   }
 
   @Post('webhook')
