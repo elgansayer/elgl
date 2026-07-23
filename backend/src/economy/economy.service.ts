@@ -394,7 +394,81 @@ export class EconomyService {
     }
   }
 
-  async sendGift(/* unchanged */) {
-    // keep original implementation
+  async sendGift(
+    senderId: string,
+    dto: SendGiftDto,
+  ): Promise<{
+    success: boolean;
+    coins_remaining: number;
+    gift: VirtualGiftRow;
+  }> {
+    const supabase = this.supabaseService.getClient();
+
+    const giftResponse = await supabase
+      .from('virtual_gifts')
+      .select('*')
+      .eq('id', dto.gift_id)
+      .single();
+    if (!giftResponse.data) {
+      throw new NotFoundException(
+        `Gift '${dto.gift_id}' not found in catalog.`,
+      );
+    }
+    const gift = giftResponse.data as VirtualGiftRow;
+
+    const { coins_balance: senderBalance } = await this.getBalance(senderId);
+    if (senderBalance < gift.cost_coins) {
+      throw new BadRequestException(
+        `Insufficient coin balance (${senderBalance} available, ${gift.cost_coins} required). Purchase coins to support your language partners and room hosts!`,
+      );
+    }
+
+    const { coins_balance: receiverBalance } = await this.getBalance(
+      dto.receiver_id,
+    );
+
+    // Deduct and credit
+    const newSenderBalance = senderBalance - gift.cost_coins;
+    const newReceiverBalance = receiverBalance + gift.cost_coins;
+
+    await supabase
+      .from('users')
+      .update({ coins_balance: newSenderBalance })
+      .eq('id', senderId);
+    await supabase
+      .from('users')
+      .update({ coins_balance: newReceiverBalance })
+      .eq('id', dto.receiver_id);
+
+    await supabase.from('gift_transactions').insert({
+      sender_id: senderId,
+      receiver_id: dto.receiver_id,
+      gift_id: gift.id,
+      room_id: dto.room_id || null,
+      coins_spent: gift.cost_coins,
+    });
+
+    const senderProfile = await this.usersService.getProfile(senderId);
+    const receiverProfile = await this.usersService.getProfile(dto.receiver_id);
+
+    const giftEvent = {
+      type: 'virtual_gift',
+      gift,
+      sender_name: senderProfile?.display_name ?? 'Language Partner',
+      receiver_name: receiverProfile?.display_name ?? 'Room Host',
+      room_id: dto.room_id,
+    };
+
+    if (dto.room_id) {
+      void this.centrifugoService.publish(`room_${dto.room_id}`, giftEvent);
+    } else {
+      void this.centrifugoService.publish(`user_${dto.receiver_id}`, giftEvent);
+    }
+
+    return {
+      success: true,
+      coins_remaining: newSenderBalance,
+      gift,
+    };
   }
 }
