@@ -96,7 +96,7 @@
 - [x] Rework `POST /economy/purchase-coins` to verify purchase receipt records server-side before updating balances.
 - [x] Implement Apple App Store Server Notifications and Google Play Billing webhook handlers.
 - [x] Verify that `AppleNotificationService` and `GooglePlayNotificationService` perform real JWS/JWT signature verification and handle all subscription lifecycle events (SUBSCRIBED, DID_RENEW, EXPIRED, REVOKE, etc.).
-- [ ] Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azure AI API calls.
+- [x] Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azure AI API calls.
 
 ## Phase 9: Internationalisation (i18n) Foundation
 - [x] Install `@ngx-translate/core` and `@ngx-translate/http-loader` in Angular.
