@@ -76,7 +76,7 @@ export class NlpService {
     const res = await fetch('https://api-free.deepl.com/v2/translate', {
       method: 'POST',
       headers: {
-        'Authorization': `DeepL-Auth-Key ${deepLKey}`,
+        Authorization: `DeepL-Auth-Key ${deepLKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -89,7 +89,9 @@ export class NlpService {
 
     if (!res.ok) {
       const errorBody = await res.text();
-      throw new BadRequestException(`DeepL API error: ${res.status} ${errorBody}`);
+      throw new BadRequestException(
+        `DeepL API error: ${res.status} ${errorBody}`,
+      );
     }
 
     const data = await res.json();
@@ -102,7 +104,7 @@ export class NlpService {
         `https://api-free.deepl.com/v2/glossary-language-pairs`,
         {
           headers: {
-            'Authorization': `DeepL-Auth-Key ${deepLKey}`,
+            Authorization: `DeepL-Auth-Key ${deepLKey}`,
           },
         },
       );
@@ -117,18 +119,21 @@ export class NlpService {
     // Generate transliteration using DeepL's source language detection
     let transliteration = '';
     try {
-      const translitRes = await fetch('https://api-free.deepl.com/v2/translate', {
-        method: 'POST',
-        headers: {
-          'Authorization': `DeepL-Auth-Key ${deepLKey}`,
-          'Content-Type': 'application/json',
+      const translitRes = await fetch(
+        'https://api-free.deepl.com/v2/translate',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `DeepL-Auth-Key ${deepLKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: [translatedText],
+            target_lang: 'EN',
+            source_lang: dto.target_language.toUpperCase(),
+          }),
         },
-        body: JSON.stringify({
-          text: [translatedText],
-          target_lang: 'EN',
-          source_lang: dto.target_language.toUpperCase(),
-        }),
-      });
+      );
       if (translitRes.ok) {
         const translitData = await translitRes.json();
         transliteration = translitData.translations[0].text;
@@ -176,7 +181,9 @@ export class NlpService {
 
     if (!detectRes.ok) {
       const errorBody = await detectRes.text();
-      throw new BadRequestException(`Azure Detect API error: ${detectRes.status} ${errorBody}`);
+      throw new BadRequestException(
+        `Azure Detect API error: ${detectRes.status} ${errorBody}`,
+      );
     }
 
     const detectData = await detectRes.json();
@@ -197,7 +204,9 @@ export class NlpService {
 
     if (!dictRes.ok) {
       const errorBody = await dictRes.text();
-      throw new BadRequestException(`Azure Dictionary API error: ${dictRes.status} ${errorBody}`);
+      throw new BadRequestException(
+        `Azure Dictionary API error: ${dictRes.status} ${errorBody}`,
+      );
     }
 
     const dictData = await dictRes.json();
@@ -215,12 +224,15 @@ export class NlpService {
             'Ocp-Apim-Subscription-Key': azureKey,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify([{ Text: `Grammar correction: "${orig}" → "${correctedText}"` }]),
+          body: JSON.stringify([
+            { Text: `Grammar correction: "${orig}" → "${correctedText}"` },
+          ]),
         },
       );
       if (explainRes.ok) {
         const explainData = await explainRes.json();
-        explanation = explainData[0]?.translations[0]?.text || 'Corrected via Azure AI';
+        explanation =
+          explainData[0]?.translations[0]?.text || 'Corrected via Azure AI';
       }
     } catch {
       explanation = 'Corrected via Azure AI';
@@ -243,12 +255,16 @@ export class NlpService {
 
     const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
     if (!azureKey) {
-      throw new BadRequestException('Azure Speech Services API key not configured');
+      throw new BadRequestException(
+        'Azure Speech Services API key not configured',
+      );
     }
 
     const region = this.configService.get<string>('AZURE_SPEECH_REGION');
     if (!region) {
-      throw new BadRequestException('AZURE_SPEECH_REGION environment variable not configured');
+      throw new BadRequestException(
+        'AZURE_SPEECH_REGION environment variable not configured',
+      );
     }
 
     // Azure Speech Services Pronunciation Assessment API
@@ -268,7 +284,7 @@ export class NlpService {
         headers: {
           'Ocp-Apim-Subscription-Key': azureKey,
           'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
         body: audioBuffer,
       },
@@ -276,35 +292,44 @@ export class NlpService {
 
     if (!assessmentRes.ok) {
       const errorBody = await assessmentRes.text();
-      throw new BadRequestException(`Azure Speech API error: ${assessmentRes.status} ${errorBody}`);
+      throw new BadRequestException(
+        `Azure Speech API error: ${assessmentRes.status} ${errorBody}`,
+      );
     }
 
     const assessmentData = await assessmentRes.json();
     const nBest = assessmentData.NBest?.[0];
 
     if (!nBest) {
-      throw new BadRequestException('No pronunciation assessment results returned');
+      throw new BadRequestException(
+        'No pronunciation assessment results returned',
+      );
     }
 
-    const overallScore = Math.round(nBest.PronunciationAssessment?.AccuracyScore || 85);
+    const overallScore = Math.round(
+      nBest.PronunciationAssessment?.AccuracyScore || 85,
+    );
     const words = dto.target_text.split(/\s+/).filter((w) => w.length > 0);
 
     const breakdown: WordBreakdownItem[] = words.map((w, index) => {
       const wordResult = nBest.Words?.[index];
       return {
         word: w,
-        score: Math.round(wordResult?.PronunciationAssessment?.AccuracyScore || 85),
+        score: Math.round(
+          wordResult?.PronunciationAssessment?.AccuracyScore || 85,
+        ),
         feedback: wordResult?.PronunciationAssessment?.ErrorType
           ? `Error: ${wordResult.PronunciationAssessment.ErrorType}`
           : 'Good pronunciation',
       };
     });
 
-    const feedbackSummary = overallScore >= 90
-      ? 'Excellent pronunciation!'
-      : overallScore >= 70
-        ? 'Good effort, some areas to improve'
-        : 'Needs practice, focus on individual sounds';
+    const feedbackSummary =
+      overallScore >= 90
+        ? 'Excellent pronunciation!'
+        : overallScore >= 70
+          ? 'Good effort, some areas to improve'
+          : 'Needs practice, focus on individual sounds';
 
     return {
       overall_score: overallScore,

@@ -40,7 +40,9 @@ export class GooglePlayNotificationService {
       // 3. Extract subscription notification details
       const subscriptionNotification = notification.subscriptionNotification;
       if (!subscriptionNotification) {
-        this.logger.warn('Google Play notification missing subscriptionNotification');
+        this.logger.warn(
+          'Google Play notification missing subscriptionNotification',
+        );
         return;
       }
 
@@ -70,13 +72,19 @@ export class GooglePlayNotificationService {
           await this.handleSubscriptionOnHold(purchaseToken, subscriptionId);
           break;
         case 6: // SUBSCRIPTION_IN_GRACE_PERIOD
-          await this.handleSubscriptionInGracePeriod(purchaseToken, subscriptionId);
+          await this.handleSubscriptionInGracePeriod(
+            purchaseToken,
+            subscriptionId,
+          );
           break;
         case 7: // SUBSCRIPTION_RESTARTED
           await this.handleSubscriptionRestarted(purchaseToken, subscriptionId);
           break;
         case 8: // SUBSCRIPTION_PRICE_CHANGE_CONFIRMED
-          await this.handleSubscriptionPriceChangeConfirmed(purchaseToken, subscriptionId);
+          await this.handleSubscriptionPriceChangeConfirmed(
+            purchaseToken,
+            subscriptionId,
+          );
           break;
         case 9: // SUBSCRIPTION_DEFERRED
           await this.handleSubscriptionDeferred(purchaseToken, subscriptionId);
@@ -88,7 +96,9 @@ export class GooglePlayNotificationService {
           await this.handleSubscriptionExpired(purchaseToken, subscriptionId);
           break;
         default:
-          this.logger.warn(`Unhandled Google Play notification type: ${notificationType}`);
+          this.logger.warn(
+            `Unhandled Google Play notification type: ${notificationType}`,
+          );
       }
     } catch (error) {
       this.logger.error(
@@ -110,9 +120,7 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(
-      `User ${userId} subscription recovered: ${subscriptionId}`,
-    );
+    this.logger.log(`User ${userId} subscription recovered: ${subscriptionId}`);
 
     await this.updateSubscriptionStatus(userId, subscriptionId, 'active');
   }
@@ -129,9 +137,7 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(
-      `User ${userId} subscription renewed: ${subscriptionId}`,
-    );
+    this.logger.log(`User ${userId} subscription renewed: ${subscriptionId}`);
 
     await this.updateSubscriptionStatus(userId, subscriptionId, 'active');
   }
@@ -148,9 +154,7 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(
-      `User ${userId} subscription canceled: ${subscriptionId}`,
-    );
+    this.logger.log(`User ${userId} subscription canceled: ${subscriptionId}`);
 
     await this.updateSubscriptionStatus(userId, subscriptionId, 'canceled');
   }
@@ -167,9 +171,7 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(
-      `User ${userId} purchased subscription: ${subscriptionId}`,
-    );
+    this.logger.log(`User ${userId} purchased subscription: ${subscriptionId}`);
 
     await this.updateSubscriptionStatus(userId, subscriptionId, 'active');
   }
@@ -186,9 +188,7 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(
-      `User ${userId} subscription on hold: ${subscriptionId}`,
-    );
+    this.logger.log(`User ${userId} subscription on hold: ${subscriptionId}`);
 
     await this.updateSubscriptionStatus(userId, subscriptionId, 'on_hold');
   }
@@ -224,9 +224,7 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(
-      `User ${userId} subscription restarted: ${subscriptionId}`,
-    );
+    this.logger.log(`User ${userId} subscription restarted: ${subscriptionId}`);
 
     await this.updateSubscriptionStatus(userId, subscriptionId, 'active');
   }
@@ -263,9 +261,7 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(
-      `User ${userId} subscription deferred: ${subscriptionId}`,
-    );
+    this.logger.log(`User ${userId} subscription deferred: ${subscriptionId}`);
 
     // Update the deferred date in the database
     await this.updateSubscriptionDeferredDate(userId, subscriptionId);
@@ -283,9 +279,7 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(
-      `User ${userId} subscription revoked: ${subscriptionId}`,
-    );
+    this.logger.log(`User ${userId} subscription revoked: ${subscriptionId}`);
 
     await this.updateSubscriptionStatus(userId, subscriptionId, 'revoked');
     await this.revokeSubscriptionBenefits(userId);
@@ -303,9 +297,7 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(
-      `User ${userId} subscription expired: ${subscriptionId}`,
-    );
+    this.logger.log(`User ${userId} subscription expired: ${subscriptionId}`);
 
     await this.updateSubscriptionStatus(userId, subscriptionId, 'expired');
     await this.revokeSubscriptionBenefits(userId);

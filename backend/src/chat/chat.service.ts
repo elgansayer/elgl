@@ -106,10 +106,7 @@ export class ChatService {
     return response.data as ChatMessage[];
   }
 
-  async addFavourite(
-    userId: string,
-    dto: AddFavouriteDto,
-  ): Promise<void> {
+  async addFavourite(userId: string, dto: AddFavouriteDto): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
     // Get the message to favourite
@@ -124,14 +121,12 @@ export class ChatService {
     }
 
     // Store the favourite
-    const { error } = await supabase
-      .from('favourites')
-      .insert({
-        user_id: userId,
-        item_type: 'message',
-        item_payload: message,
-        notes: dto.note_text || null,
-      });
+    const { error } = await supabase.from('favourites').insert({
+      user_id: userId,
+      item_type: 'message',
+      item_payload: message,
+      notes: dto.note_text || null,
+    });
 
     if (error) {
       throw new Error('Failed to add favourite');

@@ -305,9 +305,7 @@ export class EconomyService {
     );
 
     if (!packageName || !accessToken) {
-      throw new BadRequestException(
-        'Google Play credentials not configured',
-      );
+      throw new BadRequestException('Google Play credentials not configured');
     }
 
     // Expected format: android_{productId}_{purchaseToken}
@@ -394,7 +392,9 @@ export class EconomyService {
     };
   }
 
-  private getCoinPackageByProductId(productId: string): CoinPackage | undefined {
+  private getCoinPackageByProductId(
+    productId: string,
+  ): CoinPackage | undefined {
     return COIN_PACKAGES.find(
       (pkg) =>
         pkg.platform_product_id.ios === productId ||

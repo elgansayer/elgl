@@ -50,7 +50,9 @@ export class GooglePlayNotificationService {
     private readonly monetisationService: MonetisationService,
   ) {}
 
-  async handleNotification(payload: any): Promise<{ received: boolean; status: string }> {
+  async handleNotification(
+    payload: any,
+  ): Promise<{ received: boolean; status: string }> {
     this.logger.log('Received Google Play Developer Notification');
 
     try {
@@ -73,18 +75,24 @@ export class GooglePlayNotificationService {
 
       // Handle test notification
       if (notificationData.testNotification) {
-        this.logger.log('Received Google Play test notification - acknowledging');
+        this.logger.log(
+          'Received Google Play test notification - acknowledging',
+        );
         return { received: true, status: 'processed' };
       }
 
       // Handle subscription notification
       if (notificationData.subscriptionNotification) {
-        await this.handleSubscriptionNotification(notificationData.subscriptionNotification);
+        await this.handleSubscriptionNotification(
+          notificationData.subscriptionNotification,
+        );
       } else {
         this.logger.log('Unhandled Google Play notification type');
       }
     } catch (error: any) {
-      this.logger.error(`Failed to process Google notification: ${error.message}`);
+      this.logger.error(
+        `Failed to process Google notification: ${error.message}`,
+      );
       // Don't throw - return success to avoid retries
       return { received: true, status: 'error' };
     }
@@ -127,7 +135,9 @@ export class GooglePlayNotificationService {
   }
 
   private async handleSubscriptionActive(
-    notification: NonNullable<GooglePlayNotification['subscriptionNotification']>,
+    notification: NonNullable<
+      GooglePlayNotification['subscriptionNotification']
+    >,
   ): Promise<void> {
     const { purchaseToken, subscriptionId } = notification;
 
@@ -135,33 +145,52 @@ export class GooglePlayNotificationService {
     const userId = await this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       // If we don't have the purchase token stored yet, try to get it from Google Play API
-      this.logger.log(`Purchase token ${purchaseToken} not found locally, fetching from Google Play`);
+      this.logger.log(
+        `Purchase token ${purchaseToken} not found locally, fetching from Google Play`,
+      );
       const purchaseDetails = await this.getSubscriptionPurchaseDetails(
         subscriptionId,
         purchaseToken,
       );
-      
+
       if (purchaseDetails) {
         // Try to get user ID from developer payload or obfuscated account ID
-        const extractedUserId = purchaseDetails.obfuscatedExternalAccountId || 
-                                purchaseDetails.developerPayload;
-        
+        const extractedUserId =
+          purchaseDetails.obfuscatedExternalAccountId ||
+          purchaseDetails.developerPayload;
+
         if (extractedUserId) {
-          await this.storePurchaseToken(extractedUserId, purchaseToken, subscriptionId);
+          await this.storePurchaseToken(
+            extractedUserId,
+            purchaseToken,
+            subscriptionId,
+          );
           const tier = this.mapSubscriptionIdToTier(subscriptionId);
-          await this.monetisationService.updateVipStatusFromWebhook(extractedUserId, true, tier);
+          await this.monetisationService.updateVipStatusFromWebhook(
+            extractedUserId,
+            true,
+            tier,
+          );
         }
       }
       return;
     }
 
     const tier = this.mapSubscriptionIdToTier(subscriptionId);
-    this.logger.log(`Activating subscription for user ${userId}, tier: ${tier}`);
-    await this.monetisationService.updateVipStatusFromWebhook(userId, true, tier);
+    this.logger.log(
+      `Activating subscription for user ${userId}, tier: ${tier}`,
+    );
+    await this.monetisationService.updateVipStatusFromWebhook(
+      userId,
+      true,
+      tier,
+    );
   }
 
   private async handleSubscriptionExpired(
-    notification: NonNullable<GooglePlayNotification['subscriptionNotification']>,
+    notification: NonNullable<
+      GooglePlayNotification['subscriptionNotification']
+    >,
   ): Promise<void> {
     const { purchaseToken } = notification;
 
@@ -172,7 +201,11 @@ export class GooglePlayNotificationService {
     }
 
     this.logger.log(`Deactivating subscription for user ${userId}`);
-    await this.monetisationService.updateVipStatusFromWebhook(userId, false, null);
+    await this.monetisationService.updateVipStatusFromWebhook(
+      userId,
+      false,
+      null,
+    );
   }
 
   private async getSubscriptionPurchaseDetails(
@@ -180,8 +213,12 @@ export class GooglePlayNotificationService {
     purchaseToken: string,
   ): Promise<GooglePlaySubscriptionPurchase | null> {
     try {
-      const packageName = this.configService.get<string>('GOOGLE_PLAY_PACKAGE_NAME');
-      const accessToken = this.configService.get<string>('GOOGLE_PLAY_ACCESS_TOKEN');
+      const packageName = this.configService.get<string>(
+        'GOOGLE_PLAY_PACKAGE_NAME',
+      );
+      const accessToken = this.configService.get<string>(
+        'GOOGLE_PLAY_ACCESS_TOKEN',
+      );
 
       if (!packageName || !accessToken) {
         this.logger.warn('Google Play credentials not configured');
@@ -200,14 +237,18 @@ export class GooglePlayNotificationService {
 
       return response.data as GooglePlaySubscriptionPurchase;
     } catch (error: any) {
-      this.logger.error(`Failed to get subscription purchase details: ${error.message}`);
+      this.logger.error(
+        `Failed to get subscription purchase details: ${error.message}`,
+      );
       return null;
     }
   }
 
-  private async getUserIdByPurchaseToken(purchaseToken: string): Promise<string | null> {
+  private async getUserIdByPurchaseToken(
+    purchaseToken: string,
+  ): Promise<string | null> {
     const supabase = this.supabaseService.getClient();
-    
+
     const { data } = await supabase
       .from('google_play_purchases')
       .select('user_id')
@@ -223,7 +264,7 @@ export class GooglePlayNotificationService {
     subscriptionId: string,
   ): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    
+
     const { error } = await supabase.from('google_play_purchases').upsert(
       {
         user_id: userId,
@@ -238,12 +279,17 @@ export class GooglePlayNotificationService {
     );
 
     if (error) {
-      this.logger.error(`Failed to store Google Play purchase: ${error.message}`);
+      this.logger.error(
+        `Failed to store Google Play purchase: ${error.message}`,
+      );
     }
   }
 
   private mapSubscriptionIdToTier(subscriptionId: string): string {
-    if (subscriptionId.includes('developer') || subscriptionId.includes('Developer')) {
+    if (
+      subscriptionId.includes('developer') ||
+      subscriptionId.includes('Developer')
+    ) {
       return 'developer_20_ukp_26_usd';
     }
     return 'consumer_8_ukp_10_usd';

@@ -36,12 +36,19 @@ export class HobbyTagsController {
     @Body() body: { hobby_tag_id: string; proficiency_level?: string },
   ) {
     const userId = (req as any).user?.id;
-    return this.hobbyTagsService.addUserTag(userId, body.hobby_tag_id, body.proficiency_level);
+    return this.hobbyTagsService.addUserTag(
+      userId,
+      body.hobby_tag_id,
+      body.proficiency_level,
+    );
   }
 
   @Delete('my/:hobbyTagId')
   @UseGuards(SupabaseAuthGuard)
-  async removeTag(@Req() req: Request, @Param('hobbyTagId') hobbyTagId: string) {
+  async removeTag(
+    @Req() req: Request,
+    @Param('hobbyTagId') hobbyTagId: string,
+  ) {
     const userId = (req as any).user?.id;
     await this.hobbyTagsService.removeUserTag(userId, hobbyTagId);
     return { message: 'Hobby tag removed successfully' };
@@ -55,6 +62,10 @@ export class HobbyTagsController {
     @Body() body: { proficiency_level: string },
   ) {
     const userId = (req as any).user?.id;
-    return this.hobbyTagsService.updateProficiency(userId, hobbyTagId, body.proficiency_level);
+    return this.hobbyTagsService.updateProficiency(
+      userId,
+      hobbyTagId,
+      body.proficiency_level,
+    );
   }
 }

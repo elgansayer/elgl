@@ -84,8 +84,6 @@ describe('MonetisationService', () => {
     expect(service).toBeDefined();
   });
 
-
-
   describe('handleStripeWebhook', () => {
     beforeEach(() => {
       mockConstructEvent.mockReset();

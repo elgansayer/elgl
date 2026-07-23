@@ -1,4 +1,13 @@
-import { Controller, Post, Delete, Get, Param, Body, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Delete,
+  Get,
+  Param,
+  Body,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { FavouritesService } from './favourites.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
@@ -8,7 +17,10 @@ export class FavouritesController {
   constructor(private readonly favouritesService: FavouritesService) {}
 
   @Post()
-  async addFavourite(@Req() req: any, @Body() dto: { message_id: string; note_text?: string }) {
+  async addFavourite(
+    @Req() req: any,
+    @Body() dto: { message_id: string; note_text?: string },
+  ) {
     return this.favouritesService.addFavourite(req.user.id, dto);
   }
 

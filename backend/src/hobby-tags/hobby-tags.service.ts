@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
@@ -20,17 +24,23 @@ export class HobbyTagsService {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('user_hobby_tags')
-      .select(`
+      .select(
+        `
         *,
         hobby_tag:hobby_tags(*)
-      `)
+      `,
+      )
       .eq('user_id', userId);
 
     if (error) throw error;
     return data || [];
   }
 
-  async addUserTag(userId: string, hobbyTagId: string, proficiencyLevel?: string): Promise<any> {
+  async addUserTag(
+    userId: string,
+    hobbyTagId: string,
+    proficiencyLevel?: string,
+  ): Promise<any> {
     const supabase = this.supabaseService.getClient();
 
     // Verify hobby tag exists
@@ -63,10 +73,12 @@ export class HobbyTagsService {
         hobby_tag_id: hobbyTagId,
         proficiency_level: proficiencyLevel || 'beginner',
       })
-      .select(`
+      .select(
+        `
         *,
         hobby_tag:hobby_tags(*)
-      `)
+      `,
+      )
       .single();
 
     if (error) throw error;
@@ -84,17 +96,23 @@ export class HobbyTagsService {
     if (error) throw error;
   }
 
-  async updateProficiency(userId: string, hobbyTagId: string, proficiencyLevel: string): Promise<any> {
+  async updateProficiency(
+    userId: string,
+    hobbyTagId: string,
+    proficiencyLevel: string,
+  ): Promise<any> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('user_hobby_tags')
       .update({ proficiency_level: proficiencyLevel })
       .eq('user_id', userId)
       .eq('hobby_tag_id', hobbyTagId)
-      .select(`
+      .select(
+        `
         *,
         hobby_tag:hobby_tags(*)
-      `)
+      `,
+      )
       .single();
 
     if (error) throw error;

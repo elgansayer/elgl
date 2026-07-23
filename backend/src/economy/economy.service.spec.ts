@@ -153,17 +153,38 @@ describe('EconomyService', () => {
 
       // Mock HttpService for verifyReceipt
       jest.spyOn(service['httpService'], 'post').mockReturnValue({
-        toPromise: () => Promise.resolve({ data: { status: 0, latest_receipt_info: [{ product_id: 'com.linguaexchange.coins.medium', transaction_id: 'txn123' }] } }),
+        toPromise: () =>
+          Promise.resolve({
+            data: {
+              status: 0,
+              latest_receipt_info: [
+                {
+                  product_id: 'com.linguaexchange.coins.medium',
+                  transaction_id: 'txn123',
+                },
+              ],
+            },
+          }),
       } as any);
 
       // Mock rxjs firstValueFrom
       const rxjs = require('rxjs');
       jest.spyOn(rxjs, 'firstValueFrom').mockResolvedValue({
-        data: { status: 0, latest_receipt_info: [{ product_id: 'com.linguaexchange.coins.medium', transaction_id: 'txn123' }] }
+        data: {
+          status: 0,
+          latest_receipt_info: [
+            {
+              product_id: 'com.linguaexchange.coins.medium',
+              transaction_id: 'txn123',
+            },
+          ],
+        },
       });
 
       // Mock checkDuplicateTransaction
-      mockQueryBuilder.maybeSingle = jest.fn().mockResolvedValue({ data: null });
+      mockQueryBuilder.maybeSingle = jest
+        .fn()
+        .mockResolvedValue({ data: null });
 
       const result = await service.purchaseCoins('user-1', {
         amount: 500,

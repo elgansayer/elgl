@@ -5,7 +5,10 @@ import { SupabaseService } from '../supabase/supabase.service';
 export class FavouritesService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async addFavourite(userId: string, dto: { message_id: string; note_text?: string }) {
+  async addFavourite(
+    userId: string,
+    dto: { message_id: string; note_text?: string },
+  ) {
     const supabase = this.supabaseService.getClient();
 
     // Fetch the message to store as payload
@@ -25,7 +28,7 @@ export class FavouritesService {
         user_id: userId,
         item_type: 'message',
         item_payload: message,
-        notes: dto.note_text || null
+        notes: dto.note_text || null,
       })
       .select()
       .single();

@@ -77,7 +77,9 @@ export class AppleNotificationService {
         await this.handleRenewalExtension(data);
         break;
       default:
-        this.logger.warn(`Unhandled Apple notification type: ${notificationType}`);
+        this.logger.warn(
+          `Unhandled Apple notification type: ${notificationType}`,
+        );
     }
   }
 
@@ -97,7 +99,9 @@ export class AppleNotificationService {
 
       // Decode the payload (base64url)
       const payloadBase64 = parts[1];
-      const payloadJson = Buffer.from(payloadBase64, 'base64url').toString('utf-8');
+      const payloadJson = Buffer.from(payloadBase64, 'base64url').toString(
+        'utf-8',
+      );
       const payload = JSON.parse(payloadJson);
 
       // In production, verify the JWS signature using Apple's public keys
@@ -129,7 +133,12 @@ export class AppleNotificationService {
     );
 
     // Update user's subscription status in the database
-    await this.updateSubscriptionStatus(userId, productId, 'active', transactionId);
+    await this.updateSubscriptionStatus(
+      userId,
+      productId,
+      'active',
+      transactionId,
+    );
   }
 
   /**
@@ -373,7 +382,10 @@ export class AppleNotificationService {
 
     const { error } = await supabase
       .from('subscriptions')
-      .update({ renewal_product_id: newProductId, updated_at: new Date().toISOString() })
+      .update({
+        renewal_product_id: newProductId,
+        updated_at: new Date().toISOString(),
+      })
       .eq('user_id', userId);
 
     if (error) {
@@ -438,9 +450,7 @@ export class AppleNotificationService {
   /**
    * Retrieves the number of coins associated with a specific transaction.
    */
-  private async getCoinsForTransaction(
-    transactionId: string,
-  ): Promise<number> {
+  private async getCoinsForTransaction(transactionId: string): Promise<number> {
     const supabase = this.supabaseService.getClient();
 
     const { data } = await supabase
@@ -527,7 +537,10 @@ export class AppleNotificationService {
 
     const { error } = await supabase
       .from('subscriptions')
-      .update({ expires_at: newExpiry.toISOString(), updated_at: new Date().toISOString() })
+      .update({
+        expires_at: newExpiry.toISOString(),
+        updated_at: new Date().toISOString(),
+      })
       .eq('user_id', userId);
 
     if (error) {

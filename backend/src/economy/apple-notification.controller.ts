@@ -1,4 +1,12 @@
-import { Controller, Post, Body, Headers, HttpCode, HttpStatus, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { AppleNotificationService } from './apple-notification.service';
 
 @Controller('economy/apple-notifications')
@@ -12,7 +20,7 @@ export class AppleNotificationController {
   /**
    * Apple App Store Server-to-Server Notification endpoint.
    * Apple sends signed JWS payloads to this URL.
-   * 
+   *
    * IMPORTANT: This endpoint must be publicly accessible (no auth guard)
    * because Apple calls it directly. Security is ensured via JWS signature verification.
    */
@@ -30,7 +38,9 @@ export class AppleNotificationController {
     }
 
     try {
-      await this.appleNotificationService.handleNotification(body.signedPayload);
+      await this.appleNotificationService.handleNotification(
+        body.signedPayload,
+      );
       return { status: 'ok' };
     } catch (error) {
       this.logger.error(

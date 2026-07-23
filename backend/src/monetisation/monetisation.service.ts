@@ -70,11 +70,15 @@ export class MonetisationService {
       .eq('id', userId);
 
     if (error) {
-      this.logger.error(`Failed to update VIP status for user ${userId}: ${error.message}`);
+      this.logger.error(
+        `Failed to update VIP status for user ${userId}: ${error.message}`,
+      );
       throw new Error('Failed to update VIP status');
     }
 
-    this.logger.log(`VIP status updated for user ${userId}: isVip=${isVip}, tier=${vipTier}`);
+    this.logger.log(
+      `VIP status updated for user ${userId}: isVip=${isVip}, tier=${vipTier}`,
+    );
   }
 
   /**
@@ -93,20 +97,27 @@ export class MonetisationService {
     rawBody: Buffer,
     signature: string,
   ): Promise<{ received: boolean; status: string }> {
-    const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
+    const webhookSecret = this.configService.get<string>(
+      'STRIPE_WEBHOOK_SECRET',
+    );
     if (!webhookSecret) {
       throw new Error('STRIPE_WEBHOOK_SECRET is not configured');
     }
 
-    const stripe = new Stripe(this.configService.get<string>('STRIPE_SECRET_KEY') || '', {
-      apiVersion: '2025-02-24.acacia' as any,
-    });
+    const stripe = new Stripe(
+      this.configService.get<string>('STRIPE_SECRET_KEY') || '',
+      {
+        apiVersion: '2025-02-24.acacia' as any,
+      },
+    );
 
     let event: Stripe.Event;
     try {
       event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
     } catch (err: any) {
-      this.logger.error(`Webhook signature verification failed: ${err.message}`);
+      this.logger.error(
+        `Webhook signature verification failed: ${err.message}`,
+      );
       throw new BadRequestException(`Webhook Error: ${err.message}`);
     }
 
@@ -119,7 +130,11 @@ export class MonetisationService {
       const session = event.data.object as any;
       const metadata = session.metadata;
       if (metadata?.userId && metadata?.tier) {
-        await this.updateVipStatusFromWebhook(metadata.userId, true, metadata.tier);
+        await this.updateVipStatusFromWebhook(
+          metadata.userId,
+          true,
+          metadata.tier,
+        );
       }
     } else if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object as any;
@@ -132,12 +147,16 @@ export class MonetisationService {
     return { received: true, status: 'processed' };
   }
 
-  async handleAppleWebhook(payload: any): Promise<{ received: boolean; status: string }> {
+  async handleAppleWebhook(
+    payload: any,
+  ): Promise<{ received: boolean; status: string }> {
     this.logger.log('Received Apple App Store Server Notification');
     return await this.appleNotificationService.handleNotification(payload);
   }
 
-  async handleGoogleWebhook(payload: any): Promise<{ received: boolean; status: string }> {
+  async handleGoogleWebhook(
+    payload: any,
+  ): Promise<{ received: boolean; status: string }> {
     this.logger.log('Received Google Play Developer Notification');
     return await this.googlePlayNotificationService.handleNotification(payload);
   }

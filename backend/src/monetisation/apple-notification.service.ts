@@ -1,4 +1,10 @@
-import { Injectable, Logger, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -47,7 +53,9 @@ export class AppleNotificationService {
     ].filter(Boolean);
   }
 
-  async handleNotification(payload: any): Promise<{ received: boolean; status: string }> {
+  async handleNotification(
+    payload: any,
+  ): Promise<{ received: boolean; status: string }> {
     this.logger.log(`Received Apple App Store Server Notification`);
 
     const signedPayload = payload?.signedPayload;
@@ -59,19 +67,23 @@ export class AppleNotificationService {
     try {
       // Verify the JWS signature
       const verifiedPayload = await this.verifyJwsPayload(signedPayload);
-      
+
       const { notificationType, subtype, data } = verifiedPayload;
-      
+
       // Handle subscription lifecycle events
       if (this.isSubscriptionActiveEvent(notificationType, subtype)) {
         await this.handleSubscriptionActive(notificationType, subtype, data);
       } else if (this.isSubscriptionExpiredEvent(notificationType, subtype)) {
         await this.handleSubscriptionExpired(notificationType, subtype, data);
       } else {
-        this.logger.log(`Unhandled notification type: ${notificationType}/${subtype}`);
+        this.logger.log(
+          `Unhandled notification type: ${notificationType}/${subtype}`,
+        );
       }
     } catch (error: any) {
-      this.logger.error(`Failed to process Apple notification: ${error.message}`);
+      this.logger.error(
+        `Failed to process Apple notification: ${error.message}`,
+      );
       // Don't throw - return success to Apple to avoid retries
       return { received: true, status: 'error' };
     }
@@ -79,7 +91,10 @@ export class AppleNotificationService {
     return { received: true, status: 'processed' };
   }
 
-  private isSubscriptionActiveEvent(notificationType: string, subtype?: string): boolean {
+  private isSubscriptionActiveEvent(
+    notificationType: string,
+    subtype?: string,
+  ): boolean {
     const activeTypes = [
       'SUBSCRIBED',
       'DID_RENEW',
@@ -87,18 +102,24 @@ export class AppleNotificationService {
       'DID_CHANGE_RENEWAL_PREF',
       'DID_CHANGE_RENEWAL_STATUS',
     ];
-    
+
     if (!activeTypes.includes(notificationType)) return false;
-    
+
     // For DID_CHANGE_RENEWAL_STATUS, only handle when auto-renew is enabled
-    if (notificationType === 'DID_CHANGE_RENEWAL_STATUS' && subtype === 'AUTO_RENEW_DISABLED') {
+    if (
+      notificationType === 'DID_CHANGE_RENEWAL_STATUS' &&
+      subtype === 'AUTO_RENEW_DISABLED'
+    ) {
       return false;
     }
-    
+
     return true;
   }
 
-  private isSubscriptionExpiredEvent(notificationType: string, subtype?: string): boolean {
+  private isSubscriptionExpiredEvent(
+    notificationType: string,
+    subtype?: string,
+  ): boolean {
     const expiredTypes = [
       'EXPIRED',
       'CANCEL',
@@ -108,14 +129,17 @@ export class AppleNotificationService {
       'RENEWAL_EXTENSION',
       'REVOKE',
     ];
-    
+
     if (expiredTypes.includes(notificationType)) return true;
-    
+
     // DID_CHANGE_RENEWAL_STATUS with AUTO_RENEW_DISABLED means user turned off auto-renew
-    if (notificationType === 'DID_CHANGE_RENEWAL_STATUS' && subtype === 'AUTO_RENEW_DISABLED') {
+    if (
+      notificationType === 'DID_CHANGE_RENEWAL_STATUS' &&
+      subtype === 'AUTO_RENEW_DISABLED'
+    ) {
       return true;
     }
-    
+
     return false;
   }
 
@@ -124,7 +148,9 @@ export class AppleNotificationService {
     subtype: string | undefined,
     data: any,
   ): Promise<void> {
-    const transactionInfo = await this.decodeTransactionInfo(data?.signedTransactionInfo);
+    const transactionInfo = await this.decodeTransactionInfo(
+      data?.signedTransactionInfo,
+    );
     if (!transactionInfo) {
       this.logger.warn('No transaction info in subscription active event');
       return;
@@ -137,10 +163,16 @@ export class AppleNotificationService {
     }
 
     const tier = this.mapProductIdToTier(transactionInfo.productId);
-    
-    this.logger.log(`Activating subscription for user ${userId}, tier: ${tier}`);
-    await this.monetisationService.updateVipStatusFromWebhook(userId, true, tier);
-    
+
+    this.logger.log(
+      `Activating subscription for user ${userId}, tier: ${tier}`,
+    );
+    await this.monetisationService.updateVipStatusFromWebhook(
+      userId,
+      true,
+      tier,
+    );
+
     // Store the original transaction ID for future reference
     await this.storeAppleTransaction(userId, transactionInfo);
   }
@@ -150,7 +182,9 @@ export class AppleNotificationService {
     subtype: string | undefined,
     data: any,
   ): Promise<void> {
-    const transactionInfo = await this.decodeTransactionInfo(data?.signedTransactionInfo);
+    const transactionInfo = await this.decodeTransactionInfo(
+      data?.signedTransactionInfo,
+    );
     if (!transactionInfo) {
       this.logger.warn('No transaction info in subscription expired event');
       return;
@@ -163,10 +197,16 @@ export class AppleNotificationService {
     }
 
     this.logger.log(`Deactivating subscription for user ${userId}`);
-    await this.monetisationService.updateVipStatusFromWebhook(userId, false, null);
+    await this.monetisationService.updateVipStatusFromWebhook(
+      userId,
+      false,
+      null,
+    );
   }
 
-  private async verifyJwsPayload(signedPayload: string): Promise<AppleNotificationPayload> {
+  private async verifyJwsPayload(
+    signedPayload: string,
+  ): Promise<AppleNotificationPayload> {
     const parts = signedPayload.split('.');
     if (parts.length !== 3) {
       throw new BadRequestException('Invalid JWS format');
@@ -219,14 +259,16 @@ export class AppleNotificationService {
 
       // Verify the certificate chain against Apple's root CA
       const leafCert = new crypto.X509Certificate(certs[0]);
-      
+
       // Verify chain
       for (let i = 0; i < certs.length - 1; i++) {
         const cert = new crypto.X509Certificate(certs[i]);
         const issuerCert = new crypto.X509Certificate(certs[i + 1]);
-        
+
         if (!cert.verify(issuerCert.publicKey)) {
-          this.logger.warn(`Certificate chain verification failed at index ${i}`);
+          this.logger.warn(
+            `Certificate chain verification failed at index ${i}`,
+          );
           return false;
         }
       }
@@ -235,7 +277,7 @@ export class AppleNotificationService {
       if (this.rootCAs.length > 0) {
         const lastCert = new crypto.X509Certificate(certs[certs.length - 1]);
         let rootVerified = false;
-        
+
         for (const rootCA of this.rootCAs) {
           try {
             const rootCert = new crypto.X509Certificate(rootCA);
@@ -247,9 +289,11 @@ export class AppleNotificationService {
             continue;
           }
         }
-        
+
         if (!rootVerified) {
-          this.logger.warn('Could not verify certificate chain against Apple root CAs');
+          this.logger.warn(
+            'Could not verify certificate chain against Apple root CAs',
+          );
           return false;
         }
       }
@@ -258,7 +302,7 @@ export class AppleNotificationService {
       const signature = Buffer.from(signatureB64, 'base64url');
       const verify = crypto.createVerify('SHA256');
       verify.update(signedContent);
-      
+
       return verify.verify(leafCert.publicKey, signature);
     } catch (error: any) {
       this.logger.error(`Signature verification error: ${error.message}`);
@@ -303,7 +347,7 @@ export class AppleNotificationService {
     transactionInfo: AppleTransactionInfo,
   ): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    
+
     const { error } = await supabase.from('apple_subscriptions').upsert(
       {
         user_id: userId,

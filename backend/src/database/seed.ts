@@ -44,7 +44,8 @@ async function runSeed() {
       developer_api_key: 'ht_dev_8f3a1b2c4d5e6f7a8b9c0d1e2f3a4b5c',
       profile: {
         display_name: 'Oliver Smith 🇬🇧',
-        bio_text: 'Senior Full-Stack Engineer and language enthusiast! Learning Japanese and Spanish. British English native speaker. Feel free to ask about grammar or tech!',
+        bio_text:
+          'Senior Full-Stack Engineer and language enthusiast! Learning Japanese and Spanish. British English native speaker. Feel free to ask about grammar or tech!',
         avatar_url:
           'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
         native_language: 'en',
@@ -59,7 +60,8 @@ async function runSeed() {
       coins_balance: 420,
       profile: {
         display_name: 'Sofía García 🇪🇸',
-        bio_text: '¡Hola a todos! Architect from Madrid. Seeking British English practice partners. I love coffee, literature, and travelling across Europe.',
+        bio_text:
+          '¡Hola a todos! Architect from Madrid. Seeking British English practice partners. I love coffee, literature, and travelling across Europe.',
         avatar_url:
           'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
         native_language: 'es',
@@ -73,7 +75,8 @@ async function runSeed() {
       coins_balance: 80,
       profile: {
         display_name: 'Yuki Tanaka 🇯🇵',
-        bio_text: 'こんにちは！ Tokyo-based UX designer. Want to practice casual conversational English and French. Happy to correct your Japanese Kanji & grammar!',
+        bio_text:
+          'こんにちは！ Tokyo-based UX designer. Want to practice casual conversational English and French. Happy to correct your Japanese Kanji & grammar!',
         avatar_url:
           'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
         native_language: 'ja',
@@ -88,7 +91,8 @@ async function runSeed() {
       coins_balance: 310,
       profile: {
         display_name: 'Claire Dubois 🇫🇷',
-        bio_text: 'Bonjour ! Art historian living in Paris. Learning Arabic and British English. Let us exchange voice notes and cultural recommendations.',
+        bio_text:
+          'Bonjour ! Art historian living in Paris. Learning Arabic and British English. Let us exchange voice notes and cultural recommendations.',
         avatar_url:
           'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
         native_language: 'fr',
@@ -104,7 +108,8 @@ async function runSeed() {
       developer_api_key: 'ht_dev_1a2b3c4d5e6f7a8b9c0d1e2f3a4b5d',
       profile: {
         display_name: 'Ahmed Al-Mansoor 🇸🇦',
-        bio_text: 'مرحباً بكم! AI researcher and entrepreneur in Riyadh. Fluent in Arabic, mastering German and English. Proud supporter of open language education.',
+        bio_text:
+          'مرحباً بكم! AI researcher and entrepreneur in Riyadh. Fluent in Arabic, mastering German and English. Proud supporter of open language education.',
         avatar_url:
           'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
         native_language: 'ar',
@@ -147,7 +152,9 @@ async function runSeed() {
           avatar_url: u.profile.avatar_url,
           native_language: u.profile.native_language,
           target_languages: u.profile.target_languages,
-          location: supabase.rpc('st_geomfromtext', { text: u.profile.location }),
+          location: supabase.rpc('st_geomfromtext', {
+            text: u.profile.location,
+          }),
         })
         .eq('id', userId);
     }
@@ -222,27 +229,36 @@ async function runSeed() {
     .limit(3);
 
   if (vipUsers && vipUsers.length > 0) {
-    const subscriptionData = vipUsers.map((user: { id: string; email: string }, index: number) => ({
-      user_id: user.id,
-      product_id: index === 0 
-        ? 'com.linguaexchange.vip.developer' 
-        : 'com.linguaexchange.vip.consumer',
-      original_transaction_id: `apple_orig_${user.id.substring(0, 8)}_${Date.now()}`,
-      transaction_id: `apple_txn_${user.id.substring(0, 8)}_${Date.now()}`,
-      purchase_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      expires_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      environment: 'Sandbox',
-      is_active: true,
-      auto_renew_status: true,
-      last_updated: new Date().toISOString(),
-    }));
+    const subscriptionData = vipUsers.map(
+      (user: { id: string; email: string }, index: number) => ({
+        user_id: user.id,
+        product_id:
+          index === 0
+            ? 'com.linguaexchange.vip.developer'
+            : 'com.linguaexchange.vip.consumer',
+        original_transaction_id: `apple_orig_${user.id.substring(0, 8)}_${Date.now()}`,
+        transaction_id: `apple_txn_${user.id.substring(0, 8)}_${Date.now()}`,
+        purchase_date: new Date(
+          Date.now() - 30 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
+        expires_date: new Date(
+          Date.now() + 30 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
+        environment: 'Sandbox',
+        is_active: true,
+        auto_renew_status: true,
+        last_updated: new Date().toISOString(),
+      }),
+    );
 
     await supabase.from('subscriptions').upsert(subscriptionData, {
       onConflict: 'user_id, original_transaction_id',
       ignoreDuplicates: false,
     });
 
-    console.log(`✅ Seeded ${subscriptionData.length} subscriptions for VIP users`);
+    console.log(
+      `✅ Seeded ${subscriptionData.length} subscriptions for VIP users`,
+    );
   }
 
   // 5. Seed subscription events for audit trail
@@ -270,7 +286,9 @@ async function runSeed() {
             bundleId: 'com.hellotalk.app',
           },
         },
-        created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        created_at: new Date(
+          Date.now() - 30 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
       },
     ]);
 

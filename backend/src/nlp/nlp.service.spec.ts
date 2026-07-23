@@ -49,8 +49,8 @@ describe('NlpService', () => {
     }).compile();
 
     service = module.get<NlpService>(NlpService);
-    
-    global.fetch = jest.fn() as jest.Mock;
+
+    global.fetch = jest.fn();
   });
 
   afterEach(() => {
@@ -127,14 +127,14 @@ describe('NlpService', () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ translations: [{ text: 'Hello / Welcome' }] }) // translation
+          json: async () => ({ translations: [{ text: 'Hello / Welcome' }] }), // translation
         })
         .mockResolvedValueOnce({
           ok: true, // glossary check
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ translations: [{ text: 'Hello' }] }) // transliteration
+          json: async () => ({ translations: [{ text: 'Hello' }] }), // transliteration
         });
       mockGuess.mockReturnValue([{ alpha2: 'es', score: 0.9 }]);
 
@@ -160,14 +160,16 @@ describe('NlpService', () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ translations: [{ text: 'Translated [ja → en]: Konnichiwa' }] })
+          json: async () => ({
+            translations: [{ text: 'Translated [ja → en]: Konnichiwa' }],
+          }),
         })
         .mockResolvedValueOnce({
           ok: true,
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ translations: [{ text: 'Konnichiwa' }] })
+          json: async () => ({ translations: [{ text: 'Konnichiwa' }] }),
         });
       mockGuess.mockReturnValue([{ alpha2: 'ja', score: 0.99 }]);
 
@@ -180,9 +182,7 @@ describe('NlpService', () => {
 
       expect(result.detected_language).toBe('ja');
       expect(result.translated_text).toBe('Translated [ja → en]: Konnichiwa');
-      expect(result.definition).toBe(
-        'Translation of "Konnichiwa" in en',
-      );
+      expect(result.definition).toBe('Translation of "Konnichiwa" in en');
     });
   });
 
@@ -191,15 +191,19 @@ describe('NlpService', () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ([{ language: 'en' }])
+          json: async () => [{ language: 'en' }],
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ([{ displayTarget: 'I went to the store yesterday.' }])
+          json: async () => [
+            { displayTarget: 'I went to the store yesterday.' },
+          ],
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ([{ translations: [{ text: 'Grammar correction' }] }])
+          json: async () => [
+            { translations: [{ text: 'Grammar correction' }] },
+          ],
         });
       const dto = { text: 'I go to store yesterday.' };
       const result = await service.grammarCheck('user-1', true, dto);
@@ -212,15 +216,17 @@ describe('NlpService', () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ([{ language: 'en' }])
+          json: async () => [{ language: 'en' }],
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ([{ displayTarget: 'Everything is fine.' }])
+          json: async () => [{ displayTarget: 'Everything is fine.' }],
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ([{ translations: [{ text: 'Grammar correction' }] }])
+          json: async () => [
+            { translations: [{ text: 'Grammar correction' }] },
+          ],
         });
       const dto = { text: 'Everything is fine.' };
       const result = await service.grammarCheck('user-1', true, dto);
@@ -233,15 +239,17 @@ describe('NlpService', () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ([{ language: 'en' }])
+          json: async () => [{ language: 'en' }],
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ([{ displayTarget: 'Needs a period.' }])
+          json: async () => [{ displayTarget: 'Needs a period.' }],
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ([{ translations: [{ text: 'Grammar correction' }] }])
+          json: async () => [
+            { translations: [{ text: 'Grammar correction' }] },
+          ],
         });
       const dto = { text: 'Needs a period' };
       const result = await service.grammarCheck('user-1', true, dto);
@@ -256,17 +264,24 @@ describe('NlpService', () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
-          arrayBuffer: async () => Buffer.from('audio')
+          arrayBuffer: async () => Buffer.from('audio'),
         })
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({
             RecognitionStatus: 'Success',
-            NBest: [{
-              PronunciationAssessment: { PronScore: 90, AccuracyScore: 95, FluencyScore: 85, CompletenessScore: 90 },
-              Words: []
-            }]
-          })
+            NBest: [
+              {
+                PronunciationAssessment: {
+                  PronScore: 90,
+                  AccuracyScore: 95,
+                  FluencyScore: 85,
+                  CompletenessScore: 90,
+                },
+                Words: [],
+              },
+            ],
+          }),
         });
       const dto = { target_text: 'Hello world test', audio_url: 'http://test' };
       const result = await service.pronunciationScore('user-1', true, dto);
@@ -274,26 +289,31 @@ describe('NlpService', () => {
       expect(result.breakdown).toHaveLength(3);
       // scores: 85 + 0 = 85, 85 + 1 = 86, 85 + 2 = 87 -> avg 86
       expect(result.overall_score).toBe(95);
-      expect(result.feedback_summary).toBe(
-        'Excellent pronunciation!',
-      );
+      expect(result.feedback_summary).toBe('Excellent pronunciation!');
     });
 
     it('should handle empty target_text gracefully returning 90 default overall score', async () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
-          arrayBuffer: async () => Buffer.from('audio')
+          arrayBuffer: async () => Buffer.from('audio'),
         })
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({
             RecognitionStatus: 'Success',
-            NBest: [{
-              PronunciationAssessment: { PronScore: 90, AccuracyScore: 95, FluencyScore: 85, CompletenessScore: 90 },
-              Words: []
-            }]
-          })
+            NBest: [
+              {
+                PronunciationAssessment: {
+                  PronScore: 90,
+                  AccuracyScore: 95,
+                  FluencyScore: 85,
+                  CompletenessScore: 90,
+                },
+                Words: [],
+              },
+            ],
+          }),
         });
       const dto = { target_text: '   ', audio_url: 'http://test' };
       const result = await service.pronunciationScore('user-1', true, dto);
