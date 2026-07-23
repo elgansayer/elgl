@@ -1,5 +1,16 @@
 #!/bin/bash
 set -e
+
+# If npm is already available, skip installation and just run lint
+if command -v npm &> /dev/null; then
+    echo "npm is already installed. Skipping Node.js installation."
+    cd backend
+    npm install
+    npm run lint
+    echo "Lint passed successfully."
+    exit 0
+fi
+
 # Ensure xz-utils is installed for tar -xJf
 if ! command -v xz &> /dev/null; then
     echo "xz not found, installing xz-utils..."
