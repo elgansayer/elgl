@@ -13,7 +13,6 @@ import { DoodlePadComponent } from '../doodle-pad/doodle-pad.component';
 import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.component';
 import { TokenisedTextComponent } from '../tokenised-text/tokenised-text.component';
 import { WordDefinitionModalComponent } from '../word-definition-modal/word-definition-modal.component';
-import { ChatSearchComponent } from '../chat-search/chat-search.component';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { SafetyService } from '../../services/safety.service';
 import { firstValueFrom } from 'rxjs';
@@ -29,7 +28,6 @@ import { firstValueFrom } from 'rxjs';
     VoiceRecorderComponent,
     TokenisedTextComponent,
     WordDefinitionModalComponent,
-    ChatSearchComponent,
     LongPressContextMenuComponent
   ],
   templateUrl: './chat-room.component.html',
