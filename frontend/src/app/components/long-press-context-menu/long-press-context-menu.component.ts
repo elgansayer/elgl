@@ -37,7 +37,7 @@ export interface ContextMenuOption {
         >
           <button
             *ngFor="let option of options(); trackBy: trackByOptionId"
-            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-gray-800 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+            class="w-full flex items-center gap-3 ps-4 pe-4 pt-2.5 pb-2.5 text-sm text-gray-200 hover:bg-gray-800 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
             [disabled]="option.disabled"
             (click)="onOptionClick(option.id)"
             role="menuitem"
