@@ -4,5 +4,5 @@ export const environment = {
   supabaseAnonKey: 'mock-anon-key',
   apiUrl: '/api',
   centrifugoUrl: 'ws://localhost:8000/connection/websocket',
-  livekitUrl: 'ws://localhost:7880'
+  liveKitUrl: 'ws://localhost:7880'
 };
