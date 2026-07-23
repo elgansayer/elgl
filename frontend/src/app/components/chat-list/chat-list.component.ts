@@ -7,6 +7,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
 import { ChatMessage, ChatRoom, ChatService } from '../../services/chat.service';
+import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 
 interface ChatRoomPreview {
   id: string;
@@ -22,7 +23,7 @@ interface ChatRoomPreview {
 
 @Component({
   selector: 'app-chat-list',
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ScrollablePillsComponent],
   templateUrl: './chat-list.component.html'
 })
 export class ChatListComponent implements OnInit {
@@ -33,6 +34,22 @@ export class ChatListComponent implements OnInit {
   readonly isLoading = signal<boolean>(true);
   readonly previews = signal<ChatRoomPreview[]>([]);
   readonly search = signal<string>('');
+  
+  readonly filterPills = signal([
+    { id: 'all', label: 'All' },
+    { id: 'online', label: 'Online' },
+    { id: 'unread', label: 'Unread' },
+    { id: 'my_turn', label: 'My turn' },
+    { id: 'timezone', label: 'Timezone proximity' }
+  ]);
+  readonly selectedFilter = signal<string>('all');
+
+  onFilterSelect(id: string) {
+    this.selectedFilter.set(id);
+    if (id !== 'all') {
+      this.notImplemented();
+    }
+  }
 
   readonly filteredPreviews = computed(() => {
     const query = this.search().trim().toLowerCase();

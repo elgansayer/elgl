@@ -206,9 +206,9 @@
 
 ## Phase 13: HelloTalk Chat Specifics (Requires Refactor for Pixel-Perfect Clone)
 - [x] Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
-- [ ] Refactor Chat List UI ("Language Talks" tab) to strictly match screenshots: top quick-access circular icons, pill-shaped search bar, and horizontal filter pills.
-- [ ] Rebuild Chat List items with high-density rows, VIP badges, online indicator dots, right-aligned timestamps, and bright purple unread count circles.
-- [ ] Verify analysis of chat UI screenshots by reviewing git diff; if not done, perform analysis and document required UI components.
+- [x] Refactor Chat List UI ("Language Talks" tab) to strictly match screenshots: top quick-access circular icons, pill-shaped search bar, and horizontal filter pills.
+- [x] Rebuild Chat List items with high-density rows, VIP badges, online indicator dots, right-aligned timestamps, and bright purple unread count circles.
+- [x] Verify analysis of chat UI screenshots by reviewing git diff; if not done, perform analysis and document required UI components.
 - [x] Create pixel‑perfect specification documents for all chat UI components listed in the review task.
 - [x] Build HTML5 Canvas Doodle Pad component in chat modal.
 - [x] Build Virtual Gift picker modal with coin balance auto-deduction.

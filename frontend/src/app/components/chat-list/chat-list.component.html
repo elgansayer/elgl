@@ -54,13 +54,14 @@
     </div>
 
     <!-- Filter Pills -->
-    <div class="app-filter-scroll">
-      <button (click)="notImplemented()" class="bg-surface-200 text-text-secondary w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs">≡</button>
-      <button (click)="notImplemented()" class="app-chip app-chip-active bg-primary/20 text-primary">All</button>
-      <button (click)="notImplemented()" class="app-chip">Online</button>
-      <button (click)="notImplemented()" class="app-chip">Unread</button>
-      <button (click)="notImplemented()" class="app-chip">My turn</button>
-      <button (click)="notImplemented()" class="app-chip">Timezone proximity</button>
+    <div class="flex items-center">
+      <button (click)="notImplemented()" class="bg-surface-200 text-text-secondary w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs ml-4">≡</button>
+      <app-scrollable-pills 
+        [pills]="filterPills()" 
+        [selected]="selectedFilter()" 
+        (select)="onFilterSelect($event)"
+        class="flex-1">
+      </app-scrollable-pills>
     </div>
   </header>
 
@@ -104,7 +105,7 @@
           <div class="flex justify-between items-center gap-2">
             <p class="text-[13px] text-text-secondary truncate">{{ preview.lastMessageText || 'Tap to chat...' }}</p>
             @if (preview.unreadCount > 0) {
-              <span class="bg-primary text-white text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0">
+              <span class="bg-purple-600 text-white text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0">
                 {{ preview.unreadCount }}
               </span>
             }
