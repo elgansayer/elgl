@@ -20,6 +20,7 @@
 - [x] Verify clean linting across both projects (`npm run lint`). (Note: run this command in the backend directory, not on TODO.md.)
 - [ ] Ensure Node.js and npm are installed in the environment before running lint commands.
 - [ ] Ensure Node.js and npm are installed in the environment before running lint commands.
+- [ ] Verify Node.js and npm are available (`node --version` and `npm --version`). If not, install them via the system package manager (e.g., `apt install nodejs npm` on Debian/Ubuntu) or using `nvm` (Node Version Manager).
 
 ## Phase 2: User Profiles, PostGIS Matchmaking & Visitor Tracking
 - [x] Create NestJS `UsersController` & `UsersService` to handle profile updates (bio, native language, target languages up to 3 for VIP, privacy toggles).
