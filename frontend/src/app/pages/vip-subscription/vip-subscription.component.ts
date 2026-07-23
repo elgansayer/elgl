@@ -77,6 +77,21 @@ export class VipSubscriptionComponent implements OnInit {
     }
   }
 
+  getFeatureCategories(): Array<{ name: string; getValue: (plan: SubscriptionPlan) => boolean }> {
+    return [
+      { name: 'Target Languages', getValue: (p) => p.id !== 'free' || true },
+      { name: 'AI Translations', getValue: (p) => p.id !== 'free' },
+      { name: 'Voice & Video Messages', getValue: (p) => p.id !== 'free' },
+      { name: 'Location Spoofing', getValue: (p) => p.id === 'consumer_8_ukp_10_usd' || p.id === 'developer_20_ukp_26_usd' },
+      { name: 'Priority Search', getValue: (p) => p.id !== 'free' },
+      { name: 'Profile Views', getValue: (p) => p.id !== 'free' },
+      { name: 'Ad-Free', getValue: (p) => p.id !== 'free' },
+      { name: 'API Access', getValue: (p) => p.id === 'developer_20_ukp_26_usd' },
+      { name: 'Developer Analytics', getValue: (p) => p.id === 'developer_20_ukp_26_usd' },
+      { name: 'Diagnostic Logs', getValue: (p) => p.id === 'developer_20_ukp_26_usd' },
+    ];
+  }
+
   getAllFeatures(): string[] {
     const featureSet = new Set<string>();
     this.plans().forEach((plan) => {
