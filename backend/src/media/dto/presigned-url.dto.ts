@@ -10,6 +10,6 @@ export class PresignedUrlDto {
   contentType!: string;
 
   @IsString()
-  @IsIn(['avatars', 'audio-intros', 'moments', 'voice-notes', 'doodles'])
+  @IsIn(['avatars', 'audio-intros', 'moments', 'voice-notes', 'doodles', 'cover-photos'])
   folder!: string;
 }
