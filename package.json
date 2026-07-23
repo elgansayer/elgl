@@ -4,10 +4,9 @@
   "private": true,
   "description": "HelloTalk Open-Core Platform (Angular v22 + NestJS + Supabase + Centrifugo + LiveKit)",
   "scripts": {
-    "prelint": "bash install-node.sh",
     "check:constitution": "node scripts/verify-constitution.mjs",
     "check:control-flow": "cd frontend && npm run check:control-flow",
-    "lint": "npm run check:constitution && cd backend && eslint --ignore-pattern '*.md'",
+    "lint": "bash install-node.sh && npm run check:constitution && cd backend && eslint --ignore-pattern '*.md'",
     "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "cd frontend && npx ng build",
     "build:backend": "cd backend && npm run build",

@@ -10,6 +10,12 @@ if ! command -v xz &> /dev/null; then
     apt-get update -qq && apt-get install -y -qq xz-utils
 fi
 
+# Ensure curl is installed for downloading Node.js
+if ! command -v curl &> /dev/null; then
+    echo "curl not found, installing curl..."
+    apt-get update -qq && apt-get install -y -qq curl
+fi
+
 # Download Node.js v22.14.0 (LTS)
 echo "Downloading Node.js v22.14.0..."
 curl -fsSL https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz -o /tmp/node.tar.xz
