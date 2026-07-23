@@ -19,31 +19,31 @@
   </main>
 
   <!-- Mobile Bottom Navigation Bar -->
-  <nav class="fixed bottom-0 left-0 right-0 z-50 bg-surface-200 border-t border-surface-100 pb-safe">
+  <nav class="fixed bottom-0 inset-x-0 z-50 bg-surface-200 border-t border-surface-100 pb-safe">
     <div class="flex justify-around items-center h-[60px]">
       <a routerLink="/chat" routerLinkActive="text-primary" [routerLinkActiveOptions]="{exact: false}" class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors">
         <span class="text-2xl leading-none">💬</span>
-        <span class="text-[10px] font-bold">HelloTalk</span>
+        <span class="text-[10px] font-bold">{{ 'nav.helloTalk' | t }}</span>
       </a>
       
       <a routerLink="/moments" routerLinkActive="text-primary" class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors">
         <span class="text-2xl leading-none">⭕</span>
-        <span class="text-[10px] font-bold">Moments</span>
+        <span class="text-[10px] font-bold">{{ 'nav.moments' | t }}</span>
       </a>
       
       <a routerLink="/discovery" routerLinkActive="text-primary" class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors">
         <span class="text-2xl leading-none">🌍</span>
-        <span class="text-[10px] font-bold">Connect</span>
+        <span class="text-[10px] font-bold">{{ 'nav.connect' | t }}</span>
       </a>
       
       <a routerLink="/audio-rooms" routerLinkActive="text-primary" class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors">
         <span class="text-2xl leading-none">🎙️</span>
-        <span class="text-[10px] font-bold">Live</span>
+        <span class="text-[10px] font-bold">{{ 'nav.liveRooms' | t }}</span>
       </a>
       
       <a routerLink="/profile" routerLinkActive="text-primary" class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors">
         <span class="text-2xl leading-none">👤</span>
-        <span class="text-[10px] font-bold">Me</span>
+        <span class="text-[10px] font-bold">{{ 'nav.profile' | t }}</span>
       </a>
     </div>
   </nav>

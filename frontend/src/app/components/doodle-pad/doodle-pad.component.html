@@ -29,7 +29,7 @@
 
   <div class="flex flex-wrap items-center justify-between gap-4 mt-4 pt-3 border-t border-surface-100">
     <div class="flex items-center gap-2">
-      <span class="app-muted font-bold uppercase tracking-wider">Colour</span>
+      <span class="app-muted font-bold uppercase tracking-wider">{{ 'doodle.colorLabel' | t }}</span>
       @for (color of colors; track color) {
         <button
           (click)="setColor(color)"
@@ -45,7 +45,7 @@
     </div>
 
     <div class="flex items-center gap-2">
-      <span class="app-muted font-bold uppercase tracking-wider">Brush</span>
+      <span class="app-muted font-bold uppercase tracking-wider">{{ 'doodle.brushLabel' | t }}</span>
       @for (w of [2, 4, 8, 14]; track w) {
         <button
           (click)="setBrushWidth(w)"

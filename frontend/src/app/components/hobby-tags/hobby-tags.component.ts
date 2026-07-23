@@ -63,7 +63,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
             <app-pill
               [colour]="getProficiencyColour(userTag.proficiency_level)"
               [size]="'md'"
-              [customClass]="'pr-8 cursor-pointer hover:ring-2 hover:ring-indigo-400'"
+              [customClass]="'pe-8 cursor-pointer hover:ring-2 hover:ring-indigo-400'"
             >
               <span class="flex items-center gap-1.5">
                 <span>{{ userTag.hobby_tag?.icon }}</span>
@@ -73,7 +73,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
             </app-pill>
             <button
               (click)="removeTag(userTag.hobby_tag_id)"
-              class="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all text-xs"
+              class="absolute end-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all text-xs"
               title="Remove hobby"
             >
               ✕
@@ -122,7 +122,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                 <div class="flex items-start justify-between">
                   <div>
                     <span class="text-sm font-semibold text-text-primary">{{ word.word }}</span>
-                    <span class="text-xs text-text-muted ml-2">{{ word.translation }}</span>
+                    <span class="text-xs text-text-muted ms-2">{{ word.translation }}</span>
                   </div>
                   <app-pill
                     [colour]="getDifficultyColour(word.difficulty)"

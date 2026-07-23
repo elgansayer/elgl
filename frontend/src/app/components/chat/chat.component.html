@@ -1,7 +1,7 @@
 <div class="flex h-full">
   <!-- Room list -->
   <aside class="w-80 border-e border-surface-100 overflow-y-auto">
-    <h2 class="p-4 text-lg font-semibold">Chats</h2>
+    <h2 class="p-4 text-lg font-semibold">{{ 'chatList.title' | t }}</h2>
     <ul>
       @for (room of rooms(); track room.id) {
         <li
@@ -55,7 +55,7 @@
   @if (incomingCall(); as call) {
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
       <div class="bg-gray-900 rounded-xl p-6 w-80 shadow-2xl">
-        <h3 class="text-lg font-semibold mb-2">Incoming Call</h3>
+        <h3 class="text-lg font-semibold mb-2">{{ 'chat.incomingCallTitle' | t }}</h3>
         <p class="text-text-secondary mb-4">{{ call.callerName }} is calling...</p>
         <div class="flex gap-4 justify-center">
           <button

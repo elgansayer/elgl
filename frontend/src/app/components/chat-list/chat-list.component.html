@@ -55,7 +55,7 @@
 
     <!-- Filter Pills -->
     <div class="flex items-center">
-      <button (click)="notImplemented()" class="bg-surface-200 text-text-secondary w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs ml-4">≡</button>
+      <button (click)="notImplemented()" class="bg-surface-200 text-text-secondary w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs ms-4">≡</button>
       <app-scrollable-pills 
         [pills]="filterPills()" 
         [selected]="selectedFilter()" 
@@ -88,7 +88,7 @@
             {{ preview.avatar || preview.title.charAt(0) }}
           </div>
           @if (preview.isOnline) {
-            <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-surface-500 rounded-full"></span>
+            <span class="absolute bottom-0 end-0 w-3.5 h-3.5 bg-green-500 border-2 border-surface-500 rounded-full"></span>
           }
         </div>
         
@@ -96,9 +96,9 @@
           <div class="flex justify-between items-baseline mb-0.5">
             <div class="flex items-center gap-2 truncate">
               <h3 class="text-[15px] font-bold text-text-primary truncate">{{ preview.title }}</h3>
-              <span class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-black italic leading-none">VIP</span>
+              <span class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-black italic leading-none">{{ 'discovery.vipBadge' | t }}</span>
             </div>
-            <span class="text-xs text-text-secondary shrink-0 ml-2">
+            <span class="text-xs text-text-secondary shrink-0 ms-2">
               {{ preview.lastMessageAt ? (preview.lastMessageAt | date: 'shortTime') : '12:00' }}
             </span>
           </div>

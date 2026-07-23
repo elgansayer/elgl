@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, catchError, of } from 'rxjs';
+import { MOCK_PARTNERS } from './mock-data';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { UserProfile } from './user.service';
@@ -41,7 +42,9 @@ export class DiscoveryService {
     if (filters.level) params = params.set('level', filters.level);
 
     return firstValueFrom(
-      this.http.get<UserProfile[]>(`${this.baseUrl}/partners`, { headers: this.getHeaders(), params })
+      this.http.get<UserProfile[]>(`${this.baseUrl}/partners`, { headers: this.getHeaders(), params }).pipe(
+        catchError(() => of(MOCK_PARTNERS))
+      )
     );
   }
 }

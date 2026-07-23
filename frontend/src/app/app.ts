@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { TranslatePipe } from './services/translate.pipe';
 import { filter } from 'rxjs';
 import { AuthService } from './services/auth.service';
 import { CentrifugeService } from './services/centrifuge.service';
@@ -8,7 +9,7 @@ import { EconomyStore, VirtualGift } from './services/economy.store';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, RouterOutlet, RouterLink],
+  imports: [CommonModule, RouterOutlet, RouterLink, TranslatePipe],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -19,11 +20,11 @@ export class App implements OnInit {
   private readonly router = inject(Router);
 
   readonly navItems = [
-    { path: '/discovery', label: 'Partners', icon: '🔎' },
-    { path: '/moments', label: 'Moments', icon: '📝' },
-    { path: '/chat', label: 'Chats', icon: '💬' },
-    { path: '/audio-rooms', label: 'Live', icon: '🎙️' },
-    { path: '/profile', label: 'Me', icon: '👤' }
+    { path: '/discovery', label: 'nav.partners', icon: '🔎' },
+    { path: '/moments', label: 'nav.moments', icon: '📝' },
+    { path: '/chat', label: 'nav.chats', icon: '💬' },
+    { path: '/audio-rooms', label: 'nav.live', icon: '🎙️' },
+    { path: '/profile', label: 'nav.me', icon: '👤' }
   ] as const;
 
   readonly currentRoute = signal(this.router.url);

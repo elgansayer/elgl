@@ -1,5 +1,5 @@
 import { showToast, notImplementedToast } from '../../services/toast.service';
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -10,7 +10,6 @@ import { VocabularyStore } from '../../services/vocabulary.store';
 import { AuthService } from '../../services/auth.service';
 import { TokenisedTextComponent } from '../tokenised-text/tokenised-text.component';
 import { WordDefinitionModalComponent } from '../word-definition-modal/word-definition-modal.component';
-import { TextToSpeechComponent } from '../text-to-speech/text-to-speech.component';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.component';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
@@ -24,7 +23,6 @@ import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrolla
     TranslatePipe,
     TokenisedTextComponent,
     WordDefinitionModalComponent,
-    TextToSpeechComponent,
     VisualDiffComponent,
     VoiceRecorderComponent,
     ScrollablePillsComponent

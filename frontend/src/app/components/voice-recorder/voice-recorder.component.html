@@ -1,7 +1,7 @@
 <div class="app-card p-6 max-w-md mx-auto text-center space-y-4">
   <div class="flex items-center justify-between border-b border-surface-100 pb-3">
     <h3 class="app-section-title flex items-center gap-2">
-      <span>🎙️ Voice Note Recorder</span>
+      <span>{{ 'voiceRecorder.title' | t }}</span>
     </h3>
     <button
       (click)="cancel()"
@@ -12,8 +12,8 @@
   </div>
 
   <div class="flex justify-center gap-1.5">
-    <span class="app-chip">🎙️ Speak clearly</span>
-    <span class="app-chip">📤 Send to chat</span>
+    <span class="app-chip">{{ 'voiceRecorder.chipSpeak' | t }}</span>
+    <span class="app-chip">{{ 'voiceRecorder.chipSend' | t }}</span>
   </div>
 
   <div class="py-6 flex flex-col items-center justify-center">
@@ -50,7 +50,7 @@
         (click)="startRecording()"
         class="px-6 py-3 rounded-app bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2"
       >
-        <span>⏺️ Start recording</span>
+        <span>{{ 'voiceRecorder.startBtn' | t }}</span>
       </button>
     }
 
@@ -59,7 +59,7 @@
         (click)="stopRecording()"
         class="px-6 py-3 rounded-app bg-surface-800 hover:bg-surface-800 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2"
       >
-        <span>⏹️ Stop recording</span>
+        <span>{{ 'voiceRecorder.stopBtn' | t }}</span>
       </button>
     }
 
@@ -68,7 +68,7 @@
         (click)="uploadAndSend()"
         class="app-button-primary px-6 py-3 text-sm flex items-center gap-2"
       >
-        <span>📤 Send voice note</span>
+        <span>{{ 'voiceRecorder.sendBtn' | t }}</span>
       </button>
     }
 
@@ -77,7 +77,7 @@
         disabled
         class="px-6 py-3 bg-surface-100 text-white rounded-app font-bold text-sm flex items-center gap-2 cursor-not-allowed"
       >
-        <span>⏳ Uploading to Cloudflare R2...</span>
+        <span>{{ 'voiceRecorder.uploadingBtn' | t }}</span>
       </button>
     }
   </div>

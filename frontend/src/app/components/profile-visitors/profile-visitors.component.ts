@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed, effect } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, UpperCasePipe } from '@angular/common';
 import { UserService, ProfileVisitor } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
 import { RouterLink } from '@angular/router';
@@ -7,7 +7,7 @@ import { RouterLink } from '@angular/router';
 @Component({
   selector: 'app-profile-visitors',
   standalone: true,
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, UpperCasePipe],
   template: `
     <div class="p-4">
       <h2 class="text-xl font-bold mb-4">Profile Visitors</h2>

@@ -8,7 +8,7 @@
     </div>
     <div class="flex items-center gap-2">
       @if (isVip()) {
-        <span class="app-chip bg-amber-500/20 text-amber-400 font-bold">Consumer VIP (`8 UKP / $10 USD`)</span>
+        <span class="app-chip bg-amber-500/20 text-amber-400 font-bold">{{ 'common.vipStdLabel' | t }}</span>
       }
       <button (click)="togglePlay()"
               [class.bg-emerald-600]="!isPlaying()"

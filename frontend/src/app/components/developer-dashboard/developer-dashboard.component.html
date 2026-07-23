@@ -3,26 +3,26 @@
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div class="space-y-2">
         <div class="flex flex-wrap items-center gap-2">
-          <span class="rounded-full bg-indigo-600 ps-3 pe-3 pt-1 pb-1 text-[11px] font-black uppercase tracking-wide">⚡ Developer tier & AI Sandbox</span>
+          <span class="rounded-full bg-indigo-600 ps-3 pe-3 pt-1 pb-1 text-[11px] font-black uppercase tracking-wide">{{ 'developer.bannerTier' | t }}</span>
           @if (store.developerStats()?.tier === 'developer') {
-            <span class="rounded-full bg-emerald-500 ps-2.5 pe-2.5 pt-1 pb-1 text-[11px] font-black">Active: 20 UKP / $26 USD monthly</span>
+            <span class="rounded-full bg-emerald-500 ps-2.5 pe-2.5 pt-1 pb-1 text-[11px] font-black">{{ 'developer.bannerActive' | t }}</span>
           }
         </div>
-        <h2 class="text-2xl font-black">Programmatic API & Diagnostics Platform</h2>
+        <h2 class="text-2xl font-black">{{ 'developer.bannerTitle' | t }}</h2>
         <p class="text-sm text-indigo-100/85 max-w-2xl">
-          Inspect PostGIS spatial queries, Centrifugo real-time fan-out, and LiveKit WebRTC stage permissions in real time.
+          {{ 'developer.bannerSubtitle' | t }}
         </p>
       </div>
 
       <div class="flex flex-col gap-2">
         @if (store.developerStats()?.tier !== 'developer') {
           <button (click)="upgrade('developer')" class="rounded-app bg-amber-500 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-black text-amber-950">
-            Upgrade developer tier (20 UKP / $26 USD)
+            {{ 'developer.upgradeDevBtn' | t }}
           </button>
         }
         @if (!authService.currentUser()?.is_vip) {
           <button (click)="upgrade('consumer')" class="rounded-app border border-slate-500 bg-surface-800 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold text-text-primary">
-            Consumer VIP (8 UKP / $10 USD)
+            {{ 'developer.upgradeConsumerBtn' | t }}
           </button>
         }
       </div>
@@ -37,7 +37,7 @@
             [class.bg-surface-100]="activeTab() !== 'overview'"
             [class.text-text-primary]="activeTab() !== 'overview'"
             class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors">
-      📊 Telemetry Overview
+      {{ 'developer.tabOverview' | t }}
     </button>
     <button (click)="setTab('postgis')"
             [class.bg-surface-800]="activeTab() === 'postgis'"
@@ -45,7 +45,7 @@
             [class.bg-surface-100]="activeTab() !== 'postgis'"
             [class.text-text-primary]="activeTab() !== 'postgis'"
             class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors">
-      🗺️ PostGIS Spatial Sandbox
+      {{ 'developer.tabPostgis' | t }}
     </button>
     <button (click)="setTab('centrifugo')"
             [class.bg-surface-800]="activeTab() === 'centrifugo'"
@@ -53,7 +53,7 @@
             [class.bg-surface-100]="activeTab() !== 'centrifugo'"
             [class.text-text-primary]="activeTab() !== 'centrifugo'"
             class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors">
-      ⚡ Centrifugo & Redis Fan-Out
+      {{ 'developer.tabCentrifugo' | t }}
     </button>
     <button (click)="setTab('livekit')"
             [class.bg-surface-800]="activeTab() === 'livekit'"
@@ -61,7 +61,7 @@
             [class.bg-surface-100]="activeTab() !== 'livekit'"
             [class.text-text-primary]="activeTab() !== 'livekit'"
             class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors">
-      🎙️ LiveKit SFU Stage Simulator
+      {{ 'developer.tabLivekit' | t }}
     </button>
   </nav>
 
@@ -71,40 +71,40 @@
       <section class="app-card app-padded space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-surface-100 pb-3">
           <div>
-            <h3 class="text-base font-black text-text-primary">🔐 API key management</h3>
-            <p class="app-muted">Send key in <code class="rounded bg-surface-100 px-1.5 py-0.5 text-primary">Authorization</code> header.</p>
+            <h3 class="text-base font-black text-text-primary">{{ 'developer.apiKeyTitle' | t }}</h3>
+            <p class="app-muted">{{ 'developer.apiKeySubtitle' | t }}</p>
           </div>
-          <button (click)="generateKey()" class="app-button-primary ps-4 pe-4 pt-2.5 pb-2.5 text-xs">+ Generate key</button>
+          <button (click)="generateKey()" class="app-button-primary ps-4 pe-4 pt-2.5 pb-2.5 text-xs">{{ 'developer.generateBtn' | t }}</button>
         </div>
 
         @if (store.developerStats()?.api_key; as key) {
           <div class="rounded-card border border-surface-100 bg-surface-300 p-4 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p class="app-muted font-bold uppercase">Active production key</p>
+              <p class="app-muted font-bold uppercase">{{ 'developer.activeKeyLabel' | t }}</p>
               <code class="text-sm font-black text-text-primary">{{ key }}</code>
             </div>
-            <span class="app-chip bg-emerald-500/20 text-emerald-400">Active (600 RPM)</span>
+            <span class="app-chip bg-emerald-500/20 text-emerald-400">{{ 'developer.activeRpm' | t }}</span>
           </div>
         } @else {
-          <div class="app-empty-state">No API key yet. Activate developer tier and generate one.</div>
+          <div class="app-empty-state">{{ 'developer.noKey' | t }}</div>
         }
       </section>
 
       <section class="grid grid-cols-1 gap-3 md:grid-cols-3">
         <article class="app-card app-padded space-y-1">
-          <p class="app-muted font-bold uppercase">Total API calls today</p>
+          <p class="app-muted font-bold uppercase">{{ 'developer.statCallsLabel' | t }}</p>
           <p class="text-3xl font-black text-text-primary">{{ store.developerStats()?.total_api_calls_today || 0 }}</p>
-          <p class="text-[11px] text-text-secondary">Across NLP, moments, and live rooms.</p>
+          <p class="text-[11px] text-text-secondary">{{ 'developer.statCallsSub' | t }}</p>
         </article>
         <article class="app-card app-padded space-y-1">
-          <p class="app-muted font-bold uppercase">Rate limit</p>
-          <p class="text-3xl font-black text-primary">{{ store.developerStats()?.tier === 'developer' ? '600 RPM' : '60 RPM' }}</p>
-          <p class="text-[11px] text-text-secondary">Tier: {{ store.developerStats()?.tier | uppercase }}</p>
+          <p class="app-muted font-bold uppercase">{{ 'developer.statRateLabel' | t }}</p>
+          <p class="text-3xl font-black text-primary">{{ store.developerStats()?.tier === 'developer' ? ('developer.statRate600' | t) : ('developer.statRate60' | t) }}</p>
+          <p class="text-[11px] text-text-secondary">{{ 'developer.statRateSub' | t: { tier: (store.developerStats()?.tier | uppercase) } }}</p>
         </article>
         <article class="app-card app-padded space-y-1">
-          <p class="app-muted font-bold uppercase">Average latency</p>
+          <p class="app-muted font-bold uppercase">{{ 'developer.statLatencyLabel' | t }}</p>
           <p class="text-3xl font-black text-emerald-400">{{ store.developerStats()?.avg_latency_ms || 18 }} ms</p>
-          <p class="text-[11px] text-text-secondary">P95 baseline: 28 ms</p>
+          <p class="text-[11px] text-text-secondary">{{ 'developer.statLatencySub' | t }}</p>
         </article>
       </section>
     </div>
@@ -114,23 +114,23 @@
   @if (activeTab() === 'postgis') {
     <section class="app-card app-padded space-y-4">
       <div class="border-b border-surface-100 pb-3">
-        <h3 class="text-base font-black text-text-primary">🗺️ PostGIS Geography Query Simulator (`ST_DWithin`)</h3>
-        <p class="app-muted">Simulate spatial indexing calculations and VIP location spoofing without modifying production data.</p>
+        <h3 class="text-base font-black text-text-primary">{{ 'developer.postgisTitle' | t }}</h3>
+        <p class="app-muted">{{ 'developer.postgisSubtitle' | t }}</p>
       </div>
 
       <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div class="space-y-1">
-          <label class="text-xs font-bold text-text-primary">Search Latitude (SRID 4326)</label>
+          <label class="text-xs font-bold text-text-primary">{{ 'developer.latLabel' | t }}</label>
           <input type="number" step="0.0001" [ngModel]="searchLatitude()" (ngModelChange)="searchLatitude.set($event)"
                  class="app-input w-full text-sm">
         </div>
         <div class="space-y-1">
-          <label class="text-xs font-bold text-text-primary">Search Longitude (SRID 4326)</label>
+          <label class="text-xs font-bold text-text-primary">{{ 'developer.lngLabel' | t }}</label>
           <input type="number" step="0.0001" [ngModel]="searchLongitude()" (ngModelChange)="searchLongitude.set($event)"
                  class="app-input w-full text-sm">
         </div>
         <div class="space-y-1">
-          <label class="text-xs font-bold text-text-primary">Radius (Metres): {{ searchRadiusMetres() }}m</label>
+          <label class="text-xs font-bold text-text-primary">{{ 'developer.radiusLabel' | t: { radius: searchRadiusMetres() } }}</label>
           <input type="range" min="1000" max="50000" step="1000" [ngModel]="searchRadiusMetres()" (ngModelChange)="searchRadiusMetres.set($event)"
                  class="w-full accent-primary">
         </div>
@@ -140,30 +140,30 @@
         <label class="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer">
           <input type="checkbox" [ngModel]="spoofVipLocation()" (ngModelChange)="spoofVipLocation.set($event)"
                  class="rounded border-surface-100 text-primary focus:ring-primary">
-          <span>Enable VIP mock location spoofing override (8 UKP / $10 USD feature)</span>
+          <span>{{ 'developer.spoofCheckbox' | t }}</span>
         </label>
         <button (click)="runPostGisSearch()" [disabled]="isSearching()" class="app-button-primary ps-5 pe-5 pt-2 pb-2 text-xs">
-          {{ isSearching() ? '⏳ Executing...' : '🔍 Execute Spatial Query' }}
+          {{ isSearching() ? ('developer.executingBtn' | t) : ('developer.executeBtn' | t) }}
         </button>
       </div>
 
       @if (discoveryResults().length > 0) {
         <div class="space-y-2 pt-3 border-t border-surface-100">
-          <p class="text-xs font-bold text-text-primary">Query Results: {{ discoveryResults().length }} matching learners</p>
+          <p class="text-xs font-bold text-text-primary">{{ 'developer.queryResults' | t: { count: discoveryResults().length } }}</p>
           <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
             @for (partner of discoveryResults(); track partner.id) {
               <div class="rounded-card border border-surface-100 bg-surface-300 p-3 flex items-center justify-between">
                 <div>
-                  <p class="text-sm font-black text-text-primary">{{ partner.display_name }} @if (partner.is_vip) { <span class="app-chip bg-amber-500/20 text-amber-400">VIP</span> }</p>
-                  <p class="text-xs text-text-secondary">Native: {{ partner.native_language }} | Target: {{ partner.target_languages?.join(', ') }}</p>
+                  <p class="text-sm font-black text-text-primary">{{ partner.display_name }} @if (partner.is_vip) { <span class="app-chip bg-amber-500/20 text-amber-400">{{ 'discovery.vipBadge' | t }}</span> }</p>
+                  <p class="text-xs text-text-secondary">{{ 'discovery.native' | t: { lang: partner.native_language } }} | {{ 'profile.targetLabel' | t }}: {{ partner.target_languages?.join(', ') }}</p>
                 </div>
-                <span class="text-xs font-bold text-emerald-400">{{ partner.distance_metres ? partner.distance_metres + 'm away' : 'Near point' }}</span>
+                <span class="text-xs font-bold text-emerald-400">{{ partner.distance_metres ? ('developer.distanceAway' | t: { distance: partner.distance_metres }) : ('developer.nearPoint' | t) }}</span>
               </div>
             }
           </div>
         </div>
       } @else {
-        <div class="app-empty-state pt-4">No spatial results generated yet. Click 'Execute Spatial Query' to test index.</div>
+        <div class="app-empty-state pt-4">{{ 'developer.noResults' | t }}</div>
       }
     </section>
   }
@@ -173,29 +173,29 @@
     <section class="app-card app-padded space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-3 border-b border-surface-100 pb-3">
         <div>
-          <h3 class="text-base font-black text-text-primary">⚡ Centrifugo v5 & Redis 7 Fan-Out Diagnostics</h3>
-          <p class="app-muted">Inspect real-time WebSocket connection signals and simulated Redis queue broadcasts.</p>
+          <h3 class="text-base font-black text-text-primary">{{ 'developer.centrifugoTitle' | t }}</h3>
+          <p class="app-muted">{{ 'developer.centrifugoSubtitle' | t }}</p>
         </div>
         <div class="flex items-center gap-2">
           <span class="app-chip" [class.bg-emerald-500/20]="centrifugeService.isConnected()"
                                  [class.text-emerald-400]="centrifugeService.isConnected()"
                                  [class.bg-surface-100]="!centrifugeService.isConnected()"
                                  [class.text-text-primary]="!centrifugeService.isConnected()">
-            Status: {{ centrifugeService.connectionStatus() | uppercase }}
+            {{ 'developer.statusPrefix' | t: { status: (centrifugeService.connectionStatus() | uppercase) } }}
           </span>
           <button (click)="toggleCentrifugo()" class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs">
-            {{ centrifugeService.isConnected() ? 'Disconnect' : 'Connect WebSocket' }}
+            {{ centrifugeService.isConnected() ? ('developer.disconnectBtn' | t) : ('developer.connectBtn' | t) }}
           </button>
         </div>
       </div>
 
       <div class="rounded-card border border-surface-100 bg-surface-300 p-4 space-y-3">
-        <h4 class="text-xs font-black uppercase text-text-primary">Redis Timeline Queue Fan-Out Simulation</h4>
+        <h4 class="text-xs font-black uppercase text-text-primary">{{ 'developer.redisTitle' | t }}</h4>
         <p class="text-xs text-text-secondary">
-          When a user publishes a Moment, <code class="rounded bg-surface-100 px-1 text-text-primary">TimelineWorker</code> executes <code class="rounded bg-surface-100 px-1 text-primary">RPUSH timeline_queue:[id]</code> to distribute IDs to all subscribers asynchronously.
+          {{ 'developer.redisDesc' | t }}
         </p>
         <button (click)="simulateRedisTimelineFanout()" class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs">
-          🚀 Trigger Simulated Redis Fan-Out (<code class="font-mono">RPUSH</code>)
+          {{ 'developer.triggerRedisBtn' | t }}
         </button>
       </div>
     </section>
@@ -205,27 +205,27 @@
   @if (activeTab() === 'livekit') {
     <section class="app-card app-padded space-y-4">
       <div class="border-b border-surface-100 pb-3">
-        <h3 class="text-base font-black text-text-primary">🎙️ LiveKit WebRTC SFU Stage Permissions (`RoomServiceClient`)</h3>
-        <p class="app-muted">Simulate stage hand-raising workflows and token `canPublish` claims inside live audio/video rooms.</p>
+        <h3 class="text-base font-black text-text-primary">{{ 'developer.livekitTitle' | t }}</h3>
+        <p class="app-muted">{{ 'developer.livekitSubtitle' | t }}</p>
       </div>
 
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div class="rounded-card border border-surface-100 bg-surface-300 p-4 space-y-3">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-black uppercase text-text-primary">Simulated Stage Role</span>
+            <span class="text-xs font-black uppercase text-text-primary">{{ 'developer.simRoleLabel' | t }}</span>
             <span class="app-chip bg-indigo-500/20 text-indigo-400 font-bold uppercase">{{ simulatedStageRole() }}</span>
           </div>
           <p class="text-xs text-text-secondary">
-            Publish Permission (`canPublish` JWT Claim): <strong [class.text-emerald-600]="simulatedCanPublish()" [class.text-amber-600]="!simulatedCanPublish()">{{ simulatedCanPublish() ? 'GRANTED (Microphone ON)' : 'RESTRICTED (Listener only)' }}</strong>
+            {{ 'developer.permLabel' | t }} <strong [class.text-emerald-600]="simulatedCanPublish()" [class.text-amber-600]="!simulatedCanPublish()">{{ simulatedCanPublish() ? ('developer.permGranted' | t) : ('developer.permRestricted' | t) }}</strong>
           </p>
           <div class="flex flex-wrap gap-2 pt-2">
             @if (!simulatedCanPublish()) {
               <button (click)="simulateStageHandRaise()" class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs">
-                ✋ Simulate Host Approval (`canPublish: true`)
+                {{ 'developer.simApproveBtn' | t }}
               </button>
             } @else {
               <button (click)="simulateStageDemote()" class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs">
-                ⬇️ Demote to Audience (`canPublish: false`)
+                {{ 'developer.simDemoteBtn' | t }}
               </button>
             }
           </div>
@@ -233,13 +233,13 @@
 
         <div class="rounded-card border border-surface-100 bg-surface-300 p-4 space-y-3">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-black uppercase text-text-primary">Composite Recording Engine</span>
+            <span class="text-xs font-black uppercase text-text-primary">{{ 'developer.recordingTitle' | t }}</span>
             <span class="app-chip" [class.bg-emerald-500/20]="isRecordingActive()" [class.text-emerald-400]="isRecordingActive()" [class.bg-surface-100]="!isRecordingActive()" [class.text-text-primary]="!isRecordingActive()">
-              {{ isRecordingActive() ? '🔴 RECORDING ACTIVE' : '⚪ IDLE' }}
+              {{ isRecordingActive() ? ('developer.recordingActive' | t) : ('developer.recordingIdle' | t) }}
             </span>
           </div>
           <p class="text-xs text-text-secondary">
-            Archive live stage audio/video composites directly to Cloudflare R2 bucket with zero egress fees.
+            {{ 'developer.recordingDesc' | t }}
           </p>
           <button (click)="toggleRecordingArchive()"
                   [class.bg-red-600]="!isRecordingActive()"
@@ -247,7 +247,7 @@
                   [class.bg-surface-200]="isRecordingActive()"
                   [class.text-white]="isRecordingActive()"
                   class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors">
-            {{ isRecordingActive() ? '⏹️ Stop & Save R2 Archive' : '🔴 Start Composite Recording' }}
+            {{ isRecordingActive() ? ('developer.stopRecordingBtn' | t) : ('developer.startRecordingBtn' | t) }}
           </button>
         </div>
       </div>
@@ -257,8 +257,8 @@
   <!-- Live Diagnostic Stream Log Console -->
   <section class="app-card app-padded space-y-3 bg-surface-500 text-text-primary border border-surface-100">
     <div class="flex items-center justify-between border-b border-surface-100 pb-2">
-      <h4 class="text-xs font-black uppercase tracking-wider text-indigo-400">🛡️ Live Architectural Diagnostics Stream</h4>
-      <span class="text-[11px] text-text-muted">Showing last {{ logs().length }} events</span>
+      <h4 class="text-xs font-black uppercase tracking-wider text-indigo-400">{{ 'developer.logsTitle' | t }}</h4>
+      <span class="text-[11px] text-text-muted">{{ 'developer.showingLogs' | t: { count: logs().length } }}</span>
     </div>
 
     <div class="space-y-1.5 max-h-52 overflow-y-auto font-mono text-xs">

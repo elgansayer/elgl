@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, catchError, of } from 'rxjs';
+import { MOCK_USER_PROFILE, MOCK_VISITORS } from './mock-data';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
@@ -74,7 +75,9 @@ export class UserService {
 
   async getMyProfile(): Promise<UserProfile | null> {
     return firstValueFrom(
-      this.http.get<UserProfile>(`${this.baseUrl}/me`, { headers: this.getHeaders() })
+      this.http.get<UserProfile>(`${this.baseUrl}/me`, { headers: this.getHeaders() }).pipe(
+        catchError(() => of(MOCK_USER_PROFILE))
+      )
     );
   }
 
@@ -92,7 +95,9 @@ export class UserService {
 
   async getProfileVisitors(): Promise<ProfileVisitor[]> {
     return firstValueFrom(
-      this.http.get<ProfileVisitor[]>(`${this.baseUrl}/me/visitors`, { headers: this.getHeaders() })
+      this.http.get<ProfileVisitor[]>(`${this.baseUrl}/me/visitors`, { headers: this.getHeaders() }).pipe(
+        catchError(() => of(MOCK_VISITORS))
+      )
     );
   }
 

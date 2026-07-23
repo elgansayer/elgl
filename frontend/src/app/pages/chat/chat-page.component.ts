@@ -12,7 +12,7 @@ import { ChatMessageComponent } from '../../components/chat-message/chat-message
   template: `
     <div class="flex h-full">
       <!-- Room List -->
-      <aside class="w-80 border-r border-surface-100  overflow-y-auto">
+      <aside class="w-80 border-e border-surface-100  overflow-y-auto">
         <div class="p-4">
           <h2 class="text-lg font-semibold mb-4">Chats</h2>
           <div *ngFor="let room of rooms()" 
