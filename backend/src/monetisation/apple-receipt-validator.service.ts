@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MonetisationService } from './monetisation.service';
 
 interface AppleReceiptResponse {
   environment: 'Sandbox' | 'Production';
@@ -58,6 +59,7 @@ export class AppleReceiptValidatorService {
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
     private readonly supabaseService: SupabaseService,
+    private readonly monetisationService: MonetisationService,
   ) {
     this.sharedSecret = this.configService.get<string>('APPLE_SHARED_SECRET') || '';
   }
@@ -174,19 +176,9 @@ export class AppleReceiptValidatorService {
       this.logger.error('Failed to store subscription', subError);
     }
 
-    // Update user VIP status
+    // Update user VIP status via webhook-only path
     if (isActive) {
-      const { error: userError } = await supabase
-        .from('users')
-        .update({
-          is_vip: true,
-          vip_tier: tier,
-        })
-        .eq('id', userId);
-
-      if (userError) {
-        this.logger.error('Failed to update user VIP status', userError);
-      }
+      await this.monetisationService.updateVipStatusFromWebhook(userId, true, tier);
     }
 
     return { isActive, tier, expiresDate };

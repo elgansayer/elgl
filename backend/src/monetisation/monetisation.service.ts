@@ -43,6 +43,44 @@ export class MonetisationService {
     private readonly configService: ConfigService,
   ) {}
 
+  /**
+   * PRIVATE: VIP status must only be changed via verified payment webhooks.
+   * This method is called exclusively from webhook handlers.
+   */
+  private async updateVipStatus(
+    userId: string,
+    isVip: boolean,
+    vipTier: string | null,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('users')
+      .update({
+        is_vip: isVip,
+        vip_tier: vipTier,
+      })
+      .eq('id', userId);
+
+    if (error) {
+      this.logger.error(`Failed to update VIP status for user ${userId}: ${error.message}`);
+      throw new Error('Failed to update VIP status');
+    }
+
+    this.logger.log(`VIP status updated for user ${userId}: isVip=${isVip}, tier=${vipTier}`);
+  }
+
+  /**
+   * Public method for internal use by webhook handlers and receipt validators.
+   * Do NOT expose this as a controller endpoint.
+   */
+  async updateVipStatusFromWebhook(
+    userId: string,
+    isVip: boolean,
+    vipTier: string | null,
+  ): Promise<void> {
+    return this.updateVipStatus(userId, isVip, vipTier);
+  }
+
   async handleStripeWebhook(
     rawBody: Buffer,
     signature: string,
@@ -74,22 +112,13 @@ export class MonetisationService {
       const session = event.data.object as any;
       const metadata = session.metadata;
       if (metadata?.userId && metadata?.tier) {
-        await supabase
-          .from('users')
-          .update({ is_vip: true, vip_tier: metadata.tier })
-          .eq('id', metadata.userId);
-        this.logger.log(
-          `Upgraded user ${metadata.userId} to VIP tier ${metadata.tier} via webhook.`,
-        );
+        await this.updateVipStatusFromWebhook(metadata.userId, true, metadata.tier);
       }
     } else if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object as any;
       const metadata = subscription.metadata;
       if (metadata?.userId) {
-        await supabase
-          .from('users')
-          .update({ is_vip: false, vip_tier: null })
-          .eq('id', metadata.userId);
+        await this.updateVipStatusFromWebhook(metadata.userId, false, null);
       }
     }
 
@@ -144,12 +173,7 @@ export class MonetisationService {
                 : 'consumer_8_ukp_10_usd';
               
               // Update user VIP status
-              await supabase
-                .from('users')
-                .update({ is_vip: true, vip_tier: tier })
-                .eq('id', userId);
-              
-              this.logger.log(`Upgraded user ${userId} to VIP tier ${tier} via Apple webhook.`);
+              await this.updateVipStatusFromWebhook(userId, true, tier);
             }
           }
         }
@@ -170,12 +194,7 @@ export class MonetisationService {
               const supabase = this.supabaseService.getClient();
               
               // Downgrade user
-              await supabase
-                .from('users')
-                .update({ is_vip: false, vip_tier: null })
-                .eq('id', userId);
-              
-              this.logger.log(`Downgraded user ${userId} via Apple webhook.`);
+              await this.updateVipStatusFromWebhook(userId, false, null);
             }
           }
         }
@@ -239,12 +258,7 @@ export class MonetisationService {
               .single();
 
             if (purchaseData?.user_id) {
-              await supabase
-                .from('users')
-                .update({ is_vip: true, vip_tier: tier })
-                .eq('id', purchaseData.user_id);
-              
-              this.logger.log(`Upgraded user ${purchaseData.user_id} to VIP via Google webhook.`);
+              await this.updateVipStatusFromWebhook(purchaseData.user_id, true, tier);
             }
           } else {
             // Find user by purchase token
@@ -255,12 +269,7 @@ export class MonetisationService {
               .single();
 
             if (purchaseData?.user_id) {
-              await supabase
-                .from('users')
-                .update({ is_vip: false, vip_tier: null })
-                .eq('id', purchaseData.user_id);
-              
-              this.logger.log(`Downgraded user ${purchaseData.user_id} via Google webhook.`);
+              await this.updateVipStatusFromWebhook(purchaseData.user_id, false, null);
             }
           }
         }

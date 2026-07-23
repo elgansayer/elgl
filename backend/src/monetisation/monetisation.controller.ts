@@ -28,6 +28,11 @@ export class MonetisationController {
     private readonly appleReceiptValidatorService: AppleReceiptValidatorService,
   ) {}
 
+  // NOTE: VIP status changes must ONLY occur via verified payment webhooks.
+  // Do NOT add any endpoint that directly updates is_vip or vip_tier.
+  // All VIP updates go through MonetisationService.updateVipStatusFromWebhook()
+  // which is called exclusively from webhook handlers and receipt validators.
+
   @Post('webhooks/stripe')
   @HttpCode(200)
   async handleWebhook(
