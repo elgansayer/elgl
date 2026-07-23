@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChatService, ChatMessage, ChatRoom } from '../../services/chat.service';
@@ -53,7 +53,8 @@ import { ChatMessageComponent } from '../../components/chat-message/chat-message
           <!-- Input -->
           <div class="p-4 border-t border-gray-200 dark:border-gray-700">
             <div class="flex gap-2">
-              <input [(ngModel)]="newMessageText"
+              <input [ngModel]="newMessageText()"
+                     (ngModelChange)="newMessageText.set($event)"
                      (keyup.enter)="sendMessage()"
                      placeholder="Type a message..."
                      class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600">
