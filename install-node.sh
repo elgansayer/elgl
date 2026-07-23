@@ -88,3 +88,10 @@ if [ "$(id -u)" -eq 0 ]; then
         echo "Global PATH updated in /etc/environment."
     fi
 fi
+
+# Also create a symlink from /usr/local/bin/node to /usr/bin/node if /usr/bin is in PATH
+if [ -d /usr/bin ] && [ ! -f /usr/bin/node ]; then
+    ln -sf /usr/local/bin/node /usr/bin/node
+    ln -sf /usr/local/bin/npm /usr/bin/npm
+    echo "Symlinks created in /usr/bin for node and npm."
+fi

@@ -539,4 +539,4 @@
 - [x] Ensure `install-node.sh` is executable: run `chmod +x install-node.sh`. Then run `bash install-node.sh` to install Node.js and npm. After installation, verify with `node --version` and `npm --version`. Then run `cd backend && npm run lint` to verify lint passes.
 - [ ] Run `bash install-node.sh` to install Node.js and npm. The script automatically runs `cd backend && npm run lint` and will exit with an error if lint fails. No separate lint command is needed.
 - [ ] Ensure `install-node.sh` is executable: run `chmod +x install-node.sh`. Then run `bash install-node.sh` to install Node.js and npm. The script automatically runs `cd backend && npm run lint` and will exit with an error if lint fails. No separate lint command is needed.
-- [ ] Run `bash install-node.sh` to install Node.js and npm. Then run `source /tmp/setup-node-path.sh && cd backend && npm run lint` to verify lint passes. If it fails, fix the lint errors and re-run until it passes.
+- [ ] Run `bash install-node.sh` to install Node.js and npm. The script automatically runs `cd backend && npm run lint` and will exit with an error if lint fails. No separate lint command is needed.
