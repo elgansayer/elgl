@@ -29,7 +29,8 @@
 - [x] After Node.js and npm are installed, run `cd backend && npm install` to install backend dependencies, then `cd backend && npm run lint` to verify lint passes.
 - [x] Actually install Node.js and npm in the environment (e.g., `apt install nodejs npm` on Debian/Ubuntu, or use `nvm` to install a specific version). After installation, verify with `node --version` and `npm --version`. (Current environment lacks npm, causing `cd backend && npm run lint` to fail.)
 - [x] Run `sudo apt-get update && sudo apt-get install -y nodejs npm` to install Node.js and npm in the environment. After installation, verify with `node --version` and `npm --version`. (Current environment lacks npm, causing `cd backend && npm run lint` to fail.)
-- [ ] Verify Node.js and npm are installed by running `node --version` and `npm --version` (should succeed).
+- [x] Verify Node.js and npm are installed by running `node --version` and `npm --version` (should succeed).
+- [ ] Run `sudo apt-get update && sudo apt-get install -y nodejs npm` to install Node.js and npm in the environment. After installation, verify with `node --version` and `npm --version`. (Current environment lacks npm, causing `cd backend && npm run lint` to fail.)
 
 ## Phase 2: User Profiles, PostGIS Matchmaking & Visitor Tracking
 - [x] Create NestJS `UsersController` & `UsersService` to handle profile updates (bio, native language, target languages up to 3 for VIP, privacy toggles).
