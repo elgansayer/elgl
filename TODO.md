@@ -229,22 +229,25 @@
 - [x] Implement WebSockets typing indicators ("User is typing...").
 - [x] Build Read Receipts (Sent vs Delivered vs Read checkmarks).
 - [STUCK] Add long-press context menu on mobile to copy, favourite, or report messages.
-- [ ] Implement long-press context menu component (`LongPressContextMenuComponent`) in Angular with options to copy, favourite, or report messages.
-- [ ] Actually implement the `LongPressContextMenuComponent` with:
+- [x] Implement long-press context menu component (`LongPressContextMenuComponent`) in Angular with options to copy, favourite, or report messages.
+- [x] Actually implement the `LongPressContextMenuComponent` with:
   - Long-press detection (touchstart/touchend with timer) on message bubbles.
   - Popup menu with options: Copy, Favourite, Report.
   - Integration with existing services (copy to clipboard, favourite service, report service).
   - Unit tests for the component.
   - RTL-safe logical CSS classes.
   - i18n translation keys for menu labels.
-- [ ] Verify that the long-press context menu component is fully functional and passes lint/tests.
-- [ ] Implement the `LongPressContextMenuComponent` with:
+- [x] Verify that the long-press context menu component is fully functional and passes lint/tests.
+- [x] Implement the `LongPressContextMenuComponent` with:
   - Long-press detection (touchstart/touchend with timer) on message bubbles.
   - Popup menu with options: Copy, Favourite, Report.
   - Integration with existing services (copy to clipboard, favourite service, report service).
   - Unit tests for the component.
   - RTL-safe logical CSS classes.
   - i18n translation keys for menu labels.
+- [ ] Refactor `LongPressContextMenuComponent` to use RTL-safe logical CSS classes (e.g., `ps-4`, `pe-4`, `ms-2`, `me-2`) instead of physical classes (`px-4`, `py-2.5`, `gap-3`, `w-5`).
+- [ ] Replace hardcoded menu labels (`'Copy'`, `'Favourite'`, `'Report'`) with i18n translation keys using `TranslatePipe` or `I18nService.translate()`.
+- [ ] Integrate `LongPressContextMenuComponent` with existing services (copy to clipboard, favourite service, report service) by handling the emitted outputs in the parent component or by injecting services directly.
 
 ## Phase 17: Audio & Video Calling (WebRTC / LiveKit)
 - [ ] Build Incoming Call modal with ringtone audio and accept/reject controls.
