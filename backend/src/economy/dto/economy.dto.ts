@@ -1,4 +1,5 @@
 import {
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -11,6 +12,7 @@ export class PurchaseCoinsDto {
 
   @IsOptional()
   @IsString()
+  @IsIn(['ios', 'android', 'web'])
   platform?: 'ios' | 'android' | 'web';
 }
 

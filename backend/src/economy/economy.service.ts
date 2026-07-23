@@ -1,7 +1,9 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
@@ -181,13 +183,29 @@ export class EconomyService {
     }
 
     // 6. Log the purchase for audit
-    await this.logPurchase(
-      userId,
-      coinPackage,
-      dto.receipt_token,
-      platform,
-      verified.transactionId,
-    );
+    try {
+      await this.logPurchase(
+        userId,
+        coinPackage,
+        dto.receipt_token,
+        platform,
+        verified.transactionId,
+      );
+    } catch (error) {
+      // Rollback coin balance on failure
+      const { error: rollbackError } = await supabase
+        .from('users')
+        .update({ coins_balance: currentBalance })
+        .eq('id', userId);
+
+      if (rollbackError) {
+        this.logger.error(
+          `Failed to rollback coins for user ${userId}: ${rollbackError.message}`,
+        );
+      }
+
+      throw new InternalServerErrorException('Failed to record purchase');
+    }
 
     this.logger.log(
       `User ${userId} purchased ${coinPackage.coins} coins (product: ${verified.productId})`,
@@ -397,7 +415,7 @@ export class EconomyService {
       .maybeSingle();
 
     if (existing) {
-      throw new ForbiddenException(
+      throw new ConflictException(
         'This transaction has already been processed',
       );
     }

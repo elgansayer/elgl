@@ -26,7 +26,7 @@ export class EconomyController {
     return await this.economyService.getBalance(user.id);
   }
 
-  @Post('purchase')
+  @Post('purchase-coins')
   async purchaseCoins(
     @CurrentUser() user: User | null,
     @Body() dto: PurchaseCoinsDto,
