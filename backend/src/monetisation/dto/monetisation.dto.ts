@@ -1,22 +1,5 @@
 import { IsIn, IsNotEmpty, IsOptional, IsString, IsBoolean } from 'class-validator';
 
-export class StripeWebhookDto {
-  @IsString()
-  @IsNotEmpty()
-  type!: string;
-
-  @IsOptional()
-  data?: {
-    object?: {
-      metadata?: {
-        userId?: string;
-        tier?: 'consumer' | 'developer';
-      };
-      customer_email?: string;
-    };
-  };
-}
-
 export class CreateDiagnosticLogDto {
   @IsString()
   @IsNotEmpty()
@@ -31,12 +14,6 @@ export class CreateDiagnosticLogDto {
   @IsString()
   @IsNotEmpty()
   message!: string;
-}
-
-export class AppleNotificationDto {
-  @IsString()
-  @IsNotEmpty()
-  signedPayload!: string;
 }
 
 export class AppleReceiptValidationDto {
