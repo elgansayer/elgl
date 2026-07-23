@@ -14,7 +14,9 @@ export class SubscriptionPlansController {
   }
 
   @Get(':id')
-  async findById(@Param('id') id: string): Promise<SubscriptionPlan | undefined> {
+  async findById(
+    @Param('id') id: string,
+  ): Promise<SubscriptionPlan | undefined> {
     return this.subscriptionPlansService.findById(id);
   }
 
