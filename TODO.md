@@ -219,7 +219,7 @@
 ## Phase 15: Advanced User Profiles
 - [x] Build 30-second Audio Introduction recorder and playback card on profile.
 - [x] Implement dynamic Hobbies & Interests tags mapped to target vocabulary.
-- [ ] Build Profile Cover Photo uploader with client-side cropping.
+- [STUCK] Build Profile Cover Photo uploader with client-side cropping.
 - [ ] Implement client-side image cropping library (e.g., `ngx-image-cropper`) for cover photo upload, preview before upload, and store resulting URL in `users.cover_photo_url` column.
 
 ## Phase 16: Live Chat Micro-Interactions
