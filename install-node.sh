@@ -22,7 +22,12 @@ echo "Verifying..."
 node --version
 npm --version
 echo "Node.js and npm installed successfully."
-# Now run lint in backend
+
+# Install backend dependencies before linting
+echo "Installing backend dependencies..."
 cd backend
+npm install
+
+# Now run lint in backend
 npm run lint
 echo "Lint passed successfully."
