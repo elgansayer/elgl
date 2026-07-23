@@ -79,3 +79,12 @@ echo ""
 echo "A helper script has been created at /tmp/setup-node-path.sh"
 echo "Run it in your current shell with:"
 echo "  source /tmp/setup-node-path.sh"
+
+# Persist PATH globally so that non‑interactive shells also find npm
+if [ "$(id -u)" -eq 0 ]; then
+    # Append to /etc/environment (read by all processes) if not already present
+    if ! grep -q '/usr/local/bin' /etc/environment 2>/dev/null; then
+        echo 'PATH="/usr/local/bin:$PATH"' >> /etc/environment
+        echo "Global PATH updated in /etc/environment."
+    fi
+fi
