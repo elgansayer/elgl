@@ -17,8 +17,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
                  [(ngModel)]="query"
                  (input)="onSearch()"
                  placeholder="{{ 'chatSearch.placeholder' | t }}"
-                 class="w-full bg-surface-100 text-white text-sm rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-400" />
-          <span class="absolute left-3 top-2.5 text-text-muted text-sm">🔍</span>
+                 class="w-full bg-surface-100 text-white text-sm rounded-lg ps-9 pe-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-400" />
+          <span class="absolute start-3 top-2.5 text-text-muted text-sm">🔍</span>
         </div>
       </div>
 

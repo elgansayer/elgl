@@ -5,7 +5,7 @@ import { toastsSignal } from '../../../services/toast.service';
   selector: 'app-toast',
   standalone: true,
   template: `
-    <div class="fixed top-10 left-0 right-0 z-[9999] flex flex-col items-center gap-2 pointer-events-none p-4">
+    <div class="fixed top-10 inset-x-0 z-[9999] flex flex-col items-center gap-2 pointer-events-none p-4">
       @for (toast of toastsSignal(); track toast.id) {
         <div 
           class="px-4 py-2 rounded-full shadow-lg font-bold text-sm pointer-events-auto transition-all duration-300 animate-slide-down border border-surface-100"

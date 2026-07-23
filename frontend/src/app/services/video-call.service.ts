@@ -134,7 +134,11 @@ export class VideoCallService {
 
     const audioPublication = this.room.localParticipant.getTrackPublication(Track.Source.Microphone);
     if (audioPublication?.track) {
-      await audioPublication.track.setMuted(!currentState.isMuted);
+      if (!currentState.isMuted) {
+        await audioPublication.track.mute();
+      } else {
+        await audioPublication.track.unmute();
+      }
       this.callState.set({ ...currentState, isMuted: !currentState.isMuted });
     }
   }
@@ -147,7 +151,11 @@ export class VideoCallService {
 
     const videoPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
     if (videoPublication?.track) {
-      await videoPublication.track.setMuted(!currentState.isVideoOff);
+      if (!currentState.isVideoOff) {
+        await videoPublication.track.mute();
+      } else {
+        await videoPublication.track.unmute();
+      }
       this.callState.set({ ...currentState, isVideoOff: !currentState.isVideoOff });
     }
   }

@@ -1,15 +1,17 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { EconomyStore } from '../../services/economy.store';
 import { AuthService } from '../../services/auth.service';
 import { DiscoveryService, SearchFilterParams } from '../../services/discovery.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
 import { UserProfile } from '../../services/user.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-developer-dashboard',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './developer-dashboard.component.html',
   styleUrls: ['./developer-dashboard.component.scss']
 })

@@ -1,9 +1,10 @@
 import { Component, ElementRef, EventEmitter, Output, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-doodle-pad',
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   templateUrl: './doodle-pad.component.html',
   styleUrls: ['./doodle-pad.component.scss']
 })

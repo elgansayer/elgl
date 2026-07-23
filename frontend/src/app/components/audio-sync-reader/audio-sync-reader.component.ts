@@ -1,4 +1,6 @@
 import { showToast, notImplementedToast } from '../../services/toast.service';
+import { I18nService } from '../../services/i18n.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { Component, effect, inject, input, output, signal, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { VocabularyStore } from '../../services/vocabulary.store';
@@ -14,7 +16,7 @@ export interface TokenSegmentSpan {
 
 @Component({
   selector: 'app-audio-sync-reader',
-  imports: [CommonModule, WordDefinitionModalComponent],
+  imports: [CommonModule, TranslatePipe, WordDefinitionModalComponent],
   templateUrl: './audio-sync-reader.component.html',
   styleUrls: ['./audio-sync-reader.component.scss']
 })

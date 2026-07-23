@@ -33,7 +33,7 @@ export interface IncomingCallData {
                   </span>
                 </div>
               }
-              <div class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-green-500 border-4 border-slate-900"></div>
+              <div class="absolute -bottom-1 -end-1 w-8 h-8 rounded-full bg-green-500 border-4 border-slate-900"></div>
             </div>
             <div class="text-center">
               <h2 class="text-2xl font-bold text-white">{{ data.callerName }}</h2>

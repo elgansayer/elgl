@@ -64,7 +64,7 @@
                 alt="avatar"
                 class="h-14 w-14 rounded-full object-cover"
               />
-              <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-surface-500 rounded-full"></span>
+              <span class="absolute bottom-0 end-0 w-3.5 h-3.5 bg-green-500 border-2 border-surface-500 rounded-full"></span>
             </div>
             
             <div class="min-w-0">
@@ -73,7 +73,7 @@
                   {{ partner.display_name || ('discovery.partnerFallback' | t) }}
                 </p>
                 @if (partner.is_vip) {
-                  <span class="rounded bg-yellow-400 px-1.5 py-0.5 text-[9px] font-black uppercase text-black italic">VIP</span>
+                  <span class="rounded bg-yellow-400 px-1.5 py-0.5 text-[9px] font-black uppercase text-black italic">{{ 'discovery.vipBadge' | t }}</span>
                 }
               </div>
               

@@ -93,16 +93,16 @@ interface CropBox {
                   (touchstart)="onCropBoxTouchStart($event)"
                 >
                   <!-- Corner handles -->
-                  <div class="absolute -top-1.5 -left-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-nw-resize"
+                  <div class="absolute -top-1.5 -start-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-nw-resize"
                        (mousedown)="onHandleMouseDown($event, 'nw')"
                        (touchstart)="onHandleTouchStart($event, 'nw')"></div>
-                  <div class="absolute -top-1.5 -right-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-ne-resize"
+                  <div class="absolute -top-1.5 -end-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-ne-resize"
                        (mousedown)="onHandleMouseDown($event, 'ne')"
                        (touchstart)="onHandleTouchStart($event, 'ne')"></div>
-                  <div class="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-sw-resize"
+                  <div class="absolute -bottom-1.5 -start-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-sw-resize"
                        (mousedown)="onHandleMouseDown($event, 'sw')"
                        (touchstart)="onHandleTouchStart($event, 'sw')"></div>
-                  <div class="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-se-resize"
+                  <div class="absolute -bottom-1.5 -end-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-se-resize"
                        (mousedown)="onHandleMouseDown($event, 'se')"
                        (touchstart)="onHandleTouchStart($event, 'se')"></div>
                 </div>
