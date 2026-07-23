@@ -1,120 +1,116 @@
-<div class="app-screen">
-  <section class="app-card app-padded">
-    <div class="flex items-center justify-between gap-3">
-      <div>
-        <h1 class="text-lg font-black text-slate-900">{{ 'chatList.title' | t }}</h1>
-        <p class="text-xs text-slate-500">{{ 'chatList.subtitle' | t }}</p>
-      </div>
-      @if (filteredPreviews()[0]; as firstRoom) {
-        <a [routerLink]="['/chat', firstRoom.id]" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs">
-          {{ 'chatList.openFirstRoom' | t }}
-        </a>
-      }
+<div class="app-screen space-y-0">
+  <!-- Top App Bar -->
+  <header class="bg-surface-300 pt-12 pb-3 ps-4 pe-4 border-b border-surface-200">
+    <div class="flex items-center justify-between mb-4">
+      <button class="text-text-primary"><span class="text-xl">≡</span></button>
+      <h1 class="text-base font-bold text-text-primary">Language Talks</h1>
+      <button class="text-text-primary"><span class="text-xl">+</span></button>
     </div>
 
-    <div class="mt-3 flex items-center gap-2 rounded-card border border-slate-200 bg-slate-50 ps-3 pe-3 pt-2.5 pb-2.5">
-      <span class="text-sm text-slate-400">🔎</span>
+    <!-- Quick Access Row -->
+    <div class="flex justify-between items-center mb-6 px-4">
+      <div class="flex flex-col items-center gap-1">
+        <div class="w-12 h-12 rounded-[1rem] bg-blue-500 flex items-center justify-center text-white text-xl shadow-lg">
+          📚
+        </div>
+        <span class="text-[10px] text-text-secondary font-medium">All Courses</span>
+      </div>
+      <div class="flex flex-col items-center gap-1">
+        <div class="w-12 h-12 rounded-[1rem] bg-green-500 flex items-center justify-center text-white text-xl shadow-lg">
+          🎮
+        </div>
+        <span class="text-[10px] text-text-secondary font-medium">Play</span>
+      </div>
+      <div class="flex flex-col items-center gap-1">
+        <div class="w-12 h-12 rounded-[1rem] bg-cyan-500 flex items-center justify-center text-white text-xl shadow-lg">
+          🌐
+        </div>
+        <span class="text-[10px] text-text-secondary font-medium">AI Translation</span>
+      </div>
+      <div class="flex flex-col items-center gap-1">
+        <div class="w-12 h-12 rounded-[1rem] bg-pink-500 flex items-center justify-center text-white text-xl shadow-lg">
+          🤖
+        </div>
+        <span class="text-[10px] text-text-secondary font-medium">Japanese Ai</span>
+      </div>
+      <div class="flex flex-col items-center gap-1">
+        <div class="w-12 h-12 rounded-[1rem] bg-surface-200 flex items-center justify-center text-text-secondary text-lg shadow-lg">
+          ⌄
+        </div>
+        <span class="text-[10px] text-text-secondary font-medium">More</span>
+      </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="bg-surface-200 rounded-pill px-3 py-1.5 flex items-center gap-2 mb-3">
+      <span class="text-text-muted text-sm">🔍</span>
       <input
         [ngModel]="search()"
         (ngModelChange)="search.set($event)"
         type="text"
-        [placeholder]="'chatList.searchPlaceholder' | t"
-        class="w-full bg-transparent text-sm text-slate-700 outline-none"
+        placeholder="Search"
+        class="bg-transparent border-none outline-none text-sm text-text-primary w-full placeholder-text-muted"
       />
     </div>
-  </section>
 
-  @if (isLoading()) {
-    <div class="app-empty-state text-slate-500">
-      {{ 'chatList.loading' | t }}
+    <!-- Filter Pills -->
+    <div class="app-filter-scroll">
+      <button class="bg-surface-200 text-text-secondary w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs">≡</button>
+      <button class="app-chip app-chip-active bg-primary/20 text-primary">All</button>
+      <button class="app-chip">Online</button>
+      <button class="app-chip">Unread</button>
+      <button class="app-chip">My turn</button>
+      <button class="app-chip">Timezone proximity</button>
     </div>
-  }
+  </header>
 
-  @if (!isLoading() && filteredPreviews().length === 0) {
-    <div class="app-empty-state">
-      {{ 'chatList.empty' | t }}
-    </div>
-  }
+  <main class="divide-y divide-surface-200">
+    @if (isLoading()) {
+      <div class="app-empty-state">
+        {{ 'chatList.loading' | t }}
+      </div>
+    }
 
-  @if (!isLoading() && pinnedPreviews().length > 0) {
-    <section class="space-y-2">
-      <p class="ps-1 text-xs font-bold uppercase tracking-wide text-slate-500">{{ 'chatList.pinnedChats' | t }}</p>
-      @for (preview of pinnedPreviews(); track preview.id) {
-        <a
-          [routerLink]="['/chat', preview.id]"
-          class="app-card app-padded block transition-all hover:border-primary/40 hover:shadow"
-        >
-          <div class="flex items-center justify-between gap-3">
-            <div class="min-w-0 flex items-center gap-2.5">
-              <span
-                class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm ring-1 ring-slate-200"
-                >{{ preview.avatar }}</span
-              >
-              <div class="min-w-0">
-                <div class="flex items-center gap-2">
-                  <p class="truncate text-sm font-bold text-slate-900">{{ preview.title }}</p>
-                  @if (preview.isOnline) {
-                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-                  }
-                  @if (preview.unreadCount > 0) {
-                    <span
-                      class="rounded-full bg-red-500 ps-2 pe-2 pt-0.5 pb-0.5 text-[10px] font-bold text-white"
-                    >
-                      {{ preview.unreadCount }}
-                    </span>
-                  }
-                </div>
-                <p class="truncate text-[11px] text-slate-500">{{ preview.subtitle }}</p>
-              </div>
-            </div>
-            <p class="text-[11px] text-slate-400">
-              {{ preview.lastMessageAt ? (preview.lastMessageAt | date: 'shortTime') : '' }}
-            </p>
+    @if (!isLoading() && filteredPreviews().length === 0) {
+      <div class="app-empty-state">
+        {{ 'chatList.empty' | t }}
+      </div>
+    }
+
+    @for (preview of filteredPreviews(); track preview.id) {
+      <a
+        [routerLink]="['/chat', preview.id]"
+        class="flex items-center gap-3 p-4 hover:bg-surface-300 transition-colors block"
+      >
+        <div class="relative shrink-0">
+          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white font-bold text-lg">
+            {{ preview.avatar || preview.title.charAt(0) }}
           </div>
-          <p class="mt-1.5 truncate text-sm text-slate-700">{{ preview.lastMessageText }}</p>
-        </a>
-      }
-    </section>
-  }
-
-  @if (!isLoading() && regularPreviews().length > 0) {
-    <section class="space-y-2">
-      <p class="ps-1 text-xs font-bold uppercase tracking-wide text-slate-500">{{ 'chatList.allChats' | t }}</p>
-      @for (preview of regularPreviews(); track preview.id) {
-        <a
-          [routerLink]="['/chat', preview.id]"
-          class="app-card app-padded block transition-all hover:border-primary/40 hover:shadow"
-        >
-          <div class="flex items-center justify-between gap-3">
-            <div class="min-w-0 flex items-center gap-2.5">
-              <span
-                class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm ring-1 ring-slate-200"
-                >{{ preview.avatar }}</span
-              >
-              <div class="min-w-0">
-                <div class="flex items-center gap-2">
-                  <p class="truncate text-sm font-bold text-slate-900">{{ preview.title }}</p>
-                  @if (preview.isOnline) {
-                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-                  }
-                  @if (preview.unreadCount > 0) {
-                    <span
-                      class="rounded-full bg-red-500 ps-2 pe-2 pt-0.5 pb-0.5 text-[10px] font-bold text-white"
-                    >
-                      {{ preview.unreadCount }}
-                    </span>
-                  }
-                </div>
-                <p class="truncate text-[11px] text-slate-500">{{ preview.subtitle }}</p>
-              </div>
+          @if (preview.isOnline) {
+            <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-surface-500 rounded-full"></span>
+          }
+        </div>
+        
+        <div class="flex-1 min-w-0">
+          <div class="flex justify-between items-baseline mb-0.5">
+            <div class="flex items-center gap-2 truncate">
+              <h3 class="text-[15px] font-bold text-text-primary truncate">{{ preview.title }}</h3>
+              <span class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-black italic leading-none">VIP</span>
             </div>
-            <p class="text-[11px] text-slate-400">
-              {{ preview.lastMessageAt ? (preview.lastMessageAt | date: 'shortTime') : '' }}
-            </p>
+            <span class="text-xs text-text-secondary shrink-0 ml-2">
+              {{ preview.lastMessageAt ? (preview.lastMessageAt | date: 'shortTime') : '12:00' }}
+            </span>
           </div>
-          <p class="mt-1.5 truncate text-sm text-slate-700">{{ preview.lastMessageText }}</p>
-        </a>
-      }
-    </section>
-  }
+          <div class="flex justify-between items-center gap-2">
+            <p class="text-[13px] text-text-secondary truncate">{{ preview.lastMessageText || 'Tap to chat...' }}</p>
+            @if (preview.unreadCount > 0) {
+              <span class="bg-primary text-white text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0">
+                {{ preview.unreadCount }}
+              </span>
+            }
+          </div>
+        </div>
+      </a>
+    }
+  </main>
 </div>

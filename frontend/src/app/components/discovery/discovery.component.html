@@ -1,137 +1,114 @@
-<div class="app-screen">
-  <section class="app-card app-padded space-y-4">
-    <div class="flex items-start justify-between gap-3">
-      <div>
-        <h1 class="text-lg font-black text-slate-900">{{ 'discovery.title' | t }}</h1>
-        <p class="mt-1 text-xs text-slate-500">{{ 'discovery.subtitle' | t }}</p>
-      </div>
-      <span class="app-chip bg-primary/10 text-primary">{{ 'discovery.badge' | t }}</span>
+<div class="app-screen space-y-0">
+  <!-- Header & Primary Filters -->
+  <header class="bg-surface-300 pt-12 pb-3 ps-4 pe-4 border-b border-surface-200">
+    <div class="flex items-center justify-center mb-4">
+      <h1 class="text-base font-bold text-text-primary">{{ 'discovery.title' | t }}</h1>
+    </div>
+    
+    <!-- Top Filter Pills -->
+    <div class="app-filter-scroll mb-3">
+      <button class="app-chip app-chip-active">All</button>
+      <button 
+        (click)="seriousLearnerOnly.set(!seriousLearnerOnly()); searchPartners()" 
+        class="app-chip" [class.app-chip-active]="seriousLearnerOnly()">
+        Serious Learners
+      </button>
+      <button class="app-chip">Nearby</button>
+      <button class="app-chip">City</button>
+      <button class="app-chip">Gender</button>
+      <button class="app-chip">Paid Practice</button>
     </div>
 
-    <div class="flex flex-wrap gap-1.5">
-      <span class="app-chip">{{ 'discovery.chipGlobal' | t }}</span>
-      <span class="app-chip">{{ 'discovery.chipStreaks' | t }}</span>
-      <span class="app-chip">{{ 'discovery.chipCorrections' | t }}</span>
+    <!-- Language Filter Pills -->
+    <div class="app-filter-scroll">
+      <button class="app-pill bg-surface-100 flex-1 min-w-[100px] text-center">Japanese</button>
+      <button class="app-pill bg-surface-200 flex-1 min-w-[100px] text-center">Korean</button>
+      <button class="app-pill bg-surface-200 flex-1 min-w-[100px] text-center">Norwegian</button>
+      <button class="app-pill bg-surface-200 flex-none px-4">+</button>
     </div>
+  </header>
 
-    <div class="space-y-2">
-      <p class="text-xs font-bold uppercase tracking-wide text-slate-500">{{ 'discovery.distancePref' | t }}</p>
-      <div class="grid grid-cols-5 gap-1.5">
-        @for (km of distanceBandsKm; track km) {
-          <button
-            (click)="selectedDistanceKm.set(km); searchPartners()"
-            [class]="
-              'rounded-app border pt-2 pb-2 text-xs font-bold ' +
-              (selectedDistanceKm() === km
-                ? 'border-primary bg-primary text-white'
-                : 'border-slate-200 bg-white text-slate-600')
-            "
-          >
-            {{ km }} km
-          </button>
-        }
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-      <label class="rounded-card border border-slate-200 bg-slate-50 ps-3 pe-3 pt-2.5 pb-2.5">
-        <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500">{{ 'discovery.nativeLang' | t }}</span>
-        <select
-          [ngModel]="selectedNativeLanguage()"
-          (ngModelChange)="selectedNativeLanguage.set($event); searchPartners()"
-          class="mt-1 w-full rounded-app border border-slate-200 bg-white ps-2.5 pe-2.5 pt-2 pb-2 text-sm font-semibold text-slate-700"
-        >
-          @for (language of nativeLanguageOptions; track language.value) {
-            <option [value]="language.value">{{ language.labelKey | t }}</option>
-          }
-        </select>
-      </label>
-
-      <label class="rounded-card border border-slate-200 bg-slate-50 ps-3 pe-3 pt-2.5 pb-2.5">
-        <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500">{{ 'discovery.targetLang' | t }}</span>
-        <select
-          [ngModel]="selectedTargetLanguage()"
-          (ngModelChange)="selectedTargetLanguage.set($event); searchPartners()"
-          class="mt-1 w-full rounded-app border border-slate-200 bg-white ps-2.5 pe-2.5 pt-2 pb-2 text-sm font-semibold text-slate-700"
-        >
-          @for (language of targetLanguageOptions; track language.value) {
-            <option [value]="language.value">{{ language.labelKey | t }}</option>
-          }
-        </select>
-      </label>
-    </div>
-
-    <div class="flex items-center justify-between gap-2 rounded-card border border-slate-200 bg-slate-50 ps-3 pe-3 pt-2.5 pb-2.5">
-      <p class="text-xs font-semibold text-slate-700">{{ 'discovery.seriousOnly' | t }}</p>
-      <button
-        (click)="seriousLearnerOnly.set(!seriousLearnerOnly()); searchPartners()"
-        [class]="
-          'rounded-full ps-3 pe-3 pt-1.5 pb-1.5 text-[11px] font-bold ' +
-          (seriousLearnerOnly() ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700')
-        "
-      >
-        {{ seriousLearnerOnly() ? ('discovery.on' | t) : ('discovery.off' | t) }}
+  <!-- Promotional Banner -->
+  <div class="bg-gradient-to-r from-vip-light to-vip-dark px-4 py-6 relative overflow-hidden">
+    <div class="relative z-10">
+      <h2 class="text-3xl font-black text-black tracking-tighter mb-4">What's Your Chat Personality?</h2>
+      <button class="bg-black text-white rounded-pill font-bold px-6 py-2 text-sm flex items-center gap-2">
+        Test Now 
+        <span class="text-lg leading-none">»</span>
       </button>
     </div>
+    <!-- Decorative background elements would go here -->
+    <div class="absolute right-[-20px] bottom-[-20px] w-48 h-48 bg-white/20 rounded-full blur-2xl"></div>
+  </div>
 
-    <div class="flex items-center justify-end gap-2">
-      <button (click)="resetFilters()" class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs">{{ 'discovery.resetFilters' | t }}</button>
+  <div class="bg-primary px-4 py-1.5 flex justify-between items-center text-xs text-white font-bold">
+    <span>Find more partners by adding more languages!</span>
+    <div class="flex items-center gap-2">
+      <span class="bg-white/20 px-2 py-0.5 rounded">Set now</span>
+      <span>×</span>
     </div>
-  </section>
+  </div>
 
-  @if (isLoading()) {
-    <div class="app-empty-state text-slate-500">{{ 'discovery.searching' | t }}</div>
-  }
+  <!-- Content States -->
+  <main class="p-4 space-y-4">
+    @if (isLoading()) {
+      <div class="app-empty-state">
+        {{ 'discovery.searching' | t }}
+      </div>
+    }
 
-  @if (!isLoading() && partners().length === 0) {
-    <div class="app-empty-state">
-      <p class="text-sm font-semibold text-slate-700">{{ 'discovery.noMatches' | t }}</p>
-      <p class="mt-1 text-xs text-slate-500">{{ 'discovery.tryBroadening' | t }}</p>
-    </div>
-  }
+    @if (!isLoading() && partners().length === 0) {
+      <div class="app-empty-state">
+        <p class="font-bold text-text-primary">{{ 'discovery.noMatches' | t }}</p>
+        <p class="mt-1">{{ 'discovery.tryBroadening' | t }}</p>
+      </div>
+    }
 
-  @if (!isLoading() && partners().length > 0) {
-    <p class="ps-1 text-xs font-bold uppercase tracking-wide text-slate-500">
-      {{ 'discovery.matchCount' | t: { count: partners().length } }}
-    </p>
-  }
-
-  @for (partner of partners(); track partner.id) {
-    <article class="app-card app-padded">
-      <div class="flex items-start justify-between gap-3">
-        <div class="flex items-center gap-3 min-w-0">
-          <img
-            [src]="partner.avatar_url || 'https://via.placeholder.com/100'"
-            alt="avatar"
-            class="h-12 w-12 rounded-full border border-slate-200 object-cover"
-          />
-          <div class="min-w-0">
-            <div class="flex items-center gap-2">
-              <p class="truncate text-sm font-bold text-slate-900">
-                {{ partner.display_name || ('discovery.partnerFallback' | t) }}
-              </p>
-              @if (partner.is_vip) {
-                <span class="rounded-full bg-amber-100 ps-2 pe-2 pt-0.5 pb-0.5 text-[10px] font-bold text-amber-900">{{ 'discovery.vipBadge' | t }}</span>
-              }
+    <!-- User List -->
+    <div class="space-y-4">
+      @for (partner of partners(); track partner.id) {
+        <article class="flex items-center justify-between gap-3 border-b border-surface-200 pb-4">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="relative">
+              <img
+                [src]="partner.avatar_url || 'https://via.placeholder.com/100'"
+                alt="avatar"
+                class="h-12 w-12 rounded-full object-cover ring-2 ring-primary"
+              />
+              <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-surface-500 rounded-full"></span>
             </div>
-            <p class="text-[11px] text-slate-500">
-              <span class="uppercase">{{ partner.native_language }}</span>
-              <span class="ps-1 pe-1">→</span>
-              <span class="uppercase">{{ partner.target_languages.join(', ') }}</span>
-            </p>
+            
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <p class="truncate text-[15px] font-bold text-text-primary">
+                  {{ partner.display_name || ('discovery.partnerFallback' | t) }}
+                </p>
+                @if (partner.is_vip) {
+                  <span class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-black italic">VIP</span>
+                }
+              </div>
+              
+              <div class="flex items-center gap-1.5 text-[10px] font-bold text-text-secondary bg-surface-200 rounded px-1.5 py-0.5 inline-flex">
+                <span class="uppercase">{{ partner.native_language }}</span>
+                <span class="text-surface-100">⇌</span>
+                <span class="uppercase">{{ partner.target_languages[0] || 'EN' }}</span>
+                @if (partner.study_streak_days > 0) {
+                  <span class="text-primary ml-1">ID</span>
+                }
+              </div>
+              
+              <p class="text-xs text-text-secondary mt-1 truncate">
+                {{ partner.bio_text || 'I love learning new languages!' }}
+              </p>
+            </div>
           </div>
-        </div>
-        <button class="rounded-app bg-primary/10 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-primary">
-          {{ 'discovery.startChat' | t }}
-        </button>
-      </div>
-      <p class="mt-3 rounded-card bg-slate-50 ps-3 pe-3 pt-2.5 pb-2.5 text-sm text-slate-700">
-        {{ partner.bio_text || ('discovery.noBio' | t) }}
-      </p>
-      <div class="mt-3 flex items-center gap-3 text-[11px] font-semibold text-slate-500">
-        <span>{{ 'discovery.streakBadge' | t: { days: partner.study_streak_days } }}</span>
-        <span>{{ 'discovery.correctionBadge' | t: { ratio: partner.correction_ratio } }}</span>
-      </div>
-    </article>
-  }
+          
+          <button class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white shadow-lg shrink-0">
+            <!-- Waving hand placeholder -->
+            <span class="text-lg">👋</span>
+          </button>
+        </article>
+      }
+    </div>
+  </main>
 </div>

@@ -23,12 +23,12 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
             {{ displayName()[0]?.toUpperCase() || '?' }}
           </div>
           <h2 class="text-xl font-semibold text-white">{{ displayName() }}</h2>
-          <p class="text-slate-400 text-sm mt-1">{{ callStatusText() }}</p>
+          <p class="text-slate-400 text-sm mt-1">{{ callStatusText }}</p>
         </div>
 
         <!-- Call Timer (when connected) -->
         <div class="text-3xl font-mono text-white mb-6" *ngIf="callState() === 'connected'">
-          {{ formattedDuration() }}
+          {{ formattedDuration }}
         </div>
 
         <!-- Action Buttons -->
@@ -224,7 +224,11 @@ export class VoipCallComponent implements OnDestroy {
 
     // Mute/unmute the local audio track via LiveKit SDK
     if (this.localAudioTrack) {
-      await this.localAudioTrack.setMuted(newMuted);
+      if (newMuted) {
+        await this.localAudioTrack.mute();
+      } else {
+        await this.localAudioTrack.unmute();
+      }
     }
   }
 

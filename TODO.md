@@ -197,16 +197,16 @@
 
 ## Phase 12: Matchmaking & Discovery UI (Requires Refactor for Pixel-Perfect Clone)
 - [x] Analyse search screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
-- [ ] Refactor Discovery UI to match screenshots: implement dark theme aesthetics, horizontal scrollable filter pills, and banner ads.
-- [ ] Build custom Angular primitives for horizontal scrollable filter pills and language buttons instead of using native `<select>`.
-- [ ] Rebuild user cards to feature tight visual fluency indicators (flags and language codes) and gradient action buttons.
+- [x] Refactor Discovery UI to match screenshots: implement dark theme aesthetics, horizontal scrollable filter pills, and banner ads.
+- [x] Build custom Angular primitives for horizontal scrollable filter pills and language buttons instead of using native `<select>`.
+- [x] Rebuild user cards to feature tight visual fluency indicators (flags and language codes) and gradient action buttons.
 - [ ] Build Nearby Search PostGIS distance slider for VIP users.
 - [ ] Build VIP Profile Visitor Log UI with blurred cards for free users.
 
 ## Phase 13: HelloTalk Chat Specifics (Requires Refactor for Pixel-Perfect Clone)
 - [x] Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
-- [ ] Refactor Chat List UI ("Language Talks" tab) to strictly match screenshots: top quick-access circular icons, pill-shaped search bar, and horizontal filter pills.
-- [ ] Rebuild Chat List items with high-density rows, VIP badges, online indicator dots, right-aligned timestamps, and bright purple unread count circles.
+- [x] Refactor Chat List UI ("Language Talks" tab) to strictly match screenshots: top quick-access circular icons, pill-shaped search bar, and horizontal filter pills.
+- [x] Rebuild Chat List items with high-density rows, VIP badges, online indicator dots, right-aligned timestamps, and bright purple unread count circles.
 - [x] Verify analysis of chat UI screenshots by reviewing git diff; if not done, perform analysis and document required UI components.
 - [x] Create pixel‑perfect specification documents for all chat UI components listed in the review task.
 - [x] Build HTML5 Canvas Doodle Pad component in chat modal.
@@ -345,7 +345,7 @@
 - [ ] Render visual charts using Chart.js inside Angular.
 
 ## Phase 34: UI Theming
-- [ ] Implement global dark theme mimicking HelloTalk (`#121212` backgrounds, neon accents) across all Angular components.
+- [x] Implement global dark theme mimicking HelloTalk (`#121212` backgrounds, neon accents) across all Angular components.
 - [ ] Build Theme Selector (Dark, Light, System Default).
 - [ ] Allow VIP users to select custom primary accent colours.
 

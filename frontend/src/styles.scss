@@ -12,7 +12,8 @@
   }
 
   html {
-    @apply antialiased text-slate-800 bg-slate-50 dark:bg-slate-900 dark:text-slate-100;
+    /* Enforce Dark Theme Defaults */
+    @apply antialiased text-text-primary bg-surface-500;
   }
 
   /* Support RTL mirroring natively */
@@ -21,10 +22,10 @@
   }
 }
 
-/* LingQ Token Classes */
+/* UI Primitives */
 @layer components {
   .app-card {
-    @apply rounded-sheet border border-slate-200 bg-white shadow-card;
+    @apply rounded-sheet border border-surface-100 bg-surface-200 shadow-card;
   }
 
   .app-screen {
@@ -36,50 +37,68 @@
   }
 
   .app-section-title {
-    @apply text-lg font-black text-slate-900;
+    @apply text-lg font-black text-text-primary;
   }
 
   .app-muted {
-    @apply text-xs text-slate-500;
+    @apply text-xs text-text-secondary;
   }
 
   .app-empty-state {
-    @apply app-card app-padded pt-10 pb-10 text-center text-sm text-slate-600;
+    @apply app-card app-padded pt-10 pb-10 text-center text-sm text-text-secondary;
   }
 
   .app-input {
-    @apply w-full rounded-app border border-slate-200 bg-surface-50 ps-3 pe-3 pt-2.5 pb-2.5 text-sm;
+    @apply w-full rounded-app border border-surface-100 bg-surface-300 ps-3 pe-3 pt-2.5 pb-2.5 text-sm text-text-primary placeholder-text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary;
   }
 
   .app-textarea {
-    @apply w-full rounded-card border border-slate-200 bg-surface-50 ps-3 pe-3 pt-3 pb-3 text-sm;
+    @apply w-full rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-3 pb-3 text-sm text-text-primary placeholder-text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary;
   }
 
   .app-button-primary {
-    @apply rounded-app bg-primary text-white font-bold shadow-sm transition-all duration-base ease-app hover:bg-primary-dark;
+    @apply rounded-pill bg-gradient-to-r from-primary to-primary-light text-white font-bold shadow-sm transition-all duration-base ease-app hover:shadow-lift hover:opacity-90;
   }
 
   .app-button-secondary {
-    @apply rounded-app bg-slate-100 text-slate-700 font-semibold transition-all duration-base ease-app hover:bg-slate-200;
+    @apply rounded-pill bg-surface-100 text-text-primary font-semibold transition-all duration-base ease-app hover:bg-surface-50;
   }
 
   .app-chip {
-    @apply rounded-full bg-slate-100 text-slate-600 text-xs font-semibold ps-2.5 pe-2.5 pt-1 pb-1;
+    @apply rounded-pill bg-surface-100 text-text-secondary text-xs font-semibold ps-3 pe-3 pt-1.5 pb-1.5 hover:bg-surface-50 hover:text-text-primary cursor-pointer transition-colors;
+  }
+  
+  .app-chip-active {
+    @apply bg-primary/20 text-primary hover:bg-primary/30;
   }
 
   .app-pill {
-    @apply rounded-app bg-slate-100 text-slate-700 text-xs font-bold ps-3 pe-3 pt-2 pb-2;
+    @apply rounded-pill bg-surface-100 text-text-primary text-xs font-bold ps-4 pe-4 pt-2 pb-2;
+  }
+
+  /* Filter Tabs (Horizontal Scrollable) */
+  .app-filter-scroll {
+    @apply flex items-center gap-2 overflow-x-auto no-scrollbar pb-1;
+  }
+  
+  /* Hide scrollbar utility */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
   .word-token-new {
-    @apply bg-blue-500/20 text-blue-800 dark:text-blue-300 hover:bg-blue-500/40 border-b border-blue-400 rounded px-0.5 transition-colors cursor-pointer;
+    @apply bg-blue-500/20 text-blue-300 hover:bg-blue-500/40 border-b border-blue-400 rounded px-0.5 transition-colors cursor-pointer;
   }
 
   .word-token-learning {
-    @apply bg-yellow-500/30 text-yellow-800 dark:text-yellow-200 hover:bg-yellow-500/50 border-b border-yellow-400 rounded px-0.5 transition-colors cursor-pointer;
+    @apply bg-vip/20 text-vip-light hover:bg-vip/40 border-b border-vip rounded px-0.5 transition-colors cursor-pointer;
   }
 
   .word-token-known {
-    @apply text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700/30 rounded px-0.5 transition-colors cursor-pointer;
+    @apply text-text-primary hover:bg-surface-100 rounded px-0.5 transition-colors cursor-pointer;
   }
 }
