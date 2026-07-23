@@ -22,6 +22,16 @@ import {
 import { MonetisationService } from './monetisation.service';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
 
+export class CreateCheckoutSessionDto {
+  @IsString()
+  @IsNotEmpty()
+  planId!: string;
+
+  @IsString()
+  @IsIn(['month', 'year'])
+  interval!: 'month' | 'year';
+}
+
 @Controller('monetisation')
 export class MonetisationController {
   constructor(
@@ -109,21 +119,13 @@ export class MonetisationController {
   @UseGuards(SupabaseAuthGuard)
   async createCheckoutSession(
     @CurrentUser() user: User | null,
-    @Body()
-    body: {
-      @IsString()
-      @IsNotEmpty()
-      planId: string;
-      @IsString()
-      @IsIn(['month', 'year'])
-      interval: 'month' | 'year';
-    },
+    @Body() dto: CreateCheckoutSessionDto,
   ) {
     if (!user) return null;
     return await this.monetisationService.createCheckoutSession(
       user.id,
-      body.planId,
-      body.interval,
+      dto.planId,
+      dto.interval,
     );
   }
 }
