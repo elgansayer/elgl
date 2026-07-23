@@ -1,6 +1,5 @@
-import { Component, effect, inject, input, output, signal } from '@angular/core';
+import { Component, effect, inject, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 
 export interface IncomingCallData {
   callerId: string;
@@ -102,8 +101,6 @@ export interface IncomingCallData {
   `]
 })
 export class IncomingCallModalComponent {
-  private sanitizer = inject(DomSanitizer);
-
   /** Input: The incoming call invitation data */
   callData = input<IncomingCallData | null>(null);
 
