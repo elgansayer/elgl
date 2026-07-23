@@ -13,6 +13,11 @@ import { DoodlePadComponent } from '../doodle-pad/doodle-pad.component';
 import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.component';
 import { TokenisedTextComponent } from '../tokenised-text/tokenised-text.component';
 import { WordDefinitionModalComponent } from '../word-definition-modal/word-definition-modal.component';
+import { ChatMessageBubbleComponent } from '../chat-message-bubble/chat-message-bubble.component';
+import { ChatInputComponent } from '../chat-input/chat-input.component';
+import { ChatHeaderComponent } from '../chat-header/chat-header.component';
+import { TypingIndicatorComponent } from '../typing-indicator/typing-indicator.component';
+import { ChatSearchComponent } from '../chat-search/chat-search.component';
 
 @Component({
   selector: 'app-chat-room',
@@ -24,7 +29,12 @@ import { WordDefinitionModalComponent } from '../word-definition-modal/word-defi
     DoodlePadComponent,
     VoiceRecorderComponent,
     TokenisedTextComponent,
-    WordDefinitionModalComponent
+    WordDefinitionModalComponent,
+    ChatMessageBubbleComponent,
+    ChatInputComponent,
+    ChatHeaderComponent,
+    TypingIndicatorComponent,
+    ChatSearchComponent
   ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss']
@@ -43,6 +53,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   readonly showDoodleModal = signal<boolean>(false);
   readonly showVoiceModal = signal<boolean>(false);
   readonly showCorrectionForm = signal<boolean>(false);
+  readonly showSearch = signal<boolean>(false);
 
   // Transliteration state: message id -> romaji/pinyin string
   readonly transliterations = signal<Record<string, string>>({});
@@ -227,5 +238,44 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
 
   onSearch(): void {
     void this.loadMessages();
+  }
+
+  trackByMessageId(index: number, message: ChatMessage): string {
+    return message.id;
+  }
+
+  handleHeaderAction(actionId: string): void {
+    switch (actionId) {
+      case 'view_profile':
+        // Navigate to user profile
+        break;
+      case 'clear_chat':
+        // Clear chat history
+        break;
+      case 'block_user':
+        // Block user
+        break;
+      case 'report_user':
+        // Report user
+        break;
+    }
+  }
+
+  sendCorrectionFromInput(correction: { original: string; corrected: string; explanation?: string }): void {
+    this.originalText = correction.original;
+    this.correctedText = correction.corrected;
+    this.explanationText = correction.explanation || '';
+    this.sendCorrection();
+  }
+
+  scrollToMessage(message: ChatMessage): void {
+    const index = this.messages().findIndex(m => m.id === message.id);
+    if (index >= 0) {
+      // Scroll logic - could use ViewChild to scroll container
+    }
+  }
+
+  openDoodlePreview(url: string): void {
+    window.open(url, '_blank');
   }
 }
