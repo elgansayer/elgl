@@ -1,5 +1,6 @@
 import { Component, input, output, signal, computed, HostListener, ElementRef, ViewChild, AfterViewInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { I18nService } from '../../services/i18n.service';
 
 export interface ContextMenuOption {
   id: 'copy' | 'favourite' | 'report';
@@ -36,7 +37,7 @@ export interface ContextMenuOption {
           [attr.aria-label]="'Context menu'"
         >
           <button
-            *ngFor="let option of options(); trackBy: trackByOptionId"
+            *ngFor="let option of translatedOptions(); trackBy: trackByOptionId"
             class="w-full flex items-center gap-3 ps-4 pe-4 pt-2.5 pb-2.5 text-sm text-gray-200 hover:bg-gray-800 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
             [disabled]="option.disabled"
             (click)="onOptionClick(option.id)"
@@ -60,6 +61,7 @@ export interface ContextMenuOption {
 })
 export class LongPressContextMenuComponent implements AfterViewInit {
   private readonly elementRef = inject(ElementRef);
+  private readonly i18n = inject(I18nService);
 
   @ViewChild('menuPanel') menuPanel!: ElementRef<HTMLElement>;
 
@@ -82,10 +84,12 @@ export class LongPressContextMenuComponent implements AfterViewInit {
   private touchMoved = false;
 
   readonly options = computed<ContextMenuOption[]>(() => [
-    { id: 'copy', label: 'Copy', icon: '📋' },
-    { id: 'favourite', label: 'Favourite', icon: '⭐' },
-    { id: 'report', label: 'Report', icon: '🚩' },
+    { id: 'copy', label: this.i18n.translate('context_menu.copy'), icon: '📋' },
+    { id: 'favourite', label: this.i18n.translate('context_menu.favourite'), icon: '⭐' },
+    { id: 'report', label: this.i18n.translate('context_menu.report'), icon: '🚩' },
   ]);
+
+  readonly translatedOptions = computed(() => this.options());
 
   ngAfterViewInit() {
     setTimeout(() => {

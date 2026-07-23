@@ -499,6 +499,11 @@ export class I18nService {
     'tts.listen': '🔊 Listen',
     'tts.title': 'Listen to native pronunciation of this text ({{lang}})',
     'tts.unsupported': 'Text-to-speech is not supported in this browser environment.',
+
+    // Context Menu
+    'context_menu.copy': 'Copy',
+    'context_menu.favourite': 'Favourite',
+    'context_menu.report': 'Report',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });
