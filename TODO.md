@@ -93,7 +93,7 @@
 ## Phase 8: Audit Remediation & Security Lockdown
 - [x] Verify Stripe webhook signatures (`stripe.webhooks.constructEvent` with `STRIPE_WEBHOOK_SECRET`) in `MonetisationService#handleStripeWebhook`.
 - [x] Lock down `POST /monetisation/upgrade` so VIP status can only change via verified payment webhooks.
-- [ ] Rework `POST /economy/purchase-coins` to verify purchase receipt records server-side before updating balances.
+- [x] Rework `POST /economy/purchase-coins` to verify purchase receipt records server-side before updating balances.
 - [ ] Implement Apple App Store Server Notifications and Google Play Billing webhook handlers.
 - [ ] Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azure AI API calls.
 
