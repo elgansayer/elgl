@@ -14,16 +14,12 @@
 
     <!-- Language Selection Pills -->
     <div class="flex overflow-x-auto hide-scrollbar gap-2 px-4 mt-4">
-      <button (click)="setLanguage('ja')" [class.bg-surface-200]="selectedTargetLanguage() === 'ja'" [class.bg-surface-300]="selectedTargetLanguage() !== 'ja'" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-primary text-sm font-bold border border-surface-100">
-        <span>🇯🇵</span> {{ 'discovery.langJapanese' | t }}
-      </button>
-      <button (click)="setLanguage('ko')" [class.bg-surface-200]="selectedTargetLanguage() === 'ko'" [class.bg-surface-300]="selectedTargetLanguage() !== 'ko'" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-secondary text-sm font-bold border border-surface-100">
-        <span>🇰🇷</span> {{ 'discovery.langKorean' | t }}
-      </button>
-      <button (click)="setLanguage('no')" [class.bg-surface-200]="selectedTargetLanguage() === 'no'" [class.bg-surface-300]="selectedTargetLanguage() !== 'no'" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-secondary text-sm font-bold border border-surface-100">
-        <span>🇳🇴</span> {{ 'discovery.langNorwegian' | t }}
-      </button>
-      <button (click)="setLanguage('')" class="flex items-center justify-center px-4 py-1.5 rounded-full bg-surface-200 text-text-secondary font-bold border border-surface-100">{{ 'discovery.langAny' | t }}</button>
+      @for (lang of myTargetLangs(); track lang.code) {
+        <button (click)="setLanguage(lang.code)" [class.bg-surface-200]="selectedTargetLanguage() === lang.code" [class.bg-surface-300]="selectedTargetLanguage() !== lang.code" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-primary text-sm font-bold border border-surface-100 whitespace-nowrap">
+          <span>{{ lang.flag }}</span> {{ lang.labelKey | t }}
+        </button>
+      }
+      <button (click)="setLanguage('')" class="flex items-center justify-center px-4 py-1.5 rounded-full bg-surface-200 text-text-secondary font-bold border border-surface-100 whitespace-nowrap">{{ 'discovery.langAny' | t }}</button>
     </div>
   </header>
 

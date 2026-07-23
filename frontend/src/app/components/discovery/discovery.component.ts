@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { DiscoveryService } from '../../services/discovery.service';
-import { UserProfile } from '../../services/user.service';
+import { UserProfile, UserService } from '../../services/user.service';
 
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
@@ -20,10 +20,12 @@ import { RouterLink } from '@angular/router';
 })
 export class DiscoveryComponent implements OnInit {
   private readonly discoveryService = inject(DiscoveryService);
+  private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
 
   readonly partners = signal<UserProfile[]>([]);
   readonly isLoading = signal<boolean>(true);
+  readonly myTargetLangs = signal<{ code: string; flag: string; labelKey: string }[]>([]);
 
   readonly nativeLanguageOptions = [
     { value: '', labelKey: 'lang.anyNative' },
@@ -97,6 +99,22 @@ export class DiscoveryComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    try {
+      const profile = await this.userService.getMyProfile();
+      if (profile && profile.target_languages) {
+        const flagMap: Record<string, string> = {
+          en: '🇬🇧', es: '🇪🇸', fr: '🇫🇷', de: '🇩🇪', it: '🇮🇹', pt: '🇵🇹', ja: '🇯🇵', ko: '🇰🇷', zh: '🇨🇳', ar: '🇸🇦', ru: '🇷🇺', hi: '🇮🇳', tr: '🇹🇷', no: '🇳🇴'
+        };
+        const langs = profile.target_languages.map(code => ({
+          code,
+          flag: flagMap[code.toLowerCase()] || '🌍',
+          labelKey: `lang.${code.toLowerCase()}`
+        }));
+        this.myTargetLangs.set(langs);
+      }
+    } catch (e) {
+      console.warn('Could not load user profile for target languages', e);
+    }
     await this.searchPartners();
   }
 

@@ -2,7 +2,7 @@
   <!-- Top App Bar -->
   <header class="bg-surface-300 pt-12 pb-3 ps-4 pe-4 border-b border-surface-200">
     <div class="flex items-center justify-between mb-4">
-      <a [routerLink]="['/']" class="text-text-primary"><span class="text-xl">≡</span></a>
+      <button (click)="notImplemented()" class="text-text-primary"><span class="text-xl">≡</span></button>
       <h1 class="text-base font-bold text-text-primary">{{ 'chatList.topTitle' | t }}</h1>
       <a [routerLink]="['/discovery']" class="text-text-primary"><span class="text-xl">+</span></a>
     </div>
@@ -21,24 +21,24 @@
         </div>
         <span class="text-[10px] text-text-secondary font-medium">{{ 'chatList.quickPlay' | t }}</span>
       </a>
-      <a [routerLink]="['/']" class="flex flex-col items-center gap-1">
+      <button (click)="notImplemented()" class="flex flex-col items-center gap-1">
         <div class="w-12 h-12 rounded-[1rem] bg-cyan-500 flex items-center justify-center text-white text-xl shadow-lg">
           🌐
         </div>
         <span class="text-[10px] text-text-secondary font-medium">{{ 'chatList.quickAiTrans' | t }}</span>
-      </a>
-      <a [routerLink]="['/']" class="flex flex-col items-center gap-1">
+      </button>
+      <button (click)="notImplemented()" class="flex flex-col items-center gap-1">
         <div class="w-12 h-12 rounded-[1rem] bg-pink-500 flex items-center justify-center text-white text-xl shadow-lg">
           🤖
         </div>
         <span class="text-[10px] text-text-secondary font-medium">{{ 'chatList.quickJpAi' | t }}</span>
-      </a>
-      <a [routerLink]="['/']" class="flex flex-col items-center gap-1">
+      </button>
+      <button (click)="notImplemented()" class="flex flex-col items-center gap-1">
         <div class="w-12 h-12 rounded-[1rem] bg-surface-200 flex items-center justify-center text-text-secondary text-lg shadow-lg">
           ⌄
         </div>
         <span class="text-[10px] text-text-secondary font-medium">{{ 'chatList.quickMore' | t }}</span>
-      </a>
+      </button>
     </div>
 
     <!-- Search Bar -->
@@ -55,7 +55,7 @@
 
     <!-- Filter Pills -->
     <div class="flex items-center">
-      <button class="bg-surface-200 text-text-secondary w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs ml-4">≡</button>
+      <button (click)="notImplemented()" class="bg-surface-200 text-text-secondary w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs ml-4">≡</button>
       <app-scrollable-pills 
         [pills]="filterPills()" 
         [selected]="selectedFilter()" 

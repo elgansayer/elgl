@@ -35,6 +35,10 @@ export class ChatListComponent implements OnInit {
   readonly previews = signal<ChatRoomPreview[]>([]);
   readonly search = signal<string>('');
   
+  notImplemented(): void {
+    notImplementedToast();
+  }
+
   readonly filterPills = computed(() => {
     this.i18n.translations();
     return [
@@ -76,9 +80,7 @@ export class ChatListComponent implements OnInit {
     await this.loadPreviews();
   }
 
-  notImplemented(): void {
-    notImplementedToast();
-  }
+
 
   async loadPreviews(): Promise<void> {
     this.isLoading.set(true);

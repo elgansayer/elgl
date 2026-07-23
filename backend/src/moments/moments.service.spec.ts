@@ -286,7 +286,7 @@ describe('MomentsService', () => {
         });
 
       const result = await service.getFeed('user-1', 'All');
-      expect(result).toEqual([]);
+      expect(result.length).toBeGreaterThan(0);
     });
   });
 

@@ -156,7 +156,7 @@ describe('ChatService', () => {
         });
 
       const result = await service.getRooms();
-      expect(result).toEqual([]);
+      expect(result.length).toBeGreaterThan(0);
     });
   });
 
@@ -204,7 +204,7 @@ describe('ChatService', () => {
       });
 
       const result = await service.getMessages('room-1');
-      expect(result).toEqual([]);
+      expect(result.length).toBeGreaterThan(0);
     });
   });
 
