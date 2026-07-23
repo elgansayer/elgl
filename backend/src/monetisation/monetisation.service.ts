@@ -10,6 +10,8 @@ import * as crypto from 'crypto';
 import Stripe from 'stripe';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateDiagnosticLogDto } from './dto/monetisation.dto';
+import { AppleNotificationService } from './apple-notification.service';
+import { GooglePlayNotificationService } from './google-play-notification.service';
 
 export interface UserVipRow {
   id: string;
@@ -41,6 +43,8 @@ export class MonetisationService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
+    private readonly appleNotificationService: AppleNotificationService,
+    private readonly googlePlayNotificationService: GooglePlayNotificationService,
   ) {}
 
   /**
@@ -125,155 +129,13 @@ export class MonetisationService {
   }
 
   async handleAppleWebhook(payload: any): Promise<{ received: boolean; status: string }> {
-    this.logger.log(`Received Apple webhook: ${JSON.stringify(payload)}`);
-    
-    // Extract the signed payload from the notification
-    const signedPayload = payload?.signedPayload;
-    if (!signedPayload) {
-      this.logger.warn('Apple webhook missing signedPayload');
-      return { received: true, status: 'ignored' };
-    }
-
-    try {
-      // Decode the JWS payload (Apple uses ES256 algorithm)
-      const parts = signedPayload.split('.');
-      if (parts.length !== 3) {
-        this.logger.warn('Invalid JWS format in Apple notification');
-        return { received: true, status: 'ignored' };
-      }
-
-      const payloadStr = Buffer.from(parts[1], 'base64url').toString('utf-8');
-      const notificationPayload = JSON.parse(payloadStr);
-
-      const { notificationType, subtype, data } = notificationPayload;
-      
-      // Handle subscription lifecycle events
-      if (notificationType === 'SUBSCRIBED' || 
-          (notificationType === 'DID_CHANGE_RENEWAL_STATUS' && subtype === 'AUTO_RENEW_ENABLED') ||
-          (notificationType === 'DID_RENEW')) {
-        
-        const transactionInfo = data?.signedTransactionInfo;
-        if (transactionInfo) {
-          const txParts = transactionInfo.split('.');
-          if (txParts.length === 3) {
-            const txPayloadStr = Buffer.from(txParts[1], 'base64url').toString('utf-8');
-            const txPayload = JSON.parse(txPayloadStr);
-            
-            const originalTransactionId = txPayload.originalTransactionId;
-            const productId = txPayload.productId;
-            const userId = txPayload.appAccountToken; // Set during purchase
-            
-            if (userId && productId) {
-              // Map product ID to tier
-              const tier = productId.includes('developer') 
-                ? 'developer_20_ukp_26_usd' 
-                : 'consumer_8_ukp_10_usd';
-              
-              // Update user VIP status
-              await this.updateVipStatusFromWebhook(userId, true, tier);
-            }
-          }
-        }
-      } else if (notificationType === 'EXPIRED' || 
-                 notificationType === 'DID_CHANGE_RENEWAL_STATUS' && subtype === 'AUTO_RENEW_DISABLED' ||
-                 notificationType === 'CANCEL') {
-        
-        const transactionInfo = data?.signedTransactionInfo;
-        if (transactionInfo) {
-          const txParts = transactionInfo.split('.');
-          if (txParts.length === 3) {
-            const txPayloadStr = Buffer.from(txParts[1], 'base64url').toString('utf-8');
-            const txPayload = JSON.parse(txPayloadStr);
-            
-            const userId = txPayload.appAccountToken;
-            
-            if (userId) {
-              // Downgrade user
-              await this.updateVipStatusFromWebhook(userId, false, null);
-            }
-          }
-        }
-      }
-    } catch (error) {
-      this.logger.error('Failed to process Apple webhook', error);
-    }
-
-    return { received: true, status: 'processed' };
+    this.logger.log('Received Apple App Store Server Notification');
+    return await this.appleNotificationService.handleNotification(payload);
   }
 
   async handleGoogleWebhook(payload: any): Promise<{ received: boolean; status: string }> {
-    this.logger.log(`Received Google webhook: ${JSON.stringify(payload)}`);
-    
-    try {
-      // Google Play Developer Notifications structure
-      const message = payload?.message;
-      if (!message) {
-        this.logger.warn('Google webhook missing message');
-        return { received: true, status: 'ignored' };
-      }
-
-      // Decode base64-encoded data
-      const data = message.data;
-      if (!data) {
-        this.logger.warn('Google webhook missing data');
-        return { received: true, status: 'ignored' };
-      }
-
-      const decodedData = Buffer.from(data, 'base64').toString('utf-8');
-      const notificationData = JSON.parse(decodedData);
-
-      const { subscriptionNotification, testNotification } = notificationData;
-
-      if (testNotification) {
-        this.logger.log('Received Google Play test notification');
-        return { received: true, status: 'processed' };
-      }
-
-      if (subscriptionNotification) {
-        const { notificationType, purchaseToken, subscriptionId } = subscriptionNotification;
-        
-        // notificationType: 1=SUBSCRIBED, 2=RESUBSCRIBED, 3=RENEWED, 4=CANCELLED, 5=EXPIRED
-        const isActive = [1, 2, 3].includes(notificationType);
-        const isCancelled = [4, 5].includes(notificationType);
-
-        if (isActive || isCancelled) {
-          // Look up the user by purchase token (stored during initial purchase)
-          const supabase = this.supabaseService.getClient();
-          
-          if (isActive) {
-            const tier = subscriptionId?.includes('developer') 
-              ? 'developer_20_ukp_26_usd' 
-              : 'consumer_8_ukp_10_usd';
-            
-            // Find user by purchase token
-            const { data: purchaseData } = await supabase
-              .from('google_purchases')
-              .select('user_id')
-              .eq('purchase_token', purchaseToken)
-              .single();
-
-            if (purchaseData?.user_id) {
-              await this.updateVipStatusFromWebhook(purchaseData.user_id, true, tier);
-            }
-          } else {
-            // Find user by purchase token
-            const { data: purchaseData } = await supabase
-              .from('google_purchases')
-              .select('user_id')
-              .eq('purchase_token', purchaseToken)
-              .single();
-
-            if (purchaseData?.user_id) {
-              await this.updateVipStatusFromWebhook(purchaseData.user_id, false, null);
-            }
-          }
-        }
-      }
-    } catch (error) {
-      this.logger.error('Failed to process Google webhook', error);
-    }
-
-    return { received: true, status: 'processed' };
+    this.logger.log('Received Google Play Developer Notification');
+    return await this.googlePlayNotificationService.handleNotification(payload);
   }
 
   async generateApiKey(
