@@ -226,6 +226,7 @@
 - [x] Implement WebSockets typing indicators ("User is typing...").
 - [x] Build Read Receipts (Sent vs Delivered vs Read checkmarks).
 - [ ] Add long-press context menu on mobile to copy, favourite, or report messages.
+- [ ] Implement long-press context menu component (`LongPressContextMenuComponent`) in Angular with options to copy, favourite, or report messages.
 
 ## Phase 17: Audio & Video Calling (WebRTC / LiveKit)
 - [ ] Build Incoming Call modal with ringtone audio and accept/reject controls.
