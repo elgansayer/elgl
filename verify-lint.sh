@@ -63,6 +63,8 @@ fi
 # Step 4: Install backend dependencies
 echo ""
 echo "Step 4: Installing backend dependencies..."
+# Ensure npm is in PATH
+export PATH="/usr/local/bin:$PATH"
 cd backend
 npm install
 echo "✅ Backend dependencies installed"
@@ -74,7 +76,8 @@ echo "Command: cd backend && npm run lint"
 echo ""
 
 # Run lint and capture output
-LINT_OUTPUT=$(npm run lint 2>&1)
+# Use full path to npm to avoid PATH issues
+LINT_OUTPUT=$(/usr/local/bin/npm run lint 2>&1)
 LINT_EXIT_CODE=$?
 
 echo "$LINT_OUTPUT"
