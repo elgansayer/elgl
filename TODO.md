@@ -129,8 +129,9 @@
 - [x] Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
 - [STUCK] Perform detailed analysis of chat UI screenshots and document required UI components.
 - [x] Verify analysis of chat UI screenshots by reviewing git diff; if not done, perform analysis and document required UI components.
+- [x] Perform detailed analysis of chat UI screenshots and document required UI components (re‑attempt after previous `[STUCK]`).
 - [ ] Perform detailed analysis of chat UI screenshots and document required UI components (re‑attempt after previous `[STUCK]`).
-- [ ] Perform detailed analysis of chat UI screenshots and document required UI components (re‑attempt after previous `[STUCK]`).
+- [ ] Review the analysis output and ensure all chat UI components (message bubbles, input bar, emoji picker, attachment menu, voice note recorder, doodle pad, gift picker, favourites tab, search bar, typing indicator, read receipts, context menu) are documented with pixel-perfect specifications.
 - [x] Build HTML5 Canvas Doodle Pad component in chat modal.
 - [x] Build Virtual Gift picker modal with coin balance auto-deduction.
 - [x] Build Favourites bookmarking tab for saved messages and corrections.
