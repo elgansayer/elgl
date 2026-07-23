@@ -237,6 +237,7 @@
   - Unit tests for the component.
   - RTL-safe logical CSS classes.
   - i18n translation keys for menu labels.
+- [ ] Verify that the long-press context menu component is fully functional and passes lint/tests.
 
 ## Phase 17: Audio & Video Calling (WebRTC / LiveKit)
 - [ ] Build Incoming Call modal with ringtone audio and accept/reject controls.
