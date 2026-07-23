@@ -1,8 +1,9 @@
-import { showToast, notImplementedToast } from '../../services/toast.service';
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { showToast } from '../../services/toast.service';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
 import { DiscoveryService } from '../../services/discovery.service';
 import { UserProfile } from '../../services/user.service';
 
@@ -18,7 +19,8 @@ import { RouterLink } from '@angular/router';
   styleUrls: ['./discovery.component.scss'],
 })
 export class DiscoveryComponent implements OnInit {
-  private discoveryService = inject(DiscoveryService);
+  private readonly discoveryService = inject(DiscoveryService);
+  private readonly i18n = inject(I18nService);
 
   readonly partners = signal<UserProfile[]>([]);
   readonly isLoading = signal<boolean>(true);
@@ -63,11 +65,14 @@ export class DiscoveryComponent implements OnInit {
   readonly selectedTargetLanguage = signal<string>('');
   readonly seriousLearnerOnly = signal<boolean>(false);
   
-  readonly filterPills = signal([
-    { id: 'all', label: 'All' },
-    { id: 'serious', label: 'Serious Learners' },
-    { id: 'nearby', label: 'Nearby' }
-  ]);
+  readonly filterPills = computed(() => {
+    this.i18n.translations();
+    return [
+      { id: 'all', label: this.i18n.translate('discovery.filterAll') },
+      { id: 'serious', label: this.i18n.translate('discovery.filterSerious') },
+      { id: 'nearby', label: this.i18n.translate('discovery.filterNearMe') }
+    ];
+  });
   readonly selectedFilter = signal<string>('all');
   readonly showBanner = signal<boolean>(true);
 
@@ -118,9 +123,5 @@ export class DiscoveryComponent implements OnInit {
     this.selectedTargetLanguage.set('');
     this.seriousLearnerOnly.set(false);
     void this.searchPartners();
-  }
-
-  notImplemented(): void {
-    notImplementedToast();
   }
 }

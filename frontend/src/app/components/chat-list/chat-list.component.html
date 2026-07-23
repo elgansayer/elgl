@@ -3,7 +3,7 @@
   <header class="bg-surface-300 pt-12 pb-3 ps-4 pe-4 border-b border-surface-200">
     <div class="flex items-center justify-between mb-4">
       <a [routerLink]="['/']" class="text-text-primary"><span class="text-xl">≡</span></a>
-      <h1 class="text-base font-bold text-text-primary">Language Talks</h1>
+      <h1 class="text-base font-bold text-text-primary">{{ 'chatList.topTitle' | t }}</h1>
       <a [routerLink]="['/discovery']" class="text-text-primary"><span class="text-xl">+</span></a>
     </div>
 
@@ -13,31 +13,31 @@
         <div class="w-12 h-12 rounded-[1rem] bg-blue-500 flex items-center justify-center text-white text-xl shadow-lg">
           📚
         </div>
-        <span class="text-[10px] text-text-secondary font-medium">All Courses</span>
+        <span class="text-[10px] text-text-secondary font-medium">{{ 'chatList.quickCourses' | t }}</span>
       </a>
       <a [routerLink]="['/moments']" class="flex flex-col items-center gap-1">
         <div class="w-12 h-12 rounded-[1rem] bg-green-500 flex items-center justify-center text-white text-xl shadow-lg">
           🎮
         </div>
-        <span class="text-[10px] text-text-secondary font-medium">Play</span>
+        <span class="text-[10px] text-text-secondary font-medium">{{ 'chatList.quickPlay' | t }}</span>
       </a>
       <a [routerLink]="['/']" class="flex flex-col items-center gap-1">
         <div class="w-12 h-12 rounded-[1rem] bg-cyan-500 flex items-center justify-center text-white text-xl shadow-lg">
           🌐
         </div>
-        <span class="text-[10px] text-text-secondary font-medium">AI Translation</span>
+        <span class="text-[10px] text-text-secondary font-medium">{{ 'chatList.quickAiTrans' | t }}</span>
       </a>
       <a [routerLink]="['/']" class="flex flex-col items-center gap-1">
         <div class="w-12 h-12 rounded-[1rem] bg-pink-500 flex items-center justify-center text-white text-xl shadow-lg">
           🤖
         </div>
-        <span class="text-[10px] text-text-secondary font-medium">Japanese Ai</span>
+        <span class="text-[10px] text-text-secondary font-medium">{{ 'chatList.quickJpAi' | t }}</span>
       </a>
       <a [routerLink]="['/']" class="flex flex-col items-center gap-1">
         <div class="w-12 h-12 rounded-[1rem] bg-surface-200 flex items-center justify-center text-text-secondary text-lg shadow-lg">
           ⌄
         </div>
-        <span class="text-[10px] text-text-secondary font-medium">More</span>
+        <span class="text-[10px] text-text-secondary font-medium">{{ 'chatList.quickMore' | t }}</span>
       </a>
     </div>
 

@@ -45,11 +45,14 @@ export class MomentsFeedComponent implements OnInit {
   readonly openCommentsMap = signal<Set<string>>(new Set());
   readonly expandedMomentIds = signal<Set<string>>(new Set());
 
-  readonly filterPills = signal([
-    { id: 'All', label: 'All' },
-    { id: 'Classmates', label: 'Classmates' },
-    { id: 'Following', label: 'Following' }
-  ]);
+  readonly filterPills = computed(() => {
+    this.i18n.translations();
+    return [
+      { id: 'All', label: this.i18n.translate('moments.tabAll') },
+      { id: 'Classmates', label: this.i18n.translate('moments.tabClassmates') },
+      { id: 'Following', label: this.i18n.translate('moments.tabFollowing') }
+    ];
+  });
   readonly showComposeForm = signal<boolean>(false);
 
   // New Moment form state

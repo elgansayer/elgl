@@ -3,10 +3,6 @@
   <header class="bg-surface-400 pt-12 pb-3 border-b border-surface-200 shadow-sm z-10 sticky top-0">
     <div class="flex items-center justify-between px-4 mb-4">
       <h1 class="text-xl font-black text-text-primary tracking-tight">{{ 'discovery.title' | t }}</h1>
-      <button (click)="notImplemented()" class="text-text-primary p-2">
-        <!-- Search Icon -->
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-      </button>
     </div>
     
     <!-- Top Filter Pills (Horizontal Scroll) -->
@@ -19,15 +15,15 @@
     <!-- Language Selection Pills -->
     <div class="flex overflow-x-auto hide-scrollbar gap-2 px-4 mt-4">
       <button (click)="setLanguage('ja')" [class.bg-surface-200]="selectedTargetLanguage() === 'ja'" [class.bg-surface-300]="selectedTargetLanguage() !== 'ja'" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-primary text-sm font-bold border border-surface-100">
-        <span>🇯🇵</span> Japanese
+        <span>🇯🇵</span> {{ 'discovery.langJapanese' | t }}
       </button>
       <button (click)="setLanguage('ko')" [class.bg-surface-200]="selectedTargetLanguage() === 'ko'" [class.bg-surface-300]="selectedTargetLanguage() !== 'ko'" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-secondary text-sm font-bold border border-surface-100">
-        <span>🇰🇷</span> Korean
+        <span>🇰🇷</span> {{ 'discovery.langKorean' | t }}
       </button>
       <button (click)="setLanguage('no')" [class.bg-surface-200]="selectedTargetLanguage() === 'no'" [class.bg-surface-300]="selectedTargetLanguage() !== 'no'" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-secondary text-sm font-bold border border-surface-100">
-        <span>🇳🇴</span> Norwegian
+        <span>🇳🇴</span> {{ 'discovery.langNorwegian' | t }}
       </button>
-      <button (click)="setLanguage('')" class="flex items-center justify-center px-4 py-1.5 rounded-full bg-surface-200 text-text-secondary font-bold border border-surface-100">Any</button>
+      <button (click)="setLanguage('')" class="flex items-center justify-center px-4 py-1.5 rounded-full bg-surface-200 text-text-secondary font-bold border border-surface-100">{{ 'discovery.langAny' | t }}</button>
     </div>
   </header>
 
@@ -36,10 +32,10 @@
     <div class="bg-surface-300 px-4 py-2 flex justify-between items-center text-xs text-text-primary font-bold border-b border-surface-200">
       <div class="flex items-center gap-2">
         <span class="text-lg">💰</span>
-        <span>Paid Practice: Find a pro tutor!</span>
+        <span>{{ 'discovery.bannerPaid' | t }}</span>
       </div>
       <div class="flex items-center gap-2">
-        <button [routerLink]="['/vip']" class="bg-surface-200 px-2 py-0.5 rounded text-[10px] uppercase">View</button>
+        <button [routerLink]="['/vip']" class="bg-surface-200 px-2 py-0.5 rounded text-[10px] uppercase">{{ 'discovery.bannerView' | t }}</button>
         <button (click)="showBanner.set(false)" class="text-text-muted">×</button>
       </div>
     </div>

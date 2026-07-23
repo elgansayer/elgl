@@ -79,7 +79,7 @@
       <article class="p-4 bg-surface-500 hover:bg-surface-400/50 transition-colors" [class.bg-surface-400]="moment.is_pinned">
         @if (moment.is_pinned) {
           <div class="text-xs font-black uppercase text-yellow-400 mb-3 flex items-center gap-1">
-            <span class="text-sm">📌</span> Pinned
+            <span class="text-sm">📌</span> {{ 'moments.pinnedBanner' | t }}
           </div>
         }
         <div class="flex items-start gap-3">
@@ -94,7 +94,7 @@
               </div>
               @if (moment.user_id === authService.currentUser()?.id) {
                 <button (click)="momentsStore.togglePin(moment.id)" class="text-xs text-text-muted hover:text-text-primary">
-                  {{ moment.is_pinned ? 'Unpin' : 'Pin' }}
+                  {{ moment.is_pinned ? ('moments.unpinBtn' | t) : ('moments.pinBtn' | t) }}
                 </button>
               }
             </div>
@@ -138,14 +138,14 @@
             <!-- Action Bar -->
             <div class="flex items-center gap-6 mt-4 text-text-secondary text-xs">
               <button (click)="momentsStore.toggleLike(moment.id)" class="flex items-center gap-1.5 transition-colors" [class.text-red-500]="moment.is_liked_by_me">
-                <span class="text-lg leading-none">{{ moment.is_liked_by_me ? '❤️' : '🤍' }}</span> <span class="font-bold">{{ moment.likes_count || 'Like' }}</span>
+                <span class="text-lg leading-none">{{ moment.is_liked_by_me ? '❤️' : '🤍' }}</span> <span class="font-bold">{{ moment.likes_count || ('moments.likeBtn' | t) }}</span>
               </button>
               <button (click)="toggleComments(moment)" class="flex items-center gap-1.5 hover:text-text-primary transition-colors">
-                <span class="text-lg leading-none">💬</span> <span class="font-bold">{{ moment.comments_count || 'Comment' }}</span>
+                <span class="text-lg leading-none">💬</span> <span class="font-bold">{{ moment.comments_count || ('moments.commentBtn' | t) }}</span>
               </button>
               @if (moment.text_content) {
                 <button (click)="toggleInlineTranslation(moment)" class="flex items-center gap-1 hover:text-purple-400 transition-colors ml-auto font-bold">
-                  {{ moment.translatedText ? 'Hide' : 'Translate' }}
+                  {{ moment.translatedText ? ('moments.hideTranslation' | t) : ('moments.translate' | t) }}
                 </button>
               }
             </div>

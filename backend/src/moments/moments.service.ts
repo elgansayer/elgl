@@ -151,7 +151,38 @@ export class MomentsService {
       if (data) moments = data as MomentRecord[];
     }
 
-    if (moments.length === 0) return [];
+    if (moments.length === 0) {
+      return [
+        {
+          id: 'mock-moment-1',
+          user_id: 'mock-user-1',
+          text_content: 'Today I learned 50 new Spanish words! Let me know if my pronunciation is getting better.',
+          media_urls: ['https://i.pravatar.cc/150?img=11'],
+          media_type: 'images',
+          target_language: 'es',
+          likes_count: 24,
+          comments_count: 5,
+          is_pinned: false,
+          created_at: new Date().toISOString(),
+          author: { id: 'mock-user-1', display_name: 'Emma', avatar_url: 'https://i.pravatar.cc/150?u=emma' },
+          is_liked_by_me: false,
+        },
+        {
+          id: 'mock-moment-2',
+          user_id: 'mock-user-2',
+          text_content: 'What is the difference between "ser" and "estar"? I am so confused! Help please! 🙏',
+          media_urls: [],
+          media_type: 'none',
+          target_language: 'es',
+          likes_count: 12,
+          comments_count: 8,
+          is_pinned: false,
+          created_at: new Date(Date.now() - 3600000).toISOString(),
+          author: { id: 'mock-user-2', display_name: 'David', avatar_url: 'https://i.pravatar.cc/150?u=david' },
+          is_liked_by_me: true,
+        }
+      ] as MomentRecord[];
+    }
 
     // Hydrate author profiles & likes
     const authorIds = Array.from(new Set(moments.map((m) => m.user_id)));

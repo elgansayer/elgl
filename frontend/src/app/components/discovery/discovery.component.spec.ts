@@ -32,9 +32,4 @@ describe('DiscoveryComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
-
-  it('notImplemented should show toast', () => {
-    component.notImplemented();
-    expect(toast.toastsSignal().length).toBeGreaterThan(0);
-  });
 });

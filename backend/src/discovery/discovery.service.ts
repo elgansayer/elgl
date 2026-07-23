@@ -52,9 +52,11 @@ export class DiscoveryService {
         serious_only: Boolean(query.serious_learner_only),
       });
 
-      if (response.error || !response.data) {
+      if (response.error || !response.data || (response.data as any[]).length === 0) {
         const fallbackRes = await queryBuilder.limit(50);
-        if (fallbackRes.error || !fallbackRes.data) return [];
+        if (fallbackRes.error || !fallbackRes.data || fallbackRes.data.length === 0) {
+          return this.getMockDiscoveryData();
+        }
         return fallbackRes.data as UserProfile[];
       }
       return response.data as UserProfile[];
@@ -62,36 +64,39 @@ export class DiscoveryService {
 
     const response = await queryBuilder.limit(50);
     if (response.error || !response.data || response.data.length === 0) {
-      // Fake Data Fallback as required by rule 10
-      return [
-        {
-          id: 'fake-1',
-          display_name: 'Sakura 🌸',
-          native_language: 'ja',
-          target_languages: ['en'],
-          bio_text: 'Looking for a language exchange partner! I love anime.',
-          avatar_url: 'https://i.pravatar.cc/150?u=sakura',
-          is_vip: true,
-          study_streak_days: 12,
-          correction_ratio: 0.9,
-          is_serious_learner: true,
-          created_at: new Date().toISOString()
-        },
-        {
-          id: 'fake-2',
-          display_name: 'Min-jun',
-          native_language: 'ko',
-          target_languages: ['en', 'ja'],
-          bio_text: 'Let\'s talk about K-pop and food.',
-          avatar_url: 'https://i.pravatar.cc/150?u=minjun',
-          is_vip: false,
-          study_streak_days: 2,
-          correction_ratio: 0.5,
-          is_serious_learner: false,
-          created_at: new Date().toISOString()
-        }
-      ] as any;
+      return this.getMockDiscoveryData();
     }
     return response.data as UserProfile[];
+  }
+
+  private getMockDiscoveryData(): UserProfile[] {
+    return [
+      {
+        id: 'fake-1',
+        display_name: 'Sakura 🌸',
+        native_language: 'ja',
+        target_languages: ['en'],
+        bio_text: 'Looking for a language exchange partner! I love anime.',
+        avatar_url: 'https://i.pravatar.cc/150?u=sakura',
+        is_vip: true,
+        study_streak_days: 12,
+        correction_ratio: 0.9,
+        is_serious_learner: true,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 'fake-2',
+        display_name: 'Min-jun',
+        native_language: 'ko',
+        target_languages: ['en', 'ja'],
+        bio_text: 'Let\'s talk about K-pop and food.',
+        avatar_url: 'https://i.pravatar.cc/150?u=minjun',
+        is_vip: false,
+        study_streak_days: 2,
+        correction_ratio: 0.5,
+        is_serious_learner: false,
+        created_at: new Date().toISOString()
+      }
+    ] as any;
   }
 }

@@ -35,13 +35,16 @@ export class ChatListComponent implements OnInit {
   readonly previews = signal<ChatRoomPreview[]>([]);
   readonly search = signal<string>('');
   
-  readonly filterPills = signal([
-    { id: 'all', label: 'All' },
-    { id: 'online', label: 'Online' },
-    { id: 'unread', label: 'Unread' },
-    { id: 'my_turn', label: 'My turn' },
-    { id: 'timezone', label: 'Timezone proximity' }
-  ]);
+  readonly filterPills = computed(() => {
+    this.i18n.translations();
+    return [
+      { id: 'all', label: this.i18n.translate('chatList.filterAll') },
+      { id: 'online', label: this.i18n.translate('chatList.filterOnline') },
+      { id: 'unread', label: this.i18n.translate('chatList.filterUnread') },
+      { id: 'my_turn', label: this.i18n.translate('chatList.filterMyTurn') },
+      { id: 'timezone', label: this.i18n.translate('chatList.filterTimezone') }
+    ];
+  });
   readonly selectedFilter = signal<string>('all');
 
   onFilterSelect(id: string) {
