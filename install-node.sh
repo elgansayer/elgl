@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e  # Exit on first error
 
+# Ignore any arguments passed to this script (e.g. when called as "npm run lint install-node.sh")
+# The script always performs the same actions regardless of arguments.
+shift $# 2>/dev/null || true
+
 # Ensure the script itself is executable (in case it was not)
 chmod +x "$0"
 
