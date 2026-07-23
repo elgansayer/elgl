@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LivekitService } from '../../services/livekit.service';
 import { AuthService } from '../../services/auth.service';
 import { ChatService } from '../../services/chat.service';
+import { Room, LocalTrack, RemoteTrack, Track } from 'livekit-client';
 
 export type CallDirection = 'incoming' | 'outgoing';
 export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'missed' | 'rejected';
@@ -107,8 +108,11 @@ export class VoipCallComponent implements OnDestroy {
   readonly callDuration = signal(0);
 
   private durationInterval: ReturnType<typeof setInterval> | null = null;
-  private localTrack: MediaStreamTrack | null = null;
-  private remoteTrack: MediaStreamTrack | null = null;
+  private localAudioTrack: LocalTrack | null = null;
+  private localVideoTrack: LocalTrack | null = null;
+  private remoteAudioTrack: RemoteTrack | null = null;
+  private remoteVideoTrack: RemoteTrack | null = null;
+  private room: Room | null = null;
 
   constructor() {
     // Auto-start timer when connected
@@ -161,14 +165,20 @@ export class VoipCallComponent implements OnDestroy {
       if (!currentUser) throw new Error('User not authenticated');
 
       // Join the LiveKit room
-      await this.livekitService.joinRoom(this.roomName(), currentUser.id, this.isVideoCall());
+      this.room = await this.livekitService.joinRoom(this.roomName(), currentUser.id, this.isVideoCall());
 
       // Publish local tracks
-      await this.livekitService.publishTracks(this.isVideoCall());
+      const tracks = await this.livekitService.publishTracks(this.isVideoCall());
+      this.localAudioTrack = tracks.audioTrack;
+      this.localVideoTrack = tracks.videoTrack;
 
       // Subscribe to remote tracks
-      this.livekitService.onTrackSubscribed = (track: MediaStreamTrack) => {
-        this.remoteTrack = track;
+      this.livekitService.onTrackSubscribed = (track: RemoteTrack, publication: any) => {
+        if (track.kind === Track.Kind.Audio) {
+          this.remoteAudioTrack = track;
+        } else if (track.kind === Track.Kind.Video) {
+          this.remoteVideoTrack = track;
+        }
         // Attach to video/audio element in parent component
       };
 
@@ -213,15 +223,17 @@ export class VoipCallComponent implements OnDestroy {
     this.muteToggled.emit(newMuted);
 
     // Mute/unmute the local audio track via LiveKit SDK
-    if (this.localTrack) {
-      this.localTrack.enabled = !newMuted;
+    if (this.localAudioTrack) {
+      await this.localAudioTrack.setMuted(newMuted);
     }
   }
 
   async toggleVideo(): Promise<void> {
     this.isVideoEnabled.update(v => !v);
     // Re-publish tracks with updated video state
-    await this.livekitService.publishTracks(this.isVideoEnabled());
+    const tracks = await this.livekitService.publishTracks(this.isVideoEnabled());
+    this.localAudioTrack = tracks.audioTrack;
+    this.localVideoTrack = tracks.videoTrack;
   }
 
   private startDurationTimer(): void {
@@ -241,8 +253,11 @@ export class VoipCallComponent implements OnDestroy {
   private cleanup(): void {
     this.stopDurationTimer();
     this.livekitService.leaveRoom();
-    this.localTrack = null;
-    this.remoteTrack = null;
+    this.localAudioTrack = null;
+    this.localVideoTrack = null;
+    this.remoteAudioTrack = null;
+    this.remoteVideoTrack = null;
+    this.room = null;
   }
 
   ngOnDestroy(): void {

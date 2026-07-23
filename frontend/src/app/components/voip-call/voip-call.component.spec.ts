@@ -1,21 +1,93 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { VoipCallComponent } from './voip-call.component';
 import { ComponentRef } from '@angular/core';
+import { LivekitService } from '../../services/livekit.service';
+import { AuthService } from '../../services/auth.service';
+import { ChatService } from '../../services/chat.service';
+import { LocalTrack, RemoteTrack, Room, Track } from 'livekit-client';
 
 describe('VoipCallComponent', () => {
   let component: VoipCallComponent;
   let fixture: ComponentFixture<VoipCallComponent>;
   let componentRef: ComponentRef<VoipCallComponent>;
-  let mockLocalAudioTrack: { muted: boolean; stop: jest.Mock };
+  let mockLivekitService: jest.Mocked<LivekitService>;
+  let mockAuthService: jest.Mocked<AuthService>;
+  let mockChatService: jest.Mocked<ChatService>;
+  let mockLocalAudioTrack: jest.Mocked<LocalTrack>;
+  let mockLocalVideoTrack: jest.Mocked<LocalTrack>;
+  let mockRemoteAudioTrack: jest.Mocked<RemoteTrack>;
+  let mockRemoteVideoTrack: jest.Mocked<RemoteTrack>;
+  let mockRoom: jest.Mocked<Room>;
 
   beforeEach(async () => {
     mockLocalAudioTrack = {
-      muted: false,
+      kind: Track.Kind.Audio,
+      setMuted: jest.fn().mockResolvedValue(undefined),
       stop: jest.fn(),
-    };
+      muted: false,
+      sid: 'audio-track-1',
+      source: Track.Source.Microphone,
+      mediaStreamTrack: new MediaStreamTrack(),
+    } as unknown as jest.Mocked<LocalTrack>;
+
+    mockLocalVideoTrack = {
+      kind: Track.Kind.Video,
+      setMuted: jest.fn().mockResolvedValue(undefined),
+      stop: jest.fn(),
+      muted: false,
+      sid: 'video-track-1',
+      source: Track.Source.Camera,
+      mediaStreamTrack: new MediaStreamTrack(),
+    } as unknown as jest.Mocked<LocalTrack>;
+
+    mockRemoteAudioTrack = {
+      kind: Track.Kind.Audio,
+      sid: 'remote-audio-1',
+      source: Track.Source.Microphone,
+      mediaStreamTrack: new MediaStreamTrack(),
+    } as unknown as jest.Mocked<RemoteTrack>;
+
+    mockRemoteVideoTrack = {
+      kind: Track.Kind.Video,
+      sid: 'remote-video-1',
+      source: Track.Source.Camera,
+      mediaStreamTrack: new MediaStreamTrack(),
+    } as unknown as jest.Mocked<RemoteTrack>;
+
+    mockRoom = {
+      name: 'test-room',
+      sid: 'room-sid',
+      localParticipant: {
+        setMicrophoneEnabled: jest.fn(),
+        setCameraEnabled: jest.fn(),
+      },
+    } as unknown as jest.Mocked<Room>;
+
+    mockLivekitService = {
+      joinRoom: jest.fn().mockResolvedValue(mockRoom),
+      publishTracks: jest.fn().mockResolvedValue({
+        audioTrack: mockLocalAudioTrack,
+        videoTrack: mockLocalVideoTrack,
+      }),
+      leaveRoom: jest.fn(),
+      onTrackSubscribed: jest.fn(),
+    } as unknown as jest.Mocked<LivekitService>;
+
+    mockAuthService = {
+      currentUser: jest.fn().mockReturnValue({ id: 'user-123', displayName: 'Test User' }),
+    } as unknown as jest.Mocked<AuthService>;
+
+    mockChatService = {
+      sendMessage: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<ChatService>;
 
     await TestBed.configureTestingModule({
       imports: [VoipCallComponent],
+      providers: [
+        { provide: LivekitService, useValue: mockLivekitService },
+        { provide: AuthService, useValue: mockAuthService },
+        { provide: ChatService, useValue: mockChatService },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(VoipCallComponent);
@@ -56,11 +128,11 @@ describe('VoipCallComponent', () => {
 
     component.toggleMute();
     expect(component.isMuted()).toBe(true);
-    expect(mockLocalAudioTrack.muted).toBe(true);
+    expect(mockLocalAudioTrack.setMuted).toHaveBeenCalledWith(true);
 
     component.toggleMute();
     expect(component.isMuted()).toBe(false);
-    expect(mockLocalAudioTrack.muted).toBe(false);
+    expect(mockLocalAudioTrack.setMuted).toHaveBeenCalledWith(false);
   });
 
   it('should emit muteToggled event with correct value', () => {
