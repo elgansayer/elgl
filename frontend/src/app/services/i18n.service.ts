@@ -555,6 +555,9 @@ export class I18nService {
     'voip.connected': 'Connected',
     'voip.callEnded': 'Call Ended',
     'voip.dismiss': 'Dismiss',
+    'voip.incomingVoiceCall': 'Incoming voice call...',
+    'voip.incomingVideoCall': 'Incoming video call...',
+    'common.unknownCaller': 'Unknown Caller',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });
