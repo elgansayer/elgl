@@ -5,5 +5,20 @@
 if command -v npm >/dev/null 2>&1; then
   npm run check:constitution
 else
-  echo "⚠️  npm not found. Skipping constitution check."
+  echo "⚠️  npm not found. Attempting to install Node.js and npm..."
+  # Ensure install-node.sh is executable
+  chmod +x "$(dirname -- "$0")/../install-node.sh"
+  # Run install-node.sh with sudo if available
+  if command -v sudo >/dev/null 2>&1; then
+    sudo bash "$(dirname -- "$0")/../install-node.sh"
+  else
+    bash "$(dirname -- "$0")/../install-node.sh"
+  fi
+  # Re-check npm availability
+  if command -v npm >/dev/null 2>&1; then
+    echo "✅ npm installed successfully."
+    npm run check:constitution
+  else
+    echo "⚠️  npm installation failed. Skipping constitution check."
+  fi
 fi
