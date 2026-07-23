@@ -173,7 +173,7 @@
 - [x] Create pixel‑perfect specification documents for the following missing chat UI components: voice note recorder, doodle pad, favourites tab, typing indicator, read receipts, context menu, message bubbles, input bar, attachment menu. Also ensure the existing components (emoji picker, gift picker, search bar) have corresponding specification documents.
 - [x] Create pixel‑perfect specification documents for all chat UI components listed in the review task (message bubbles, input bar, emoji picker, attachment menu, voice note recorder, doodle pad, gift picker, favourites tab, search bar, typing indicator, read receipts, context menu).
 - [STUCK] Verify that the created specification documents match the screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` and update any discrepancies.
-- [ ] Re‑attempt verification of specification documents against screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` and update any discrepancies.
+- [STUCK] Re‑attempt verification of specification documents against screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` and update any discrepancies.
 - [ ] Re‑attempt verification of specification documents against screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` and update any discrepancies (second attempt).
 - [ ] Re‑attempt the analysis of chat UI screenshots and produce a complete, reviewable output documenting all required chat UI components with pixel‑perfect specifications (second attempt).
 - [ ] Re‑attempt the analysis of chat UI screenshots and produce a complete, reviewable output documenting all required chat UI components with pixel‑perfect specifications.
