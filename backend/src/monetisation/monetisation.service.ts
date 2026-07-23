@@ -161,7 +161,11 @@ export class MonetisationService {
 
     let event: Stripe.Event;
     try {
-      event = this.stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+      event = this.stripe.webhooks.constructEvent(
+        rawBody,
+        signature,
+        webhookSecret,
+      );
     } catch (err: any) {
       this.logger.error(
         `Webhook signature verification failed: ${(err as Error).message}`,
