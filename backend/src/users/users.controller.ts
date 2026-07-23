@@ -1,9 +1,21 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards, UnauthorizedException } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import { UserProfile, ProfileVisitor } from './interfaces/user-profile.interface';
+import {
+  UserProfile,
+  ProfileVisitor,
+} from './interfaces/user-profile.interface';
 import { UsersService } from './users.service';
 import { MediaService } from '../media/media.service';
 
@@ -59,7 +71,7 @@ export class UsersController {
     const profile = await this.usersService.getProfile(user.id);
     return this.usersService.updateProfile(
       user.id,
-      { cover_photo_url: coverPhotoUrl } as UpdateProfileDto,
+      { cover_photo_url: coverPhotoUrl },
       profile?.is_vip ?? false,
     );
   }

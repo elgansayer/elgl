@@ -29,10 +29,11 @@ export class UsersService {
 
   async getVisitors(userId: string): Promise<ProfileVisitor[]> {
     const supabase = this.supabaseService.getClient();
-    
+
     const { data, error } = await supabase
       .from('profile_visits')
-      .select(`
+      .select(
+        `
         id,
         visitor_id,
         viewed_id,
@@ -44,7 +45,8 @@ export class UsersService {
           native_language,
           target_languages
         )
-      `)
+      `,
+      )
       .eq('viewed_id', userId)
       .order('created_at', { ascending: false })
       .limit(50);
