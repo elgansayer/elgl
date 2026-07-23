@@ -254,6 +254,7 @@
 - [ ] Build Incoming Call modal with ringtone audio and accept/reject controls.
 - [ ] Implement active VoIP Call UI (Mute, Speakerphone, End Call).
 - [ ] Build 1-on-1 Video Call interface with local preview overlay.
+- [ ] Implement IncomingCallComponent with ringtone audio playback, accept/reject buttons, and integration with LiveKit for incoming call detection.
 
 ## Phase 18: Monetisation & VIP Tiers
 - [ ] Build VIP Subscription showcase page detailing all premium benefits.
