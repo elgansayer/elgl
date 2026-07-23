@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
+import { AccessToken, RoomServiceClient, CreateRoomOptions } from 'livekit-server-sdk';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -10,26 +10,28 @@ export class VideoCallsService {
   constructor(private configService: ConfigService) {
     this.roomService = new RoomServiceClient(
       this.configService.get<string>('LIVEKIT_URL') as string,
-      this.configService.get<string>('LIVEKIT_API_KEY'),
-      this.configService.get<string>('LIVEKIT_SECRET'),
+      this.configService.get<string>('LIVEKIT_API_KEY') as string,
+      this.configService.get<string>('LIVEKIT_SECRET') as string,
     );
   }
 
-  async createRoom(userId: string, _remoteUserId: string) {
+  async createRoom(userId: string, _remoteUserId: string): Promise<{ token: string; roomName: string }> {
     const roomName = `video_${uuidv4()}`;
 
-    await this.roomService.createRoom({
+    const createOptions: CreateRoomOptions = {
       name: roomName,
       emptyTimeout: 30,
       maxParticipants: 2,
-    });
+    };
+
+    await this.roomService.createRoom(createOptions);
 
     const token = this.generateToken(userId, roomName, true);
 
     return { token, roomName };
   }
 
-  async joinRoom(userId: string, roomName: string) {
+  joinRoom(userId: string, roomName: string): { token: string; roomName: string } {
     const token = this.generateToken(userId, roomName, true);
     return { token, roomName };
   }
@@ -40,8 +42,8 @@ export class VideoCallsService {
     canPublish: boolean,
   ): string {
     const at = new AccessToken(
-      this.configService.get<string>('LIVEKIT_API_KEY'),
-      this.configService.get<string>('LIVEKIT_SECRET'),
+      this.configService.get<string>('LIVEKIT_API_KEY') as string,
+      this.configService.get<string>('LIVEKIT_SECRET') as string,
       {
         identity: userId,
         ttl: '1h',
