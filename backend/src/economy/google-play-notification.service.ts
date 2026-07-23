@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EconomyService } from './economy.service';
 
@@ -27,18 +26,18 @@ export class GooglePlayNotificationService {
   async handleNotification(message: any): Promise<void> {
     try {
       // 1. Decode the Pub/Sub message
-      const data = message?.message?.data;
+      const data = (message as any)?.message?.data;
       if (!data) {
         this.logger.warn('Google Play notification missing data');
         return;
       }
 
       // 2. Decode base64-encoded data
-      const decodedData = Buffer.from(data, 'base64').toString('utf-8');
-      const notification = JSON.parse(decodedData);
+      const decodedData = Buffer.from(data as string, 'base64').toString('utf-8');
+      const notification = JSON.parse(decodedData) as any;
 
       // 3. Extract subscription notification details
-      const subscriptionNotification = notification.subscriptionNotification;
+      const subscriptionNotification = (notification as any).subscriptionNotification;
       if (!subscriptionNotification) {
         this.logger.warn(
           'Google Play notification missing subscriptionNotification',
@@ -46,9 +45,9 @@ export class GooglePlayNotificationService {
         return;
       }
 
-      const notificationType = subscriptionNotification.notificationType;
-      const purchaseToken = subscriptionNotification.purchaseToken;
-      const subscriptionId = subscriptionNotification.subscriptionId;
+      const notificationType = (subscriptionNotification as any).notificationType;
+      const purchaseToken = (subscriptionNotification as any).purchaseToken;
+      const subscriptionId = (subscriptionNotification as any).subscriptionId;
 
       this.logger.log(
         `Google Play notification: type=${notificationType}, subscriptionId=${subscriptionId}`,
@@ -317,7 +316,7 @@ export class GooglePlayNotificationService {
       .eq('purchase_token', purchaseToken)
       .single();
 
-    return data?.user_id ?? null;
+    return (data as any)?.user_id ?? null;
   }
 
   /**
@@ -350,10 +349,10 @@ export class GooglePlayNotificationService {
   /**
    * Updates the subscription price in the database.
    */
-  private async updateSubscriptionPrice(
+  private updateSubscriptionPrice(
     userId: string,
     subscriptionId: string,
-  ): Promise<void> {
+  ): void {
     // Placeholder: In production, fetch the new price from Google Play API
     this.logger.log(
       `Would update price for user ${userId}, subscription ${subscriptionId}`,
@@ -363,10 +362,10 @@ export class GooglePlayNotificationService {
   /**
    * Updates the deferred date for a subscription.
    */
-  private async updateSubscriptionDeferredDate(
+  private updateSubscriptionDeferredDate(
     userId: string,
     subscriptionId: string,
-  ): Promise<void> {
+  ): void {
     // Placeholder: In production, update the deferred date in the database
     this.logger.log(
       `Would update deferred date for user ${userId}, subscription ${subscriptionId}`,

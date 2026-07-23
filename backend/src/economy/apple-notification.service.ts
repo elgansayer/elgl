@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EconomyService } from './economy.service';
 
@@ -33,9 +32,9 @@ export class AppleNotificationService {
       return;
     }
 
-    const notificationType = decodedPayload.notificationType;
-    const subtype = decodedPayload.subtype;
-    const data = decodedPayload.data;
+    const notificationType = (decodedPayload as any).notificationType;
+    const subtype = (decodedPayload as any).subtype;
+    const data = (decodedPayload as any).data;
 
     this.logger.log(
       `Apple notification: type=${notificationType}, subtype=${subtype}`,
@@ -88,7 +87,7 @@ export class AppleNotificationService {
    * In production, this should use a library like `jsonwebtoken` with Apple's root CA.
    * For now, we perform a basic decode without full verification (placeholder).
    */
-  private async verifyAndDecodeJWS(signedPayload: string): Promise<any | null> {
+  private async verifyAndDecodeJWS(signedPayload: string): Promise<unknown | null> {
     try {
       // JWS format: header.payload.signature
       const parts = signedPayload.split('.');
@@ -119,9 +118,9 @@ export class AppleNotificationService {
    * Handles a new subscription event.
    */
   private async handleSubscribed(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
-    const productId = data?.signedTransactionInfo?.productId;
-    const transactionId = data?.signedTransactionInfo?.transactionId;
+    const userId = (data as any)?.appAccountToken;
+    const productId = (data as any)?.signedTransactionInfo?.productId;
+    const transactionId = (data as any)?.signedTransactionInfo?.transactionId;
 
     if (!userId || !productId || !transactionId) {
       this.logger.warn('Missing required fields in SUBSCRIBED notification');
@@ -145,8 +144,8 @@ export class AppleNotificationService {
    * Handles a change in auto-renewal status (e.g., user turned off auto-renew).
    */
   private async handleRenewalStatusChange(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
-    const autoRenewStatus = data?.autoRenewStatus;
+    const userId = (data as any)?.appAccountToken;
+    const autoRenewStatus = (data as any)?.autoRenewStatus;
 
     if (!userId) {
       return;
@@ -164,8 +163,8 @@ export class AppleNotificationService {
    * Handles a change in renewal preference (e.g., user switched to a different product).
    */
   private async handleRenewalPreferenceChange(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
-    const newProductId = data?.autoRenewProductId;
+    const userId = (data as any)?.appAccountToken;
+    const newProductId = (data as any)?.autoRenewProductId;
 
     if (!userId || !newProductId) {
       return;
@@ -183,8 +182,8 @@ export class AppleNotificationService {
    * Handles a failed renewal attempt.
    */
   private async handleFailedRenewal(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
-    const gracePeriodExpiresDate = data?.gracePeriodExpiresDate;
+    const userId = (data as any)?.appAccountToken;
+    const gracePeriodExpiresDate = (data as any)?.gracePeriodExpiresDate;
 
     if (!userId) {
       return;
@@ -202,8 +201,8 @@ export class AppleNotificationService {
    * Handles subscription expiration.
    */
   private async handleExpired(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
-    const expirationIntent = data?.expirationIntent;
+    const userId = (data as any)?.appAccountToken;
+    const expirationIntent = (data as any)?.expirationIntent;
 
     if (!userId) {
       return;
@@ -221,9 +220,9 @@ export class AppleNotificationService {
    * Handles a refund request.
    */
   private async handleRefund(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
-    const transactionId = data?.signedTransactionInfo?.transactionId;
-    const refundAmount = data?.signedTransactionInfo?.price;
+    const userId = (data as any)?.appAccountToken;
+    const transactionId = (data as any)?.signedTransactionInfo?.transactionId;
+    const refundAmount = (data as any)?.signedTransactionInfo?.price;
 
     if (!userId || !transactionId) {
       return;
@@ -241,7 +240,7 @@ export class AppleNotificationService {
    * Handles a revoke notification (e.g., family sharing removal).
    */
   private async handleRevoke(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
+    const userId = (data as any)?.appAccountToken;
 
     if (!userId) {
       return;
@@ -257,8 +256,8 @@ export class AppleNotificationService {
    * Handles a price increase notification.
    */
   private async handlePriceIncrease(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
-    const newPrice = data?.price;
+    const userId = (data as any)?.appAccountToken;
+    const newPrice = (data as any)?.price;
 
     if (!userId) {
       return;
@@ -274,7 +273,7 @@ export class AppleNotificationService {
    * Handles a refund declined notification.
    */
   private async handleRefundDeclined(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
+    const userId = (data as any)?.appAccountToken;
 
     if (!userId) {
       return;
@@ -287,8 +286,8 @@ export class AppleNotificationService {
    * Handles a consumption request (Apple asks for consumption data).
    */
   private async handleConsumptionRequest(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
-    const transactionId = data?.signedTransactionInfo?.transactionId;
+    const userId = (data as any)?.appAccountToken;
+    const transactionId = (data as any)?.signedTransactionInfo?.transactionId;
 
     if (!userId || !transactionId) {
       return;
@@ -306,8 +305,8 @@ export class AppleNotificationService {
    * Handles a renewal extension notification.
    */
   private async handleRenewalExtension(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
-    const extensionLength = data?.extensionLength;
+    const userId = (data as any)?.appAccountToken;
+    const extensionLength = (data as any)?.extensionLength;
 
     if (!userId) {
       return;
@@ -414,7 +413,7 @@ export class AppleNotificationService {
   private async revokeCoinsForRefund(
     userId: string,
     transactionId: string,
-    refundAmount: number,
+    _refundAmount: number,
   ): Promise<void> {
     // Determine how many coins were associated with the refunded purchase
     const coinsToRevoke = await this.getCoinsForTransaction(transactionId);
@@ -459,7 +458,7 @@ export class AppleNotificationService {
       .eq('transaction_id', transactionId)
       .single();
 
-    return data?.coins_added ?? 0;
+    return (data as any)?.coins_added ?? 0;
   }
 
   /**

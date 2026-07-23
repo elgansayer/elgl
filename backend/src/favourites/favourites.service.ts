@@ -12,17 +12,17 @@ export class FavouritesService {
     const supabase = this.supabaseService.getClient();
 
     // Fetch the message to store as payload
-    const { data: message, error: fetchError } = await supabase
+    const { data: message, error: fetchError } = (await supabase
       .from('chat_messages')
       .select('*')
       .eq('id', dto.message_id)
-      .single();
+      .single()) as { data: any; error: any };
 
     if (fetchError || !message) {
       throw new Error('Message not found');
     }
 
-    const { data, error } = await supabase
+    const { data, error } = (await supabase
       .from('favourites')
       .insert({
         user_id: userId,
@@ -31,10 +31,10 @@ export class FavouritesService {
         notes: dto.note_text || null,
       })
       .select()
-      .single();
+      .single()) as { data: any; error: any };
 
     if (error) throw error;
-    return data;
+    return data as any;
   }
 
   async removeFavourite(userId: string, favouriteId: string) {
@@ -58,6 +58,6 @@ export class FavouritesService {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data;
+    return data as any[];
   }
 }

@@ -5,7 +5,6 @@ import { MonetisationService } from './monetisation.service';
 import { AppleNotificationService } from './apple-notification.service';
 import { GooglePlayNotificationService } from './google-play-notification.service';
 import { SupabaseService } from '../supabase/supabase.service';
-import Stripe from 'stripe';
 
 const mockConstructEvent = jest.fn();
 

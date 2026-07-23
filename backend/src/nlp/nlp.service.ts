@@ -94,8 +94,8 @@ export class NlpService {
       );
     }
 
-    const data = await res.json();
-    const translatedText = data.translations[0].text;
+    const data = (await res.json()) as any;
+    const translatedText = (data as any).translations[0].text;
 
     // Get glossary/definition via DeepL glossary lookup (if available) or fallback
     let definition = '';
@@ -186,8 +186,8 @@ export class NlpService {
       );
     }
 
-    const detectData = await detectRes.json();
-    const detectedLang = detectData[0]?.language || 'en';
+    const detectData = (await detectRes.json()) as any;
+    const detectedLang = (detectData as any)[0]?.language || 'en';
 
     // Use Azure's dictionary lookup for grammar correction (works best for common languages)
     const dictRes = await fetch(
@@ -209,8 +209,8 @@ export class NlpService {
       );
     }
 
-    const dictData = await dictRes.json();
-    const correctedText = dictData[0]?.displayTarget || orig;
+    const dictData = (await dictRes.json()) as any;
+    const correctedText = (dictData as any)[0]?.displayTarget || orig;
     const errorsFound = orig === correctedText ? 0 : 1;
 
     // Generate explanation using Azure's translation with "to" parameter
@@ -297,8 +297,8 @@ export class NlpService {
       );
     }
 
-    const assessmentData = await assessmentRes.json();
-    const nBest = assessmentData.NBest?.[0];
+    const assessmentData = (await assessmentRes.json()) as any;
+    const nBest = (assessmentData as any).NBest?.[0];
 
     if (!nBest) {
       throw new BadRequestException(
@@ -307,19 +307,19 @@ export class NlpService {
     }
 
     const overallScore = Math.round(
-      nBest.PronunciationAssessment?.AccuracyScore || 85,
+      (nBest as any).PronunciationAssessment?.AccuracyScore || 85,
     );
     const words = dto.target_text.split(/\s+/).filter((w) => w.length > 0);
 
     const breakdown: WordBreakdownItem[] = words.map((w, index) => {
-      const wordResult = nBest.Words?.[index];
+      const wordResult = (nBest as any).Words?.[index];
       return {
         word: w,
         score: Math.round(
-          wordResult?.PronunciationAssessment?.AccuracyScore || 85,
+          (wordResult as any)?.PronunciationAssessment?.AccuracyScore || 85,
         ),
-        feedback: wordResult?.PronunciationAssessment?.ErrorType
-          ? `Error: ${wordResult.PronunciationAssessment.ErrorType}`
+        feedback: (wordResult as any)?.PronunciationAssessment?.ErrorType
+          ? `Error: ${(wordResult as any).PronunciationAssessment.ErrorType}`
           : 'Good pronunciation',
       };
     });

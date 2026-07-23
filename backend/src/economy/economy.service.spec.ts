@@ -168,7 +168,7 @@ describe('EconomyService', () => {
       } as any);
 
       // Mock rxjs firstValueFrom
-      const rxjs = require('rxjs');
+      const rxjs = await import('rxjs');
       jest.spyOn(rxjs, 'firstValueFrom').mockResolvedValue({
         data: {
           status: 0,

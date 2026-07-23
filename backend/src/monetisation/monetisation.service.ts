@@ -116,9 +116,9 @@ export class MonetisationService {
       event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
     } catch (err: any) {
       this.logger.error(
-        `Webhook signature verification failed: ${err.message}`,
+        `Webhook signature verification failed: ${(err as any).message}`,
       );
-      throw new BadRequestException(`Webhook Error: ${err.message}`);
+      throw new BadRequestException(`Webhook Error: ${(err as any).message}`);
     }
 
     this.logger.log(`Received verified Stripe Webhook event: ${event.type}`);
@@ -128,19 +128,19 @@ export class MonetisationService {
       event.type === 'customer.subscription.created'
     ) {
       const session = event.data.object as any;
-      const metadata = session.metadata;
+      const metadata = (session as any).metadata;
       if (metadata?.userId && metadata?.tier) {
         await this.updateVipStatusFromWebhook(
-          metadata.userId,
+          metadata.userId as string,
           true,
-          metadata.tier,
+          metadata.tier as string,
         );
       }
     } else if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object as any;
-      const metadata = subscription.metadata;
+      const metadata = (subscription as any).metadata;
       if (metadata?.userId) {
-        await this.updateVipStatusFromWebhook(metadata.userId, false, null);
+        await this.updateVipStatusFromWebhook(metadata.userId as string, false, null);
       }
     }
 

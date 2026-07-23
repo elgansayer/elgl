@@ -28,7 +28,7 @@ export class AppleNotificationController {
   @HttpCode(HttpStatus.OK)
   async handleNotification(
     @Body() body: { signedPayload: string },
-    @Headers('authorization') authHeader?: string,
+    @Headers('authorization') _authHeader?: string,
   ): Promise<{ status: string }> {
     this.logger.log('Received Apple server notification');
 

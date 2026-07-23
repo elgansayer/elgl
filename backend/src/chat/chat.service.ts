@@ -110,11 +110,11 @@ export class ChatService {
     const supabase = this.supabaseService.getClient();
 
     // Get the message to favourite
-    const { data: message, error: messageError } = await supabase
+    const { data: message, error: messageError } = (await supabase
       .from('chat_messages')
       .select('*')
       .eq('id', dto.message_id)
-      .single();
+      .single()) as { data: any; error: any };
 
     if (messageError || !message) {
       throw new Error('Message not found');

@@ -2,7 +2,6 @@ import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import * as crypto from 'crypto';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MonetisationService } from './monetisation.service';
 
@@ -57,20 +56,20 @@ export class GooglePlayNotificationService {
 
     try {
       // Google Play Developer Notifications come as a Pub/Sub message wrapper
-      const message = payload?.message;
+      const message = (payload as any)?.message;
       if (!message) {
         this.logger.warn('Google notification missing message');
         return { received: true, status: 'ignored' };
       }
 
       // Decode base64-encoded data
-      const data = message.data;
+      const data = (message as any).data;
       if (!data) {
         this.logger.warn('Google notification missing data');
         return { received: true, status: 'ignored' };
       }
 
-      const decodedData = Buffer.from(data, 'base64').toString('utf-8');
+      const decodedData = Buffer.from(data as string, 'base64').toString('utf-8');
       const notificationData: GooglePlayNotification = JSON.parse(decodedData);
 
       // Handle test notification
@@ -105,7 +104,7 @@ export class GooglePlayNotificationService {
   ): Promise<void> {
     if (!notification) return;
 
-    const { notificationType, purchaseToken, subscriptionId } = notification;
+    const { notificationType, purchaseToken, subscriptionId } = notification as any;
 
     // notificationType mapping:
     // 1 = SUBSCRIBED (new subscription)
@@ -255,7 +254,7 @@ export class GooglePlayNotificationService {
       .eq('purchase_token', purchaseToken)
       .single();
 
-    return data?.user_id || null;
+    return (data as any)?.user_id || null;
   }
 
   private async storePurchaseToken(

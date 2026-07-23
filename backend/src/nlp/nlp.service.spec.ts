@@ -127,14 +127,14 @@ describe('NlpService', () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ translations: [{ text: 'Hello / Welcome' }] }), // translation
+          json: () => Promise.resolve({ translations: [{ text: 'Hello / Welcome' }] }), // translation
         })
         .mockResolvedValueOnce({
           ok: true, // glossary check
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ translations: [{ text: 'Hello' }] }), // transliteration
+          json: () => Promise.resolve({ translations: [{ text: 'Hello' }] }), // transliteration
         });
       mockGuess.mockReturnValue([{ alpha2: 'es', score: 0.9 }]);
 
@@ -160,7 +160,7 @@ describe('NlpService', () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({
+          json: () => Promise.resolve({
             translations: [{ text: 'Translated [ja → en]: Konnichiwa' }],
           }),
         })
@@ -169,7 +169,7 @@ describe('NlpService', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ translations: [{ text: 'Konnichiwa' }] }),
+          json: () => Promise.resolve({ translations: [{ text: 'Konnichiwa' }] }),
         });
       mockGuess.mockReturnValue([{ alpha2: 'ja', score: 0.99 }]);
 
@@ -191,19 +191,19 @@ describe('NlpService', () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => [{ language: 'en' }],
+          json: () => Promise.resolve([{ language: 'en' }]),
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => [
+          json: () => Promise.resolve([
             { displayTarget: 'I went to the store yesterday.' },
-          ],
+          ]),
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => [
+          json: () => Promise.resolve([
             { translations: [{ text: 'Grammar correction' }] },
-          ],
+          ]),
         });
       const dto = { text: 'I go to store yesterday.' };
       const result = await service.grammarCheck('user-1', true, dto);
@@ -216,17 +216,17 @@ describe('NlpService', () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => [{ language: 'en' }],
+          json: () => Promise.resolve([{ language: 'en' }]),
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => [{ displayTarget: 'Everything is fine.' }],
+          json: () => Promise.resolve([{ displayTarget: 'Everything is fine.' }]),
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => [
+          json: () => Promise.resolve([
             { translations: [{ text: 'Grammar correction' }] },
-          ],
+          ]),
         });
       const dto = { text: 'Everything is fine.' };
       const result = await service.grammarCheck('user-1', true, dto);
@@ -239,17 +239,17 @@ describe('NlpService', () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => [{ language: 'en' }],
+          json: () => Promise.resolve([{ language: 'en' }]),
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => [{ displayTarget: 'Needs a period.' }],
+          json: () => Promise.resolve([{ displayTarget: 'Needs a period.' }]),
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => [
+          json: () => Promise.resolve([
             { translations: [{ text: 'Grammar correction' }] },
-          ],
+          ]),
         });
       const dto = { text: 'Needs a period' };
       const result = await service.grammarCheck('user-1', true, dto);
@@ -264,11 +264,11 @@ describe('NlpService', () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
-          arrayBuffer: async () => Buffer.from('audio'),
+          arrayBuffer: () => Promise.resolve(Buffer.from('audio')),
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({
+          json: () => Promise.resolve({
             RecognitionStatus: 'Success',
             NBest: [
               {
@@ -296,11 +296,11 @@ describe('NlpService', () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
-          arrayBuffer: async () => Buffer.from('audio'),
+          arrayBuffer: () => Promise.resolve(Buffer.from('audio')),
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({
+          json: () => Promise.resolve({
             RecognitionStatus: 'Success',
             NBest: [
               {

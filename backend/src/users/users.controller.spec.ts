@@ -7,7 +7,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 describe('UsersController', () => {
   let controller: UsersController;
   let usersService: UsersService;
-  let mediaService: MediaService;
+  let _mediaService: MediaService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
