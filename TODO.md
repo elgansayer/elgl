@@ -274,6 +274,7 @@
 - [x] Build frontend subscription page that calls `POST /monetisation/create-checkout-session` and redirects to Stripe Checkout.
 - [x] Create backend endpoint `POST /monetisation/create-checkout-session` that creates a Stripe Checkout session and returns the session URL. The frontend `SubscriptionPlansComponent` currently calls `/stripe/create-checkout-session` which does not exist; update it to call the correct endpoint.
 - [ ] Build "Restore Purchases" button for app store compliance.
+- [ ] Implement `restorePurchases()` method in `MonetisationService` that calls `POST /monetisation/restore-purchases` backend endpoint, verifies App Store/Google Play receipts, and updates VIP status accordingly.
 - [x] Refine `SubscriptionPlansComponent` to use dynamic pricing from plan data (price_ukp/price_usd) instead of hardcoded values, display dual-currency format "8 UKP / $10 USD" per AGENTS.md rules, and properly handle free plan display.
 - [ ] Add `stripe_price_id_yearly` field to frontend `SubscriptionPlan` interface and ensure yearly pricing uses the correct Stripe price ID.
 - [ ] Add `FRONTEND_URL` environment variable to backend configuration for Stripe success/cancel URLs.
