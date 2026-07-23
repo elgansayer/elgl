@@ -228,7 +228,7 @@
 ## Phase 16: Live Chat Micro-Interactions
 - [x] Implement WebSockets typing indicators ("User is typing...").
 - [x] Build Read Receipts (Sent vs Delivered vs Read checkmarks).
-- [ ] Add long-press context menu on mobile to copy, favourite, or report messages.
+- [STUCK] Add long-press context menu on mobile to copy, favourite, or report messages.
 - [ ] Implement long-press context menu component (`LongPressContextMenuComponent`) in Angular with options to copy, favourite, or report messages.
 - [ ] Actually implement the `LongPressContextMenuComponent` with:
   - Long-press detection (touchstart/touchend with timer) on message bubbles.
