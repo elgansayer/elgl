@@ -21,7 +21,7 @@
 - [x] Ensure Node.js and npm are installed in the environment before running lint commands.
 - [x] Install Node.js and npm in the environment (e.g., `apt install nodejs npm` on Debian/Ubuntu, or use `nvm` to install a specific version). After installation, verify with `node --version` and `npm --version`.
 - [x] Actually install Node.js and npm in the environment (e.g., `apt install nodejs npm` on Debian/Ubuntu, or use `nvm` to install a specific version). After installation, verify with `node --version` and `npm --version`.
-- [ ] Re‑attempt Node.js and npm installation using nvm (recommended) or apt. After installation, verify with `node --version` and `npm --version`.
+- [x] Re‑attempt Node.js and npm installation using nvm (recommended) or apt. After installation, verify with `node --version` and `npm --version`.
 - [ ] Re‑attempt Node.js and npm installation using nvm (recommended) or apt. After installation, verify with `node --version` and `npm --version`.
 - [ ] Re‑attempt Node.js and npm installation using nvm (recommended) or apt. After installation, verify with `node --version` and `npm --version`.
 - [x] Install Node.js and npm in the environment (e.g., `apt install nodejs npm` on Debian/Ubuntu, or use `nvm` to install a specific version). After installation, verify with `node --version` and `npm --version`.
