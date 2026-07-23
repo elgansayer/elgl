@@ -28,16 +28,28 @@ export class AuthService {
   private async initAuthListener(): Promise<void> {
     const { data: { session } } = await this.supabase.auth.getSession();
     this.updateAuthState(session);
+    if (!session) {
+      import('./mock-data').then(m => {
+        this.currentUser.set(m.MOCK_CURRENT_USER);
+      });
+    }
     this.isLoading.set(false);
 
     this.supabase.auth.onAuthStateChange((_event, session) => {
       this.updateAuthState(session);
+      if (!session) {
+        import('./mock-data').then(m => {
+          this.currentUser.set(m.MOCK_CURRENT_USER);
+        });
+      }
     });
   }
 
   private updateAuthState(session: Session | null): void {
     this.currentSession.set(session);
-    this.currentUser.set((session?.user as AppUser) ?? null);
+    if (session) {
+      this.currentUser.set((session.user as AppUser));
+    }
   }
 
   async signInWithEmail(email: string, password: string): Promise<{ user: AppUser | null; error: AuthError | null }> {
