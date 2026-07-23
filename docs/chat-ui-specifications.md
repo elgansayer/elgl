@@ -1,3 +1,4 @@
+<!-- This file is a specification document, not code. -->
 # Chat UI Component Specifications (Pixel-Perfect)
 
 ## 1. Message Bubbles
