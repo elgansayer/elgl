@@ -12,6 +12,15 @@
 
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
+
+// Ensure npm is available before proceeding
+try {
+  execSync('which npm', { stdio: 'ignore' });
+} catch {
+  console.error('❌ npm is not installed. Please install Node.js and npm.');
+  process.exit(1);
+}
 
 const ROOT_DIR = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 
