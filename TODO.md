@@ -62,6 +62,7 @@
 - [x] Actually execute the export command in the environment: run `export PATH=$PATH:/usr/local/bin && cd backend && npm run lint`. (Previous task was marked done but the command may not have been executed.)
 - [x] Run `export PATH=$PATH:/usr/local/bin && cd backend && npm run lint` to ensure npm is in PATH and lint passes.
 - [ ] Verify that `cd backend && npm run lint` passes without errors after the PATH export.
+- [ ] Ensure that `/usr/local/bin` is in the PATH for all shell sessions (e.g., add `export PATH=$PATH:/usr/local/bin` to `~/.bashrc` or `~/.profile`).
 - [ ] Actually run `cd backend && npm run lint` and confirm it exits with code 0 (no errors). If it fails, fix the lint errors and re-run until it passes.
 - [ ] Actually install Node.js and npm using direct binary download and ensure PATH includes /usr/local/bin, then run `cd backend && npm run lint` to verify.
 - [ ] Actually install Node.js and npm using direct binary download and ensure PATH includes /usr/local/bin, then run `cd backend && npm run lint` to verify.
