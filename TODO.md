@@ -251,7 +251,7 @@
 - [x] Actually wire the `LongPressContextMenuComponent` outputs (`copy`, `favourite`, `report`) to the corresponding service calls in the parent chat component (`ChatRoomComponent` or `MessageBubbleComponent`). Currently the component emits events but no parent subscribes to them, so the actions are never executed.
 
 ## Phase 17: Audio & Video Calling (WebRTC / LiveKit)
-- [ ] Build Incoming Call modal with ringtone audio and accept/reject controls.
+- [STUCK] Build Incoming Call modal with ringtone audio and accept/reject controls.
 - [ ] Implement active VoIP Call UI (Mute, Speakerphone, End Call).
 - [ ] Build 1-on-1 Video Call interface with local preview overlay.
 - [ ] Implement IncomingCallComponent with ringtone audio playback, accept/reject buttons, and integration with LiveKit for incoming call detection.
