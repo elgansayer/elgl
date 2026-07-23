@@ -67,7 +67,11 @@ export class User {
   @Column({ type: 'float', default: 1.0 })
   correction_ratio: number;
 
-  @Column({ type: 'boolean', generatedType: 'STORED', asExpression: '(study_streak_days > 7 AND correction_ratio >= 0.8)' })
+  @Column({
+    type: 'boolean',
+    generatedType: 'STORED',
+    asExpression: '(study_streak_days > 7 AND correction_ratio >= 0.8)',
+  })
   is_serious_learner: boolean;
 
   @Column({ type: 'boolean', default: false })
@@ -151,7 +155,11 @@ export class User {
   @Column({ type: 'float', default: 1.0 })
   correction_ratio: number;
 
-  @Column({ type: 'boolean', generatedType: 'STORED', asExpression: '(study_streak_days > 7 AND correction_ratio >= 0.8)' })
+  @Column({
+    type: 'boolean',
+    generatedType: 'STORED',
+    asExpression: '(study_streak_days > 7 AND correction_ratio >= 0.8)',
+  })
   is_serious_learner: boolean;
 
   @Column({ type: 'boolean', default: false })
