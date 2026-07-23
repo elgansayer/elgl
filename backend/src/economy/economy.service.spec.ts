@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EconomyService } from './economy.service';
+import { ConfigService } from '@nestjs/config';
+import { HttpService } from '@nestjs/axios';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
@@ -56,6 +58,22 @@ describe('EconomyService', () => {
           provide: CentrifugoService,
           useValue: {
             publish: jest.fn().mockResolvedValue(true),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockImplementation((key) => {
+              if (key === 'APPLE_SHARED_SECRET') return 'secret';
+              return null;
+            }),
+          },
+        },
+        {
+          provide: HttpService,
+          useValue: {
+            post: jest.fn(),
+            get: jest.fn(),
           },
         },
       ],
@@ -133,9 +151,24 @@ describe('EconomyService', () => {
         error: null,
       });
 
+      // Mock HttpService for verifyReceipt
+      jest.spyOn(service['httpService'], 'post').mockReturnValue({
+        toPromise: () => Promise.resolve({ data: { status: 0, latest_receipt_info: [{ product_id: 'com.linguaexchange.coins.medium', transaction_id: 'txn123' }] } }),
+      } as any);
+
+      // Mock rxjs firstValueFrom
+      const rxjs = require('rxjs');
+      jest.spyOn(rxjs, 'firstValueFrom').mockResolvedValue({
+        data: { status: 0, latest_receipt_info: [{ product_id: 'com.linguaexchange.coins.medium', transaction_id: 'txn123' }] }
+      });
+
+      // Mock checkDuplicateTransaction
+      mockQueryBuilder.maybeSingle = jest.fn().mockResolvedValue({ data: null });
+
       const result = await service.purchaseCoins('user-1', {
         amount: 500,
-        package_id: 'pack_500',
+        package_id: 'coins_medium',
+        receipt_token: 'ios_token123',
       });
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
@@ -143,7 +176,7 @@ describe('EconomyService', () => {
         coins_balance: 600,
       });
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'user-1');
-      expect(result).toEqual({ coins_balance: 600, package_id: 'pack_500' });
+      expect(result).toEqual({ coins: 500, newBalance: 600 });
     });
   });
 

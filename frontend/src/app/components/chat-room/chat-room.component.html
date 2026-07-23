@@ -39,10 +39,13 @@
 
     @for (msg of messages(); track msg.id) {
       <app-long-press-context-menu
-        [message]="msg"
-        [channelId]="roomId"
-        (favouriteAdded)="bookmark(msg)"
-        (reportSubmitted)="reportMessage(msg)"
+        [messageId]="msg.id"
+        [messageContent]="msg.text_content ?? ''"
+        [messageType]="msg.message_type"
+        [senderId]="msg.sender_id"
+        [roomId]="roomId"
+        (favourite)="bookmark(msg)"
+        (report)="reportMessage(msg)"
       >
         <div
           [class]="

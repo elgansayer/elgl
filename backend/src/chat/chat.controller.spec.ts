@@ -113,17 +113,14 @@ describe('ChatController', () => {
 
     it('should call chatService.addFavourite when user is provided', async () => {
       const dto: any = { message_id: 'msg-1' };
-      const favouriteRecord: any = { id: 'fav-1', message_id: 'msg-1' };
-      (chatService.addFavourite as jest.Mock).mockResolvedValue(
-        favouriteRecord,
-      );
+      (chatService.addFavourite as jest.Mock).mockResolvedValue(undefined);
 
       const result = await controller.addFavourite(
         { id: 'user-1' } as any,
         dto,
       );
       expect(chatService.addFavourite).toHaveBeenCalledWith('user-1', dto);
-      expect(result).toEqual(favouriteRecord);
+      expect(result).toEqual({ success: true });
     });
   });
 

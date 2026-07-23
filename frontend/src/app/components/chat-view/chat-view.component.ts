@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { ChatMessageComponent } from '../chat-message/chat-message.component';
 import { ChatService, ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-chat-view',
   standalone: true,
-  imports: [CommonModule, ChatMessageComponent],
+  imports: [CommonModule, FormsModule, ChatMessageComponent],
   template: `
     <div class="flex flex-col h-full">
       <div class="flex-1 overflow-y-auto p-4 space-y-2">

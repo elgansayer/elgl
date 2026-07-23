@@ -2,7 +2,7 @@ import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
-import { LongPressContextMenuComponent } from '../../shared/long-press-context-menu/long-press-context-menu.component';
+import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { FavouriteService } from '../../services/favourite.service';
 import { SafetyService } from '../../services/safety.service';
 

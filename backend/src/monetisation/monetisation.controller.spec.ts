@@ -1,11 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MonetisationController } from './monetisation.controller';
 import { MonetisationService } from './monetisation.service';
+import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { BadRequestException } from '@nestjs/common';
 
 describe('MonetisationController', () => {
   let controller: MonetisationController;
   let monetisationService: MonetisationService;
+  let appleReceiptValidatorService: AppleReceiptValidatorService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -14,12 +17,19 @@ describe('MonetisationController', () => {
         {
           provide: MonetisationService,
           useValue: {
-            upgradeUser: jest.fn(),
             handleStripeWebhook: jest.fn(),
+            handleAppleWebhook: jest.fn(),
+            handleGoogleWebhook: jest.fn(),
             generateApiKey: jest.fn(),
             getDeveloperAnalytics: jest.fn(),
             getDiagnosticLogs: jest.fn(),
             createDiagnosticLog: jest.fn(),
+          },
+        },
+        {
+          provide: AppleReceiptValidatorService,
+          useValue: {
+            validateReceipt: jest.fn(),
           },
         },
       ],
@@ -30,6 +40,9 @@ describe('MonetisationController', () => {
 
     controller = module.get<MonetisationController>(MonetisationController);
     monetisationService = module.get<MonetisationService>(MonetisationService);
+    appleReceiptValidatorService = module.get<AppleReceiptValidatorService>(
+      AppleReceiptValidatorService,
+    );
   });
 
   afterEach(() => {
@@ -40,37 +53,59 @@ describe('MonetisationController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('upgradeVip', () => {
-    it('should return null if user is not provided', async () => {
-      const result = await controller.upgradeVip(null, {} as any);
-      expect(result).toBeNull();
-      expect(monetisationService.upgradeUser).not.toHaveBeenCalled();
+  describe('handleStripeWebhook', () => {
+    it('should throw BadRequestException if signature is missing', async () => {
+      await expect(
+        controller.handleStripeWebhook('', { rawBody: Buffer.from('') } as any),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it('should call service upgradeUser when user is provided', async () => {
-      const dto: any = { tier: 'consumer' };
-      const row: any = { id: 'user-1', is_vip: true, vip_tier: 'consumer' };
-      (monetisationService.upgradeUser as jest.Mock).mockResolvedValue(row);
-
-      const result = await controller.upgradeVip({ id: 'user-1' } as any, dto);
-      expect(monetisationService.upgradeUser).toHaveBeenCalledWith(
-        'user-1',
-        dto,
-      );
-      expect(result).toEqual(row);
-    });
-  });
-
-  describe('handleWebhook', () => {
     it('should pass webhook DTO to service and return result', async () => {
-      const dto: any = { type: 'checkout.session.completed' };
       const response = { received: true, status: 'processed' };
       (monetisationService.handleStripeWebhook as jest.Mock).mockResolvedValue(
         response,
       );
+      const rawBody = Buffer.from('test');
 
-      const result = await controller.handleWebhook(dto);
-      expect(monetisationService.handleStripeWebhook).toHaveBeenCalledWith(dto);
+      const result = await controller.handleStripeWebhook('sig', {
+        rawBody,
+      } as any);
+      expect(monetisationService.handleStripeWebhook).toHaveBeenCalledWith(
+        rawBody,
+        'sig',
+      );
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('handleAppleWebhook', () => {
+    it('should pass webhook payload to service', async () => {
+      const payload = { notificationType: 'test' };
+      const response = { received: true, status: 'processed' };
+      (monetisationService.handleAppleWebhook as jest.Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.handleAppleWebhook(payload);
+      expect(monetisationService.handleAppleWebhook).toHaveBeenCalledWith(
+        payload,
+      );
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('handleGoogleWebhook', () => {
+    it('should pass webhook payload to service', async () => {
+      const payload = { version: '1.0' };
+      const response = { received: true, status: 'processed' };
+      (monetisationService.handleGoogleWebhook as jest.Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.handleGoogleWebhook(payload);
+      expect(monetisationService.handleGoogleWebhook).toHaveBeenCalledWith(
+        payload,
+      );
       expect(result).toEqual(response);
     });
   });
@@ -111,7 +146,7 @@ describe('MonetisationController', () => {
         tier: 'developer',
         total_api_calls_today: 1420,
         avg_latency_ms: 18,
-        pricing_info: 'Developer Tier: 20 UKP / $26 USD per month',
+        pricing_info: 'Developer Tier',
       };
       (
         monetisationService.getDeveloperAnalytics as jest.Mock
@@ -123,48 +158,80 @@ describe('MonetisationController', () => {
       );
       expect(result).toEqual(response);
     });
+  });
 
-    describe('getDiagnosticLogs', () => {
-      it('should return logs from service', async () => {
-        const logs = [{ id: 'log-1', category: 'POSTGIS' }];
-        (monetisationService.getDiagnosticLogs as jest.Mock).mockResolvedValue(
-          logs,
-        );
+  describe('getDiagnosticLogs', () => {
+    it('should return logs from service', async () => {
+      const logs = [{ id: 'log-1', category: 'POSTGIS' }];
+      (monetisationService.getDiagnosticLogs as jest.Mock).mockResolvedValue(
+        logs,
+      );
 
-        const result = await controller.getDiagnosticLogs();
-        expect(monetisationService.getDiagnosticLogs).toHaveBeenCalled();
-        expect(result).toEqual(logs);
-      });
+      const result = await controller.getDiagnosticLogs();
+      expect(monetisationService.getDiagnosticLogs).toHaveBeenCalled();
+      expect(result).toEqual(logs);
+    });
+  });
+
+  describe('createDiagnosticLog', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.createDiagnosticLog(null, {} as any);
+      expect(result).toBeNull();
+      expect(monetisationService.createDiagnosticLog).not.toHaveBeenCalled();
     });
 
-    describe('createDiagnosticLog', () => {
-      it('should return null if user is not provided', async () => {
-        const result = await controller.createDiagnosticLog(null, {} as any);
-        expect(result).toBeNull();
-        expect(monetisationService.createDiagnosticLog).not.toHaveBeenCalled();
-      });
+    it('should create log through service when user is provided', async () => {
+      const dto: any = {
+        category: 'REDIS',
+        status: 'success',
+        message: 'ok',
+      };
+      const log = { id: 'log-2', ...dto };
+      (monetisationService.createDiagnosticLog as jest.Mock).mockResolvedValue(
+        log,
+      );
 
-      it('should create log through service when user is provided', async () => {
-        const dto: any = {
-          category: 'REDIS',
-          status: 'success',
-          message: 'ok',
-        };
-        const log = { id: 'log-2', ...dto };
-        (
-          monetisationService.createDiagnosticLog as jest.Mock
-        ).mockResolvedValue(log);
+      const result = await controller.createDiagnosticLog(
+        { id: 'user-1' } as any,
+        dto,
+      );
+      expect(monetisationService.createDiagnosticLog).toHaveBeenCalledWith(
+        'user-1',
+        dto,
+      );
+      expect(result).toEqual(log);
+    });
+  });
 
-        const result = await controller.createDiagnosticLog(
-          { id: 'user-1' } as any,
-          dto,
-        );
-        expect(monetisationService.createDiagnosticLog).toHaveBeenCalledWith(
-          'user-1',
-          dto,
-        );
-        expect(result).toEqual(log);
-      });
+  describe('validateAppleReceipt', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.validateAppleReceipt(null, {} as any);
+      expect(result).toBeNull();
+      expect(
+        appleReceiptValidatorService.validateReceipt,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should call appleReceiptValidatorService.validateReceipt when user is provided', async () => {
+      const dto: any = {
+        receipt_data: 'token123',
+        exclude_old_transactions: true,
+      };
+      const response = { valid: true };
+      (
+        appleReceiptValidatorService.validateReceipt as jest.Mock
+      ).mockResolvedValue(response);
+
+      const result = await controller.validateAppleReceipt(
+        { id: 'user-1' } as any,
+        dto,
+      );
+      expect(appleReceiptValidatorService.validateReceipt).toHaveBeenCalledWith(
+        'user-1',
+        'token123',
+        true,
+      );
+      expect(result).toEqual(response);
     });
   });
 });

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { MediaService } from './media.service';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { SupabaseService } from '../supabase/supabase.service';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 jest.mock('@aws-sdk/client-s3', () => ({
@@ -39,6 +40,16 @@ describe('MediaService', () => {
               if (key === 'CLOUDFLARE_R2_PUBLIC_DOMAIN')
                 return 'https://media.hellotalk.mock';
               return null;
+            }),
+          },
+        },
+        {
+          provide: SupabaseService,
+          useValue: {
+            getClient: jest.fn().mockReturnValue({
+              from: jest.fn().mockReturnThis(),
+              update: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
             }),
           },
         },

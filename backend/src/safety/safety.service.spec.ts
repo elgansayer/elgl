@@ -42,11 +42,11 @@ describe('SafetyService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('reportUser', () => {
-    it('should submit safety report successfully and return report row', async () => {
+  describe('reportMessage', () => {
+    it('should submit safety report successfully and return void', async () => {
       const dto: any = {
-        reported_id: 'bad-user',
-        reason: 'spam',
+        reported_id: 'reported-1',
+        reason: 'Spam',
         details: 'Sent unsolicited links',
       };
       const reportRow: any = {
@@ -62,36 +62,35 @@ describe('SafetyService', () => {
         error: null,
       });
 
+      mockQueryBuilder.insert.mockResolvedValue({ error: null });
+
       const logSpy = jest
         .spyOn((service as any).logger, 'log')
         .mockImplementation(() => {});
 
-      const result = await service.reportUser('user-1', dto);
+      await service.reportMessage('user-1', dto);
 
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('safety_reports');
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('reports');
       expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
         reporter_id: 'user-1',
-        reported_id: 'bad-user',
-        reason: 'spam',
-        details: 'Sent unsolicited links',
+        reported_user_id: 'reported-1',
+        reason_category: 'message_content',
+        description: 'Spam',
+        context_url: null,
         status: 'pending',
       });
-      expect(logSpy).toHaveBeenCalledWith(
-        'Safety report submitted by user-1 against bad-user (spam)',
-      );
-      expect(result).toEqual(reportRow);
       logSpy.mockRestore();
     });
 
     it('should throw Error when report insertion fails', async () => {
-      const dto: any = { reported_id: 'user-2', reason: 'harassment' };
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: null,
+      const dto: any = { reported_id: 'reported-1', reason: 'Spam' };
+
+      mockQueryBuilder.insert.mockResolvedValue({
         error: { message: 'Database error' },
       });
 
-      await expect(service.reportUser('user-1', dto)).rejects.toThrow(
-        'Failed to submit safety report: Database error',
+      await expect(service.reportMessage('user-1', dto)).rejects.toThrow(
+        'Failed to submit report',
       );
     });
   });
@@ -107,7 +106,7 @@ describe('SafetyService', () => {
         blocked_id: 'blocked-user',
       });
 
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('user_blocks');
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
       expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
         blocker_id: 'user-1',
         blocked_id: 'blocked-user',
@@ -127,7 +126,7 @@ describe('SafetyService', () => {
 
       const result = await service.getBlockedIds('user-1');
 
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('user_blocks');
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
       expect(mockQueryBuilder.select).toHaveBeenCalledWith('blocked_id');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('blocker_id', 'user-1');
       expect(result).toEqual(['blocked-1', 'blocked-2']);

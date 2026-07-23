@@ -35,7 +35,7 @@ export class HobbyTagsService {
   private readonly apiUrl = `${environment.apiUrl}/hobby-tags`;
 
   getAllTags(category?: string): Observable<HobbyTag[]> {
-    const params = category ? { category } : {};
+    const params: Record<string, string> = category ? { category } : {};
     return this.http.get<HobbyTag[]>(this.apiUrl, { params });
   }
 

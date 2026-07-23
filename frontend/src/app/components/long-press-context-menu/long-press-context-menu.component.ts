@@ -18,7 +18,7 @@ export interface ContextMenuOption {
       class="relative inline-block"
       (contextmenu)="onRightClick($event)"
       (touchstart)="onTouchStart($event)"
-      (touchend)="onTouchEnd($event)"
+      (touchend)="onTouchEnd()"
       (touchmove)="onTouchMove()"
     >
       <ng-content />
@@ -188,7 +188,7 @@ export class LongPressContextMenuComponent implements AfterViewInit {
     this.isOpen.set(true);
   }
 
-  private onOptionClick(optionId: string): void {
+  onOptionClick(optionId: string): void {
     const id = this.messageId();
     const content = this.messageContent();
     const msgType = this.messageType();
@@ -212,7 +212,7 @@ export class LongPressContextMenuComponent implements AfterViewInit {
     this.isOpen.set(false);
   }
 
-  private trackByOptionId(_index: number, option: ContextMenuOption): string {
+  trackByOptionId(_index: number, option: ContextMenuOption): string {
     return option.id;
   }
 }

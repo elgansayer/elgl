@@ -1,7 +1,23 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { MonetisationService } from './monetisation.service';
+import { AppleNotificationService } from './apple-notification.service';
+import { GooglePlayNotificationService } from './google-play-notification.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import Stripe from 'stripe';
+
+const mockConstructEvent = jest.fn();
+
+jest.mock('stripe', () => {
+  return jest.fn().mockImplementation(() => {
+    return {
+      webhooks: {
+        constructEvent: (...args: any[]) => mockConstructEvent(...args),
+      },
+    };
+  });
+});
 
 describe('MonetisationService', () => {
   let service: MonetisationService;
@@ -27,9 +43,31 @@ describe('MonetisationService', () => {
       providers: [
         MonetisationService,
         {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key) => {
+              if (key === 'STRIPE_WEBHOOK_SECRET') return 'whsec_test';
+              if (key === 'STRIPE_SECRET_KEY') return 'sk_test';
+              return null;
+            }),
+          },
+        },
+        {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+          },
+        },
+        {
+          provide: AppleNotificationService,
+          useValue: {
+            handleNotification: jest.fn(),
+          },
+        },
+        {
+          provide: GooglePlayNotificationService,
+          useValue: {
+            handleNotification: jest.fn(),
           },
         },
       ],
@@ -46,50 +84,15 @@ describe('MonetisationService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('upgradeUser', () => {
-    it('should update user VIP status and return user row', async () => {
-      const updatedUser = {
-        id: 'user-1',
-        is_vip: true,
-        vip_tier: 'consumer',
-        developer_api_key: null,
-        email: 'test@hellotalk.com',
-      };
-      mockQueryBuilder.single.mockResolvedValue({
-        data: updatedUser,
-        error: null,
-      });
 
-      const result = await service.upgradeUser('user-1', {
-        tier: 'consumer',
-      } as any);
-
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
-      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
-        is_vip: true,
-        vip_tier: 'consumer',
-      });
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'user-1');
-      expect(result).toEqual(updatedUser);
-    });
-
-    it('should throw Error when upgrade update fails', async () => {
-      mockQueryBuilder.single.mockResolvedValue({
-        data: null,
-        error: { message: 'Database constraint violation' },
-      });
-
-      await expect(
-        service.upgradeUser('user-1', { tier: 'developer' } as any),
-      ).rejects.toThrow(
-        'Failed to upgrade VIP status: Database constraint violation',
-      );
-    });
-  });
 
   describe('handleStripeWebhook', () => {
+    beforeEach(() => {
+      mockConstructEvent.mockReset();
+    });
+
     it('should upgrade user when checkout.session.completed with userId and tier', async () => {
-      const dto: any = {
+      const event: any = {
         type: 'checkout.session.completed',
         data: {
           object: {
@@ -100,8 +103,9 @@ describe('MonetisationService', () => {
           },
         },
       };
+      mockConstructEvent.mockReturnValue(event);
 
-      const result = await service.handleStripeWebhook(dto);
+      const result = await service.handleStripeWebhook(Buffer.from(''), 'sig');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
       expect(mockQueryBuilder.update).toHaveBeenCalledWith({
@@ -113,7 +117,7 @@ describe('MonetisationService', () => {
     });
 
     it('should upgrade user when customer.subscription.created with metadata', async () => {
-      const dto: any = {
+      const event: any = {
         type: 'customer.subscription.created',
         data: {
           object: {
@@ -124,8 +128,9 @@ describe('MonetisationService', () => {
           },
         },
       };
+      mockConstructEvent.mockReturnValue(event);
 
-      const result = await service.handleStripeWebhook(dto);
+      const result = await service.handleStripeWebhook(Buffer.from(''), 'sig');
 
       expect(mockQueryBuilder.update).toHaveBeenCalledWith({
         is_vip: true,
@@ -135,7 +140,7 @@ describe('MonetisationService', () => {
     });
 
     it('should revoke VIP status when customer.subscription.deleted', async () => {
-      const dto: any = {
+      const event: any = {
         type: 'customer.subscription.deleted',
         data: {
           object: {
@@ -145,8 +150,9 @@ describe('MonetisationService', () => {
           },
         },
       };
+      mockConstructEvent.mockReturnValue(event);
 
-      const result = await service.handleStripeWebhook(dto);
+      const result = await service.handleStripeWebhook(Buffer.from(''), 'sig');
 
       expect(mockQueryBuilder.update).toHaveBeenCalledWith({
         is_vip: false,
@@ -157,12 +163,13 @@ describe('MonetisationService', () => {
     });
 
     it('should acknowledge webhook when event type is unrecognized or metadata missing', async () => {
-      const dto: any = {
+      const event: any = {
         type: 'unknown.event',
         data: { object: {} },
       };
+      mockConstructEvent.mockReturnValue(event);
 
-      const result = await service.handleStripeWebhook(dto);
+      const result = await service.handleStripeWebhook(Buffer.from(''), 'sig');
 
       expect(mockQueryBuilder.update).not.toHaveBeenCalled();
       expect(result).toEqual({ received: true, status: 'processed' });

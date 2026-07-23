@@ -34,7 +34,7 @@ const AVAILABLE_GIFTS: GiftItem[] = [
     <div class="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl w-72 max-h-96 overflow-hidden">
       <!-- Header -->
       <div class="p-3 border-b border-gray-700">
-        <h3 class="text-sm font-semibold text-white">{{ 'giftPicker.title' | translate }}</h3>
+        <h3 class="text-sm font-semibold text-white">{{ 'giftPicker.title' | t }}</h3>
       </div>
 
       <!-- Category filter -->

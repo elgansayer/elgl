@@ -1,11 +1,11 @@
 import { Component, input, output, signal } from '@angular/core';
-import { ImageCropperModule } from 'ngx-image-cropper';
+import { ImageCropperComponent } from 'ngx-image-cropper';
 import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-cover-photo-cropper',
   standalone: true,
-  imports: [CommonModule, ImageCropperModule],
+  imports: [CommonModule, ImageCropperComponent],
   template: `
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70" (click)="cancel.emit()">
       <div class="bg-gray-900 rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl" (click)="$event.stopPropagation()">
@@ -50,8 +50,10 @@ export class CoverPhotoCropperComponent {
 
   readonly croppedBlob = signal<Blob | null>(null);
 
-  onImageCropped(event: { blob: Blob; objectUrl: string }) {
-    this.croppedBlob.set(event.blob);
+  onImageCropped(event: any) {
+    if (event.blob) {
+      this.croppedBlob.set(event.blob);
+    }
   }
 
   onLoadImageFailed() {

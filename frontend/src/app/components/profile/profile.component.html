@@ -5,7 +5,7 @@
 
   @if (!isLoading() && profile()) {
     <app-cover-photo-uploader
-      [currentCoverUrl]="profile()?.cover_photo_url"
+      [currentCoverUrl]="profile()?.cover_photo_url || ''"
       (coverPhotoUploaded)="onCoverUploaded($event)"
     />
     <section class="app-card app-padded">
