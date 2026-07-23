@@ -41,10 +41,11 @@ export class StripeService {
     let priceId: string | undefined;
 
     if (interval === 'month') {
-      unitAmount = plan.price_usd * 100; // Stripe uses cents
+      // Monthly: £8 / $10 USD
+      unitAmount = 1000; // $10.00 in cents
       priceId = plan.stripe_price_id;
     } else if (interval === 'year') {
-      // Yearly pricing: 50 UKP / $63 USD
+      // Yearly: £50 / $63 USD
       unitAmount = 6300; // $63.00 in cents
       priceId = plan.stripe_price_id_yearly;
     } else {
@@ -54,7 +55,6 @@ export class StripeService {
     }
 
     // For yearly, we need to create a price or use a fixed one
-    // We'll create a price object dynamically for yearly
     let priceData:
       Stripe.Checkout.SessionCreateParams.LineItem.PriceData | undefined;
     if (interval === 'year' || !priceId) {

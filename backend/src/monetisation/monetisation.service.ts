@@ -123,17 +123,19 @@ export class MonetisationService {
 
     this.logger.log(`Received verified Stripe Webhook event: ${event.type}`);
 
-    if (
-      event.type === 'checkout.session.completed' ||
-      event.type === 'customer.subscription.created'
-    ) {
+    if (event.type === 'checkout.session.completed') {
       const session = event.data.object as any;
       const metadata = session.metadata;
-      if (metadata?.userId && metadata?.tier) {
+      if (metadata?.userId) {
+        // Determine tier based on interval
+        const tier = metadata.interval === 'year' 
+          ? 'developer_20_ukp_26_usd' 
+          : 'consumer_8_ukp_10_usd';
+        
         await this.updateVipStatusFromWebhook(
           metadata.userId as string,
           true,
-          metadata.tier as string,
+          tier,
         );
       }
     } else if (event.type === 'customer.subscription.deleted') {

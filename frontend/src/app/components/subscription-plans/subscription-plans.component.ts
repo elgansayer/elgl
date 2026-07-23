@@ -1,10 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { SubscriptionPlansService, SubscriptionPlan } from '../../services/subscription-plans.service';
-import { StripeService } from '../../services/stripe.service';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-subscription-plans',
@@ -38,7 +39,7 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
               class="px-6 py-2 rounded-full font-medium transition-all duration-200"
             >
               Yearly
-              <span class="text-xs ml-1 text-green-400">Save 34%</span>
+              <span class="text-xs ml-1 text-green-400">Save 48%</span>
             </button>
           </div>
         </div>
@@ -65,7 +66,7 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
                 <div class="mb-6">
                   <div class="flex items-baseline">
                     <span class="text-4xl font-bold text-white">
-                      ${{ getDisplayPrice(plan) }}
+                      {{ getDisplayPrice(plan) }}
                     </span>
                     <span class="text-slate-400 ml-2">/{{ billingInterval() }}</span>
                   </div>
@@ -134,7 +135,7 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 })
 export class SubscriptionPlansComponent {
   private plansService = inject(SubscriptionPlansService);
-  private stripeService = inject(StripeService);
+  private http = inject(HttpClient);
   private router = inject(Router);
 
   readonly plans = signal<SubscriptionPlan[]>([]);
@@ -161,21 +162,30 @@ export class SubscriptionPlansComponent {
   }
 
   getDisplayPrice(plan: SubscriptionPlan): string {
-    if (plan.price_usd === 0) return '0';
+    if (plan.price_usd === 0) return 'Free';
     if (this.billingInterval() === 'year') {
-      return '63'; // Yearly price: $63 USD
+      // Yearly price: £50 / $63 USD
+      return '£50';
     }
-    return plan.price_usd.toString();
+    // Monthly price: £8 / $10 USD
+    return '£8';
   }
 
   onSelectPlan(plan: SubscriptionPlan): void {
     if (plan.price_usd === 0) return;
     
     this.loading.set(true);
-    this.stripeService.createCheckoutSession(plan.id, this.billingInterval()).subscribe({
+    
+    // Map plan to interval type
+    const planType = this.billingInterval() === 'year' ? 'yearly' : 'monthly';
+    
+    this.http.post<{ sessionUrl: string; sessionId: string }>(
+      `${environment.apiUrl}/stripe/create-checkout-session`,
+      { planType }
+    ).subscribe({
       next: (response) => {
         // Redirect to Stripe Checkout
-        window.location.href = response.url;
+        window.location.href = response.sessionUrl;
       },
       error: (err) => {
         console.error('Failed to create checkout session', err);

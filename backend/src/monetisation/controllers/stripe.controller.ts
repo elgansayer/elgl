@@ -16,11 +16,8 @@ import { IsString, IsIn, IsNotEmpty } from 'class-validator';
 export class CreateCheckoutSessionDto {
   @IsString()
   @IsNotEmpty()
-  planId!: string;
-
-  @IsString()
-  @IsIn(['month', 'year'])
-  interval!: 'month' | 'year';
+  @IsIn(['monthly', 'yearly'])
+  planType!: 'monthly' | 'yearly';
 }
 
 @Controller('stripe')
@@ -33,10 +30,14 @@ export class StripeController {
     @Body() dto: CreateCheckoutSessionDto,
     @CurrentUser() user: { id: string },
   ) {
+    // Map planType to planId and interval
+    const planId = dto.planType === 'yearly' ? 'yearly_vip' : 'monthly_vip';
+    const interval = dto.planType === 'yearly' ? 'year' : 'month';
+    
     return this.stripeService.createCheckoutSession(
-      dto.planId,
+      planId,
       user.id,
-      dto.interval,
+      interval,
     );
   }
 
