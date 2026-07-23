@@ -30,6 +30,7 @@
 - [ ] Install Node.js and npm in the environment (e.g., `apt install nodejs npm` on Debian/Ubuntu, or use `nvm` to install a specific version). After installation, verify with `node --version` and `npm --version`.
 - [ ] Actually install Node.js and npm in the environment (e.g., `apt install nodejs npm` on Debian/Ubuntu, or use `nvm` to install a specific version). After installation, verify with `node --version` and `npm --version`.
 - [ ] Install Node.js and npm in the environment (e.g., `apt install nodejs npm` on Debian/Ubuntu, or use `nvm` to install a specific version). After installation, verify with `node --version` and `npm --version`.
+- [ ] Install Node.js and npm in the environment (e.g., `apt install nodejs npm` on Debian/Ubuntu, or use `nvm` to install a specific version). After installation, verify with `node --version` and `npm --version`.
 - [ ] Verify Node.js and npm are installed and functional by running `node --version` and `npm --version` in the CI/CD pipeline or local environment.
 - [ ] Actually install Node.js and npm in the environment (e.g., `apt install nodejs npm` on Debian/Ubuntu, or use `nvm` to install a specific version). After installation, verify with `node --version` and `npm --version`.
 - [ ] Actually install Node.js and npm in the environment (e.g., `apt install nodejs npm` on Debian/Ubuntu, or use `nvm` to install a specific version). After installation, verify with `node --version` and `npm --version`.
