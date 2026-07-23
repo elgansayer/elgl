@@ -129,6 +129,7 @@
 ## Phase 13: HelloTalk Chat Specifics
 - [ ] Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
 - [ ] Perform detailed analysis of chat UI screenshots and document required UI components.
+- [ ] Verify analysis of chat UI screenshots by reviewing git diff; if not done, perform analysis and document required UI components.
 - [x] Build HTML5 Canvas Doodle Pad component in chat modal.
 - [x] Build Virtual Gift picker modal with coin balance auto-deduction.
 - [x] Build Favourites bookmarking tab for saved messages and corrections.
