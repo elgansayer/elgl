@@ -504,6 +504,16 @@ export class I18nService {
     'context_menu.copy': 'Copy',
     'context_menu.favourite': 'Favourite',
     'context_menu.report': 'Report',
+
+    // VoIP Call UI
+    'voip.mute': 'Mute',
+    'voip.speaker': 'Speaker',
+    'voip.endCall': 'End Call',
+    'voip.connecting': 'Connecting...',
+    'voip.ringing': 'Ringing...',
+    'voip.connected': 'Connected',
+    'voip.callEnded': 'Call Ended',
+    'voip.dismiss': 'Dismiss',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });
