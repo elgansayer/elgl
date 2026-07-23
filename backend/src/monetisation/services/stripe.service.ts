@@ -1,4 +1,9 @@
-import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import { SubscriptionPlansService } from './subscription-plans.service';
@@ -21,7 +26,11 @@ export class StripeService {
     });
   }
 
-  async createCheckoutSession(planId: string, userId: string, interval: 'month' | 'year'): Promise<{ url: string; sessionId: string }> {
+  async createCheckoutSession(
+    planId: string,
+    userId: string,
+    interval: 'month' | 'year',
+  ): Promise<{ url: string; sessionId: string }> {
     const plan = this.plansService.getPlanById(planId);
     if (!plan) {
       throw new BadRequestException(`Plan "${planId}" not found`);
@@ -39,12 +48,15 @@ export class StripeService {
       unitAmount = 6300; // $63.00 in cents
       priceId = plan.stripe_price_id_yearly;
     } else {
-      throw new BadRequestException('Invalid interval. Must be "month" or "year"');
+      throw new BadRequestException(
+        'Invalid interval. Must be "month" or "year"',
+      );
     }
 
     // For yearly, we need to create a price or use a fixed one
     // We'll create a price object dynamically for yearly
-    let priceData: Stripe.Checkout.SessionCreateParams.LineItem.PriceData | undefined;
+    let priceData:
+      Stripe.Checkout.SessionCreateParams.LineItem.PriceData | undefined;
     if (interval === 'year' || !priceId) {
       priceData = {
         currency: 'usd',
@@ -95,18 +107,29 @@ export class StripeService {
       };
     } catch (error) {
       this.logger.error('Failed to create Stripe checkout session', error);
-      throw new InternalServerErrorException('Failed to create checkout session');
+      throw new InternalServerErrorException(
+        'Failed to create checkout session',
+      );
     }
   }
 
-  async constructWebhookEvent(payload: Buffer, signature: string): Promise<Stripe.Event> {
-    const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
+  async constructWebhookEvent(
+    payload: Buffer,
+    signature: string,
+  ): Promise<Stripe.Event> {
+    const webhookSecret = this.configService.get<string>(
+      'STRIPE_WEBHOOK_SECRET',
+    );
     if (!webhookSecret) {
       throw new Error('STRIPE_WEBHOOK_SECRET is required');
     }
 
     try {
-      return this.stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+      return this.stripe.webhooks.constructEvent(
+        payload,
+        signature,
+        webhookSecret,
+      );
     } catch (error) {
       this.logger.error('Stripe webhook signature verification failed', error);
       throw new BadRequestException('Invalid webhook signature');
@@ -120,7 +143,9 @@ export class StripeService {
     const planId = metadata.planId;
     const interval = metadata.interval;
 
-    this.logger.log(`Subscription created for user ${userId}: plan ${planId}, interval ${interval}`);
+    this.logger.log(
+      `Subscription created for user ${userId}: plan ${planId}, interval ${interval}`,
+    );
 
     // TODO: Update user's subscription status in database
     // This will be handled by the MonetisationService
@@ -132,7 +157,9 @@ export class StripeService {
     const userId = metadata.userId;
     const planId = metadata.planId;
 
-    this.logger.log(`Subscription updated for user ${userId}: plan ${planId}, status ${subscription.status}`);
+    this.logger.log(
+      `Subscription updated for user ${userId}: plan ${planId}, status ${subscription.status}`,
+    );
   }
 
   async handleSubscriptionDeleted(event: Stripe.Event): Promise<void> {
@@ -146,20 +173,26 @@ export class StripeService {
   async handleInvoicePaymentSucceeded(event: Stripe.Event): Promise<void> {
     const invoice = event.data.object as Stripe.Invoice;
     const subscriptionId = invoice.subscription as string;
-    const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
+    const subscription =
+      await this.stripe.subscriptions.retrieve(subscriptionId);
     const metadata = subscription.metadata;
     const userId = metadata.userId;
 
-    this.logger.log(`Payment succeeded for user ${userId}, subscription ${subscriptionId}`);
+    this.logger.log(
+      `Payment succeeded for user ${userId}, subscription ${subscriptionId}`,
+    );
   }
 
   async handleInvoicePaymentFailed(event: Stripe.Event): Promise<void> {
     const invoice = event.data.object as Stripe.Invoice;
     const subscriptionId = invoice.subscription as string;
-    const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
+    const subscription =
+      await this.stripe.subscriptions.retrieve(subscriptionId);
     const metadata = subscription.metadata;
     const userId = metadata.userId;
 
-    this.logger.warn(`Payment failed for user ${userId}, subscription ${subscriptionId}`);
+    this.logger.warn(
+      `Payment failed for user ${userId}, subscription ${subscriptionId}`,
+    );
   }
 }
