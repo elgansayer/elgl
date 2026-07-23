@@ -41,6 +41,7 @@
 - [ ] Install Node.js and npm using `sudo apt-get update && sudo apt-get install -y nodejs npm`. After installation, verify with `node --version` and `npm --version`.
 - [ ] Install Node.js and npm using `nvm` (Node Version Manager): run `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash`, then `source ~/.bashrc`, then `nvm install 22`, then `nvm use 22`. After installation, verify with `node --version` and `npm --version`. (Previous `apt` attempts failed; `nvm` is more reliable for getting a recent Node.js version.)
 - [ ] After Node.js and npm are installed, run `cd backend && npm install` to install backend dependencies, then `cd backend && npm run lint` to verify lint passes.
+- [ ] Actually run the nvm installation commands in the environment: `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash`, then `source ~/.bashrc`, then `nvm install 22`, then `nvm use 22`. After installation, verify with `node --version` and `npm --version`. (Previous attempts to install via apt have failed; nvm is more reliable for getting a recent Node.js version.)
 
 ## Phase 2: User Profiles, PostGIS Matchmaking & Visitor Tracking
 - [x] Create NestJS `UsersController` & `UsersService` to handle profile updates (bio, native language, target languages up to 3 for VIP, privacy toggles).
