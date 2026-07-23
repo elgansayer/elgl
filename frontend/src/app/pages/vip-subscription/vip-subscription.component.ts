@@ -23,7 +23,7 @@ export class VipSubscriptionComponent implements OnInit {
     this.loadPlans();
   }
 
-  private loadPlans(): void {
+  loadPlans(): void {
     this.isLoading.set(true);
     this.error.set(null);
 
@@ -121,5 +121,28 @@ export class VipSubscriptionComponent implements OnInit {
 
   retry(): void {
     this.loadPlans();
+  }
+
+  scrollToPlans(): void {
+    const element = document.getElementById('plans');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  getAllFeatureNames(): string[] {
+    const featureSet = new Set<string>();
+    for (const plan of this.plans()) {
+      for (const feature of plan.features) {
+        featureSet.add(feature);
+      }
+    }
+    return Array.from(featureSet);
+  }
+
+  hasFeature(planId: string, featureName: string): boolean {
+    const plan = this.plans().find((p) => p.id === planId);
+    if (!plan) return false;
+    return plan.features.includes(featureName);
   }
 }
