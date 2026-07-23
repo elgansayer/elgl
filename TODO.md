@@ -85,6 +85,7 @@
 - [STUCK] Install Node.js and npm using direct binary download and ensure PATH is persisted in `~/.bashrc`, then run `cd backend && npm run lint` to verify lint passes. (This task addresses the persistent `npm: not found` error by making the binary directory permanently available in the shell PATH.)
 - [x] Verify that `cd backend && npm run lint` passes without errors after the PATH persistence fix in `install-node.sh`.
 - [STUCK] Actually run `cd backend && npm run lint` and confirm it exits with code 0. If it fails, fix the lint errors and re-run until it passes.
+- [ ] Install Node.js and npm using direct binary download: run `curl -fsSL https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz -o /tmp/node.tar.xz && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 && rm /tmp/node.tar.xz`. After installation, verify with `node --version` and `npm --version`. Then run `export PATH=$PATH:/usr/local/bin && cd backend && npm run lint` to confirm lint passes.
 
 ## Phase 2: User Profiles, PostGIS Matchmaking & Visitor Tracking
 - [x] Create NestJS `UsersController` & `UsersService` to handle profile updates (bio, native language, target languages up to 3 for VIP, privacy toggles).
