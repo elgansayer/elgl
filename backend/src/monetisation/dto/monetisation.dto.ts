@@ -1,12 +1,5 @@
 import { IsIn, IsNotEmpty, IsOptional, IsString, IsBoolean } from 'class-validator';
 
-export class UpgradeVipDto {
-  @IsString()
-  @IsNotEmpty()
-  @IsIn(['consumer', 'developer'])
-  tier!: 'consumer' | 'developer';
-}
-
 export class StripeWebhookDto {
   @IsString()
   @IsNotEmpty()

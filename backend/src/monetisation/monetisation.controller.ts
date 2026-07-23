@@ -16,7 +16,6 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   CreateDiagnosticLogDto,
-  StripeWebhookDto,
   AppleReceiptValidationDto,
 } from './dto/monetisation.dto';
 import { MonetisationService } from './monetisation.service';
