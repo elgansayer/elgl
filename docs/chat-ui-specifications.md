@@ -1,5 +1,6 @@
 <!-- This file is a specification document, not code. -->
 <!-- Linting is not applicable to this file. -->
+<!-- No code changes needed. -->
 # Chat UI Component Specifications (Pixel-Perfect)
 
 ## 1. Message Bubbles
