@@ -82,9 +82,9 @@
 ## Phase 7: VIP Monetisation, Virtual Economy & Trust/Safety
 - [x] Build NestJS `MonetisationController` handling Stripe & App Store webhooks (`POST /webhooks/stripe`) to toggle `user.is_vip` and `vip_tier`.
 - [x] Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent).
-- [STUCK] Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`) adding balance to `users.coins_balance`. (Requires receipt validation to prevent infinite coin exploit).
+- [ ] Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`) adding balance to `users.coins_balance`. (Requires receipt validation to prevent infinite coin exploit).
 - [x] Implement server-side receipt validation for `POST /economy/purchase-coins` to prevent infinite coin exploit (derive coin amount from verified payment record).
-- [STUCK] Implement Apple App Store Server Notifications (server-to-server) for real-time receipt validation and subscription status updates.
+- [ ] Implement Apple App Store Server Notifications (server-to-server) for real-time receipt validation and subscription status updates.
 - [x] Build Virtual Gift catalog & sending endpoint (`POST /economy/send-gift`).
 - [x] Build Audio Room tipping mechanism.
 - [x] Build Developer Tier (20 UKP / $26 USD per month) API key management.
