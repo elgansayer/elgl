@@ -496,5 +496,5 @@
 ## Phase 79: Economy-Driven Learning
 - [ ] Allow spending virtual coins to unlock premium one-off AI services (e.g., "Conversation Analysis Report").
 - [ ] Build "Language Challenge" system with coin-based entry fees and prize pools (e.g., "7-day writing streak challenge").
-- [ ] Run the direct binary download script: `bash install-node.sh`. After installation, verify with `node --version` and `npm --version`. (This script performs the same commands as the previous re-attempt task.)
-- [ ] Ensure `install-node.sh` is executable: run `chmod +x install-node.sh`. Then run `bash install-node.sh` to install Node.js and npm. After installation, verify with `node --version` and `npm --version`. Then run `cd backend && npm run lint` to verify lint passes.
+- [x] Run the direct binary download script: `bash install-node.sh`. After installation, verify with `node --version` and `npm --version`. (This script performs the same commands as the previous re-attempt task.)
+- [x] Ensure `install-node.sh` is executable: run `chmod +x install-node.sh`. Then run `bash install-node.sh` to install Node.js and npm. After installation, verify with `node --version` and `npm --version`. Then run `cd backend && npm run lint` to verify lint passes.
