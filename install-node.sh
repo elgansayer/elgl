@@ -109,5 +109,8 @@ fi
 # Source the bashrc again to ensure PATH is set for the current shell
 . ~/.bashrc 2>/dev/null || true
 
+# Ensure PATH includes /usr/local/bin for the current shell
+export PATH="/usr/local/bin:$PATH"
+
 # Run the lint command that was failing
 cd backend && npm run lint
