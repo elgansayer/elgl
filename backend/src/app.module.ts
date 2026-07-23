@@ -51,6 +51,7 @@ import { VideoCallsModule } from './video-calls/video-calls.module';
         AZURE_TRANSLATOR_REGION: Joi.string().default('global'),
         STRIPE_SECRET_KEY: Joi.string().required(),
         STRIPE_WEBHOOK_SECRET: Joi.string().required(),
+        FRONTEND_URL: Joi.string().uri().default('http://localhost:4200'),
         APPLE_BUNDLE_ID: Joi.string().default('com.hellotalk.app'),
         APPLE_SHARED_SECRET: Joi.string().required(),
         APPLE_ROOT_CA_CERT_1: Joi.string().required(),

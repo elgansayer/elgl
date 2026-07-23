@@ -11,6 +11,7 @@ export interface SubscriptionPlan {
   features: string[];
   is_popular?: boolean;
   stripe_price_id?: string;
+  stripe_price_id_yearly?: string;
   highlighted_benefits?: string[];
   badge_text?: string;
 }
@@ -51,6 +52,7 @@ export class SubscriptionPlansService {
       interval: 'month',
       is_popular: true,
       stripe_price_id: 'price_consumer_vip_monthly',
+      stripe_price_id_yearly: 'price_consumer_vip_yearly',
       badge_text: 'Most Popular',
       features: [
         'Up to 3 target languages',

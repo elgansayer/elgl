@@ -9,6 +9,8 @@ import { GooglePlayNotificationService } from './google-play-notification.servic
 import { GooglePlayNotificationController } from './google-play-notification.controller';
 import { SubscriptionPlansController } from './controllers/subscription-plans.controller';
 import { SubscriptionPlansService } from './services/subscription-plans.service';
+import { StripeController } from './controllers/stripe.controller';
+import { StripeService } from './services/stripe.service';
 
 @Module({
   imports: [HttpModule],
@@ -17,6 +19,7 @@ import { SubscriptionPlansService } from './services/subscription-plans.service'
     AppleNotificationController,
     GooglePlayNotificationController,
     SubscriptionPlansController,
+    StripeController,
   ],
   providers: [
     MonetisationService,
@@ -24,6 +27,7 @@ import { SubscriptionPlansService } from './services/subscription-plans.service'
     AppleNotificationService,
     GooglePlayNotificationService,
     SubscriptionPlansService,
+    StripeService,
   ],
   exports: [
     MonetisationService,
@@ -31,6 +35,7 @@ import { SubscriptionPlansService } from './services/subscription-plans.service'
     AppleNotificationService,
     GooglePlayNotificationService,
     SubscriptionPlansService,
+    StripeService,
   ],
 })
 export class MonetisationModule {}

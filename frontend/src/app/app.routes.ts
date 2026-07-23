@@ -12,6 +12,9 @@ import { DeveloperDashboardComponent } from './components/developer-dashboard/de
 import { ProfileVisitorsComponent } from './components/profile-visitors/profile-visitors.component';
 import { VideoCallComponent } from './components/video-call/video-call.component';
 import { UserDetailComponent } from './components/user-detail/user-detail.component';
+import { SubscriptionPlansComponent } from './components/subscription-plans/subscription-plans.component';
+import { SubscriptionSuccessComponent } from './components/subscription-success/subscription-success.component';
+import { SubscriptionCancelComponent } from './components/subscription-cancel/subscription-cancel.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'discovery', pathMatch: 'full' },
@@ -42,5 +45,20 @@ export const routes: Routes = [
         (m) => m.VipSubscriptionComponent
       ),
     title: 'VIP Subscription - HelloTalk',
+  },
+  {
+    path: 'subscription',
+    component: SubscriptionPlansComponent,
+    title: 'Subscription Plans - HelloTalk',
+  },
+  {
+    path: 'subscription/success',
+    component: SubscriptionSuccessComponent,
+    title: 'Subscription Successful - HelloTalk',
+  },
+  {
+    path: 'subscription/cancel',
+    component: SubscriptionCancelComponent,
+    title: 'Subscription Cancelled - HelloTalk',
   },
 ];
