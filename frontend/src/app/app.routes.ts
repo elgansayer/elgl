@@ -48,7 +48,10 @@ export const routes: Routes = [
   },
   {
     path: 'subscription',
-    component: SubscriptionPlansComponent,
+    loadComponent: () =>
+      import('./pages/subscription/subscription-page.component').then(
+        (m) => m.SubscriptionPageComponent
+      ),
     title: 'Subscription Plans - HelloTalk',
   },
   {
