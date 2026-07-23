@@ -113,10 +113,7 @@ export class StripeService {
     }
   }
 
-  constructWebhookEvent(
-    payload: Buffer,
-    signature: string,
-  ): Stripe.Event {
+  constructWebhookEvent(payload: Buffer, signature: string): Stripe.Event {
     const webhookSecret = this.configService.get<string>(
       'STRIPE_WEBHOOK_SECRET',
     );
