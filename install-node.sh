@@ -33,6 +33,6 @@ echo "Installing backend dependencies..."
 cd backend
 npm install
 
-# Now run lint in backend
+# Now run lint in backend (without any extra arguments)
 npm run lint
 echo "Lint passed successfully."
