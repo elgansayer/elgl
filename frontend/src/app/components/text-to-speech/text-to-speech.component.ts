@@ -1,3 +1,4 @@
+import { showToast, notImplementedToast } from '../../services/toast.service';
 import { Component, Input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
@@ -42,7 +43,7 @@ export class TextToSpeechComponent {
 
       window.speechSynthesis.speak(utterance);
     } else {
-      alert('Text-to-speech is not supported in this browser environment.');
+      showToast('Text-to-speech is not supported in this browser environment.');
     }
   }
 }

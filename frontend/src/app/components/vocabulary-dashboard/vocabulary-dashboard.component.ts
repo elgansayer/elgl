@@ -1,3 +1,4 @@
+import { showToast, notImplementedToast } from '../../services/toast.service';
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -64,7 +65,7 @@ export class VocabularyDashboardComponent implements OnInit {
       this.grammarResult.set(res);
     } catch (e) {
       console.error('Grammar check error:', e);
-      alert(this.i18n.translate('vocab.grammarErrorAlert'));
+      showToast(this.i18n.translate('vocab.grammarErrorAlert'));
     } finally {
       this.isAiLoading.set(false);
     }
@@ -80,7 +81,7 @@ export class VocabularyDashboardComponent implements OnInit {
       this.pronunciationResult.set(res);
     } catch (e) {
       console.error('Pronunciation score error:', e);
-      alert(this.i18n.translate('vocab.pronunciationErrorAlert'));
+      showToast(this.i18n.translate('vocab.pronunciationErrorAlert'));
     } finally {
       this.isAiLoading.set(false);
     }

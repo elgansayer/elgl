@@ -1,3 +1,4 @@
+import { showToast, notImplementedToast } from './toast.service';
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -174,7 +175,7 @@ export class MomentsStore {
     } catch (e: unknown) {
       console.error('Failed to pin moment:', e);
       const err = e as { error?: { message?: string } };
-      alert(err?.error?.message || 'Error pinning Moment. Ensure you have an active VIP subscription (8 UKP / $10 USD).');
+      showToast(err?.error?.message || 'Error pinning Moment. Ensure you have an active VIP subscription (8 UKP / $10 USD).');
     }
   }
 }

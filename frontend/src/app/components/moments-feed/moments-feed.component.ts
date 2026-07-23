@@ -1,3 +1,4 @@
+import { showToast, notImplementedToast } from '../../services/toast.service';
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -67,7 +68,7 @@ export class MomentsFeedComponent implements OnInit {
   addTempImageUrl(): void {
     if (!this.tempImageUrlInput.trim()) return;
     if (this.newMediaUrls.length >= 9) {
-      alert(this.i18n.translate('moments.maxMediaAlert'));
+      showToast(this.i18n.translate('moments.maxMediaAlert'));
       return;
     }
     this.newMediaUrls.push(this.tempImageUrlInput.trim());
@@ -103,7 +104,7 @@ export class MomentsFeedComponent implements OnInit {
       this.newMediaType = 'none';
     } catch (e) {
       console.error('Error submitting moment:', e);
-      alert(this.i18n.translate('moments.publishError'));
+      showToast(this.i18n.translate('moments.publishError'));
     } finally {
       this.isCreating.set(false);
     }
@@ -145,10 +146,10 @@ export class MomentsFeedComponent implements OnInit {
         definition: 'Saved full social feed moment to LingQ Spaced Repetition deck.'
       });
       await this.vocabStore.updateSrsLevel(created.id, 1);
-      alert(this.i18n.translate('moments.savedLingqAlert', { text: moment.text_content }));
+      showToast(this.i18n.translate('moments.savedLingqAlert', { text: moment.text_content }));
     } catch (e) {
       console.error('Failed to save moment text to LingQ deck:', e);
-      alert(this.i18n.translate('moments.saveErrorAlert'));
+      showToast(this.i18n.translate('moments.saveErrorAlert'));
     }
   }
 
@@ -225,10 +226,10 @@ export class MomentsFeedComponent implements OnInit {
     if (!moment.text_content) return;
     try {
       await navigator.clipboard.writeText(moment.text_content);
-      alert(this.i18n.translate('moments.copiedAlert'));
+      showToast(this.i18n.translate('moments.copiedAlert'));
     } catch (error) {
       console.error('Failed to copy moment text:', error);
-      alert(this.i18n.translate('moments.copyErrorAlert'));
+      showToast(this.i18n.translate('moments.copyErrorAlert'));
     }
   }
 }

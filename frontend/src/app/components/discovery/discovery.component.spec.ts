@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DiscoveryComponent } from './discovery.component';
 import { DiscoveryService } from '../../services/discovery.service';
 import { provideHttpClient } from '@angular/common/http';
+import * as toast from '../../services/toast.service';
 
 describe('DiscoveryComponent', () => {
   let component: DiscoveryComponent;
@@ -30,9 +31,8 @@ describe('DiscoveryComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('notImplemented should alert', () => {
-    vi.spyOn(window, 'alert');
+  it('notImplemented should show toast', () => {
     component.notImplemented();
-    expect(window.alert).toHaveBeenCalledWith('Not implemented yet');
+    expect(toast.toastsSignal().length).toBeGreaterThan(0);
   });
 });

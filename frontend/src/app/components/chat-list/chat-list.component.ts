@@ -1,3 +1,4 @@
+import { showToast, notImplementedToast } from '../../services/toast.service';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -53,7 +54,7 @@ export class ChatListComponent implements OnInit {
   }
 
   notImplemented(): void {
-    alert('Not implemented yet');
+    notImplementedToast();
   }
 
   async loadPreviews(): Promise<void> {

@@ -1,3 +1,4 @@
+import { showToast, notImplementedToast } from '../../services/toast.service';
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -87,6 +88,6 @@ export class DiscoveryComponent implements OnInit {
   }
 
   notImplemented(): void {
-    alert('Not implemented yet');
+    notImplementedToast();
   }
 }

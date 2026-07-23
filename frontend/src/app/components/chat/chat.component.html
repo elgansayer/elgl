@@ -17,7 +17,7 @@
             />
             <div class="flex-1 min-w-0">
               <p class="truncate font-medium">{{ room.title }}</p>
-              <p class="truncate text-sm text-gray-400">{{ room.subtitle }}</p>
+              <p class="truncate text-sm text-text-muted">{{ room.subtitle }}</p>
             </div>
             @if (room.is_online) {
               <span class="w-2 h-2 rounded-full bg-green-500"></span>
@@ -40,12 +40,12 @@
             [class.bg-gray-700]="msg.sender_id !== authService.currentUser()?.id"
           >
             <p>{{ msg.text_content }}</p>
-            <span class="text-xs text-gray-400">{{ msg.created_at | date:'short' }}</span>
+            <span class="text-xs text-text-muted">{{ msg.created_at | date:'short' }}</span>
           </div>
         }
       </div>
     } @else {
-      <div class="flex-1 flex items-center justify-center text-gray-500">
+      <div class="flex-1 flex items-center justify-center text-text-muted">
         Select a chat to start messaging
       </div>
     }

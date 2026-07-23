@@ -1,3 +1,4 @@
+import { showToast, notImplementedToast } from './toast.service';
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -98,10 +99,10 @@ export class EconomyStore {
         )
       );
       this.coinsBalance.set(res.coins_balance);
-      alert(`🎉 Successfully purchased ${amount} coins! Your new balance is ${res.coins_balance} coins.`);
+      showToast(`🎉 Successfully purchased ${amount} coins! Your new balance is ${res.coins_balance} coins.`);
     } catch (e) {
       console.error('Coin purchase error:', e);
-      alert('Could not process coin purchase right now.');
+      showToast('Could not process coin purchase right now.');
     }
   }
 
@@ -119,7 +120,7 @@ export class EconomyStore {
     } catch (e: unknown) {
       console.error('Send gift error:', e);
       const err = e as { error?: { message?: string } };
-      alert(err?.error?.message || 'Failed to send virtual gift. Ensure you have sufficient coin balance.');
+      showToast(err?.error?.message || 'Failed to send virtual gift. Ensure you have sufficient coin balance.');
       return false;
     }
   }
@@ -134,10 +135,10 @@ export class EconomyStore {
         this.authService.currentUser.set({ ...user, is_vip: true, vip_tier: tier });
       }
       const title = tier === 'developer' ? 'Developer Tier (20 UKP / $26 USD per month)' : 'Consumer VIP (8 UKP / $10 USD per month)';
-      alert(`🎊 Congratulations! You have successfully upgraded to ${title}. All premium features and unlocked limits are now active!`);
+      showToast(`🎊 Congratulations! You have successfully upgraded to ${title}. All premium features and unlocked limits are now active!`);
     } catch (e) {
       console.error('VIP upgrade error:', e);
-      alert('Failed to process VIP upgrade.');
+      showToast('Failed to process VIP upgrade.');
     }
   }
 
@@ -194,12 +195,12 @@ export class EconomyStore {
         )
       );
       await this.loadDeveloperAnalytics();
-      alert(`🔐 Developer API Key generated: ${res.api_key}\nRate Limit: ${res.rate_limit_rpm} RPM`);
+      showToast(`🔐 Developer API Key generated: ${res.api_key}\nRate Limit: ${res.rate_limit_rpm} RPM`);
       return res.api_key;
     } catch (e: unknown) {
       console.error('Generate API key error:', e);
       const err = e as { error?: { message?: string } };
-      alert(err?.error?.message || 'Failed to generate API key. Requires Developer Tier subscription (20 UKP / $26 USD per month).');
+      showToast(err?.error?.message || 'Failed to generate API key. Requires Developer Tier subscription (20 UKP / $26 USD per month).');
       return null;
     }
   }
@@ -209,10 +210,10 @@ export class EconomyStore {
       await firstValueFrom(
         this.http.post(`${this.safetyUrl}/report`, { reported_id: reportedId, reason, details }, { headers: this.getHeaders() })
       );
-      alert('🛡️ Thank you. Your report has been submitted to our Trust & Safety moderation team for review within 24 hours.');
+      showToast('🛡️ Thank you. Your report has been submitted to our Trust & Safety moderation team for review within 24 hours.');
     } catch (e) {
       console.error('Report user error:', e);
-      alert('Failed to submit report.');
+      showToast('Failed to submit report.');
     }
   }
 
@@ -224,10 +225,10 @@ export class EconomyStore {
       const set = new Set(this.blockedUserIds());
       set.add(blockedId);
       this.blockedUserIds.set(set);
-      alert('🚫 User blocked. All posts, moments, and direct messages from this user are now hidden across the platform.');
+      showToast('🚫 User blocked. All posts, moments, and direct messages from this user are now hidden across the platform.');
     } catch (e) {
       console.error('Block user error:', e);
-      alert('Failed to block user.');
+      showToast('Failed to block user.');
     }
   }
 

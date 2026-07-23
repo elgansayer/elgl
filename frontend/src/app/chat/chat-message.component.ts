@@ -29,7 +29,7 @@ import { SafetyService } from '../services/safety.service';
           @if (message().media_url) {
             <img [src]="message().media_url" class="mt-2 rounded max-w-full max-h-64 object-cover" />
           }
-          <span class="text-xs text-gray-400 mt-1 block">
+          <span class="text-xs text-text-muted mt-1 block">
             {{ message().created_at | date:'short' }}
           </span>
         </div>
