@@ -92,7 +92,7 @@
               </div>
               
               <p class="text-xs text-text-secondary mt-0.5 truncate max-w-[200px]">
-                {{ partner.bio_text || 'I want to improve my English! Let us practice together.' }}
+                {{ partner.bio_text || ('discovery.partnerBioFallback' | t) }}
               </p>
             </div>
           </div>

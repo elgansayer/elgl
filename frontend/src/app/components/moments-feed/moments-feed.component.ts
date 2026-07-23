@@ -152,7 +152,7 @@ export class MomentsFeedComponent implements OnInit {
       const created = await this.vocabStore.saveWord({
         word_token: moment.text_content,
         translation: trans?.translated_text || `Post: ${moment.text_content}`,
-        original_context: `Moment by ${moment.author?.display_name || 'Community Member'}`,
+        original_context: `Moment by ${moment.author?.display_name || this.i18n.translate('common.unknownUser')}`,
         definition: 'Saved full social feed moment to LingQ Spaced Repetition deck.'
       });
       await this.vocabStore.updateSrsLevel(created.id, 1);

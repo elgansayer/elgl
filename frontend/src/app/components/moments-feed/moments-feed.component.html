@@ -156,7 +156,7 @@
                 @for (comment of moment.comments || []; track comment.id) {
                   <div class="bg-surface-300 rounded-2xl p-3">
                     <div class="flex items-center justify-between mb-1">
-                      <span class="font-bold text-xs text-text-primary">{{ comment.author?.display_name || 'User' }}</span>
+                      <span class="font-bold text-xs text-text-primary">{{ comment.author?.display_name || ('common.unknownUser' | t) }}</span>
                       <span class="text-[10px] text-text-muted">{{ comment.created_at | date: 'shortTime' }}</span>
                     </div>
                     @if (comment.text_content) {

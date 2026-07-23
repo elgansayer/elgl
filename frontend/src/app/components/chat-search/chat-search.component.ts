@@ -44,8 +44,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <button *ngFor="let msg of results()"
                 (click)="onMessageSelect.emit(msg)"
                 class="w-full text-left px-3 py-2 hover:bg-surface-100 transition-colors border-b border-surface-100 last:border-b-0">
-          <div class="text-xs text-text-muted mb-1">
-            {{ msg.sender?.display_name || 'Unknown' }}
+          <div class="ms-3 min-w-0 flex-1">
+            <p class="text-sm font-bold text-text-primary truncate">
+              {{ msg.sender?.display_name || ('common.unknownSender' | t) }}
+            </p>
           </div>
           <div class="text-sm text-gray-200 truncate">
             {{ msg.text_content || msg.message_type }}
