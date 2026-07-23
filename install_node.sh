@@ -19,5 +19,5 @@ npm --version
 # Refresh command hash table to make npm available in this shell
 hash -r
 
-# Change to backend directory and run lint
-cd backend && npm run lint
+# Use a login shell to ensure npm is in PATH, then run lint
+exec bash -l -c 'cd backend && npm run lint'
