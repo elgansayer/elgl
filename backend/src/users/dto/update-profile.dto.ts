@@ -71,8 +71,4 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsBoolean()
   privacy_hide_from_search?: boolean;
-
-  @IsOptional()
-  @IsString()
-  cover_photo_url?: string;
 }

@@ -114,10 +114,9 @@ export class ProfileEditComponent {
       const croppedFile = new File([croppedBlob], 'cover-photo.jpg', { type: 'image/jpeg' });
 
       // Get presigned URL for upload
-      const { uploadUrl, mediaUrl } = await this.userService.getPresignedUploadUrl(
+      const { uploadUrl, mediaUrl } = await this.userService.getPresignedCoverPhotoUrl(
         'cover-photo.jpg',
-        'image/jpeg',
-        'cover-photos'
+        'image/jpeg'
       );
 
       // Upload the cropped image

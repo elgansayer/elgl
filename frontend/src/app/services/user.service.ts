@@ -113,10 +113,9 @@ export class UserService {
   }
 
   async uploadCoverPhoto(file: File): Promise<string> {
-    const { uploadUrl, mediaUrl } = await this.getPresignedUploadUrl(
+    const { uploadUrl, mediaUrl } = await this.getPresignedCoverPhotoUrl(
       file.name,
-      file.type,
-      'cover-photos'
+      file.type
     );
 
     const uploadResponse = await fetch(uploadUrl, {
