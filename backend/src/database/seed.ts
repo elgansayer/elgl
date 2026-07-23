@@ -307,6 +307,69 @@ async function runSeed() {
     ]);
   }
 
+  // 4. Seed subscriptions for VIP users
+  const { data: vipUsers } = await supabase
+    .from('users')
+    .select('id, email')
+    .eq('is_vip', true)
+    .limit(3);
+
+  if (vipUsers && vipUsers.length > 0) {
+    const subscriptionData = vipUsers.map((user: { id: string; email: string }, index: number) => ({
+      user_id: user.id,
+      product_id: index === 0 
+        ? 'com.linguaexchange.vip.developer' 
+        : 'com.linguaexchange.vip.consumer',
+      original_transaction_id: `apple_orig_${user.id.substring(0, 8)}_${Date.now()}`,
+      transaction_id: `apple_txn_${user.id.substring(0, 8)}_${Date.now()}`,
+      purchase_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      expires_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      environment: 'Sandbox',
+      is_active: true,
+      auto_renew_status: true,
+      last_updated: new Date().toISOString(),
+    }));
+
+    await supabase.from('subscriptions').upsert(subscriptionData, {
+      onConflict: 'user_id, original_transaction_id',
+      ignoreDuplicates: false,
+    });
+
+    console.log(`✅ Seeded ${subscriptionData.length} subscriptions for VIP users`);
+  }
+
+  // 5. Seed subscription events for audit trail
+  const { data: firstVip } = await supabase
+    .from('users')
+    .select('id')
+    .eq('is_vip', true)
+    .limit(1)
+    .single();
+
+  if (firstVip) {
+    await supabase.from('subscription_events').insert([
+      {
+        user_id: firstVip.id,
+        event_type: 'subscribed',
+        product_id: 'com.linguaexchange.vip.developer',
+        original_transaction_id: `apple_orig_${firstVip.id.substring(0, 8)}_${Date.now()}`,
+        notification_type: 'SUBSCRIBED',
+        notification_subtype: 'INITIAL_BUY',
+        payload: {
+          notificationType: 'SUBSCRIBED',
+          subtype: 'INITIAL_BUY',
+          data: {
+            environment: 'Sandbox',
+            bundleId: 'com.hellotalk.app',
+          },
+        },
+        created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+    ]);
+
+    console.log('✅ Seeded subscription events for audit trail');
+  }
+
   console.log(
     '✅ Database successfully seeded with rich global users, moments, comments, and LiveKit rooms!',
   );
