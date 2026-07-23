@@ -195,30 +195,20 @@
 - [x] Implement Text-to-Speech (TTS) using SpeechSynthesis or Azure Speech API.
 - [x] Implement Voice-to-Text transcription next to audio messages.
 
-## Phase 12: Matchmaking & Discovery UI
+## Phase 12: Matchmaking & Discovery UI (Requires Refactor for Pixel-Perfect Clone)
 - [x] Analyse search screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
-- [x] Build Global Search UI with translated dropdowns for Native Language, Target Language, and Level.
-- [x] Build Nearby Search PostGIS distance slider for VIP users.
-- [x] Build VIP Profile Visitor Log UI with blurred cards for free users.
+- [ ] Refactor Discovery UI to match screenshots: implement dark theme aesthetics, horizontal scrollable filter pills, and banner ads.
+- [ ] Build custom Angular primitives for horizontal scrollable filter pills and language buttons instead of using native `<select>`.
+- [ ] Rebuild user cards to feature tight visual fluency indicators (flags and language codes) and gradient action buttons.
+- [ ] Build Nearby Search PostGIS distance slider for VIP users.
+- [ ] Build VIP Profile Visitor Log UI with blurred cards for free users.
 
-## Phase 13: HelloTalk Chat Specifics
+## Phase 13: HelloTalk Chat Specifics (Requires Refactor for Pixel-Perfect Clone)
 - [x] Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
-- [STUCK] Perform detailed analysis of chat UI screenshots and document required UI components.
+- [ ] Refactor Chat List UI ("Language Talks" tab) to strictly match screenshots: top quick-access circular icons, pill-shaped search bar, and horizontal filter pills.
+- [ ] Rebuild Chat List items with high-density rows, VIP badges, online indicator dots, right-aligned timestamps, and bright purple unread count circles.
 - [x] Verify analysis of chat UI screenshots by reviewing git diff; if not done, perform analysis and document required UI components.
-- [x] Perform detailed analysis of chat UI screenshots and document required UI components (re‑attempt after previous `[STUCK]`).
-- [STUCK] Perform detailed analysis of chat UI screenshots and document required UI components (re‑attempt after previous `[STUCK]`).
-- [STUCK] Review the analysis output and ensure all chat UI components (message bubbles, input bar, emoji picker, attachment menu, voice note recorder, doodle pad, gift picker, favourites tab, search bar, typing indicator, read receipts, context menu) are documented with pixel-perfect specifications.
-- [x] Create pixel‑perfect specification documents for the following missing chat UI components: voice note recorder, doodle pad, favourites tab, typing indicator, read receipts, context menu, message bubbles, input bar, attachment menu. Also ensure the existing components (emoji picker, gift picker, search bar) have corresponding specification documents.
-- [x] Create pixel‑perfect specification documents for all chat UI components listed in the review task (message bubbles, input bar, emoji picker, attachment menu, voice note recorder, doodle pad, gift picker, favourites tab, search bar, typing indicator, read receipts, context menu).
-- [STUCK] Verify that the created specification documents match the screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` and update any discrepancies.
-- [STUCK] Re‑attempt verification of specification documents against screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` and update any discrepancies.
-- [STUCK] Re‑attempt verification of specification documents against screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` and update any discrepancies (second attempt).
-- [x] Re‑attempt verification of specification documents against screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` and update any discrepancies (third attempt).
-- [x] Re‑attempt verification of specification documents against screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` and update any discrepancies (fourth attempt).
-- [x] Re‑attempt verification of specification documents against screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` and update any discrepancies (third attempt).
-- [x] Re‑attempt the analysis of chat UI screenshots and produce a complete, reviewable output documenting all required chat UI components with pixel‑perfect specifications (second attempt).
-- [x] Re‑attempt the analysis of chat UI screenshots and produce a complete, reviewable output documenting all required chat UI components with pixel‑perfect specifications.
-- [x] Verify that `cd backend && npm run lint` passes without errors after the PATH persistence fix in `install-node.sh`.
+- [x] Create pixel‑perfect specification documents for all chat UI components listed in the review task.
 - [x] Build HTML5 Canvas Doodle Pad component in chat modal.
 - [x] Build Virtual Gift picker modal with coin balance auto-deduction.
 - [x] Build Favourites bookmarking tab for saved messages and corrections.
@@ -355,6 +345,7 @@
 - [ ] Render visual charts using Chart.js inside Angular.
 
 ## Phase 34: UI Theming
+- [ ] Implement global dark theme mimicking HelloTalk (`#121212` backgrounds, neon accents) across all Angular components.
 - [ ] Build Theme Selector (Dark, Light, System Default).
 - [ ] Allow VIP users to select custom primary accent colours.
 
