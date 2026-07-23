@@ -43,9 +43,13 @@ export class I18nService {
   private readonly baseDictionary: Record<string, string> = {
     // Top App Navigation & Header
     'app.title': 'HelloTalk',
-    'app.badgeOpenCore': 'Open-Core',
+    'app.badgeOpenCore': 'Community clone',
     'nav.discover': '🌍 Discover',
-    'nav.moments': '🌐 Moments',
+    'nav.moments': 'Moments',
+    'nav.partners': 'Partners',
+    'nav.chats': 'Chats',
+    'nav.live': 'Live',
+    'nav.me': 'Me',
     'nav.helloTalk': '💬 HelloTalk',
     'nav.connect': '🌍 Connect',
     'nav.liveRooms': '🎙️ Live Rooms',

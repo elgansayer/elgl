@@ -1,4 +1,4 @@
-<div class="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100 text-text-primary">
+<div class="min-h-[100dvh] flex flex-col bg-surface-500 text-text-primary font-sans relative overflow-x-hidden">
   @if (economyStore.activeGiftAnimation(); as overlay) {
     <div class="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center p-4">
       <div
@@ -25,7 +25,7 @@
         >
         <div>
           <p class="text-sm font-black leading-tight">HelloTalk</p>
-          <p class="text-[10px] text-text-secondary leading-tight">Community clone</p>
+          <p class="text-[10px] text-text-secondary leading-tight">{{ 'app.badgeOpenCore' | t }}</p>
         </div>
       </a>
 
@@ -36,7 +36,7 @@
           🪙 {{ economyStore.coinsBalance() }}
         </span>
         <a routerLink="/visitors" class="app-pill hidden sm:inline text-text-secondary">
-          👀 Visitors
+          👀 {{ 'profile.visitorsBtn' | t }}
         </a>
         <a routerLink="/profile" class="app-pill hidden sm:inline">
           {{ authService.currentUser()?.email || 'Guest' }}
@@ -64,7 +64,7 @@
           "
         >
           <span class="text-lg">{{ item.icon }}</span>
-          <span>{{ item.label }}</span>
+          <span>{{ item.label | t }}</span>
         </a>
       }
     </div>
