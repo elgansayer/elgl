@@ -248,7 +248,7 @@
 - [x] Refactor `LongPressContextMenuComponent` to use RTL-safe logical CSS classes (e.g., `ps-4`, `pe-4`, `ms-2`, `me-2`) instead of physical classes (`px-4`, `py-2.5`, `gap-3`, `w-5`).
 - [x] Replace hardcoded menu labels (`'Copy'`, `'Favourite'`, `'Report'`) with i18n translation keys using `TranslatePipe` or `I18nService.translate()`.
 - [x] Integrate `LongPressContextMenuComponent` with existing services (copy to clipboard, favourite service, report service) by handling the emitted outputs in the parent component or by injecting services directly.
-- [ ] Actually wire the `LongPressContextMenuComponent` outputs (`copy`, `favourite`, `report`) to the corresponding service calls in the parent chat component (`ChatRoomComponent` or `MessageBubbleComponent`). Currently the component emits events but no parent subscribes to them, so the actions are never executed.
+- [x] Actually wire the `LongPressContextMenuComponent` outputs (`copy`, `favourite`, `report`) to the corresponding service calls in the parent chat component (`ChatRoomComponent` or `MessageBubbleComponent`). Currently the component emits events but no parent subscribes to them, so the actions are never executed.
 
 ## Phase 17: Audio & Video Calling (WebRTC / LiveKit)
 - [ ] Build Incoming Call modal with ringtone audio and accept/reject controls.
