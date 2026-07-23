@@ -53,3 +53,11 @@ npm install
 # Now run lint in backend
 npm run lint
 echo "Lint passed successfully."
+
+# Ensure PATH is exported for the parent shell (if sourced)
+# This line is only effective if the script is sourced, but we also print instructions.
+echo ""
+echo "If you need to run 'npm' commands manually in this shell, run:"
+echo "  export PATH=\"/usr/local/bin:\$PATH\""
+echo "Or source your bashrc:"
+echo "  source ~/.bashrc"
