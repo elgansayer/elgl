@@ -246,7 +246,7 @@
   - RTL-safe logical CSS classes.
   - i18n translation keys for menu labels.
 - [x] Refactor `LongPressContextMenuComponent` to use RTL-safe logical CSS classes (e.g., `ps-4`, `pe-4`, `ms-2`, `me-2`) instead of physical classes (`px-4`, `py-2.5`, `gap-3`, `w-5`).
-- [ ] Replace hardcoded menu labels (`'Copy'`, `'Favourite'`, `'Report'`) with i18n translation keys using `TranslatePipe` or `I18nService.translate()`.
+- [x] Replace hardcoded menu labels (`'Copy'`, `'Favourite'`, `'Report'`) with i18n translation keys using `TranslatePipe` or `I18nService.translate()`.
 - [ ] Integrate `LongPressContextMenuComponent` with existing services (copy to clipboard, favourite service, report service) by handling the emitted outputs in the parent component or by injecting services directly.
 
 ## Phase 17: Audio & Video Calling (WebRTC / LiveKit)
