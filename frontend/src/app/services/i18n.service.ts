@@ -309,6 +309,13 @@ export class I18nService {
     'vocabulary.originalLabel': 'Original: ',
     'vocabulary.correctedLabel': 'Corrected: ',
     'vocabulary.pronunciationScore': 'Pronunciation score: {{score}} / 100',
+    'profile.playAudioIntro': 'Play Introduction',
+
+    // User Detail Component
+    'userProfile.notFound': 'User not found.',
+    'userProfile.loadError': 'Failed to load profile. Please try again.',
+    'userProfile.follow': 'Follow',
+    'userProfile.following': 'Following',
 
     // Favourites Component
     'favourites.title': 'Favourites',

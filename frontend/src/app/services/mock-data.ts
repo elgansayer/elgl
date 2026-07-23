@@ -57,6 +57,8 @@ export const MOCK_PARTNERS: UserProfile[] = [
     privacy_hide_location: false,
     privacy_hide_from_search: false,
     created_at: new Date().toISOString(),
+    is_followed_by_me: true,
+    is_liked_by_me: false,
   },
   {
     id: 'partner-2',
@@ -75,6 +77,8 @@ export const MOCK_PARTNERS: UserProfile[] = [
     privacy_hide_location: false,
     privacy_hide_from_search: false,
     created_at: new Date().toISOString(),
+    is_followed_by_me: false,
+    is_liked_by_me: true,
   }
 ];
 

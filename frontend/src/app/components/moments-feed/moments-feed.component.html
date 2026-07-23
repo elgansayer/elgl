@@ -84,7 +84,9 @@
         }
         <div class="flex items-start gap-3">
           <!-- Avatar -->
-          <img [src]="moment.author?.avatar_url || 'https://i.pravatar.cc/150?u=' + moment.id" class="h-12 w-12 rounded-full object-cover shrink-0" />
+          <a [routerLink]="['/profile/user', moment.author?.id]">
+            <img [src]="moment.author?.avatar_url || 'https://i.pravatar.cc/150?u=' + moment.id" class="h-12 w-12 rounded-full object-cover shrink-0" />
+          </a>
           
           <div class="min-w-0 flex-1">
             <div class="flex justify-between items-start mb-1">
