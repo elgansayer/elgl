@@ -394,7 +394,7 @@ export class EconomyService {
       .from('coin_purchases')
       .select('id')
       .eq('transaction_id', transactionId)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       throw new ForbiddenException(
