@@ -1,4 +1,4 @@
-import { IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsNotEmpty, IsOptional, IsString, IsBoolean } from 'class-validator';
 
 export class UpgradeVipDto {
   @IsString()
@@ -38,4 +38,20 @@ export class CreateDiagnosticLogDto {
   @IsString()
   @IsNotEmpty()
   message!: string;
+}
+
+export class AppleNotificationDto {
+  @IsString()
+  @IsNotEmpty()
+  signedPayload!: string;
+}
+
+export class AppleReceiptValidationDto {
+  @IsString()
+  @IsNotEmpty()
+  receipt_data!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  exclude_old_transactions?: boolean;
 }

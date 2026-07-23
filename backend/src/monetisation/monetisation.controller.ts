@@ -17,12 +17,17 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   CreateDiagnosticLogDto,
   StripeWebhookDto,
+  AppleReceiptValidationDto,
 } from './dto/monetisation.dto';
 import { MonetisationService } from './monetisation.service';
+import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
 
 @Controller('monetisation')
 export class MonetisationController {
-  constructor(private readonly monetisationService: MonetisationService) {}
+  constructor(
+    private readonly monetisationService: MonetisationService,
+    private readonly appleReceiptValidatorService: AppleReceiptValidatorService,
+  ) {}
 
   @Post('webhooks/stripe')
   @HttpCode(200)
@@ -76,5 +81,19 @@ export class MonetisationController {
   ) {
     if (!user) return null;
     return await this.monetisationService.createDiagnosticLog(user.id, dto);
+  }
+
+  @Post('validate-apple-receipt')
+  @UseGuards(SupabaseAuthGuard)
+  async validateAppleReceipt(
+    @CurrentUser() user: User | null,
+    @Body() dto: AppleReceiptValidationDto,
+  ) {
+    if (!user) return null;
+    return await this.appleReceiptValidatorService.validateReceipt(
+      user.id,
+      dto.receipt_data,
+      dto.exclude_old_transactions,
+    );
   }
 }
