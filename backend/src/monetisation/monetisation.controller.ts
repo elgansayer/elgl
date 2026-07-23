@@ -57,18 +57,6 @@ export class MonetisationController {
     return await this.monetisationService.handleGoogleWebhook(payload);
   }
 
-  @Post('webhooks/apple')
-  @HttpCode(200)
-  async handleAppleWebhook(@Body() payload: any) {
-    return await this.monetisationService.handleAppleWebhook(payload);
-  }
-
-  @Post('webhooks/google')
-  @HttpCode(200)
-  async handleGoogleWebhook(@Body() payload: any) {
-    return await this.monetisationService.handleGoogleWebhook(payload);
-  }
-
   @Post('generate-api-key')
   @UseGuards(SupabaseAuthGuard)
   async generateApiKey(@CurrentUser() user: User | null) {
