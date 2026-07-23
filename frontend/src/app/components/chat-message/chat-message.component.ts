@@ -55,9 +55,13 @@ import { AuthService } from '../../services/auth.service';
 })
 export class ChatMessageComponent {
   @Input({ required: true }) message!: ChatMessage;
+  @Input() currentUserId?: string;
   private authService = inject(AuthService);
 
   isOwnMessage(): boolean {
+    if (this.currentUserId !== undefined) {
+      return this.message.sender_id === this.currentUserId;
+    }
     return this.message.sender_id === this.authService.currentUser()?.id;
   }
 
