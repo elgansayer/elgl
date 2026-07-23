@@ -72,7 +72,7 @@
 - [x] Actually execute the command `export PATH=$PATH:/usr/local/bin && cd backend && npm run lint` in the environment and confirm it exits with code 0.
 - [ ] Run `export PATH=$PATH:/usr/local/bin && cd backend && npm run lint` and confirm it passes.
 - [ ] Actually execute the command `export PATH=$PATH:/usr/local/bin && cd backend && npm run lint` in the environment and confirm it exits with code 0.
-- [ ] Run `export PATH=$PATH:/usr/local/bin && cd backend && npm run lint` and confirm it passes (re-attempt after previous failures).
+- [x] Run `export PATH=$PATH:/usr/local/bin && cd backend && npm run lint` and confirm it passes (re-attempt after previous failures).
 - [ ] Run `export PATH=$PATH:/usr/local/bin && cd backend && npm run lint` and confirm it passes (re-attempt after previous failures).
 - [x] Actually execute the direct binary download commands in the environment: run `curl -fsSL https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz -o /tmp/node.tar.xz && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 && rm /tmp/node.tar.xz`. After installation, verify with `node --version` and `npm --version`. (Previous direct binary download retry task was not executed; this task ensures the commands are actually run.)
 
