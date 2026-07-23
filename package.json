@@ -6,7 +6,7 @@
   "scripts": {
     "check:constitution": "node scripts/verify-constitution.mjs",
     "check:control-flow": "cd frontend && npm run check:control-flow",
-    "lint": "npm run check:constitution && cd backend && npm run lint -- --ignore-pattern '*.md'",
+    "lint": "npm run check:constitution && cd backend && eslint --ignore-pattern '*.md'",
     "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "cd frontend && npx ng build",
     "build:backend": "cd backend && npm run build",
