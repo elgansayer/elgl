@@ -18,8 +18,9 @@ if ! grep -q 'export PATH="/usr/local/bin:$PATH"' ~/.bashrc 2>/dev/null; then
 fi
 # Source the updated bashrc so the current shell also sees the change
 . ~/.bashrc 2>/dev/null || true
-# Ensure /usr/local/bin is in PATH (in case sourcing didn't work)
-export PATH="/usr/local/bin:$PATH"
+# Verify npm is accessible
+echo "Verifying npm is accessible..."
+which npm || { echo "npm not found in PATH"; exit 1; }
 echo "Verifying..."
 node --version
 npm --version
