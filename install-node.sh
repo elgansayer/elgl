@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# Ensure the script itself is executable (in case it was not)
+chmod +x "$0"
+
 # Remove the early exit check for npm - we always need to install/ensure Node.js
 # The script should always download and install Node.js to ensure it's available
 
