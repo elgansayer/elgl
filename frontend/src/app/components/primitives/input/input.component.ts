@@ -4,7 +4,7 @@ import { Component, input, output, computed } from '@angular/core';
   selector: 'app-input',
   template: `
     @if (label()) {
-      <label [for]="inputId()" class="block font-bold text-xs text-slate-700 mb-1">
+      <label [for]="inputId()" class="block font-bold text-xs text-text-primary mb-1">
         {{ label() }}
       </label>
     }
@@ -42,8 +42,8 @@ export class AppInputComponent {
   readonly inputClasses = computed(() => {
     const base = 'block w-full rounded-2xl border ps-4 pe-4 pt-2.5 pb-2.5 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary';
     const state = this.disabled()
-      ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-      : 'bg-white border-slate-200 text-slate-800';
+      ? 'bg-surface-100 text-text-muted border-surface-100 cursor-not-allowed'
+      : 'bg-surface-200 border-surface-100 text-text-primary';
     const extra = this.customClass();
     return `${base} ${state}${extra ? ' ' + extra : ''}`.trim();
   });

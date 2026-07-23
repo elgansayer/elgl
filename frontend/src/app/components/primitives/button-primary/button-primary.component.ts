@@ -41,7 +41,7 @@ export class AppButtonPrimaryComponent {
     }
 
     const stateClass = this.disabled()
-      ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+      ? 'bg-surface-200 text-text-secondary cursor-not-allowed shadow-none'
       : 'bg-primary text-white hover:bg-primary/90 shadow-sm hover:shadow-md cursor-pointer';
 
     const extra = this.customClass();

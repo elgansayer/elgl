@@ -1,3 +1,4 @@
+import { showToast, notImplementedToast } from '../../services/toast.service';
 import { Component, EventEmitter, Output, signal, inject } from '@angular/core';
 
 import { UserService } from '../../services/user.service';
@@ -51,7 +52,7 @@ export class VoiceRecorderComponent {
       }, 1000);
     } catch (e) {
       console.error('Microphone access denied or error:', e);
-      alert('Microphone permission required to record voice notes.');
+      showToast('Microphone permission required to record voice notes.');
     }
   }
 

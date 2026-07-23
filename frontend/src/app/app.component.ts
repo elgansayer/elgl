@@ -5,6 +5,7 @@ import { EconomyStore, VirtualGift } from './services/economy.store';
 import { CentrifugeService } from './services/centrifuge.service';
 import { TranslatePipe } from './services/translate.pipe';
 import { IncomingCallModalComponent, IncomingCallData } from './components/incoming-call-modal/incoming-call-modal.component';
+import { ToastComponent } from './components/primitives/toast/toast.component';
 
 @Component({
   selector: 'app-root',
@@ -13,7 +14,8 @@ import { IncomingCallModalComponent, IncomingCallData } from './components/incom
     RouterLink, 
     RouterLinkActive, 
     TranslatePipe, 
-    IncomingCallModalComponent
+    IncomingCallModalComponent,
+    ToastComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],

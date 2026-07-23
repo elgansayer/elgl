@@ -2,43 +2,43 @@
   <!-- Top App Bar -->
   <header class="bg-surface-300 pt-12 pb-3 ps-4 pe-4 border-b border-surface-200">
     <div class="flex items-center justify-between mb-4">
-      <button class="text-text-primary"><span class="text-xl">≡</span></button>
-      <h1 class="text-base font-bold text-text-primary">Language Talks</h1>
-      <button class="text-text-primary"><span class="text-xl">+</span></button>
+      <button (click)="notImplemented()" class="text-text-primary"><span class="text-xl">≡</span></button>
+      <h1 class="text-base font-bold text-text-primary">{{ 'chatList.topTitle' | t }}</h1>
+      <a [routerLink]="['/discovery']" class="text-text-primary"><span class="text-xl">+</span></a>
     </div>
 
     <!-- Quick Access Row -->
     <div class="flex justify-between items-center mb-6 px-4">
-      <div class="flex flex-col items-center gap-1">
+      <a [routerLink]="['/discovery']" class="flex flex-col items-center gap-1">
         <div class="w-12 h-12 rounded-[1rem] bg-blue-500 flex items-center justify-center text-white text-xl shadow-lg">
           📚
         </div>
-        <span class="text-[10px] text-text-secondary font-medium">All Courses</span>
-      </div>
-      <div class="flex flex-col items-center gap-1">
+        <span class="text-[10px] text-text-secondary font-medium">{{ 'chatList.quickCourses' | t }}</span>
+      </a>
+      <a [routerLink]="['/moments']" class="flex flex-col items-center gap-1">
         <div class="w-12 h-12 rounded-[1rem] bg-green-500 flex items-center justify-center text-white text-xl shadow-lg">
           🎮
         </div>
-        <span class="text-[10px] text-text-secondary font-medium">Play</span>
-      </div>
-      <div class="flex flex-col items-center gap-1">
+        <span class="text-[10px] text-text-secondary font-medium">{{ 'chatList.quickPlay' | t }}</span>
+      </a>
+      <button (click)="notImplemented()" class="flex flex-col items-center gap-1">
         <div class="w-12 h-12 rounded-[1rem] bg-cyan-500 flex items-center justify-center text-white text-xl shadow-lg">
           🌐
         </div>
-        <span class="text-[10px] text-text-secondary font-medium">AI Translation</span>
-      </div>
-      <div class="flex flex-col items-center gap-1">
+        <span class="text-[10px] text-text-secondary font-medium">{{ 'chatList.quickAiTrans' | t }}</span>
+      </button>
+      <button (click)="notImplemented()" class="flex flex-col items-center gap-1">
         <div class="w-12 h-12 rounded-[1rem] bg-pink-500 flex items-center justify-center text-white text-xl shadow-lg">
           🤖
         </div>
-        <span class="text-[10px] text-text-secondary font-medium">Japanese Ai</span>
-      </div>
-      <div class="flex flex-col items-center gap-1">
+        <span class="text-[10px] text-text-secondary font-medium">{{ 'chatList.quickJpAi' | t }}</span>
+      </button>
+      <button (click)="notImplemented()" class="flex flex-col items-center gap-1">
         <div class="w-12 h-12 rounded-[1rem] bg-surface-200 flex items-center justify-center text-text-secondary text-lg shadow-lg">
           ⌄
         </div>
-        <span class="text-[10px] text-text-secondary font-medium">More</span>
-      </div>
+        <span class="text-[10px] text-text-secondary font-medium">{{ 'chatList.quickMore' | t }}</span>
+      </button>
     </div>
 
     <!-- Search Bar -->
@@ -54,13 +54,14 @@
     </div>
 
     <!-- Filter Pills -->
-    <div class="app-filter-scroll">
-      <button class="bg-surface-200 text-text-secondary w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs">≡</button>
-      <button class="app-chip app-chip-active bg-primary/20 text-primary">All</button>
-      <button class="app-chip">Online</button>
-      <button class="app-chip">Unread</button>
-      <button class="app-chip">My turn</button>
-      <button class="app-chip">Timezone proximity</button>
+    <div class="flex items-center">
+      <button (click)="notImplemented()" class="bg-surface-200 text-text-secondary w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs ml-4">≡</button>
+      <app-scrollable-pills 
+        [pills]="filterPills()" 
+        [selected]="selectedFilter()" 
+        (select)="onFilterSelect($event)"
+        class="flex-1">
+      </app-scrollable-pills>
     </div>
   </header>
 
@@ -104,7 +105,7 @@
           <div class="flex justify-between items-center gap-2">
             <p class="text-[13px] text-text-secondary truncate">{{ preview.lastMessageText || 'Tap to chat...' }}</p>
             @if (preview.unreadCount > 0) {
-              <span class="bg-primary text-white text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0">
+              <span class="bg-purple-600 text-white text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0">
                 {{ preview.unreadCount }}
               </span>
             }

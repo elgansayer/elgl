@@ -23,7 +23,7 @@ export class AppCardComponent {
   });
 
   readonly hostClasses = computed(() => {
-    const base = 'block rounded-2xl bg-white transition-all';
+    const base = 'block rounded-2xl bg-surface-200 transition-all';
     
     let paddingClass = '';
     switch (this.padding()) {
@@ -44,16 +44,16 @@ export class AppCardComponent {
     let variantClass = '';
     switch (this.variant()) {
       case 'default':
-        variantClass = 'border border-slate-100 shadow-sm';
+        variantClass = 'border border-surface-100 shadow-sm';
         break;
       case 'elevated':
-        variantClass = 'border border-slate-200 shadow-lg';
+        variantClass = 'border border-surface-100 shadow-lg';
         break;
       case 'outlined':
-        variantClass = 'border-2 border-slate-200 shadow-none';
+        variantClass = 'border-2 border-surface-100 shadow-none';
         break;
       case 'interactive':
-        variantClass = 'border border-slate-200 shadow-sm cursor-pointer hover:shadow-md hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2';
+        variantClass = 'border border-surface-100 shadow-sm cursor-pointer hover:shadow-md hover:border-surface-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2';
         break;
     }
 

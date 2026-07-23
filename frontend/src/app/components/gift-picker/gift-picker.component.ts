@@ -31,18 +31,18 @@ const AVAILABLE_GIFTS: GiftItem[] = [
   standalone: true,
   imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
-    <div class="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl w-72 max-h-96 overflow-hidden">
+    <div class="bg-surface-200 border border-surface-100 rounded-xl shadow-2xl w-72 max-h-96 overflow-hidden">
       <!-- Header -->
-      <div class="p-3 border-b border-gray-700">
+      <div class="p-3 border-b border-surface-100">
         <h3 class="text-sm font-semibold text-white">{{ 'giftPicker.title' | t }}</h3>
       </div>
 
       <!-- Category filter -->
-      <div class="flex gap-1 p-2 border-b border-gray-700 overflow-x-auto">
+      <div class="flex gap-1 p-2 border-b border-surface-100 overflow-x-auto">
         <button *ngFor="let cat of categories"
                 (click)="selectedCategory.set(cat)"
                 class="px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors"
-                [ngClass]="selectedCategory() === cat ? 'bg-pink-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'">
+                [ngClass]="selectedCategory() === cat ? 'bg-pink-600 text-white' : 'bg-surface-100 text-text-secondary hover:bg-gray-600'">
           {{ cat }}
         </button>
       </div>
@@ -52,10 +52,10 @@ const AVAILABLE_GIFTS: GiftItem[] = [
         <div class="grid grid-cols-3 gap-2">
           <button *ngFor="let gift of filteredGifts()"
                   (click)="selectGift(gift)"
-                  class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-gray-700 transition-colors"
+                  class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-100 transition-colors"
                   [attr.aria-label]="'Send ' + gift.name">
             <span class="text-2xl">{{ gift.emoji }}</span>
-            <span class="text-xs text-gray-300">{{ gift.name }}</span>
+            <span class="text-xs text-text-secondary">{{ gift.name }}</span>
             <span class="text-[10px] text-yellow-400">{{ gift.coinCost }} 🪙</span>
           </button>
         </div>

@@ -54,7 +54,7 @@ describe('AppEmptyStateComponent', () => {
     const heading = emptyStateElement.querySelector('h3');
     expect(heading?.textContent?.trim()).toBe('No Results Found');
 
-    const desc = emptyStateElement.querySelector('p.text-slate-500');
+    const desc = emptyStateElement.querySelector('p.text-text-secondary');
     expect(desc?.textContent?.trim()).toBe('Try adjusting your search criteria.');
 
     const btn = emptyStateElement.querySelector('button');

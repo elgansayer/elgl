@@ -62,7 +62,6 @@ export class UsersService {
 
     return data ?? [];
   }
-
   private getMockProfile(userId: string): UserProfile {
     return {
       id: userId,

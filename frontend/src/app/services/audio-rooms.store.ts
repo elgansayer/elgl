@@ -1,3 +1,4 @@
+import { showToast, notImplementedToast } from './toast.service';
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -131,7 +132,7 @@ export class AudioRoomsStore {
       }
     } catch (e) {
       console.error('Failed to join audio room:', e);
-      alert('Could not join room right now.');
+      showToast('Could not join room right now.');
       return;
     }
 
@@ -170,7 +171,7 @@ export class AudioRoomsStore {
           if (this.livekitRoom) {
             void this.livekitRoom.localParticipant.setMicrophoneEnabled(true);
           }
-          alert('🎉 Host approved your request to speak! Your microphone is now live on stage.');
+          showToast('🎉 Host approved your request to speak! Your microphone is now live on stage.');
         }
       } else if (payload.type === 'speaker_demoted' && payload.target_user_id) {
         this.currentRoom.update(r => {
@@ -184,14 +185,14 @@ export class AudioRoomsStore {
           if (this.livekitRoom) {
             void this.livekitRoom.localParticipant.setMicrophoneEnabled(false);
           }
-          alert('The host moved you back to the listener audience.');
+          showToast('The host moved you back to the listener audience.');
         }
       } else if (payload.type === 'subtitle' && payload.caption) {
         this.captions.update(list => [...list.slice(-49), payload.caption!]);
       } else if (payload.type === 'chat_message' && payload.message) {
         this.roomMessages.update(list => [...list.slice(-99), payload.message!]);
       } else if (payload.type === 'room_ended') {
-        alert('This audio/video room has ended and been archived to Cloudflare R2.');
+        showToast('This audio/video room has ended and been archived to Cloudflare R2.');
         this.leaveRoom();
       }
     });
@@ -205,7 +206,7 @@ export class AudioRoomsStore {
         this.http.post<AudioRoomRecord>(`${this.baseUrl}/raise-hand`, { room_id: room.id }, { headers: this.getHeaders() })
       );
       this.currentRoom.set(updated);
-      alert('✋ Hand raised! The host has been notified of your request to speak on stage.');
+      showToast('✋ Hand raised! The host has been notified of your request to speak on stage.');
     } catch (e) {
       console.error('Raise hand error:', e);
     }

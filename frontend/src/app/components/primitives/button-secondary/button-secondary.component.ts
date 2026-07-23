@@ -41,8 +41,8 @@ export class AppButtonSecondaryComponent {
     }
 
     const stateClass = this.disabled()
-      ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed shadow-none'
-      : 'bg-slate-100 text-slate-800 border border-slate-200 hover:bg-slate-200 hover:border-slate-300 shadow-sm cursor-pointer';
+      ? 'bg-surface-100 text-text-muted border border-surface-100 cursor-not-allowed shadow-none'
+      : 'bg-surface-100 text-text-primary border border-surface-100 hover:bg-surface-100 hover:border-surface-100 shadow-sm cursor-pointer';
 
     const extra = this.customClass();
     return `${base} ${sizeClass} ${stateClass}${extra ? ' ' + extra : ''}`.trim();

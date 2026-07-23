@@ -25,8 +25,8 @@ import { SafetyService } from '../../services/safety.service';
         <div class="max-w-[70%] rounded-lg p-3"
              [class.bg-blue-600]="isOwnMessage()"
              [class.text-white]="isOwnMessage()"
-             [class.bg-gray-100]="!isOwnMessage()"
-             [class.dark:bg-gray-800]="!isOwnMessage()">
+             [class.bg-surface-300]="!isOwnMessage()"
+             [class.]="!isOwnMessage()">
           
           <!-- Text message -->
           <p *ngIf="message.message_type === 'text'" class="text-sm">{{ message.text_content }}</p>

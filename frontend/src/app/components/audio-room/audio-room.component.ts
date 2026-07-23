@@ -1,3 +1,4 @@
+import { showToast, notImplementedToast } from '../../services/toast.service';
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -39,7 +40,7 @@ export class AudioRoomComponent implements OnInit {
       await this.store.joinRoom(room);
     } catch (e) {
       console.error('Error creating live room:', e);
-      alert(this.i18n.translate('audioRoom.launchError'));
+      showToast(this.i18n.translate('audioRoom.launchError'));
     }
   }
 

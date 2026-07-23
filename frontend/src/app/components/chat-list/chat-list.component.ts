@@ -1,3 +1,4 @@
+import { showToast, notImplementedToast } from '../../services/toast.service';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -6,6 +7,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
 import { ChatMessage, ChatRoom, ChatService } from '../../services/chat.service';
+import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 
 interface ChatRoomPreview {
   id: string;
@@ -21,7 +23,7 @@ interface ChatRoomPreview {
 
 @Component({
   selector: 'app-chat-list',
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ScrollablePillsComponent],
   templateUrl: './chat-list.component.html'
 })
 export class ChatListComponent implements OnInit {
@@ -32,13 +34,39 @@ export class ChatListComponent implements OnInit {
   readonly isLoading = signal<boolean>(true);
   readonly previews = signal<ChatRoomPreview[]>([]);
   readonly search = signal<string>('');
+  
+  notImplemented(): void {
+    notImplementedToast();
+  }
+
+  readonly filterPills = computed(() => {
+    this.i18n.translations();
+    return [
+      { id: 'all', label: this.i18n.translate('chatList.filterAll') },
+      { id: 'online', label: this.i18n.translate('chatList.filterOnline') },
+      { id: 'unread', label: this.i18n.translate('chatList.filterUnread') },
+      { id: 'my_turn', label: this.i18n.translate('chatList.filterMyTurn') },
+      { id: 'timezone', label: this.i18n.translate('chatList.filterTimezone') }
+    ];
+  });
+  readonly selectedFilter = signal<string>('all');
+
+  onFilterSelect(id: string) {
+    this.selectedFilter.set(id);
+  }
 
   readonly filteredPreviews = computed(() => {
     const query = this.search().trim().toLowerCase();
+    const filter = this.selectedFilter();
+    
+    let result = this.previews();
+    if (filter === 'online') result = result.filter(p => p.isOnline);
+    if (filter === 'unread') result = result.filter(p => p.unreadCount > 0);
+    
     if (!query) {
-      return this.previews();
+      return result;
     }
-    return this.previews().filter((preview) =>
+    return result.filter((preview) =>
       preview.title.toLowerCase().includes(query) ||
       preview.subtitle.toLowerCase().includes(query) ||
       preview.lastMessageText.toLowerCase().includes(query)
@@ -51,6 +79,8 @@ export class ChatListComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     await this.loadPreviews();
   }
+
+
 
   async loadPreviews(): Promise<void> {
     this.isLoading.set(true);

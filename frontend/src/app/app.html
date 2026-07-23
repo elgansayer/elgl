@@ -1,12 +1,12 @@
-<div class="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100 text-slate-900">
+<div class="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100 text-text-primary">
   @if (economyStore.activeGiftAnimation(); as overlay) {
     <div class="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center p-4">
       <div
-        class="rounded-3xl bg-white shadow-2xl border border-amber-200 ps-6 pe-6 pt-5 pb-5 text-center max-w-sm"
+        class="rounded-3xl bg-surface-200 shadow-2xl border border-amber-500/30 ps-6 pe-6 pt-5 pb-5 text-center max-w-sm"
       >
         <div class="text-5xl">{{ overlay.gift.icon }}</div>
         <h3 class="mt-2 text-lg font-black">{{ overlay.gift.name }}</h3>
-        <p class="mt-1 text-xs text-slate-600">
+        <p class="mt-1 text-xs text-text-secondary">
           {{ overlay.sender_name }} sent {{ overlay.receiver_name }} a gift ({{
             overlay.gift.cost_coins
           }}
@@ -16,7 +16,7 @@
     </div>
   }
 
-  <header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur">
+  <header class="sticky top-0 z-40 border-b border-surface-100/80 bg-surface-200/95 backdrop-blur">
     <div class="mx-auto max-w-4xl ps-4 pe-4 pt-2.5 pb-2.5 flex items-center justify-between gap-3">
       <a routerLink="/discovery" class="flex items-center gap-2.5">
         <span
@@ -25,17 +25,17 @@
         >
         <div>
           <p class="text-sm font-black leading-tight">HelloTalk</p>
-          <p class="text-[10px] text-slate-500 leading-tight">Community clone</p>
+          <p class="text-[10px] text-text-secondary leading-tight">Community clone</p>
         </div>
       </a>
 
       <div class="flex items-center gap-2.5">
         <span
-          class="rounded-full bg-amber-100 text-amber-900 text-xs font-bold ps-2.5 pe-2.5 pt-1 pb-1 ring-1 ring-amber-200"
+          class="rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold ps-2.5 pe-2.5 pt-1 pb-1 ring-1 ring-amber-200"
         >
           🪙 {{ economyStore.coinsBalance() }}
         </span>
-        <a routerLink="/visitors" class="app-pill hidden sm:inline text-slate-600">
+        <a routerLink="/visitors" class="app-pill hidden sm:inline text-text-secondary">
           👀 Visitors
         </a>
         <a routerLink="/profile" class="app-pill hidden sm:inline">
@@ -51,7 +51,7 @@
     </div>
   </main>
 
-  <nav class="fixed bottom-0 inset-x-0 z-40 border-t border-slate-200/80 bg-white/95 backdrop-blur">
+  <nav class="fixed bottom-0 inset-x-0 z-40 border-t border-surface-100/80 bg-surface-200/95 backdrop-blur">
     <div class="mx-auto max-w-4xl grid grid-cols-5 ps-2 pe-2 pt-2 pb-2">
       @for (item of navItems; track item.path) {
         <a
@@ -60,7 +60,7 @@
             'flex flex-col items-center justify-center gap-0.5 rounded-2xl pt-2 pb-2 text-[11px] font-semibold transition-all duration-200 ' +
             (isRouteActive(item.path)
               ? 'bg-primary/10 text-primary'
-              : 'text-slate-500 hover:bg-slate-100/80')
+              : 'text-text-secondary hover:bg-surface-100/80')
           "
         >
           <span class="text-lg">{{ item.icon }}</span>

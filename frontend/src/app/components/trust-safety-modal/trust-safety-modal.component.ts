@@ -9,35 +9,35 @@ import { EconomyStore } from '../../services/economy.store';
   template: `
     <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div
-        class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-5 animate-fadeIn"
+        class="bg-surface-200 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-surface-100 space-y-5 animate-fadeIn"
       >
         <div
-          class="flex items-center justify-between border-b border-slate-100 pb-3"
+          class="flex items-center justify-between border-b border-surface-100 pb-3"
         >
           <div>
-            <h3 class="text-xl font-black text-slate-900 flex items-center gap-2">
+            <h3 class="text-xl font-black text-text-primary flex items-center gap-2">
               <span>🛡️ Trust and safety moderation</span>
             </h3>
-            <p class="text-xs text-slate-500">
+            <p class="text-xs text-text-secondary">
               Report or block {{ targetName }} to keep our community safe
             </p>
           </div>
           <button
             (click)="closed.emit()"
-            class="text-slate-400 hover:text-slate-600 text-lg font-bold"
+            class="text-text-muted hover:text-text-secondary text-lg font-bold"
           >
             ✕
           </button>
         </div>
 
-        <div class="flex rounded-2xl bg-slate-100 p-1 gap-1">
+        <div class="flex rounded-2xl bg-surface-100 p-1 gap-1">
           <button
             (click)="mode = 'report'"
             [class]="
               'flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ' +
               (mode === 'report'
-                ? 'bg-white text-primary shadow-sm'
-                : 'text-slate-600')
+                ? 'bg-surface-200 text-primary shadow-sm'
+                : 'text-text-secondary')
             "
           >
             ⚠️ Report user
@@ -48,7 +48,7 @@ import { EconomyStore } from '../../services/economy.store';
               'flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ' +
               (mode === 'block'
                 ? 'bg-red-600 text-white shadow-sm'
-                : 'text-slate-600')
+                : 'text-text-secondary')
             "
           >
             🚫 Block user
@@ -58,13 +58,13 @@ import { EconomyStore } from '../../services/economy.store';
         @if (mode === 'report') {
           <div class="space-y-3 text-xs">
             <div>
-              <label for="report-reason-select" class="font-bold text-slate-700 block mb-1"
+              <label for="report-reason-select" class="font-bold text-text-primary block mb-1"
                 >Select violation category:</label
               >
               <select
                 id="report-reason-select"
                 [(ngModel)]="reportReason"
-                class="w-full px-3 py-2 border rounded-xl bg-slate-50 font-medium"
+                class="w-full px-3 py-2 border rounded-xl bg-surface-300 font-medium"
               >
                 <option value="harassment">Harassment / Bullying</option>
                 <option value="spam">Spam / Commercial Advertising</option>
@@ -74,7 +74,7 @@ import { EconomyStore } from '../../services/economy.store';
               </select>
             </div>
             <div>
-              <label for="report-details-textarea" class="font-bold text-slate-700 block mb-1"
+              <label for="report-details-textarea" class="font-bold text-text-primary block mb-1"
                 >Additional context (optional):</label
               >
               <textarea
@@ -82,7 +82,7 @@ import { EconomyStore } from '../../services/economy.store';
                 [(ngModel)]="reportDetails"
                 rows="3"
                 placeholder="Provide context or specific phrase where violation occurred..."
-                class="w-full p-3 border rounded-xl bg-slate-50"
+                class="w-full p-3 border rounded-xl bg-surface-300"
               ></textarea>
             </div>
           </div>
@@ -90,12 +90,12 @@ import { EconomyStore } from '../../services/economy.store';
 
         @if (mode === 'block') {
           <div
-            class="bg-red-50 p-4 rounded-2xl border border-red-200 space-y-2 text-xs"
+            class="bg-red-500/10 p-4 rounded-2xl border border-red-500/30 space-y-2 text-xs"
           >
             <span class="font-bold text-red-900 block"
               >⚠️ What happens when you block {{ targetName }}:</span
             >
-            <ul class="list-disc list-inside space-y-1 text-slate-700">
+            <ul class="list-disc list-inside space-y-1 text-text-primary">
               <li>They will not be able to send you direct chat messages.</li>
               <li>Their Moments will immediately vanish from your timeline.</li>
               <li>They cannot see when you visit their profile.</li>
@@ -103,10 +103,10 @@ import { EconomyStore } from '../../services/economy.store';
           </div>
         }
 
-        <div class="flex justify-end gap-3 pt-2 border-t border-slate-100">
+        <div class="flex justify-end gap-3 pt-2 border-t border-surface-100">
           <button
             (click)="closed.emit()"
-            class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-bold text-xs"
+            class="px-4 py-2 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs"
           >
             Cancel
           </button>

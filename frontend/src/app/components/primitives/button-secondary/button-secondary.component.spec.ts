@@ -50,8 +50,8 @@ describe('AppButtonSecondaryComponent', () => {
   });
 
   it('should apply secondary styles and size md by default', () => {
-    expect(buttonElement.classList.contains('bg-slate-100')).toBe(true);
-    expect(buttonElement.classList.contains('text-slate-800')).toBe(true);
+    expect(buttonElement.classList.contains('bg-surface-100')).toBe(true);
+    expect(buttonElement.classList.contains('text-text-primary')).toBe(true);
     expect(buttonElement.classList.contains('border')).toBe(true);
     expect(buttonElement.classList.contains('ps-4')).toBe(true);
   });
@@ -67,6 +67,6 @@ describe('AppButtonSecondaryComponent', () => {
 
     expect(buttonElement.disabled).toBe(true);
     expect(buttonElement.classList.contains('cursor-not-allowed')).toBe(true);
-    expect(buttonElement.classList.contains('bg-slate-200')).toBe(true);
+    expect(buttonElement.classList.contains('bg-surface-100')).toBe(true);
   });
 });

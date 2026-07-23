@@ -10,7 +10,7 @@ import { HobbyTag } from '../../services/hobby-tags.service';
   template: `
     <div class="space-y-4">
       <h3 class="text-lg font-bold text-slate-200">Select your hobbies & interests</h3>
-      <p class="text-sm text-slate-400">Choose tags to get personalised vocabulary recommendations</p>
+      <p class="text-sm text-text-muted">Choose tags to get personalised vocabulary recommendations</p>
 
       @for (category of categories(); track category) {
         <div class="space-y-2">
@@ -36,7 +36,7 @@ import { HobbyTag } from '../../services/hobby-tags.service';
       }
 
       @if (selectedTags().length > 0) {
-        <div class="mt-6 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+        <div class="mt-6 p-4 bg-surface-800/50 rounded-xl border border-slate-700">
           <h4 class="text-sm font-semibold text-slate-300 mb-3">Your selected interests</h4>
           <div class="flex flex-wrap gap-2">
             @for (tag of selectedTags(); track tag.id) {
@@ -91,6 +91,6 @@ export class HobbyTagSelectorComponent {
     if (this.isSelected(tagId)) {
       return `${base} bg-indigo-500/20 text-indigo-300 border-indigo-500/50 shadow-sm`;
     }
-    return `${base} bg-slate-800/50 text-slate-300 border-slate-700/50 hover:bg-slate-700/50 hover:border-slate-600`;
+    return `${base} bg-surface-800/50 text-slate-300 border-slate-700/50 hover:bg-surface-200/50 hover:border-slate-600`;
   }
 }

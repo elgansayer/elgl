@@ -8,6 +8,7 @@ import { UsersService } from '../users/users.service';
 import { CreateCommentDto, CreateMomentDto } from './dto/moment.dto';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { TimelineWorker } from './timeline.worker';
+import { MOCK_USERS } from '../mock-data';
 
 interface UserFollowRow {
   following_id: string;
@@ -151,7 +152,33 @@ export class MomentsService {
       if (data) moments = data as MomentRecord[];
     }
 
-    if (moments.length === 0) return [];
+    if (moments.length === 0) {
+      const generated: MomentRecord[] = [];
+      const usedUsers = MOCK_USERS.slice(0, 50); // Get 50 fake users
+      for (let i = 0; i < usedUsers.length; i++) {
+        const u = usedUsers[i];
+        generated.push({
+          id: `mock-moment-${i}`,
+          user_id: u.id,
+          text_content: `Just practicing my ${u.target_languages[0].toUpperCase()} today! How is everyone doing? Let me know if you want to chat.`,
+          media_urls: Math.random() > 0.5 ? [`https://i.pravatar.cc/300?u=moment-${i}`] : [],
+          media_type: Math.random() > 0.5 ? 'images' : 'none',
+          target_language: u.target_languages[0],
+          likes_count: Math.floor(Math.random() * 100),
+          comments_count: Math.floor(Math.random() * 20),
+          is_pinned: false,
+          created_at: new Date(Date.now() - Math.random() * 86400000 * 3).toISOString(),
+          author: { id: u.id, display_name: u.display_name, avatar_url: u.avatar_url },
+          is_liked_by_me: Math.random() > 0.8,
+        } as MomentRecord);
+      }
+      
+      // Filter the generated mock data same as DB query
+      if (filter === 'Classmates' && targetLang) {
+        return generated.filter(m => m.target_language === targetLang);
+      }
+      return generated.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
 
     // Hydrate author profiles & likes
     const authorIds = Array.from(new Set(moments.map((m) => m.user_id)));

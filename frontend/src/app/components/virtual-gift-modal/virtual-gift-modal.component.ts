@@ -8,33 +8,33 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
   template: `
     <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div
-        class="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-200 space-y-5 animate-fadeIn"
+        class="bg-surface-200 rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-surface-100 space-y-5 animate-fadeIn"
       >
         <div
-          class="flex items-center justify-between border-b border-slate-100 pb-3"
+          class="flex items-center justify-between border-b border-surface-100 pb-3"
         >
           <div>
-            <h3 class="text-xl font-black text-slate-900 flex items-center gap-2">
+            <h3 class="text-xl font-black text-text-primary flex items-center gap-2">
               <span>🎁 Send virtual gift to host</span>
             </h3>
-            <p class="text-xs text-slate-500">Support language partners with animated tokens</p>
+            <p class="text-xs text-text-secondary">Support language partners with animated tokens</p>
           </div>
           <button
             (click)="closed.emit()"
-            class="text-slate-400 hover:text-slate-600 text-lg font-bold"
+            class="text-text-muted hover:text-text-secondary text-lg font-bold"
           >
             ✕
           </button>
         </div>
 
         <div
-          class="bg-amber-50 p-4 rounded-2xl border border-amber-300 flex items-center justify-between"
+          class="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/30 flex items-center justify-between"
         >
           <div class="flex items-center gap-2">
             <span class="text-2xl">💰</span>
             <div>
               <span
-                class="text-[10px] uppercase font-black text-amber-800 block"
+                class="text-[10px] uppercase font-black text-amber-400 block"
                 >Your coin balance:</span
               >
               <span class="text-lg font-extrabold text-amber-950"
@@ -53,20 +53,20 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
 
         @if (showCoinPackages) {
           <div class="space-y-3 animate-fadeIn">
-            <span class="text-xs font-bold text-slate-700 block"
+            <span class="text-xs font-bold text-text-primary block"
               >Select a coin bundle to recharge:</span
             >
             <div class="grid grid-cols-1 gap-2.5">
               <div
-                class="p-3.5 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-between"
+                class="p-3.5 rounded-2xl border border-surface-100 bg-surface-300 flex items-center justify-between"
               >
                 <div class="flex items-center gap-3">
                   <span class="text-2xl">🪙</span>
                   <div>
-                    <span class="font-black text-sm text-slate-800"
+                    <span class="font-black text-sm text-text-primary"
                       >Starter Pouch (100 Coins)</span
                     >
-                    <span class="text-xs text-slate-500 block"
+                    <span class="text-xs text-text-secondary block"
                       >Great for sending roses and coffees</span
                     >
                   </div>
@@ -79,12 +79,12 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                 </button>
               </div>
               <div
-                class="p-3.5 rounded-2xl border-2 border-amber-400 bg-amber-50/30 flex items-center justify-between"
+                class="p-3.5 rounded-2xl border-2 border-amber-400 bg-amber-500/10/30 flex items-center justify-between"
               >
                 <div class="flex items-center gap-3">
                   <span class="text-2xl">💰</span>
                   <div>
-                    <span class="font-black text-sm text-slate-800"
+                    <span class="font-black text-sm text-text-primary"
                       >Popular Chest (500 Coins)</span
                     >
                     <span class="text-xs text-amber-600 font-bold block"
@@ -100,15 +100,15 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                 </button>
               </div>
               <div
-                class="p-3.5 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-between"
+                class="p-3.5 rounded-2xl border border-surface-100 bg-surface-300 flex items-center justify-between"
               >
                 <div class="flex items-center gap-3">
                   <span class="text-2xl">💎</span>
                   <div>
-                    <span class="font-black text-sm text-slate-800"
+                    <span class="font-black text-sm text-text-primary"
                       >Royal Vault (2,000 Coins)</span
                     >
-                    <span class="text-xs text-slate-500 block"
+                    <span class="text-xs text-text-secondary block"
                       >Unlock crowns and rocket boosts</span
                     >
                   </div>
@@ -126,7 +126,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
 
         @if (!showCoinPackages) {
           <div class="space-y-3">
-            <span class="text-xs font-bold text-slate-700 block"
+            <span class="text-xs font-bold text-text-primary block"
               >Select virtual gift to send to {{ receiverName }}:</span
             >
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -138,12 +138,12 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                     'w-full p-3 rounded-2xl border-2 cursor-pointer transition-all flex flex-col items-center text-center space-y-1.5 ' +
                     (selectedGift?.id === gift.id
                       ? 'border-primary bg-primary/5 shadow-md scale-105'
-                      : 'border-slate-200 hover:border-slate-300 bg-slate-50')
+                      : 'border-surface-100 hover:border-surface-100 bg-surface-300')
                   "
                 >
                   <span class="text-3xl block">{{ gift.icon }}</span>
                   <span
-                    class="font-bold text-xs text-slate-800 block truncate w-full"
+                    class="font-bold text-xs text-text-primary block truncate w-full"
                     >{{ gift.name }}</span
                   >
                   <span class="text-[11px] font-extrabold text-amber-600"
@@ -155,10 +155,10 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
           </div>
         }
 
-        <div class="flex justify-end gap-3 pt-2 border-t border-slate-100">
+        <div class="flex justify-end gap-3 pt-2 border-t border-surface-100">
           <button
             (click)="closed.emit()"
-            class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-bold text-xs"
+            class="px-4 py-2 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs"
           >
             Cancel
           </button>

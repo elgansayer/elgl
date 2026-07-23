@@ -8,16 +8,16 @@ import { SearchFilterParams } from '../../../services/discovery.service';
   selector: 'app-global-search',
   imports: [FormsModule, TranslatePipe],
   template: `
-    <div class="flex flex-col gap-4 p-4 bg-surface rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
-      <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+    <div class="flex flex-col gap-4 p-4 bg-surface rounded-xl shadow-sm border border-surface-100 ">
+      <h3 class="text-lg font-bold text-text-primary ">
         {{ 'discovery.global_search_title' | t }}
       </h3>
 
       <div class="flex flex-col gap-1.5">
-        <label class="text-sm font-medium text-slate-700 dark:text-slate-300">
+        <label class="text-sm font-medium text-text-primary ">
           {{ 'discovery.native_language' | t }}
         </label>
-        <select [ngModel]="nativeLanguage()" (ngModelChange)="nativeLanguage.set($event)" class="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+        <select [ngModel]="nativeLanguage()" (ngModelChange)="nativeLanguage.set($event)" class="w-full p-2.5 rounded-lg border border-surface-100  bg-surface-200  text-text-primary  focus:ring-2 focus:ring-blue-500 outline-none">
           <option value="">{{ 'discovery.any_language' | t }}</option>
           @for (lang of i18n.availableLanguages; track lang.code) {
             <option [value]="lang.code">{{ lang.nativeName }} {{ lang.flag }}</option>
@@ -26,10 +26,10 @@ import { SearchFilterParams } from '../../../services/discovery.service';
       </div>
 
       <div class="flex flex-col gap-1.5">
-        <label class="text-sm font-medium text-slate-700 dark:text-slate-300">
+        <label class="text-sm font-medium text-text-primary ">
           {{ 'discovery.target_language' | t }}
         </label>
-        <select [ngModel]="targetLanguage()" (ngModelChange)="targetLanguage.set($event)" class="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+        <select [ngModel]="targetLanguage()" (ngModelChange)="targetLanguage.set($event)" class="w-full p-2.5 rounded-lg border border-surface-100  bg-surface-200  text-text-primary  focus:ring-2 focus:ring-blue-500 outline-none">
           <option value="">{{ 'discovery.any_language' | t }}</option>
           @for (lang of i18n.availableLanguages; track lang.code) {
             <option [value]="lang.code">{{ lang.nativeName }} {{ lang.flag }}</option>
@@ -38,10 +38,10 @@ import { SearchFilterParams } from '../../../services/discovery.service';
       </div>
 
       <div class="flex flex-col gap-1.5">
-        <label class="text-sm font-medium text-slate-700 dark:text-slate-300">
+        <label class="text-sm font-medium text-text-primary ">
           {{ 'discovery.proficiency_level' | t }}
         </label>
-        <select [ngModel]="level()" (ngModelChange)="level.set($event)" class="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+        <select [ngModel]="level()" (ngModelChange)="level.set($event)" class="w-full p-2.5 rounded-lg border border-surface-100  bg-surface-200  text-text-primary  focus:ring-2 focus:ring-blue-500 outline-none">
           <option value="">{{ 'discovery.any_level' | t }}</option>
           @for (lvl of levels; track lvl) {
             <option [value]="lvl">{{ 'levels.' + lvl | t }}</option>

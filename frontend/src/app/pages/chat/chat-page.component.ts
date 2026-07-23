@@ -12,18 +12,18 @@ import { ChatMessageComponent } from '../../components/chat-message/chat-message
   template: `
     <div class="flex h-full">
       <!-- Room List -->
-      <aside class="w-80 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
+      <aside class="w-80 border-r border-surface-100  overflow-y-auto">
         <div class="p-4">
           <h2 class="text-lg font-semibold mb-4">Chats</h2>
           <div *ngFor="let room of rooms()" 
                (click)="selectRoom(room)"
-               class="cursor-pointer p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-               [class.bg-blue-50]="selectedRoom()?.id === room.id">
+               class="cursor-pointer p-3 rounded-lg hover:bg-surface-300 :bg-surface-200 transition-colors"
+               [class.bg-blue-500/10]="selectedRoom()?.id === room.id">
             <div class="flex items-center gap-3">
               <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt="">
               <div class="flex-1 min-w-0">
                 <p class="font-medium truncate">{{ room.title }}</p>
-                <p class="text-sm text-gray-500 truncate">{{ room.subtitle }}</p>
+                <p class="text-sm text-text-muted truncate">{{ room.subtitle }}</p>
               </div>
               <span *ngIf="room.is_online" class="w-2 h-2 bg-green-500 rounded-full"></span>
             </div>
@@ -35,12 +35,12 @@ import { ChatMessageComponent } from '../../components/chat-message/chat-message
       <main class="flex-1 flex flex-col">
         <div *ngIf="selectedRoom() as room" class="flex-1 flex flex-col">
           <!-- Header -->
-          <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div class="p-4 border-b border-surface-100 ">
             <div class="flex items-center gap-3">
               <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt="">
               <div>
                 <h3 class="font-semibold">{{ room.title }}</h3>
-                <p class="text-sm text-gray-500">{{ room.subtitle }}</p>
+                <p class="text-sm text-text-muted">{{ room.subtitle }}</p>
               </div>
             </div>
           </div>
@@ -51,13 +51,13 @@ import { ChatMessageComponent } from '../../components/chat-message/chat-message
           </div>
 
           <!-- Input -->
-          <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+          <div class="p-4 border-t border-surface-100 ">
             <div class="flex gap-2">
               <input [ngModel]="newMessageText()"
                      (ngModelChange)="newMessageText.set($event)"
                      (keyup.enter)="sendMessage()"
                      placeholder="Type a message..."
-                     class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600">
+                     class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500  ">
               <button (click)="sendMessage()"
                       class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                 Send
@@ -67,7 +67,7 @@ import { ChatMessageComponent } from '../../components/chat-message/chat-message
         </div>
 
         <!-- No room selected -->
-        <div *ngIf="!selectedRoom()" class="flex-1 flex items-center justify-center text-gray-500">
+        <div *ngIf="!selectedRoom()" class="flex-1 flex items-center justify-center text-text-muted">
           Select a chat to start messaging
         </div>
       </main>

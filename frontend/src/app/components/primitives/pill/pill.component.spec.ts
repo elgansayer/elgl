@@ -50,8 +50,8 @@ describe('AppPillComponent', () => {
   });
 
   it('should apply success colour and size md classes', () => {
-    expect(pillElement.classList.contains('bg-emerald-100')).toBe(true);
-    expect(pillElement.classList.contains('text-emerald-800')).toBe(true);
+    expect(pillElement.classList.contains('bg-emerald-500/20')).toBe(true);
+    expect(pillElement.classList.contains('text-emerald-400')).toBe(true);
     expect(pillElement.classList.contains('ps-3')).toBe(true);
     expect(pillElement.classList.contains('pe-3')).toBe(true);
   });

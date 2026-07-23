@@ -1,3 +1,4 @@
+import { showToast, notImplementedToast } from '../../services/toast.service';
 import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -190,10 +191,10 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   async bookmark(msg: ChatMessage): Promise<void> {
     try {
       await this.chatService.addFavourite(msg.id, `Saved from room ${this.roomId}`);
-      alert(this.i18n.translate('chatRoom.bookmarkedAlert'));
+      showToast(this.i18n.translate('chatRoom.bookmarkedAlert'));
     } catch (e) {
       console.error('Failed to bookmark message:', e);
-      alert(this.i18n.translate('chatRoom.bookmarkErrorAlert'));
+      showToast(this.i18n.translate('chatRoom.bookmarkErrorAlert'));
     }
   }
 
@@ -204,10 +205,10 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
         reason: 'Inappropriate message content',
         context_url: `${window.location.origin}/chat/${this.roomId}`
       }));
-      alert(this.i18n.translate('chatRoom.reportedAlert'));
+      showToast(this.i18n.translate('chatRoom.reportedAlert'));
     } catch (e) {
       console.error('Failed to report message:', e);
-      alert(this.i18n.translate('chatRoom.reportErrorAlert'));
+      showToast(this.i18n.translate('chatRoom.reportErrorAlert'));
     }
   }
 
@@ -222,10 +223,10 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
         definition: 'Saved full chat sentence to LingQ Spaced Repetition deck.'
       });
       await this.vocabStore.updateSrsLevel(created.id, 1);
-      alert(this.i18n.translate('chatRoom.savedLingqAlert', { text: msg.text_content }));
+      showToast(this.i18n.translate('chatRoom.savedLingqAlert', { text: msg.text_content }));
     } catch (e) {
       console.error('Failed to save sentence to LingQ deck:', e);
-      alert(this.i18n.translate('chatRoom.saveErrorAlert'));
+      showToast(this.i18n.translate('chatRoom.saveErrorAlert'));
     }
   }
 

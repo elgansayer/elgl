@@ -9,48 +9,48 @@ import { TranslatePipe } from '../../services/translate.pipe';
   standalone: true,
   imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
-    <div class="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl w-80 max-h-96 overflow-hidden">
+    <div class="bg-surface-200 border border-surface-100 rounded-xl shadow-2xl w-80 max-h-96 overflow-hidden">
       <!-- Search input -->
-      <div class="p-3 border-b border-gray-700">
+      <div class="p-3 border-b border-surface-100">
         <div class="relative">
           <input type="text"
                  [(ngModel)]="query"
                  (input)="onSearch()"
                  placeholder="{{ 'chatSearch.placeholder' | t }}"
-                 class="w-full bg-gray-700 text-white text-sm rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-400" />
-          <span class="absolute left-3 top-2.5 text-gray-400 text-sm">🔍</span>
+                 class="w-full bg-surface-100 text-white text-sm rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-400" />
+          <span class="absolute left-3 top-2.5 text-text-muted text-sm">🔍</span>
         </div>
       </div>
 
       <!-- Filter by type -->
-      <div class="flex gap-1 p-2 border-b border-gray-700 overflow-x-auto">
+      <div class="flex gap-1 p-2 border-b border-surface-100 overflow-x-auto">
         <button *ngFor="let type of messageTypes"
                 (click)="selectedType.set(type)"
                 class="px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors"
-                [ngClass]="selectedType() === type ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'">
+                [ngClass]="selectedType() === type ? 'bg-blue-600 text-white' : 'bg-surface-100 text-text-secondary hover:bg-gray-600'">
           {{ type }}
         </button>
       </div>
 
       <!-- Results -->
       <div class="overflow-y-auto max-h-64">
-        <div *ngIf="isSearching()" class="p-4 text-center text-sm text-gray-400">
+        <div *ngIf="isSearching()" class="p-4 text-center text-sm text-text-muted">
           {{ 'chatSearch.searching' | t }}
         </div>
         <div *ngIf="!isSearching() && results().length === 0 && query().length > 0"
-             class="p-4 text-center text-sm text-gray-400">
+             class="p-4 text-center text-sm text-text-muted">
           {{ 'chatSearch.noResults' | t }}
         </div>
         <button *ngFor="let msg of results()"
                 (click)="onMessageSelect.emit(msg)"
-                class="w-full text-left px-3 py-2 hover:bg-gray-700 transition-colors border-b border-gray-700 last:border-b-0">
-          <div class="text-xs text-gray-400 mb-1">
+                class="w-full text-left px-3 py-2 hover:bg-surface-100 transition-colors border-b border-surface-100 last:border-b-0">
+          <div class="text-xs text-text-muted mb-1">
             {{ msg.sender?.display_name || 'Unknown' }}
           </div>
           <div class="text-sm text-gray-200 truncate">
             {{ msg.text_content || msg.message_type }}
           </div>
-          <div class="text-[10px] text-gray-500 mt-1">
+          <div class="text-[10px] text-text-muted mt-1">
             {{ msg.created_at | date:'short' }}
           </div>
         </button>

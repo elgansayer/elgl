@@ -1,12 +1,12 @@
 <div class="flex h-full">
   <!-- Room list -->
-  <aside class="w-80 border-e border-gray-700 overflow-y-auto">
+  <aside class="w-80 border-e border-surface-100 overflow-y-auto">
     <h2 class="p-4 text-lg font-semibold">Chats</h2>
     <ul>
       @for (room of rooms(); track room.id) {
         <li
-          class="p-3 cursor-pointer hover:bg-gray-800 transition-colors"
-          [class.bg-gray-800]="selectedRoomId() === room.id"
+          class="p-3 cursor-pointer hover:bg-surface-200 transition-colors"
+          [class.bg-surface-200]="selectedRoomId() === room.id"
           (click)="selectRoom(room.id)"
         >
           <div class="flex items-center gap-3">
@@ -17,7 +17,7 @@
             />
             <div class="flex-1 min-w-0">
               <p class="truncate font-medium">{{ room.title }}</p>
-              <p class="truncate text-sm text-gray-400">{{ room.subtitle }}</p>
+              <p class="truncate text-sm text-text-muted">{{ room.subtitle }}</p>
             </div>
             @if (room.is_online) {
               <span class="w-2 h-2 rounded-full bg-green-500"></span>
@@ -37,15 +37,15 @@
             class="max-w-xs p-3 rounded-lg"
             [class.ms-auto]="msg.sender_id === authService.currentUser()?.id"
             [class.bg-blue-600]="msg.sender_id === authService.currentUser()?.id"
-            [class.bg-gray-700]="msg.sender_id !== authService.currentUser()?.id"
+            [class.bg-surface-100]="msg.sender_id !== authService.currentUser()?.id"
           >
             <p>{{ msg.text_content }}</p>
-            <span class="text-xs text-gray-400">{{ msg.created_at | date:'short' }}</span>
+            <span class="text-xs text-text-muted">{{ msg.created_at | date:'short' }}</span>
           </div>
         }
       </div>
     } @else {
-      <div class="flex-1 flex items-center justify-center text-gray-500">
+      <div class="flex-1 flex items-center justify-center text-text-muted">
         Select a chat to start messaging
       </div>
     }
@@ -56,7 +56,7 @@
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
       <div class="bg-gray-900 rounded-xl p-6 w-80 shadow-2xl">
         <h3 class="text-lg font-semibold mb-2">Incoming Call</h3>
-        <p class="text-gray-300 mb-4">{{ call.callerName }} is calling...</p>
+        <p class="text-text-secondary mb-4">{{ call.callerName }} is calling...</p>
         <div class="flex gap-4 justify-center">
           <button
             class="px-6 py-2 bg-green-600 hover:bg-green-700 rounded-full font-medium"

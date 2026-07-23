@@ -34,10 +34,10 @@ export class AppPillComponent {
         colourClass = 'bg-primary/10 text-primary border border-primary/20';
         break;
       case 'success':
-        colourClass = 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+        colourClass = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
         break;
       case 'warning':
-        colourClass = 'bg-amber-100 text-amber-800 border border-amber-200';
+        colourClass = 'bg-amber-500/20 text-amber-400 border border-amber-500/30';
         break;
       case 'danger':
         colourClass = 'bg-rose-100 text-rose-800 border border-rose-200';
@@ -46,7 +46,7 @@ export class AppPillComponent {
         colourClass = 'bg-sky-100 text-sky-800 border border-sky-200';
         break;
       case 'neutral':
-        colourClass = 'bg-slate-100 text-slate-700 border border-slate-200';
+        colourClass = 'bg-surface-100 text-text-primary border border-surface-100';
         break;
     }
 

@@ -49,13 +49,13 @@ export class AppButtonComponent {
         variantClass = 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed';
         break;
       case 'secondary':
-        variantClass = 'bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed';
+        variantClass = 'bg-surface-400 text-text-primary hover:bg-gray-300 focus:ring-gray-400 disabled:bg-surface-300 disabled:cursor-not-allowed';
         break;
       case 'outline':
-        variantClass = 'border border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed';
+        variantClass = 'border border-surface-200 text-text-secondary hover:bg-surface-300 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed';
         break;
       case 'ghost':
-        variantClass = 'text-gray-600 hover:bg-gray-100 focus:ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed';
+        variantClass = 'text-text-secondary hover:bg-surface-300 focus:ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed';
         break;
       case 'danger':
         variantClass = 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:bg-red-300 disabled:cursor-not-allowed';

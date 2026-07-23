@@ -32,13 +32,13 @@ export interface ContextMenuOption {
         (click)="$event.stopPropagation()"
       >
         <div
-          class="bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[160px] overflow-hidden"
+          class="bg-gray-900 border border-surface-100 rounded-lg shadow-xl py-1 min-w-[160px] overflow-hidden"
           role="menu"
           [attr.aria-label]="'Context menu'"
         >
           <button
             *ngFor="let option of translatedOptions(); trackBy: trackByOptionId"
-            class="w-full flex items-center gap-3 ps-4 pe-4 pt-2.5 pb-2.5 text-sm text-gray-200 hover:bg-gray-800 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+            class="w-full flex items-center gap-3 ps-4 pe-4 pt-2.5 pb-2.5 text-sm text-gray-200 hover:bg-surface-200 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
             [disabled]="option.disabled"
             (click)="onOptionClick(option.id)"
             role="menuitem"

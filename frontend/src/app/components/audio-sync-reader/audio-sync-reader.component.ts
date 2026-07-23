@@ -1,3 +1,4 @@
+import { showToast, notImplementedToast } from '../../services/toast.service';
 import { Component, effect, inject, input, output, signal, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { VocabularyStore } from '../../services/vocabulary.store';
@@ -134,7 +135,7 @@ export class AudioSyncReaderComponent implements OnDestroy {
 
   private playSpeechSynthesis(): void {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      alert('Speech synthesis is not available in this browser environment.');
+      showToast('Speech synthesis is not available in this browser environment.');
       return;
     }
 
@@ -193,7 +194,7 @@ export class AudioSyncReaderComponent implements OnDestroy {
 
   getWordClass(token: TokenSegmentSpan): string {
     if (!token.isWordLike) {
-      return 'text-slate-500 font-normal px-0.5';
+      return 'text-text-secondary font-normal px-0.5';
     }
     const status = this.vocabStore.getWordStatus(token.segment);
     return `rounded px-1 py-0.5 transition-all duration-150 ${status.colourClass}`;

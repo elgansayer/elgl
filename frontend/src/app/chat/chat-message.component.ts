@@ -23,13 +23,13 @@ import { SafetyService } from '../services/safety.service';
         <div 
           class="message-bubble p-3 rounded-lg cursor-pointer select-none"
           [class.bg-blue-600]="isOwnMessage()"
-          [class.bg-gray-700]="!isOwnMessage()"
+          [class.bg-surface-100]="!isOwnMessage()"
         >
           <p class="text-white text-sm">{{ message().text_content }}</p>
           @if (message().media_url) {
             <img [src]="message().media_url" class="mt-2 rounded max-w-full max-h-64 object-cover" />
           }
-          <span class="text-xs text-gray-400 mt-1 block">
+          <span class="text-xs text-text-muted mt-1 block">
             {{ message().created_at | date:'short' }}
           </span>
         </div>

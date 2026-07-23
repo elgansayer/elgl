@@ -68,7 +68,7 @@ describe('AppButtonPrimaryComponent', () => {
 
     expect(buttonElement.disabled).toBe(true);
     expect(buttonElement.classList.contains('cursor-not-allowed')).toBe(true);
-    expect(buttonElement.classList.contains('bg-slate-300')).toBe(true);
+    expect(buttonElement.classList.contains('bg-surface-200')).toBe(true);
 
     buttonElement.click();
     expect(host.clickCount).toBe(0);

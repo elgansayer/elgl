@@ -8,13 +8,13 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
   imports: [CommonModule, FormsModule],
   template: `
     <div
-      class="bg-white rounded-3xl shadow-xl border border-slate-200 flex flex-col h-96 overflow-hidden"
+      class="bg-surface-200 rounded-3xl shadow-xl border border-surface-100 flex flex-col h-96 overflow-hidden"
     >
       <div
-        class="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between"
+        class="bg-surface-300 px-4 py-3 border-b border-surface-100 flex items-center justify-between"
       >
         <span
-          class="font-black text-xs text-slate-800 flex items-center gap-1.5"
+          class="font-black text-xs text-text-primary flex items-center gap-1.5"
         >
           <span>💬 Synchronised room chat and subtitles</span>
         </span>
@@ -24,7 +24,7 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
             'px-2.5 py-1 rounded-xl text-[10px] font-extrabold transition-colors ' +
             (activeTab() === 'subtitles'
               ? 'bg-purple-600 text-white'
-              : 'bg-slate-200 text-slate-700')
+              : 'bg-surface-100 text-text-primary')
           "
         >
           {{
@@ -38,40 +38,40 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
       <div class="flex-1 p-4 overflow-y-auto space-y-2 text-xs">
         @if (activeTab() === 'chat') {
           @if (store.roomMessages().length === 0) {
-            <div class="text-center py-12 text-slate-400">
+            <div class="text-center py-12 text-text-muted">
               No messages in this live room yet. Say hello to the stage speakers!
             </div>
           }
           @for (msg of store.roomMessages(); track msg.id) {
-            <div class="p-2 rounded-xl bg-slate-50">
+            <div class="p-2 rounded-xl bg-surface-300">
               <div
-                class="flex items-center justify-between font-bold text-[11px] text-slate-600 mb-0.5"
+                class="flex items-center justify-between font-bold text-[11px] text-text-secondary mb-0.5"
               >
                 <span>{{ msg.sender_name }}</span>
-                <span class="text-[9px] text-slate-400">{{
+                <span class="text-[9px] text-text-muted">{{
                   msg.created_at | date: 'shortTime'
                 }}</span>
               </div>
-              <p class="text-slate-800">{{ msg.text_content }}</p>
+              <p class="text-text-primary">{{ msg.text_content }}</p>
             </div>
           }
         }
 
         @if (activeTab() === 'subtitles') {
           @if (store.captions().length === 0) {
-            <div class="text-center py-12 text-slate-400">
+            <div class="text-center py-12 text-text-muted">
               No live subtitles yet. When speakers talk on stage or use speech-to-text, closed
               captions broadcast here!
             </div>
           }
           @for (cap of store.captions(); track cap.id) {
             <div
-              class="p-2.5 rounded-xl bg-purple-50 border border-purple-200"
+              class="p-2.5 rounded-xl bg-purple-500/10 border border-purple-200"
             >
               <span class="font-bold text-[10px] text-purple-900 block mb-1"
                 >🎙️ {{ cap.speaker_name }} (Live AI caption):</span
               >
-              <p class="text-xs font-medium text-slate-900">
+              <p class="text-xs font-medium text-text-primary">
                 {{ cap.text_content }}
               </p>
             </div>
@@ -81,14 +81,14 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
 
       @if (activeTab() === 'chat') {
         <div
-          class="p-3 bg-slate-50 border-t border-slate-200 flex gap-2"
+          class="p-3 bg-surface-300 border-t border-surface-100 flex gap-2"
         >
           <input
             type="text"
             [(ngModel)]="inputText"
             (keyup.enter)="send()"
             placeholder="Send a chat message to the room..."
-            class="flex-1 px-3 py-1.5 border rounded-xl bg-white text-xs focus:ring-2 focus:ring-primary"
+            class="flex-1 px-3 py-1.5 border rounded-xl bg-surface-200 text-xs focus:ring-2 focus:ring-primary"
           />
           <button
             (click)="send()"
@@ -101,14 +101,14 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
 
       @if (activeTab() === 'subtitles' && store.isSpeaker()) {
         <div
-          class="p-3 bg-purple-50 border-t border-purple-200 flex gap-2"
+          class="p-3 bg-purple-500/10 border-t border-purple-200 flex gap-2"
         >
           <input
             type="text"
             [(ngModel)]="inputCaption"
             (keyup.enter)="sendSubtitle()"
             placeholder="Simulate speech-to-text live subtitle broadcast..."
-            class="flex-1 px-3 py-1.5 border rounded-xl bg-white text-xs focus:ring-2 focus:ring-purple-600"
+            class="flex-1 px-3 py-1.5 border rounded-xl bg-surface-200 text-xs focus:ring-2 focus:ring-purple-600"
           />
           <button
             (click)="sendSubtitle()"

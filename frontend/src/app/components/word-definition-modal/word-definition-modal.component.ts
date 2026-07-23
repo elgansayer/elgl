@@ -1,3 +1,4 @@
+import { showToast, notImplementedToast } from '../../services/toast.service';
 import { Component, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
 
 import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
@@ -88,7 +89,7 @@ export class WordDefinitionModalComponent implements OnInit {
       }
     } catch (e) {
       console.error('Failed to update word status:', e);
-      alert('Error updating SRS review schedule.');
+      showToast('Error updating SRS review schedule.');
     } finally {
       this.isSaving.set(false);
       this.closed.emit();
