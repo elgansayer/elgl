@@ -109,23 +109,33 @@ export class ChatService {
   async addFavourite(
     userId: string,
     dto: AddFavouriteDto,
-  ): Promise<FavouriteRecord> {
+  ): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    const insertResponse = await supabase
+
+    // Get the message to favourite
+    const { data: message, error: messageError } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('id', dto.message_id)
+      .single();
+
+    if (messageError || !message) {
+      throw new Error('Message not found');
+    }
+
+    // Store the favourite
+    const { error } = await supabase
       .from('favourites')
       .insert({
         user_id: userId,
-        message_id: dto.message_id,
-        note_text: dto.note_text ?? null,
-      })
-      .select()
-      .single();
+        item_type: 'message',
+        item_payload: message,
+        notes: dto.note_text || null,
+      });
 
-    if (insertResponse.error || !insertResponse.data) {
-      const msg = insertResponse.error?.message ?? 'Unknown error';
-      throw new Error(`Failed to add favourite: ${msg}`);
+    if (error) {
+      throw new Error('Failed to add favourite');
     }
-    return insertResponse.data as FavouriteRecord;
   }
 
   async getFavourites(userId: string): Promise<FavouriteRecord[]> {

@@ -58,9 +58,10 @@ export class ChatController {
   async addFavourite(
     @CurrentUser() user: User | null,
     @Body() dto: AddFavouriteDto,
-  ): Promise<FavouriteRecord | null> {
+  ): Promise<{ success: boolean } | null> {
     if (!user) return null;
-    return await this.chatService.addFavourite(user.id, dto);
+    await this.chatService.addFavourite(user.id, dto);
+    return { success: true };
   }
 
   @Get('favourites')

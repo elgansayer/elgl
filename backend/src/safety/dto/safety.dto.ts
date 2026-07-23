@@ -12,8 +12,7 @@ export class ReportUserDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(1000)
-  details?: string;
+  context_url?: string;
 }
 
 export class BlockUserDto {

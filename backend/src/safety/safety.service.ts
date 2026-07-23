@@ -21,34 +21,26 @@ export class SafetyService {
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async reportUser(
+  async reportMessage(
     reporterId: string,
     dto: ReportUserDto,
-  ): Promise<SafetyReportRow> {
+  ): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    const response = await supabase
+
+    const { error } = await supabase
       .from('reports')
       .insert({
         reporter_id: reporterId,
         reported_user_id: dto.reported_id,
-        reason_category: 'inappropriate_message',
+        reason_category: 'message_content',
         description: dto.reason,
-        context_url: dto.details || null,
+        context_url: dto.context_url || null,
         status: 'pending',
-      })
-      .select()
-      .single();
+      });
 
-    if (response.error || !response.data) {
-      throw new Error(
-        `Failed to submit safety report: ${response.error?.message ?? 'Unknown error'}`,
-      );
+    if (error) {
+      throw new Error('Failed to submit report');
     }
-
-    this.logger.log(
-      `Safety report submitted by ${reporterId} against ${dto.reported_id} (${dto.reason})`,
-    );
-    return response.data as SafetyReportRow;
   }
 
   async blockUser(

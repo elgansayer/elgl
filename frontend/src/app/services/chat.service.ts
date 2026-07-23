@@ -90,14 +90,32 @@ export class ChatService {
     );
   }
 
-  async addFavourite(messageId: string, noteText?: string): Promise<FavouriteRecord> {
-    return firstValueFrom(
-      this.http.post<FavouriteRecord>(
-        `${this.baseUrl}/favourites`,
-        { message_id: messageId, note_text: noteText },
-        { headers: this.getHeaders() }
-      )
-    );
+  async addFavourite(messageId: string, noteText?: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/favourites`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getHeaders(),
+      },
+      body: JSON.stringify({ message_id: messageId, note_text: noteText }),
+    });
+    if (!response.ok) throw new Error('Failed to add favourite');
+  }
+
+  async reportMessage(messageId: string, reason: string): Promise<void> {
+    const response = await fetch('/api/safety/report', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getHeaders(),
+      },
+      body: JSON.stringify({ 
+        reported_id: messageId, 
+        reason: reason,
+        context_url: window.location.href 
+      }),
+    });
+    if (!response.ok) throw new Error('Failed to report message');
   }
 
   async getFavourites(): Promise<FavouriteRecord[]> {
