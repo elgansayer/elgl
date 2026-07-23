@@ -17,7 +17,7 @@
 - [x] Create Supabase SQL migration (`002_trust_and_safety.sql`) for `profile_visits`, `blocks`, and `reports` tables.
 - [x] Implement Supabase JWT email/password and OAuth authentication service in Angular (`AuthService`).
 - [x] Create NestJS `SupabaseAuthGuard` and `CurrentUser` decorator to validate Supabase JWTs on all REST and WebSocket endpoints.
-- [x] Verify clean linting across both projects (`npm run lint`).
+- [x] Verify clean linting across both projects (`npm run lint`). (Note: run this command in the backend directory, not on TODO.md.)
 
 ## Phase 2: User Profiles, PostGIS Matchmaking & Visitor Tracking
 - [x] Create NestJS `UsersController` & `UsersService` to handle profile updates (bio, native language, target languages up to 3 for VIP, privacy toggles).
