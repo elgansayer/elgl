@@ -84,19 +84,10 @@ npm install
 
 # Now run lint in backend
 npm run lint
-echo "Lint completed."
 
-# Ensure PATH is exported for the parent shell (if sourced)
-echo ""
-echo "If you need to run 'npm' commands manually in this shell, run:"
-echo "  export PATH=\"/usr/local/bin:\$PATH\""
-echo "Or source your bashrc:"
-echo "  source ~/.bashrc"
+# Capture the exit code of npm run lint
+LINT_EXIT_CODE=$?
+echo "Lint completed with exit code: $LINT_EXIT_CODE"
 
-# Persist PATH globally so that non‑interactive shells also find npm
-if [ "$(id -u)" -eq 0 ]; then
-    if ! grep -q '/usr/local/bin' /etc/environment 2>/dev/null; then
-        echo 'PATH="/usr/local/bin:$PATH"' >> /etc/environment
-        echo "Global PATH updated in /etc/environment."
-    fi
-fi
+# Exit with the lint exit code so the caller knows if lint passed
+exit $LINT_EXIT_CODE
