@@ -19,6 +19,7 @@ import { EconomyModule } from './economy/economy.module';
 import { SafetyModule } from './safety/safety.module';
 import { HobbyTagsModule } from './hobby-tags/hobby-tags.module';
 import { FavouritesModule } from './favourites/favourites.module';
+import { VideoCallsModule } from './video-calls/video-calls.module';
 
 @Module({
   imports: [

@@ -10,6 +10,7 @@ import { MomentsFeedComponent } from './components/moments-feed/moments-feed.com
 import { AudioRoomComponent } from './components/audio-room/audio-room.component';
 import { DeveloperDashboardComponent } from './components/developer-dashboard/developer-dashboard.component';
 import { ProfileVisitorsComponent } from './components/profile-visitors/profile-visitors.component';
+import { VideoCallComponent } from './components/video-call/video-call.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'discovery', pathMatch: 'full' },
@@ -24,6 +25,7 @@ export const routes: Routes = [
   { path: 'visitors', component: VisitorLogsComponent },
   { path: 'profile/visitors', component: ProfileVisitorsComponent },
   { path: 'developer', component: DeveloperDashboardComponent },
+  { path: 'video-call', component: VideoCallComponent },
   {
     path: 'hobby-tags',
     loadComponent: () =>
