@@ -142,26 +142,7 @@ export class ChatService {
     const supabase = this.supabaseService.getClient();
     const response = await supabase
       .from('favourites')
-      .select(
-        `
-        *,
-        message:chat_messages!favourites_message_id_fkey (
-          id,
-          room_id,
-          sender_id,
-          message_type,
-          text_content,
-          media_url,
-          correction_payload,
-          created_at,
-          sender:users!chat_messages_sender_id_fkey (
-            id,
-            display_name,
-            avatar_url
-          )
-        )
-      `,
-      )
+      .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(100);

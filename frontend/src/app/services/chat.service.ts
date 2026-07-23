@@ -103,7 +103,7 @@ export class ChatService {
   }
 
   async reportMessage(messageId: string, reason: string): Promise<void> {
-    const response = await fetch('/api/safety/report', {
+    const response = await fetch('/safety/report', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
