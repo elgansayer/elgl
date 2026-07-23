@@ -806,7 +806,7 @@
 
 ### Gallery Indicator
 - **Multiple images:** Dot indicators (6px, bottom center)
-- **Active dot:** `#00A884` (dark) / `#00A884` (light)
+- **Active dot:** `#00A884`
 - **Inactive dot:** `rgba(255,255,255,0.5)` (dark) / `rgba(0,0,0,0.3)` (light)
 - **Swipe:** Horizontal swipe to navigate
 
