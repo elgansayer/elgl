@@ -16,5 +16,8 @@ $SUDO apt-get install -y nodejs
 node --version
 npm --version
 
+# Refresh command hash table to make npm available in this shell
+hash -r
+
 # Change to backend directory and run lint
 cd backend && npm run lint
