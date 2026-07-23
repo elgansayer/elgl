@@ -80,16 +80,16 @@ export class SubscriptionPlansService {
     },
   ];
 
-  async findAll(): Promise<SubscriptionPlan[]> {
+  findAll(): SubscriptionPlan[] {
     return this.plans;
   }
 
-  async findById(id: string): Promise<SubscriptionPlan | undefined> {
+  findById(id: string): SubscriptionPlan | undefined {
     return this.plans.find((plan) => plan.id === id);
   }
 
   async getHighlightedBenefits(planId: string): Promise<string[]> {
-    const plan = await this.findById(planId);
+    const plan = this.findById(planId);
     return plan?.highlighted_benefits || [];
   }
 }
