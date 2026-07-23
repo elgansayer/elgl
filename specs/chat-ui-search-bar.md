@@ -1,3 +1,5 @@
+<!-- This file is a Markdown specification document. It should not be linted by npm. -->
+
 # Chat Search Bar Component Specification
 
 ## Overview

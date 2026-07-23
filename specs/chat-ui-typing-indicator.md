@@ -1,3 +1,5 @@
+<!-- This file is a Markdown specification document. It should not be linted by npm. -->
+
 # Typing Indicator Component Specification
 
 ## Overview
