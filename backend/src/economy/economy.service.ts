@@ -125,8 +125,9 @@ export class EconomyService {
       .select('coins_balance')
       .eq('id', userId)
       .single();
-    if (!response.data) {
-      return { coins_balance: 50 };
+    if (response.error || !response.data) {
+      const profile = await this.usersService.getProfile(userId);
+      return { coins_balance: profile.coins_balance || 50 };
     }
     const row = response.data as UserCoinRow;
     return { coins_balance: row.coins_balance };

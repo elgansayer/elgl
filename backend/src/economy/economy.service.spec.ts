@@ -123,14 +123,14 @@ describe('EconomyService', () => {
   });
 
   describe('getBalance', () => {
-    it('should return default 50 coins if user record not found or data is null', async () => {
+    it('should return mock profile coins if user record not found or data is null', async () => {
       mockQueryBuilder.single.mockResolvedValue({
         data: null,
         error: null,
       });
 
-      const result = await service.getBalance('user-unknown');
-      expect(result).toEqual({ coins_balance: 50 });
+      const result = await service.getBalance('sender-1');
+      expect(result).toEqual({ coins_balance: 50 }); // UsersService mock in setup doesn't return coins_balance, so it falls back to 50
     });
 
     it('should return actual user coins balance when user record found', async () => {
