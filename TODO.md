@@ -202,7 +202,7 @@
 - [x] Build custom Angular primitives for horizontal scrollable filter pills and language buttons instead of using native `<select>`.
 - [x] Rebuild user cards to feature tight visual fluency indicators (flags and language codes) and gradient action buttons.
 - [x] Build Nearby Search PostGIS distance slider for VIP users.
-- [ ] Build VIP Profile Visitor Log UI with blurred cards for free users.
+- [x] Build VIP Profile Visitor Log UI with blurred cards for free users.
 
 ## Phase 13: HelloTalk Chat Specifics (Requires Refactor for Pixel-Perfect Clone)
 - [x] Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
