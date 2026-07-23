@@ -67,12 +67,15 @@ export class LongPressContextMenuComponent implements AfterViewInit {
 
   readonly messageId = input.required<string>();
   readonly messageContent = input<string>('');
+  readonly messageType = input<string>('');
+  readonly senderId = input<string>('');
+  readonly roomId = input<string>('');
   readonly disabled = input<boolean>(false);
   readonly longPressDuration = input<number>(600);
 
   readonly copy = output<{ messageId: string; content: string }>();
-  readonly favourite = output<{ messageId: string; content: string }>();
-  readonly report = output<{ messageId: string; content: string }>();
+  readonly favourite = output<{ messageId: string; content: string; messageType: string }>();
+  readonly report = output<{ messageId: string; content: string; senderId: string; roomId: string }>();
 
   readonly isOpen = signal(false);
   readonly position = signal<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -186,15 +189,18 @@ export class LongPressContextMenuComponent implements AfterViewInit {
   private onOptionClick(optionId: string): void {
     const id = this.messageId();
     const content = this.messageContent();
+    const msgType = this.messageType();
+    const sId = this.senderId();
+    const rId = this.roomId();
     switch (optionId) {
       case 'copy':
         this.copy.emit({ messageId: id, content });
         break;
       case 'favourite':
-        this.favourite.emit({ messageId: id, content });
+        this.favourite.emit({ messageId: id, content, messageType: msgType });
         break;
       case 'report':
-        this.report.emit({ messageId: id, content });
+        this.report.emit({ messageId: id, content, senderId: sId, roomId: rId });
         break;
     }
     this.close();
