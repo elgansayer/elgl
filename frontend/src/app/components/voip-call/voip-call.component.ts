@@ -1,180 +1,228 @@
-import { Component, input, output, computed, signal, effect, inject } from '@angular/core';
+import { Component, inject, input, output, signal, OnDestroy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
-import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
-import { I18nService } from '../../services/i18n.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { FormsModule } from '@angular/forms';
+import { LivekitService } from '../../services/livekit.service';
+import { AuthService } from '../../services/auth.service';
+import { ChatService } from '../../services/chat.service';
 
-export type CallState = 'connecting' | 'ringing' | 'connected' | 'ended';
+export type CallDirection = 'incoming' | 'outgoing';
+export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'missed' | 'rejected';
 
 @Component({
   selector: 'app-voip-call',
   standalone: true,
-  imports: [CommonModule, AppButtonPrimaryComponent, AppButtonSecondaryComponent],
+  imports: [CommonModule, FormsModule],
   template: `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" 
-         [attr.dir]="dirValue()">
-      <div class="bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden border border-slate-700">
-        <!-- Call Header -->
-        <div class="ps-6 pe-6 pt-8 pb-4 text-center">
-          <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-3xl font-bold text-white shadow-lg mb-4">
-            {{ callerName() | slice:0:1 | uppercase }}
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+         *ngIf="showCallUI()">
+      <div class="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center border border-slate-700">
+        <!-- Caller/Callee Info -->
+        <div class="mb-6">
+          <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-3xl font-bold text-white mb-3">
+            {{ displayName()[0]?.toUpperCase() || '?' }}
           </div>
-          <h2 class="text-xl font-bold text-white mb-1">{{ callerName() }}</h2>
-          <p class="text-sm text-slate-400">{{ callStatusText }}</p>
-          @if (callDuration()) {
-            <p class="text-xs text-slate-500 mt-1">{{ callDuration() }}</p>
+          <h2 class="text-xl font-semibold text-white">{{ displayName() }}</h2>
+          <p class="text-slate-400 text-sm mt-1">{{ callStatusText() }}</p>
+        </div>
+
+        <!-- Call Timer (when connected) -->
+        <div class="text-3xl font-mono text-white mb-6" *ngIf="callState() === 'connected'">
+          {{ formattedDuration() }}
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex justify-center gap-6">
+          <!-- Incoming call actions -->
+          @if (callDirection() === 'incoming' && callState() === 'ringing') {
+            <button (click)="acceptCall()"
+                    class="w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+            </button>
+            <button (click)="rejectCall()"
+                    class="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          }
+
+          <!-- Outgoing / Connected call actions -->
+          @if (callDirection() === 'outgoing' || callState() === 'connected' || callState() === 'connecting') {
+            <button (click)="toggleMute()"
+                    class="w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg"
+                    [ngClass]="isMuted() ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-slate-700 hover:bg-slate-600'">
+              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+              </svg>
+            </button>
+            <button (click)="toggleVideo()"
+                    class="w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg"
+                    [ngClass]="isVideoEnabled() ? 'bg-slate-700 hover:bg-slate-600' : 'bg-yellow-500 hover:bg-yellow-600'">
+              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+              </svg>
+            </button>
+            <button (click)="endCall()"
+                    class="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.516l2.257-1.13a1 1 0 00.502-1.21L9.228 3.684A1 1 0 008.28 3H5z"/>
+              </svg>
+            </button>
           }
         </div>
-
-        <!-- Call Controls -->
-        <div class="ps-6 pe-6 pb-8 pt-2">
-          <div class="flex justify-center gap-6">
-            <!-- Mute Button -->
-            <div class="flex flex-col items-center gap-2">
-              <app-button-secondary
-                [size]="'lg'"
-                [customClass]="muted() ? '!bg-red-500 !text-white !border-red-400 !hover:bg-red-600' : '!bg-slate-800 !text-slate-300 !border-slate-700 !hover:bg-slate-700'"
-                (clicked)="toggleMute()"
-              >
-                @if (muted()) {
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-                  </svg>
-                } @else {
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                  </svg>
-                }
-              </app-button-secondary>
-              <span class="text-xs text-slate-500">{{ i18nService.translate('voip.mute') }}</span>
-            </div>
-
-            <!-- Speakerphone Button -->
-            <div class="flex flex-col items-center gap-2">
-              <app-button-secondary
-                [size]="'lg'"
-                [customClass]="speakerOn() ? '!bg-primary !text-white !border-primary !hover:bg-primary/90' : '!bg-slate-800 !text-slate-300 !border-slate-700 !hover:bg-slate-700'"
-                (clicked)="toggleSpeaker()"
-              >
-                @if (speakerOn()) {
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                  </svg>
-                } @else {
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                }
-              </app-button-secondary>
-              <span class="text-xs text-slate-500">{{ i18nService.translate('voip.speaker') }}</span>
-            </div>
-
-            <!-- End Call Button -->
-            <div class="flex flex-col items-center gap-2">
-              <app-button-primary
-                [size]="'lg'"
-                [customClass]="'!bg-red-600 !text-white !border-red-500 !hover:bg-red-700 !rounded-full !w-14 !h-14 !p-0'"
-                (clicked)="endCall()"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z" />
-                </svg>
-              </app-button-primary>
-              <span class="text-xs text-red-400 font-semibold">{{ i18nService.translate('voip.endCall') }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Call Ended State -->
-        @if (callState() === 'ended') {
-          <div class="ps-6 pe-6 pb-6 text-center">
-            <p class="text-slate-400 text-sm mb-4">{{ i18nService.translate('voip.callEnded') }}</p>
-            <app-button-primary
-              [size]="'md'"
-              (clicked)="dismiss.emit()"
-            >
-              {{ i18nService.translate('voip.dismiss') }}
-            </app-button-primary>
-          </div>
-        }
       </div>
     </div>
   `,
   styles: [`
     :host {
-      display: contents;
+      display: block;
     }
   `]
 })
-export class VoipCallComponent {
-  readonly i18nService = inject(I18nService);
-  private centrifugoService = inject(CentrifugoService);
+export class VoipCallComponent implements OnDestroy {
+  private livekitService = inject(LivekitService);
+  private authService = inject(AuthService);
+  private chatService = inject(ChatService);
 
   // Inputs
-  readonly callerName = input.required<string>();
-  readonly callerId = input.required<string>();
-  readonly roomId = input.required<string>();
-  readonly callState = input<CallState>('connecting');
+  readonly callDirection = input.required<CallDirection>();
+  readonly remoteUserId = input.required<string>();
+  readonly displayName = input.required<string>();
+  readonly roomName = input.required<string>();
+  readonly isVideoCall = input<boolean>(false);
 
   // Outputs
-  readonly muteToggled = output<boolean>();
-  readonly speakerToggled = output<boolean>();
   readonly callEnded = output<void>();
-  readonly dismiss = output<void>();
+  readonly callAccepted = output<void>();
+  readonly callRejected = output<void>();
 
-  // Internal state
-  readonly muted = signal(false);
-  readonly speakerOn = signal(false);
-  readonly callDuration = signal<string>('');
+  // State signals
+  readonly showCallUI = signal(true);
+  readonly callState = signal<CallState>('ringing');
+  readonly isMuted = signal(false);
+  readonly isVideoEnabled = signal(false);
+  readonly callDuration = signal(0);
+
   private durationInterval: ReturnType<typeof setInterval> | null = null;
-  private callStartTime: number | null = null;
-
-  readonly dirValue = computed(() => {
-    const lang = this.i18nService.currentLang();
-    const rtlLangs = ['ar', 'he', 'fa', 'ur'];
-    return rtlLangs.includes(lang.toLowerCase()) ? 'rtl' : 'ltr';
-  });
+  private localTrack: MediaStreamTrack | null = null;
+  private remoteTrack: MediaStreamTrack | null = null;
 
   constructor() {
-    // Listen for call state changes to start/stop duration timer
+    // Auto-start timer when connected
     effect(() => {
-      const state = this.callState();
-      if (state === 'connected' && !this.callStartTime) {
-        this.callStartTime = Date.now();
+      if (this.callState() === 'connected') {
         this.startDurationTimer();
-      } else if (state === 'ended') {
+      } else {
         this.stopDurationTimer();
       }
     });
 
-    // Listen for remote mute/unmute events via Centrifugo
+    // Auto-enable video if it's a video call
     effect(() => {
-      const events = this.centrifugoService.events();
-      const roomChannel = `room_${this.roomId()}`;
-      for (const event of events) {
-        if (event.channel === roomChannel) {
-          const data = event.data as Record<string, unknown>;
-          if (data?.type === 'remote_mute') {
-            this.muted.set(true);
-          } else if (data?.type === 'remote_unmute') {
-            this.muted.set(false);
-          }
-        }
+      if (this.isVideoCall()) {
+        this.isVideoEnabled.set(true);
       }
     });
   }
 
+  get callStatusText(): string {
+    switch (this.callState()) {
+      case 'ringing':
+        return this.callDirection() === 'incoming' ? 'Incoming call...' : 'Ringing...';
+      case 'connecting':
+        return 'Connecting...';
+      case 'connected':
+        return 'Connected';
+      case 'ended':
+        return 'Call ended';
+      case 'missed':
+        return 'Missed call';
+      case 'rejected':
+        return 'Call rejected';
+      default:
+        return '';
+    }
+  }
+
+  get formattedDuration(): string {
+    const totalSeconds = this.callDuration();
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  async acceptCall(): Promise<void> {
+    this.callState.set('connecting');
+    try {
+      const currentUser = this.authService.currentUser();
+      if (!currentUser) throw new Error('User not authenticated');
+
+      // Join the LiveKit room
+      await this.livekitService.joinRoom(this.roomName(), currentUser.id, this.isVideoCall());
+
+      // Publish local tracks
+      await this.livekitService.publishTracks(this.isVideoCall());
+
+      // Subscribe to remote tracks
+      this.livekitService.onTrackSubscribed = (track: MediaStreamTrack) => {
+        this.remoteTrack = track;
+        // Attach to video/audio element in parent component
+      };
+
+      this.callState.set('connected');
+      this.callAccepted.emit();
+
+      // Notify the caller via chat that call was accepted
+      await this.chatService.sendMessage({
+        room_id: this.roomName(),
+        message_type: 'text',
+        text_content: 'Call accepted'
+      });
+    } catch (error) {
+      console.error('Failed to accept call:', error);
+      this.callState.set('ended');
+    }
+  }
+
+  async rejectCall(): Promise<void> {
+    this.callState.set('rejected');
+    this.showCallUI.set(false);
+    this.callRejected.emit();
+
+    // Notify the caller
+    await this.chatService.sendMessage({
+      room_id: this.roomName(),
+      message_type: 'text',
+      text_content: 'Call rejected'
+    });
+  }
+
+  async endCall(): Promise<void> {
+    this.callState.set('ended');
+    this.cleanup();
+    this.showCallUI.set(false);
+    this.callEnded.emit();
+  }
+
+  async toggleMute(): Promise<void> {
+    this.isMuted.update(v => !v);
+    if (this.localTrack) {
+      this.localTrack.enabled = !this.isMuted();
+    }
+  }
+
+  async toggleVideo(): Promise<void> {
+    this.isVideoEnabled.update(v => !v);
+    // Re-publish tracks with updated video state
+    await this.livekitService.publishTracks(this.isVideoEnabled());
+  }
+
   private startDurationTimer(): void {
+    this.callDuration.set(0);
     this.durationInterval = setInterval(() => {
-      if (this.callStartTime) {
-        const elapsed = Math.floor((Date.now() - this.callStartTime) / 1000);
-        const minutes = Math.floor(elapsed / 60);
-        const seconds = elapsed % 60;
-        this.callDuration.set(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-      }
+      this.callDuration.update(v => v + 1);
     }, 1000);
   }
 
@@ -185,42 +233,14 @@ export class VoipCallComponent {
     }
   }
 
-  toggleMute(): void {
-    const newMuted = !this.muted();
-    this.muted.set(newMuted);
-    this.muteToggled.emit(newMuted);
-
-    // Publish mute state to room channel for remote participants
-    this.centrifugoService.publish(`room_${this.roomId()}`, {
-      type: newMuted ? 'remote_mute' : 'remote_unmute',
-      userId: this.callerId(),
-    });
-  }
-
-  toggleSpeaker(): void {
-    const newSpeaker = !this.speakerOn();
-    this.speakerOn.set(newSpeaker);
-    this.speakerToggled.emit(newSpeaker);
-  }
-
-  endCall(): void {
+  private cleanup(): void {
     this.stopDurationTimer();
-    this.callEnded.emit();
+    this.livekitService.leaveRoom();
+    this.localTrack = null;
+    this.remoteTrack = null;
   }
 
-  get callStatusText(): string {
-    const state = this.callState();
-    switch (state) {
-      case 'connecting':
-        return this.i18nService.translate('voip.connecting');
-      case 'ringing':
-        return this.i18nService.translate('voip.ringing');
-      case 'connected':
-        return this.i18nService.translate('voip.connected');
-      case 'ended':
-        return this.i18nService.translate('voip.callEnded');
-      default:
-        return '';
-    }
+  ngOnDestroy(): void {
+    this.cleanup();
   }
 }
