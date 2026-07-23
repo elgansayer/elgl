@@ -9,9 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import Stripe from 'stripe';
 import { SupabaseService } from '../supabase/supabase.service';
-import {
-  CreateDiagnosticLogDto,
-} from './dto/monetisation.dto';
+import { CreateDiagnosticLogDto } from './dto/monetisation.dto';
 
 export interface UserVipRow {
   id: string;
