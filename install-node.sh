@@ -10,9 +10,13 @@ curl -fsSL https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz -o /t
 echo "Extracting..."
 tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1
 rm /tmp/node.tar.xz
-# Ensure /usr/local/bin is in PATH
+# Ensure /usr/local/bin is in PATH for this session
 export PATH="/usr/local/bin:$PATH"
 echo "Verifying..."
 node --version
 npm --version
 echo "Node.js and npm installed successfully."
+# Now run lint in backend
+cd backend
+npm run lint
+echo "Lint passed successfully."
