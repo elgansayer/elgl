@@ -85,7 +85,6 @@ export const COIN_PACKAGES: CoinPackage[] = [
 @Injectable()
 export class EconomyService {
   private readonly logger = new Logger(EconomyService.name);
-  private readonly receiptCachePrefix = 'purchase_receipt:';
 
   constructor(
     private readonly supabaseService: SupabaseService,
@@ -133,15 +132,7 @@ export class EconomyService {
     // 2. Validate receipt token format and prevent replay attacks
     await this.validateReceipt(userId, dto.receipt_token, coinPackage, dto.platform);
 
-    // 3. Check for duplicate receipt in Redis cache
-    const redisClient = this.supabaseService.getRedisClient();
-    const receiptKey = `${this.receiptCachePrefix}${dto.receipt_token}`;
-    const existingReceipt = await redisClient.get(receiptKey);
-    if (existingReceipt) {
-      throw new ForbiddenException('This receipt has already been used to purchase coins');
-    }
-
-    // 4. Add coins to user balance
+    // 3. Add coins to user balance
     const supabase = this.supabaseService.getClient();
     const { data: user, error: fetchError } = await supabase
       .from('users')
@@ -165,10 +156,7 @@ export class EconomyService {
       throw new BadRequestException('Failed to update coin balance');
     }
 
-    // 5. Cache receipt to prevent reuse (expire after 30 days)
-    await redisClient.setex(receiptKey, 30 * 24 * 60 * 60, userId);
-
-    // 6. Log the purchase for audit
+    // 4. Log the purchase for audit
     await this.logPurchase(userId, coinPackage, dto.receipt_token, dto.platform);
 
     this.logger.log(`User ${userId} purchased ${coinPackage.coins} coins (package: ${dto.package_id})`);
