@@ -266,7 +266,7 @@
 - [x] Add LiveKit audio track management to `VoipCallComponent` (mute/unmute local audio track via LiveKit SDK), replace physical CSS classes with logical RTL-safe equivalents, and create unit tests (`voip-call.component.spec.ts`).
 - [x] Build 1-on-1 Video Call interface with local preview overlay.
 - [x] Implement `VideoCallComponent` with local camera preview overlay, remote video stream, mute/unmute controls, end call button, and integration with LiveKit for 1-on-1 video rooms.
-- [ ] Implement IncomingCallComponent with ringtone audio playback, accept/reject buttons, and integration with LiveKit for incoming call detection.
+- [x] Implement IncomingCallComponent with ringtone audio playback, accept/reject buttons, and integration with LiveKit for incoming call detection.
 
 ## Phase 18: Monetisation & VIP Tiers
 - [ ] Build VIP Subscription showcase page detailing all premium benefits.
