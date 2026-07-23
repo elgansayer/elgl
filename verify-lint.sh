@@ -65,8 +65,14 @@ echo ""
 echo "Step 4: Installing backend dependencies..."
 # Ensure npm is in PATH
 export PATH="/usr/local/bin:$PATH"
+# Verify npm is accessible before using it
+if ! command -v /usr/local/bin/npm &> /dev/null; then
+    echo "⚠️  npm not found at /usr/local/bin/npm - trying to source bashrc..."
+    . ~/.bashrc 2>/dev/null || true
+    export PATH="/usr/local/bin:$PATH"
+fi
 cd backend
-npm install
+/usr/local/bin/npm install
 echo "✅ Backend dependencies installed"
 
 # Step 5: Run lint
