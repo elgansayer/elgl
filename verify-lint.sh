@@ -14,6 +14,9 @@ if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     if [ -f "$SCRIPT_DIR/install-node.sh" ]; then
         bash "$SCRIPT_DIR/install-node.sh"
+        # After install-node.sh runs, source the updated bashrc and re-export PATH
+        . ~/.bashrc 2>/dev/null || true
+        export PATH="/usr/local/bin:$PATH"
     else
         echo "❌ install-node.sh not found alongside verify-lint.sh"
         exit 1
