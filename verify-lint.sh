@@ -5,6 +5,21 @@ echo "============================================"
 echo "Verifying PATH persistence fix and lint pass"
 echo "============================================"
 
+# Step 0: Ensure Node.js and npm are installed
+echo ""
+echo "Step 0: Ensuring Node.js and npm are installed..."
+if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
+    echo "⚠️  Node.js or npm not found – running install-node.sh..."
+    # Determine the directory of this script so we can find install-node.sh
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [ -f "$SCRIPT_DIR/install-node.sh" ]; then
+        bash "$SCRIPT_DIR/install-node.sh"
+    else
+        echo "❌ install-node.sh not found alongside verify-lint.sh"
+        exit 1
+    fi
+fi
+
 # Step 1: Verify the PATH persistence fix is in ~/.bashrc
 echo ""
 echo "Step 1: Checking PATH persistence in ~/.bashrc..."
