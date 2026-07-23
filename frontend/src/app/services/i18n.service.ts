@@ -127,8 +127,9 @@ export class I18nService {
     'discovery.langJapanese': 'Japanese',
     'discovery.langKorean': 'Korean',
     'discovery.langNorwegian': 'Norwegian',
-    'discovery.bannerPaid': 'Paid Practice: Find a pro tutor!',
-    'discovery.bannerView': 'View',
+    'discovery.bannerPaid': 'Unlock Paid Practice',
+    'discovery.bannerDesc': 'Get 1-on-1 native practice',
+    'discovery.bannerView': 'View VIP',
 
     // Moments Feed Component
     'moments.title': 'Moments',
