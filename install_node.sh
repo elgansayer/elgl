@@ -35,7 +35,7 @@ else
 fi
 
 # Export for current session
-export PATH="$PATH:$NODE_BIN"
+export PATH="$NODE_BIN:$PATH"
 
 # Verify installation
 echo "Verifying installation..."
