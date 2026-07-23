@@ -1,3 +1,4 @@
+/* eslint-disable */
 <!-- This file is not JavaScript; ignore linting -->
 # TODO.md (Master HelloTalk Clone Architecture: Phases 1 to 65)
 
