@@ -12,6 +12,7 @@ export interface UserProfile {
   bio_text?: string;
   avatar_url?: string;
   audio_intro_url?: string;
+  cover_photo_url?: string;
   is_vip: boolean;
   vip_tier: string;
   coins_balance: number;
@@ -86,6 +87,26 @@ export class UserService {
       this.http.post<{ uploadUrl: string; mediaUrl: string; objectKey: string }>(
         `${this.mediaUrl}/presigned-url`,
         { filename, contentType, folder },
+        { headers: this.getHeaders() }
+      )
+    );
+  }
+
+  async getPresignedCoverPhotoUrl(filename: string, contentType: string): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    return firstValueFrom(
+      this.http.post<{ uploadUrl: string; mediaUrl: string; objectKey: string }>(
+        `${this.baseUrl}/me/cover-photo/presigned-url`,
+        { filename, contentType },
+        { headers: this.getHeaders() }
+      )
+    );
+  }
+
+  async updateCoverPhotoUrl(coverPhotoUrl: string): Promise<UserProfile> {
+    return firstValueFrom(
+      this.http.patch<UserProfile>(
+        `${this.baseUrl}/me/cover-photo`,
+        { cover_photo_url: coverPhotoUrl },
         { headers: this.getHeaders() }
       )
     );

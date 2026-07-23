@@ -1,15 +1,20 @@
-import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserProfile } from './interfaces/user-profile.interface';
 import { UsersService } from './users.service';
+import { MediaService } from '../media/media.service';
+import { PresignedUrlDto } from '../media/dto/presigned-url.dto';
 
 @Controller('users')
 @UseGuards(SupabaseAuthGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly mediaService: MediaService,
+  ) {}
 
   @Get('me')
   async getMyProfile(
@@ -30,6 +35,31 @@ export class UsersController {
       user.id,
       dto,
       profile?.is_vip ?? false,
+    );
+  }
+
+  @Post('me/cover-photo/presigned-url')
+  async getCoverPhotoPresignedUrl(
+    @CurrentUser() user: User | null,
+    @Body() dto: PresignedUrlDto,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    if (!user) throw new Error('User not authenticated');
+    return this.mediaService.generatePresignedUrl(user.id, {
+      ...dto,
+      folder: 'cover-photos',
+    });
+  }
+
+  @Patch('me/cover-photo')
+  async updateCoverPhoto(
+    @CurrentUser() user: User | null,
+    @Body('cover_photo_url') coverPhotoUrl: string,
+  ): Promise<UserProfile | null> {
+    if (!user) return null;
+    return this.usersService.updateProfile(
+      user.id,
+      { cover_photo_url: coverPhotoUrl },
+      false,
     );
   }
 

@@ -1,0 +1,441 @@
+import { Component, signal, computed, output, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { UserService } from '../../services/user.service';
+
+interface CropBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+@Component({
+  selector: 'app-cover-photo-uploader',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
+    <div class="relative w-full max-w-2xl mx-auto">
+      <!-- Hidden file input -->
+      <input
+        #fileInput
+        type="file"
+        accept="image/*"
+        (change)="onFileSelected($event)"
+        class="hidden"
+      />
+
+      <!-- Upload trigger button -->
+      @if (!imageSource()) {
+        <button
+          (click)="fileInput.click()"
+          class="w-full h-48 border-2 border-dashed border-slate-600 rounded-xl flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors"
+        >
+          <div class="text-center">
+            <svg class="w-12 h-12 mx-auto text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p class="mt-2 text-sm text-slate-400">Click to upload cover photo</p>
+            <p class="text-xs text-slate-500">Recommended: 1200x400px</p>
+          </div>
+        </button>
+      }
+
+      <!-- Cropping interface -->
+      @if (imageSource()) {
+        <div class="relative">
+          <!-- Image container -->
+          <div class="relative overflow-hidden rounded-xl" #imageContainer>
+            <img
+              [src]="imageSource()"
+              (load)="onImageLoad($event)"
+              class="w-full select-none"
+              draggable="false"
+              #imageElement
+            />
+            
+            <!-- Crop overlay -->
+            @if (isCropping()) {
+              <div class="absolute inset-0">
+                <!-- Dark overlay outside crop box -->
+                <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <defs>
+                    <mask id="cropMask">
+                      <rect width="100" height="100" fill="white" />
+                      <rect
+                        [attr.x]="(cropBox().x / imageWidth()) * 100"
+                        [attr.y]="(cropBox().y / imageHeight()) * 100"
+                        [attr.width]="(cropBox().width / imageWidth()) * 100"
+                        [attr.height]="(cropBox().height / imageHeight()) * 100"
+                        fill="black"
+                      />
+                    </mask>
+                  </defs>
+                  <rect width="100" height="100" fill="rgba(0,0,0,0.5)" mask="url(#cropMask)" />
+                </svg>
+
+                <!-- Crop box handles -->
+                <div
+                  class="absolute border-2 border-white cursor-move"
+                  [style.left.px]="cropBox().x"
+                  [style.top.px]="cropBox().y"
+                  [style.width.px]="cropBox().width"
+                  [style.height.px]="cropBox().height"
+                  (mousedown)="onCropBoxMouseDown($event)"
+                  (touchstart)="onCropBoxTouchStart($event)"
+                >
+                  <!-- Corner handles -->
+                  <div class="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white rounded-full cursor-nw-resize"
+                       (mousedown)="onHandleMouseDown($event, 'nw')"
+                       (touchstart)="onHandleTouchStart($event, 'nw')"></div>
+                  <div class="absolute -top-1.5 -right-1.5 w-3 h-3 bg-white rounded-full cursor-ne-resize"
+                       (mousedown)="onHandleMouseDown($event, 'ne')"
+                       (touchstart)="onHandleTouchStart($event, 'ne')"></div>
+                  <div class="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white rounded-full cursor-sw-resize"
+                       (mousedown)="onHandleMouseDown($event, 'sw')"
+                       (touchstart)="onHandleTouchStart($event, 'sw')"></div>
+                  <div class="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-white rounded-full cursor-se-resize"
+                       (mousedown)="onHandleMouseDown($event, 'se')"
+                       (touchstart)="onHandleTouchStart($event, 'se')"></div>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Action buttons -->
+          <div class="flex gap-2 mt-4">
+            @if (!isCropping()) {
+              <button
+                (click)="startCropping()"
+                class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors text-sm"
+              >
+                Crop
+              </button>
+            } @else {
+              <button
+                (click)="applyCrop()"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors text-sm"
+              >
+                Apply Crop
+              </button>
+              <button
+                (click)="cancelCrop()"
+                class="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors text-sm"
+              >
+                Cancel
+              </button>
+            }
+            <button
+              (click)="uploadCropped()"
+              [disabled]="isUploading()"
+              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors text-sm disabled:opacity-50"
+            >
+              {{ isUploading() ? 'Uploading...' : 'Upload' }}
+            </button>
+            <button
+              (click)="reset()"
+              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors text-sm"
+            >
+              Cancel
+            </button>
+          </div>
+
+          <!-- Cropped preview -->
+          @if (croppedPreviewUrl()) {
+            <div class="mt-4">
+              <p class="text-sm text-slate-400 mb-2">Preview:</p>
+              <img [src]="croppedPreviewUrl()" class="w-full rounded-lg" />
+            </div>
+          }
+        </div>
+      }
+    </div>
+  `,
+})
+export class CoverPhotoUploaderComponent {
+  private userService = inject(UserService);
+
+  readonly coverPhotoUploaded = output<string>();
+
+  readonly imageSource = signal<string | null>(null);
+  readonly isCropping = signal(false);
+  readonly isUploading = signal(false);
+  readonly croppedPreviewUrl = signal<string | null>(null);
+
+  private originalImage: HTMLImageElement | null = null;
+  private canvas = document.createElement('canvas');
+  private ctx = this.canvas.getContext('2d')!;
+
+  // Crop box state
+  readonly cropBox = signal<CropBox>({ x: 0, y: 0, width: 200, height: 100 });
+  readonly imageWidth = signal(0);
+  readonly imageHeight = signal(0);
+
+  private isDragging = false;
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private dragStartCropBox: CropBox = { x: 0, y: 0, width: 0, height: 0 };
+  private activeHandle: string | null = null;
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length) return;
+
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this.imageSource.set(e.target?.result as string);
+      this.isCropping.set(false);
+      this.croppedPreviewUrl.set(null);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  onImageLoad(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    this.originalImage = img;
+    this.imageWidth.set(img.naturalWidth);
+    this.imageHeight.set(img.naturalHeight);
+
+    // Set initial crop box to center with 3:1 aspect ratio
+    const cropWidth = Math.min(img.naturalWidth, 800);
+    const cropHeight = cropWidth / 3;
+    this.cropBox.set({
+      x: (img.naturalWidth - cropWidth) / 2,
+      y: (img.naturalHeight - cropHeight) / 2,
+      width: cropWidth,
+      height: cropHeight,
+    });
+  }
+
+  startCropping(): void {
+    this.isCropping.set(true);
+  }
+
+  applyCrop(): void {
+    if (!this.originalImage) return;
+
+    const box = this.cropBox();
+    this.canvas.width = box.width;
+    this.canvas.height = box.height;
+    this.ctx.drawImage(
+      this.originalImage,
+      box.x, box.y, box.width, box.height,
+      0, 0, box.width, box.height
+    );
+    this.croppedPreviewUrl.set(this.canvas.toDataURL('image/jpeg', 0.9));
+    this.isCropping.set(false);
+  }
+
+  cancelCrop(): void {
+    this.isCropping.set(false);
+  }
+
+  async uploadCropped(): Promise<void> {
+    if (!this.croppedPreviewUrl()) return;
+
+    this.isUploading.set(true);
+    try {
+      // Convert data URL to blob
+      const blob = this.dataUrlToBlob(this.croppedPreviewUrl()!);
+      const filename = `cover-${Date.now()}.jpg`;
+
+      // Get presigned URL
+      const { uploadUrl, mediaUrl } = await this.userService.getPresignedCoverPhotoUrl(filename, 'image/jpeg');
+
+      // Upload to R2
+      await fetch(uploadUrl, {
+        method: 'PUT',
+        body: blob,
+        headers: { 'Content-Type': 'image/jpeg' },
+      });
+
+      // Update user profile
+      await this.userService.updateCoverPhotoUrl(mediaUrl);
+
+      this.coverPhotoUploaded.emit(mediaUrl);
+      this.reset();
+    } catch (error) {
+      console.error('Upload failed:', error);
+    } finally {
+      this.isUploading.set(false);
+    }
+  }
+
+  reset(): void {
+    this.imageSource.set(null);
+    this.isCropping.set(false);
+    this.isUploading.set(false);
+    this.croppedPreviewUrl.set(null);
+    this.originalImage = null;
+  }
+
+  // Mouse drag handlers for crop box
+  onCropBoxMouseDown(event: MouseEvent): void {
+    event.preventDefault();
+    this.isDragging = true;
+    this.dragStartX = event.clientX;
+    this.dragStartY = event.clientY;
+    this.dragStartCropBox = { ...this.cropBox() };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!this.isDragging) return;
+      const dx = e.clientX - this.dragStartX;
+      const dy = e.clientY - this.dragStartY;
+      this.cropBox.update(box => ({
+        x: Math.max(0, Math.min(this.imageWidth() - box.width, this.dragStartCropBox.x + dx)),
+        y: Math.max(0, Math.min(this.imageHeight() - box.height, this.dragStartCropBox.y + dy)),
+        width: box.width,
+        height: box.height,
+      }));
+    };
+
+    const onMouseUp = () => {
+      this.isDragging = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }
+
+  onCropBoxTouchStart(event: TouchEvent): void {
+    event.preventDefault();
+    const touch = event.touches[0];
+    this.isDragging = true;
+    this.dragStartX = touch.clientX;
+    this.dragStartY = touch.clientY;
+    this.dragStartCropBox = { ...this.cropBox() };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!this.isDragging) return;
+      const t = e.touches[0];
+      const dx = t.clientX - this.dragStartX;
+      const dy = t.clientY - this.dragStartY;
+      this.cropBox.update(box => ({
+        x: Math.max(0, Math.min(this.imageWidth() - box.width, this.dragStartCropBox.x + dx)),
+        y: Math.max(0, Math.min(this.imageHeight() - box.height, this.dragStartCropBox.y + dy)),
+        width: box.width,
+        height: box.height,
+      }));
+    };
+
+    const onTouchEnd = () => {
+      this.isDragging = false;
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+    };
+
+    document.addEventListener('touchmove', onTouchMove);
+    document.addEventListener('touchend', onTouchEnd);
+  }
+
+  // Handle resize handlers
+  onHandleMouseDown(event: MouseEvent, handle: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.activeHandle = handle;
+    this.dragStartX = event.clientX;
+    this.dragStartY = event.clientY;
+    this.dragStartCropBox = { ...this.cropBox() };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!this.activeHandle) return;
+      const dx = e.clientX - this.dragStartX;
+      const dy = e.clientY - this.dragStartY;
+      this.resizeCropBox(dx, dy);
+    };
+
+    const onMouseUp = () => {
+      this.activeHandle = null;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }
+
+  onHandleTouchStart(event: TouchEvent, handle: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const touch = event.touches[0];
+    this.activeHandle = handle;
+    this.dragStartX = touch.clientX;
+    this.dragStartY = touch.clientY;
+    this.dragStartCropBox = { ...this.cropBox() };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!this.activeHandle) return;
+      const t = e.touches[0];
+      const dx = t.clientX - this.dragStartX;
+      const dy = t.clientY - this.dragStartY;
+      this.resizeCropBox(dx, dy);
+    };
+
+    const onTouchEnd = () => {
+      this.activeHandle = null;
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+    };
+
+    document.addEventListener('touchmove', onTouchMove);
+    document.addEventListener('touchend', onTouchEnd);
+  }
+
+  private resizeCropBox(dx: number, dy: number): void {
+    const imgW = this.imageWidth();
+    const imgH = this.imageHeight();
+    const box = this.dragStartCropBox;
+    let newX = box.x;
+    let newY = box.y;
+    let newW = box.width;
+    let newH = box.height;
+
+    // Maintain 3:1 aspect ratio
+    const aspectRatio = 3;
+
+    switch (this.activeHandle) {
+      case 'nw':
+        newX = Math.max(0, box.x + dx);
+        newY = Math.max(0, box.y + dy);
+        newW = box.width + (box.x - newX);
+        newH = newW / aspectRatio;
+        newY = box.y + (box.height - newH);
+        break;
+      case 'ne':
+        newW = Math.max(100, box.width + dx);
+        newH = newW / aspectRatio;
+        newY = box.y + (box.height - newH);
+        break;
+      case 'sw':
+        newW = Math.max(100, box.width - dx);
+        newH = newW / aspectRatio;
+        newX = box.x + (box.width - newW);
+        break;
+      case 'se':
+        newW = Math.max(100, box.width + dx);
+        newH = newW / aspectRatio;
+        break;
+    }
+
+    // Clamp to image bounds
+    newX = Math.max(0, Math.min(imgW - newW, newX));
+    newY = Math.max(0, Math.min(imgH - newH, newY));
+    newW = Math.min(newW, imgW - newX);
+    newH = Math.min(newH, imgH - newY);
+
+    this.cropBox.set({ x: newX, y: newY, width: newW, height: newH });
+  }
+
+  private dataUrlToBlob(dataUrl: string): Blob {
+    const parts = dataUrl.split(',');
+    const mime = parts[0].match(/:(.*?);/)![1];
+    const bytes = atob(parts[1]);
+    const array = new Uint8Array(bytes.length);
+    for (let i = 0; i < bytes.length; i++) {
+      array[i] = bytes.charCodeAt(i);
+    }
+    return new Blob([array], { type: mime });
+  }
+}
