@@ -1,14 +1,8 @@
-<div
-  class="min-h-screen flex flex-col bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans relative overflow-x-hidden"
->
+<div class="min-h-[100dvh] flex flex-col bg-surface-500 text-text-primary font-sans relative overflow-x-hidden">
   <!-- Global Animated Virtual Gift Broadcast Overlay -->
   @if (economyStore.activeGiftAnimation(); as overlay) {
-    <div
-      class="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center animate-bounce duration-1000"
-    >
-      <div
-        class="bg-gradient-to-r from-amber-500 via-purple-600 to-amber-500 text-white px-8 py-6 rounded-3xl shadow-2xl border-4 border-amber-300 flex flex-col items-center gap-2 transform scale-125"
-      >
+    <div class="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center animate-bounce duration-1000">
+      <div class="bg-gradient-to-r from-amber-500 via-purple-600 to-amber-500 text-white px-8 py-6 rounded-3xl shadow-2xl border-4 border-amber-300 flex flex-col items-center gap-2 transform scale-125">
         <span class="text-6xl animate-pulse">{{ overlay.gift.icon }}</span>
         <h3 class="text-2xl font-black tracking-wide">{{ 'gift.broadcastTitle' | t: { giftName: overlay.gift.name } }}</h3>
         <p class="text-sm font-extrabold text-amber-100">
@@ -18,131 +12,41 @@
     </div>
   }
 
-  <!-- Top Navigation Bar -->
-  <header
-    class="sticky top-0 z-50 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm"
-  >
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-6">
-        <a
-          routerLink="/"
-          class="flex items-center gap-2 text-xl font-extrabold text-primary tracking-tight"
-        >
-          <span class="text-2xl">🗣️</span>
-          <span>
-            {{ 'app.title' | t }}
-            <span class="text-xs uppercase bg-primary/10 text-primary px-1.5 py-0.5 rounded">
-              {{ 'app.badgeOpenCore' | t }}
-            </span>
-          </span>
-        </a>
-
-        <nav class="hidden sm:flex items-center gap-1">
-          <a
-            routerLink="/discovery"
-            routerLinkActive="bg-primary/10 text-primary font-bold"
-            class="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-          >
-            {{ 'nav.discover' | t }}
-          </a>
-          <a
-            routerLink="/moments"
-            routerLinkActive="bg-primary/10 text-primary font-bold"
-            class="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-          >
-            {{ 'nav.moments' | t }}
-          </a>
-          <a
-            routerLink="/audio-rooms"
-            routerLinkActive="bg-primary/10 text-primary font-bold"
-            class="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-          >
-            {{ 'nav.liveRooms' | t }}
-          </a>
-          <a
-            routerLink="/chat"
-            routerLinkActive="bg-primary/10 text-primary font-bold"
-            class="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-          >
-            {{ 'nav.chatRoom' | t }}
-          </a>
-          <a
-            routerLink="/vocabulary"
-            routerLinkActive="bg-primary/10 text-primary font-bold"
-            class="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-          >
-            {{ 'nav.lingqReader' | t }}
-          </a>
-          <a
-            routerLink="/favourites"
-            routerLinkActive="bg-primary/10 text-primary font-bold"
-            class="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-          >
-            {{ 'nav.favourites' | t }}
-          </a>
-          <a
-            routerLink="/developer"
-            routerLinkActive="bg-primary/10 text-primary font-bold"
-            class="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-          >
-            {{ 'nav.developerApi' | t }}
-          </a>
-          <a
-            routerLink="/profile"
-            routerLinkActive="bg-primary/10 text-primary font-bold"
-            class="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-          >
-            {{ 'nav.profile' | t }}
-          </a>
-        </nav>
-      </div>
-
-      <!-- Auth State & VIP Badge + Coin Balance + Language Selector -->
-      <div class="flex items-center gap-3">
-        <!-- Language Selector -->
-        <app-language-selector />
-
-        <!-- Coin Balance Badge -->
-        <div
-          class="flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 rounded-xl font-extrabold text-xs shadow-sm"
-        >
-          <span>🪙</span>
-          <span>{{ 'common.coinsBalance' | t: { coins: economyStore.coinsBalance() } }}</span>
-        </div>
-
-        @if (authService.currentUser(); as user) {
-          <div class="flex items-center gap-3">
-            <span
-              class="text-xs font-bold bg-amber-500 text-white px-2 py-0.5 rounded-full shadow-sm"
-            >
-              {{ user.vip_tier === 'developer' ? ('common.vipDevLabel' | t) : ('common.vipStdLabel' | t) }}
-            </span>
-            <span class="text-sm font-medium text-slate-700 dark:text-slate-300 hidden md:inline">
-              {{ user.email }}
-            </span>
-            <button
-              type="button"
-              (click)="authService.signOut()"
-              class="text-xs font-bold text-red-600 dark:text-red-400 hover:underline px-2 py-1"
-            >
-              {{ 'common.signOut' | t }}
-            </button>
-          </div>
-        } @else {
-          <span
-            class="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-200 dark:bg-slate-700 px-2.5 py-1 rounded-lg"
-          >
-            {{ 'common.demoActive' | t }}
-          </span>
-        }
-      </div>
-    </div>
-  </header>
-
-  <!-- Main Content Area -->
-  <main class="flex-1 pb-12">
+  <!-- Main Content Area (padding-bottom to account for bottom nav) -->
+  <main class="flex-1 pb-[72px]">
     <router-outlet></router-outlet>
   </main>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav class="fixed bottom-0 left-0 right-0 z-50 bg-surface-200 border-t border-surface-100 pb-safe">
+    <div class="flex justify-around items-center h-[60px]">
+      <a routerLink="/chat" routerLinkActive="text-primary" [routerLinkActiveOptions]="{exact: false}" class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors">
+        <span class="text-2xl leading-none">💬</span>
+        <span class="text-[10px] font-bold">HelloTalk</span>
+      </a>
+      
+      <a routerLink="/moments" routerLinkActive="text-primary" class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors">
+        <span class="text-2xl leading-none">⭕</span>
+        <span class="text-[10px] font-bold">Moments</span>
+      </a>
+      
+      <a routerLink="/discovery" routerLinkActive="text-primary" class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors">
+        <span class="text-2xl leading-none">🌍</span>
+        <span class="text-[10px] font-bold">Connect</span>
+      </a>
+      
+      <a routerLink="/audio-rooms" routerLinkActive="text-primary" class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors">
+        <span class="text-2xl leading-none">🎙️</span>
+        <span class="text-[10px] font-bold">Live</span>
+      </a>
+      
+      <a routerLink="/profile" routerLinkActive="text-primary" class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors">
+        <span class="text-2xl leading-none">👤</span>
+        <span class="text-[10px] font-bold">Me</span>
+      </a>
+    </div>
+  </nav>
+
   <!-- Incoming Call Modal -->
   <app-incoming-call-modal
     [callData]="incomingCallData()"

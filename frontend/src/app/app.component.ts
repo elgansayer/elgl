@@ -4,7 +4,6 @@ import { AuthService } from './services/auth.service';
 import { EconomyStore, VirtualGift } from './services/economy.store';
 import { CentrifugeService } from './services/centrifuge.service';
 import { TranslatePipe } from './services/translate.pipe';
-import { LanguageSelectorComponent } from './components/language-selector/language-selector.component';
 import { IncomingCallModalComponent, IncomingCallData } from './components/incoming-call-modal/incoming-call-modal.component';
 
 @Component({
@@ -14,7 +13,6 @@ import { IncomingCallModalComponent, IncomingCallData } from './components/incom
     RouterLink, 
     RouterLinkActive, 
     TranslatePipe, 
-    LanguageSelectorComponent,
     IncomingCallModalComponent
   ],
   templateUrl: './app.component.html',
