@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, catchError, of } from 'rxjs';
-import { MOCK_USER_PROFILE, MOCK_VISITORS } from './mock-data';
+import { MOCK_USER_PROFILE, MOCK_VISITORS, MOCK_PARTNERS } from './mock-data';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
@@ -25,6 +25,8 @@ export interface UserProfile {
   privacy_hide_from_search: boolean;
   distance_metres?: number;
   created_at: string;
+  is_followed_by_me?: boolean;
+  is_liked_by_me?: boolean;
 }
 
 export interface VisitorLog {
@@ -77,6 +79,41 @@ export class UserService {
     return firstValueFrom(
       this.http.get<UserProfile>(`${this.baseUrl}/me`, { headers: this.getHeaders() }).pipe(
         catchError(() => of(MOCK_USER_PROFILE))
+      )
+    );
+  }
+
+  async getUserProfile(userId: string): Promise<UserProfile | null> {
+    return firstValueFrom(
+      this.http.get<UserProfile>(`${this.baseUrl}/${userId}`, { headers: this.getHeaders() }).pipe(
+        catchError(() => {
+          const user = [MOCK_USER_PROFILE, ...MOCK_PARTNERS].find(u => u.id === userId);
+          return of(user || null);
+        })
+      )
+    );
+  }
+
+  async followUser(userId: string): Promise<void> {
+    return firstValueFrom(
+      this.http.post<void>(`${this.baseUrl}/${userId}/follow`, {}, { headers: this.getHeaders() }).pipe(
+        catchError(() => of(undefined))
+      )
+    );
+  }
+
+  async unfollowUser(userId: string): Promise<void> {
+    return firstValueFrom(
+      this.http.delete<void>(`${this.baseUrl}/${userId}/follow`, { headers: this.getHeaders() }).pipe(
+        catchError(() => of(undefined))
+      )
+    );
+  }
+
+  async likeProfile(userId: string): Promise<void> {
+    return firstValueFrom(
+      this.http.post<void>(`${this.baseUrl}/${userId}/like`, {}, { headers: this.getHeaders() }).pipe(
+        catchError(() => of(undefined))
       )
     );
   }

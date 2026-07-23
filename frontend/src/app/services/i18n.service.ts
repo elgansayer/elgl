@@ -49,7 +49,12 @@ export class I18nService {
     'nav.partners': 'Partners',
     'nav.chats': 'Chats',
     'nav.live': 'Live',
-    'nav.me': 'Me',
+    'app.navMe': 'Me',
+
+    // Common Fallbacks
+    'common.unknownUser': 'Unknown User',
+    'common.unknownSender': 'Unknown',
+    'common.languagePartner': 'Language Partner',
     'nav.helloTalk': '💬 HelloTalk',
     'nav.connect': '🌍 Connect',
     'nav.liveRooms': '🎙️ Live Rooms',
@@ -130,6 +135,7 @@ export class I18nService {
     'discovery.bannerPaid': 'Unlock Paid Practice',
     'discovery.bannerDesc': 'Get 1-on-1 native practice',
     'discovery.bannerView': 'View VIP',
+    'discovery.partnerBioFallback': 'I want to improve my language skills! Let us practice together.',
 
     // Moments Feed Component
     'moments.title': 'Moments',
@@ -252,8 +258,9 @@ export class I18nService {
     'chatList.subtitle': 'Messages, corrections, and instant language exchange.',
     'chatList.openFirstBtn': '+ Open first room',
     'chatList.searchPlaceholder': 'Search chats',
-    'chatList.loading': 'Loading chats...',
-    'chatList.empty': 'No chat previews match your search.',
+    'chatList.loading': 'Loading conversations...',
+    'chatList.empty': 'No active conversations. Find partners to start chatting!',
+    'chatList.tapToChat': 'Tap to chat...',
     'chatList.pinnedSection': 'Pinned chats',
     'chatList.allSection': 'All chats',
     'chat.incomingCallTitle': 'Incoming Call',
@@ -302,6 +309,13 @@ export class I18nService {
     'vocabulary.originalLabel': 'Original: ',
     'vocabulary.correctedLabel': 'Corrected: ',
     'vocabulary.pronunciationScore': 'Pronunciation score: {{score}} / 100',
+    'profile.playAudioIntro': 'Play Introduction',
+
+    // User Detail Component
+    'userProfile.notFound': 'User not found.',
+    'userProfile.loadError': 'Failed to load profile. Please try again.',
+    'userProfile.follow': 'Follow',
+    'userProfile.following': 'Following',
 
     // Favourites Component
     'favourites.title': 'Favourites',

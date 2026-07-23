@@ -1,13 +1,14 @@
 import { Component, inject, signal, computed, effect } from '@angular/core';
-import { DatePipe, UpperCasePipe } from '@angular/common';
+import { DatePipe, UpperCasePipe, CommonModule } from '@angular/common';
 import { UserService, ProfileVisitor } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
 import { RouterLink } from '@angular/router';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-profile-visitors',
   standalone: true,
-  imports: [DatePipe, RouterLink, UpperCasePipe],
+  imports: [DatePipe, RouterLink, UpperCasePipe, CommonModule, TranslatePipe],
   template: `
     <div class="p-4">
       <h2 class="text-xl font-bold mb-4">Profile Visitors</h2>
@@ -35,9 +36,9 @@ import { RouterLink } from '@angular/router';
                     </div>
                   }
                 </div>
-                <div class="min-w-0 flex-1">
-                  <p class="font-medium truncate">{{ visit.visitor?.display_name || 'Unknown User' }}</p>
-                  <p class="text-sm text-slate-400">
+                <div class="ms-3 min-w-0">
+                  <p class="font-medium truncate">{{ visit.visitor?.display_name || ('common.unknownUser' | t) }}</p>
+                  <p class="text-sm text-text-secondary">
                     {{ visit.created_at | date: 'medium' }}
                   </p>
                 </div>

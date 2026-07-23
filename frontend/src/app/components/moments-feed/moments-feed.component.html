@@ -84,7 +84,9 @@
         }
         <div class="flex items-start gap-3">
           <!-- Avatar -->
-          <img [src]="moment.author?.avatar_url || 'https://i.pravatar.cc/150?u=' + moment.id" class="h-12 w-12 rounded-full object-cover shrink-0" />
+          <a [routerLink]="['/profile/user', moment.author?.id]">
+            <img [src]="moment.author?.avatar_url || 'https://i.pravatar.cc/150?u=' + moment.id" class="h-12 w-12 rounded-full object-cover shrink-0" />
+          </a>
           
           <div class="min-w-0 flex-1">
             <div class="flex justify-between items-start mb-1">
@@ -156,7 +158,7 @@
                 @for (comment of moment.comments || []; track comment.id) {
                   <div class="bg-surface-300 rounded-2xl p-3">
                     <div class="flex items-center justify-between mb-1">
-                      <span class="font-bold text-xs text-text-primary">{{ comment.author?.display_name || 'User' }}</span>
+                      <span class="font-bold text-xs text-text-primary">{{ comment.author?.display_name || ('common.unknownUser' | t) }}</span>
                       <span class="text-[10px] text-text-muted">{{ comment.created_at | date: 'shortTime' }}</span>
                     </div>
                     @if (comment.text_content) {

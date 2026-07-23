@@ -99,11 +99,13 @@
               <span class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-black italic leading-none">{{ 'discovery.vipBadge' | t }}</span>
             </div>
             <span class="text-xs text-text-secondary shrink-0 ms-2">
-              {{ preview.lastMessageAt ? (preview.lastMessageAt | date: 'shortTime') : '12:00' }}
+              @if (preview.lastMessageAt) {
+                {{ preview.lastMessageAt | date: 'shortTime' }}
+              }
             </span>
           </div>
           <div class="flex justify-between items-center gap-2">
-            <p class="text-[13px] text-text-secondary truncate">{{ preview.lastMessageText || 'Tap to chat...' }}</p>
+            <p class="text-[13px] text-text-secondary truncate">{{ preview.lastMessageText || ('chatList.tapToChat' | t) }}</p>
             @if (preview.unreadCount > 0) {
               <span class="bg-purple-600 text-white text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0">
                 {{ preview.unreadCount }}

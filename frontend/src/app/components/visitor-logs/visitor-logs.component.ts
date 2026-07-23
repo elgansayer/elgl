@@ -1,10 +1,11 @@
 import { Component, computed, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { UserService, VisitorLog, UserProfile } from '../../services/user.service';
 
 @Component({
   selector: 'app-visitor-logs',
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   templateUrl: './visitor-logs.component.html',
   styleUrls: ['./visitor-logs.component.scss']
 })

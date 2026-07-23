@@ -11,11 +11,17 @@
     <section class="app-card app-padded">
       <div class="flex flex-wrap items-center justify-between gap-4 border-b border-surface-100 pb-4">
         <div class="flex items-center gap-3">
-          <img
-            [src]="profile()?.avatar_url || 'https://via.placeholder.com/150'"
-            alt="avatar"
-            class="h-16 w-16 rounded-full border border-surface-100 object-cover"
-          />
+          <div class="relative h-16 w-16 overflow-hidden rounded-full border border-surface-100 bg-surface-300 flex items-center justify-center">
+            @if (profile()?.avatar_url) {
+              <img
+                [src]="profile()?.avatar_url"
+                alt="avatar"
+                class="h-16 w-16 object-cover"
+              />
+            } @else {
+              <span class="text-2xl font-bold text-text-secondary">{{ profile()?.display_name?.charAt(0) || '?' }}</span>
+            }
+          </div>
           <div>
             <div class="flex items-center gap-2">
               <h1 class="app-section-title">{{ profile()?.display_name || ('profile.defaultName' | t) }}</h1>

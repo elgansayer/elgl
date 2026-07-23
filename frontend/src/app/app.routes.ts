@@ -11,6 +11,7 @@ import { AudioRoomComponent } from './components/audio-room/audio-room.component
 import { DeveloperDashboardComponent } from './components/developer-dashboard/developer-dashboard.component';
 import { ProfileVisitorsComponent } from './components/profile-visitors/profile-visitors.component';
 import { VideoCallComponent } from './components/video-call/video-call.component';
+import { UserDetailComponent } from './components/user-detail/user-detail.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'discovery', pathMatch: 'full' },
@@ -22,6 +23,7 @@ export const routes: Routes = [
   { path: 'favourites', component: FavouritesComponent },
   { path: 'vocabulary', component: VocabularyDashboardComponent },
   { path: 'profile', component: ProfileComponent },
+  { path: 'profile/user/:id', component: UserDetailComponent },
   { path: 'visitors', component: VisitorLogsComponent },
   { path: 'profile/visitors', component: ProfileVisitorsComponent },
   { path: 'developer', component: DeveloperDashboardComponent },
