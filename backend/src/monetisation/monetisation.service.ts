@@ -11,7 +11,6 @@ import Stripe from 'stripe';
 import { SupabaseService } from '../supabase/supabase.service';
 import {
   CreateDiagnosticLogDto,
-  StripeWebhookDto,
 } from './dto/monetisation.dto';
 
 export interface UserVipRow {
