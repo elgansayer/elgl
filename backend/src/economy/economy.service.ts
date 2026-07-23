@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -446,6 +445,7 @@ export class EconomyService {
       this.logger.error(
         `Failed to log purchase for user ${userId}: ${error.message}`,
       );
+      throw new InternalServerErrorException('Failed to record purchase');
     }
   }
 
