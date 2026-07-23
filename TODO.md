@@ -198,9 +198,9 @@
 
 ## Phase 12: Matchmaking & Discovery UI (Requires Refactor for Pixel-Perfect Clone)
 - [x] Analyse search screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
-- [ ] Refactor Discovery UI to match screenshots: implement dark theme aesthetics, horizontal scrollable filter pills, and banner ads.
-- [ ] Build custom Angular primitives for horizontal scrollable filter pills and language buttons instead of using native `<select>`.
-- [ ] Rebuild user cards to feature tight visual fluency indicators (flags and language codes) and gradient action buttons.
+- [x] Refactor Discovery UI to match screenshots: implement dark theme aesthetics, horizontal scrollable filter pills, and banner ads.
+- [x] Build custom Angular primitives for horizontal scrollable filter pills and language buttons instead of using native `<select>`.
+- [x] Rebuild user cards to feature tight visual fluency indicators (flags and language codes) and gradient action buttons.
 - [ ] Build Nearby Search PostGIS distance slider for VIP users.
 - [ ] Build VIP Profile Visitor Log UI with blurred cards for free users.
 

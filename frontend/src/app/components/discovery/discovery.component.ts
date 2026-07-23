@@ -6,9 +6,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { DiscoveryService } from '../../services/discovery.service';
 import { UserProfile } from '../../services/user.service';
 
+import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
+import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
+import { AppGradientButtonComponent } from '../primitives/gradient-button/gradient-button.component';
+
 @Component({
   selector: 'app-discovery',
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, ScrollablePillsComponent, FluencyIndicatorComponent, AppGradientButtonComponent],
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
 })
@@ -57,6 +61,36 @@ export class DiscoveryComponent implements OnInit {
   readonly selectedNativeLanguage = signal<string>('');
   readonly selectedTargetLanguage = signal<string>('');
   readonly seriousLearnerOnly = signal<boolean>(false);
+  
+  readonly filterPills = signal([
+    { id: 'all', label: 'All' },
+    { id: 'serious', label: 'Serious Learners' },
+    { id: 'nearby', label: 'Nearby' },
+    { id: 'city', label: 'City' },
+    { id: 'gender', label: 'Gender' },
+    { id: 'paid', label: 'Paid Practice' }
+  ]);
+  readonly selectedFilter = signal<string>('all');
+
+  onFilterSelect(id: string) {
+    this.selectedFilter.set(id);
+    if (id === 'serious') {
+      this.seriousLearnerOnly.set(true);
+      void this.searchPartners();
+    } else {
+      this.seriousLearnerOnly.set(false);
+      if (id === 'all') void this.searchPartners();
+      else this.notImplemented();
+    }
+  }
+
+  getNativeLangs(partner: UserProfile) {
+    return [{ code: partner.native_language || 'EN', level: 5 }];
+  }
+
+  getTargetLangs(partner: UserProfile) {
+    return (partner.target_languages?.length ? partner.target_languages : ['JA']).map(code => ({ code, level: 1 }));
+  }
 
   async ngOnInit(): Promise<void> {
     await this.searchPartners();

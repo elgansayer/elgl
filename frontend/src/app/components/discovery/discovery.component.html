@@ -1,99 +1,106 @@
-<div class="app-screen space-y-0">
+<div class="app-screen bg-surface-500">
   <!-- Header & Primary Filters -->
-  <header class="bg-surface-300 pt-12 pb-3 ps-4 pe-4 border-b border-surface-200">
-    <div class="flex items-center justify-center mb-4">
-      <h1 class="text-base font-bold text-text-primary">{{ 'discovery.title' | t }}</h1>
+  <header class="bg-surface-400 pt-12 pb-3 border-b border-surface-200 shadow-sm z-10 sticky top-0">
+    <div class="flex items-center justify-between px-4 mb-4">
+      <h1 class="text-xl font-black text-text-primary tracking-tight">{{ 'discovery.title' | t }}</h1>
+      <button (click)="notImplemented()" class="text-text-primary p-2">
+        <!-- Search Icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      </button>
     </div>
     
-    <!-- Top Filter Pills -->
-    <div class="app-filter-scroll mb-3">
-      <button (click)="notImplemented()" class="app-chip app-chip-active">All</button>
-      <button 
-        (click)="seriousLearnerOnly.set(!seriousLearnerOnly()); searchPartners()" 
-        class="app-chip" [class.app-chip-active]="seriousLearnerOnly()">
-        Serious Learners
-      </button>
-      <button (click)="notImplemented()" class="app-chip">Nearby</button>
-      <button (click)="notImplemented()" class="app-chip">City</button>
-      <button (click)="notImplemented()" class="app-chip">Gender</button>
-      <button (click)="notImplemented()" class="app-chip">Paid Practice</button>
-    </div>
+    <!-- Top Filter Pills (Horizontal Scroll) -->
+    <app-scrollable-pills 
+      [pills]="filterPills()" 
+      [selected]="selectedFilter()" 
+      (select)="onFilterSelect($event)">
+    </app-scrollable-pills>
 
-    <!-- Language Filter Pills -->
-    <div class="app-filter-scroll">
-      <button (click)="notImplemented()" class="app-pill bg-surface-100 flex-1 min-w-[100px] text-center">Japanese</button>
-      <button (click)="notImplemented()" class="app-pill bg-surface-200 flex-1 min-w-[100px] text-center">Korean</button>
-      <button (click)="notImplemented()" class="app-pill bg-surface-200 flex-1 min-w-[100px] text-center">Norwegian</button>
-      <button (click)="notImplemented()" class="app-pill bg-surface-200 flex-none px-4">+</button>
+    <!-- Language Selection Pills (Fake static for now matching screenshot) -->
+    <div class="flex overflow-x-auto hide-scrollbar gap-2 px-4 mt-4">
+      <button (click)="notImplemented()" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-surface-200 text-text-primary text-sm font-bold border border-surface-100">
+        <span>🇯🇵</span> Japanese
+      </button>
+      <button (click)="notImplemented()" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-surface-300 text-text-secondary text-sm font-bold">
+        <span>🇰🇷</span> Korean
+      </button>
+      <button (click)="notImplemented()" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-surface-300 text-text-secondary text-sm font-bold">
+        <span>🇳🇴</span> Norwegian
+      </button>
+      <button (click)="notImplemented()" class="flex items-center justify-center w-8 h-8 rounded-full bg-surface-200 text-text-secondary font-bold">+</button>
     </div>
   </header>
 
-  <div class="bg-primary px-4 py-1.5 flex justify-between items-center text-xs text-white font-bold">
-    <span>Find more partners by adding more languages!</span>
+  <!-- Banner Ad Placeholder (matches screenshot) -->
+  <div class="bg-surface-300 px-4 py-2 flex justify-between items-center text-xs text-text-primary font-bold border-b border-surface-200">
     <div class="flex items-center gap-2">
-      <button (click)="notImplemented()" class="bg-surface-200/20 px-2 py-0.5 rounded">Set now</button>
-      <button (click)="notImplemented()">×</button>
+      <span class="text-lg">💰</span>
+      <span>Paid Practice: Find a pro tutor!</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button (click)="notImplemented()" class="bg-surface-200 px-2 py-0.5 rounded text-[10px] uppercase">View</button>
+      <button (click)="notImplemented()" class="text-text-muted">×</button>
     </div>
   </div>
 
   <!-- Content States -->
-  <main class="p-4 space-y-4">
+  <main class="p-0">
     @if (isLoading()) {
-      <div class="app-empty-state">
+      <div class="p-8 text-center text-text-secondary font-bold">
         {{ 'discovery.searching' | t }}
       </div>
     }
 
     @if (!isLoading() && partners().length === 0) {
-      <div class="app-empty-state">
-        <p class="font-bold text-text-primary">{{ 'discovery.noMatches' | t }}</p>
-        <p class="mt-1">{{ 'discovery.tryBroadening' | t }}</p>
+      <div class="p-8 text-center">
+        <p class="font-bold text-text-primary text-lg">{{ 'discovery.noMatches' | t }}</p>
+        <p class="mt-2 text-text-secondary text-sm">{{ 'discovery.tryBroadening' | t }}</p>
       </div>
     }
 
     <!-- User List -->
-    <div class="space-y-4">
+    <div class="divide-y divide-surface-200">
       @for (partner of partners(); track partner.id) {
-        <article class="flex items-center justify-between gap-3 border-b border-surface-200 pb-4">
+        <article class="flex items-center justify-between gap-3 p-4 bg-surface-500 hover:bg-surface-400 transition-colors cursor-pointer" (click)="notImplemented()">
           <div class="flex items-center gap-3 min-w-0">
-            <div class="relative">
+            <!-- Avatar -->
+            <div class="relative shrink-0">
               <img
-                [src]="partner.avatar_url || 'https://via.placeholder.com/100'"
+                [src]="partner.avatar_url || 'https://i.pravatar.cc/150?u=' + partner.id"
                 alt="avatar"
-                class="h-12 w-12 rounded-full object-cover ring-2 ring-primary"
+                class="h-14 w-14 rounded-full object-cover"
               />
               <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-surface-500 rounded-full"></span>
             </div>
             
             <div class="min-w-0">
               <div class="flex items-center gap-2 mb-1">
-                <p class="truncate text-[15px] font-bold text-text-primary">
+                <p class="truncate text-base font-black text-text-primary">
                   {{ partner.display_name || ('discovery.partnerFallback' | t) }}
                 </p>
                 @if (partner.is_vip) {
-                  <span class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-black italic">VIP</span>
+                  <span class="rounded bg-yellow-400 px-1.5 py-0.5 text-[9px] font-black uppercase text-black italic">VIP</span>
                 }
               </div>
               
-              <div class="flex items-center gap-1.5 text-[10px] font-bold text-text-secondary bg-surface-200 rounded px-1.5 py-0.5 inline-flex">
-                <span class="uppercase">{{ partner.native_language }}</span>
-                <span class="text-surface-100">⇌</span>
-                <span class="uppercase">{{ partner.target_languages[0] || 'EN' }}</span>
-                @if (partner.study_streak_days > 0) {
-                  <span class="text-primary ml-1">ID</span>
-                }
+              <!-- Tight Fluency Indicator -->
+              <div class="mb-1">
+                <app-fluency-indicator 
+                  [nativeLanguages]="getNativeLangs(partner)" 
+                  [targetLanguages]="getTargetLangs(partner)">
+                </app-fluency-indicator>
               </div>
               
-              <p class="text-xs text-text-secondary mt-1 truncate">
-                {{ partner.bio_text || 'I love learning new languages!' }}
+              <p class="text-xs text-text-secondary mt-0.5 truncate max-w-[200px]">
+                {{ partner.bio_text || 'I want to improve my English! Let us practice together.' }}
               </p>
             </div>
           </div>
           
-          <button (click)="notImplemented()" class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white shadow-lg shrink-0">
-            <!-- Waving hand placeholder -->
-            <span class="text-lg">👋</span>
-          </button>
+          <!-- Gradient Action Button -->
+          <app-gradient-button size="icon" (clicked)="notImplemented(); $event.stopPropagation()">
+            <span class="text-xl">👋</span>
+          </app-gradient-button>
         </article>
       }
     </div>
