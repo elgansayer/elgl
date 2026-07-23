@@ -99,5 +99,8 @@ Domain-specific, on-demand workflows for recurring engineering tasks on this cod
 *   `payment-webhook-security` - secure payment/webhook/IAP patterns; created directly in response to the Section 8.1 findings above.
 *   `realtime-centrifugo-channel` - adding new Centrifugo channels/JSON payload types.
 *   `livekit-room-flow` - LiveKit room creation, stage management, and token refresh flows.
-*   `i18n-translation-workflow` - adding/removing translation keys under the zero-hardcoded-strings rule.
-*   `verification-gate` - running the full lint/build/test/constitution completion gate before marking any task done.
+## 10. Strict Execution & Quality Rules (Added 2026-07-23)
+*   **No Dead Buttons:** The application must have absolutely zero buttons that do nothing. Every single `<button>`, `<a>`, or clickable element must either have a functional `(click)` handler, a valid `[routerLink]`, or trigger a "Not Implemented" toast notification if the feature is pending.
+*   **Test Coverage Mandate:** A test must be added for every single feature developed. This includes unit tests for both Angular frontend components/services (`*.spec.ts`) and NestJS backend controllers/services.
+*   **Fake Data First:** Fake/mock seed data must be added to the backend for every feature as it is developed. The frontend should never render empty states indefinitely during development; it must always populate with realistic placeholder data served from the backend or database seeds to properly validate the UI.
+

@@ -85,4 +85,8 @@ export class DiscoveryComponent implements OnInit {
     this.seriousLearnerOnly.set(false);
     void this.searchPartners();
   }
+
+  notImplemented(): void {
+    alert('Not implemented yet');
+  }
 }

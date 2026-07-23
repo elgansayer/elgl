@@ -52,6 +52,10 @@ export class ChatListComponent implements OnInit {
     await this.loadPreviews();
   }
 
+  notImplemented(): void {
+    alert('Not implemented yet');
+  }
+
   async loadPreviews(): Promise<void> {
     this.isLoading.set(true);
     try {

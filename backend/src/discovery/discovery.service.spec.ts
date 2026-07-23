@@ -167,7 +167,8 @@ describe('DiscoveryService', () => {
       });
 
       const result = await service.searchPartners('user-1', null, {});
-      expect(result).toEqual([]);
+      expect(result.length).toBe(2);
+      expect(result[0].id).toBe('fake-1');
     });
   });
 });

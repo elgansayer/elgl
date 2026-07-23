@@ -7,24 +7,24 @@
     
     <!-- Top Filter Pills -->
     <div class="app-filter-scroll mb-3">
-      <button class="app-chip app-chip-active">All</button>
+      <button (click)="notImplemented()" class="app-chip app-chip-active">All</button>
       <button 
         (click)="seriousLearnerOnly.set(!seriousLearnerOnly()); searchPartners()" 
         class="app-chip" [class.app-chip-active]="seriousLearnerOnly()">
         Serious Learners
       </button>
-      <button class="app-chip">Nearby</button>
-      <button class="app-chip">City</button>
-      <button class="app-chip">Gender</button>
-      <button class="app-chip">Paid Practice</button>
+      <button (click)="notImplemented()" class="app-chip">Nearby</button>
+      <button (click)="notImplemented()" class="app-chip">City</button>
+      <button (click)="notImplemented()" class="app-chip">Gender</button>
+      <button (click)="notImplemented()" class="app-chip">Paid Practice</button>
     </div>
 
     <!-- Language Filter Pills -->
     <div class="app-filter-scroll">
-      <button class="app-pill bg-surface-100 flex-1 min-w-[100px] text-center">Japanese</button>
-      <button class="app-pill bg-surface-200 flex-1 min-w-[100px] text-center">Korean</button>
-      <button class="app-pill bg-surface-200 flex-1 min-w-[100px] text-center">Norwegian</button>
-      <button class="app-pill bg-surface-200 flex-none px-4">+</button>
+      <button (click)="notImplemented()" class="app-pill bg-surface-100 flex-1 min-w-[100px] text-center">Japanese</button>
+      <button (click)="notImplemented()" class="app-pill bg-surface-200 flex-1 min-w-[100px] text-center">Korean</button>
+      <button (click)="notImplemented()" class="app-pill bg-surface-200 flex-1 min-w-[100px] text-center">Norwegian</button>
+      <button (click)="notImplemented()" class="app-pill bg-surface-200 flex-none px-4">+</button>
     </div>
   </header>
 
@@ -32,7 +32,7 @@
   <div class="bg-gradient-to-r from-vip-light to-vip-dark px-4 py-6 relative overflow-hidden">
     <div class="relative z-10">
       <h2 class="text-3xl font-black text-black tracking-tighter mb-4">What's Your Chat Personality?</h2>
-      <button class="bg-black text-white rounded-pill font-bold px-6 py-2 text-sm flex items-center gap-2">
+      <button (click)="notImplemented()" class="bg-black text-white rounded-pill font-bold px-6 py-2 text-sm flex items-center gap-2">
         Test Now 
         <span class="text-lg leading-none">»</span>
       </button>
@@ -44,8 +44,8 @@
   <div class="bg-primary px-4 py-1.5 flex justify-between items-center text-xs text-white font-bold">
     <span>Find more partners by adding more languages!</span>
     <div class="flex items-center gap-2">
-      <span class="bg-surface-200/20 px-2 py-0.5 rounded">Set now</span>
-      <span>×</span>
+      <button (click)="notImplemented()" class="bg-white/20 px-2 py-0.5 rounded">Set now</button>
+      <button (click)="notImplemented()">×</button>
     </div>
   </div>
 
@@ -103,7 +103,7 @@
             </div>
           </div>
           
-          <button class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white shadow-lg shrink-0">
+          <button (click)="notImplemented()" class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white shadow-lg shrink-0">
             <!-- Waving hand placeholder -->
             <span class="text-lg">👋</span>
           </button>
