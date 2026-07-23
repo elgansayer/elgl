@@ -6,7 +6,6 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserProfile } from './interfaces/user-profile.interface';
 import { UsersService } from './users.service';
 import { MediaService } from '../media/media.service';
-import { PresignedUrlDto } from '../media/dto/presigned-url.dto';
 
 @Controller('users')
 @UseGuards(SupabaseAuthGuard)
@@ -41,11 +40,12 @@ export class UsersController {
   @Post('me/cover-photo/presigned-url')
   async getCoverPhotoPresignedUrl(
     @CurrentUser() user: User | null,
-    @Body() dto: PresignedUrlDto,
+    @Body() dto: { filename: string; contentType: string },
   ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
     if (!user) throw new Error('User not authenticated');
     return this.mediaService.generatePresignedUrl(user.id, {
-      ...dto,
+      filename: dto.filename,
+      contentType: dto.contentType,
       folder: 'cover-photos',
     });
   }
