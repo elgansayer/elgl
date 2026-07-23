@@ -103,7 +103,6 @@ export class MonetisationService {
     }
 
     this.logger.log(`Received verified Stripe Webhook event: ${event.type}`);
-    const supabase = this.supabaseService.getClient();
 
     if (
       event.type === 'checkout.session.completed' ||
@@ -165,8 +164,6 @@ export class MonetisationService {
             const userId = txPayload.appAccountToken; // Set during purchase
             
             if (userId && productId) {
-              const supabase = this.supabaseService.getClient();
-              
               // Map product ID to tier
               const tier = productId.includes('developer') 
                 ? 'developer_20_ukp_26_usd' 
@@ -191,8 +188,6 @@ export class MonetisationService {
             const userId = txPayload.appAccountToken;
             
             if (userId) {
-              const supabase = this.supabaseService.getClient();
-              
               // Downgrade user
               await this.updateVipStatusFromWebhook(userId, false, null);
             }
