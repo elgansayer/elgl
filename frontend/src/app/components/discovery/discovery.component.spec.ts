@@ -4,6 +4,7 @@ import { DiscoveryComponent } from './discovery.component';
 import { DiscoveryService } from '../../services/discovery.service';
 import { provideHttpClient } from '@angular/common/http';
 import * as toast from '../../services/toast.service';
+import { provideRouter } from '@angular/router';
 
 describe('DiscoveryComponent', () => {
   let component: DiscoveryComponent;
@@ -18,6 +19,7 @@ describe('DiscoveryComponent', () => {
     await TestBed.configureTestingModule({
       imports: [DiscoveryComponent],
       providers: [
+        provideRouter([]),
         { provide: DiscoveryService, useValue: mockDiscoveryService }
       ]
     }).compileComponents();

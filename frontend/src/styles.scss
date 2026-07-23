@@ -11,9 +11,9 @@
     --app-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
-  html {
+  html, body {
     /* Enforce Dark Theme Defaults */
-    @apply antialiased text-text-primary bg-surface-500;
+    @apply antialiased text-text-primary bg-surface-500 m-0 p-0 h-full w-full;
   }
 
   /* Support RTL mirroring natively */

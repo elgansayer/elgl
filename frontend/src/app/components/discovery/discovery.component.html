@@ -16,32 +16,34 @@
       (select)="onFilterSelect($event)">
     </app-scrollable-pills>
 
-    <!-- Language Selection Pills (Fake static for now matching screenshot) -->
+    <!-- Language Selection Pills -->
     <div class="flex overflow-x-auto hide-scrollbar gap-2 px-4 mt-4">
-      <button (click)="notImplemented()" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-surface-200 text-text-primary text-sm font-bold border border-surface-100">
+      <button (click)="setLanguage('ja')" [class.bg-surface-200]="selectedTargetLanguage() === 'ja'" [class.bg-surface-300]="selectedTargetLanguage() !== 'ja'" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-primary text-sm font-bold border border-surface-100">
         <span>🇯🇵</span> Japanese
       </button>
-      <button (click)="notImplemented()" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-surface-300 text-text-secondary text-sm font-bold">
+      <button (click)="setLanguage('ko')" [class.bg-surface-200]="selectedTargetLanguage() === 'ko'" [class.bg-surface-300]="selectedTargetLanguage() !== 'ko'" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-secondary text-sm font-bold border border-surface-100">
         <span>🇰🇷</span> Korean
       </button>
-      <button (click)="notImplemented()" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-surface-300 text-text-secondary text-sm font-bold">
+      <button (click)="setLanguage('no')" [class.bg-surface-200]="selectedTargetLanguage() === 'no'" [class.bg-surface-300]="selectedTargetLanguage() !== 'no'" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-secondary text-sm font-bold border border-surface-100">
         <span>🇳🇴</span> Norwegian
       </button>
-      <button (click)="notImplemented()" class="flex items-center justify-center w-8 h-8 rounded-full bg-surface-200 text-text-secondary font-bold">+</button>
+      <button (click)="setLanguage('')" class="flex items-center justify-center px-4 py-1.5 rounded-full bg-surface-200 text-text-secondary font-bold border border-surface-100">Any</button>
     </div>
   </header>
 
-  <!-- Banner Ad Placeholder (matches screenshot) -->
-  <div class="bg-surface-300 px-4 py-2 flex justify-between items-center text-xs text-text-primary font-bold border-b border-surface-200">
-    <div class="flex items-center gap-2">
-      <span class="text-lg">💰</span>
-      <span>Paid Practice: Find a pro tutor!</span>
+  <!-- Banner Ad Placeholder -->
+  @if (showBanner()) {
+    <div class="bg-surface-300 px-4 py-2 flex justify-between items-center text-xs text-text-primary font-bold border-b border-surface-200">
+      <div class="flex items-center gap-2">
+        <span class="text-lg">💰</span>
+        <span>Paid Practice: Find a pro tutor!</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button [routerLink]="['/vip']" class="bg-surface-200 px-2 py-0.5 rounded text-[10px] uppercase">View</button>
+        <button (click)="showBanner.set(false)" class="text-text-muted">×</button>
+      </div>
     </div>
-    <div class="flex items-center gap-2">
-      <button (click)="notImplemented()" class="bg-surface-200 px-2 py-0.5 rounded text-[10px] uppercase">View</button>
-      <button (click)="notImplemented()" class="text-text-muted">×</button>
-    </div>
-  </div>
+  }
 
   <!-- Content States -->
   <main class="p-0">
@@ -61,7 +63,7 @@
     <!-- User List -->
     <div class="divide-y divide-surface-200">
       @for (partner of partners(); track partner.id) {
-        <article class="flex items-center justify-between gap-3 p-4 bg-surface-500 hover:bg-surface-400 transition-colors cursor-pointer" (click)="notImplemented()">
+        <article class="flex items-center justify-between gap-3 p-4 bg-surface-500 hover:bg-surface-400 transition-colors cursor-pointer" [routerLink]="['/chat', partner.id]">
           <div class="flex items-center gap-3 min-w-0">
             <!-- Avatar -->
             <div class="relative shrink-0">
@@ -98,7 +100,7 @@
           </div>
           
           <!-- Gradient Action Button -->
-          <app-gradient-button size="icon" (clicked)="notImplemented(); $event.stopPropagation()">
+          <app-gradient-button size="icon" (clicked)="$event.stopPropagation()" [routerLink]="['/chat', partner.id]">
             <span class="text-xl">👋</span>
           </app-gradient-button>
         </article>

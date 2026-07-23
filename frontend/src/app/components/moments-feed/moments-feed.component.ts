@@ -13,6 +13,7 @@ import { WordDefinitionModalComponent } from '../word-definition-modal/word-defi
 import { TextToSpeechComponent } from '../text-to-speech/text-to-speech.component';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.component';
+import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 
 @Component({
   selector: 'app-moments-feed',
@@ -25,7 +26,8 @@ import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.compone
     WordDefinitionModalComponent,
     TextToSpeechComponent,
     VisualDiffComponent,
-    VoiceRecorderComponent
+    VoiceRecorderComponent,
+    ScrollablePillsComponent
   ],
   templateUrl: './moments-feed.component.html',
   styleUrls: ['./moments-feed.component.scss']
@@ -42,6 +44,13 @@ export class MomentsFeedComponent implements OnInit {
   readonly activeWordContext = signal<string>('');
   readonly openCommentsMap = signal<Set<string>>(new Set());
   readonly expandedMomentIds = signal<Set<string>>(new Set());
+
+  readonly filterPills = signal([
+    { id: 'All', label: 'All' },
+    { id: 'Classmates', label: 'Classmates' },
+    { id: 'Following', label: 'Following' }
+  ]);
+  readonly showComposeForm = signal<boolean>(false);
 
   // New Moment form state
   newText = '';

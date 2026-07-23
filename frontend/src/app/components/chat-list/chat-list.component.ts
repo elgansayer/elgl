@@ -46,17 +46,20 @@ export class ChatListComponent implements OnInit {
 
   onFilterSelect(id: string) {
     this.selectedFilter.set(id);
-    if (id !== 'all') {
-      this.notImplemented();
-    }
   }
 
   readonly filteredPreviews = computed(() => {
     const query = this.search().trim().toLowerCase();
+    const filter = this.selectedFilter();
+    
+    let result = this.previews();
+    if (filter === 'online') result = result.filter(p => p.isOnline);
+    if (filter === 'unread') result = result.filter(p => p.unreadCount > 0);
+    
     if (!query) {
-      return this.previews();
+      return result;
     }
-    return this.previews().filter((preview) =>
+    return result.filter((preview) =>
       preview.title.toLowerCase().includes(query) ||
       preview.subtitle.toLowerCase().includes(query) ||
       preview.lastMessageText.toLowerCase().includes(query)

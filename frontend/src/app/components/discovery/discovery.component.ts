@@ -9,10 +9,11 @@ import { UserProfile } from '../../services/user.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
 import { AppGradientButtonComponent } from '../primitives/gradient-button/gradient-button.component';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-discovery',
-  imports: [CommonModule, FormsModule, TranslatePipe, ScrollablePillsComponent, FluencyIndicatorComponent, AppGradientButtonComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, ScrollablePillsComponent, FluencyIndicatorComponent, AppGradientButtonComponent, RouterLink],
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
 })
@@ -65,23 +66,21 @@ export class DiscoveryComponent implements OnInit {
   readonly filterPills = signal([
     { id: 'all', label: 'All' },
     { id: 'serious', label: 'Serious Learners' },
-    { id: 'nearby', label: 'Nearby' },
-    { id: 'city', label: 'City' },
-    { id: 'gender', label: 'Gender' },
-    { id: 'paid', label: 'Paid Practice' }
+    { id: 'nearby', label: 'Nearby' }
   ]);
   readonly selectedFilter = signal<string>('all');
+  readonly showBanner = signal<boolean>(true);
 
   onFilterSelect(id: string) {
     this.selectedFilter.set(id);
-    if (id === 'serious') {
-      this.seriousLearnerOnly.set(true);
-      void this.searchPartners();
-    } else {
-      this.seriousLearnerOnly.set(false);
-      if (id === 'all') void this.searchPartners();
-      else this.notImplemented();
-    }
+    this.seriousLearnerOnly.set(id === 'serious');
+    this.selectedDistanceKm.set(id === 'nearby' ? 10 : 50); // 10km for nearby, 50km default
+    void this.searchPartners();
+  }
+
+  setLanguage(code: string) {
+    this.selectedTargetLanguage.set(code);
+    void this.searchPartners();
   }
 
   getNativeLangs(partner: UserProfile) {
