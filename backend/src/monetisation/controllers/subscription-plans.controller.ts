@@ -1,5 +1,8 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
-import { SubscriptionPlansService, SubscriptionPlan } from '../services/subscription-plans.service';
+import {
+  SubscriptionPlansService,
+  SubscriptionPlan,
+} from '../services/subscription-plans.service';
 
 @Controller('subscription-plans')
 export class SubscriptionPlansController {

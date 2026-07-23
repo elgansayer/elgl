@@ -112,7 +112,9 @@ export class SubscriptionPlansService {
   getPlanById(id: string): SubscriptionPlan {
     const plan = this.plans.find((p) => p.id === id);
     if (!plan) {
-      throw new NotFoundException(`Subscription plan with id "${id}" not found`);
+      throw new NotFoundException(
+        `Subscription plan with id "${id}" not found`,
+      );
     }
     return plan;
   }
