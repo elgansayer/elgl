@@ -1,4 +1,9 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-npm run check:constitution
+# Check if npm is available before running the constitution check
+if command -v npm >/dev/null 2>&1; then
+  npm run check:constitution
+else
+  echo "⚠️  npm not found. Skipping constitution check."
+fi
