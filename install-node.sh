@@ -1,15 +1,20 @@
 #!/bin/bash
 set -e  # Exit on first error
 
-# Ignore any arguments passed to this script (e.g. when called as "npm run lint install-node.sh")
-# The script always performs the same actions regardless of arguments.
-shift $# 2>/dev/null || true
+# This script ignores any arguments passed to it.
+# It always performs the same actions regardless of arguments.
 
 # Ensure the script itself is executable (in case it was not)
 chmod +x "$0"
 
 # Determine the directory where this script resides
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Verify that the backend directory exists relative to the script location
+if [ ! -d "$SCRIPT_DIR/backend" ]; then
+    echo "Error: backend directory not found relative to script location."
+    exit 1
+fi
 
 # Check if npm is already available. If yes, skip installation and just run lint.
 if command -v npm &> /dev/null; then
