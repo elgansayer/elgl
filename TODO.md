@@ -227,6 +227,13 @@
 - [x] Build Read Receipts (Sent vs Delivered vs Read checkmarks).
 - [ ] Add long-press context menu on mobile to copy, favourite, or report messages.
 - [ ] Implement long-press context menu component (`LongPressContextMenuComponent`) in Angular with options to copy, favourite, or report messages.
+- [ ] Actually implement the `LongPressContextMenuComponent` with:
+  - Long-press detection (touchstart/touchend with timer) on message bubbles.
+  - Popup menu with options: Copy, Favourite, Report.
+  - Integration with existing services (copy to clipboard, favourite service, report service).
+  - Unit tests for the component.
+  - RTL-safe logical CSS classes.
+  - i18n translation keys for menu labels.
 
 ## Phase 17: Audio & Video Calling (WebRTC / LiveKit)
 - [ ] Build Incoming Call modal with ringtone audio and accept/reject controls.
