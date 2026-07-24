@@ -5,7 +5,8 @@ import { environment } from '../../environments/environment';
 
 export interface ReportUserDto {
   reported_id: string;
-  reason: string;
+  reason_category: string;
+  description?: string;
   context_url?: string;
 }
 
@@ -22,5 +23,9 @@ export class SafetyService {
 
   blockUser(blockedId: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/safety/block`, { blocked_id: blockedId });
+  }
+
+  getBlockedIds(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids`);
   }
 }

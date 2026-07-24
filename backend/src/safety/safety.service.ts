@@ -6,15 +6,6 @@ export interface UserBlockRow {
   blocked_id: string;
 }
 
-export interface SafetyReportRow {
-  id: string;
-  reporter_id: string;
-  reported_id: string;
-  reason: string;
-  status: string;
-  created_at: string;
-}
-
 @Injectable()
 export class SafetyService {
   private readonly logger = new Logger(SafetyService.name);
@@ -27,8 +18,8 @@ export class SafetyService {
     const { error } = await supabase.from('reports').insert({
       reporter_id: reporterId,
       reported_user_id: dto.reported_id,
-      reason_category: 'message_content',
-      description: dto.reason,
+      reason_category: dto.reason_category,
+      description: dto.description || null,
       context_url: dto.context_url || null,
       status: 'pending',
     });
