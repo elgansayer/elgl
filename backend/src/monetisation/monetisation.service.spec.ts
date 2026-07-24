@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MonetisationService } from './monetisation.service';
 import { AppleNotificationService } from './apple-notification.service';
@@ -315,24 +319,40 @@ describe('MonetisationService', () => {
         stripe_price_id: 'price_consumer_vip_monthly',
         stripe_price_id_yearly: 'price_consumer_vip_yearly',
       };
-      
+
       const mockSession = {
         url: 'https://checkout.stripe.com/session_123',
         id: 'cs_test_abc123',
       };
 
-      const plansService = module.get<SubscriptionPlansService>(SubscriptionPlansService);
+      const plansService = module.get<SubscriptionPlansService>(
+        SubscriptionPlansService,
+      );
       (plansService.getPlanById as jest.Mock).mockReturnValue(mockPlan);
 
-      (service as any).stripe.checkout.sessions.create = jest.fn().mockResolvedValue(mockSession);
+      (service as any).stripe.checkout.sessions.create = jest
+        .fn()
+        .mockResolvedValue(mockSession);
 
-      const result = await service.createCheckoutSession('user-1', 'consumer_8_ukp_10_usd', 'month');
+      const result = await service.createCheckoutSession(
+        'user-1',
+        'consumer_8_ukp_10_usd',
+        'month',
+      );
 
-      expect(plansService.getPlanById).toHaveBeenCalledWith('consumer_8_ukp_10_usd');
-      expect((service as any).stripe.checkout.sessions.create).toHaveBeenCalledWith({
+      expect(plansService.getPlanById).toHaveBeenCalledWith(
+        'consumer_8_ukp_10_usd',
+      );
+      expect(
+        (service as any).stripe.checkout.sessions.create,
+      ).toHaveBeenCalledWith({
         mode: 'subscription',
         line_items: [{ price: 'price_consumer_vip_monthly', quantity: 1 }],
-        metadata: { userId: 'user-1', planId: 'consumer_8_ukp_10_usd', interval: 'month' },
+        metadata: {
+          userId: 'user-1',
+          planId: 'consumer_8_ukp_10_usd',
+          interval: 'month',
+        },
         success_url: expect.stringContaining('/subscription/success'),
         cancel_url: expect.stringContaining('/subscription/cancel'),
       });
@@ -349,22 +369,36 @@ describe('MonetisationService', () => {
         stripe_price_id: 'price_consumer_vip_monthly',
         stripe_price_id_yearly: 'price_consumer_vip_yearly',
       };
-      
+
       const mockSession = {
         url: 'https://checkout.stripe.com/session_456',
         id: 'cs_test_def456',
       };
 
-      const plansService = module.get<SubscriptionPlansService>(SubscriptionPlansService);
+      const plansService = module.get<SubscriptionPlansService>(
+        SubscriptionPlansService,
+      );
       (plansService.getPlanById as jest.Mock).mockReturnValue(mockPlan);
-      (service as any).stripe.checkout.sessions.create = jest.fn().mockResolvedValue(mockSession);
+      (service as any).stripe.checkout.sessions.create = jest
+        .fn()
+        .mockResolvedValue(mockSession);
 
-      const result = await service.createCheckoutSession('user-1', 'consumer_8_ukp_10_usd', 'year');
+      const result = await service.createCheckoutSession(
+        'user-1',
+        'consumer_8_ukp_10_usd',
+        'year',
+      );
 
-      expect((service as any).stripe.checkout.sessions.create).toHaveBeenCalledWith(
+      expect(
+        (service as any).stripe.checkout.sessions.create,
+      ).toHaveBeenCalledWith(
         expect.objectContaining({
           line_items: [{ price: 'price_consumer_vip_yearly', quantity: 1 }],
-          metadata: { userId: 'user-1', planId: 'consumer_8_ukp_10_usd', interval: 'year' },
+          metadata: {
+            userId: 'user-1',
+            planId: 'consumer_8_ukp_10_usd',
+            interval: 'year',
+          },
         }),
       );
       expect(result).toEqual({
@@ -374,9 +408,13 @@ describe('MonetisationService', () => {
     });
 
     it('should throw NotFoundException when plan does not exist', async () => {
-      const plansService = module.get<SubscriptionPlansService>(SubscriptionPlansService);
+      const plansService = module.get<SubscriptionPlansService>(
+        SubscriptionPlansService,
+      );
       (plansService.getPlanById as jest.Mock).mockImplementation(() => {
-        throw new NotFoundException('Subscription plan with id "invalid_plan" not found');
+        throw new NotFoundException(
+          'Subscription plan with id "invalid_plan" not found',
+        );
       });
 
       await expect(
@@ -392,7 +430,9 @@ describe('MonetisationService', () => {
         stripe_price_id_yearly: undefined,
       };
 
-      const plansService = module.get<SubscriptionPlansService>(SubscriptionPlansService);
+      const plansService = module.get<SubscriptionPlansService>(
+        SubscriptionPlansService,
+      );
       (plansService.getPlanById as jest.Mock).mockReturnValue(mockPlan);
 
       await expect(
@@ -407,14 +447,20 @@ describe('MonetisationService', () => {
         stripe_price_id: 'price_consumer_vip_monthly',
       };
 
-      const plansService = module.get<SubscriptionPlansService>(SubscriptionPlansService);
-      (plansService.getPlanById as jest.Mock).mockReturnValue(mockPlan);
-      (service as any).stripe.checkout.sessions.create = jest.fn().mockRejectedValue(
-        new Error('Stripe API error'),
+      const plansService = module.get<SubscriptionPlansService>(
+        SubscriptionPlansService,
       );
+      (plansService.getPlanById as jest.Mock).mockReturnValue(mockPlan);
+      (service as any).stripe.checkout.sessions.create = jest
+        .fn()
+        .mockRejectedValue(new Error('Stripe API error'));
 
       await expect(
-        service.createCheckoutSession('user-1', 'consumer_8_ukp_10_usd', 'month'),
+        service.createCheckoutSession(
+          'user-1',
+          'consumer_8_ukp_10_usd',
+          'month',
+        ),
       ).rejects.toThrow('Stripe API error');
     });
   });

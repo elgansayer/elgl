@@ -205,19 +205,27 @@ describe('MonetisationController', () => {
 
   describe('createCheckoutSession', () => {
     it('should return null if user is not provided', async () => {
-      const dto = { planId: 'consumer_8_ukp_10_usd', interval: 'month' as const };
+      const dto = {
+        planId: 'consumer_8_ukp_10_usd',
+        interval: 'month' as const,
+      };
       const result = await controller.createCheckoutSession(null, dto);
       expect(result).toBeNull();
       expect(monetisationService.createCheckoutSession).not.toHaveBeenCalled();
     });
 
     it('should call service.createCheckoutSession with correct parameters', async () => {
-      const dto = { planId: 'consumer_8_ukp_10_usd', interval: 'month' as const };
+      const dto = {
+        planId: 'consumer_8_ukp_10_usd',
+        interval: 'month' as const,
+      };
       const mockResponse = {
         sessionUrl: 'https://checkout.stripe.com/session_123',
         sessionId: 'cs_test_abc123',
       };
-      (monetisationService.createCheckoutSession as jest.Mock).mockResolvedValue(mockResponse);
+      (
+        monetisationService.createCheckoutSession as jest.Mock
+      ).mockResolvedValue(mockResponse);
 
       const result = await controller.createCheckoutSession(
         { id: 'user-1' } as any,
@@ -233,12 +241,17 @@ describe('MonetisationController', () => {
     });
 
     it('should handle yearly interval', async () => {
-      const dto = { planId: 'consumer_8_ukp_10_usd', interval: 'year' as const };
+      const dto = {
+        planId: 'consumer_8_ukp_10_usd',
+        interval: 'year' as const,
+      };
       const mockResponse = {
         sessionUrl: 'https://checkout.stripe.com/session_456',
         sessionId: 'cs_test_def456',
       };
-      (monetisationService.createCheckoutSession as jest.Mock).mockResolvedValue(mockResponse);
+      (
+        monetisationService.createCheckoutSession as jest.Mock
+      ).mockResolvedValue(mockResponse);
 
       const result = await controller.createCheckoutSession(
         { id: 'user-1' } as any,
@@ -256,7 +269,9 @@ describe('MonetisationController', () => {
     it('should propagate service errors', async () => {
       const dto = { planId: 'invalid_plan', interval: 'month' as const };
       const error = new Error('Plan not found');
-      (monetisationService.createCheckoutSession as jest.Mock).mockRejectedValue(error);
+      (
+        monetisationService.createCheckoutSession as jest.Mock
+      ).mockRejectedValue(error);
 
       await expect(
         controller.createCheckoutSession({ id: 'user-1' } as any, dto),
