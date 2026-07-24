@@ -17,7 +17,7 @@ run_aider_with_fallback() {
 
     local MODELS=(
         "openai/claude-opus-4.7 openai/claude-sonnet-4.5 Claude"
-        "deepseek/deepseek-v4-pro deepseek/deepseek-coder DeepSeek"
+        "deepseek/deepseek-v4-pro deepseek/deepseek-v4-pro DeepSeek"
         "openai/gpt-5.5 openai/gpt-4o Copilot-GPT"
         "gemini/gemini-3.1-pro-preview gemini/gemini-3.1-pro-preview Gemini-3-Pro"
         "gemini/gemini-3.5-flash gemini/gemini-3.5-flash Gemini-Flash"
@@ -31,7 +31,8 @@ run_aider_with_fallback() {
         # Watcher: kills Aider instantly if litellm rate limits or quota is hit
         ( tail -f current_aider.log 2>/dev/null | grep -i -m 1 -E "RateLimitError|quota exceeded|rate limited" && pkill -f "aider.*$MODEL" ) &
         WATCHER_PID=$!
-
+        disown $WATCHER_PID # Stops Bash from printing "Killed" when we terminate it
+        
         timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model "$MODEL" --editor-model "$EDITOR" --message "$MESSAGE" 2>&1 | tee current_aider.log
         AIDER_EXIT=${PIPESTATUS[0]}
         
