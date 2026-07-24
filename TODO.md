@@ -305,6 +305,8 @@
 - [x] Build "Report User" modal with dynamic category selection.
 - [x] Implement Blocklist system hiding blocked accounts across chat, feed, and search.
 - [ ] Wire up block/unblock UI in LongPressContextMenuComponent and ChatMessageComponent, and implement backend/frontend filtering to hide blocked users from chat, feed, and search results.
+- [ ] **DIFF REVIEW:** The provided git diff for this task included only formatting/lint changes and did not implement any block/unblock UI wiring or filtering. Need to implement the actual feature.
+- [ ] **ACTION REQUIRED:** The submitted diff for block/unblock wiring only included formatting/lint cleanups; actual block/unblock UI wiring and backend/frontend filtering remain unimplemented. Task is still incomplete.
 - [ ] **REMAINING:** Wire the `block`/`unblock` outputs of `LongPressContextMenuComponent` to `SafetyService.blockUser`/`unblockUser` in the parent chat component (`ChatRoomComponent` or `MessageBubbleComponent`). Currently the component emits events but no parent subscribes to them, so the actions are never executed.
 - [ ] **REMAINING:** Add block/unblock button directly in `ChatMessageComponent` (or reuse the context menu) that calls `SafetyService.blockUser`/`unblockUser`.
 - [ ] **REMAINING:** Modify backend `ChatService`, `MomentsService`, and `DiscoveryService` to accept a list of blocked user IDs and exclude them from query results.
