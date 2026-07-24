@@ -1,6 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { SupabaseService } from '../supabase/supabase.service';
+
+interface UserRow {
+  id: string;
+  study_streak_days: number;
+  last_active_at: string;
+}
 
 @Injectable()
 export class StreakService {
@@ -23,7 +29,7 @@ export class StreakService {
     const { data: inactiveUsers, error: queryError } = await supabase
       .from('users')
       .select('id, study_streak_days, last_active_at')
-      .lt('last_active_at', cutoff);
+      .lt('last_active_at', cutoff) as { data: UserRow[] | null; error: any };
 
     if (queryError) {
       this.logger.error('Failed to query inactive users', queryError.message);
@@ -35,7 +41,7 @@ export class StreakService {
       return 0;
     }
 
-    const userIds = inactiveUsers.map((user) => user.id);
+    const userIds: string[] = inactiveUsers.map((user) => user.id);
 
     // Reset streaks for the found users
     const { error: updateError } = await supabase
@@ -55,7 +61,7 @@ export class StreakService {
   /**
    * Scheduled job that runs every hour to reset streaks for inactive users.
    */
-  @Cron(CronExpression.EVERY_HOUR)
+  @Cron('0 * * * *')
   async handleStreakResetCron(): Promise<void> {
     this.logger.log('Running scheduled streak reset job');
     await this.resetStreaksForTesting();
