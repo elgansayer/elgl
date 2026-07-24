@@ -1,5 +1,6 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SupabaseModule } from './supabase/supabase.module';
@@ -22,6 +23,7 @@ import { VideoCallsModule } from './video-calls/video-calls.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { StreakModule } from './streak/streak.module';
 import { StreakMiddleware } from './streak/streak.middleware';
+import { NotificationsModule } from './notifications/notifications.module';
 import { validationSchema } from './config/validation.schema';
 
 @Module({
@@ -29,6 +31,15 @@ import { validationSchema } from './config/validation.schema';
     ConfigModule.forRoot({
       isGlobal: true,
       validationSchema,
+    }),
+    EventEmitterModule.forRoot({
+      wildcard: false,
+      delimiter: '.',
+      newListener: false,
+      removeListener: false,
+      maxListeners: 10,
+      verboseMemoryLeak: false,
+      ignoreErrors: false,
     }),
     SupabaseModule,
     AuthModule,
@@ -49,6 +60,7 @@ import { validationSchema } from './config/validation.schema';
     VideoCallsModule,
     LeaderboardModule,
     StreakModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
@@ -8,12 +9,14 @@ import {
   ChatRoomRecord,
   FavouriteRecord,
 } from './interfaces/chat-message.interface';
+import { ChatMessageEvent } from '../notifications/events/notification.events';
 
 @Injectable()
 export class ChatService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly centrifugoService: CentrifugoService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   generateConnectionToken(userId: string): { token: string } {
@@ -92,6 +95,38 @@ export class ChatService {
     await this.centrifugoService.publish(`chat:${dto.room_id}`, {
       message: savedMessage,
     });
+
+    // Emit push notification event
+    // Determine receiver from room participants (simplified - in production get from room membership)
+    const { data: roomMembers } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', dto.room_id)
+      .neq('user_id', senderId);
+
+    if (roomMembers && roomMembers.length > 0) {
+      const receiverId = roomMembers[0].user_id;
+      const preview = dto.text_content
+        ? dto.text_content.substring(0, 120)
+        : dto.message_type === 'voice'
+          ? '🎤 Voice message'
+          : dto.message_type === 'correction'
+            ? '📝 Correction'
+            : dto.message_type === 'doodle'
+              ? '🎨 Doodle'
+              : '';
+
+      this.eventEmitter.emit(
+        'chat.message',
+        new ChatMessageEvent(
+          senderId,
+          receiverId,
+          dto.room_id,
+          dto.message_type,
+          preview,
+        ),
+      );
+    }
 
     return savedMessage;
   }

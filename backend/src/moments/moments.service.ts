@@ -3,12 +3,14 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { CreateCommentDto, CreateMomentDto } from './dto/moment.dto';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { TimelineWorker } from './timeline.worker';
 import { MOCK_USERS } from '../mock-data';
+import { MomentCommentEvent } from '../notifications/events/notification.events';
 
 interface UserFollowRow {
   following_id: string;
@@ -49,6 +51,7 @@ export class MomentsService {
     private readonly supabaseService: SupabaseService,
     private readonly usersService: UsersService,
     private readonly timelineWorker: TimelineWorker,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async createMoment(
@@ -286,10 +289,10 @@ export class MomentsService {
 
     const { data: updatedData } = await supabase
       .from('moments')
-      .select('comments_count')
+      .select('comments_count, user_id')
       .eq('id', momentId)
       .single();
-    const updatedRow = updatedData as MomentCountRow | null;
+    const updatedRow = updatedData as MomentCountRow & { user_id?: string } | null;
     await supabase
       .from('moments')
       .update({ comments_count: (updatedRow?.comments_count ?? 0) + 1 })
@@ -302,6 +305,27 @@ export class MomentsService {
       display_name: profile?.display_name ?? 'Serious Learner',
       avatar_url: profile?.avatar_url ?? null,
     };
+
+    // Emit push notification event
+    const momentAuthorId = updatedRow?.user_id;
+    if (momentAuthorId && momentAuthorId !== userId) {
+      const preview = dto.text_content
+        ? dto.text_content.substring(0, 120)
+        : dto.correction_payload
+          ? `Correction: "${dto.correction_payload.original}" → "${dto.correction_payload.corrected}"`
+          : '';
+
+      this.eventEmitter.emit(
+        'moment.comment',
+        new MomentCommentEvent(
+          userId,
+          momentAuthorId,
+          momentId,
+          preview,
+        ),
+      );
+    }
+
     return comment;
   }
 

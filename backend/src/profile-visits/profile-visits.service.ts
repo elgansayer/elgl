@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
+import { ProfileViewEvent } from '../notifications/events/notification.events';
 
 export interface VisitorUser {
   id: string;
@@ -26,7 +28,10 @@ interface RawVisitRow {
 
 @Injectable()
 export class ProfileVisitsService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async recordVisit(
     visitorId: string,
@@ -61,6 +66,13 @@ export class ProfileVisitsService {
       const msg = response.error?.message ?? 'Unknown error';
       throw new Error(`Failed to record visit: ${msg}`);
     }
+
+    // Emit push notification event
+    this.eventEmitter.emit(
+      'profile.view',
+      new ProfileViewEvent(visitorId, viewedId),
+    );
+
     return response.data as Record<string, unknown>;
   }
 
