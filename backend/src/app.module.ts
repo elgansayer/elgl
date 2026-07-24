@@ -32,7 +32,8 @@ import { validationSchema } from './config/validation.schema';
       isGlobal: true,
       validationSchema,
     }),
-    (EventEmitterModule as any).forRoot({
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    EventEmitterModule.forRoot({
       wildcard: false,
       delimiter: '.',
       newListener: false,
