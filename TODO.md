@@ -312,17 +312,17 @@
   - After fetching data on the frontend, filter out messages, moments, and search results whose `sender_id` or `user_id` appears in the blocked list.
 - [ ] **PARTIALLY DONE:** LongPressContextMenuComponent already has block/unblock options, calls SafetyService.blockUserAsync/unblockUserAsync, and emits block output events. Remaining: parent component subscription, backend query filtering, frontend filtering.
 - [ ] Wire block/unblock outputs in LongPressContextMenuComponent to SafetyService.blockUser/unblockUser in parent chat component, and implement backend/frontend filtering to exclude blocked users from chat, feed, and search results.
-- [x] Implement hiding blocked accounts across chat, feed, and search (frontend filtering + backend query filtering)
-- [x] Implement backend query filtering to exclude blocked users from chat, feed, and search results (modify ChatService, MomentsService, DiscoveryService to filter out blocked user IDs)
+- [ ] Implement hiding blocked accounts across chat, feed, and search (frontend filtering + backend query filtering)
+- [ ] Implement backend query filtering to exclude blocked users from chat, feed, and search results (modify ChatService, MomentsService, DiscoveryService to filter out blocked user IDs)
 - [ ] Implement frontend filtering to hide blocked users' messages, moments, and search results (filter arrays in components after fetching)
 - [ ] Build automated NLP spam detector in NestJS to flag duplicate copy-paste messages.
-- [x] Add block user option to chat message context menu (LongPressContextMenuComponent)
-- [x] Add block user option to chat message component (ChatMessageComponent)
+- [ ] Add block user option to chat message context menu (LongPressContextMenuComponent)
+- [ ] Add block user option to chat message component (ChatMessageComponent)
 - [ ] Implement backend query filtering to exclude blocked users from chat, feed, and search results
 - [ ] Implement frontend filtering to hide blocked users' messages, moments, and search results
-- [x] Add backend `POST /safety/block` and `POST /safety/unblock` endpoints with `SafetyService.blockUser`/`unblockUser` methods
-- [x] Add `getBlockedUserIds` method to `SafetyService` for use in query filters
-- [x] Add `isBlocked` method to `SafetyService` for use in query filters
+- [ ] Add backend `POST /safety/block` and `POST /safety/unblock` endpoints with `SafetyService.blockUser`/`unblockUser` methods
+- [ ] Add `getBlockedUserIds` method to `SafetyService` for use in query filters
+- [ ] Add `isBlocked` method to `SafetyService` for use in query filters
 - [ ] Add block/unblock UI in chat message context menu (LongPressContextMenuComponent)
 - [ ] Add block/unblock UI in chat message component (ChatMessageComponent)
 - [ ] Implement backend query filtering to exclude blocked users from chat, feed, and search results
@@ -331,6 +331,7 @@
 - [ ] Add block/unblock UI in ChatMessageComponent (add block button, wire to SafetyService.blockUser/unblockUser)
 - [ ] Implement backend query filtering to exclude blocked users from chat, feed, and search results (modify ChatService, MomentsService, DiscoveryService to filter out blocked user IDs)
 - [ ] Implement frontend filtering to hide blocked users' messages, moments, and search results (filter arrays in components after fetching)
+- [ ] **NEW:** Wire the `block`/`unblock` outputs of `LongPressContextMenuComponent` to `SafetyService.blockUser`/`unblockUser` in the parent chat component (`ChatRoomComponent` or `MessageBubbleComponent`). Currently the component emits events but no parent subscribes to them, so the actions are never executed.
 
 ## Phase 23: Onboarding Flow
 - [ ] Build multi-step Angular onboarding wizard.
