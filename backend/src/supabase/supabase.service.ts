@@ -50,7 +50,10 @@ export class SupabaseService implements OnModuleInit {
       .eq('id', userId);
 
     if (error) {
-      console.error(`Failed to update last_active_at for user ${userId}:`, error.message);
+      console.error(
+        `Failed to update last_active_at for user ${userId}:`,
+        error.message,
+      );
     }
   }
 }
