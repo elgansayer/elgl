@@ -229,7 +229,7 @@ export class AppleNotificationService {
     return JSON.parse(payloadStr) as AppleNotificationPayload;
   }
 
-  private verifySignature(
+  private async verifySignature(
     signedContent: string,
     signatureB64: string,
     header: { x5c?: string[] },
@@ -307,7 +307,7 @@ export class AppleNotificationService {
     }
   }
 
-  private decodeTransactionInfo(
+  private async decodeTransactionInfo(
     signedTransactionInfo?: string,
   ): Promise<AppleTransactionInfo | null> {
     if (!signedTransactionInfo) return null;

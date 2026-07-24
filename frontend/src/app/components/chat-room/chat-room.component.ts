@@ -202,7 +202,8 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     try {
       await firstValueFrom(this.safetyService.reportUser({
         reported_id: msg.sender_id,
-        reason: 'Inappropriate message content',
+        reason_category: 'inappropriate_content',
+        description: 'Inappropriate message content',
         context_url: `${window.location.origin}/chat/${this.roomId}`
       }));
       showToast(this.i18n.translate('chatRoom.reportedAlert'));

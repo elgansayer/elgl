@@ -15,7 +15,8 @@ import {
   Room,
   RoomEvent,
   RemoteParticipant,
-  TrackPublication,
+  RemoteTrack,
+  RemoteTrackPublication,
   VideoTrack,
   AudioTrack,
   LocalVideoTrack,
@@ -34,7 +35,6 @@ import { AppGradientButtonComponent } from '../primitives/gradient-button/gradie
   standalone: true,
   imports: [
     CommonModule,
-    AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
     AppGradientButtonComponent,
   ],
@@ -121,7 +121,7 @@ import { AppGradientButtonComponent } from '../primitives/gradient-button/gradie
 
         <!-- End Call -->
         <app-gradient-button
-          size="lg"
+          size="md"
           [customClass]="'rounded-full w-16 h-16 bg-red-600 hover:bg-red-700'"
           (clicked)="endCall()"
         >
@@ -247,8 +247,8 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   }
 
   private onTrackSubscribed(
-    track: TrackPublication,
-    publication: TrackPublication,
+    track: RemoteTrack,
+    publication: RemoteTrackPublication,
     participant: RemoteParticipant
   ): void {
     if (track.kind === Track.Kind.Video) {
@@ -257,8 +257,8 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   }
 
   private onTrackUnsubscribed(
-    track: TrackPublication,
-    publication: TrackPublication,
+    track: RemoteTrack,
+    publication: RemoteTrackPublication,
     participant: RemoteParticipant
   ): void {
     if (track.kind === Track.Kind.Video) {

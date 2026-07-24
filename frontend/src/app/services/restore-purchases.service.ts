@@ -82,14 +82,12 @@ export class RestorePurchasesService {
       this.lastRestoreResult.set(result);
 
       if (result.success) {
-        this.toastService.show({
-          message: result.message,
+        this.toastService.show(result.message, {
           type: 'success',
           duration: 4000,
         });
       } else {
-        this.toastService.show({
-          message: result.message,
+        this.toastService.show(result.message, {
           type: 'info',
           duration: 4000,
         });
@@ -104,8 +102,7 @@ export class RestorePurchasesService {
       };
       this.lastRestoreResult.set(result);
 
-      this.toastService.show({
-        message: result.message,
+      this.toastService.show(result.message, {
         type: 'error',
         duration: 5000,
       });

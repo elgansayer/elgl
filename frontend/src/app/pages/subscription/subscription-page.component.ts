@@ -4,8 +4,8 @@ import { AppCardComponent } from '../../components/primitives/card/card.componen
 import { AppButtonPrimaryComponent } from '../../components/primitives/button-primary/button-primary.component';
 import { AppPillComponent } from '../../components/primitives/pill/pill.component';
 import { AppGradientButtonComponent } from '../../components/primitives/gradient-button/gradient-button.component';
-import { MonetisationService, SubscriptionPlan } from '../../services/monetisation.service';
-
+import { MonetisationService } from '../../services/monetisation.service';
+import { SubscriptionPlansService, SubscriptionPlan } from '../../services/subscription-plans.service';
 @Component({
   selector: 'app-subscription-page',
   standalone: true,
@@ -117,6 +117,7 @@ import { MonetisationService, SubscriptionPlan } from '../../services/monetisati
 })
 export class SubscriptionPageComponent implements OnInit {
   private readonly monetisationService = inject(MonetisationService);
+  private readonly subscriptionPlansService = inject(SubscriptionPlansService);
 
   readonly plans = signal<SubscriptionPlan[]>([]);
   readonly isLoading = signal(true);
@@ -131,7 +132,7 @@ export class SubscriptionPageComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    this.monetisationService.getSubscriptionPlans().subscribe({
+    this.subscriptionPlansService.getAllPlans().subscribe({
       next: (plans) => {
         this.plans.set(plans);
         this.isLoading.set(false);
@@ -145,10 +146,12 @@ export class SubscriptionPageComponent implements OnInit {
 
   subscribe(planId: string): void {
     this.subscribingPlanId.set(planId);
+    const plan = this.plans().find(p => p.id === planId);
+    if (!plan) return;
 
-    this.monetisationService.createCheckoutSession(planId).subscribe({
+    this.monetisationService.createCheckoutSession(planId, plan.interval).subscribe({
       next: (response) => {
-        window.location.href = response.url;
+        window.location.href = response.sessionUrl;
       },
       error: (err) => {
         this.subscribingPlanId.set(null);

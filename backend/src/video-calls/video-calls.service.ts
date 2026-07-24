@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   AccessToken,
   RoomServiceClient,
-  CreateRoomOptions,
+  CreateOptions,
 } from 'livekit-server-sdk';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -24,7 +24,7 @@ export class VideoCallsService {
   ): Promise<{ token: string; roomName: string }> {
     const roomName = `video_${uuidv4()}`;
 
-    const createOptions: CreateRoomOptions = {
+    const createOptions: CreateOptions = {
       name: roomName,
       emptyTimeout: 30,
       maxParticipants: 2,
@@ -34,24 +34,24 @@ export class VideoCallsService {
       createOptions as any,
     );
 
-    const token = this.generateToken(userId, roomName, true);
+    const token = await this.generateToken(userId, roomName, true);
 
     return { token, roomName };
   }
 
-  joinRoom(
+  async joinRoom(
     userId: string,
     roomName: string,
-  ): { token: string; roomName: string } {
-    const token = this.generateToken(userId, roomName, true);
+  ): Promise<{ token: string; roomName: string }> {
+    const token = await this.generateToken(userId, roomName, true);
     return { token, roomName };
   }
 
-  private generateToken(
+  private async generateToken(
     userId: string,
     roomName: string,
     canPublish: boolean,
-  ): string {
+  ): Promise<string> {
     const at = new AccessToken(
       this.configService.get<string>('LIVEKIT_API_KEY'),
       this.configService.get<string>('LIVEKIT_SECRET'),
@@ -69,6 +69,6 @@ export class VideoCallsService {
       canPublishData: true,
     });
 
-    return at.toJwt();
+    return await at.toJwt();
   }
 }

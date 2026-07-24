@@ -21,7 +21,6 @@ export interface IncomingCallInfo {
   standalone: true,
   imports: [
     CommonModule,
-    TranslatePipe,
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
   ],

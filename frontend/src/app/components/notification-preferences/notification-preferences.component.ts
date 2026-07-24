@@ -67,8 +67,7 @@ export class NotificationPreferencesComponent implements OnInit {
       },
       error: (err) => {
         console.error('Failed to load notification preferences', err);
-        this.toastService.show({
-          message: 'Failed to load notification preferences',
+        this.toastService.show('Failed to load notification preferences', {
           type: 'error',
           duration: 3000,
         });
@@ -91,8 +90,7 @@ export class NotificationPreferencesComponent implements OnInit {
       },
       error: (err) => {
         console.error('Failed to update preference', err);
-        this.toastService.show({
-          message: 'Failed to update notification preference',
+        this.toastService.show('Failed to update notification preference', {
           type: 'error',
           duration: 3000,
         });
@@ -116,16 +114,14 @@ export class NotificationPreferencesComponent implements OnInit {
       next: (updated) => {
         this.preferences.set(updated);
         this.saving.set(false);
-        this.toastService.show({
-          message: newValue ? 'Do Not Disturb enabled' : 'Do Not Disturb disabled',
+        this.toastService.show(newValue ? 'Do Not Disturb enabled' : 'Do Not Disturb disabled', {
           type: 'success',
           duration: 2000,
         });
       },
       error: (err) => {
         console.error('Failed to update Do Not Disturb', err);
-        this.toastService.show({
-          message: 'Failed to update Do Not Disturb setting',
+        this.toastService.show('Failed to update Do Not Disturb setting', {
           type: 'error',
           duration: 3000,
         });
@@ -143,16 +139,14 @@ export class NotificationPreferencesComponent implements OnInit {
       next: (updated) => {
         this.preferences.set(updated);
         this.saving.set(false);
-        this.toastService.show({
-          message: 'Quiet hours updated',
+        this.toastService.show('Quiet hours updated', {
           type: 'success',
           duration: 2000,
         });
       },
       error: (err) => {
         console.error('Failed to update quiet hours', err);
-        this.toastService.show({
-          message: 'Failed to update quiet hours',
+        this.toastService.show('Failed to update quiet hours', {
           type: 'error',
           duration: 3000,
         });
@@ -167,16 +161,14 @@ export class NotificationPreferencesComponent implements OnInit {
       next: (prefs) => {
         this.preferences.set(prefs);
         this.saving.set(false);
-        this.toastService.show({
-          message: 'Notification preferences reset to defaults',
+        this.toastService.show('Notification preferences reset to defaults', {
           type: 'success',
           duration: 2000,
         });
       },
       error: (err) => {
         console.error('Failed to reset preferences', err);
-        this.toastService.show({
-          message: 'Failed to reset preferences',
+        this.toastService.show('Failed to reset preferences', {
           type: 'error',
           duration: 3000,
         });

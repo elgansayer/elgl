@@ -4,6 +4,7 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MonetisationService } from './monetisation.service';
+import { AppleReceiptValidationResponse } from './dto/monetisation.dto';
 
 interface AppleReceiptResponse {
   environment: 'Sandbox' | 'Production';
@@ -70,7 +71,7 @@ export class AppleReceiptValidatorService {
     userId: string,
     receiptData: string,
     excludeOldTransactions: boolean = true,
-  ): Promise<{ isActive: boolean; tier: string; expiresDate: string | null }> {
+  ): Promise<AppleReceiptValidationResponse> {
     // First try production
     try {
       const result = await this.verifyWithUrl(
@@ -149,13 +150,13 @@ export class AppleReceiptValidatorService {
   private async processValidationResult(
     userId: string,
     result: AppleReceiptResponse,
-  ): Promise<{ isActive: boolean; tier: string; expiresDate: string | null }> {
+  ): Promise<AppleReceiptValidationResponse> {
     const supabase = this.supabaseService.getClient();
 
     // Get the latest receipt info
     const latestInfo = result.latestReceiptInfo?.[0];
     if (!latestInfo) {
-      return { isActive: false, tier: 'free', expiresDate: null };
+      return { valid: false };
     }
 
     const productId = latestInfo.productId;
@@ -204,6 +205,6 @@ export class AppleReceiptValidatorService {
       );
     }
 
-    return { isActive, tier, expiresDate };
+    return { valid: isActive, product_id: productId, expiration_date: expiresDate || undefined };
   }
 }

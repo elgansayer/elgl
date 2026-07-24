@@ -11,4 +11,8 @@ export class FcmService {
   async unregisterToken(): Promise<void> {
     // Clean up FCM token on signout
   }
+
+  async requestPermission(): Promise<void> {
+    // Empty implementation
+  }
 }

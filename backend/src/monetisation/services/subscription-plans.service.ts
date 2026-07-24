@@ -144,4 +144,23 @@ export class SubscriptionPlansService {
       highlighted_benefits: plan.highlighted_benefits || [],
     }));
   }
+
+  getTierByProductId(productId: string): string | null {
+    const plan = this.plans.find(
+      (p) =>
+        p.stripe_price_id === productId ||
+        p.stripe_price_id_yearly === productId ||
+        p.id === productId // if apple product id is same as tier
+    );
+    if (plan) return plan.id;
+    
+    // Apple specific fallback mapping (as seen in PRODUCT_TIER_MAP)
+    const PRODUCT_TIER_MAP: Record<string, string> = {
+      'com.hellotalk.vip.monthly': 'consumer_8_ukp_10_usd',
+      'com.hellotalk.vip.yearly': 'consumer_8_ukp_10_usd',
+      'com.hellotalk.developer.monthly': 'developer_20_ukp_26_usd',
+      'com.hellotalk.developer.yearly': 'developer_20_ukp_26_usd',
+    };
+    return PRODUCT_TIER_MAP[productId] || null;
+  }
 }

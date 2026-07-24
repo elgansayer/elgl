@@ -110,11 +110,11 @@ export class GooglePlayNotificationService {
   /**
    * Handles a recovered subscription (user re-subscribed after cancellation).
    */
-  private handleSubscriptionRecovered(
+  private async handleSubscriptionRecovered(
     purchaseToken: string,
     subscriptionId: string,
-  ): void {
-    const userId = this.getUserIdByPurchaseToken(purchaseToken);
+  ): Promise<void> {
+    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       this.logger.warn(`No user found for purchase token ${purchaseToken}`);
       return;
@@ -128,11 +128,11 @@ export class GooglePlayNotificationService {
   /**
    * Handles a renewed subscription.
    */
-  private handleSubscriptionRenewed(
+  private async handleSubscriptionRenewed(
     purchaseToken: string,
     subscriptionId: string,
-  ): void {
-    const userId = this.getUserIdByPurchaseToken(purchaseToken);
+  ): Promise<void> {
+    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
@@ -145,11 +145,11 @@ export class GooglePlayNotificationService {
   /**
    * Handles a canceled subscription.
    */
-  private handleSubscriptionCanceled(
+  private async handleSubscriptionCanceled(
     purchaseToken: string,
     subscriptionId: string,
-  ): void {
-    const userId = this.getUserIdByPurchaseToken(purchaseToken);
+  ): Promise<void> {
+    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
@@ -162,11 +162,11 @@ export class GooglePlayNotificationService {
   /**
    * Handles a new subscription purchase.
    */
-  private handleSubscriptionPurchased(
+  private async handleSubscriptionPurchased(
     purchaseToken: string,
     subscriptionId: string,
-  ): void {
-    const userId = this.getUserIdByPurchaseToken(purchaseToken);
+  ): Promise<void> {
+    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
@@ -179,11 +179,11 @@ export class GooglePlayNotificationService {
   /**
    * Handles a subscription on hold.
    */
-  private handleSubscriptionOnHold(
+  private async handleSubscriptionOnHold(
     purchaseToken: string,
     subscriptionId: string,
-  ): void {
-    const userId = this.getUserIdByPurchaseToken(purchaseToken);
+  ): Promise<void> {
+    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
@@ -196,11 +196,11 @@ export class GooglePlayNotificationService {
   /**
    * Handles a subscription in grace period.
    */
-  private handleSubscriptionInGracePeriod(
+  private async handleSubscriptionInGracePeriod(
     purchaseToken: string,
     subscriptionId: string,
-  ): void {
-    const userId = this.getUserIdByPurchaseToken(purchaseToken);
+  ): Promise<void> {
+    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
@@ -215,11 +215,11 @@ export class GooglePlayNotificationService {
   /**
    * Handles a restarted subscription.
    */
-  private handleSubscriptionRestarted(
+  private async handleSubscriptionRestarted(
     purchaseToken: string,
     subscriptionId: string,
-  ): void {
-    const userId = this.getUserIdByPurchaseToken(purchaseToken);
+  ): Promise<void> {
+    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
@@ -232,11 +232,11 @@ export class GooglePlayNotificationService {
   /**
    * Handles a price change confirmation.
    */
-  private handleSubscriptionPriceChangeConfirmed(
+  private async handleSubscriptionPriceChangeConfirmed(
     purchaseToken: string,
     subscriptionId: string,
-  ): void {
-    const userId = this.getUserIdByPurchaseToken(purchaseToken);
+  ): Promise<void> {
+    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
@@ -252,11 +252,11 @@ export class GooglePlayNotificationService {
   /**
    * Handles a deferred subscription.
    */
-  private handleSubscriptionDeferred(
+  private async handleSubscriptionDeferred(
     purchaseToken: string,
     subscriptionId: string,
-  ): void {
-    const userId = this.getUserIdByPurchaseToken(purchaseToken);
+  ): Promise<void> {
+    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
@@ -269,11 +269,11 @@ export class GooglePlayNotificationService {
   /**
    * Handles a revoked subscription.
    */
-  private handleSubscriptionRevoked(
+  private async handleSubscriptionRevoked(
     purchaseToken: string,
     subscriptionId: string,
-  ): void {
-    const userId = this.getUserIdByPurchaseToken(purchaseToken);
+  ): Promise<void> {
+    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
@@ -287,11 +287,11 @@ export class GooglePlayNotificationService {
   /**
    * Handles an expired subscription.
    */
-  private handleSubscriptionExpired(
+  private async handleSubscriptionExpired(
     purchaseToken: string,
     subscriptionId: string,
-  ): void {
-    const userId = this.getUserIdByPurchaseToken(purchaseToken);
+  ): Promise<void> {
+    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
@@ -305,7 +305,7 @@ export class GooglePlayNotificationService {
   /**
    * Retrieves the user ID associated with a purchase token.
    */
-  private getUserIdByPurchaseToken(purchaseToken: string): string | null {
+  private async getUserIdByPurchaseToken(purchaseToken: string): Promise<string | null> {
     const supabase = this.supabaseService.getClient();
 
     const { data } = await supabase
