@@ -279,7 +279,7 @@
 - [x] Refine `SubscriptionPlansComponent` to use dynamic pricing from plan data (price_ukp/price_usd) instead of hardcoded values, display dual-currency format "8 UKP / $10 USD" per AGENTS.md rules, and properly handle free plan display.
 - [x] Add `stripe_price_id_yearly` field to frontend `SubscriptionPlan` interface and ensure yearly pricing uses the correct Stripe price ID.
 - [x] Add `FRONTEND_URL` environment variable to backend configuration for Stripe success/cancel URLs.
-- [ ] Add unit tests for `MonetisationService.createCheckoutSession` and `MonetisationController.createCheckoutSession`.
+- [x] Add unit tests for `MonetisationService.createCheckoutSession` and `MonetisationController.createCheckoutSession`.
 
 ## Phase 19: Gamification & Study Streaks
 - [ ] Build Daily Study Streak counter widget on home screen.
