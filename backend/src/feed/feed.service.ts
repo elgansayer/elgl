@@ -65,9 +65,7 @@ export class FeedService {
           );
         }
         if (nativeLang) {
-          conditions.push(
-            `author.target_languages.cs.{${nativeLang}}`,
-          );
+          conditions.push(`author.target_languages.cs.{${nativeLang}}`);
         }
 
         if (conditions.length > 0) {
@@ -82,7 +80,9 @@ export class FeedService {
         .eq('follower_id', currentUserId);
 
       if (following && following.length > 0) {
-        const followedIds = following.map((f: { followed_id: string }) => f.followed_id);
+        const followedIds = following.map(
+          (f: { followed_id: string }) => f.followed_id,
+        );
         query = query.in('author_id', followedIds);
       } else {
         // No one followed, return empty
@@ -100,7 +100,10 @@ export class FeedService {
     return response.data as Moment[];
   }
 
-  async getMomentById(momentId: string, currentUserId: string): Promise<Moment | null> {
+  async getMomentById(
+    momentId: string,
+    currentUserId: string,
+  ): Promise<Moment | null> {
     const supabase = this.supabaseService.getClient();
 
     // Check if author is blocked
