@@ -1,7 +1,8 @@
 #!/bin/bash
-# loop.sh (5-Stage Waterfall Architecture with Warning Fixes & Context Bounds)
+# loop.sh (5-Stage Waterfall Architecture with Global Rate Limit Watcher)
 export OPENAI_MAX_RETRIES=0
 export LITELLM_NUM_RETRIES=0
+export AIDER_RETRIES=0
 
 echo "Starting 24/7 autonomous 5-stage pipeline with global fallbacks..."
 
@@ -14,41 +15,35 @@ run_aider_with_fallback() {
     local MESSAGE="$1"
     local FILES_AND_ARGS="$2"
 
-    echo "Attempting 1: Claude (via Copilot)..."
-    > claude.log
-    
-    # Background watcher: kills Aider instantly if the quota is hit
-    ( tail -f claude.log 2>/dev/null | grep -m 1 "quota exceeded" && pkill -f "aider.*claude" ) &
-    WATCHER_PID=$!
+    local MODELS=(
+        "openai/claude-opus-4.7 openai/claude-sonnet-4.5 Claude"
+        "deepseek/deepseek-v4-pro deepseek/deepseek-coder DeepSeek"
+        "openai/gpt-5.5 openai/gpt-4o Copilot-GPT"
+        "gemini/gemini-3.1-pro-preview gemini/gemini-3.1-pro-preview Gemini-3-Pro"
+        "gemini/gemini-3.5-flash gemini/gemini-3.5-flash Gemini-Flash"
+    )
 
-    # Run Aider and pipe output to both the terminal and the log file
-    timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model openai/claude-opus-4.7 --editor-model openai/claude-sonnet-4.5 --message "$MESSAGE" 2>&1 | tee claude.log
-    AIDER_EXIT=${PIPESTATUS[0]}
-    
-    # Clean up the watcher
-    kill -9 $WATCHER_PID 2>/dev/null || true
-    
-    if [ $AIDER_EXIT -eq 0 ]; then return 0; fi
-    echo "Claude failed or hit quota limit. Reverting and attempting 2: DeepSeek..."
-    git reset --hard HEAD
+    for config in "${MODELS[@]}"; do
+        read -r MODEL EDITOR NAME <<< "$config"
+        echo "Attempting: $NAME..."
+        > current_aider.log
+        
+        # Watcher: kills Aider instantly if litellm rate limits or quota is hit
+        ( tail -f current_aider.log 2>/dev/null | grep -i -m 1 -E "RateLimitError|quota exceeded|rate limited" && pkill -f "aider.*$MODEL" ) &
+        WATCHER_PID=$!
 
-    timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model deepseek/deepseek-v4-pro --editor-model deepseek/deepseek-coder --message "$MESSAGE"
-    if [ $? -eq 0 ]; then return 0; fi
-    echo "DeepSeek failed. Reverting and attempting 3: Copilot GPT..."
-    git reset --hard HEAD
-
-    timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model openai/gpt-5.5 --editor-model openai/gpt-4o --message "$MESSAGE"
-    if [ $? -eq 0 ]; then return 0; fi
-    echo "Copilot GPT failed. Reverting and attempting 4: Gemini 3 Pro..."
-    git reset --hard HEAD
-
-    timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model gemini/gemini-3.1-pro-preview --editor-model gemini/gemini-3.1-pro-preview --message "$MESSAGE"
-    if [ $? -eq 0 ]; then return 0; fi
-    echo "Gemini 3 Pro failed. Reverting and attempting 5: Gemini Flash..."
-    git reset --hard HEAD
-
-    timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model gemini/gemini-3.5-flash --editor-model gemini/gemini-3.5-flash --message "$MESSAGE"
-    if [ $? -eq 0 ]; then return 0; fi
+        timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model "$MODEL" --editor-model "$EDITOR" --message "$MESSAGE" 2>&1 | tee current_aider.log
+        AIDER_EXIT=${PIPESTATUS[0]}
+        
+        kill -9 $WATCHER_PID 2>/dev/null || true
+        
+        if [ $AIDER_EXIT -eq 0 ]; then 
+            return 0 
+        fi
+        
+        echo "$NAME failed or hit quota limit. Reverting..."
+        git reset --hard HEAD
+    done
 
     echo "CRITICAL: All 5 models failed for this step."
     return 1
