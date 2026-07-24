@@ -293,12 +293,11 @@ export class MomentsService {
       await supabase
         .from('moment_likes')
         .insert({ moment_id: momentId, user_id: userId });
-      const response = await supabase
+      const { data: updatedData } = await supabase
         .from('moments')
         .select('likes_count')
         .eq('id', momentId)
         .single();
-      const updatedData = response.data as unknown;
       const updatedRow = updatedData as MomentCountRow | null;
       const newCount = (updatedRow?.likes_count ?? 0) + 1;
       await supabase
@@ -374,7 +373,7 @@ export class MomentsService {
     // Emit push notification event
     const momentAuthorId = updatedRow?.user_id;
     if (momentAuthorId) {
-      const payload = dto.correction_payload;
+      const payload = dto.correction_payload as { original: string; corrected: string; explanation?: string } | null | undefined;
       const preview = dto.text_content
         ? dto.text_content.substring(0, 120)
         : payload
