@@ -277,7 +277,7 @@
 - [x] Implement `restorePurchases()` method in `MonetisationService` that calls `POST /monetisation/restore-purchases` backend endpoint, verifies App Store/Google Play receipts, and updates VIP status accordingly.
 - [x] Add `POST /monetisation/restore-purchases` endpoint in backend controller and implement `restorePurchases()` method in backend service that validates Apple/Google receipts and updates VIP status accordingly.
 - [x] Refine `SubscriptionPlansComponent` to use dynamic pricing from plan data (price_ukp/price_usd) instead of hardcoded values, display dual-currency format "8 UKP / $10 USD" per AGENTS.md rules, and properly handle free plan display.
-- [ ] Add `stripe_price_id_yearly` field to frontend `SubscriptionPlan` interface and ensure yearly pricing uses the correct Stripe price ID.
+- [x] Add `stripe_price_id_yearly` field to frontend `SubscriptionPlan` interface and ensure yearly pricing uses the correct Stripe price ID.
 - [x] Add `FRONTEND_URL` environment variable to backend configuration for Stripe success/cancel URLs.
 - [ ] Add unit tests for `MonetisationService.createCheckoutSession` and `MonetisationController.createCheckoutSession`.
 
