@@ -43,9 +43,3 @@ export class UnblockUserDto {
   @IsNotEmpty()
   blocked_id!: string;
 }
-
-export class UnblockUserDto {
-  @IsString()
-  @IsNotEmpty()
-  blocked_id!: string;
-}
