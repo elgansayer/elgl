@@ -34,7 +34,7 @@ export class SafetyService {
       throw new NotFoundException('Reported user not found');
     }
 
-    const { data, error } = await supabase
+    const { data, error }: { data: { id: string } | null; error: any } = await supabase
       .from('reports')
       .insert({
         reporter_id: reporterId,
@@ -52,6 +52,10 @@ export class SafetyService {
         `Failed to submit report from ${reporterId} against ${dto.reported_id}: ${error.message}`,
       );
       throw new Error('Failed to submit report');
+    }
+
+    if (!data) {
+      throw new Error('Failed to submit report: no data returned');
     }
 
     this.logger.log(
