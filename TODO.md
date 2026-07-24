@@ -306,6 +306,10 @@
 - [ ] Implement Blocklist system hiding blocked accounts across chat, feed, and search.
 - [ ] Implement hiding blocked accounts across chat, feed, and search (frontend filtering + backend query filtering)
 - [ ] Build automated NLP spam detector in NestJS to flag duplicate copy-paste messages.
+- [ ] Add block user option to chat message context menu (LongPressContextMenuComponent)
+- [ ] Add block user option to chat message component (ChatMessageComponent)
+- [ ] Implement backend query filtering to exclude blocked users from chat, feed, and search results
+- [ ] Implement frontend filtering to hide blocked users' messages, moments, and search results
 
 ## Phase 23: Onboarding Flow
 - [ ] Build multi-step Angular onboarding wizard.
