@@ -189,20 +189,18 @@ export class NotificationPreferencesService {
       'audio_room_invite',
     ];
 
-    const merged = { ...existing };
+    const merged: Record<string, unknown> = { ...existing };
 
     for (const category of categories) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      const dtoCategory = (dto as any)[category] as
+      const dtoCategory = (dto as Record<string, unknown>)[category] as
         | import('./dto/notification-preferences.dto').CategoryPreferenceDto
         | undefined;
       if (dtoCategory) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        const existingCategory = (existing as any)[category] as
+        const existingCategory = (existing as Record<string, unknown>)[category] as
           | import('./interfaces/notification-preferences.interface').CategoryPreference
           | undefined;
 
-        (merged as any)[category] = {
+        merged[category] = {
           push: dtoCategory.push ?? existingCategory?.push ?? true,
           email: dtoCategory.email ?? existingCategory?.email ?? false,
           in_app: dtoCategory.in_app ?? existingCategory?.in_app ?? true,
@@ -221,7 +219,7 @@ export class NotificationPreferencesService {
     }
 
     merged.updatedAt = new Date().toISOString();
-    return merged;
+    return merged as unknown as NotificationPreferences;
   }
 
   private mapDbToPreferences(
