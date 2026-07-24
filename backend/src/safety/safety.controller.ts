@@ -8,7 +8,7 @@ import {
   Param,
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
+import { BlockUserDto, ReportUserDto, UnblockUserDto } from './dto/safety.dto';
 import { SafetyService } from './safety.service';
 
 @Controller('safety')
@@ -36,7 +36,7 @@ export class SafetyController {
   @Post('unblock')
   async unblockUser(
     @Req() req: { user: { id: string } },
-    @Body() dto: BlockUserDto,
+    @Body() dto: UnblockUserDto,
   ): Promise<{ success: boolean }> {
     return this.safetyService.unblockUser(req.user.id, dto.blocked_id);
   }

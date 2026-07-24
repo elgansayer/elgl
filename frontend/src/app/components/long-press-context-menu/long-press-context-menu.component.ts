@@ -1,6 +1,7 @@
 import { Component, input, output, signal, computed, HostListener, ElementRef, ViewChild, AfterViewInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { I18nService } from '../../services/i18n.service';
+import { SafetyService } from '../../services/safety.service';
 
 export interface ContextMenuOption {
   id: 'copy' | 'favourite' | 'report' | 'block' | 'unblock';
@@ -62,6 +63,7 @@ export interface ContextMenuOption {
 export class LongPressContextMenuComponent implements AfterViewInit {
   private readonly elementRef = inject(ElementRef);
   private readonly i18n = inject(I18nService);
+  private readonly safetyService = inject(SafetyService);
 
   @ViewChild('menuPanel') menuPanel!: ElementRef<HTMLElement>;
 
@@ -222,10 +224,20 @@ export class LongPressContextMenuComponent implements AfterViewInit {
         this.report.emit({ messageId: id, content, senderId: sId, roomId: rId });
         break;
       case 'block':
-        this.block.emit({ senderId: sId, blocked: true });
+        try {
+          await this.safetyService.blockUserAsync(sId);
+          this.block.emit({ senderId: sId, blocked: true });
+        } catch (err) {
+          console.error('Failed to block user', err);
+        }
         break;
       case 'unblock':
-        this.block.emit({ senderId: sId, blocked: false });
+        try {
+          await this.safetyService.unblockUserAsync(sId);
+          this.block.emit({ senderId: sId, blocked: false });
+        } catch (err) {
+          console.error('Failed to unblock user', err);
+        }
         break;
     }
     this.close();
