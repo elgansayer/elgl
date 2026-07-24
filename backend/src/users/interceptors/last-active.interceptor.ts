@@ -38,7 +38,9 @@ export class LastActiveInterceptor implements NestInterceptor {
       .eq('id', userId);
 
     if (error) {
-      this.logger.warn(`Failed to update last_active_at for user ${userId}: ${error.message}`);
+      this.logger.warn(
+        `Failed to update last_active_at for user ${userId}: ${error.message}`,
+      );
     }
   }
 }
@@ -82,7 +84,9 @@ export class LastActiveInterceptor implements NestInterceptor {
       .eq('id', userId);
 
     if (error) {
-      this.logger.warn(`Failed to update last_active_at for user ${userId}: ${error.message}`);
+      this.logger.warn(
+        `Failed to update last_active_at for user ${userId}: ${error.message}`,
+      );
     }
   }
 }
