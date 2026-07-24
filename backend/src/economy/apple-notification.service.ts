@@ -26,7 +26,7 @@ export class AppleNotificationService {
    */
   async handleNotification(signedPayload: string): Promise<void> {
     // 1. Verify JWS signature using Apple's public keys
-    const decodedPayload = await this.verifyAndDecodeJWS(signedPayload);
+    const decodedPayload = this.verifyAndDecodeJWS(signedPayload);
     if (!decodedPayload) {
       this.logger.warn('Failed to verify Apple JWS payload');
       return;
@@ -44,13 +44,13 @@ export class AppleNotificationService {
     // 2. Route to appropriate handler based on notification type
     switch (notificationType) {
       case 'SUBSCRIBED':
-        await this.handleSubscribed(data);
+        this.handleSubscribed(data);
         break;
       case 'DID_CHANGE_RENEWAL_STATUS':
-        await this.handleRenewalStatusChange(data);
+        this.handleRenewalStatusChange(data);
         break;
       case 'DID_CHANGE_RENEWAL_PREF':
-        await this.handleRenewalPreferenceChange(data);
+        this.handleRenewalPreferenceChange(data);
         break;
       case 'DID_FAIL_TO_RENEW':
         await this.handleFailedRenewal(data);
@@ -88,7 +88,7 @@ export class AppleNotificationService {
    * In production, this should use a library like `jsonwebtoken` with Apple's root CA.
    * For now, we perform a basic decode without full verification (placeholder).
    */
-  private verifyAndDecodeJWS(signedPayload: string): unknown | null {
+  private verifyAndDecodeJWS(signedPayload: string): unknown {
     try {
       // JWS format: header.payload.signature
       const parts = signedPayload.split('.');
@@ -118,7 +118,7 @@ export class AppleNotificationService {
   /**
    * Handles a new subscription event.
    */
-  private async handleSubscribed(data: Record<string, unknown>): Promise<void> {
+  private handleSubscribed(data: Record<string, unknown>): void {
     const signedTransactionInfo = data?.signedTransactionInfo as
       Record<string, unknown> | undefined;
     const userId = data?.appAccountToken as string | undefined;
@@ -147,9 +147,9 @@ export class AppleNotificationService {
   /**
    * Handles a change in auto-renewal status (e.g., user turned off auto-renew).
    */
-  private async handleRenewalStatusChange(
+  private handleRenewalStatusChange(
     data: Record<string, unknown>,
-  ): Promise<void> {
+  ): void {
     const userId = data?.appAccountToken as string | undefined;
     const autoRenewStatus = data?.autoRenewStatus as number | undefined;
 
@@ -168,9 +168,9 @@ export class AppleNotificationService {
   /**
    * Handles a change in renewal preference (e.g., user switched to a different product).
    */
-  private async handleRenewalPreferenceChange(
+  private handleRenewalPreferenceChange(
     data: Record<string, unknown>,
-  ): Promise<void> {
+  ): void {
     const userId = data?.appAccountToken as string | undefined;
     const newProductId = data?.autoRenewProductId as string | undefined;
 
@@ -435,7 +435,6 @@ export class AppleNotificationService {
   private async revokeCoinsForRefund(
     userId: string,
     transactionId: string,
-    _refundAmount: number,
   ): Promise<void> {
     // Determine how many coins were associated with the refunded purchase
     const coinsToRevoke = await this.getCoinsForTransaction(transactionId);
@@ -546,7 +545,7 @@ export class AppleNotificationService {
       return;
     }
 
-    const currentExpiry = new Date(subscription.expires_at);
+    const currentExpiry = new Date(subscription.expires_at as string);
     const newExpiry = new Date(
       currentExpiry.getTime() + extensionDays * 24 * 60 * 60 * 1000,
     );

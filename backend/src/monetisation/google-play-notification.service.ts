@@ -72,7 +72,7 @@ export class GooglePlayNotificationService {
       }
 
       const decodedData = Buffer.from(data, 'base64').toString('utf-8');
-      const notificationData: GooglePlayNotification = JSON.parse(decodedData);
+      const notificationData = JSON.parse(decodedData) as GooglePlayNotification;
 
       // Handle test notification
       if (notificationData.testNotification) {
@@ -110,10 +110,6 @@ export class GooglePlayNotificationService {
       notificationType,
       purchaseToken,
       subscriptionId,
-    }: {
-      notificationType: number;
-      purchaseToken: string;
-      subscriptionId: string;
     } = notification;
 
     // notificationType mapping:
@@ -264,7 +260,7 @@ export class GooglePlayNotificationService {
       .eq('purchase_token', purchaseToken)
       .single();
 
-    const row = data;
+    const row = data as { user_id: string } | null;
     return row?.user_id || null;
   }
 

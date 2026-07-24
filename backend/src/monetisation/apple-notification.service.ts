@@ -141,7 +141,7 @@ export class AppleNotificationService {
     subtype: string | undefined,
     data: any,
   ): Promise<void> {
-    const transactionInfo = await this.decodeTransactionInfo(
+    const transactionInfo = this.decodeTransactionInfo(
       data?.signedTransactionInfo as string | undefined,
     );
     if (!transactionInfo) {
@@ -175,7 +175,7 @@ export class AppleNotificationService {
     subtype: string | undefined,
     data: any,
   ): Promise<void> {
-    const transactionInfo = await this.decodeTransactionInfo(
+    const transactionInfo = this.decodeTransactionInfo(
       data?.signedTransactionInfo as string | undefined,
     );
     if (!transactionInfo) {
@@ -209,7 +209,7 @@ export class AppleNotificationService {
 
     // Decode header to get the key ID and algorithm
     const headerStr = Buffer.from(headerB64, 'base64url').toString('utf-8');
-    const header: { x5c?: string[] } = JSON.parse(headerStr);
+    const header = JSON.parse(headerStr) as { x5c?: string[] };
 
     // Verify the signature using Apple's root CA
     const verified = await this.verifySignature(

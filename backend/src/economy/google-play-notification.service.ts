@@ -60,43 +60,43 @@ export class GooglePlayNotificationService {
       // 4. Route to appropriate handler based on notification type
       switch (notificationType) {
         case 1: // SUBSCRIPTION_RECOVERED
-          await this.handleSubscriptionRecovered(purchaseToken, subscriptionId);
+          this.handleSubscriptionRecovered(purchaseToken, subscriptionId);
           break;
         case 2: // SUBSCRIPTION_RENEWED
-          await this.handleSubscriptionRenewed(purchaseToken, subscriptionId);
+          this.handleSubscriptionRenewed(purchaseToken, subscriptionId);
           break;
         case 3: // SUBSCRIPTION_CANCELED
-          await this.handleSubscriptionCanceled(purchaseToken, subscriptionId);
+          this.handleSubscriptionCanceled(purchaseToken, subscriptionId);
           break;
         case 4: // SUBSCRIPTION_PURCHASED
-          await this.handleSubscriptionPurchased(purchaseToken, subscriptionId);
+          this.handleSubscriptionPurchased(purchaseToken, subscriptionId);
           break;
         case 5: // SUBSCRIPTION_ON_HOLD
-          await this.handleSubscriptionOnHold(purchaseToken, subscriptionId);
+          this.handleSubscriptionOnHold(purchaseToken, subscriptionId);
           break;
         case 6: // SUBSCRIPTION_IN_GRACE_PERIOD
-          await this.handleSubscriptionInGracePeriod(
+          this.handleSubscriptionInGracePeriod(
             purchaseToken,
             subscriptionId,
           );
           break;
         case 7: // SUBSCRIPTION_RESTARTED
-          await this.handleSubscriptionRestarted(purchaseToken, subscriptionId);
+          this.handleSubscriptionRestarted(purchaseToken, subscriptionId);
           break;
         case 8: // SUBSCRIPTION_PRICE_CHANGE_CONFIRMED
-          await this.handleSubscriptionPriceChangeConfirmed(
+          this.handleSubscriptionPriceChangeConfirmed(
             purchaseToken,
             subscriptionId,
           );
           break;
         case 9: // SUBSCRIPTION_DEFERRED
-          await this.handleSubscriptionDeferred(purchaseToken, subscriptionId);
+          this.handleSubscriptionDeferred(purchaseToken, subscriptionId);
           break;
         case 12: // SUBSCRIPTION_REVOKED
-          await this.handleSubscriptionRevoked(purchaseToken, subscriptionId);
+          this.handleSubscriptionRevoked(purchaseToken, subscriptionId);
           break;
         case 13: // SUBSCRIPTION_EXPIRED
-          await this.handleSubscriptionExpired(purchaseToken, subscriptionId);
+          this.handleSubscriptionExpired(purchaseToken, subscriptionId);
           break;
         default:
           this.logger.warn(
@@ -113,11 +113,11 @@ export class GooglePlayNotificationService {
   /**
    * Handles a recovered subscription (user re-subscribed after cancellation).
    */
-  private async handleSubscriptionRecovered(
+  private handleSubscriptionRecovered(
     purchaseToken: string,
     subscriptionId: string,
-  ): Promise<void> {
-    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
+  ): void {
+    const userId = this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       this.logger.warn(`No user found for purchase token ${purchaseToken}`);
       return;
@@ -125,85 +125,85 @@ export class GooglePlayNotificationService {
 
     this.logger.log(`User ${userId} subscription recovered: ${subscriptionId}`);
 
-    await this.updateSubscriptionStatus(userId, subscriptionId, 'active');
+    this.updateSubscriptionStatus(userId, subscriptionId, 'active');
   }
 
   /**
    * Handles a renewed subscription.
    */
-  private async handleSubscriptionRenewed(
+  private handleSubscriptionRenewed(
     purchaseToken: string,
     subscriptionId: string,
-  ): Promise<void> {
-    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
+  ): void {
+    const userId = this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
 
     this.logger.log(`User ${userId} subscription renewed: ${subscriptionId}`);
 
-    await this.updateSubscriptionStatus(userId, subscriptionId, 'active');
+    this.updateSubscriptionStatus(userId, subscriptionId, 'active');
   }
 
   /**
    * Handles a canceled subscription.
    */
-  private async handleSubscriptionCanceled(
+  private handleSubscriptionCanceled(
     purchaseToken: string,
     subscriptionId: string,
-  ): Promise<void> {
-    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
+  ): void {
+    const userId = this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
 
     this.logger.log(`User ${userId} subscription canceled: ${subscriptionId}`);
 
-    await this.updateSubscriptionStatus(userId, subscriptionId, 'canceled');
+    this.updateSubscriptionStatus(userId, subscriptionId, 'canceled');
   }
 
   /**
    * Handles a new subscription purchase.
    */
-  private async handleSubscriptionPurchased(
+  private handleSubscriptionPurchased(
     purchaseToken: string,
     subscriptionId: string,
-  ): Promise<void> {
-    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
+  ): void {
+    const userId = this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
 
     this.logger.log(`User ${userId} purchased subscription: ${subscriptionId}`);
 
-    await this.updateSubscriptionStatus(userId, subscriptionId, 'active');
+    this.updateSubscriptionStatus(userId, subscriptionId, 'active');
   }
 
   /**
    * Handles a subscription on hold.
    */
-  private async handleSubscriptionOnHold(
+  private handleSubscriptionOnHold(
     purchaseToken: string,
     subscriptionId: string,
-  ): Promise<void> {
-    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
+  ): void {
+    const userId = this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
 
     this.logger.log(`User ${userId} subscription on hold: ${subscriptionId}`);
 
-    await this.updateSubscriptionStatus(userId, subscriptionId, 'on_hold');
+    this.updateSubscriptionStatus(userId, subscriptionId, 'on_hold');
   }
 
   /**
    * Handles a subscription in grace period.
    */
-  private async handleSubscriptionInGracePeriod(
+  private handleSubscriptionInGracePeriod(
     purchaseToken: string,
     subscriptionId: string,
-  ): Promise<void> {
-    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
+  ): void {
+    const userId = this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
@@ -212,34 +212,34 @@ export class GooglePlayNotificationService {
       `User ${userId} subscription in grace period: ${subscriptionId}`,
     );
 
-    await this.updateSubscriptionStatus(userId, subscriptionId, 'grace_period');
+    this.updateSubscriptionStatus(userId, subscriptionId, 'grace_period');
   }
 
   /**
    * Handles a restarted subscription.
    */
-  private async handleSubscriptionRestarted(
+  private handleSubscriptionRestarted(
     purchaseToken: string,
     subscriptionId: string,
-  ): Promise<void> {
-    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
+  ): void {
+    const userId = this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
 
     this.logger.log(`User ${userId} subscription restarted: ${subscriptionId}`);
 
-    await this.updateSubscriptionStatus(userId, subscriptionId, 'active');
+    this.updateSubscriptionStatus(userId, subscriptionId, 'active');
   }
 
   /**
    * Handles a price change confirmation.
    */
-  private async handleSubscriptionPriceChangeConfirmed(
+  private handleSubscriptionPriceChangeConfirmed(
     purchaseToken: string,
     subscriptionId: string,
-  ): Promise<void> {
-    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
+  ): void {
+    const userId = this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
@@ -249,69 +249,68 @@ export class GooglePlayNotificationService {
     );
 
     // Update the price in the database if needed
-    await this.updateSubscriptionPrice(userId, subscriptionId);
+    this.updateSubscriptionPrice(userId, subscriptionId);
   }
 
   /**
    * Handles a deferred subscription.
    */
-  private async handleSubscriptionDeferred(
+  private handleSubscriptionDeferred(
     purchaseToken: string,
     subscriptionId: string,
-  ): Promise<void> {
-    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
+  ): void {
+    const userId = this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
 
     this.logger.log(`User ${userId} subscription deferred: ${subscriptionId}`);
 
-    // Update the deferred date in the database
-    await this.updateSubscriptionDeferredDate(userId, subscriptionId);
+    // Update the deferred date in the database    this.updateSubscriptionDeferredDate(userId, subscriptionId);
   }
 
   /**
    * Handles a revoked subscription.
    */
-  private async handleSubscriptionRevoked(
+  private handleSubscriptionRevoked(
     purchaseToken: string,
     subscriptionId: string,
-  ): Promise<void> {
-    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
+  ): void {
+    const userId = this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
 
     this.logger.log(`User ${userId} subscription revoked: ${subscriptionId}`);
 
-    await this.updateSubscriptionStatus(userId, subscriptionId, 'revoked');
-    await this.revokeSubscriptionBenefits(userId);
+    this.updateSubscriptionStatus(userId, subscriptionId, 'revoked');
+    this.revokeSubscriptionBenefits(userId);
   }
 
   /**
    * Handles an expired subscription.
    */
-  private async handleSubscriptionExpired(
+  private handleSubscriptionExpired(
     purchaseToken: string,
     subscriptionId: string,
-  ): Promise<void> {
-    const userId = await this.getUserIdByPurchaseToken(purchaseToken);
+  ): void {
+    const userId = this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
       return;
     }
 
     this.logger.log(`User ${userId} subscription expired: ${subscriptionId}`);
 
-    await this.updateSubscriptionStatus(userId, subscriptionId, 'expired');
-    await this.revokeSubscriptionBenefits(userId);
+    this.updateSubscriptionStatus(userId, subscriptionId, 'expired');
+    this.revokeSubscriptionBenefits(userId);
   }
 
   /**
    * Retrieves the user ID associated with a purchase token.
    */
-  private async getUserIdByPurchaseToken(
+  private getUserIdByPurchaseToken(
     purchaseToken: string,
-  ): Promise<string | null> {
+  ): string | null {
     const supabase = this.supabaseService.getClient();
 
     const { data } = await supabase
@@ -320,18 +319,18 @@ export class GooglePlayNotificationService {
       .eq('purchase_token', purchaseToken)
       .single();
 
-    const row = data;
+    const row = data as { user_id: string } | null;
     return row?.user_id ?? null;
   }
 
   /**
    * Updates the subscription status in the database.
    */
-  private async updateSubscriptionStatus(
+  private updateSubscriptionStatus(
     userId: string,
     subscriptionId: string,
     status: string,
-  ): Promise<void> {
+  ): void {
     const supabase = this.supabaseService.getClient();
 
     const { error } = await supabase.from('subscriptions').upsert(
@@ -380,7 +379,7 @@ export class GooglePlayNotificationService {
   /**
    * Revokes subscription benefits for a user.
    */
-  private async revokeSubscriptionBenefits(userId: string): Promise<void> {
+  private revokeSubscriptionBenefits(userId: string): void {
     const supabase = this.supabaseService.getClient();
 
     const { error } = await supabase

@@ -94,11 +94,10 @@ export class NlpService {
       );
     }
 
-    const jsonResponse = await res.json();
-    const data = jsonResponse as {
+    const jsonResponse = (await res.json()) as {
       translations: Array<{ text: string }>;
     };
-    const translatedText = data.translations[0].text;
+    const translatedText = jsonResponse.translations[0].text;
 
     // Get glossary/definition via DeepL glossary lookup (if available) or fallback
     let definition = '';
@@ -189,8 +188,7 @@ export class NlpService {
       );
     }
 
-    const detectJson = await detectRes.json();
-    const detectData = detectJson as Array<{ language: string }>;
+    const detectData = (await detectRes.json()) as Array<{ language: string }>;
     const detectedLang = detectData[0]?.language || 'en';
 
     // Use Azure's dictionary lookup for grammar correction (works best for common languages)

@@ -170,7 +170,7 @@ export class EconomyService {
       throw new BadRequestException('User not found');
     }
 
-    const user = userResponse.data;
+    const user = userResponse.data as { coins_balance: number };
     const currentBalance = user.coins_balance || 0;
     const newBalance = currentBalance + coinPackage.coins;
 
@@ -192,7 +192,7 @@ export class EconomyService {
         platform,
         verified.transactionId,
       );
-    } catch (_error) {
+    } catch {
       // Rollback coin balance on failure
       const { error: rollbackError } = await supabase
         .from('users')

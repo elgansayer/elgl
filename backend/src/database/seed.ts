@@ -152,12 +152,7 @@ async function runSeed() {
           avatar_url: u.profile.avatar_url,
           native_language: u.profile.native_language,
           target_languages: u.profile.target_languages,
-          location: (
-            supabase.rpc as unknown as (
-              name: string,
-              args: Record<string, unknown>,
-            ) => unknown
-          )('st_geomfromtext', {
+          location: supabase.rpc('st_geomfromtext', {
             text: u.profile.location,
           }),
         })
