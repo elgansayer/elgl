@@ -9,12 +9,12 @@ export class SafetyController {
   constructor(private readonly safetyService: SafetyService) {}
 
   @Post('report')
-  async reportMessage(
+  async reportUser(
     @Req() req: { user: { id: string } },
     @Body() dto: ReportUserDto,
-  ): Promise<{ success: boolean }> {
-    await this.safetyService.reportMessage(req.user.id, dto);
-    return { success: true };
+  ): Promise<{ success: boolean; message: string }> {
+    await this.safetyService.reportUser(req.user.id, dto);
+    return { success: true, message: 'Report submitted successfully' };
   }
 
   @Post('block')

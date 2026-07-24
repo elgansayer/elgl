@@ -12,7 +12,7 @@ export class SafetyService {
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async reportMessage(reporterId: string, dto: ReportUserDto): Promise<void> {
+  async reportUser(reporterId: string, dto: ReportUserDto): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
     const { error } = await supabase.from('reports').insert({

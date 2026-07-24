@@ -1,5 +1,6 @@
 import { Component, inject, signal, output, input } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { SafetyService, ReportUserDto } from '../../services/safety.service';
 import { ToastService } from '../primitives/toast/toast.service';
 
@@ -170,15 +171,17 @@ export class ReportUserModalComponent {
         description: this.description() || undefined
       };
 
-      await this.safetyService.reportUser(dto).toPromise();
-      this.toastService.show('Report submitted successfully. Our team will review it.', {
+      await firstValueFrom(this.safetyService.reportUser(dto));
+      this.toastService.show({
+        message: 'Report submitted successfully. Our team will review it.',
         type: 'success',
         duration: 4000
       });
       this.reported.emit();
       this.close.emit();
     } catch (error) {
-      this.toastService.show('Failed to submit report. Please try again.', {
+      this.toastService.show({
+        message: 'Failed to submit report. Please try again.',
         type: 'error',
         duration: 4000
       });

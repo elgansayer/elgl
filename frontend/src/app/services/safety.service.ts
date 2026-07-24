@@ -10,6 +10,11 @@ export interface ReportUserDto {
   context_url?: string;
 }
 
+export interface ReportResponse {
+  success: boolean;
+  message: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -17,12 +22,12 @@ export class SafetyService {
   private http = inject(HttpClient);
   private apiUrl = environment.apiUrl;
 
-  reportUser(dto: ReportUserDto): Observable<any> {
-    return this.http.post(`${this.apiUrl}/safety/report`, dto);
+  reportUser(dto: ReportUserDto): Observable<ReportResponse> {
+    return this.http.post<ReportResponse>(`${this.apiUrl}/safety/report`, dto);
   }
 
-  blockUser(blockedId: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/safety/block`, { blocked_id: blockedId });
+  blockUser(blockedId: string): Observable<{ success: boolean; blocked_id: string }> {
+    return this.http.post<{ success: boolean; blocked_id: string }>(`${this.apiUrl}/safety/block`, { blocked_id: blockedId });
   }
 
   getBlockedIds(): Observable<string[]> {
