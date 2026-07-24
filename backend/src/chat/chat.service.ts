@@ -118,10 +118,7 @@ export class ChatService {
               ? '🎨 Doodle'
               : '';
 
-      (this.eventEmitter.emit as (
-        event: string,
-        ...args: unknown[]
-      ) => void)(
+      (this.eventEmitter.emit as (event: string, ...args: unknown[]) => void)(
         'chat.message',
         new ChatMessageEvent(
           senderId,
@@ -208,7 +205,9 @@ export class ChatService {
 
       // Filter out blocked users from mock data
       if (blockedIds.length > 0) {
-        return mockMessages.filter((msg) => !blockedIds.includes(msg.sender_id));
+        return mockMessages.filter(
+          (msg) => !blockedIds.includes(msg.sender_id),
+        );
       }
       return mockMessages;
     }

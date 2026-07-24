@@ -82,7 +82,9 @@ export class DiscoveryService {
         // Filter fallback results for blocked users
         let fallbackResults = fallbackRes.data as UserProfile[];
         if (blockedIds.length > 0) {
-          fallbackResults = fallbackResults.filter((u) => !blockedIds.includes(u.id));
+          fallbackResults = fallbackResults.filter(
+            (u) => !blockedIds.includes(u.id),
+          );
         }
         return fallbackResults;
       }
@@ -106,7 +108,10 @@ export class DiscoveryService {
     return results;
   }
 
-  private getMockDiscoveryData(query: SearchQueryDto, blockedIds: string[] = []): UserProfile[] {
+  private getMockDiscoveryData(
+    query: SearchQueryDto,
+    blockedIds: string[] = [],
+  ): UserProfile[] {
     let filtered = MOCK_USERS;
 
     // Filter out blocked users
