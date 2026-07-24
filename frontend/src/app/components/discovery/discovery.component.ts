@@ -11,11 +11,12 @@ import { SafetyService } from '../../services/safety.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
 import { AppGradientButtonComponent } from '../primitives/gradient-button/gradient-button.component';
+import { LanguagePickerComponent } from '../primitives/language-picker/language-picker.component';
 import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-discovery',
-  imports: [CommonModule, FormsModule, TranslatePipe, ScrollablePillsComponent, FluencyIndicatorComponent, AppGradientButtonComponent, RouterLink],
+  imports: [CommonModule, FormsModule, TranslatePipe, ScrollablePillsComponent, FluencyIndicatorComponent, AppGradientButtonComponent, LanguagePickerComponent, RouterLink],
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
 })
@@ -29,40 +30,6 @@ export class DiscoveryComponent implements OnInit {
   readonly isLoading = signal<boolean>(true);
   readonly myTargetLangs = signal<{ code: string; flag: string; labelKey: string }[]>([]);
   readonly blockedUserIds = signal<string[]>([]);
-
-  readonly nativeLanguageOptions = [
-    { value: '', labelKey: 'lang.anyNative' },
-    { value: 'en', labelKey: 'lang.en' },
-    { value: 'es', labelKey: 'lang.es' },
-    { value: 'fr', labelKey: 'lang.fr' },
-    { value: 'de', labelKey: 'lang.de' },
-    { value: 'it', labelKey: 'lang.it' },
-    { value: 'pt', labelKey: 'lang.pt' },
-    { value: 'ja', labelKey: 'lang.ja' },
-    { value: 'ko', labelKey: 'lang.ko' },
-    { value: 'zh', labelKey: 'lang.zh' },
-    { value: 'ar', labelKey: 'lang.ar' },
-    { value: 'ru', labelKey: 'lang.ru' },
-    { value: 'hi', labelKey: 'lang.hi' },
-    { value: 'tr', labelKey: 'lang.tr' },
-  ] as const;
-
-  readonly targetLanguageOptions = [
-    { value: '', labelKey: 'lang.anyTarget' },
-    { value: 'en', labelKey: 'lang.en' },
-    { value: 'es', labelKey: 'lang.es' },
-    { value: 'fr', labelKey: 'lang.fr' },
-    { value: 'de', labelKey: 'lang.de' },
-    { value: 'it', labelKey: 'lang.it' },
-    { value: 'pt', labelKey: 'lang.pt' },
-    { value: 'ja', labelKey: 'lang.ja' },
-    { value: 'ko', labelKey: 'lang.ko' },
-    { value: 'zh', labelKey: 'lang.zh' },
-    { value: 'ar', labelKey: 'lang.ar' },
-    { value: 'ru', labelKey: 'lang.ru' },
-    { value: 'hi', labelKey: 'lang.hi' },
-    { value: 'tr', labelKey: 'lang.tr' },
-  ] as const;
 
   readonly distanceBandsKm = [10, 25, 50, 100, 250] as const;
   readonly selectedDistanceKm = signal<number>(50);

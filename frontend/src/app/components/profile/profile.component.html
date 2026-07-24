@@ -118,30 +118,23 @@
           <div class="space-y-4 pt-2">
             <div>
               <label class="block text-xs font-semibold uppercase text-text-secondary mb-1">{{ 'profile.nativeLangPlaceholder' | t }}</label>
-              <select [(ngModel)]="nativeLanguage" name="nativeLanguage" class="app-input w-full bg-surface-300">
-                @for (lang of availableLanguages; track lang.code) {
-                  <option [value]="lang.code">{{ lang.flag }} {{ lang.name }}</option>
-                }
-              </select>
+              <div class="w-full max-w-[300px]">
+                <app-language-picker (languageSelected)="nativeLanguage = $event" [selectedCode]="nativeLanguage"></app-language-picker>
+              </div>
             </div>
             
             <div>
               <label class="block text-xs font-semibold uppercase text-text-secondary mb-1">{{ 'profile.targetLangPlaceholder' | t }}</label>
-              <div class="flex flex-wrap gap-2">
-                @for (lang of availableLanguages; track lang.code) {
-                  <button type="button" 
-                    (click)="toggleTargetLanguage(lang.code)"
-                    class="px-3 py-1.5 rounded-full text-sm font-medium border transition-colors flex items-center gap-1"
-                    [class.bg-primary]="targetLanguages.includes(lang.code)"
-                    [class.border-primary]="targetLanguages.includes(lang.code)"
-                    [class.text-white]="targetLanguages.includes(lang.code)"
-                    [class.bg-surface-300]="!targetLanguages.includes(lang.code)"
-                    [class.border-surface-100]="!targetLanguages.includes(lang.code)"
-                    [class.text-text-secondary]="!targetLanguages.includes(lang.code)">
-                    <span>{{ lang.flag }}</span>
-                    <span>{{ lang.name }}</span>
-                  </button>
+              <div class="flex flex-wrap gap-2 mb-2">
+                @for (code of targetLanguages; track code) {
+                  <div class="px-3 py-1.5 rounded-full text-sm font-medium border bg-primary border-primary text-white flex items-center gap-1.5">
+                    <span>{{ getLanguageName(code) }}</span>
+                    <button type="button" (click)="removeTargetLanguage(code)" class="text-white/70 hover:text-white" aria-label="Remove language">✕</button>
+                  </div>
                 }
+              </div>
+              <div class="w-full max-w-[300px]">
+                <app-language-picker (languageSelected)="addTargetLanguage($event)"></app-language-picker>
               </div>
             </div>
           </div>

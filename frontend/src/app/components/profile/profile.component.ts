@@ -7,10 +7,11 @@ import { I18nService } from '../../services/i18n.service';
 import { UserService, UserProfile } from '../../services/user.service';
 import { CoverPhotoUploaderComponent } from '../cover-photo-uploader/cover-photo-uploader.component';
 import { HobbyTagsComponent } from '../hobby-tags/hobby-tags.component';
+import { LanguagePickerComponent, getLanguageFlag } from '../primitives/language-picker/language-picker.component';
 
 @Component({
   selector: 'app-profile',
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, CoverPhotoUploaderComponent, HobbyTagsComponent],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, CoverPhotoUploaderComponent, HobbyTagsComponent, LanguagePickerComponent],
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.scss']
 })
@@ -92,30 +93,29 @@ export class ProfileComponent implements OnInit {
     this.successMessage.set(this.i18n.translate('profile.coverUpdated'));
   }
 
-  readonly availableLanguages = [
-    { code: 'en', name: 'English', flag: '🇬🇧' },
-    { code: 'es', name: 'Spanish', flag: '🇪🇸' },
-    { code: 'fr', name: 'French', flag: '🇫🇷' },
-    { code: 'ja', name: 'Japanese', flag: '🇯🇵' },
-    { code: 'ko', name: 'Korean', flag: '🇰🇷' },
-    { code: 'zh', name: 'Chinese', flag: '🇨🇳' },
-    { code: 'de', name: 'German', flag: '🇩🇪' },
-    { code: 'it', name: 'Italian', flag: '🇮🇹' },
-    { code: 'ru', name: 'Russian', flag: '🇷🇺' },
-    { code: 'pt', name: 'Portuguese', flag: '🇵🇹' }
-  ];
-
-  toggleTargetLanguage(code: string): void {
-    if (this.targetLanguages.includes(code)) {
-      this.targetLanguages = this.targetLanguages.filter(l => l !== code);
-    } else {
-      // free users can only have 1, VIP can have up to 3.
-      // we'll just let them toggle up to 3 and the backend will reject if free and >1.
-      if (this.targetLanguages.length < 3) {
-        this.targetLanguages.push(code);
-      } else {
-        this.errorMessage.set(this.i18n.translate('profile.maxLanguagesError') || 'Max 3 languages allowed');
-      }
+  getLanguageName(code: string): string {
+    try {
+      const enNames = new Intl.DisplayNames(['en'], { type: 'language' });
+      return enNames.of(code) || code;
+    } catch {
+      return code;
     }
+  }
+
+  getLanguageFlagIcon(code: string): string {
+    return getLanguageFlag(code);
+  }
+
+  addTargetLanguage(code: string): void {
+    if (this.targetLanguages.includes(code)) return;
+    if (this.targetLanguages.length < 3) {
+      this.targetLanguages.push(code);
+    } else {
+      this.errorMessage.set(this.i18n.translate('profile.maxLanguagesError') || 'Max 3 languages allowed');
+    }
+  }
+
+  removeTargetLanguage(code: string): void {
+    this.targetLanguages = this.targetLanguages.filter(l => l !== code);
   }
 }

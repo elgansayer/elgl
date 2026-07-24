@@ -89,6 +89,9 @@ export class I18nService {
     // Language Selector & Header
     'lang.label': 'Language',
     'lang.selectTitle': 'Select App Language (Any Language)',
+    'lang.selectLanguage': 'Select a language',
+    'lang.searchPlaceholder': 'Search languages...',
+    'lang.selectPlaceholder': 'Select language',
     'lang.customPlaceholder': 'Enter ISO code e.g. sv, th, id...',
     'lang.applyCustom': 'Switch Language',
     'lang.anyNative': 'Any native language',

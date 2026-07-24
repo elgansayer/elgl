@@ -55,6 +55,29 @@ export class HobbyTagsService {
     );
   }
 
+  createGlobalTag(name: string, category: string, icon: string = '✨'): Observable<HobbyTag> {
+    const formattedName = name
+      .trim()
+      .split(/\s+/)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+
+    return this.http.post<HobbyTag>(this.apiUrl, { name: formattedName, category, icon }).pipe(
+      catchError(() => {
+        const newTag: HobbyTag = {
+          id: `tag-${Date.now()}`,
+          name: formattedName,
+          category,
+          icon,
+          target_vocabulary: [],
+          created_at: new Date().toISOString()
+        };
+        this.mockTags.push(newTag);
+        return of(newTag);
+      })
+    );
+  }
+
   getMyTags(): Observable<UserHobbyTag[]> {
     return this.http.get<UserHobbyTag[]>(`${this.apiUrl}/my`).pipe(
       catchError(() => of([...this.mockUserTags]))

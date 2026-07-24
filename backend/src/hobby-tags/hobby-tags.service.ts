@@ -20,6 +20,29 @@ export class HobbyTagsService {
     return data || [];
   }
 
+  async createTag(name: string, category: string, icon: string = '✨'): Promise<any> {
+    const formattedName = name
+      .trim()
+      .split(/\s+/)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+
+    const supabase = this.supabaseService.getClient();
+    const insertResponse = await supabase
+      .from('hobby_tags')
+      .insert({
+        name: formattedName,
+        category,
+        icon,
+        target_vocabulary: []
+      })
+      .select()
+      .single();
+
+    if (insertResponse.error) throw insertResponse.error;
+    return insertResponse.data;
+  }
+
   async getUserTags(userId: string): Promise<any[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase

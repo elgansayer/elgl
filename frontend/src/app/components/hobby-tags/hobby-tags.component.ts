@@ -50,7 +50,17 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                 }
               }
               @empty {
-                <p class="text-text-muted text-sm">No hobbies found</p>
+                <div class="w-full flex flex-col items-center gap-3 py-4">
+                  <p class="text-text-muted text-sm">No hobbies found</p>
+                  @if (searchQuery().trim()) {
+                    <button
+                      (click)="createGlobalTag(searchQuery().trim())"
+                      class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                      Create "{{ searchQuery().trim() }}"
+                    </button>
+                  }
+                </div>
               }
             </div>
           </div>
@@ -203,6 +213,14 @@ export class HobbyTagsComponent implements OnInit {
       if (this.selectedTagForProficiency() === tagId) {
         this.selectedTagForProficiency.set(null);
       }
+    });
+  }
+
+  createGlobalTag(name: string): void {
+    this.hobbyTagsService.createGlobalTag(name, 'Other', '✨').subscribe((newTag) => {
+      this.fetchAllTags();
+      this.addTag(newTag.id);
+      this.searchQuery.set('');
     });
   }
 
