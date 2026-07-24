@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FirebaseAdmin = any;
 
 @Injectable()
