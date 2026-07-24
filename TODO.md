@@ -304,6 +304,7 @@
 ## Phase 22: Moderation & Trust Engine
 - [x] Build "Report User" modal with dynamic category selection.
 - [ ] Implement Blocklist system hiding blocked accounts across chat, feed, and search.
+- [ ] Wire up block/unblock UI in LongPressContextMenuComponent and ChatMessageComponent, and implement backend/frontend filtering to hide blocked users from chat, feed, and search results.
 - [x] Implement hiding blocked accounts across chat, feed, and search (frontend filtering + backend query filtering)
 - [ ] Build automated NLP spam detector in NestJS to flag duplicate copy-paste messages.
 - [x] Add block user option to chat message context menu (LongPressContextMenuComponent)
