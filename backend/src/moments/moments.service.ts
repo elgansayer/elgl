@@ -382,7 +382,7 @@ export class MomentsService {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       this.eventEmitter.emit(
         'moment.comment',
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+
         new MomentCommentEvent(
           momentId,
           userId,

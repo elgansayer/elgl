@@ -141,7 +141,7 @@
             }
 
             <!-- Action Bar -->
-            <div class="flex items-center gap-6 mt-4 text-text-secondary text-xs">
+            <div class="flex items-center gap-5 mt-4 text-text-secondary text-xs flex-wrap">
               <button (click)="momentsStore.toggleLike(moment.id)" class="flex items-center gap-1.5 transition-colors" [class.text-red-500]="moment.is_liked_by_me">
                 <span class="text-lg leading-none">{{ moment.is_liked_by_me ? '❤️' : '🤍' }}</span> <span class="font-bold">{{ moment.likes_count || ('moments.likeBtn' | t) }}</span>
               </button>
@@ -149,6 +149,12 @@
                 <span class="text-lg leading-none">💬</span> <span class="font-bold">{{ moment.comments_count || ('moments.commentBtn' | t) }}</span>
               </button>
               @if (moment.text_content) {
+                <button (click)="openGhostCorrection(moment)" class="flex items-center gap-1.5 text-amber-400 hover:opacity-80 font-bold transition-opacity">
+                  <span>✏️</span> <span>{{ 'moments.correctBtn' | t }}</span>
+                </button>
+                <button (click)="quoteTextToComment(moment, moment.text_content)" class="flex items-center gap-1 hover:text-text-primary font-bold transition-colors">
+                  <span>💬</span> <span>{{ 'moments.quoteBtn' | t }}</span>
+                </button>
                 <button (click)="toggleInlineTranslation(moment)" class="flex items-center gap-1 hover:text-purple-400 transition-colors ms-auto font-bold">
                   {{ moment.translatedText ? ('moments.hideTranslation' | t) : ('moments.translate' | t) }}
                 </button>
@@ -163,6 +169,11 @@
                     <div class="flex items-center justify-between mb-1">
                       <span class="font-bold text-xs text-text-primary">{{ comment.author?.display_name || ('common.unknownUser' | t) }}</span>
                       <div class="flex items-center gap-2">
+                        @if (comment.text_content) {
+                          <button (click)="openGhostCorrection(moment, comment.text_content)" class="text-[10px] text-amber-400 font-bold hover:underline">
+                            ✏️ {{ 'moments.correctBtn' | t }}
+                          </button>
+                        }
                         <button (click)="startReply(moment.id, comment)" class="text-[10px] text-purple-400 font-bold hover:underline">
                           {{ 'moments.replyBtn' | t }}
                         </button>
@@ -201,5 +212,14 @@
 
   @if (activeWordToken(); as token) {
     <app-word-definition-modal [wordToken]="token" [contextSentence]="activeWordContext()" (closed)="activeWordToken.set(null)"></app-word-definition-modal>
+  }
+
+  <!-- HelloTalk Ghost Text Correction Modal -->
+  @if (activeCorrectionMomentId()) {
+    <app-correction-modal
+      [originalText]="activeCorrectionOriginalText()"
+      (submitted)="onCorrectionModalSubmitted($event)"
+      (cancelled)="activeCorrectionMomentId.set(null)">
+    </app-correction-modal>
   }
 </div>

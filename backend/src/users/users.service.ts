@@ -74,12 +74,21 @@ export class UsersService {
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase
       .from('user_follows')
-      .upsert({ follower_id: followerId, following_id: targetUserId }, { onConflict: 'follower_id,following_id' });
+      .upsert(
+        { follower_id: followerId, following_id: targetUserId },
+        { onConflict: 'follower_id,following_id' },
+      );
 
     if (error) {
-      Logger.warn(`Failed to follow user ${targetUserId} by ${followerId}: ${error.message}`);
+      Logger.warn(
+        `Failed to follow user ${targetUserId} by ${followerId}: ${error.message}`,
+      );
     } else if (this.notificationsService) {
-      void this.notificationsService.createNotification(targetUserId, followerId, 'follow');
+      void this.notificationsService.createNotification(
+        targetUserId,
+        followerId,
+        'follow',
+      );
     }
   }
 
@@ -92,7 +101,9 @@ export class UsersService {
       .eq('following_id', targetUserId);
 
     if (error) {
-      Logger.warn(`Failed to unfollow user ${targetUserId} by ${followerId}: ${error.message}`);
+      Logger.warn(
+        `Failed to unfollow user ${targetUserId} by ${followerId}: ${error.message}`,
+      );
     }
   }
 
@@ -103,12 +114,21 @@ export class UsersService {
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase
       .from('user_profile_likes')
-      .upsert({ liker_id: likerId, liked_id: targetUserId }, { onConflict: 'liker_id,liked_id' });
+      .upsert(
+        { liker_id: likerId, liked_id: targetUserId },
+        { onConflict: 'liker_id,liked_id' },
+      );
 
     if (error) {
-      Logger.warn(`Failed to like profile ${targetUserId} by ${likerId}: ${error.message}`);
+      Logger.warn(
+        `Failed to like profile ${targetUserId} by ${likerId}: ${error.message}`,
+      );
     } else if (this.notificationsService) {
-      void this.notificationsService.createNotification(targetUserId, likerId, 'like_profile');
+      void this.notificationsService.createNotification(
+        targetUserId,
+        likerId,
+        'like_profile',
+      );
     }
   }
 
@@ -121,7 +141,9 @@ export class UsersService {
       .eq('liked_id', targetUserId);
 
     if (error) {
-      Logger.warn(`Failed to unlike profile ${targetUserId} by ${likerId}: ${error.message}`);
+      Logger.warn(
+        `Failed to unlike profile ${targetUserId} by ${likerId}: ${error.message}`,
+      );
     }
   }
 

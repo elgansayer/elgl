@@ -50,11 +50,7 @@ describe('NotificationsService', () => {
 
   describe('createNotification', () => {
     it('should insert notification into Supabase when recipient is not actor', async () => {
-      await service.createNotification(
-        'recipient-1',
-        'actor-1',
-        'follow',
-      );
+      await service.createNotification('recipient-1', 'actor-1', 'follow');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('notifications');
       expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
@@ -82,7 +78,11 @@ describe('NotificationsService', () => {
 
     it('should filter mock notifications by type likes', async () => {
       const results = await service.getNotifications('user-1', 'likes');
-      expect(results.every((n) => n.type === 'like_profile' || n.type === 'like_moment')).toBe(true);
+      expect(
+        results.every(
+          (n) => n.type === 'like_profile' || n.type === 'like_moment',
+        ),
+      ).toBe(true);
     });
   });
 

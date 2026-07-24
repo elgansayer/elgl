@@ -2,7 +2,12 @@ export interface InAppNotification {
   id: string;
   recipient_id: string;
   actor_id: string;
-  type: 'follow' | 'like_profile' | 'like_moment' | 'comment_moment' | 'profile_visit';
+  type:
+    | 'follow'
+    | 'like_profile'
+    | 'like_moment'
+    | 'comment_moment'
+    | 'profile_visit';
   entity_id?: string;
   message?: string;
   is_read: boolean;

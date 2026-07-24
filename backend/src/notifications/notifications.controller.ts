@@ -40,10 +40,7 @@ export class NotificationsController {
   }
 
   @Patch(':id/read')
-  async markAsRead(
-    @Param('id') id: string,
-    @CurrentUser() user: User | null,
-  ) {
+  async markAsRead(@Param('id') id: string, @CurrentUser() user: User | null) {
     if (!user) throw new UnauthorizedException();
     await this.notificationsService.markAsRead(user.id, id);
     return { success: true };

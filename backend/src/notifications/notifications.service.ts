@@ -143,7 +143,13 @@ export class NotificationsService {
   async createNotification(
     recipientId: string,
     actorId: string,
-    type: 'follow' | 'like_profile' | 'like_moment' | 'comment_moment' | 'reply_comment' | 'profile_visit',
+    type:
+      | 'follow'
+      | 'like_profile'
+      | 'like_moment'
+      | 'comment_moment'
+      | 'reply_comment'
+      | 'profile_visit',
     entityId?: string,
     message?: string,
   ): Promise<void> {
@@ -267,7 +273,10 @@ export class NotificationsService {
       .eq('recipient_id', recipientId);
   }
 
-  private getMockNotifications(recipientId: string, filterType?: string): any[] {
+  private getMockNotifications(
+    recipientId: string,
+    filterType?: string,
+  ): any[] {
     const allMocks = [
       {
         id: 'notif-1',
@@ -348,9 +357,14 @@ export class NotificationsService {
     ];
 
     if (!filterType || filterType === 'all') return allMocks;
-    if (filterType === 'likes') return allMocks.filter(n => n.type === 'like_profile' || n.type === 'like_moment');
-    if (filterType === 'comments') return allMocks.filter(n => n.type === 'comment_moment');
-    if (filterType === 'follows') return allMocks.filter(n => n.type === 'follow');
+    if (filterType === 'likes')
+      return allMocks.filter(
+        (n) => n.type === 'like_profile' || n.type === 'like_moment',
+      );
+    if (filterType === 'comments')
+      return allMocks.filter((n) => n.type === 'comment_moment');
+    if (filterType === 'follows')
+      return allMocks.filter((n) => n.type === 'follow');
     return allMocks;
   }
 }
