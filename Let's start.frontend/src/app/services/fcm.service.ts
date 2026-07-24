@@ -6,7 +6,7 @@ import { CentrifugoService } from './centrifugo.service';
 import { environment } from '../../environments/environment';
 
 export interface FcmPayload {
-  type: 'new_message' | 'call_invite' | 'moment_like' | 'moment_comment' | 'correction' | 'gift' | 'friend_request';
+  type: 'new_message' | 'call_invite' | 'moment_like' | 'moment_comment' | 'correction' | 'gift';
   title: string;
   body: string;
   data?: Record<string, string>;
