@@ -25,7 +25,10 @@ export class FavouritesController {
   }
 
   @Delete(':id')
-  async removeFavourite(@Req() req: { user: { id: string } }, @Param('id') id: string) {
+  async removeFavourite(
+    @Req() req: { user: { id: string } },
+    @Param('id') id: string,
+  ) {
     return this.favouritesService.removeFavourite(req.user.id, id);
   }
 

@@ -18,7 +18,10 @@ export class SafetyController {
   }
 
   @Post('block')
-  async blockUser(@Req() req: { user: { id: string } }, @Body() dto: BlockUserDto): Promise<unknown> {
+  async blockUser(
+    @Req() req: { user: { id: string } },
+    @Body() dto: BlockUserDto,
+  ): Promise<unknown> {
     return this.safetyService.blockUser(req.user.id, dto);
   }
 

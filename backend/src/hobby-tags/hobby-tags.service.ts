@@ -116,7 +116,8 @@ export class HobbyTagsService {
       .single();
 
     if (updateResponse.error) throw updateResponse.error;
-    if (!updateResponse.data) throw new NotFoundException('User hobby tag not found');
+    if (!updateResponse.data)
+      throw new NotFoundException('User hobby tag not found');
     return updateResponse.data;
   }
 }
