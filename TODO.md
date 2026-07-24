@@ -302,7 +302,7 @@
 - [x] Build Notification Preferences UI with granular category toggles.
 
 ## Phase 22: Moderation & Trust Engine
-- [ ] Build "Report User" modal with dynamic category selection.
+- [x] Build "Report User" modal with dynamic category selection.
 - [ ] Implement Blocklist system hiding blocked accounts across chat, feed, and search.
 - [ ] Implement hiding blocked accounts across chat, feed, and search (frontend filtering + backend query filtering)
 - [ ] Build automated NLP spam detector in NestJS to flag duplicate copy-paste messages.
