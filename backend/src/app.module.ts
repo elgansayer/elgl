@@ -19,6 +19,7 @@ import { SafetyModule } from './safety/safety.module';
 import { HobbyTagsModule } from './hobby-tags/hobby-tags.module';
 import { FavouritesModule } from './favourites/favourites.module';
 import { VideoCallsModule } from './video-calls/video-calls.module';
+import { StreakModule } from './streak/streak.module';
 import { validationSchema } from './config/validation.schema';
 
 @Module({
@@ -44,6 +45,7 @@ import { validationSchema } from './config/validation.schema';
     HobbyTagsModule,
     FavouritesModule,
     VideoCallsModule,
+    StreakModule,
   ],
   controllers: [AppController],
   providers: [AppService],
