@@ -2,7 +2,6 @@ import {
   Component,
   Input,
   inject,
-  computed,
   signal,
   OnInit,
   OnDestroy,
@@ -41,8 +40,7 @@ import { Subject } from 'rxjs';
           <div class="max-w-[70%] rounded-lg p-3"
                [class.bg-blue-600]="isOwnMessage()"
                [class.text-white]="isOwnMessage()"
-               [class.bg-surface-300]="!isOwnMessage()"
-               [class.]="!isOwnMessage()">
+               [class.bg-surface-300]="!isOwnMessage()">
             
             <!-- Text message -->
             <p *ngIf="message.message_type === 'text'" class="text-sm">{{ message.text_content }}</p>
