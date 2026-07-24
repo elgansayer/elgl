@@ -277,11 +277,12 @@ export class MomentsService {
     if (existing) {
       const existingRow = existing;
       await supabase.from('moment_likes').delete().eq('id', existingRow.id);
-      const { data: updatedData } = (await supabase
+      const response = await supabase
         .from('moments')
         .select('likes_count')
         .eq('id', momentId)
-        .single()) as { data: unknown; error: PostgrestError | null };
+        .single();
+      const updatedData = response.data as unknown;
       const updatedRow = updatedData as MomentCountRow | null;
       const newCount = Math.max(0, (updatedRow?.likes_count ?? 1) - 1);
       await supabase
@@ -293,12 +294,13 @@ export class MomentsService {
       await supabase
         .from('moment_likes')
         .insert({ moment_id: momentId, user_id: userId });
-      const { data: updatedData } = await supabase
+      const response = await supabase
         .from('moments')
         .select('likes_count')
         .eq('id', momentId)
         .single();
-      const updatedRow = updatedData as unknown as MomentCountRow | null;
+      const updatedData = response.data as unknown;
+      const updatedRow = updatedData as MomentCountRow | null;
       const newCount = (updatedRow?.likes_count ?? 0) + 1;
       await supabase
         .from('moments')
@@ -350,11 +352,12 @@ export class MomentsService {
       );
     }
 
-    const { data: updatedData } = (await supabase
+    const response = await supabase
       .from('moments')
       .select('comments_count, user_id')
       .eq('id', momentId)
-      .single()) as { data: unknown; error: PostgrestError | null };
+      .single();
+    const updatedData = response.data as unknown;
     const updatedRow = updatedData as
       (MomentCountRow & { user_id?: string }) | null;
     await supabase
