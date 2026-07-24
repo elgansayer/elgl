@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DiscoveryService } from './discovery.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ConfigService } from '@nestjs/config';
+import { SafetyService } from '../safety/safety.service';
 
 describe('DiscoveryService', () => {
   let service: DiscoveryService;
@@ -31,6 +32,12 @@ describe('DiscoveryService', () => {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+          },
+        },
+        {
+          provide: SafetyService,
+          useValue: {
+            getBlockedAndBlockerIds: jest.fn().mockResolvedValue([]),
           },
         },
         {
