@@ -162,12 +162,26 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
     });
   }
 
-  onBlock(event: { senderId: string; blocked: boolean }): void {
+  async onBlock(event: { senderId: string; blocked: boolean }): Promise<void> {
     this.isBlocked.set(event.blocked);
     if (event.blocked) {
+      try {
+        await this.safetyService.blockUserAsync(event.senderId);
+      } catch (err) {
+        console.error('Failed to block user', err);
+        this.isBlocked.set(false);
+        return;
+      }
       this.chatService.addBlockedUser(event.senderId);
       this.messageBlocked.emit(event.senderId);
     } else {
+      try {
+        await this.safetyService.unblockUserAsync(event.senderId);
+      } catch (err) {
+        console.error('Failed to unblock user', err);
+        this.isBlocked.set(true);
+        return;
+      }
       this.chatService.removeBlockedUser(event.senderId);
     }
   }
