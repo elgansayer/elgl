@@ -19,6 +19,7 @@ import { SafetyModule } from './safety/safety.module';
 import { HobbyTagsModule } from './hobby-tags/hobby-tags.module';
 import { FavouritesModule } from './favourites/favourites.module';
 import { VideoCallsModule } from './video-calls/video-calls.module';
+import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { StreakModule } from './streak/streak.module';
 import { StreakMiddleware } from './streak/streak.middleware';
 import { validationSchema } from './config/validation.schema';
@@ -46,6 +47,7 @@ import { validationSchema } from './config/validation.schema';
     HobbyTagsModule,
     FavouritesModule,
     VideoCallsModule,
+    LeaderboardModule,
     StreakModule,
   ],
   controllers: [AppController],

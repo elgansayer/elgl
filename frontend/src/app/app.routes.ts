@@ -23,6 +23,7 @@ export const routes: Routes = [
   { path: 'audio-rooms', component: AudioRoomComponent },
   { path: 'chat', component: ChatListComponent },
   { path: 'chat/:id', component: ChatRoomComponent },
+  { path: 'leaderboard', loadComponent: () => import('./components/leaderboard/leaderboard.component').then(m => m.LeaderboardComponent) },
   { path: 'favourites', component: FavouritesComponent },
   { path: 'vocabulary', component: VocabularyDashboardComponent },
   { path: 'profile', component: ProfileComponent },
