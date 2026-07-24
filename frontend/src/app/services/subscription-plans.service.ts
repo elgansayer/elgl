@@ -14,6 +14,7 @@ export interface SubscriptionPlan {
   features: string[];
   is_popular?: boolean;
   stripe_price_id?: string;
+  stripe_price_id_yearly?: string;
   highlighted_benefits?: string[];
   badge_text?: string;
 }
