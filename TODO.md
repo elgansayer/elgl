@@ -310,6 +310,7 @@
   - Add a block/unblock button directly in `ChatMessageComponent` (or reuse the context menu) that calls `SafetyService.blockUser`/`unblockUser`.
   - Modify `ChatService`, `MomentsService`, and `DiscoveryService` (backend) to accept a list of blocked user IDs and exclude them from query results.
   - After fetching data on the frontend, filter out messages, moments, and search results whose `sender_id` or `user_id` appears in the blocked list.
+- [ ] **PARTIALLY DONE:** LongPressContextMenuComponent already has block/unblock options, calls SafetyService.blockUserAsync/unblockUserAsync, and emits block output events. Remaining: parent component subscription, backend query filtering, frontend filtering.
 - [ ] Wire block/unblock outputs in LongPressContextMenuComponent to SafetyService.blockUser/unblockUser in parent chat component, and implement backend/frontend filtering to exclude blocked users from chat, feed, and search results.
 - [x] Implement hiding blocked accounts across chat, feed, and search (frontend filtering + backend query filtering)
 - [x] Implement backend query filtering to exclude blocked users from chat, feed, and search results (modify ChatService, MomentsService, DiscoveryService to filter out blocked user IDs)
