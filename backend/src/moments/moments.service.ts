@@ -340,8 +340,10 @@ export class MomentsService {
           ? `Correction: "${dto.correction_payload.original}" → "${dto.correction_payload.corrected}"`
           : '';
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      this.eventEmitter.emit(
+      (this.eventEmitter.emit as (
+        event: string,
+        ...args: unknown[]
+      ) => void)(
         'moment.comment',
         new MomentCommentEvent(userId, momentAuthorId, momentId, preview),
       );
