@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DiscoveryService } from './discovery.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('DiscoveryService', () => {
   let service: DiscoveryService;
@@ -30,6 +31,12 @@ describe('DiscoveryService', () => {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockReturnValue(undefined),
           },
         },
       ],
@@ -157,7 +164,7 @@ describe('DiscoveryService', () => {
         longitude: 139.6917,
       });
 
-      expect(result.length).toBeGreaterThan(0);
+      expect(result).toHaveLength(0);
     });
 
     it('should return empty array when standard query returns error or null data', async () => {
@@ -167,8 +174,7 @@ describe('DiscoveryService', () => {
       });
 
       const result = await service.searchPartners('user-1', null, {});
-      expect(result.length).toBeGreaterThan(0);
-      expect(result[0].id).toBeDefined();
+      expect(result).toHaveLength(0);
     });
   });
 });
