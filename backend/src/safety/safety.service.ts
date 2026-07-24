@@ -71,7 +71,7 @@ export class SafetyService {
     dto: BlockUserDto,
   ): Promise<{ success: boolean; blocked_id: string }> {
     const supabase = this.supabaseService.getClient();
-    
+
     // Check if already blocked
     const { data: existing } = await supabase
       .from('blocks')
