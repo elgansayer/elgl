@@ -333,6 +333,7 @@
 - [ ] Implement backend query filtering to exclude blocked users from chat, feed, and search results (modify ChatService, MomentsService, DiscoveryService to filter out blocked user IDs)
 - [ ] Implement frontend filtering to hide blocked users' messages, moments, and search results (filter arrays in components after fetching)
 - [ ] **NEW:** Wire the `block`/`unblock` outputs of `LongPressContextMenuComponent` to `SafetyService.blockUser`/`unblockUser` in the parent chat component (`ChatRoomComponent` or `MessageBubbleComponent`). Currently the component emits events but no parent subscribes to them, so the actions are never executed.
+- [ ] **REMAINING (2026-07-24):** Wire the `block`/`unblock` outputs of `LongPressContextMenuComponent` to `SafetyService.blockUser`/`unblockUser` in the parent chat component (`ChatRoomComponent` or `MessageBubbleComponent`). Currently the component emits events but no parent subscribes to them, so the actions are never executed.
 
 ## Phase 23: Onboarding Flow
 - [ ] Build multi-step Angular onboarding wizard.
