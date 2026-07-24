@@ -293,13 +293,12 @@ export class MomentsService {
       await supabase
         .from('moment_likes')
         .insert({ moment_id: momentId, user_id: userId });
-      const { data: updatedData } = await supabase
+      const { data: updatedData } = (await supabase
         .from('moments')
         .select('likes_count')
         .eq('id', momentId)
-        .single();
-      const updatedRow = updatedData as MomentCountRow | null;
-      const newCount = (updatedRow?.likes_count ?? 0) + 1;
+        .single()) as { data: MomentCountRow | null; error: any };
+      const newCount = (updatedData?.likes_count ?? 0) + 1;
       await supabase
         .from('moments')
         .update({ likes_count: newCount })
@@ -350,16 +349,14 @@ export class MomentsService {
       );
     }
 
-    const { data: updatedData } = await supabase
+    const { data: updatedData } = (await supabase
       .from('moments')
       .select('comments_count, user_id')
       .eq('id', momentId)
-      .single();
-    const updatedRow = updatedData as
-      (MomentCountRow & { user_id?: string }) | null;
+      .single()) as { data: (MomentCountRow & { user_id?: string }) | null; error: any };
     await supabase
       .from('moments')
-      .update({ comments_count: (updatedRow?.comments_count ?? 0) + 1 })
+      .update({ comments_count: (updatedData?.comments_count ?? 0) + 1 })
       .eq('id', momentId);
 
     const comment = response.data as MomentComment;
@@ -371,7 +368,7 @@ export class MomentsService {
     };
 
     // Emit push notification event
-    const momentAuthorId = updatedRow?.user_id;
+    const momentAuthorId = updatedData?.user_id;
     if (momentAuthorId) {
       const payload = dto.correction_payload as
         | { original: string; corrected: string; explanation?: string }
