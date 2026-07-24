@@ -10,7 +10,7 @@ export class MediaController {
 
   @Post('cover/presigned-url')
   async getCoverPresignedUrl(
-    @Req() req: any,
+    @Req() req: { user: { id: string } },
     @Body() dto: PresignedUrlDto,
   ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
     return this.mediaService.generateCoverPresignedUrl(req.user.id, dto);
@@ -18,7 +18,7 @@ export class MediaController {
 
   @Post('cover/confirm')
   async confirmCoverUpload(
-    @Req() req: any,
+    @Req() req: { user: { id: string } },
     @Body('objectKey') objectKey: string,
   ): Promise<{ coverUrl: string }> {
     return this.mediaService.confirmCoverUpload(req.user.id, objectKey);

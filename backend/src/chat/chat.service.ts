@@ -48,10 +48,10 @@ export class ChatService {
           is_pinned: false,
           created_at: new Date(Date.now() - 3600000).toISOString(),
         },
-      ] as any[];
+      ] as ChatRoomRecord[];
     }
 
-    return response.data;
+    return response.data as ChatRoomRecord[];
   }
 
   async sendMessage(
@@ -147,7 +147,7 @@ export class ChatService {
           created_at: new Date().toISOString(),
           sender: { id: 'me', display_name: 'Me', avatar_url: null },
         },
-      ] as any[];
+      ] as ChatMessage[];
     }
     return response.data as ChatMessage[];
   }
@@ -156,15 +156,17 @@ export class ChatService {
     const supabase = this.supabaseService.getClient();
 
     // Get the message to favourite
-    const { data: message, error: messageError } = (await supabase
+    const messageResponse = await supabase
       .from('chat_messages')
       .select('*')
       .eq('id', dto.message_id)
-      .single()) as { data: any; error: any };
+      .single();
 
-    if (messageError || !message) {
+    if (messageResponse.error || !messageResponse.data) {
       throw new Error('Message not found');
     }
+
+    const message = messageResponse.data;
 
     // Store the favourite
     const { error } = await supabase.from('favourites').insert({

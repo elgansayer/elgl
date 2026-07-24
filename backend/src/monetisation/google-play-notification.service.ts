@@ -56,14 +56,15 @@ export class GooglePlayNotificationService {
 
     try {
       // Google Play Developer Notifications come as a Pub/Sub message wrapper
-      const message: any = payload?.message;
+      const payloadRecord = payload as Record<string, unknown>;
+      const message = payloadRecord?.message as Record<string, unknown> | undefined;
       if (!message) {
         this.logger.warn('Google notification missing message');
         return { received: true, status: 'ignored' };
       }
 
       // Decode base64-encoded data
-      const data: string | undefined = message.data;
+      const data = message.data as string | undefined;
       if (!data) {
         this.logger.warn('Google notification missing data');
         return { received: true, status: 'ignored' };
@@ -262,8 +263,8 @@ export class GooglePlayNotificationService {
       .eq('purchase_token', purchaseToken)
       .single();
 
-    const row = data;
-    return (row as any)?.user_id || null;
+    const row = data as { user_id: string } | null;
+    return row?.user_id || null;
   }
 
   private async storePurchaseToken(

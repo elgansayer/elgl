@@ -24,18 +24,18 @@ export class HobbyTagsController {
 
   @Get('my')
   @UseGuards(SupabaseAuthGuard)
-  async getMyTags(@Req() req: Request): Promise<any> {
-    const userId = (req as any).user?.id;
+  async getMyTags(@Req() req: { user?: { id: string } }): Promise<unknown> {
+    const userId = req.user?.id;
     return this.hobbyTagsService.getUserTags(userId as string);
   }
 
   @Post('my')
   @UseGuards(SupabaseAuthGuard)
   async addTag(
-    @Req() req: Request,
+    @Req() req: { user?: { id: string } },
     @Body() body: { hobby_tag_id: string; proficiency_level?: string },
-  ): Promise<any> {
-    const userId = (req as any).user?.id;
+  ): Promise<unknown> {
+    const userId = req.user?.id;
     return this.hobbyTagsService.addUserTag(
       userId as string,
       body.hobby_tag_id,
@@ -46,10 +46,10 @@ export class HobbyTagsController {
   @Delete('my/:hobbyTagId')
   @UseGuards(SupabaseAuthGuard)
   async removeTag(
-    @Req() req: Request,
+    @Req() req: { user?: { id: string } },
     @Param('hobbyTagId') hobbyTagId: string,
   ): Promise<{ message: string }> {
-    const userId = (req as any).user?.id;
+    const userId = req.user?.id;
     await this.hobbyTagsService.removeUserTag(userId as string, hobbyTagId);
     return { message: 'Hobby tag removed successfully' };
   }
@@ -57,11 +57,11 @@ export class HobbyTagsController {
   @Patch('my/:hobbyTagId')
   @UseGuards(SupabaseAuthGuard)
   async updateProficiency(
-    @Req() req: Request,
+    @Req() req: { user?: { id: string } },
     @Param('hobbyTagId') hobbyTagId: string,
     @Body() body: { proficiency_level: string },
-  ): Promise<any> {
-    const userId = (req as any).user?.id;
+  ): Promise<unknown> {
+    const userId = req.user?.id;
     return this.hobbyTagsService.updateProficiency(
       userId as string,
       hobbyTagId,

@@ -9,27 +9,27 @@ import {
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'text', nullable: true })
   @Index()
-  display_name: string | null;
+  display_name!: string | null;
 
   @Column({ type: 'varchar', length: 2, nullable: true })
   @Index()
-  native_language: string | null;
+  native_language!: string | null;
 
   @Column('text', { array: true, nullable: true })
-  target_languages: string[] | null;
+  target_languages!: string[] | null;
 
   @Column({ type: 'text', nullable: true })
-  bio_text: string | null;
+  bio_text!: string | null;
 
   @Column({ type: 'text', nullable: true })
-  avatar_url: string | null;
+  avatar_url!: string | null;
 
   @Column({ type: 'text', nullable: true })
-  audio_intro_url: string | null;
+  audio_intro_url!: string | null;
 
   @Column({
     type: 'geography',
@@ -37,7 +37,7 @@ export class User {
     srid: 4326,
     nullable: true,
   })
-  location: unknown | null;
+  location!: unknown;
 
   @Column({
     type: 'geography',
@@ -45,44 +45,44 @@ export class User {
     srid: 4326,
     nullable: true,
   })
-  mock_location: unknown | null;
+  mock_location!: unknown;
 
   @Column({ type: 'boolean', default: false })
   @Index()
-  is_vip: boolean;
+  is_vip!: boolean;
 
   @Column({
     type: 'varchar',
     length: 50,
     default: 'free',
   })
-  vip_tier: string;
+  vip_tier!: string;
 
   @Column({ type: 'integer', default: 0 })
-  coins_balance: number;
+  coins_balance!: number;
 
   @Column({ type: 'integer', default: 1 })
-  study_streak_days: number;
+  study_streak_days!: number;
 
   @Column({ type: 'float', default: 1.0 })
-  correction_ratio: number;
+  correction_ratio!: number;
 
   @Column({
     type: 'boolean',
     generatedType: 'STORED',
     asExpression: '(study_streak_days > 7 AND correction_ratio >= 0.8)',
   })
-  is_serious_learner: boolean;
+  is_serious_learner!: boolean;
 
   @Column({ type: 'boolean', default: false })
-  privacy_hide_age: boolean;
+  privacy_hide_age!: boolean;
 
   @Column({ type: 'boolean', default: false })
-  privacy_hide_location: boolean;
+  privacy_hide_location!: boolean;
 
   @Column({ type: 'boolean', default: false })
-  privacy_hide_from_search: boolean;
+  privacy_hide_from_search!: boolean;
 
   @CreateDateColumn({ type: 'timestamptz', default: () => 'NOW()' })
-  created_at: Date;
+  created_at!: Date;
 }

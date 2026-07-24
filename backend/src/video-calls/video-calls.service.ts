@@ -21,7 +21,7 @@ export class VideoCallsService {
 
   async createRoom(
     userId: string,
-    remoteUserId: string,
+    _remoteUserId: string,
   ): Promise<{ token: string; roomName: string }> {
     const roomName = `video_${uuidv4()}`;
 

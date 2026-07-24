@@ -160,16 +160,17 @@ export class EconomyService {
 
     // 5. Add coins to user balance
     const supabase = this.supabaseService.getClient();
-    const { data: user, error: fetchError } = await supabase
+    const userResponse = await supabase
       .from('users')
       .select('coins_balance')
       .eq('id', userId)
       .single();
 
-    if (fetchError || !user) {
+    if (userResponse.error || !userResponse.data) {
       throw new BadRequestException('User not found');
     }
 
+    const user = userResponse.data as { coins_balance: number };
     const currentBalance = user.coins_balance || 0;
     const newBalance = currentBalance + coinPackage.coins;
 
@@ -191,7 +192,7 @@ export class EconomyService {
         platform,
         verified.transactionId,
       );
-    } catch (error) {
+    } catch (_error) {
       // Rollback coin balance on failure
       const { error: rollbackError } = await supabase
         .from('users')
@@ -274,7 +275,10 @@ export class EconomyService {
       }),
     );
 
-    const body = response.data;
+    const body = response.data as {
+      status: number;
+      latest_receipt_info?: Array<{ product_id: string; transaction_id: string }>;
+    };
 
     if (body.status !== 0 && body.status !== 21007) {
       throw new BadRequestException(
@@ -327,7 +331,11 @@ export class EconomyService {
       }),
     );
 
-    const body = response.data;
+    const body = response.data as {
+      purchaseState: number;
+      productId: string;
+      orderId: string;
+    };
 
     if (body.purchaseState !== 0) {
       throw new BadRequestException('Google Play purchase not completed');
@@ -364,7 +372,11 @@ export class EconomyService {
       ),
     );
 
-    const session = response.data;
+    const session = response.data as {
+      payment_status: string;
+      metadata?: Record<string, string>;
+      payment_intent: string;
+    };
 
     if (session.payment_status !== 'paid') {
       throw new BadRequestException('Stripe payment not completed');

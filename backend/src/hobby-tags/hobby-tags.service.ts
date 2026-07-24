@@ -66,7 +66,7 @@ export class HobbyTagsService {
       throw new ConflictException('Hobby tag already added');
     }
 
-    const { data, error } = (await supabase
+    const insertResponse = await supabase
       .from('user_hobby_tags')
       .insert({
         user_id: userId,
@@ -79,10 +79,10 @@ export class HobbyTagsService {
         hobby_tag:hobby_tags(*)
       `,
       )
-      .single()) as { data: any; error: any };
+      .single();
 
-    if (error) throw error;
-    return data;
+    if (insertResponse.error) throw insertResponse.error;
+    return insertResponse.data;
   }
 
   async removeUserTag(userId: string, hobbyTagId: string): Promise<void> {
@@ -102,7 +102,7 @@ export class HobbyTagsService {
     proficiencyLevel: string,
   ): Promise<any> {
     const supabase = this.supabaseService.getClient();
-    const { data, error } = (await supabase
+    const updateResponse = await supabase
       .from('user_hobby_tags')
       .update({ proficiency_level: proficiencyLevel })
       .eq('user_id', userId)
@@ -113,10 +113,10 @@ export class HobbyTagsService {
         hobby_tag:hobby_tags(*)
       `,
       )
-      .single()) as { data: any; error: any };
+      .single();
 
-    if (error) throw error;
-    if (!data) throw new NotFoundException('User hobby tag not found');
-    return data;
+    if (updateResponse.error) throw updateResponse.error;
+    if (!updateResponse.data) throw new NotFoundException('User hobby tag not found');
+    return updateResponse.data;
   }
 }

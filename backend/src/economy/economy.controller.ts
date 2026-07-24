@@ -17,7 +17,7 @@ export class EconomyController {
 
   @Get('packages')
   async getPackages() {
-    return await this.economyService.getPackages();
+    return this.economyService.getPackages();
   }
 
   @Get('balance')

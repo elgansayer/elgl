@@ -94,7 +94,8 @@ export class NlpService {
       );
     }
 
-    const data = (await res.json()) as {
+    const jsonResponse = await res.json();
+    const data = jsonResponse as {
       translations: Array<{ text: string }>;
     };
     const translatedText = data.translations[0].text;
@@ -188,7 +189,8 @@ export class NlpService {
       );
     }
 
-    const detectData = (await detectRes.json()) as Array<{ language: string }>;
+    const detectJson = await detectRes.json();
+    const detectData = detectJson as Array<{ language: string }>;
     const detectedLang = detectData[0]?.language || 'en';
 
     // Use Azure's dictionary lookup for grammar correction (works best for common languages)

@@ -10,7 +10,7 @@ export class SafetyController {
 
   @Post('report')
   async reportMessage(
-    @Req() req: any,
+    @Req() req: { user: { id: string } },
     @Body() dto: ReportUserDto,
   ): Promise<{ success: boolean }> {
     await this.safetyService.reportMessage(req.user.id, dto);
@@ -18,12 +18,12 @@ export class SafetyController {
   }
 
   @Post('block')
-  async blockUser(@Req() req: any, @Body() dto: BlockUserDto): Promise<any> {
+  async blockUser(@Req() req: { user: { id: string } }, @Body() dto: BlockUserDto): Promise<unknown> {
     return this.safetyService.blockUser(req.user.id, dto);
   }
 
   @Get('blocked-ids')
-  async getBlockedIds(@Req() req: any): Promise<string[]> {
+  async getBlockedIds(@Req() req: { user: { id: string } }): Promise<string[]> {
     return this.safetyService.getBlockedIds(req.user.id);
   }
 }

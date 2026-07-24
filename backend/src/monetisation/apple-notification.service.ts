@@ -50,7 +50,8 @@ export class AppleNotificationService {
   ): Promise<{ received: boolean; status: string }> {
     this.logger.log(`Received Apple App Store Server Notification`);
 
-    const signedPayload: string = payload?.signedPayload as string;
+    const payloadRecord = payload as Record<string, unknown>;
+    const signedPayload = payloadRecord?.signedPayload as string | undefined;
     if (!signedPayload) {
       this.logger.warn('Apple notification missing signedPayload');
       return { received: true, status: 'ignored' };
@@ -140,7 +141,7 @@ export class AppleNotificationService {
     subtype: string | undefined,
     data: any,
   ): Promise<void> {
-    const transactionInfo: any = await this.decodeTransactionInfo(
+    const transactionInfo = await this.decodeTransactionInfo(
       data?.signedTransactionInfo as string | undefined,
     );
     if (!transactionInfo) {
@@ -174,7 +175,7 @@ export class AppleNotificationService {
     subtype: string | undefined,
     data: any,
   ): Promise<void> {
-    const transactionInfo: any = await this.decodeTransactionInfo(
+    const transactionInfo = await this.decodeTransactionInfo(
       data?.signedTransactionInfo as string | undefined,
     );
     if (!transactionInfo) {
@@ -314,14 +315,14 @@ export class AppleNotificationService {
       if (parts.length !== 3) return null;
 
       const payloadStr = Buffer.from(parts[1], 'base64url').toString('utf-8');
-      const payload: {
+      const payload = JSON.parse(payloadStr) as {
         originalTransactionId: string;
         productId: string;
         appAccountToken?: string;
         transactionId: string;
         expiresDate: number;
         purchaseDate: number;
-      } = JSON.parse(payloadStr);
+      };
 
       return {
         originalTransactionId: payload.originalTransactionId,
