@@ -52,7 +52,7 @@ describe('SafetyController', () => {
   });
 
   describe('blockUser', () => {
-    it('should throw if req user is missing', async () => {
+    it('should throw if req user is missing', () => {
       // guard prevents this in reality
       expect(true).toBe(true);
     });
@@ -72,7 +72,7 @@ describe('SafetyController', () => {
   });
 
   describe('getBlockedIds', () => {
-    it('should throw if req user is missing', async () => {
+    it('should throw if req user is missing', () => {
       // guard prevents this in reality
       expect(true).toBe(true);
     });
