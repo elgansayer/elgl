@@ -305,6 +305,7 @@
 - [x] Build "Report User" modal with dynamic category selection.
 - [x] Implement Blocklist system hiding blocked accounts across chat, feed, and search.
 - [ ] Wire up block/unblock UI in LongPressContextMenuComponent and ChatMessageComponent, and implement backend/frontend filtering to hide blocked users from chat, feed, and search results.
+- [ ] **DIFF REVIEW (2026-07-25):** The latest git diff only contains formatting/lint cleanups; no block/unblock UI wiring or filtering implemented.
 - [ ] **DIFF REVIEW:** The provided git diff for this task included only formatting/lint changes and did not implement any block/unblock UI wiring or filtering. Need to implement the actual feature.
 - [ ] **ACTION REQUIRED:** The submitted diff for block/unblock wiring only included formatting/lint cleanups; actual block/unblock UI wiring and backend/frontend filtering remain unimplemented. Task is still incomplete.
 - [ ] **REMAINING:** Wire the `block`/`unblock` outputs of `LongPressContextMenuComponent` to `SafetyService.blockUser`/`unblockUser` in the parent chat component (`ChatRoomComponent` or `MessageBubbleComponent`). Currently the component emits events but no parent subscribes to them, so the actions are never executed.
@@ -341,6 +342,7 @@
 - [ ] **NEW:** Wire the `block`/`unblock` outputs of `LongPressContextMenuComponent` to `SafetyService.blockUser`/`unblockUser` in the parent chat component (`ChatRoomComponent` or `MessageBubbleComponent`). Currently the component emits events but no parent subscribes to them, so the actions are never executed.
 - [ ] **REMAINING (2026-07-24):** Wire the `block`/`unblock` outputs of `LongPressContextMenuComponent` to `SafetyService.blockUser`/`unblockUser` in the parent chat component (`ChatRoomComponent` or `MessageBubbleComponent`). Currently the component emits events but no parent subscribes to them, so the actions are never executed.
 - [ ] Add block/unblock wiring in `ChatViewComponent` to call `SafetyService.blockUser`/`unblockUser` when the `block` output is emitted from `LongPressContextMenuComponent`.
+- [ ] **DIFF REVIEW (2026-07-25):** The latest submitted git diff only included formatting/lint cleanups; still no block/unblock UI wiring or filtering. Task remains incomplete.
 
 ## Phase 23: Onboarding Flow
 - [ ] Build multi-step Angular onboarding wizard.
