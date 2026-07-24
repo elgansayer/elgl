@@ -35,7 +35,10 @@ export class SafetyService {
       throw new NotFoundException('Reported user not found');
     }
 
-    const { data, error }: { data: { id: string } | null; error: PostgrestError | null } =
+    const {
+      data,
+      error,
+    }: { data: { id: string } | null; error: PostgrestError | null } =
       await supabase
         .from('reports')
         .insert({
