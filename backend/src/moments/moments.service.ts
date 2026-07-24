@@ -28,10 +28,6 @@ interface MomentLikeRow {
   moment_id: string;
 }
 
-interface MomentUserIdRow {
-  user_id: string;
-}
-
 interface MomentCountRow {
   likes_count?: number;
   comments_count?: number;
@@ -260,10 +256,8 @@ export class MomentsService {
       .eq('id', momentId)
       .single();
 
-    const momentRow = momentData;
-
-    if (momentRow) {
-      const momentAuthorId: string = momentRow.user_id;
+    if (momentData) {
+      const momentAuthorId = momentData.user_id as string;
       const blockedIds =
         await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
       if (blockedIds.includes(userId)) {
@@ -328,10 +322,8 @@ export class MomentsService {
       .eq('id', momentId)
       .single();
 
-    const momentRow = momentData;
-
-    if (momentRow) {
-      const momentAuthorId: string = momentRow.user_id;
+    if (momentData) {
+      const momentAuthorId = momentData.user_id as string;
       const blockedIds =
         await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
       if (blockedIds.includes(userId)) {
