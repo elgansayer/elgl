@@ -59,24 +59,24 @@ export class NotificationPreferencesService {
 
   async getPreferences(userId: string): Promise<NotificationPreferences> {
     const supabase = this.supabaseService.getClient();
-    const { data, error } = (await supabase
+    const { data, error } = await supabase
       .from('notification_preferences')
       .select('*')
       .eq('user_id', userId)
-      .single()) as unknown as {
-      data: DbNotificationPreferences | null;
-      error: PostgrestError | null;
-    };
+      .single();
 
-    if (error && error.code !== 'PGRST116') {
-      throw error;
+    const dbError = error as PostgrestError | null;
+    const dbData = data as DbNotificationPreferences | null;
+
+    if (dbError && dbError.code !== 'PGRST116') {
+      throw dbError;
     }
 
-    if (!data) {
+    if (!dbData) {
       return this.createDefaultPreferences(userId);
     }
 
-    return this.mapDbToPreferences(data);
+    return this.mapDbToPreferences(dbData);
   }
 
   async updatePreferences(
@@ -90,20 +90,20 @@ export class NotificationPreferencesService {
 
     const dbPayload = this.mapPreferencesToDb(userId, merged);
 
-    const { data, error } = (await supabase
+    const { data, error } = await supabase
       .from('notification_preferences')
       .upsert(dbPayload, { onConflict: 'user_id' })
       .select()
-      .single()) as unknown as {
-      data: DbNotificationPreferences | null;
-      error: PostgrestError | null;
-    };
+      .single();
 
-    if (error) {
-      throw error;
+    const dbError = error as PostgrestError | null;
+    const dbData = data as DbNotificationPreferences | null;
+
+    if (dbError) {
+      throw dbError;
     }
 
-    return this.mapDbToPreferences(data!);
+    return this.mapDbToPreferences(dbData!);
   }
 
   async resetToDefaults(userId: string): Promise<NotificationPreferences> {
@@ -111,20 +111,20 @@ export class NotificationPreferencesService {
     const supabase = this.supabaseService.getClient();
     const dbPayload = this.mapPreferencesToDb(userId, defaults);
 
-    const { data, error } = (await supabase
+    const { data, error } = await supabase
       .from('notification_preferences')
       .upsert(dbPayload, { onConflict: 'user_id' })
       .select()
-      .single()) as unknown as {
-      data: DbNotificationPreferences | null;
-      error: PostgrestError | null;
-    };
+      .single();
 
-    if (error) {
-      throw error;
+    const dbError = error as PostgrestError | null;
+    const dbData = data as DbNotificationPreferences | null;
+
+    if (dbError) {
+      throw dbError;
     }
 
-    return this.mapDbToPreferences(data!);
+    return this.mapDbToPreferences(dbData!);
   }
 
   async shouldSendNotification(
@@ -221,7 +221,7 @@ export class NotificationPreferencesService {
     }
 
     merged.updatedAt = new Date().toISOString();
-    return merged as unknown as NotificationPreferences;
+    return merged as NotificationPreferences;
   }
 
   private mapDbToPreferences(

@@ -31,7 +31,7 @@ export class GooglePlayNotificationController {
     this.logger.log('Received Google Play notification');
 
     try {
-      await this.googlePlayNotificationService.handleNotification(body);
+      this.googlePlayNotificationService.handleNotification(body);
       return { status: 'ok' };
     } catch (error) {
       this.logger.error(

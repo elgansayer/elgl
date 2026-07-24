@@ -97,6 +97,9 @@ export class NlpService {
     const jsonResponse = (await res.json()) as {
       translations: Array<{ text: string }>;
     };
+    if (!jsonResponse || !jsonResponse.translations || jsonResponse.translations.length === 0) {
+      throw new BadRequestException('DeepL returned no translations');
+    }
     const translatedText = jsonResponse.translations[0].text;
 
     // Get glossary/definition via DeepL glossary lookup (if available) or fallback
@@ -189,7 +192,7 @@ export class NlpService {
     }
 
     const detectData = (await detectRes.json()) as Array<{ language: string }>;
-    const detectedLang = detectData[0]?.language || 'en';
+    const detectedLang = detectData?.[0]?.language || 'en';
 
     // Use Azure's dictionary lookup for grammar correction (works best for common languages)
     const dictRes = await fetch(
@@ -214,7 +217,7 @@ export class NlpService {
     const dictData = (await dictRes.json()) as Array<{
       displayTarget?: string;
     }>;
-    const correctedText = dictData[0]?.displayTarget || orig;
+    const correctedText = dictData?.[0]?.displayTarget || orig;
     const errorsFound = orig === correctedText ? 0 : 1;
 
     // Generate explanation using Azure's translation with "to" parameter

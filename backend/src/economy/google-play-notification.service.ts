@@ -314,7 +314,7 @@ export class GooglePlayNotificationService {
       .eq('purchase_token', purchaseToken)
       .single();
 
-    const row = data;
+    const row = data as { user_id?: string } | null;
     return row?.user_id ?? null;
   }
 

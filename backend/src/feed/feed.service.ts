@@ -129,14 +129,14 @@ export class FeedService {
       }
     }
 
-    const response = await query;
+    const { data: feedData, error: feedError } = await query;
 
-    if (response.error || !response.data) {
-      this.logger.error(`Failed to fetch feed: ${response.error?.message}`);
+    if (feedError || !feedData) {
+      this.logger.error(`Failed to fetch feed: ${feedError?.message}`);
       return [];
     }
 
-    return response.data as Moment[];
+    return feedData as Moment[];
   }
 
   async getMomentById(

@@ -170,8 +170,8 @@ export class EconomyService {
       throw new BadRequestException('User not found');
     }
 
-    const user = userResponse.data;
-    const currentBalance = user.coins_balance || 0;
+    const user = userResponse.data as { coins_balance?: number };
+    const currentBalance = user.coins_balance ?? 0;
     const newBalance = currentBalance + coinPackage.coins;
 
     const { error: updateError } = await supabase
@@ -282,6 +282,9 @@ export class EconomyService {
         transaction_id: string;
       }>;
     };
+    if (!body) {
+      throw new BadRequestException('Invalid Apple receipt response');
+    }
 
     if (body.status !== 0 && body.status !== 21007) {
       throw new BadRequestException(
@@ -339,6 +342,9 @@ export class EconomyService {
       productId: string;
       orderId: string;
     };
+    if (!body) {
+      throw new BadRequestException('Invalid Google Play response');
+    }
 
     if (body.purchaseState !== 0) {
       throw new BadRequestException('Google Play purchase not completed');

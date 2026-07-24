@@ -153,7 +153,7 @@ async function runSeed() {
           native_language: u.profile.native_language,
           target_languages: u.profile.target_languages,
 
-          location: (supabase.rpc as any)('st_geomfromtext', {
+          location: supabase.rpc('st_geomfromtext' as any, {
             text: u.profile.location,
           }),
         })
@@ -239,8 +239,8 @@ async function runSeed() {
           index === 0
             ? 'com.linguaexchange.vip.developer'
             : 'com.linguaexchange.vip.consumer',
-        original_transaction_id: `apple_orig_${user.id.substring(0, 8)}_${Date.now()}`,
-        transaction_id: `apple_txn_${user.id.substring(0, 8)}_${Date.now()}`,
+        original_transaction_id: `apple_orig_${(user as { id: string }).id.substring(0, 8)}_${Date.now()}`,
+        transaction_id: `apple_txn_${(user as { id: string }).id.substring(0, 8)}_${Date.now()}`,
         purchase_date: new Date(
           Date.now() - 30 * 24 * 60 * 60 * 1000,
         ).toISOString(),

@@ -172,7 +172,8 @@ export class MonetisationService {
         webhookSecret,
       );
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
+      const error = err as Error;
+      const message = error.message || 'Unknown error';
       this.logger.error(`Webhook signature verification failed: ${message}`);
       throw new BadRequestException(`Webhook Error: ${message}`);
     }
