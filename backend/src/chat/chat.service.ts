@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
+import { SafetyService } from '../safety/safety.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import {
@@ -17,6 +18,7 @@ export class ChatService {
     private readonly supabaseService: SupabaseService,
     private readonly centrifugoService: CentrifugoService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly safetyService: SafetyService,
   ) {}
 
   generateConnectionToken(userId: string): { token: string } {
@@ -131,8 +133,15 @@ export class ChatService {
     return savedMessage;
   }
 
-  async getMessages(roomId: string, search?: string): Promise<ChatMessage[]> {
+  async getMessages(roomId: string, search?: string, currentUserId?: string): Promise<ChatMessage[]> {
     const supabase = this.supabaseService.getClient();
+    
+    // Get blocked user IDs if current user is provided
+    let blockedIds: string[] = [];
+    if (currentUserId) {
+      blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUserId);
+    }
+
     let query = supabase
       .from('chat_messages')
       .select(
@@ -148,6 +157,11 @@ export class ChatService {
       .eq('room_id', roomId)
       .order('created_at', { ascending: true })
       .limit(100);
+
+    // Exclude messages from blocked users
+    if (blockedIds.length > 0) {
+      query = query.not('sender_id', 'in', `(${blockedIds.join(',')})`);
+    }
 
     if (search && search.trim().length > 0) {
       query = query.ilike('text_content', `%${search.trim()}%`);

@@ -38,9 +38,9 @@ export class FeedService {
   ): Promise<Moment[]> {
     const supabase = this.supabaseService.getClient();
 
-    // Get blocked user IDs to exclude from feed
+    // Get blocked AND blocker user IDs to exclude from feed
     const blockedIds: string[] =
-      await this.safetyService.getBlockedIds(currentUserId);
+      await this.safetyService.getBlockedAndBlockerIds(currentUserId);
 
     let query = supabase
       .from('moments')
@@ -59,10 +59,9 @@ export class FeedService {
       .order('created_at', { ascending: false })
       .limit(50);
 
-    // Exclude blocked users' moments
+    // Exclude blocked users' moments (both directions)
     if (blockedIds.length > 0) {
-      // Use filter method for 'not.in' operator
-      query = query.filter('author_id', 'not.in', `(${blockedIds.join(',')})`);
+      query = query.not('author_id', 'in', `(${blockedIds.join(',')})`);
     }
 
     // Apply filter logic

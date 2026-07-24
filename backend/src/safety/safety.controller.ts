@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards, Req } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards, Req, Param } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
 import { SafetyService } from './safety.service';
@@ -28,5 +28,15 @@ export class SafetyController {
   @Get('blocked-ids')
   async getBlockedIds(@Req() req: { user: { id: string } }): Promise<string[]> {
     return this.safetyService.getBlockedIds(req.user.id);
+  }
+
+  @Get('blocked-ids/:userId')
+  async getBlockedUserIds(@Param('userId') userId: string): Promise<string[]> {
+    return this.safetyService.getBlockedUserIds(userId);
+  }
+
+  @Get('blocker-ids/:userId')
+  async getBlockerUserIds(@Param('userId') userId: string): Promise<string[]> {
+    return this.safetyService.getBlockerUserIds(userId);
   }
 }

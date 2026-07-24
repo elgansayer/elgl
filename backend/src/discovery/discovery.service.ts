@@ -1,12 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { SafetyService } from '../safety/safety.service';
 import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { MOCK_USERS } from '../mock-data';
 
 @Injectable()
 export class DiscoveryService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly safetyService: SafetyService,
+  ) {}
 
   async searchPartners(
     currentUserId: string,
@@ -14,6 +18,9 @@ export class DiscoveryService {
     query: SearchQueryDto,
   ): Promise<UserProfile[]> {
     const supabase = this.supabaseService.getClient();
+
+    // Get blocked user IDs to exclude from search
+    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUserId);
 
     const searchLat = query.latitude;
     const searchLon = query.longitude;
@@ -25,6 +32,11 @@ export class DiscoveryService {
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false);
+
+    // Exclude blocked users
+    if (blockedIds.length > 0) {
+      queryBuilder = queryBuilder.not('id', 'in', `(${blockedIds.join(',')})`);
+    }
 
     if (query.native_language) {
       queryBuilder = queryBuilder.eq('native_language', query.native_language);

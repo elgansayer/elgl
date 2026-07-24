@@ -102,4 +102,40 @@ export class SafetyService {
     const rows = data as UserBlockRow[];
     return rows.map((r) => r.blocked_id);
   }
+
+  async getBlockedUserIds(userId: string): Promise<string[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('blocks')
+      .select('blocked_id')
+      .eq('blocker_id', userId);
+
+    if (error) {
+      this.logger.error(`Failed to get blocked user IDs for ${userId}:`, error);
+      return [];
+    }
+    return (data as { blocked_id: string }[]).map(b => b.blocked_id);
+  }
+
+  async getBlockerUserIds(userId: string): Promise<string[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('blocks')
+      .select('blocker_id')
+      .eq('blocked_id', userId);
+
+    if (error) {
+      this.logger.error(`Failed to get blocker user IDs for ${userId}:`, error);
+      return [];
+    }
+    return (data as { blocker_id: string }[]).map(b => b.blocker_id);
+  }
+
+  async getBlockedAndBlockerIds(userId: string): Promise<string[]> {
+    const [blocked, blockers] = await Promise.all([
+      this.getBlockedUserIds(userId),
+      this.getBlockerUserIds(userId),
+    ]);
+    return [...new Set([...blocked, ...blockers])];
+  }
 }

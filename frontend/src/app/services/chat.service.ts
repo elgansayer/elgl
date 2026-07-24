@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { SafetyService } from './safety.service';
 
 export interface CorrectionPayload {
   original: string;
@@ -52,6 +53,7 @@ export interface ChatRoom {
 export class ChatService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
+  private safetyService = inject(SafetyService);
   private baseUrl = `${environment.apiUrl}/chat`;
 
   private getHeaders() {
@@ -79,9 +81,23 @@ export class ChatService {
       params = params.set('search', search.trim());
     }
 
-    return firstValueFrom(
-      this.http.get<ChatMessage[]>(`${this.baseUrl}/messages/${roomId}`, { headers: this.getHeaders(), params })
+    const messages = await firstValueFrom(
+      this.http.get<ChatMessage[]>(`${this.baseUrl}/messages/${roomId}`, { 
+        headers: this.getHeaders(), 
+        params 
+      })
     );
+
+    // Filter out messages from blocked users
+    const currentUser = this.authService.currentUser();
+    if (currentUser?.id) {
+      const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
+      if (blockedIds.length > 0) {
+        return messages.filter(msg => !blockedIds.includes(msg.sender_id));
+      }
+    }
+
+    return messages;
   }
 
   async getRooms(): Promise<ChatRoom[]> {

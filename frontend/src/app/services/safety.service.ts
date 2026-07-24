@@ -65,4 +65,34 @@ export class SafetyService {
       { value: 'other', label: 'Other' },
     ];
   }
+
+  async getBlockedUserIds(userId: string): Promise<string[]> {
+    try {
+      return lastValueFrom(
+        this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids/${userId}`)
+      );
+    } catch (e) {
+      console.error('Failed to get blocked user IDs:', e);
+      return [];
+    }
+  }
+
+  async getBlockerUserIds(userId: string): Promise<string[]> {
+    try {
+      return lastValueFrom(
+        this.http.get<string[]>(`${this.apiUrl}/safety/blocker-ids/${userId}`)
+      );
+    } catch (e) {
+      console.error('Failed to get blocker user IDs:', e);
+      return [];
+    }
+  }
+
+  async getBlockedAndBlockerIds(userId: string): Promise<string[]> {
+    const [blocked, blockers] = await Promise.all([
+      this.getBlockedUserIds(userId),
+      this.getBlockerUserIds(userId),
+    ]);
+    return [...new Set([...blocked, ...blockers])];
+  }
 }

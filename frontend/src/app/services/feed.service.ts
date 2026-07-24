@@ -63,10 +63,13 @@ export class FeedService {
       })
     );
 
-    // Apply client-side blocklist filtering as a safety net
-    const blockedIds = await this.safetyService.getBlockedIdsAsync();
-    if (blockedIds.length > 0) {
-      return moments.filter(moment => !blockedIds.includes(moment.author_id));
+    // Apply client-side blocklist filtering (both directions)
+    const currentUser = this.authService.currentUser();
+    if (currentUser?.id) {
+      const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
+      if (blockedIds.length > 0) {
+        return moments.filter(moment => !blockedIds.includes(moment.author_id));
+      }
     }
 
     return moments;
