@@ -43,8 +43,8 @@ export class SafetyService {
    *  In a production app this could be fetched from the backend. */
   getReportCategories(): ReportCategory[] {
     return [
-      { value: 'spam', label: 'Spam' },
       { value: 'harassment', label: 'Harassment' },
+      { value: 'spam', label: 'Spam' },
       { value: 'inappropriate_content', label: 'Inappropriate Content' },
       { value: 'fake_profile', label: 'Fake Profile' },
       { value: 'other', label: 'Other' },

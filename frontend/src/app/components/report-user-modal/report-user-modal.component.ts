@@ -169,8 +169,6 @@ export class ReportUserModalComponent {
     spam: '📧',
     inappropriate_content: '🔞',
     fake_profile: '🎭',
-    hate_speech: '⚡',
-    privacy_violation: '🔒',
     other: '📝'
   };
 
@@ -179,8 +177,6 @@ export class ReportUserModalComponent {
     spam: 'Unsolicited promotions, phishing, or fraudulent activity',
     inappropriate_content: 'Sexually explicit, violent, or offensive material',
     fake_profile: 'Pretending to be someone else or using false identity',
-    hate_speech: 'Racist, sexist, or otherwise discriminatory language',
-    privacy_violation: 'Sharing personal information without consent',
     other: 'Something else not listed above'
   };
 
