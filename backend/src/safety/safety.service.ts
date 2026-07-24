@@ -124,7 +124,10 @@ export class SafetyService {
     return data !== null;
   }
 
-  async isBlockedByUser(blockerId: string, blockedId: string): Promise<boolean> {
+  async isBlockedByUser(
+    blockerId: string,
+    blockedId: string,
+  ): Promise<boolean> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('blocks')

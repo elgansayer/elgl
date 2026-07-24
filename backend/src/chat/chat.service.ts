@@ -69,30 +69,30 @@ export class ChatService {
     }
 
     const rooms = response.data as ChatRoomRecord[];
-    
+
     // If we have a current user, filter out rooms where the other participant is blocked
     if (currentUserId && blockedIds.length > 0) {
       // Get room members for all rooms
-      const roomIds = rooms.map(r => r.id);
+      const roomIds = rooms.map((r) => r.id);
       const { data: members } = await supabase
         .from('chat_room_members')
         .select('room_id, user_id')
         .in('room_id', roomIds)
         .neq('user_id', currentUserId);
-      
+
       if (members) {
         const memberMap = new Map<string, string>();
-        (members as { room_id: string; user_id: string }[]).forEach(m => {
+        (members as { room_id: string; user_id: string }[]).forEach((m) => {
           memberMap.set(m.room_id, m.user_id);
         });
-        
-        return rooms.filter(room => {
+
+        return rooms.filter((room) => {
           const otherUserId = memberMap.get(room.id);
           return otherUserId ? !blockedIds.includes(otherUserId) : true;
         });
       }
     }
-    
+
     return rooms;
   }
 
