@@ -1,11 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { NotificationPreferencesDto } from './dto/notification-preferences.dto';
-import { NotificationPreferences, CategoryPreference } from './interfaces/notification-preferences.interface';
+import {
+  NotificationPreferences,
+  CategoryPreference,
+} from './interfaces/notification-preferences.interface';
 
 @Injectable()
 export class NotificationPreferencesService {
-  private readonly defaultPreferences: Omit<NotificationPreferences, 'userId' | 'updatedAt'> = {
+  private readonly defaultPreferences: Omit<
+    NotificationPreferences,
+    'userId' | 'updatedAt'
+  > = {
     new_message: { push: true, email: false, in_app: true },
     call_invite: { push: true, email: false, in_app: true },
     moment_like: { push: true, email: false, in_app: true },
@@ -86,7 +92,14 @@ export class NotificationPreferencesService {
 
   async shouldSendNotification(
     userId: string,
-    category: keyof Omit<NotificationPreferences, 'userId' | 'updatedAt' | 'quiet_hours_start' | 'quiet_hours_end' | 'do_not_disturb'>,
+    category: keyof Omit<
+      NotificationPreferences,
+      | 'userId'
+      | 'updatedAt'
+      | 'quiet_hours_start'
+      | 'quiet_hours_end'
+      | 'do_not_disturb'
+    >,
     channel: 'push' | 'email' | 'in_app',
   ): Promise<boolean> {
     const prefs = await this.getPreferences(userId);
@@ -126,7 +139,7 @@ export class NotificationPreferencesService {
       userId,
       ...this.defaultPreferences,
       updatedAt: new Date().toISOString(),
-    } as NotificationPreferences;
+    };
   }
 
   private mergePreferences(
@@ -134,9 +147,16 @@ export class NotificationPreferencesService {
     dto: NotificationPreferencesDto,
   ): NotificationPreferences {
     const categories = [
-      'new_message', 'call_invite', 'moment_like', 'moment_comment',
-      'correction', 'gift', 'profile_view', 'study_reminder',
-      'friend_request', 'audio_room_invite',
+      'new_message',
+      'call_invite',
+      'moment_like',
+      'moment_comment',
+      'correction',
+      'gift',
+      'profile_view',
+      'study_reminder',
+      'friend_request',
+      'audio_room_invite',
     ] as const;
 
     const merged = { ...existing };
@@ -186,7 +206,10 @@ export class NotificationPreferencesService {
     };
   }
 
-  private mapPreferencesToDb(userId: string, prefs: NotificationPreferences): any {
+  private mapPreferencesToDb(
+    userId: string,
+    prefs: NotificationPreferences,
+  ): any {
     return {
       user_id: userId,
       new_message: prefs.new_message,
