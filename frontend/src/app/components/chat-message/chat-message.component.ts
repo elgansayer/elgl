@@ -1,4 +1,4 @@
-import { Component, Input, inject, computed, signal, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, Input, inject, computed, signal, OnInit, OnDestroy, ViewChild, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatMessage, ChatService } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
@@ -86,6 +86,8 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
   
   @ViewChild(LongPressContextMenuComponent) contextMenu!: LongPressContextMenuComponent;
 
+  readonly messageBlocked = output<string>();
+
   private authService = inject(AuthService);
   private favouriteService = inject(FavouriteService);
   private safetyService = inject(SafetyService);
@@ -150,6 +152,7 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
     this.isBlocked.set(event.blocked);
     if (event.blocked) {
       this.chatService.addBlockedUser(event.senderId);
+      this.messageBlocked.emit(event.senderId);
     } else {
       this.chatService.removeBlockedUser(event.senderId);
     }
