@@ -64,4 +64,11 @@ export class SafetyController {
     const blocked = await this.safetyService.isBlocked(req.user.id, blockedId);
     return { blocked };
   }
+
+  @Get('blocked-and-blocker-ids/:userId')
+  async getBlockedAndBlockerIds(
+    @Param('userId') userId: string,
+  ): Promise<string[]> {
+    return this.safetyService.getBlockedAndBlockerIds(userId);
+  }
 }

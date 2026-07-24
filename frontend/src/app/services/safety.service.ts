@@ -98,11 +98,14 @@ export class SafetyService {
   }
 
   async getBlockedAndBlockerIds(userId: string): Promise<string[]> {
-    const [blocked, blockers] = await Promise.all([
-      this.getBlockedUserIds(userId),
-      this.getBlockerUserIds(userId),
-    ]);
-    return [...new Set([...blocked, ...blockers])];
+    try {
+      return lastValueFrom(
+        this.http.get<string[]>(`${this.apiUrl}/safety/blocked-and-blocker-ids/${userId}`)
+      );
+    } catch (e) {
+      console.error('Failed to get blocked and blocker IDs:', e);
+      return [];
+    }
   }
 
   async isBlocked(userId: string): Promise<{ blocked: boolean }> {
