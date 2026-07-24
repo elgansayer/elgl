@@ -3,6 +3,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from './services/auth.service';
 import { EconomyStore, VirtualGift } from './services/economy.store';
 import { CentrifugeService } from './services/centrifuge.service';
+import { FcmService } from './services/fcm.service';
 import { TranslatePipe } from './services/translate.pipe';
 import { IncomingCallModalComponent, IncomingCallData } from './components/incoming-call-modal/incoming-call-modal.component';
 import { ToastComponent } from './components/primitives/toast/toast.component';
@@ -25,6 +26,7 @@ export class AppComponent implements OnInit {
   authService = inject(AuthService);
   economyStore = inject(EconomyStore);
   centrifugeService = inject(CentrifugeService);
+  fcmService = inject(FcmService);
 
   // Incoming call state
   readonly incomingCallData = signal<IncomingCallData | null>(null);
@@ -58,6 +60,9 @@ export class AppComponent implements OnInit {
           });
         }
       });
+
+      // Request notification permission after user is authenticated
+      await this.fcmService.requestPermission();
     }
   }
 

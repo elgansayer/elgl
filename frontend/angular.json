@@ -28,11 +28,18 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "firebase-messaging-sw.js",
+                "input": "src",
+                "output": "/"
               }
             ],
             "styles": [
               "src/styles.scss"
-            ]
+            ],
+            "serviceWorker": true,
+            "ngswConfigPath": "ngsw-config.json"
           },
           "configurations": {
             "production": {
