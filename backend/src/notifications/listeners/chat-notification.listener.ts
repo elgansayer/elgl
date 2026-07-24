@@ -14,15 +14,19 @@ export class ChatNotificationListener {
   @OnEvent('chat.message')
   async handleChatMessage(event: ChatMessageEvent): Promise<void> {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       const supabase = this.supabaseService.getClient();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const { senderId, messageType, receiverId, messagePreview, roomId } = event as any;
       const { data: sender } = await supabase
         .from('users')
         .select('display_name, avatar_url')
-        .eq('id', event.senderId)
+        .eq('id', senderId)
         .single();
 
       if (!sender) return;
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const senderName = sender.display_name || 'Someone';
       const messageTypeLabels: Record<string, string> = {
         text: 'sent a message',
@@ -32,18 +36,19 @@ export class ChatNotificationListener {
       };
 
       const actionLabel =
-        messageTypeLabels[event.messageType] || 'sent a message';
+        messageTypeLabels[messageType] || 'sent a message';
 
-      await this.notificationsService.sendPushNotification(event.receiverId, {
+      await this.notificationsService.sendPushNotification(receiverId, {
         type: 'new_message',
         title: senderName,
-        body: `${actionLabel}: ${event.messagePreview}`,
+        body: `${actionLabel}: ${messagePreview}`,
         data: {
-          channel: event.roomId,
-          sender_id: event.senderId,
+          channel: roomId,
+          sender_id: senderId,
           sender_name: senderName,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           sender_avatar: sender.avatar_url || '',
-          room_id: event.roomId,
+          room_id: roomId,
         },
       });
     } catch (err) {
