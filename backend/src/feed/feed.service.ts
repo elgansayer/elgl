@@ -150,7 +150,7 @@ export class FeedService {
     const blockedIds: string[] =
       await this.safetyService.getBlockedIds(currentUserId);
 
-    const { data, error } = await supabase
+    const momentResponse = await supabase
       .from('moments')
       .select(
         `
@@ -167,11 +167,11 @@ export class FeedService {
       .eq('id', momentId)
       .single();
 
-    if (error || !data) {
+    if (momentResponse.error || !momentResponse.data) {
       return null;
     }
 
-    const moment = data as Moment;
+    const moment = momentResponse.data as Moment;
 
     // If author is blocked, return null
     if (blockedIds.includes(moment.author_id)) {
