@@ -37,6 +37,7 @@ export class BlockUserDto {
   @IsNotEmpty()
   blocked_id!: string;
 }
+
 export class UnblockUserDto {
   @IsString()
   @IsNotEmpty()
