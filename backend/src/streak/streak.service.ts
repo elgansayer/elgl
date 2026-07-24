@@ -26,10 +26,10 @@ export class StreakService {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     // Query users whose last_active_at is older than the cutoff
-    const { data: inactiveUsers, error: queryError } = await supabase
+    const { data: inactiveUsers, error: queryError } = (await supabase
       .from('users')
       .select('id, study_streak_days, last_active_at')
-      .lt('last_active_at', cutoff) as { data: UserRow[] | null; error: any };
+      .lt('last_active_at', cutoff)) as { data: UserRow[] | null; error: any };
 
     if (queryError) {
       this.logger.error('Failed to query inactive users', queryError.message);
