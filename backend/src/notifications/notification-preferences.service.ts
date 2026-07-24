@@ -5,6 +5,7 @@ import {
   NotificationPreferences,
   CategoryPreference,
 } from './interfaces/notification-preferences.interface';
+import { PostgrestError } from '@supabase/supabase-js';
 
 interface DbNotificationPreferences {
   user_id: string;
@@ -23,6 +24,11 @@ interface DbNotificationPreferences {
   do_not_disturb: boolean;
   updated_at: string;
 }
+
+type CategoryKeys = keyof Omit<
+  NotificationPreferences,
+  'userId' | 'updatedAt' | 'quiet_hours_start' | 'quiet_hours_end' | 'do_not_disturb'
+>;
 
 @Injectable()
 export class NotificationPreferencesService {
@@ -49,11 +55,14 @@ export class NotificationPreferencesService {
 
   async getPreferences(userId: string): Promise<NotificationPreferences> {
     const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
+    const { data, error } = (await supabase
       .from('notification_preferences')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .single()) as unknown as {
+      data: DbNotificationPreferences | null;
+      error: PostgrestError | null;
+    };
 
     if (error && error.code !== 'PGRST116') {
       throw error;
@@ -63,7 +72,7 @@ export class NotificationPreferencesService {
       return this.createDefaultPreferences(userId);
     }
 
-    return this.mapDbToPreferences(data as DbNotificationPreferences);
+    return this.mapDbToPreferences(data);
   }
 
   async updatePreferences(
@@ -77,17 +86,20 @@ export class NotificationPreferencesService {
 
     const dbPayload = this.mapPreferencesToDb(userId, merged);
 
-    const { data, error } = await supabase
+    const { data, error } = (await supabase
       .from('notification_preferences')
       .upsert(dbPayload, { onConflict: 'user_id' })
       .select()
-      .single();
+      .single()) as unknown as {
+      data: DbNotificationPreferences | null;
+      error: PostgrestError | null;
+    };
 
     if (error) {
       throw error;
     }
 
-    return this.mapDbToPreferences(data as DbNotificationPreferences);
+    return this.mapDbToPreferences(data!);
   }
 
   async resetToDefaults(userId: string): Promise<NotificationPreferences> {
@@ -95,29 +107,25 @@ export class NotificationPreferencesService {
     const supabase = this.supabaseService.getClient();
     const dbPayload = this.mapPreferencesToDb(userId, defaults);
 
-    const { data, error } = await supabase
+    const { data, error } = (await supabase
       .from('notification_preferences')
       .upsert(dbPayload, { onConflict: 'user_id' })
       .select()
-      .single();
+      .single()) as unknown as {
+      data: DbNotificationPreferences | null;
+      error: PostgrestError | null;
+    };
 
     if (error) {
       throw error;
     }
 
-    return this.mapDbToPreferences(data as DbNotificationPreferences);
+    return this.mapDbToPreferences(data!);
   }
 
   async shouldSendNotification(
     userId: string,
-    category: keyof Omit<
-      NotificationPreferences,
-      | 'userId'
-      | 'updatedAt'
-      | 'quiet_hours_start'
-      | 'quiet_hours_end'
-      | 'do_not_disturb'
-    >,
+    category: CategoryKeys,
     channel: 'push' | 'email' | 'in_app',
   ): Promise<boolean> {
     const prefs = await this.getPreferences(userId);
@@ -164,7 +172,7 @@ export class NotificationPreferencesService {
     existing: NotificationPreferences,
     dto: NotificationPreferencesDto,
   ): NotificationPreferences {
-    const categories = [
+    const categories: CategoryKeys[] = [
       'new_message',
       'call_invite',
       'moment_like',
@@ -175,7 +183,7 @@ export class NotificationPreferencesService {
       'study_reminder',
       'friend_request',
       'audio_room_invite',
-    ] as const;
+    ];
 
     const merged = { ...existing };
 
