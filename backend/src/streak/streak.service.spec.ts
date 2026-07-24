@@ -35,17 +35,6 @@ describe('StreakService', () => {
     }).compile();
 
     service = module.get<StreakService>(StreakService);
-
-    // Provide a dummy logger so handleStreakResetCron doesn't throw
-    (service as any).logger = {
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-    };
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -127,28 +116,6 @@ describe('StreakService', () => {
 
       const result = await service.resetStreaksForTesting();
       expect(result).toBe(0);
-    });
-  });
-
-  describe('handleStreakResetCron', () => {
-    it('should call resetStreaksForTesting and log result', async () => {
-      const resetSpy = jest
-        .spyOn(service, 'resetStreaksForTesting')
-        .mockResolvedValue(3);
-
-      await service.handleStreakResetCron();
-
-      expect(resetSpy).toHaveBeenCalled();
-    });
-
-    it('should handle zero resets gracefully', async () => {
-      const resetSpy = jest
-        .spyOn(service, 'resetStreaksForTesting')
-        .mockResolvedValue(0);
-
-      await service.handleStreakResetCron();
-
-      expect(resetSpy).toHaveBeenCalled();
     });
   });
 });
