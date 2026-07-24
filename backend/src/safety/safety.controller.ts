@@ -21,7 +21,7 @@ export class SafetyController {
   async blockUser(
     @Req() req: { user: { id: string } },
     @Body() dto: BlockUserDto,
-  ): Promise<unknown> {
+  ): Promise<{ success: boolean; blocked_id: string }> {
     return this.safetyService.blockUser(req.user.id, dto);
   }
 

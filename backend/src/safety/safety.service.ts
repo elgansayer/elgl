@@ -49,12 +49,16 @@ export class SafetyService {
 
   async getBlockedIds(userId: string): Promise<string[]> {
     const supabase = this.supabaseService.getClient();
-    const response = await supabase
+    const { data, error } = await supabase
       .from('blocks')
       .select('blocked_id')
       .eq('blocker_id', userId);
-    if (!response.data || response.data.length === 0) return [];
-    const rows = response.data as UserBlockRow[];
+    if (error) {
+      this.logger.error(`Failed to fetch blocked IDs: ${error.message}`);
+      return [];
+    }
+    if (!data || data.length === 0) return [];
+    const rows = data as UserBlockRow[];
     return rows.map((r) => r.blocked_id);
   }
 }
