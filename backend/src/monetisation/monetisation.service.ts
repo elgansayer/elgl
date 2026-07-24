@@ -273,7 +273,7 @@ export class MonetisationService {
       .select('user_id, total_api_calls_today, avg_latency_ms')
       .eq('user_id', userId)
       .single();
-    const metric = metricResponse.data as DeveloperMetricRow | null;
+    const metric = metricResponse.data;
 
     return {
       api_key: user.developer_api_key || null,

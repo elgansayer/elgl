@@ -30,7 +30,9 @@ export class VideoCallsService {
       maxParticipants: 2,
     };
 
-    await this.roomService.createRoom(createOptions as import('livekit-server-sdk').CreateRoomOptions);
+    await this.roomService.createRoom(
+      createOptions as import('livekit-server-sdk').CreateRoomOptions,
+    );
 
     const token = this.generateToken(userId, roomName, true);
 

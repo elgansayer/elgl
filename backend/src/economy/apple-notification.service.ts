@@ -26,7 +26,10 @@ export class AppleNotificationService {
    */
   handleNotification(signedPayload: string): void {
     // 1. Verify JWS signature using Apple's public keys
-    const decodedPayload = this.verifyAndDecodeJWS(signedPayload) as Record<string, unknown> | null;
+    const decodedPayload = this.verifyAndDecodeJWS(signedPayload) as Record<
+      string,
+      unknown
+    > | null;
     if (!decodedPayload) {
       this.logger.warn('Failed to verify Apple JWS payload');
       return;
@@ -219,7 +222,9 @@ export class AppleNotificationService {
     );
 
     // Update subscription status to expired
-    void this.updateSubscriptionStatus(userId, null, 'expired', null).catch(() => {});
+    void this.updateSubscriptionStatus(userId, null, 'expired', null).catch(
+      () => {},
+    );
   }
 
   /**
