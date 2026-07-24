@@ -9,7 +9,6 @@ import {
   Req,
   BadRequestException,
 } from '@nestjs/common';
-import { IsString, IsIn, IsNotEmpty } from 'class-validator';
 import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
 import { User } from '@supabase/supabase-js';
@@ -18,19 +17,10 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   CreateDiagnosticLogDto,
   AppleReceiptValidationDto,
+  CreateCheckoutSessionDto,
 } from './dto/monetisation.dto';
 import { MonetisationService } from './monetisation.service';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
-
-export class CreateCheckoutSessionDto {
-  @IsString()
-  @IsNotEmpty()
-  planId!: string;
-
-  @IsString()
-  @IsIn(['month', 'year'])
-  interval!: 'month' | 'year';
-}
 
 @Controller('monetisation')
 export class MonetisationController {
