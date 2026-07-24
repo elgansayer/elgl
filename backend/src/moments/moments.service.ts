@@ -107,7 +107,7 @@ export class MomentsService {
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
-    // Get blocked user IDs to exclude from feed
+    // 1) Get blocked+blocker user IDs (bidirectional)
     const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
 
     let moments: MomentRecord[] = [];
@@ -167,11 +167,11 @@ export class MomentsService {
 
     if (moments.length === 0) {
       const generated: MomentRecord[] = [];
-      const usedUsers = MOCK_USERS.slice(0, 50); // Get 50 fake users
-      for (let i = 0; i < usedUsers.length; i++) {
-        const u = usedUsers[i];
-        // Skip blocked users in mock data
-        if (blockedIds.includes(u.id)) continue;
+      const eligibleUsers = MOCK_USERS.filter(
+        (u) => !blockedIds.includes(u.id),
+      );
+      for (let i = 0; i < Math.min(eligibleUsers.length, 50); i++) {
+        const u = eligibleUsers[i];
         generated.push({
           id: `mock-moment-${i}`,
           user_id: u.id,

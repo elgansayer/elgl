@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, lastValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -21,11 +21,39 @@ export interface ReportCategory {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class SafetyService {
   private http = inject(HttpClient);
   private apiUrl = environment.apiUrl;
+
+  // Local cache for blocked user IDs (bidirectional: blocked + blocker)
+  private _blockedUserIds = signal<Set<string>>(new Set());
+
+  // Public read-only accessor (could be used for reactivity)
+  get blockedUserIds(): ReadonlySet<string> {
+    return this._blockedUserIds();
+  }
+
+  /**
+   * Load the initial list of blocked user IDs from the backend.
+   * Should be called once after user login / app init.
+   */
+  async loadBlockedUsers(): Promise<void> {
+    try {
+      const ids = await lastValueFrom(
+        this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids`),
+      );
+      this._blockedUserIds.set(new Set(ids));
+    } catch (e) {
+      console.error('Failed to load blocked user IDs', e);
+    }
+  }
+
+  /** Synchronous cache-based check (fast, no network) */
+  isUserBlockedCached(userId: string): boolean {
+    return this._blockedUserIds().has(userId);
+  }
 
   reportUser(dto: ReportUserDto): Observable<ReportResponse> {
     return this.http.post<ReportResponse>(`${this.apiUrl}/safety/report`, dto);
@@ -36,28 +64,40 @@ export class SafetyService {
     return lastValueFrom(this.reportUser(dto));
   }
 
-  blockUser(blockedId: string): Observable<{ success: boolean; blocked_id: string }> {
+  blockUser(
+    blockedId: string,
+  ): Observable<{ success: boolean; blocked_id: string }> {
     return this.http.post<{ success: boolean; blocked_id: string }>(
-      `${this.apiUrl}/safety/block/${blockedId}`, 
-      {}
+      `${this.apiUrl}/safety/block/${blockedId}`,
+      {},
     );
   }
 
-  /** Promise-based version for use with async/await in components */
-  async blockUserAsync(blockedId: string): Promise<{ success: boolean; blocked_id: string }> {
-    return lastValueFrom(this.blockUser(blockedId));
+  /** Promise-based version that also updates the local cache */
+  async blockUserAsync(
+    blockedId: string,
+  ): Promise<{ success: boolean; blocked_id: string }> {
+    const res = await lastValueFrom(this.blockUser(blockedId));
+    this._blockedUserIds.update((prev) => new Set([...prev, blockedId]));
+    return res;
   }
 
   unblockUser(blockedId: string): Observable<{ success: boolean }> {
     return this.http.post<{ success: boolean }>(
-      `${this.apiUrl}/safety/unblock/${blockedId}`, 
-      {}
+      `${this.apiUrl}/safety/unblock/${blockedId}`,
+      {},
     );
   }
 
-  /** Promise-based version for use with async/await in components */
+  /** Promise-based version that also updates the local cache */
   async unblockUserAsync(blockedId: string): Promise<{ success: boolean }> {
-    return lastValueFrom(this.unblockUser(blockedId));
+    const res = await lastValueFrom(this.unblockUser(blockedId));
+    this._blockedUserIds.update((prev) => {
+      const next = new Set(prev);
+      next.delete(blockedId);
+      return next;
+    });
+    return res;
   }
 
   getBlockedIds(): Observable<string[]> {
@@ -84,7 +124,9 @@ export class SafetyService {
   async getBlockedUserIds(userId: string): Promise<string[]> {
     try {
       return lastValueFrom(
-        this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids/${userId}`)
+        this.http.get<string[]>(
+          `${this.apiUrl}/safety/blocked-ids/${userId}`,
+        ),
       );
     } catch (e) {
       console.error('Failed to get blocked user IDs:', e);
@@ -95,7 +137,9 @@ export class SafetyService {
   async getBlockerUserIds(userId: string): Promise<string[]> {
     try {
       return lastValueFrom(
-        this.http.get<string[]>(`${this.apiUrl}/safety/blocker-ids/${userId}`)
+        this.http.get<string[]>(
+          `${this.apiUrl}/safety/blocker-ids/${userId}`,
+        ),
       );
     } catch (e) {
       console.error('Failed to get blocker user IDs:', e);
@@ -106,7 +150,9 @@ export class SafetyService {
   async getBlockedAndBlockerIds(userId: string): Promise<string[]> {
     try {
       return lastValueFrom(
-        this.http.get<string[]>(`${this.apiUrl}/safety/blocked-and-blocker-ids/${userId}`)
+        this.http.get<string[]>(
+          `${this.apiUrl}/safety/blocked-and-blocker-ids/${userId}`,
+        ),
       );
     } catch (e) {
       console.error('Failed to get blocked and blocker IDs:', e);
@@ -115,9 +161,15 @@ export class SafetyService {
   }
 
   async isBlocked(userId: string): Promise<{ blocked: boolean }> {
+    // Use cache for a quick answer if possible
+    if (this.isUserBlockedCached(userId)) {
+      return { blocked: true };
+    }
     try {
       return lastValueFrom(
-        this.http.get<{ blocked: boolean }>(`${this.apiUrl}/safety/is-blocked/${userId}`)
+        this.http.get<{ blocked: boolean }>(
+          `${this.apiUrl}/safety/is-blocked/${userId}`,
+        ),
       );
     } catch (e) {
       console.error('Failed to check block status:', e);

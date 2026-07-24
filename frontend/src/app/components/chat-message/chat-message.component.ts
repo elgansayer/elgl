@@ -1,4 +1,14 @@
-import { Component, Input, inject, computed, signal, OnInit, OnDestroy, ViewChild, output } from '@angular/core';
+import {
+  Component,
+  Input,
+  inject,
+  computed,
+  signal,
+  OnInit,
+  OnDestroy,
+  ViewChild,
+  output,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatMessage, ChatService } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
@@ -83,12 +93,12 @@ import { Subject } from 'rxjs';
     :host {
       display: block;
     }
-  `]
+  `],
 })
 export class ChatMessageComponent implements OnInit, OnDestroy {
   @Input({ required: true }) message!: ChatMessage;
   @Input() currentUserId?: string;
-  
+
   @ViewChild(LongPressContextMenuComponent) contextMenu!: LongPressContextMenuComponent;
 
   readonly messageBlocked = output<string>();
@@ -103,19 +113,26 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
   isBlocked = signal(false);
 
   ngOnInit(): void {
-    // Load blocked users from backend to pre-populate the blocked set
-    this.chatService.loadBlockedUsers();
-    
-    // Check if this message sender is blocked using the local cached set first
+    // Pre-load the blocked‑user cache (idempotent)
+    this.safetyService.loadBlockedUsers();
+
     if (this.message.sender_id) {
-      // First check the local cached set (faster)
-      if (this.chatService.isUserBlocked()(this.message.sender_id)) {
+      // Fast synchronous check using the local cache
+      const cachedBlocked = this.safetyService.isUserBlockedCached(
+        this.message.sender_id,
+      );
+      if (cachedBlocked) {
         this.isBlocked.set(true);
       } else {
-        // Then check the backend for a definitive answer
-        this.safetyService.isBlocked(this.message.sender_id).then((result) => {
-          this.isBlocked.set(result.blocked);
-        }).catch(err => console.error('Failed to check block status', err));
+        // Double‑check with the backend (handles stale cache / cross‑device blocks)
+        this.safetyService
+          .isBlocked(this.message.sender_id)
+          .then((result) => {
+            this.isBlocked.set(result.blocked);
+          })
+          .catch((err) =>
+            console.error('Failed to check block status', err),
+          );
       }
     }
   }
@@ -165,10 +182,9 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
   async onBlock(event: { senderId: string; blocked: boolean }): Promise<void> {
     this.isBlocked.set(event.blocked);
     if (event.blocked) {
-      this.chatService.addBlockedUser(event.senderId);
+      // The SafetyService.blockUserAsync already updates the cache – just emit for the parent
       this.messageBlocked.emit(event.senderId);
     } else {
-      this.chatService.removeBlockedUser(event.senderId);
       this.messageBlocked.emit(event.senderId);
     }
   }
