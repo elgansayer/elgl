@@ -58,22 +58,7 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to fetch visitors');
     }
 
-    return (response.data ?? []) as ProfileVisitor[];
-  }
-  async touchLastActiveAt(userId: string): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-    const now = new Date().toISOString();
-
-    const { error } = await supabase
-      .from('users')
-      .update({ last_active_at: now })
-      .eq('id', userId);
-
-    if (error) {
-      Logger.warn(
-        `Failed to update last_active_at for user ${userId}: ${error.message}`,
-      );
-    }
+    return (response.data ?? []) as unknown as ProfileVisitor[];
   }
 
   async touchLastActiveAt(userId: string): Promise<void> {
