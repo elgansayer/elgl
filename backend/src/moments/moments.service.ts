@@ -357,7 +357,8 @@ export class MomentsService {
       .eq('id', momentId)
       .single();
     const updatedRow = updatedData as
-      (MomentCountRow & { user_id?: string }) | null;
+      | (MomentCountRow & { user_id?: string })
+      | null;
     await supabase
       .from('moments')
       .update({ comments_count: (updatedRow?.comments_count ?? 0) + 1 })
@@ -374,10 +375,11 @@ export class MomentsService {
     // Emit push notification event
     const momentAuthorId = updatedRow?.user_id;
     if (momentAuthorId) {
+      const payload = dto.correction_payload as { original: string; corrected: string; explanation?: string } | undefined;
       const preview = dto.text_content
         ? dto.text_content.substring(0, 120)
-        : dto.correction_payload
-          ? `Correction: "${dto.correction_payload.original}" → "${dto.correction_payload.corrected}"`
+        : payload
+          ? `Correction: "${payload.original}" → "${payload.corrected}"`
           : '';
 
       this.eventEmitter.emit(
@@ -456,7 +458,7 @@ export class MomentsService {
     if (!momentData) {
       throw new ForbiddenException('Moment not found.');
     }
-    const momentRow = momentData;
+    const momentRow = momentData as { user_id: string; is_pinned: boolean };
     if (momentRow.user_id !== userId) {
       throw new ForbiddenException('You can only pin your own Moments.');
     }
