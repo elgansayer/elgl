@@ -125,7 +125,8 @@ export class AppleNotificationService {
   private handleSubscribed(data: Record<string, unknown> | undefined): void {
     const rawSignedTransactionInfo: unknown = data?.signedTransactionInfo;
     const signedTransactionInfo: Record<string, unknown> | undefined =
-      typeof rawSignedTransactionInfo === 'object' && rawSignedTransactionInfo !== null
+      typeof rawSignedTransactionInfo === 'object' &&
+      rawSignedTransactionInfo !== null
         ? (rawSignedTransactionInfo as Record<string, unknown>)
         : undefined;
 
@@ -239,7 +240,8 @@ export class AppleNotificationService {
   private handleRefund(data: Record<string, unknown> | undefined): void {
     const rawSignedTransactionInfo: unknown = data?.signedTransactionInfo;
     const signedTransactionInfo: Record<string, unknown> | undefined =
-      typeof rawSignedTransactionInfo === 'object' && rawSignedTransactionInfo !== null
+      typeof rawSignedTransactionInfo === 'object' &&
+      rawSignedTransactionInfo !== null
         ? (rawSignedTransactionInfo as Record<string, unknown>)
         : undefined;
 
@@ -315,7 +317,8 @@ export class AppleNotificationService {
   ): void {
     const rawSignedTransactionInfo: unknown = data?.signedTransactionInfo;
     const signedTransactionInfo: Record<string, unknown> | undefined =
-      typeof rawSignedTransactionInfo === 'object' && rawSignedTransactionInfo !== null
+      typeof rawSignedTransactionInfo === 'object' &&
+      rawSignedTransactionInfo !== null
         ? (rawSignedTransactionInfo as Record<string, unknown>)
         : undefined;
 
