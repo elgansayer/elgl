@@ -1,4 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { PostgrestError } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
 
@@ -34,7 +35,7 @@ export class SafetyService {
       throw new NotFoundException('Reported user not found');
     }
 
-    const { data, error }: { data: { id: string } | null; error: any } =
+    const { data, error }: { data: { id: string } | null; error: PostgrestError | null } =
       await supabase
         .from('reports')
         .insert({
