@@ -191,7 +191,7 @@ export class EconomyService {
         platform,
         verified.transactionId,
       );
-    } catch (_error) {
+    } catch (error) {
       // Rollback coin balance on failure
       const { error: rollbackError } = await supabase
         .from('users')

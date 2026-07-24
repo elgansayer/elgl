@@ -87,9 +87,9 @@ export class AppleNotificationService {
    * In production, this should use a library like `jsonwebtoken` with Apple's root CA.
    * For now, we perform a basic decode without full verification (placeholder).
    */
-  private async verifyAndDecodeJWS(
+  private verifyAndDecodeJWS(
     signedPayload: string,
-  ): Promise<unknown | null> {
+  ): unknown | null {
     try {
       // JWS format: header.payload.signature
       const parts = signedPayload.split('.');
@@ -224,7 +224,6 @@ export class AppleNotificationService {
   private async handleRefund(data: any): Promise<void> {
     const userId = data?.appAccountToken;
     const transactionId = data?.signedTransactionInfo?.transactionId;
-    const refundAmount = data?.signedTransactionInfo?.price;
 
     if (!userId || !transactionId) {
       return;
@@ -235,7 +234,7 @@ export class AppleNotificationService {
     );
 
     // Revoke coins or subscription benefits
-    await this.revokeCoinsForRefund(userId, transactionId, refundAmount);
+    await this.revokeCoinsForRefund(userId, transactionId);
   }
 
   /**
@@ -274,7 +273,7 @@ export class AppleNotificationService {
   /**
    * Handles a refund declined notification.
    */
-  private async handleRefundDeclined(data: any): Promise<void> {
+  private handleRefundDeclined(data: any): void {
     const userId = data?.appAccountToken;
 
     if (!userId) {
@@ -399,10 +398,10 @@ export class AppleNotificationService {
   /**
    * Notifies the user about a failed renewal.
    */
-  private async notifyUserAboutFailedRenewal(
+  private notifyUserAboutFailedRenewal(
     userId: string,
     gracePeriodExpiresDate: string,
-  ): Promise<void> {
+  ): void {
     // Placeholder: send push notification or in-app message
     this.logger.log(
       `Would notify user ${userId} about failed renewal, grace until ${gracePeriodExpiresDate}`,
@@ -415,7 +414,7 @@ export class AppleNotificationService {
   private async revokeCoinsForRefund(
     userId: string,
     transactionId: string,
-    _refundAmount: number,
+    refundAmount: number,
   ): Promise<void> {
     // Determine how many coins were associated with the refunded purchase
     const coinsToRevoke = await this.getCoinsForTransaction(transactionId);
@@ -489,10 +488,10 @@ export class AppleNotificationService {
   /**
    * Notifies the user about a price increase.
    */
-  private async notifyUserAboutPriceIncrease(
+  private notifyUserAboutPriceIncrease(
     userId: string,
     newPrice: number,
-  ): Promise<void> {
+  ): void {
     // Placeholder: send push notification or in-app message
     this.logger.log(
       `Would notify user ${userId} about price increase to ${newPrice}`,
@@ -502,10 +501,10 @@ export class AppleNotificationService {
   /**
    * Provides consumption data to Apple for a specific transaction.
    */
-  private async provideConsumptionData(
+  private provideConsumptionData(
     userId: string,
     transactionId: string,
-  ): Promise<void> {
+  ): void {
     // Placeholder: In production, send consumption data to Apple's API
     this.logger.log(
       `Would provide consumption data for user ${userId}, transaction ${transactionId}`,
