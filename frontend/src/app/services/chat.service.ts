@@ -169,20 +169,6 @@ export class ChatService {
     }
   }
 
-  isUserBlocked(userId: string): boolean {
-    return this.blockedUserIds.includes(userId);
-  }
-
-  addBlockedUser(userId: string): void {
-    if (!this.blockedUserIds.includes(userId)) {
-      this.blockedUserIds.push(userId);
-    }
-  }
-
-  removeBlockedUser(userId: string): void {
-    this.blockedUserIds = this.blockedUserIds.filter(id => id !== userId);
-  }
-
   async isBlocked(userId: string): Promise<boolean> {
     try {
       const response = await firstValueFrom(

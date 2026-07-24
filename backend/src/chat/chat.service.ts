@@ -118,7 +118,7 @@ export class ChatService {
               ? '🎨 Doodle'
               : '';
 
-      (this.eventEmitter.emit as (event: string, ...args: unknown[]) => void)(
+      (this.eventEmitter as any).emit(
         'chat.message',
         new ChatMessageEvent(
           senderId,
