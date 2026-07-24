@@ -195,8 +195,10 @@ export class NotificationPreferencesService {
 
     for (const category of categories) {
       const dtoMap = dto as Record<string, CategoryPreferenceDto | undefined>;
-      const existingMap =
-        existing as unknown as Record<string, CategoryPreference | undefined>;
+      const existingMap = existing as unknown as Record<
+        string,
+        CategoryPreference | undefined
+      >;
 
       const dtoCategory = dtoMap[category];
       if (dtoCategory) {

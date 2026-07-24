@@ -229,30 +229,28 @@ async function runSeed() {
     .eq('is_vip', true)
     .limit(3);
 
-  const vipUsers = vipUsersRaw as Array<{ id: string; email: string }> | null;
+  const vipUsers = vipUsersRaw;
 
   if (vipUsers && vipUsers.length > 0) {
-    const subscriptionData = vipUsers.map(
-      (user, index) => ({
-        user_id: user.id,
-        product_id:
-          index === 0
-            ? 'com.linguaexchange.vip.developer'
-            : 'com.linguaexchange.vip.consumer',
-        original_transaction_id: `apple_orig_${user.id.substring(0, 8)}_${Date.now()}`,
-        transaction_id: `apple_txn_${user.id.substring(0, 8)}_${Date.now()}`,
-        purchase_date: new Date(
-          Date.now() - 30 * 24 * 60 * 60 * 1000,
-        ).toISOString(),
-        expires_date: new Date(
-          Date.now() + 30 * 24 * 60 * 60 * 1000,
-        ).toISOString(),
-        environment: 'Sandbox',
-        is_active: true,
-        auto_renew_status: true,
-        last_updated: new Date().toISOString(),
-      }),
-    );
+    const subscriptionData = vipUsers.map((user, index) => ({
+      user_id: user.id,
+      product_id:
+        index === 0
+          ? 'com.linguaexchange.vip.developer'
+          : 'com.linguaexchange.vip.consumer',
+      original_transaction_id: `apple_orig_${user.id.substring(0, 8)}_${Date.now()}`,
+      transaction_id: `apple_txn_${user.id.substring(0, 8)}_${Date.now()}`,
+      purchase_date: new Date(
+        Date.now() - 30 * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+      expires_date: new Date(
+        Date.now() + 30 * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+      environment: 'Sandbox',
+      is_active: true,
+      auto_renew_status: true,
+      last_updated: new Date().toISOString(),
+    }));
 
     await supabase.from('subscriptions').upsert(subscriptionData, {
       onConflict: 'user_id, original_transaction_id',
@@ -272,7 +270,7 @@ async function runSeed() {
     .limit(1)
     .single();
 
-  const firstVip = firstVipRaw as { id: string } | null;
+  const firstVip = firstVipRaw;
 
   if (firstVip) {
     await supabase.from('subscription_events').insert([
