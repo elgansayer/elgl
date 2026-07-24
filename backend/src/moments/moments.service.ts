@@ -277,12 +277,11 @@ export class MomentsService {
     if (existing) {
       const existingRow = existing;
       await supabase.from('moment_likes').delete().eq('id', existingRow.id);
-      const response = await supabase
+      const { data: updatedData } = (await supabase
         .from('moments')
         .select('likes_count')
         .eq('id', momentId)
-        .single();
-      const updatedData = response.data as unknown;
+        .single()) as { data: unknown; error: unknown };
       const updatedRow = updatedData as MomentCountRow | null;
       const newCount = Math.max(0, (updatedRow?.likes_count ?? 1) - 1);
       await supabase
@@ -352,12 +351,11 @@ export class MomentsService {
       );
     }
 
-    const response = await supabase
+    const { data: updatedData } = (await supabase
       .from('moments')
       .select('comments_count, user_id')
       .eq('id', momentId)
-      .single();
-    const updatedData = response.data as unknown;
+      .single()) as { data: unknown; error: unknown };
     const updatedRow = updatedData as
       (MomentCountRow & { user_id?: string }) | null;
     await supabase
