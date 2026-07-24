@@ -1,16 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { SupabaseService } from '../supabase/supabase.service';
 
 interface UserRow {
   id: string;
   study_streak_days: number;
   last_active_at: string;
-}
-
-interface SupabaseResponse<T> {
-  data: T | null;
-  error: { message: string } | null;
 }
 
 @Injectable()
@@ -24,21 +19,19 @@ export class StreakService {
    * for more than 24 hours. Returns the number of users whose streaks
    * were reset.
    */
-  async resetStreaksForTesting(): Promise<number> {
+  async resetStreaksForInactiveUsers(): Promise<number> {
     const supabase = this.supabaseService.getClient();
 
     // Calculate the cutoff time (24 hours ago)
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     // Query users whose last_active_at is older than the cutoff
-    const queryResponse = await (supabase
+    // and who still have a streak > 0
+    const { data: inactiveUsers, error: queryError } = await supabase
       .from('users')
       .select('id, study_streak_days, last_active_at')
-      .lt('last_active_at', cutoff) as unknown as Promise<
-      SupabaseResponse<UserRow[]>
-    >);
-
-    const { data: inactiveUsers, error: queryError } = queryResponse;
+      .lt('last_active_at', cutoff)
+      .gt('study_streak_days', 0);
 
     if (queryError) {
       this.logger.error('Failed to query inactive users', queryError.message);
@@ -53,12 +46,10 @@ export class StreakService {
     const userIds: string[] = inactiveUsers.map((user) => user.id);
 
     // Reset streaks for the found users
-    const updateResponse = await (supabase
+    const { error: updateError } = await supabase
       .from('users')
       .update({ study_streak_days: 0 })
-      .in('id', userIds) as unknown as Promise<SupabaseResponse<null>>);
-
-    const { error: updateError } = updateResponse;
+      .in('id', userIds);
 
     if (updateError) {
       this.logger.error('Failed to reset streaks', updateError.message);
@@ -72,9 +63,16 @@ export class StreakService {
   /**
    * Scheduled job that runs every hour to reset streaks for inactive users.
    */
-  @Cron('0 * * * *')
+  @Cron(CronExpression.EVERY_HOUR)
   async handleStreakResetCron(): Promise<void> {
     this.logger.log('Running scheduled streak reset job');
-    await this.resetStreaksForTesting();
+    try {
+      const resetCount = await this.resetStreaksForInactiveUsers();
+      if (resetCount > 0) {
+        this.logger.log(`Successfully reset ${resetCount} user streaks`);
+      }
+    } catch (error) {
+      this.logger.error('Streak reset cron job failed', error);
+    }
   }
 }
