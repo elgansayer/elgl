@@ -83,10 +83,6 @@ export class ChatService {
   ): Promise<ChatMessage> {
     const supabase = this.supabaseService.getClient();
 
-    // Check if sender is blocked by any room member
-    const blockedIds =
-      await this.safetyService.getBlockedAndBlockerIds(senderId);
-
     // Get room members to check if any are blocked
     const { data: roomMembers } = await supabase
       .from('chat_room_members')
@@ -151,7 +147,7 @@ export class ChatService {
               ? '🎨 Doodle'
               : '';
 
-      (this.eventEmitter as any).emit(
+      this.eventEmitter.emit(
         'chat.message',
         new ChatMessageEvent(
           senderId,
