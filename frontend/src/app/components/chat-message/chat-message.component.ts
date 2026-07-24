@@ -94,9 +94,9 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Check if this message sender is blocked
     if (this.message.sender_id) {
-      this.safetyService.isBlocked(this.message.sender_id).subscribe({
-        next: (result) => this.isBlocked.set(result.blocked),
-      });
+      this.safetyService.isBlocked(this.message.sender_id).then((result) => {
+        this.isBlocked.set(result.blocked);
+      }).catch(err => console.error('Failed to check block status', err));
     }
   }
 
