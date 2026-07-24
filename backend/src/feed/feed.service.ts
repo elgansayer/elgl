@@ -216,7 +216,9 @@ export class FeedService {
       .single();
 
     if (insertResponse.error || !insertResponse.data) {
-      throw new Error(`Failed to create moment: ${insertResponse.error?.message}`);
+      throw new Error(
+        `Failed to create moment: ${insertResponse.error?.message}`,
+      );
     }
 
     return insertResponse.data as Moment;
@@ -236,7 +238,7 @@ export class FeedService {
       throw new Error('Moment not found');
     }
 
-    const momentData = momentResponse.data as { author_id: string };
+    const momentData = momentResponse.data;
 
     if (momentData.author_id !== userId) {
       throw new Error('Not authorized to delete this moment');
@@ -248,7 +250,9 @@ export class FeedService {
       .eq('id', momentId);
 
     if (deleteResponse.error) {
-      throw new Error(`Failed to delete moment: ${deleteResponse.error.message}`);
+      throw new Error(
+        `Failed to delete moment: ${deleteResponse.error.message}`,
+      );
     }
   }
 }
