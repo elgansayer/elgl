@@ -43,7 +43,7 @@ describe('SafetyController', () => {
       (safetyService.reportUser as jest.Mock).mockResolvedValue(undefined);
 
       const result = await controller.reportUser(
-        { user: { id: 'user-1' } } as any,
+        { user: { id: 'user-1' } },
         dto,
       );
       expect(safetyService.reportUser).toHaveBeenCalledWith('user-1', dto);
