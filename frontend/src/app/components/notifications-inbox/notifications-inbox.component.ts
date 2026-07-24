@@ -79,7 +79,11 @@ export class NotificationsInboxComponent implements OnInit {
       void this.notificationService.markAsRead(notif.id);
     }
 
-    if (notif.type === 'like_moment' || notif.type === 'comment_moment') {
+    if (
+      notif.type === 'like_moment' ||
+      notif.type === 'comment_moment' ||
+      notif.type === 'reply_comment'
+    ) {
       void this.router.navigate(['/moments']);
     } else {
       void this.router.navigate(['/profile/user', notif.actor_id]);
@@ -92,6 +96,7 @@ export class NotificationsInboxComponent implements OnInit {
       case 'like_moment':
         return '❤️';
       case 'comment_moment':
+      case 'reply_comment':
         return '💬';
       case 'follow':
         return '👤';
@@ -110,6 +115,8 @@ export class NotificationsInboxComponent implements OnInit {
         return 'notifications.likedMoment';
       case 'comment_moment':
         return 'notifications.commentedMoment';
+      case 'reply_comment':
+        return 'notifications.repliedComment';
       case 'follow':
         return 'notifications.followedYou';
       case 'profile_visit':

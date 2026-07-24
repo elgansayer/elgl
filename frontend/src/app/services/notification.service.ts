@@ -8,7 +8,7 @@ export interface InAppNotification {
   id: string;
   recipient_id: string;
   actor_id: string;
-  type: 'follow' | 'like_profile' | 'like_moment' | 'comment_moment' | 'profile_visit';
+  type: 'follow' | 'like_profile' | 'like_moment' | 'comment_moment' | 'reply_comment' | 'profile_visit';
   entity_id?: string;
   message?: string;
   is_read: boolean;
@@ -152,7 +152,7 @@ export class NotificationService {
 
     if (!type || type === 'all') return mocks;
     if (type === 'likes') return mocks.filter((n) => n.type === 'like_profile' || n.type === 'like_moment');
-    if (type === 'comments') return mocks.filter((n) => n.type === 'comment_moment');
+    if (type === 'comments') return mocks.filter((n) => n.type === 'comment_moment' || n.type === 'reply_comment');
     if (type === 'follows') return mocks.filter((n) => n.type === 'follow');
     return mocks;
   }

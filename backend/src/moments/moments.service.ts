@@ -338,6 +338,8 @@ export class MomentsService {
         user_id: userId,
         text_content: dto.text_content ?? null,
         correction_payload: dto.correction_payload ?? null,
+        parent_comment_id: dto.parent_comment_id ?? null,
+        reply_to_user_id: dto.reply_to_user_id ?? null,
       })
       .select()
       .single();
@@ -370,7 +372,7 @@ export class MomentsService {
 
     // Emit push notification event
     const momentAuthorId = updatedRow?.user_id;
-    if (momentAuthorId && momentAuthorId !== userId) {
+    if (momentAuthorId) {
       const preview = dto.text_content
         ? dto.text_content.substring(0, 120)
         : dto.correction_payload
@@ -381,7 +383,14 @@ export class MomentsService {
       this.eventEmitter.emit(
         'moment.comment',
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        new MomentCommentEvent(userId, momentAuthorId, momentId, preview),
+        new MomentCommentEvent(
+          momentId,
+          userId,
+          momentAuthorId,
+          preview,
+          dto.parent_comment_id,
+          dto.reply_to_user_id,
+        ),
       );
     }
 

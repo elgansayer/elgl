@@ -143,7 +143,7 @@ export class NotificationsService {
   async createNotification(
     recipientId: string,
     actorId: string,
-    type: 'follow' | 'like_profile' | 'like_moment' | 'comment_moment' | 'profile_visit',
+    type: 'follow' | 'like_profile' | 'like_moment' | 'comment_moment' | 'reply_comment' | 'profile_visit',
     entityId?: string,
     message?: string,
   ): Promise<void> {
@@ -166,6 +166,7 @@ export class NotificationsService {
         like_profile: 'Profile Liked',
         like_moment: 'Moment Liked',
         comment_moment: 'New Comment',
+        reply_comment: 'New Reply',
         profile_visit: 'Profile Visited',
       };
       const bodyMap: Record<string, string> = {
@@ -173,6 +174,7 @@ export class NotificationsService {
         like_profile: 'Someone liked your profile',
         like_moment: 'Someone liked your moment',
         comment_moment: message || 'Someone commented on your moment',
+        reply_comment: message || 'Someone replied to your comment',
         profile_visit: 'Someone viewed your profile',
       };
 
@@ -219,7 +221,7 @@ export class NotificationsService {
       if (filterType === 'likes') {
         query = query.in('type', ['like_profile', 'like_moment']);
       } else if (filterType === 'comments') {
-        query = query.eq('type', 'comment_moment');
+        query = query.in('type', ['comment_moment', 'reply_comment']);
       } else if (filterType === 'follows') {
         query = query.eq('type', 'follow');
       }

@@ -30,13 +30,28 @@ export class CommentNotificationListener {
         ? event.commentPreview.substring(0, 100)
         : '';
 
-      await this.notificationsService.createNotification(
-        event.momentAuthorId,
-        event.commenterId,
-        'comment_moment',
-        event.momentId,
-        preview,
-      );
+      if (event.replyToUserId && event.replyToUserId !== event.commenterId) {
+        await this.notificationsService.createNotification(
+          event.replyToUserId,
+          event.commenterId,
+          'reply_comment',
+          event.momentId,
+          preview,
+        );
+      }
+
+      if (
+        event.momentAuthorId !== event.commenterId &&
+        event.momentAuthorId !== event.replyToUserId
+      ) {
+        await this.notificationsService.createNotification(
+          event.momentAuthorId,
+          event.commenterId,
+          'comment_moment',
+          event.momentId,
+          preview,
+        );
+      }
     } catch (err) {
       console.error('Comment notification listener error:', err);
     }
