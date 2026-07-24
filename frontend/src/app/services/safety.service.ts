@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, lastValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface ReportUserDto {
@@ -31,12 +31,27 @@ export class SafetyService {
     return this.http.post<ReportResponse>(`${this.apiUrl}/safety/report`, dto);
   }
 
+  /** Promise-based version for use with async/await in components */
+  async reportUserAsync(dto: ReportUserDto): Promise<ReportResponse> {
+    return lastValueFrom(this.reportUser(dto));
+  }
+
   blockUser(blockedId: string): Observable<{ success: boolean; blocked_id: string }> {
     return this.http.post<{ success: boolean; blocked_id: string }>(`${this.apiUrl}/safety/block`, { blocked_id: blockedId });
   }
 
+  /** Promise-based version for use with async/await in components */
+  async blockUserAsync(blockedId: string): Promise<{ success: boolean; blocked_id: string }> {
+    return lastValueFrom(this.blockUser(blockedId));
+  }
+
   getBlockedIds(): Observable<string[]> {
     return this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids`);
+  }
+
+  /** Promise-based version for use with async/await in components */
+  async getBlockedIdsAsync(): Promise<string[]> {
+    return lastValueFrom(this.getBlockedIds());
   }
 
   /** Returns a static list of report categories.

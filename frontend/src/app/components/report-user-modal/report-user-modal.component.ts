@@ -210,11 +210,11 @@ export class ReportUserModalComponent {
     this.error.set(null);
 
     try {
-      await this.safetyService.reportUser({
+      await this.safetyService.reportUserAsync({
         reported_id: this.reportedUserId,
         reason_category: this.selectedCategory()!.value,
         description: this.description() || undefined
-      }).toPromise();
+      });
 
       this.step.set('success');
       this.toastService.show({

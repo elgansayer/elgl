@@ -25,8 +25,15 @@ export class SafetyService {
     });
 
     if (error) {
+      this.logger.error(
+        `Failed to submit report from ${reporterId} against ${dto.reported_id}: ${error.message}`,
+      );
       throw new Error('Failed to submit report');
     }
+
+    this.logger.log(
+      `Report submitted: reporter=${reporterId}, reported=${dto.reported_id}, category=${dto.reason_category}`,
+    );
   }
 
   async blockUser(
