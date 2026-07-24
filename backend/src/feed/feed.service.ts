@@ -1,7 +1,28 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
-import { Moment } from './interfaces/moment.interface';
+import { PostgrestError } from '@supabase/supabase-js';
+
+// Define Moment interface locally to avoid import issues
+export interface Moment {
+  id: string;
+  author_id: string;
+  content_text?: string | null;
+  media_urls?: string[];
+  voice_note_url?: string | null;
+  detected_language?: string | null;
+  is_pinned: boolean;
+  likes_count: number;
+  comments_count: number;
+  created_at: string;
+  author?: {
+    id: string;
+    display_name: string;
+    avatar_url?: string | null;
+    native_language?: string;
+    target_languages?: string[];
+  } | null;
+}
 
 @Injectable()
 export class FeedService {
@@ -19,7 +40,7 @@ export class FeedService {
     const supabase = this.supabaseService.getClient();
 
     // Get blocked user IDs to exclude from feed
-    const blockedIds = await this.safetyService.getBlockedIds(currentUserId);
+    const blockedIds: string[] = await this.safetyService.getBlockedIds(currentUserId);
 
     let query = supabase
       .from('moments')
@@ -40,47 +61,56 @@ export class FeedService {
 
     // Exclude blocked users' moments
     if (blockedIds.length > 0) {
-      query = query.not('author_id', 'in', `(${blockedIds.join(',')})`);
+      // Use filter method for 'not.in' operator
+      query = query.filter('author_id', 'not.in', `(${blockedIds.join(',')})`);
     }
 
     // Apply filter logic
     if (filter === 'classmates') {
       // Get current user's target languages
-      const { data: currentUser } = await supabase
+      const { data: currentUser, error: userError } = await supabase
         .from('users')
         .select('target_languages, native_language')
         .eq('id', currentUserId)
         .single();
 
-      if (currentUser) {
-        // Show moments from users who share target languages or native language
-        const targetLangs = currentUser.target_languages || [];
-        const nativeLang = currentUser.native_language;
+      if (userError || !currentUser) {
+        this.logger.error(`Failed to fetch current user: ${userError?.message}`);
+        return [];
+      }
 
-        // Build OR conditions for language matching
-        const conditions: string[] = [];
-        if (targetLangs.length > 0) {
-          conditions.push(
-            `author.native_language.in.(${targetLangs.map((l: string) => `"${l}"`).join(',')})`,
-          );
-        }
-        if (nativeLang) {
-          conditions.push(`author.target_languages.cs.{${nativeLang}}`);
-        }
+      // Show moments from users who share target languages or native language
+      const targetLangs: string[] = (currentUser as { target_languages?: string[]; native_language?: string }).target_languages || [];
+      const nativeLang: string | undefined = (currentUser as { target_languages?: string[]; native_language?: string }).native_language;
 
-        if (conditions.length > 0) {
-          query = query.or(conditions.join(','));
-        }
+      // Build OR conditions for language matching
+      const conditions: string[] = [];
+      if (targetLangs.length > 0) {
+        conditions.push(
+          `author.native_language.in.(${targetLangs.map((l: string) => `"${l}"`).join(',')})`,
+        );
+      }
+      if (nativeLang) {
+        conditions.push(`author.target_languages.cs.{${nativeLang}}`);
+      }
+
+      if (conditions.length > 0) {
+        query = query.or(conditions.join(','));
       }
     } else if (filter === 'following') {
       // Get users the current user follows
-      const { data: following } = await supabase
+      const { data: following, error: followError } = await supabase
         .from('follows')
         .select('followed_id')
         .eq('follower_id', currentUserId);
 
+      if (followError) {
+        this.logger.error(`Failed to fetch following: ${followError.message}`);
+        return [];
+      }
+
       if (following && following.length > 0) {
-        const followedIds = following.map(
+        const followedIds: string[] = (following as { followed_id: string }[]).map(
           (f: { followed_id: string }) => f.followed_id,
         );
         query = query.in('author_id', followedIds);
@@ -107,7 +137,7 @@ export class FeedService {
     const supabase = this.supabaseService.getClient();
 
     // Check if author is blocked
-    const blockedIds = await this.safetyService.getBlockedIds(currentUserId);
+    const blockedIds: string[] = await this.safetyService.getBlockedIds(currentUserId);
 
     const { data, error } = await supabase
       .from('moments')
@@ -185,13 +215,19 @@ export class FeedService {
     const supabase = this.supabaseService.getClient();
 
     // Verify ownership
-    const { data: moment } = await supabase
+    const { data: moment, error: fetchError } = await supabase
       .from('moments')
       .select('author_id')
       .eq('id', momentId)
       .single();
 
-    if (!moment || moment.author_id !== userId) {
+    if (fetchError || !moment) {
+      throw new Error('Moment not found');
+    }
+
+    const momentData = moment as { author_id: string };
+
+    if (momentData.author_id !== userId) {
       throw new Error('Not authorized to delete this moment');
     }
 
