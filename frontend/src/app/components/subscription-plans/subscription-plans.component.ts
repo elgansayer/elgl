@@ -73,7 +73,7 @@ import { environment } from '../../../environments/environment';
                   </div>
                   @if (billingInterval() === 'year' && plan.price_usd > 0) {
                     <p class="text-green-400 text-sm mt-1">
-                      {{ plan.price_ukp }} UKP / ${{ plan.price_usd }} USD per month if paid monthly
+                      {{ plan.price_ukp }} UKP / &#36;{{ plan.price_usd }} USD per month if paid monthly
                     </p>
                   }
                 </div>
