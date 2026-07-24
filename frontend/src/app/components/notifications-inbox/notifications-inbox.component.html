@@ -1,0 +1,98 @@
+<div class="h-full flex flex-col bg-surface-500 text-text-primary overflow-y-auto">
+  <!-- Top App Header -->
+  <header class="sticky top-0 z-10 bg-surface-500/90 backdrop-blur border-b border-surface-100 p-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <button (click)="goBack()" class="p-2 -ms-2 rounded-full hover:bg-surface-300 transition-colors">
+        <span class="text-xl">←</span>
+      </button>
+      <div class="flex items-center gap-2">
+        <h1 class="text-lg font-bold">{{ 'notifications.title' | t }}</h1>
+        @if (unreadCount() > 0) {
+          <span class="bg-neon-pink text-white text-xs font-black px-2 py-0.5 rounded-full">
+            {{ unreadCount() }}
+          </span>
+        }
+      </div>
+    </div>
+
+    <button (click)="markAllAsRead()" class="text-xs font-bold text-neon-blue hover:opacity-80 transition-opacity">
+      {{ 'notifications.markAllRead' | t }}
+    </button>
+  </header>
+
+  <!-- Horizontal Scrollable Filter Pills -->
+  <div class="p-4 border-b border-surface-100/50">
+    <app-scrollable-pills
+      [pills]="filterPills()"
+      [selected]="selectedTab()"
+      (select)="setTab($any($event))">
+    </app-scrollable-pills>
+  </div>
+
+  <!-- Notification List Content -->
+  <main class="flex-1">
+    @if (isLoading()) {
+      <div class="flex items-center justify-center p-12">
+        <div class="animate-spin text-4xl text-neon-blue">↻</div>
+      </div>
+    } @else if (notifications().length === 0) {
+      <div class="flex flex-col items-center justify-center p-12 text-center">
+        <span class="text-5xl mb-3">🔔</span>
+        <p class="font-bold text-text-primary text-base">{{ 'notifications.emptyTitle' | t }}</p>
+        <p class="text-xs text-text-secondary mt-1">{{ 'notifications.emptySubtitle' | t }}</p>
+      </div>
+    } @else {
+      <div class="divide-y divide-surface-100/30">
+        @for (notif of notifications(); track notif.id) {
+          <article
+            (click)="onNotificationClick(notif)"
+            class="flex items-start gap-4 p-4 hover:bg-surface-300/50 transition-colors cursor-pointer relative"
+            [class.bg-surface-300/30]="!notif.is_read">
+            
+            <!-- Actor Avatar with Badge Overlay -->
+            <div class="relative shrink-0">
+              @if (notif.actor?.avatar_url) {
+                <img [src]="notif.actor?.avatar_url" alt="avatar" class="h-12 w-12 rounded-full object-cover border border-surface-100" />
+              } @else {
+                <div class="h-12 w-12 rounded-full bg-surface-300 border border-surface-100 flex items-center justify-center font-bold text-text-secondary">
+                  {{ notif.actor?.display_name?.charAt(0) || '?' }}
+                </div>
+              }
+              <span class="absolute -bottom-1 -end-1 h-6 w-6 rounded-full bg-surface-400 border border-surface-100 flex items-center justify-center text-xs">
+                {{ getBadgeIcon(notif.type) }}
+              </span>
+            </div>
+
+            <!-- Content Area -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline justify-between gap-2 mb-1">
+                <p class="text-sm text-text-primary leading-snug">
+                  <span class="font-bold text-text-primary hover:underline">
+                    {{ notif.actor?.display_name || ('common.unknownUser' | t) }}
+                  </span>
+                  <span class="text-text-secondary ms-1">
+                    {{ getNotificationMessageKey(notif.type) | t }}
+                  </span>
+                </p>
+                <span class="text-[11px] text-text-secondary shrink-0">
+                  {{ notif.created_at | date: 'shortTime' }}
+                </span>
+              </div>
+
+              @if (notif.message) {
+                <p class="text-xs text-text-secondary italic bg-surface-300/60 p-2 rounded-xl mt-1 line-clamp-2">
+                  "{{ notif.message }}"
+                </p>
+              }
+            </div>
+
+            <!-- Unread Indicator Dot -->
+            @if (!notif.is_read) {
+              <span class="h-2.5 w-2.5 rounded-full bg-neon-blue shrink-0 mt-2"></span>
+            }
+          </article>
+        }
+      </div>
+    }
+  </main>
+</div>

@@ -5,6 +5,7 @@ import { CentrifugoService } from '../../services/centrifugo.service';
 import { AuthService } from '../../services/auth.service';
 import { LivekitService } from '../../services/livekit.service';
 import { signal } from '@angular/core';
+import { vi } from 'vitest';
 
 describe('IncomingCallComponent', () => {
   let component: IncomingCallComponent;
@@ -15,17 +16,17 @@ describe('IncomingCallComponent', () => {
 
   beforeEach(async () => {
     mockCentrifugoService = {
-      subscribe: jest.fn(),
-      publish: jest.fn(),
-      unsubscribe: jest.fn(),
+      subscribe: vi.fn(),
+      publish: vi.fn(),
+      unsubscribe: vi.fn(),
     };
     mockAuthService = {
       currentUser: signal({ id: 'test-user-123' }),
-      getAccessToken: jest.fn().mockReturnValue('token'),
+      getAccessToken: vi.fn().mockReturnValue('token'),
     };
     mockLivekitService = {
-      joinRoom: jest.fn().mockResolvedValue(undefined),
-      leaveRoom: jest.fn().mockResolvedValue(undefined),
+      joinRoom: vi.fn().mockResolvedValue(undefined),
+      leaveRoom: vi.fn().mockResolvedValue(undefined),
     };
 
     await TestBed.configureTestingModule({
@@ -75,7 +76,7 @@ describe('IncomingCallComponent', () => {
     component.callInfo.set(callInfo);
     component.showCallModal.set(true);
 
-    const emitSpy = jest.spyOn(component.callAccepted, 'emit');
+    const emitSpy = vi.spyOn(component.callAccepted, 'emit');
 
     await component.acceptCall();
 
@@ -102,7 +103,7 @@ describe('IncomingCallComponent', () => {
     component.callInfo.set(callInfo);
     component.showCallModal.set(true);
 
-    const emitSpy = jest.spyOn(component.callRejected, 'emit');
+    const emitSpy = vi.spyOn(component.callRejected, 'emit');
 
     component.rejectCall();
 

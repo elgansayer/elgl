@@ -510,7 +510,7 @@
 - [ ] Build "Block Management" page to manage and unblock users.
 
 ### Notifications & Alerts
-- [ ] Build unified "Notifications Area" (Inbox) for system alerts, likes, comments, and followers.
+- [x] Build unified "Notifications Area" (Inbox) for system alerts, likes, comments, and followers.
 - [ ] Build "Notification Settings" toggles for Push Alerts and Badges across Direct Messages, Groups, Likes, and Voicerooms.
 
 ### Chat & Data Storage Settings

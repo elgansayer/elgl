@@ -16,10 +16,13 @@ import { SubscriptionPlansComponent } from './components/subscription-plans/subs
 import { SubscriptionSuccessComponent } from './components/subscription-success/subscription-success.component';
 import { SubscriptionCancelComponent } from './components/subscription-cancel/subscription-cancel.component';
 
+import { NotificationsInboxComponent } from './components/notifications-inbox/notifications-inbox.component';
+
 export const routes: Routes = [
   { path: '', redirectTo: 'discovery', pathMatch: 'full' },
   { path: 'discovery', component: DiscoveryComponent },
   { path: 'moments', component: MomentsFeedComponent },
+  { path: 'notifications', component: NotificationsInboxComponent },
   { path: 'audio-rooms', component: AudioRoomComponent },
   { path: 'chat', component: ChatListComponent },
   { path: 'chat/:id', component: ChatRoomComponent },

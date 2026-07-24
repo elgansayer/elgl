@@ -7,9 +7,11 @@ import { CommentNotificationListener } from './listeners/comment-notification.li
 import { ProfileViewNotificationListener } from './listeners/profile-view-notification.listener';
 import { SupabaseModule } from '../supabase/supabase.module';
 
+import { NotificationsController } from './notifications.controller';
+
 @Module({
   imports: [SupabaseModule],
-  controllers: [NotificationPreferencesController],
+  controllers: [NotificationsController, NotificationPreferencesController],
   providers: [
     NotificationsService,
     NotificationPreferencesService,

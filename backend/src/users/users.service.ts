@@ -11,9 +11,15 @@ import {
   ProfileVisitor,
 } from './interfaces/user-profile.interface';
 
+import { Optional } from '@nestjs/common';
+import { NotificationsService } from '../notifications/notifications.service';
+
 @Injectable()
 export class UsersService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    @Optional() private readonly notificationsService?: NotificationsService,
+  ) {}
 
   async getProfile(userId: string): Promise<UserProfile> {
     const supabase = this.supabaseService.getClient();
@@ -59,6 +65,64 @@ export class UsersService {
     }
 
     return (response.data ?? []) as unknown as ProfileVisitor[];
+  }
+
+  async followUser(followerId: string, targetUserId: string): Promise<void> {
+    if (followerId === targetUserId) {
+      throw new BadRequestException('Cannot follow yourself');
+    }
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('user_follows')
+      .upsert({ follower_id: followerId, following_id: targetUserId }, { onConflict: 'follower_id,following_id' });
+
+    if (error) {
+      Logger.warn(`Failed to follow user ${targetUserId} by ${followerId}: ${error.message}`);
+    } else if (this.notificationsService) {
+      void this.notificationsService.createNotification(targetUserId, followerId, 'follow');
+    }
+  }
+
+  async unfollowUser(followerId: string, targetUserId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('user_follows')
+      .delete()
+      .eq('follower_id', followerId)
+      .eq('following_id', targetUserId);
+
+    if (error) {
+      Logger.warn(`Failed to unfollow user ${targetUserId} by ${followerId}: ${error.message}`);
+    }
+  }
+
+  async likeProfile(likerId: string, targetUserId: string): Promise<void> {
+    if (likerId === targetUserId) {
+      throw new BadRequestException('Cannot like your own profile');
+    }
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('user_profile_likes')
+      .upsert({ liker_id: likerId, liked_id: targetUserId }, { onConflict: 'liker_id,liked_id' });
+
+    if (error) {
+      Logger.warn(`Failed to like profile ${targetUserId} by ${likerId}: ${error.message}`);
+    } else if (this.notificationsService) {
+      void this.notificationsService.createNotification(targetUserId, likerId, 'like_profile');
+    }
+  }
+
+  async unlikeProfile(likerId: string, targetUserId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('user_profile_likes')
+      .delete()
+      .eq('liker_id', likerId)
+      .eq('liked_id', targetUserId);
+
+    if (error) {
+      Logger.warn(`Failed to unlike profile ${targetUserId} by ${likerId}: ${error.message}`);
+    }
   }
 
   async touchLastActiveAt(userId: string): Promise<void> {

@@ -8,11 +8,14 @@ import { StreakResetCron } from './cron/streak-reset.cron';
 import { LastActiveInterceptor } from './interceptors/last-active.interceptor';
 import { SupabaseModule } from '../supabase/supabase.module';
 
+import { NotificationsModule } from '../notifications/notifications.module';
+
 @Module({
   imports: [
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     ScheduleModule.forRoot(),
     SupabaseModule,
+    NotificationsModule,
   ],
   controllers: [UsersController],
   providers: [

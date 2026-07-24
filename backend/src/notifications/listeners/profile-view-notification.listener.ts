@@ -27,16 +27,11 @@ export class ProfileViewNotificationListener {
 
       const viewerName = viewer.display_name || 'Someone';
 
-      await this.notificationsService.sendPushNotification(event.viewedUserId, {
-        type: 'profile_view',
-        title: 'Profile Visit',
-        body: `${viewerName} viewed your profile`,
-        data: {
-          sender_id: event.viewerId,
-          sender_name: viewerName,
-          sender_avatar: viewer.avatar_url || '',
-        },
-      });
+      await this.notificationsService.createNotification(
+        event.viewedUserId,
+        event.viewerId,
+        'profile_visit',
+      );
     } catch (err) {
       console.error('Profile view notification listener error:', err);
     }
