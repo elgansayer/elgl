@@ -285,6 +285,7 @@
 - [x] Build Daily Study Streak counter widget on home screen.
 - [ ] Implement NestJS CRON job to reset streaks if inactive for 24 hours.
 - [ ] Create NestJS `StreakModule` with `@Cron('0 0 * * *')` scheduled method in `StreakService` that queries `users` table for users whose `last_active_at` is older than 24 hours and resets their `study_streak_days` to 0. Add `last_active_at` column to `users` table if not present. Update `UsersService` to touch `last_active_at` on any authenticated request (e.g., via a middleware or interceptor). Write unit tests for the CRON job logic.
+- [ ] Actually implement the NestJS CRON job for streak reset: create `StreakModule` with `@nestjs/schedule`, add `@Cron('0 0 * * *')` in `StreakService` that queries `users` where `last_active_at < NOW() - INTERVAL '24 hours'` and sets `study_streak_days = 0`. Ensure `last_active_at` column exists in `users` table. Add middleware/interceptor to update `last_active_at` on authenticated requests. Write unit tests.
 - [ ] Build "Top Corrector" community leaderboard.
 - [x] Actually implement the Daily Study Streak counter widget on the home screen: create an Angular component (`StudyStreakWidgetComponent`) that displays the current streak count from the user's profile (`study_streak_days`), shows a visual progress indicator (e.g., flame icon + number), and fetches the streak data from the backend `/users/me` endpoint. The widget must be placed on the home/dashboard screen and update reactively when the streak changes.
 
