@@ -94,11 +94,4 @@ export class SafetyController {
   ): Promise<string[]> {
     return this.safetyService.getBlockedAndBlockerIds(userId);
   }
-
-  @Get('blocked-and-blocker-ids/:userId')
-  async getBlockedAndBlockerIds(
-    @Param('userId') userId: string,
-  ): Promise<string[]> {
-    return this.safetyService.getBlockedAndBlockerIds(userId);
-  }
 }

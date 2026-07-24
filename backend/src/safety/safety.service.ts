@@ -208,12 +208,4 @@ export class SafetyService {
     ]);
     return [...new Set([...blocked, ...blockers])];
   }
-
-  async getBlockedAndBlockerIds(userId: string): Promise<string[]> {
-    const [blocked, blockers] = await Promise.all([
-      this.getBlockedUserIds(userId),
-      this.getBlockerUserIds(userId),
-    ]);
-    return [...new Set([...blocked, ...blockers])];
-  }
 }
