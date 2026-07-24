@@ -3,3 +3,4 @@ export class ProfileViewEvent {
     public readonly viewerId: string,
     public readonly viewedUserId: string,
   ) {}
+}
