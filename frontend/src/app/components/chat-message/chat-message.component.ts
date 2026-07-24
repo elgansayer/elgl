@@ -1,10 +1,11 @@
-import { Component, Input, inject, computed } from '@angular/core';
+import { Component, Input, inject, computed, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatMessage, ChatService } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { FavouriteService } from '../../services/favourite.service';
 import { SafetyService } from '../../services/safety.service';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-chat-message',
@@ -78,17 +79,31 @@ import { SafetyService } from '../../services/safety.service';
     }
   `]
 })
-export class ChatMessageComponent {
+export class ChatMessageComponent implements OnInit, OnDestroy {
   @Input({ required: true }) message!: ChatMessage;
   @Input() currentUserId?: string;
+  
   private authService = inject(AuthService);
   private favouriteService = inject(FavouriteService);
   private safetyService = inject(SafetyService);
   private chatService = inject(ChatService);
+  private destroy$ = new Subject<void>();
 
-  isBlocked = computed(() => {
-    return this.chatService.isUserBlocked(this.message.sender_id);
-  });
+  isBlocked = signal(false);
+
+  ngOnInit(): void {
+    // Check if this message sender is blocked
+    if (this.message.sender_id) {
+      this.safetyService.isBlocked(this.message.sender_id).subscribe({
+        next: (result) => this.isBlocked.set(result.blocked),
+      });
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   isOwnMessage(): boolean {
     if (this.currentUserId !== undefined) {
@@ -118,7 +133,8 @@ export class ChatMessageComponent {
   onReport(event: { messageId: string; content: string; senderId: string; roomId: string }): void {
     this.safetyService.reportUser({
       reported_id: event.senderId,
-      reason: 'Inappropriate message',
+      reason_category: 'inappropriate_content',
+      description: 'Inappropriate message',
       context_url: window.location.href,
     }).subscribe({
       next: () => console.log('Report submitted'),
@@ -128,13 +144,11 @@ export class ChatMessageComponent {
 
   onBlock(event: { senderId: string; blocked: boolean }): void {
     if (event.blocked) {
-      this.safetyService.blockUserAsync(event.senderId).then(() => {
-        this.chatService.addBlockedUser(event.senderId);
-      }).catch(err => console.error('Failed to block user', err));
+      this.isBlocked.set(true);
+      this.chatService.addBlockedUser(event.senderId);
     } else {
-      this.safetyService.unblockUserAsync(event.senderId).then(() => {
-        this.chatService.removeBlockedUser(event.senderId);
-      }).catch(err => console.error('Failed to unblock user', err));
+      this.isBlocked.set(false);
+      this.chatService.removeBlockedUser(event.senderId);
     }
   }
 }

@@ -104,4 +104,15 @@ export class SafetyService {
     ]);
     return [...new Set([...blocked, ...blockers])];
   }
+
+  async isBlocked(userId: string): Promise<{ blocked: boolean }> {
+    try {
+      return lastValueFrom(
+        this.http.get<{ blocked: boolean }>(`${this.apiUrl}/safety/is-blocked/${userId}`)
+      );
+    } catch (e) {
+      console.error('Failed to check block status:', e);
+      return { blocked: false };
+    }
+  }
 }

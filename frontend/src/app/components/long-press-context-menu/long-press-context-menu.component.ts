@@ -4,7 +4,7 @@ import { I18nService } from '../../services/i18n.service';
 import { SafetyService } from '../../services/safety.service';
 
 export interface ContextMenuOption {
-  id: 'copy' | 'favourite' | 'report';
+  id: 'copy' | 'favourite' | 'report' | 'block' | 'unblock';
   label: string;
   icon: string;
   disabled?: boolean;
@@ -224,10 +224,16 @@ export class LongPressContextMenuComponent implements AfterViewInit {
         this.report.emit({ messageId: id, content, senderId: sId, roomId: rId });
         break;
       case 'block':
-        this.block.emit({ senderId: sId, blocked: true });
+        // Actually call the API
+        this.safetyService.blockUserAsync(sId).then(() => {
+          this.block.emit({ senderId: sId, blocked: true });
+        }).catch(err => console.error('Failed to block user', err));
         break;
       case 'unblock':
-        this.block.emit({ senderId: sId, blocked: false });
+        // Actually call the API
+        this.safetyService.unblockUserAsync(sId).then(() => {
+          this.block.emit({ senderId: sId, blocked: false });
+        }).catch(err => console.error('Failed to unblock user', err));
         break;
     }
     this.close();

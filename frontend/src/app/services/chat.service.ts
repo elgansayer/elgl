@@ -168,4 +168,18 @@ export class ChatService {
   removeBlockedUser(userId: string): void {
     this.blockedUserIds = this.blockedUserIds.filter(id => id !== userId);
   }
+
+  async isBlocked(userId: string): Promise<boolean> {
+    try {
+      const response = await firstValueFrom(
+        this.http.get<{ blocked: boolean }>(`${environment.apiUrl}/safety/is-blocked/${userId}`, {
+          headers: this.getHeaders()
+        })
+      );
+      return response.blocked;
+    } catch (e) {
+      console.error('Failed to check block status:', e);
+      return false;
+    }
+  }
 }
