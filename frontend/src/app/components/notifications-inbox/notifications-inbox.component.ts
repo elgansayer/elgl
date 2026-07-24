@@ -13,7 +13,7 @@ export type NotificationTab = 'all' | 'likes' | 'comments' | 'follows';
 
 @Component({
   selector: 'app-notifications-inbox',
-  imports: [CommonModule, RouterLink, TranslatePipe, ScrollablePillsComponent],
+  imports: [CommonModule, TranslatePipe, ScrollablePillsComponent],
   templateUrl: './notifications-inbox.component.html',
   styleUrls: ['./notifications-inbox.component.scss'],
 })
@@ -28,12 +28,15 @@ export class NotificationsInboxComponent implements OnInit {
   readonly selectedTab = signal<NotificationTab>('all');
   readonly unreadCount = signal<number>(0);
 
-  readonly filterPills = signal<{ id: NotificationTab; labelKey: string }[]>([
-    { id: 'all', labelKey: 'notifications.tabAll' },
-    { id: 'likes', labelKey: 'notifications.tabLikes' },
-    { id: 'comments', labelKey: 'notifications.tabComments' },
-    { id: 'follows', labelKey: 'notifications.tabFollows' },
-  ]);
+  readonly filterPills = computed(() => {
+    this.i18n.translations();
+    return [
+      { id: 'all', label: this.i18n.translate('notifications.tabAll') },
+      { id: 'likes', label: this.i18n.translate('notifications.tabLikes') },
+      { id: 'comments', label: this.i18n.translate('notifications.tabComments') },
+      { id: 'follows', label: this.i18n.translate('notifications.tabFollows') },
+    ];
+  });
 
   async ngOnInit(): Promise<void> {
     await this.loadNotifications();
