@@ -141,7 +141,7 @@ export class AppleNotificationService {
     data: any,
   ): Promise<void> {
     const transactionInfo: any = await this.decodeTransactionInfo(
-      data?.signedTransactionInfo as string | undefined,
+      (data as any)?.signedTransactionInfo as string | undefined,
     );
     if (!transactionInfo) {
       this.logger.warn('No transaction info in subscription active event');

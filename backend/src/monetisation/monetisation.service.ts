@@ -230,7 +230,7 @@ export class MonetisationService {
       .eq('id', userId)
       .single();
     if (!response.data) throw new NotFoundException('User not found');
-    const user = response.data as UserVipRow;
+    const user = response.data as unknown as UserVipRow;
 
     if (!user.is_vip) {
       throw new ForbiddenException(
@@ -296,7 +296,7 @@ export class MonetisationService {
       return [];
     }
 
-    return response.data;
+    return response.data as ChatRoomRecord[];
   }
 
   async createDiagnosticLog(

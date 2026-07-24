@@ -37,7 +37,7 @@ export class User {
     srid: 4326,
     nullable: true,
   })
-  location: any | null;
+  location: unknown | null;
 
   @Column({
     type: 'geography',
@@ -45,7 +45,7 @@ export class User {
     srid: 4326,
     nullable: true,
   })
-  mock_location: any | null;
+  mock_location: unknown | null;
 
   @Column({ type: 'boolean', default: false })
   @Index()

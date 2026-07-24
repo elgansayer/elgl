@@ -20,7 +20,7 @@ export class FavouritesController {
   async addFavourite(
     @Req() req: any,
     @Body() dto: { message_id: string; note_text?: string },
-  ) {
+  ): Promise<any> {
     return this.favouritesService.addFavourite(req.user.id, dto);
   }
 
