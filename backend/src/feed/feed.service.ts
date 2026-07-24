@@ -40,7 +40,8 @@ export class FeedService {
     const supabase = this.supabaseService.getClient();
 
     // Get blocked user IDs to exclude from feed
-    const blockedIds: string[] = await this.safetyService.getBlockedIds(currentUserId);
+    const blockedIds: string[] =
+      await this.safetyService.getBlockedIds(currentUserId);
 
     let query = supabase
       .from('moments')
@@ -75,13 +76,23 @@ export class FeedService {
         .single();
 
       if (userError || !currentUser) {
-        this.logger.error(`Failed to fetch current user: ${userError?.message}`);
+        this.logger.error(
+          `Failed to fetch current user: ${userError?.message}`,
+        );
         return [];
       }
 
       // Show moments from users who share target languages or native language
-      const targetLangs: string[] = (currentUser as { target_languages?: string[]; native_language?: string }).target_languages || [];
-      const nativeLang: string | undefined = (currentUser as { target_languages?: string[]; native_language?: string }).native_language;
+      const targetLangs: string[] =
+        (
+          currentUser as {
+            target_languages?: string[];
+            native_language?: string;
+          }
+        ).target_languages || [];
+      const nativeLang: string | undefined = (
+        currentUser as { target_languages?: string[]; native_language?: string }
+      ).native_language;
 
       // Build OR conditions for language matching
       const conditions: string[] = [];
@@ -110,9 +121,9 @@ export class FeedService {
       }
 
       if (following && following.length > 0) {
-        const followedIds: string[] = (following as { followed_id: string }[]).map(
-          (f: { followed_id: string }) => f.followed_id,
-        );
+        const followedIds: string[] = (
+          following as { followed_id: string }[]
+        ).map((f: { followed_id: string }) => f.followed_id);
         query = query.in('author_id', followedIds);
       } else {
         // No one followed, return empty
@@ -137,7 +148,8 @@ export class FeedService {
     const supabase = this.supabaseService.getClient();
 
     // Check if author is blocked
-    const blockedIds: string[] = await this.safetyService.getBlockedIds(currentUserId);
+    const blockedIds: string[] =
+      await this.safetyService.getBlockedIds(currentUserId);
 
     const { data, error } = await supabase
       .from('moments')
@@ -225,7 +237,7 @@ export class FeedService {
       throw new Error('Moment not found');
     }
 
-    const momentData = moment as { author_id: string };
+    const momentData = moment;
 
     if (momentData.author_id !== userId) {
       throw new Error('Not authorized to delete this moment');
