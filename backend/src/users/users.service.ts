@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -59,6 +60,34 @@ export class UsersService {
 
     return (response.data ?? []) as ProfileVisitor[];
   }
+  async touchLastActiveAt(userId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const now = new Date().toISOString();
+    
+    const { error } = await supabase
+      .from('users')
+      .update({ last_active_at: now })
+      .eq('id', userId);
+
+    if (error) {
+      Logger.warn(`Failed to update last_active_at for user ${userId}: ${error.message}`);
+    }
+  }
+
+  async touchLastActiveAt(userId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const now = new Date().toISOString();
+    
+    const { error } = await supabase
+      .from('users')
+      .update({ last_active_at: now })
+      .eq('id', userId);
+
+    if (error) {
+      Logger.warn(`Failed to update last_active_at for user ${userId}: ${error.message}`);
+    }
+  }
+
   private getMockProfile(userId: string): UserProfile {
     return {
       id: userId,
