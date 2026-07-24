@@ -1,11 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
+export interface Corrector {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  correction_ratio: number;
+  study_streak_days: number;
+  is_serious_learner: boolean;
+}
+
 @Injectable()
 export class LeaderboardService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async getTopCorrectors(limit: number = 20): Promise<any[]> {
+  async getTopCorrectors(limit: number = 20): Promise<Corrector[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('users')
@@ -19,6 +28,6 @@ export class LeaderboardService {
       throw new Error(`Failed to fetch top correctors: ${error.message}`);
     }
 
-    return data ?? [];
+    return (data ?? []) as Corrector[];
   }
 }
