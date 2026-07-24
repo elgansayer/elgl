@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProfileVisitsService } from './profile-visits.service';
 import { SupabaseService } from '../supabase/supabase.service';
