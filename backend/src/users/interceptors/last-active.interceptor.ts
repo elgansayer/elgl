@@ -15,7 +15,7 @@ export class LastActiveInterceptor implements NestInterceptor {
   constructor(private readonly supabaseService: SupabaseService) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const request: any = context.switchToHttp().getRequest();
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const userId: string | undefined = request.user?.id;
