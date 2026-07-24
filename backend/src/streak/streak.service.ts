@@ -34,7 +34,9 @@ export class StreakService {
     const queryResponse = await (supabase
       .from('users')
       .select('id, study_streak_days, last_active_at')
-      .lt('last_active_at', cutoff) as unknown as Promise<SupabaseResponse<UserRow[]>>);
+      .lt('last_active_at', cutoff) as unknown as Promise<
+      SupabaseResponse<UserRow[]>
+    >);
 
     const { data: inactiveUsers, error: queryError } = queryResponse;
 
