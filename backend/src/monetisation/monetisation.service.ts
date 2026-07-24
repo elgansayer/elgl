@@ -168,11 +168,10 @@ export class MonetisationService {
         signature,
         webhookSecret,
       );
-    } catch (err: any) {
-      this.logger.error(
-        `Webhook signature verification failed: ${(err as Error).message}`,
-      );
-      throw new BadRequestException(`Webhook Error: ${(err as Error).message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      this.logger.error(`Webhook signature verification failed: ${message}`);
+      throw new BadRequestException(`Webhook Error: ${message}`);
     }
 
     this.logger.log(`Received verified Stripe Webhook event: ${event.type}`);
