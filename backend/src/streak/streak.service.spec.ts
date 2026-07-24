@@ -35,6 +35,17 @@ describe('StreakService', () => {
     }).compile();
 
     service = module.get<StreakService>(StreakService);
+
+    // Provide a dummy logger so handleStreakResetCron doesn't throw
+    (service as any).logger = {
+      log: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+    };
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('should be defined', () => {
