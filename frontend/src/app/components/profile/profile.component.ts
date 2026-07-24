@@ -27,12 +27,9 @@ export class ProfileComponent implements OnInit {
   // Editable fields
   displayName = '';
   nativeLanguage = 'en';
-  targetLanguagesInput = 'es';
+  targetLanguages: string[] = ['es'];
   avatarUrl = '';
   bioText = '';
-  privacyHideLocation = false;
-  privacyHideSearch = false;
-  privacyHideAge = false;
 
   async ngOnInit(): Promise<void> {
     await this.loadProfile();
@@ -46,12 +43,9 @@ export class ProfileComponent implements OnInit {
         this.profile.set(data);
         this.displayName = data.display_name || '';
         this.nativeLanguage = data.native_language;
-        this.targetLanguagesInput = (data.target_languages || []).join(', ');
+        this.targetLanguages = data.target_languages || [];
         this.avatarUrl = data.avatar_url || '';
         this.bioText = data.bio_text || '';
-        this.privacyHideLocation = Boolean(data.privacy_hide_location);
-        this.privacyHideSearch = Boolean(data.privacy_hide_from_search);
-        this.privacyHideAge = Boolean(data.privacy_hide_age);
       }
     } catch (e: unknown) {
       const err = e as { message?: string };
@@ -70,21 +64,12 @@ export class ProfileComponent implements OnInit {
   async saveProfile(): Promise<void> {
     this.errorMessage.set('');
     this.successMessage.set('');
-    const targetLanguages = this.targetLanguagesInput
-      .split(',')
-      .map(s => s.trim())
-      .filter(s => s.length > 0);
-
-    try {
       const updated = await this.userService.updateMyProfile({
         display_name: this.displayName,
         native_language: this.nativeLanguage,
-        target_languages: targetLanguages,
+        target_languages: this.targetLanguages,
         avatar_url: this.avatarUrl,
         bio_text: this.bioText,
-        privacy_hide_location: this.privacyHideLocation,
-        privacy_hide_from_search: this.privacyHideSearch,
-        privacy_hide_age: this.privacyHideAge,
       });
       this.profile.set(updated);
       this.isEditing.set(false);
@@ -104,5 +89,32 @@ export class ProfileComponent implements OnInit {
   onCoverUploaded(coverUrl: string): void {
     this.profile.update(p => p ? { ...p, cover_photo_url: coverUrl } : p);
     this.successMessage.set(this.i18n.translate('profile.coverUpdated'));
+  }
+
+  readonly availableLanguages = [
+    { code: 'en', name: 'English', flag: '🇬🇧' },
+    { code: 'es', name: 'Spanish', flag: '🇪🇸' },
+    { code: 'fr', name: 'French', flag: '🇫🇷' },
+    { code: 'ja', name: 'Japanese', flag: '🇯🇵' },
+    { code: 'ko', name: 'Korean', flag: '🇰🇷' },
+    { code: 'zh', name: 'Chinese', flag: '🇨🇳' },
+    { code: 'de', name: 'German', flag: '🇩🇪' },
+    { code: 'it', name: 'Italian', flag: '🇮🇹' },
+    { code: 'ru', name: 'Russian', flag: '🇷🇺' },
+    { code: 'pt', name: 'Portuguese', flag: '🇵🇹' }
+  ];
+
+  toggleTargetLanguage(code: string): void {
+    if (this.targetLanguages.includes(code)) {
+      this.targetLanguages = this.targetLanguages.filter(l => l !== code);
+    } else {
+      // free users can only have 1, VIP can have up to 3.
+      // we'll just let them toggle up to 3 and the backend will reject if free and >1.
+      if (this.targetLanguages.length < 3) {
+        this.targetLanguages.push(code);
+      } else {
+        this.errorMessage.set(this.i18n.translate('profile.maxLanguagesError') || 'Max 3 languages allowed');
+      }
+    }
   }
 }
