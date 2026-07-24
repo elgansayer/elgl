@@ -574,6 +574,7 @@ export class I18nService {
     'context_menu.block': 'Block',
     'context_menu.unblock': 'Unblock',
     'chat.message_blocked': 'This message is from a blocked user',
+    'chat.unblock_user': 'Unblock user',
 
     // VoIP Call UI
     'voip.mute': 'Mute',
