@@ -6,6 +6,24 @@ import {
   CategoryPreference,
 } from './interfaces/notification-preferences.interface';
 
+interface DbNotificationPreferences {
+  user_id: string;
+  new_message: CategoryPreference;
+  call_invite: CategoryPreference;
+  moment_like: CategoryPreference;
+  moment_comment: CategoryPreference;
+  correction: CategoryPreference;
+  gift: CategoryPreference;
+  profile_view: CategoryPreference;
+  study_reminder: CategoryPreference;
+  friend_request: CategoryPreference;
+  audio_room_invite: CategoryPreference;
+  quiet_hours_start: string | null;
+  quiet_hours_end: string | null;
+  do_not_disturb: boolean;
+  updated_at: string;
+}
+
 @Injectable()
 export class NotificationPreferencesService {
   private readonly defaultPreferences: Omit<
@@ -45,7 +63,7 @@ export class NotificationPreferencesService {
       return this.createDefaultPreferences(userId);
     }
 
-    return this.mapDbToPreferences(data);
+    return this.mapDbToPreferences(data as DbNotificationPreferences);
   }
 
   async updatePreferences(
@@ -69,7 +87,7 @@ export class NotificationPreferencesService {
       throw error;
     }
 
-    return this.mapDbToPreferences(data);
+    return this.mapDbToPreferences(data as DbNotificationPreferences);
   }
 
   async resetToDefaults(userId: string): Promise<NotificationPreferences> {
@@ -87,7 +105,7 @@ export class NotificationPreferencesService {
       throw error;
     }
 
-    return this.mapDbToPreferences(data);
+    return this.mapDbToPreferences(data as DbNotificationPreferences);
   }
 
   async shouldSendNotification(
@@ -186,22 +204,22 @@ export class NotificationPreferencesService {
     return merged;
   }
 
-  private mapDbToPreferences(data: any): NotificationPreferences {
+  private mapDbToPreferences(data: DbNotificationPreferences): NotificationPreferences {
     return {
       userId: data.user_id,
-      new_message: data.new_message as CategoryPreference,
-      call_invite: data.call_invite as CategoryPreference,
-      moment_like: data.moment_like as CategoryPreference,
-      moment_comment: data.moment_comment as CategoryPreference,
-      correction: data.correction as CategoryPreference,
-      gift: data.gift as CategoryPreference,
-      profile_view: data.profile_view as CategoryPreference,
-      study_reminder: data.study_reminder as CategoryPreference,
-      friend_request: data.friend_request as CategoryPreference,
-      audio_room_invite: data.audio_room_invite as CategoryPreference,
-      quiet_hours_start: data.quiet_hours_start,
-      quiet_hours_end: data.quiet_hours_end,
-      do_not_disturb: data.do_not_disturb ?? false,
+      new_message: data.new_message,
+      call_invite: data.call_invite,
+      moment_like: data.moment_like,
+      moment_comment: data.moment_comment,
+      correction: data.correction,
+      gift: data.gift,
+      profile_view: data.profile_view,
+      study_reminder: data.study_reminder,
+      friend_request: data.friend_request,
+      audio_room_invite: data.audio_room_invite,
+      quiet_hours_start: data.quiet_hours_start ?? undefined,
+      quiet_hours_end: data.quiet_hours_end ?? undefined,
+      do_not_disturb: data.do_not_disturb,
       updatedAt: data.updated_at,
     };
   }
@@ -209,7 +227,7 @@ export class NotificationPreferencesService {
   private mapPreferencesToDb(
     userId: string,
     prefs: NotificationPreferences,
-  ): any {
+  ): DbNotificationPreferences {
     return {
       user_id: userId,
       new_message: prefs.new_message,
