@@ -55,6 +55,7 @@ export class I18nService {
     'notifications.likedProfile': 'liked your profile',
     'notifications.likedMoment': 'liked your moment',
     'notifications.commentedMoment': 'commented on your moment',
+    'notifications.repliedComment': 'replied to your comment',
     'notifications.followedYou': 'started following you',
     'notifications.viewedProfile': 'viewed your profile',
     'notifications.newActivity': 'new activity alert',
