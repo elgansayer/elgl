@@ -147,9 +147,7 @@ export class AppleNotificationService {
   /**
    * Handles a change in auto-renewal status (e.g., user turned off auto-renew).
    */
-  private handleRenewalStatusChange(
-    data: Record<string, unknown>,
-  ): void {
+  private handleRenewalStatusChange(data: Record<string, unknown>): void {
     const userId = data?.appAccountToken as string | undefined;
     const autoRenewStatus = data?.autoRenewStatus as number | undefined;
 
@@ -168,9 +166,7 @@ export class AppleNotificationService {
   /**
    * Handles a change in renewal preference (e.g., user switched to a different product).
    */
-  private handleRenewalPreferenceChange(
-    data: Record<string, unknown>,
-  ): void {
+  private handleRenewalPreferenceChange(data: Record<string, unknown>): void {
     const userId = data?.appAccountToken as string | undefined;
     const newProductId = data?.autoRenewProductId as string | undefined;
 

@@ -75,10 +75,7 @@ export class GooglePlayNotificationService {
           this.handleSubscriptionOnHold(purchaseToken, subscriptionId);
           break;
         case 6: // SUBSCRIPTION_IN_GRACE_PERIOD
-          this.handleSubscriptionInGracePeriod(
-            purchaseToken,
-            subscriptionId,
-          );
+          this.handleSubscriptionInGracePeriod(purchaseToken, subscriptionId);
           break;
         case 7: // SUBSCRIPTION_RESTARTED
           this.handleSubscriptionRestarted(purchaseToken, subscriptionId);
@@ -308,9 +305,7 @@ export class GooglePlayNotificationService {
   /**
    * Retrieves the user ID associated with a purchase token.
    */
-  private getUserIdByPurchaseToken(
-    purchaseToken: string,
-  ): string | null {
+  private getUserIdByPurchaseToken(purchaseToken: string): string | null {
     const supabase = this.supabaseService.getClient();
 
     const { data } = await supabase
@@ -319,7 +314,7 @@ export class GooglePlayNotificationService {
       .eq('purchase_token', purchaseToken)
       .single();
 
-    const row = data as { user_id: string } | null;
+    const row = data;
     return row?.user_id ?? null;
   }
 

@@ -30,7 +30,7 @@ export class VideoCallsService {
       maxParticipants: 2,
     };
 
-    await this.roomService.createRoom(createOptions as CreateRoomOptions);
+    await this.roomService.createRoom(createOptions);
 
     const token = this.generateToken(userId, roomName, true);
 
@@ -51,8 +51,8 @@ export class VideoCallsService {
     canPublish: boolean,
   ): string {
     const at = new AccessToken(
-      this.configService.get<string>('LIVEKIT_API_KEY') as string,
-      this.configService.get<string>('LIVEKIT_SECRET') as string,
+      this.configService.get<string>('LIVEKIT_API_KEY'),
+      this.configService.get<string>('LIVEKIT_SECRET'),
       {
         identity: userId,
         ttl: '1h',

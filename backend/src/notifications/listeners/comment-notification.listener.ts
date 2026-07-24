@@ -30,19 +30,22 @@ export class CommentNotificationListener {
         ? event.commentPreview.substring(0, 100)
         : '';
 
-      await this.notificationsService.sendPushNotification(event.momentAuthorId, {
-        type: 'moment_comment',
-        title: commenterName,
-        body: preview
-          ? `commented: "${preview}"`
-          : 'commented on your moment',
-        data: {
-          moment_id: event.momentId,
-          sender_id: event.commenterId,
-          sender_name: commenterName,
-          sender_avatar: commenter.avatar_url || '',
+      await this.notificationsService.sendPushNotification(
+        event.momentAuthorId,
+        {
+          type: 'moment_comment',
+          title: commenterName,
+          body: preview
+            ? `commented: "${preview}"`
+            : 'commented on your moment',
+          data: {
+            moment_id: event.momentId,
+            sender_id: event.commenterId,
+            sender_name: commenterName,
+            sender_avatar: commenter.avatar_url || '',
+          },
         },
-      });
+      );
     } catch (err) {
       console.error('Comment notification listener error:', err);
     }

@@ -63,28 +63,32 @@ export class UsersService {
   async touchLastActiveAt(userId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
     const now = new Date().toISOString();
-    
+
     const { error } = await supabase
       .from('users')
       .update({ last_active_at: now })
       .eq('id', userId);
 
     if (error) {
-      Logger.warn(`Failed to update last_active_at for user ${userId}: ${error.message}`);
+      Logger.warn(
+        `Failed to update last_active_at for user ${userId}: ${error.message}`,
+      );
     }
   }
 
   async touchLastActiveAt(userId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
     const now = new Date().toISOString();
-    
+
     const { error } = await supabase
       .from('users')
       .update({ last_active_at: now })
       .eq('id', userId);
 
     if (error) {
-      Logger.warn(`Failed to update last_active_at for user ${userId}: ${error.message}`);
+      Logger.warn(
+        `Failed to update last_active_at for user ${userId}: ${error.message}`,
+      );
     }
   }
 

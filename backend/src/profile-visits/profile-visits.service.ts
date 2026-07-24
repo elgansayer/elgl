@@ -70,7 +70,7 @@ export class ProfileVisitsService {
     // Emit push notification event
     this.eventEmitter.emit(
       'profile.view',
-      new ProfileViewEvent(visitorId, viewedId) as ProfileViewEvent,
+      new ProfileViewEvent(visitorId, viewedId),
     );
 
     return response.data as Record<string, unknown>;

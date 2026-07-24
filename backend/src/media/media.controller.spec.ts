@@ -53,7 +53,7 @@ describe('MediaController', () => {
       );
 
       const result = await controller.getCoverPresignedUrl(
-        { user: { id: 'user-1' } } as any,
+        { user: { id: 'user-1' } },
         dto,
       );
 
@@ -76,7 +76,7 @@ describe('MediaController', () => {
       );
 
       const result = await controller.confirmCoverUpload(
-        { user: { id: 'user-1' } } as any,
+        { user: { id: 'user-1' } },
         'covers/user-1/test.jpg',
       );
 

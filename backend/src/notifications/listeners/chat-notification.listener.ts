@@ -31,7 +31,8 @@ export class ChatNotificationListener {
         doodle: 'sent a doodle',
       };
 
-      const actionLabel = messageTypeLabels[event.messageType] || 'sent a message';
+      const actionLabel =
+        messageTypeLabels[event.messageType] || 'sent a message';
 
       await this.notificationsService.sendPushNotification(event.receiverId, {
         type: 'new_message',
