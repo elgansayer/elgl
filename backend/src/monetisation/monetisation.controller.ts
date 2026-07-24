@@ -128,4 +128,21 @@ export class MonetisationController {
       dto.interval,
     );
   }
+
+  @Post('restore-purchases')
+  @UseGuards(SupabaseAuthGuard)
+  async restorePurchases(
+    @CurrentUser() user: User | null,
+    @Body() dto: { platform?: string; receipt_data?: string },
+  ) {
+    if (!user) return null;
+    if (!dto.platform || !['ios', 'android'].includes(dto.platform)) {
+      throw new BadRequestException('Platform must be "ios" or "android"');
+    }
+    return await this.monetisationService.restorePurchases(
+      user.id,
+      dto.platform as 'ios' | 'android',
+      dto.receipt_data,
+    );
+  }
 }

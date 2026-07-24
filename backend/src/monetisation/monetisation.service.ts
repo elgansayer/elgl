@@ -15,6 +15,7 @@ import { CreateDiagnosticLogDto } from './dto/monetisation.dto';
 import { AppleNotificationService } from './apple-notification.service';
 import { GooglePlayNotificationService } from './google-play-notification.service';
 import { SubscriptionPlansService } from './services/subscription-plans.service';
+import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
 
 export interface UserVipRow {
   id: string;
@@ -53,6 +54,7 @@ export class MonetisationService {
     @Inject(forwardRef(() => GooglePlayNotificationService))
     private readonly googlePlayNotificationService: GooglePlayNotificationService,
     private readonly subscriptionPlansService: SubscriptionPlansService,
+    private readonly appleReceiptValidatorService: AppleReceiptValidatorService,
   ) {
     this.stripe = new Stripe(
       this.configService.get<string>('STRIPE_SECRET_KEY') || '',
@@ -318,5 +320,44 @@ export class MonetisationService {
     }
 
     return response.data;
+  }
+
+  /**
+   * Restore previous purchases (Apple App Store / Google Play).
+   * Validates receipt and updates VIP status accordingly.
+   */
+  async restorePurchases(
+    userId: string,
+    platform: 'ios' | 'android',
+    receiptData?: string,
+  ): Promise<{ received: boolean; status: string }> {
+    if (platform === 'ios') {
+      if (!receiptData) {
+        throw new BadRequestException('Receipt data is required for iOS');
+      }
+      const validationResult =
+        await this.appleReceiptValidatorService.validateReceipt(
+          userId,
+          receiptData,
+          false,
+        );
+      if (validationResult.valid && validationResult.product_id) {
+        const tier = this.subscriptionPlansService.getTierByProductId(
+          validationResult.product_id,
+        );
+        if (tier) {
+          await this.updateVipStatusFromWebhook(userId, true, tier);
+          return { received: true, status: 'restored' };
+        }
+      }
+      return { received: true, status: 'no_valid_subscription' };
+    } else if (platform === 'android') {
+      // Android restore purchases not fully implemented yet
+      this.logger.warn(
+        `Android restore purchases not fully implemented for user ${userId}`,
+      );
+      return { received: true, status: 'not_implemented' };
+    }
+    throw new BadRequestException('Invalid platform');
   }
 }
