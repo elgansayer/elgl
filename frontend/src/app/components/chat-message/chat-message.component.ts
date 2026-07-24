@@ -22,20 +22,21 @@ import { Subject } from 'rxjs';
   standalone: true,
   imports: [CommonModule, LongPressContextMenuComponent],
   template: `
-    <app-long-press-context-menu
-      [messageId]="message.id"
-      [messageContent]="message.text_content ?? ''"
-      [messageType]="message.message_type"
-      [senderId]="message.sender_id"
-      [roomId]="message.room_id"
-      [isBlocked]="isBlocked()"
-      (copy)="onCopy($event)"
-      (favourite)="onFavourite($event)"
-      (report)="onReport($event)"
-      (block)="onBlock($event)"
-      (unblock)="onUnblock($event)"
-    >
-      <ng-container *ngIf="!isBlocked(); else blockedMessage">
+    <!-- Entire wrapper rendered only for unblocked users -->
+    <ng-container *ngIf="!isBlocked(); else blockPlaceholder">
+      <app-long-press-context-menu
+        [messageId]="message.id"
+        [messageContent]="message.text_content ?? ''"
+        [messageType]="message.message_type"
+        [senderId]="message.sender_id"
+        [roomId]="message.room_id"
+        [isBlocked]="isBlocked()"
+        (copy)="onCopy($event)"
+        (favourite)="onFavourite($event)"
+        (report)="onReport($event)"
+        (block)="onBlock($event)"
+        (unblock)="onUnblock($event)"
+      >
         <div class="flex" [class.justify-end]="isOwnMessage()" [class.justify-start]="!isOwnMessage()">
           <div class="max-w-[70%] rounded-lg p-3"
                [class.bg-blue-600]="isOwnMessage()"
@@ -73,20 +74,11 @@ import { Subject } from 'rxjs';
             <p class="text-xs mt-1 opacity-60 text-right">{{ message.created_at | date:'shortTime' }}</p>
           </div>
         </div>
-      </ng-container>
-      <ng-template #blockedMessage>
-        <div class="flex justify-center">
-          <div class="bg-gray-800/50 rounded-lg p-3 text-center text-gray-400 text-sm italic max-w-[80%]">
-            <p>{{ i18n.translate('chat.message_blocked') }}</p>
-            <button 
-              (click)="unblockUser()" 
-              class="text-blue-400 hover:text-blue-300 text-xs mt-2 underline">
-              {{ i18n.translate('chat.unblock_user') }}
-            </button>
-          </div>
-        </div>
-      </ng-template>
-    </app-long-press-context-menu>
+      </app-long-press-context-menu>
+    </ng-container>
+
+    <!-- Empty placeholder: no UI at all for blocked messages -->
+    <ng-template #blockPlaceholder></ng-template>
   `,
   styles: [`
     :host {
