@@ -1,6 +1,7 @@
 import { Component, input, output, signal, computed, HostListener, ElementRef, ViewChild, AfterViewInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { I18nService } from '../../services/i18n.service';
+import { SafetyService } from '../../services/safety.service';
 
 export interface ContextMenuOption {
   id: 'copy' | 'favourite' | 'report';
@@ -62,6 +63,7 @@ export interface ContextMenuOption {
 export class LongPressContextMenuComponent implements AfterViewInit {
   private readonly elementRef = inject(ElementRef);
   private readonly i18n = inject(I18nService);
+  private readonly safetyService = inject(SafetyService);
 
   @ViewChild('menuPanel') menuPanel!: ElementRef<HTMLElement>;
 
@@ -72,10 +74,12 @@ export class LongPressContextMenuComponent implements AfterViewInit {
   readonly roomId = input<string>('');
   readonly disabled = input<boolean>(false);
   readonly longPressDuration = input<number>(600);
+  readonly isBlocked = input<boolean>(false);
 
   readonly copy = output<{ messageId: string; content: string }>();
   readonly favourite = output<{ messageId: string; content: string; messageType: string }>();
   readonly report = output<{ messageId: string; content: string; senderId: string; roomId: string }>();
+  readonly block = output<{ senderId: string; blocked: boolean }>();
 
   readonly isOpen = signal(false);
   readonly position = signal<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -83,11 +87,26 @@ export class LongPressContextMenuComponent implements AfterViewInit {
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private touchMoved = false;
 
-  readonly options = computed<ContextMenuOption[]>(() => [
-    { id: 'copy', label: this.i18n.translate('context_menu.copy'), icon: '📋' },
-    { id: 'favourite', label: this.i18n.translate('context_menu.favourite'), icon: '⭐' },
-    { id: 'report', label: this.i18n.translate('context_menu.report'), icon: '🚩' },
-  ]);
+  readonly options = computed<ContextMenuOption[]>(() => {
+    const baseOptions: ContextMenuOption[] = [
+      { id: 'copy', label: this.i18n.translate('context_menu.copy'), icon: '📋' },
+      { id: 'favourite', label: this.i18n.translate('context_menu.favourite'), icon: '⭐' },
+      { id: 'report', label: this.i18n.translate('context_menu.report'), icon: '🚩' },
+    ];
+
+    // Add block/unblock option if senderId is provided
+    if (this.senderId()) {
+      baseOptions.push({
+        id: this.isBlocked() ? 'unblock' : 'block',
+        label: this.isBlocked()
+          ? this.i18n.translate('context_menu.unblock')
+          : this.i18n.translate('context_menu.block'),
+        icon: this.isBlocked() ? '🔓' : '🔒',
+      });
+    }
+
+    return baseOptions;
+  });
 
   readonly translatedOptions = computed(() => this.options());
 
@@ -203,6 +222,12 @@ export class LongPressContextMenuComponent implements AfterViewInit {
         break;
       case 'report':
         this.report.emit({ messageId: id, content, senderId: sId, roomId: rId });
+        break;
+      case 'block':
+        this.block.emit({ senderId: sId, blocked: true });
+        break;
+      case 'unblock':
+        this.block.emit({ senderId: sId, blocked: false });
         break;
     }
     this.close();

@@ -45,6 +45,15 @@ export class SafetyService {
     return lastValueFrom(this.blockUser(blockedId));
   }
 
+  unblockUser(blockedId: string): Observable<{ success: boolean }> {
+    return this.http.post<{ success: boolean }>(`${this.apiUrl}/safety/unblock`, { blocked_id: blockedId });
+  }
+
+  /** Promise-based version for use with async/await in components */
+  async unblockUserAsync(blockedId: string): Promise<{ success: boolean }> {
+    return lastValueFrom(this.unblockUser(blockedId));
+  }
+
   getBlockedIds(): Observable<string[]> {
     return this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids`);
   }

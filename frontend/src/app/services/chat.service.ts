@@ -56,6 +56,8 @@ export class ChatService {
   private safetyService = inject(SafetyService);
   private baseUrl = `${environment.apiUrl}/chat`;
 
+  private blockedUserIds: string[] = [];
+
   private getHeaders() {
     const token = this.authService.getAccessToken();
     return {
@@ -138,5 +140,32 @@ export class ChatService {
     return firstValueFrom(
       this.http.get<FavouriteRecord[]>(`${this.baseUrl}/favourites`, { headers: this.getHeaders() })
     );
+  }
+
+  async loadBlockedUsers(): Promise<void> {
+    try {
+      const response = await firstValueFrom(
+        this.http.get<string[]>(`${environment.apiUrl}/safety/blocked-ids`, {
+          headers: this.getHeaders()
+        })
+      );
+      this.blockedUserIds = response;
+    } catch (e) {
+      console.error('Failed to load blocked users:', e);
+    }
+  }
+
+  isUserBlocked(userId: string): boolean {
+    return this.blockedUserIds.includes(userId);
+  }
+
+  addBlockedUser(userId: string): void {
+    if (!this.blockedUserIds.includes(userId)) {
+      this.blockedUserIds.push(userId);
+    }
+  }
+
+  removeBlockedUser(userId: string): void {
+    this.blockedUserIds = this.blockedUserIds.filter(id => id !== userId);
   }
 }
