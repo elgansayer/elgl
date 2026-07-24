@@ -47,7 +47,9 @@ export class SafetyController {
   }
 
   @Get('blocked-users')
-  async getBlockedUsers(@Req() req: { user: { id: string } }): Promise<string[]> {
+  async getBlockedUsers(
+    @Req() req: { user: { id: string } },
+  ): Promise<string[]> {
     return this.safetyService.getBlockedIds(req.user.id);
   }
 
