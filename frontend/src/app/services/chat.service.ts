@@ -56,20 +56,31 @@ export class ChatService {
   private safetyService = inject(SafetyService);
   private baseUrl = `${environment.apiUrl}/chat`;
 
-  private blockedUserIds: string[] = [];
+  private readonly blockedUsers = signal<Set<string>>(new Set());
+
+  readonly isUserBlocked = computed(() => {
+    const blocked = this.blockedUsers();
+    return (userId: string) => blocked.has(userId);
+  });
 
   addBlockedUser(userId: string): void {
-    if (!this.blockedUserIds.includes(userId)) {
-      this.blockedUserIds.push(userId);
-    }
+    this.blockedUsers.update(blocked => {
+      const newSet = new Set(blocked);
+      newSet.add(userId);
+      return newSet;
+    });
   }
 
   removeBlockedUser(userId: string): void {
-    this.blockedUserIds = this.blockedUserIds.filter(id => id !== userId);
+    this.blockedUsers.update(blocked => {
+      const newSet = new Set(blocked);
+      newSet.delete(userId);
+      return newSet;
+    });
   }
 
-  isUserBlocked(userId: string): boolean {
-    return this.blockedUserIds.includes(userId);
+  getBlockedUsers(): string[] {
+    return Array.from(this.blockedUsers());
   }
 
   private getHeaders() {

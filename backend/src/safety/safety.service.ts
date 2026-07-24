@@ -124,6 +124,23 @@ export class SafetyService {
     return data !== null;
   }
 
+  async isBlockedByUser(blockerId: string, blockedId: string): Promise<boolean> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('blocks')
+      .select('id')
+      .eq('blocker_id', blockerId)
+      .eq('blocked_id', blockedId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(`Failed to check block status: ${error.message}`);
+      return false;
+    }
+
+    return data !== null;
+  }
+
   async getBlockedIds(userId: string): Promise<string[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
