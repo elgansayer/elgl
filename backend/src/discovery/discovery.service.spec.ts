@@ -1,7 +1,7 @@
+/// <reference types="jest" />
 import { Test, TestingModule } from '@nestjs/testing';
 import { DiscoveryService } from './discovery.service';
 import { SupabaseService } from '../supabase/supabase.service';
-import { ConfigService } from '@nestjs/config';
 import { SafetyService } from '../safety/safety.service';
 
 jest.mock('../mock-data', () => ({
@@ -42,13 +42,6 @@ describe('DiscoveryService', () => {
           provide: SafetyService,
           useValue: {
             getBlockedAndBlockerIds: jest.fn().mockResolvedValue([]),
-          },
-        },
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn().mockReturnValue(undefined),
-            getOrThrow: jest.fn().mockReturnValue('dummy-config-value'),
           },
         },
       ],
