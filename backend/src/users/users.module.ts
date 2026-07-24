@@ -1,11 +1,14 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { MediaService } from '../media/media.service';
+import { StreakResetCron } from './cron/streak-reset.cron';
 
 @Module({
+  imports: [ScheduleModule.forRoot()],
   controllers: [UsersController],
-  providers: [UsersService, MediaService],
+  providers: [UsersService, MediaService, StreakResetCron],
   exports: [UsersService],
 })
 export class UsersModule {}
