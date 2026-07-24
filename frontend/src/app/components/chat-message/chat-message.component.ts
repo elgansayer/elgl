@@ -6,7 +6,7 @@ import { LongPressContextMenuComponent } from '../long-press-context-menu/long-p
 import { FavouriteService } from '../../services/favourite.service';
 import { SafetyService } from '../../services/safety.service';
 import { I18nService } from '../../services/i18n.service';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject } from 'rxjs';
 
 @Component({
   selector: 'app-chat-message',
@@ -109,7 +109,7 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
     // Check if this message sender is blocked using the local cached set first
     if (this.message.sender_id) {
       // First check the local cached set (faster)
-      if (this.chatService.isUserBlocked()(this.message.sender_id)) {
+      if (this.chatService.isUserBlocked(this.message.sender_id)) {
         this.isBlocked.set(true);
       } else {
         // Then check the backend for a definitive answer
