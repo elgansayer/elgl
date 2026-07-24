@@ -204,7 +204,9 @@ export class NotificationPreferencesService {
     return merged;
   }
 
-  private mapDbToPreferences(data: DbNotificationPreferences): NotificationPreferences {
+  private mapDbToPreferences(
+    data: DbNotificationPreferences,
+  ): NotificationPreferences {
     return {
       userId: data.user_id,
       new_message: data.new_message,
