@@ -11,7 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import Stripe from 'stripe';
 import { SupabaseService } from '../supabase/supabase.service';
-import { CreateDiagnosticLogDto } from './dto/monetisation.dto';
+import { CreateDiagnosticLogDto, AppleReceiptValidationResponse } from './dto/monetisation.dto';
 import { AppleNotificationService } from './apple-notification.service';
 import { GooglePlayNotificationService } from './google-play-notification.service';
 import { SubscriptionPlansService } from './services/subscription-plans.service';
@@ -169,7 +169,8 @@ export class MonetisationService {
         webhookSecret,
       );
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
+      const error = err as Error;
+      const message = error.message || 'Unknown error';
       this.logger.error(`Webhook signature verification failed: ${message}`);
       throw new BadRequestException(`Webhook Error: ${message}`);
     }
@@ -334,7 +335,7 @@ export class MonetisationService {
       if (!receiptData) {
         throw new BadRequestException('Receipt data is required for iOS');
       }
-      const validationResult =
+      const validationResult: AppleReceiptValidationResponse =
         await this.appleReceiptValidatorService.validateReceipt(
           userId,
           receiptData,
