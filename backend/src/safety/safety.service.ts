@@ -12,7 +12,10 @@ export class SafetyService {
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async reportUser(reporterId: string, dto: ReportUserDto): Promise<{ id: string }> {
+  async reportUser(
+    reporterId: string,
+    dto: ReportUserDto,
+  ): Promise<{ id: string }> {
     const supabase = this.supabaseService.getClient();
 
     // Prevent self-reporting
