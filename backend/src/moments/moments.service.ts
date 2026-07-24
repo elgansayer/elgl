@@ -281,8 +281,8 @@ export class MomentsService {
         .from('moments')
         .select('likes_count')
         .eq('id', momentId)
-        .single();
-      const updatedRow = updatedData as unknown as MomentCountRow | null;
+        .single() as { data: unknown; error: PostgrestError | null };
+      const updatedRow = updatedData as MomentCountRow | null;
       const newCount = Math.max(0, (updatedRow?.likes_count ?? 1) - 1);
       await supabase
         .from('moments')
@@ -354,9 +354,8 @@ export class MomentsService {
       .from('moments')
       .select('comments_count, user_id')
       .eq('id', momentId)
-      .single();
-    const updatedRow = updatedData as unknown as
-      (MomentCountRow & { user_id?: string }) | null;
+      .single() as { data: unknown; error: PostgrestError | null };
+    const updatedRow = updatedData as (MomentCountRow & { user_id?: string }) | null;
     await supabase
       .from('moments')
       .update({ comments_count: (updatedRow?.comments_count ?? 0) + 1 })
