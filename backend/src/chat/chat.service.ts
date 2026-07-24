@@ -107,7 +107,7 @@ export class ChatService {
       .neq('user_id', senderId);
 
     if (roomMembers && roomMembers.length > 0) {
-      const receiverId = roomMembers[0].user_id;
+      const receiverId = (roomMembers as { user_id: string }[])[0].user_id;
       const preview = dto.text_content
         ? dto.text_content.substring(0, 120)
         : dto.message_type === 'voice'
