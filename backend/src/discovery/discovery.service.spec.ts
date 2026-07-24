@@ -4,6 +4,10 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { ConfigService } from '@nestjs/config';
 import { SafetyService } from '../safety/safety.service';
 
+jest.mock('../mock-data', () => ({
+  MOCK_USERS: [],
+}));
+
 describe('DiscoveryService', () => {
   let service: DiscoveryService;
   let mockSupabaseClient: any;
