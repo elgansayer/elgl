@@ -33,6 +33,7 @@ export const routes: Routes = [
   { path: 'profile/user/:id', component: UserDetailComponent },
   { path: 'visitors', component: VisitorLogsComponent },
   { path: 'profile/visitors', component: ProfileVisitorsComponent },
+  { path: 'settings', loadComponent: () => import('./components/settings/settings.component').then(m => m.SettingsComponent) },
   { path: 'developer', component: DeveloperDashboardComponent },
   { path: 'video-call', component: VideoCallComponent },
   {

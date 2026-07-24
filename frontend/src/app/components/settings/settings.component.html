@@ -1,1 +1,58 @@
-<p>settings works!</p>
+<div class="app-screen bg-surface-50">
+  <header class="app-header">
+    <button (click)="goBack()" class="app-button-icon" aria-label="Go back">
+      <span class="text-xl">←</span>
+    </button>
+    <h1 class="app-header-title">{{ 'settings.title' | t }}</h1>
+    <div class="w-10"></div>
+  </header>
+
+  <main class="p-4 space-y-6 max-w-lg mx-auto">
+    @if (isLoading()) {
+      <div class="app-empty-state">{{ 'common.loading' | t }}</div>
+    } @else {
+      @if (errorMessage()) {
+        <div class="rounded-card border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+          {{ errorMessage() }}
+        </div>
+      }
+      @if (successMessage()) {
+        <div class="rounded-card border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400">
+          {{ successMessage() }}
+        </div>
+      }
+
+      <section class="space-y-4">
+        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">{{ 'settings.privacySection' | t }}</h2>
+        
+        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm">
+          <label class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-200 transition-colors">
+            <span class="text-sm font-medium text-text-primary">{{ 'settings.hideLocation' | t }}</span>
+            <input type="checkbox" [(ngModel)]="privacyHideLocation" class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30" />
+          </label>
+          
+          <label class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-200 transition-colors">
+            <span class="text-sm font-medium text-text-primary">{{ 'settings.hideSearch' | t }}</span>
+            <input type="checkbox" [(ngModel)]="privacyHideSearch" class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30" />
+          </label>
+
+          <label class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-200 transition-colors">
+            <span class="text-sm font-medium text-text-primary">{{ 'settings.hideAge' | t }}</span>
+            <input type="checkbox" [(ngModel)]="privacyHideAge" class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30" />
+          </label>
+
+          <label class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-200 transition-colors">
+            <span class="text-sm font-medium text-text-primary">{{ 'settings.hideGender' | t }}</span>
+            <input type="checkbox" [(ngModel)]="privacyHideGender" class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30" />
+          </label>
+        </div>
+      </section>
+
+      <div class="pt-6">
+        <button (click)="saveSettings()" class="w-full app-button-primary py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95">
+          {{ 'settings.saveBtn' | t }}
+        </button>
+      </div>
+    }
+  </main>
+</div>
