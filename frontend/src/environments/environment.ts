@@ -2,7 +2,16 @@ export const environment = {
   production: false,
   supabaseUrl: 'https://mock.supabase.co',
   supabaseAnonKey: 'mock-anon-key',
-  apiUrl: '/api',
+  apiUrl: 'http://localhost:3000/api',
   centrifugoUrl: 'ws://localhost:8000/connection/websocket',
-  livekitUrl: 'ws://localhost:7880'
+  liveKitUrl: 'ws://localhost:7880',
+  firebase: {
+    apiKey: 'YOUR_API_KEY',
+    authDomain: 'YOUR_AUTH_DOMAIN',
+    projectId: 'YOUR_PROJECT_ID',
+    storageBucket: 'YOUR_STORAGE_BUCKET',
+    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
+    appId: 'YOUR_APP_ID',
+    vapidKey: 'YOUR_VAPID_KEY',
+  },
 };

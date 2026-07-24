@@ -56,23 +56,25 @@ export class GooglePlayNotificationService {
 
     try {
       // Google Play Developer Notifications come as a Pub/Sub message wrapper
-      const message = payload?.message;
+      const payloadRecord = payload as Record<string, unknown>;
+      const message = payloadRecord?.message as
+        Record<string, unknown> | undefined;
       if (!message) {
         this.logger.warn('Google notification missing message');
         return { received: true, status: 'ignored' };
       }
 
       // Decode base64-encoded data
-      const data = message.data;
+      const data = message.data as string | undefined;
       if (!data) {
         this.logger.warn('Google notification missing data');
         return { received: true, status: 'ignored' };
       }
 
-      const decodedData = Buffer.from(data as string, 'base64').toString(
-        'utf-8',
-      );
-      const notificationData: GooglePlayNotification = JSON.parse(decodedData);
+      const decodedData = Buffer.from(data, 'base64').toString('utf-8');
+      const notificationData = JSON.parse(
+        decodedData,
+      ) as GooglePlayNotification;
 
       // Handle test notification
       if (notificationData.testNotification) {
@@ -92,7 +94,7 @@ export class GooglePlayNotificationService {
       }
     } catch (error: any) {
       this.logger.error(
-        `Failed to process Google notification: ${error.message}`,
+        `Failed to process Google notification: ${(error as Error).message}`,
       );
       // Don't throw - return success to avoid retries
       return { received: true, status: 'error' };
@@ -106,8 +108,7 @@ export class GooglePlayNotificationService {
   ): Promise<void> {
     if (!notification) return;
 
-    const { notificationType, purchaseToken, subscriptionId } =
-      notification as any;
+    const { notificationType, purchaseToken, subscriptionId } = notification;
 
     // notificationType mapping:
     // 1 = SUBSCRIBED (new subscription)
@@ -126,6 +127,8 @@ export class GooglePlayNotificationService {
 
     const isActive = [1, 2, 3, 7, 13].includes(notificationType);
     const isExpired = [4, 5, 12].includes(notificationType);
+    void purchaseToken;
+    void subscriptionId;
 
     if (isActive) {
       await this.handleSubscriptionActive(notification);
@@ -240,7 +243,7 @@ export class GooglePlayNotificationService {
       return response.data as GooglePlaySubscriptionPurchase;
     } catch (error: any) {
       this.logger.error(
-        `Failed to get subscription purchase details: ${error.message}`,
+        `Failed to get subscription purchase details: ${(error as Error).message}`,
       );
       return null;
     }
@@ -257,7 +260,8 @@ export class GooglePlayNotificationService {
       .eq('purchase_token', purchaseToken)
       .single();
 
-    return (data as any)?.user_id || null;
+    const row = data as { user_id?: string } | null;
+    return row?.user_id || null;
   }
 
   private async storePurchaseToken(
@@ -282,7 +286,7 @@ export class GooglePlayNotificationService {
 
     if (error) {
       this.logger.error(
-        `Failed to store Google Play purchase: ${error.message}`,
+        `Failed to store Google Play purchase: ${(error as Error).message}`,
       );
     }
   }

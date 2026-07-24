@@ -3,12 +3,15 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
+import { SafetyService } from '../safety/safety.service';
 import { CreateCommentDto, CreateMomentDto } from './dto/moment.dto';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { TimelineWorker } from './timeline.worker';
 import { MOCK_USERS } from '../mock-data';
+import { MomentCommentEvent } from '../notifications/events/notification.events';
 
 interface UserFollowRow {
   following_id: string;
@@ -49,6 +52,8 @@ export class MomentsService {
     private readonly supabaseService: SupabaseService,
     private readonly usersService: UsersService,
     private readonly timelineWorker: TimelineWorker,
+    private readonly eventEmitter: EventEmitter2,
+    private readonly safetyService: SafetyService,
   ) {}
 
   async createMoment(
@@ -102,6 +107,9 @@ export class MomentsService {
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
+    // Get blocked user IDs to exclude from feed
+    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
+
     let moments: MomentRecord[] = [];
 
     if (filter === 'Following') {
@@ -152,52 +160,73 @@ export class MomentsService {
       if (data) moments = data as MomentRecord[];
     }
 
+    // Filter out blocked users
+    if (blockedIds.length > 0) {
+      moments = moments.filter((m) => !blockedIds.includes(m.user_id));
+    }
+
     if (moments.length === 0) {
       const generated: MomentRecord[] = [];
       const usedUsers = MOCK_USERS.slice(0, 50); // Get 50 fake users
       for (let i = 0; i < usedUsers.length; i++) {
         const u = usedUsers[i];
+        // Skip blocked users in mock data
+        if (blockedIds.includes(u.id)) continue;
         generated.push({
           id: `mock-moment-${i}`,
           user_id: u.id,
           text_content: `Just practicing my ${u.target_languages[0].toUpperCase()} today! How is everyone doing? Let me know if you want to chat.`,
-          media_urls: Math.random() > 0.5 ? [`https://i.pravatar.cc/300?u=moment-${i}`] : [],
+          media_urls:
+            Math.random() > 0.5
+              ? [`https://i.pravatar.cc/300?u=moment-${i}`]
+              : [],
           media_type: Math.random() > 0.5 ? 'images' : 'none',
           target_language: u.target_languages[0],
           likes_count: Math.floor(Math.random() * 100),
           comments_count: Math.floor(Math.random() * 20),
           is_pinned: false,
-          created_at: new Date(Date.now() - Math.random() * 86400000 * 3).toISOString(),
-          author: { id: u.id, display_name: u.display_name, avatar_url: u.avatar_url },
+          created_at: new Date(
+            Date.now() - Math.random() * 86400000 * 3,
+          ).toISOString(),
+          author: {
+            id: u.id,
+            display_name: u.display_name,
+            avatar_url: u.avatar_url,
+          },
           is_liked_by_me: Math.random() > 0.8,
-        } as MomentRecord);
+        });
       }
-      
+
       // Filter the generated mock data same as DB query
       if (filter === 'Classmates' && targetLang) {
-        return generated.filter(m => m.target_language === targetLang);
+        return generated.filter((m) => m.target_language === targetLang);
       }
-      return generated.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      return generated.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
     }
 
     // Hydrate author profiles & likes
     const authorIds = Array.from(new Set(moments.map((m) => m.user_id)));
     const momentIdsList = moments.map((m) => m.id);
 
-    const { data: profiles } = await supabase
+    const profilesResponse = await supabase
       .from('users')
       .select('id, display_name, avatar_url')
       .in('id', authorIds);
-    const profileRows = (profiles ?? []) as UserProfileRow[];
+    const profiles = profilesResponse.data as UserProfileRow[] | null;
+    const profileRows = profiles ?? [];
     const profileMap = new Map<string, UserProfileRow>();
     profileRows.forEach((p) => profileMap.set(p.id, p));
 
-    const { data: myLikes } = await supabase
+    const likesResponse = await supabase
       .from('moment_likes')
       .select('moment_id')
       .eq('user_id', userId)
       .in('moment_id', momentIdsList);
-    const likeRows = (myLikes ?? []) as MomentLikeRow[];
+    const myLikes = likesResponse.data as MomentLikeRow[] | null;
+    const likeRows = myLikes ?? [];
     const likedSet = new Set<string>(likeRows.map((l) => l.moment_id));
 
     return moments.map((m) => {
@@ -220,15 +249,33 @@ export class MomentsService {
   ): Promise<{ likes_count: number; is_liked: boolean }> {
     const supabase = this.supabaseService.getClient();
 
-    const { data: existing } = await supabase
+    // Check if the moment author has blocked the current user
+    const { data: momentData } = await supabase
+      .from('moments')
+      .select('user_id')
+      .eq('id', momentId)
+      .single();
+
+    if (momentData) {
+      const momentAuthorId = momentData.user_id;
+      const blockedIds =
+        await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
+      if (blockedIds.includes(userId)) {
+        throw new Error('You cannot interact with this moment.');
+      }
+    }
+
+    const existingResponse = await supabase
       .from('moment_likes')
       .select('id')
       .eq('moment_id', momentId)
       .eq('user_id', userId)
       .single();
 
+    const existing = existingResponse.data as MomentLikeRow | null;
+
     if (existing) {
-      const existingRow = existing as MomentLikeRow;
+      const existingRow = existing;
       await supabase.from('moment_likes').delete().eq('id', existingRow.id);
       const { data: updatedData } = await supabase
         .from('moments')
@@ -246,11 +293,12 @@ export class MomentsService {
       await supabase
         .from('moment_likes')
         .insert({ moment_id: momentId, user_id: userId });
-      const { data: updatedData } = await supabase
+      const response = await supabase
         .from('moments')
         .select('likes_count')
         .eq('id', momentId)
         .single();
+      const updatedData = response.data as unknown;
       const updatedRow = updatedData as MomentCountRow | null;
       const newCount = (updatedRow?.likes_count ?? 0) + 1;
       await supabase
@@ -267,6 +315,23 @@ export class MomentsService {
     dto: CreateCommentDto,
   ): Promise<MomentComment> {
     const supabase = this.supabaseService.getClient();
+
+    // Check if the moment author has blocked the current user
+    const { data: momentData } = await supabase
+      .from('moments')
+      .select('user_id')
+      .eq('id', momentId)
+      .single();
+
+    if (momentData) {
+      const momentAuthorId = momentData.user_id;
+      const blockedIds =
+        await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
+      if (blockedIds.includes(userId)) {
+        throw new Error('You cannot comment on this moment.');
+      }
+    }
+
     const response = await supabase
       .from('moment_comments')
       .insert({
@@ -274,6 +339,8 @@ export class MomentsService {
         user_id: userId,
         text_content: dto.text_content ?? null,
         correction_payload: dto.correction_payload ?? null,
+        parent_comment_id: dto.parent_comment_id ?? null,
+        reply_to_user_id: dto.reply_to_user_id ?? null,
       })
       .select()
       .single();
@@ -286,10 +353,11 @@ export class MomentsService {
 
     const { data: updatedData } = await supabase
       .from('moments')
-      .select('comments_count')
+      .select('comments_count, user_id')
       .eq('id', momentId)
       .single();
-    const updatedRow = updatedData as MomentCountRow | null;
+    const updatedRow = updatedData as
+      (MomentCountRow & { user_id?: string }) | null;
     await supabase
       .from('moments')
       .update({ comments_count: (updatedRow?.comments_count ?? 0) + 1 })
@@ -302,6 +370,30 @@ export class MomentsService {
       display_name: profile?.display_name ?? 'Serious Learner',
       avatar_url: profile?.avatar_url ?? null,
     };
+
+    // Emit push notification event
+    const momentAuthorId = updatedRow?.user_id;
+    if (momentAuthorId) {
+      const preview = dto.text_content
+        ? dto.text_content.substring(0, 120)
+        : dto.correction_payload
+          ? `Correction: "${dto.correction_payload.original}" → "${dto.correction_payload.corrected}"`
+          : '';
+
+      this.eventEmitter.emit(
+        'moment.comment',
+
+        new MomentCommentEvent(
+          momentId,
+          userId,
+          momentAuthorId,
+          preview,
+          dto.parent_comment_id,
+          dto.reply_to_user_id,
+        ),
+      );
+    }
+
     return comment;
   }
 
@@ -317,11 +409,12 @@ export class MomentsService {
 
     const commentRows = data as MomentCommentRow[];
     const authorIds = Array.from(new Set(commentRows.map((c) => c.user_id)));
-    const { data: profiles } = await supabase
+    const profilesResponse = await supabase
       .from('users')
       .select('id, display_name, avatar_url')
       .in('id', authorIds);
-    const profileRows = (profiles ?? []) as UserProfileRow[];
+    const profiles = profilesResponse.data as UserProfileRow[] | null;
+    const profileRows = profiles ?? [];
     const profileMap = new Map<string, UserProfileRow>();
     profileRows.forEach((p) => profileMap.set(p.id, p));
 

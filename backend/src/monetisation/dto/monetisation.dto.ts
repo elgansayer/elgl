@@ -31,3 +31,20 @@ export class AppleReceiptValidationDto {
   @IsBoolean()
   exclude_old_transactions?: boolean;
 }
+
+export class CreateCheckoutSessionDto {
+  @IsString()
+  @IsNotEmpty()
+  planId!: string;
+
+  @IsString()
+  @IsIn(['month', 'year'])
+  interval!: 'month' | 'year';
+}
+
+export interface AppleReceiptValidationResponse {
+  valid: boolean;
+  product_id?: string;
+  expiration_date?: string;
+  error?: string;
+}

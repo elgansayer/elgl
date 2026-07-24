@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsIn,
+  MaxLength,
+} from 'class-validator';
 
 export class ReportUserDto {
   @IsString()
@@ -7,8 +13,19 @@ export class ReportUserDto {
 
   @IsString()
   @IsNotEmpty()
-  @MaxLength(100)
-  reason!: string;
+  @IsIn([
+    'harassment',
+    'spam',
+    'inappropriate_content',
+    'fake_profile',
+    'other',
+  ])
+  reason_category!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string;
 
   @IsOptional()
   @IsString()
@@ -16,6 +33,18 @@ export class ReportUserDto {
 }
 
 export class BlockUserDto {
+  @IsString()
+  @IsNotEmpty()
+  blocked_id!: string;
+}
+
+export class UnblockUserDto {
+  @IsString()
+  @IsNotEmpty()
+  blocked_id!: string;
+}
+
+export class UnblockUserDto {
   @IsString()
   @IsNotEmpty()
   blocked_id!: string;

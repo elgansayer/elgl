@@ -26,10 +26,9 @@ export class AppleNotificationController {
    */
   @Post()
   @HttpCode(HttpStatus.OK)
-  async handleNotification(
+  handleNotification(
     @Body() body: { signedPayload: string },
-    @Headers('authorization') _authHeader?: string,
-  ): Promise<{ status: string }> {
+  ): { status: string } {
     this.logger.log('Received Apple server notification');
 
     if (!body.signedPayload) {
@@ -38,9 +37,7 @@ export class AppleNotificationController {
     }
 
     try {
-      await this.appleNotificationService.handleNotification(
-        body.signedPayload,
-      );
+      this.appleNotificationService.handleNotification(body.signedPayload);
       return { status: 'ok' };
     } catch (error) {
       this.logger.error(

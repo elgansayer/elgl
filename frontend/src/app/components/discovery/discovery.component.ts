@@ -6,6 +6,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { DiscoveryService } from '../../services/discovery.service';
 import { UserProfile, UserService } from '../../services/user.service';
+import { SafetyService } from '../../services/safety.service';
 
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
@@ -22,10 +23,12 @@ export class DiscoveryComponent implements OnInit {
   private readonly discoveryService = inject(DiscoveryService);
   private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
+  private readonly safetyService = inject(SafetyService);
 
   readonly partners = signal<UserProfile[]>([]);
   readonly isLoading = signal<boolean>(true);
   readonly myTargetLangs = signal<{ code: string; flag: string; labelKey: string }[]>([]);
+  readonly blockedUserIds = signal<string[]>([]);
 
   readonly nativeLanguageOptions = [
     { value: '', labelKey: 'lang.anyNative' },
@@ -115,6 +118,14 @@ export class DiscoveryComponent implements OnInit {
     } catch (e) {
       console.warn('Could not load user profile for target languages', e);
     }
+
+    try {
+      const blockedIds = await this.safetyService.getBlockedIdsAsync();
+      this.blockedUserIds.set(blockedIds);
+    } catch (e) {
+      console.warn('Could not load blocked user IDs', e);
+    }
+
     await this.searchPartners();
   }
 
@@ -127,7 +138,12 @@ export class DiscoveryComponent implements OnInit {
         target_language: this.selectedTargetLanguage() || undefined,
         serious_learner_only: this.seriousLearnerOnly(),
       });
-      this.partners.set(results);
+      // Filter out blocked users
+      const blocked = this.blockedUserIds();
+      const filtered = blocked.length > 0
+        ? results.filter(u => !blocked.includes(u.id))
+        : results;
+      this.partners.set(filtered);
     } catch (e) {
       console.error('Partner search failed:', e);
     } finally {

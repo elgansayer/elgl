@@ -17,6 +17,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   CreateDiagnosticLogDto,
   AppleReceiptValidationDto,
+  CreateCheckoutSessionDto,
 } from './dto/monetisation.dto';
 import { MonetisationService } from './monetisation.service';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
@@ -101,6 +102,37 @@ export class MonetisationController {
       user.id,
       dto.receipt_data,
       dto.exclude_old_transactions,
+    );
+  }
+
+  @Post('create-checkout-session')
+  @UseGuards(SupabaseAuthGuard)
+  async createCheckoutSession(
+    @CurrentUser() user: User | null,
+    @Body() dto: CreateCheckoutSessionDto,
+  ) {
+    if (!user) return null;
+    return await this.monetisationService.createCheckoutSession(
+      user.id,
+      dto.planId,
+      dto.interval,
+    );
+  }
+
+  @Post('restore-purchases')
+  @UseGuards(SupabaseAuthGuard)
+  async restorePurchases(
+    @CurrentUser() user: User | null,
+    @Body() dto: { platform?: string; receipt_data?: string },
+  ) {
+    if (!user) return null;
+    if (!dto.platform || !['ios', 'android'].includes(dto.platform)) {
+      throw new BadRequestException('Platform must be "ios" or "android"');
+    }
+    return await this.monetisationService.restorePurchases(
+      user.id,
+      dto.platform as 'ios' | 'android',
+      dto.receipt_data,
     );
   }
 }

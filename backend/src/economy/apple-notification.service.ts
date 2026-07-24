@@ -24,17 +24,22 @@ export class AppleNotificationService {
    * Verifies the JWS signature, decodes the notification payload,
    * and handles the appropriate notification type.
    */
-  async handleNotification(signedPayload: string): Promise<void> {
+  handleNotification(signedPayload: string): void {
     // 1. Verify JWS signature using Apple's public keys
-    const decodedPayload = await this.verifyAndDecodeJWS(signedPayload);
+    const decodedPayload = this.verifyAndDecodeJWS(signedPayload) as unknown as Record<
+      string,
+      unknown
+    > | null;
     if (!decodedPayload) {
       this.logger.warn('Failed to verify Apple JWS payload');
       return;
     }
 
-    const notificationType = (decodedPayload as any).notificationType;
-    const subtype = (decodedPayload as any).subtype;
-    const data = (decodedPayload as any).data;
+    const payload = decodedPayload;
+    if (!payload) return;
+    const notificationType = payload.notificationType as string;
+    const subtype = payload.subtype as string | undefined;
+    const data = payload.data as Record<string, unknown> | undefined;
 
     this.logger.log(
       `Apple notification: type=${notificationType}, subtype=${subtype}`,
@@ -43,37 +48,37 @@ export class AppleNotificationService {
     // 2. Route to appropriate handler based on notification type
     switch (notificationType) {
       case 'SUBSCRIBED':
-        await this.handleSubscribed(data);
+        void this.handleSubscribed(data);
         break;
       case 'DID_CHANGE_RENEWAL_STATUS':
-        await this.handleRenewalStatusChange(data);
+        void this.handleRenewalStatusChange(data);
         break;
       case 'DID_CHANGE_RENEWAL_PREF':
-        await this.handleRenewalPreferenceChange(data);
+        void this.handleRenewalPreferenceChange(data);
         break;
       case 'DID_FAIL_TO_RENEW':
-        await this.handleFailedRenewal(data);
+        void this.handleFailedRenewal(data);
         break;
       case 'EXPIRED':
-        await this.handleExpired(data);
+        void this.handleExpired(data);
         break;
       case 'REFUND':
-        await this.handleRefund(data);
+        void this.handleRefund(data);
         break;
       case 'REVOKE':
-        await this.handleRevoke(data);
+        void this.handleRevoke(data);
         break;
       case 'PRICE_INCREASE':
-        await this.handlePriceIncrease(data);
+        void this.handlePriceIncrease(data);
         break;
       case 'REFUND_DECLINED':
-        await this.handleRefundDeclined(data);
+        void this.handleRefundDeclined(data);
         break;
       case 'CONSUMPTION_REQUEST':
-        await this.handleConsumptionRequest(data);
+        void this.handleConsumptionRequest(data);
         break;
       case 'RENEWAL_EXTENSION':
-        await this.handleRenewalExtension(data);
+        void this.handleRenewalExtension(data);
         break;
       default:
         this.logger.warn(
@@ -87,9 +92,7 @@ export class AppleNotificationService {
    * In production, this should use a library like `jsonwebtoken` with Apple's root CA.
    * For now, we perform a basic decode without full verification (placeholder).
    */
-  private async verifyAndDecodeJWS(
-    signedPayload: string,
-  ): Promise<unknown | null> {
+  private verifyAndDecodeJWS(signedPayload: string): unknown {
     try {
       // JWS format: header.payload.signature
       const parts = signedPayload.split('.');
@@ -119,10 +122,13 @@ export class AppleNotificationService {
   /**
    * Handles a new subscription event.
    */
-  private async handleSubscribed(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
-    const productId = data?.signedTransactionInfo?.productId;
-    const transactionId = data?.signedTransactionInfo?.transactionId;
+  private handleSubscribed(data: Record<string, unknown>): void {
+    const signedTransactionInfo = data?.signedTransactionInfo as
+      Record<string, unknown> | undefined;
+    const userId = data?.appAccountToken as string | undefined;
+    const productId = signedTransactionInfo?.productId as string | undefined;
+    const transactionId = signedTransactionInfo?.transactionId as
+      string | undefined;
 
     if (!userId || !productId || !transactionId) {
       this.logger.warn('Missing required fields in SUBSCRIBED notification');
@@ -134,7 +140,7 @@ export class AppleNotificationService {
     );
 
     // Update user's subscription status in the database
-    await this.updateSubscriptionStatus(
+    void this.updateSubscriptionStatus(
       userId,
       productId,
       'active',
@@ -145,9 +151,9 @@ export class AppleNotificationService {
   /**
    * Handles a change in auto-renewal status (e.g., user turned off auto-renew).
    */
-  private async handleRenewalStatusChange(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
-    const autoRenewStatus = data?.autoRenewStatus;
+  private handleRenewalStatusChange(data: Record<string, unknown>): void {
+    const userId = data?.appAccountToken as string | undefined;
+    const autoRenewStatus = data?.autoRenewStatus as number | undefined;
 
     if (!userId) {
       return;
@@ -158,15 +164,15 @@ export class AppleNotificationService {
     );
 
     // Update subscription auto-renew status
-    await this.updateAutoRenewStatus(userId, autoRenewStatus === 1);
+    void this.updateAutoRenewStatus(userId, autoRenewStatus === 1);
   }
 
   /**
    * Handles a change in renewal preference (e.g., user switched to a different product).
    */
-  private async handleRenewalPreferenceChange(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
-    const newProductId = data?.autoRenewProductId;
+  private handleRenewalPreferenceChange(data: Record<string, unknown>): void {
+    const userId = data?.appAccountToken as string | undefined;
+    const newProductId = data?.autoRenewProductId as string | undefined;
 
     if (!userId || !newProductId) {
       return;
@@ -177,15 +183,16 @@ export class AppleNotificationService {
     );
 
     // Update the product the user will renew to
-    await this.updateRenewalProduct(userId, newProductId);
+    void this.updateRenewalProduct(userId, newProductId);
   }
 
   /**
    * Handles a failed renewal attempt.
    */
-  private async handleFailedRenewal(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
-    const gracePeriodExpiresDate = data?.gracePeriodExpiresDate;
+  private handleFailedRenewal(data: Record<string, unknown>): void {
+    const userId = data?.appAccountToken as string | undefined;
+    const gracePeriodExpiresDate = data?.gracePeriodExpiresDate as
+      string | undefined;
 
     if (!userId) {
       return;
@@ -196,15 +203,15 @@ export class AppleNotificationService {
     );
 
     // Optionally notify the user about the failed renewal
-    await this.notifyUserAboutFailedRenewal(userId, gracePeriodExpiresDate);
+    void this.notifyUserAboutFailedRenewal(userId, gracePeriodExpiresDate);
   }
 
   /**
    * Handles subscription expiration.
    */
-  private async handleExpired(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
-    const expirationIntent = data?.expirationIntent;
+  private handleExpired(data: Record<string, unknown>): void {
+    const userId = data?.appAccountToken as string | undefined;
+    const expirationIntent = data?.expirationIntent as number | undefined;
 
     if (!userId) {
       return;
@@ -215,16 +222,18 @@ export class AppleNotificationService {
     );
 
     // Update subscription status to expired
-    await this.updateSubscriptionStatus(userId, null, 'expired', null);
+    void this.updateSubscriptionStatus(userId, null, 'expired', null);
   }
 
   /**
    * Handles a refund request.
    */
-  private async handleRefund(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
-    const transactionId = data?.signedTransactionInfo?.transactionId;
-    const refundAmount = data?.signedTransactionInfo?.price;
+  private handleRefund(data: Record<string, unknown>): void {
+    const signedTransactionInfo = data?.signedTransactionInfo as
+      Record<string, unknown> | undefined;
+    const userId = data?.appAccountToken as string | undefined;
+    const transactionId = signedTransactionInfo?.transactionId as
+      string | undefined;
 
     if (!userId || !transactionId) {
       return;
@@ -235,14 +244,14 @@ export class AppleNotificationService {
     );
 
     // Revoke coins or subscription benefits
-    await this.revokeCoinsForRefund(userId, transactionId, refundAmount);
+    void this.revokeCoinsForRefund(userId, transactionId);
   }
 
   /**
    * Handles a revoke notification (e.g., family sharing removal).
    */
-  private async handleRevoke(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
+  private handleRevoke(data: Record<string, unknown>): void {
+    const userId = data?.appAccountToken as string | undefined;
 
     if (!userId) {
       return;
@@ -251,15 +260,15 @@ export class AppleNotificationService {
     this.logger.log(`User ${userId} had their purchase revoked`);
 
     // Revoke subscription benefits
-    await this.revokeSubscriptionBenefits(userId);
+    void this.revokeSubscriptionBenefits(userId);
   }
 
   /**
    * Handles a price increase notification.
    */
-  private async handlePriceIncrease(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
-    const newPrice = data?.price;
+  private handlePriceIncrease(data: Record<string, unknown>): void {
+    const userId = data?.appAccountToken as string | undefined;
+    const newPrice = data?.price as number | undefined;
 
     if (!userId) {
       return;
@@ -268,14 +277,14 @@ export class AppleNotificationService {
     this.logger.log(`User ${userId} notified of price increase to ${newPrice}`);
 
     // Optionally notify the user about the price increase
-    await this.notifyUserAboutPriceIncrease(userId, newPrice);
+    void this.notifyUserAboutPriceIncrease(userId, newPrice);
   }
 
   /**
    * Handles a refund declined notification.
    */
-  private async handleRefundDeclined(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
+  private handleRefundDeclined(data: Record<string, unknown>): void {
+    const userId = data?.appAccountToken as string | undefined;
 
     if (!userId) {
       return;
@@ -287,9 +296,12 @@ export class AppleNotificationService {
   /**
    * Handles a consumption request (Apple asks for consumption data).
    */
-  private async handleConsumptionRequest(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
-    const transactionId = data?.signedTransactionInfo?.transactionId;
+  private handleConsumptionRequest(data: Record<string, unknown>): void {
+    const signedTransactionInfo = data?.signedTransactionInfo as
+      Record<string, unknown> | undefined;
+    const userId = data?.appAccountToken as string | undefined;
+    const transactionId = signedTransactionInfo?.transactionId as
+      string | undefined;
 
     if (!userId || !transactionId) {
       return;
@@ -300,15 +312,15 @@ export class AppleNotificationService {
     );
 
     // Provide consumption data to Apple (e.g., how many coins were consumed)
-    await this.provideConsumptionData(userId, transactionId);
+    void this.provideConsumptionData(userId, transactionId);
   }
 
   /**
    * Handles a renewal extension notification.
    */
-  private async handleRenewalExtension(data: any): Promise<void> {
-    const userId = data?.appAccountToken;
-    const extensionLength = data?.extensionLength;
+  private handleRenewalExtension(data: Record<string, unknown>): void {
+    const userId = data?.appAccountToken as string | undefined;
+    const extensionLength = data?.extensionLength as number | undefined;
 
     if (!userId) {
       return;
@@ -319,13 +331,13 @@ export class AppleNotificationService {
     );
 
     // Extend the user's subscription period
-    await this.extendSubscription(userId, extensionLength);
+    void this.extendSubscription(userId, extensionLength);
   }
 
   /**
    * Updates the user's subscription status in the database.
    */
-  private async updateSubscriptionStatus(
+  private updateSubscriptionStatus(
     userId: string,
     productId: string | null,
     status: string,
@@ -333,76 +345,75 @@ export class AppleNotificationService {
   ): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
-    const { error } = await supabase.from('subscriptions').upsert(
-      {
-        user_id: userId,
-        product_id: productId,
-        status,
-        transaction_id: transactionId,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' },
-    );
-
-    if (error) {
-      this.logger.error(
-        `Failed to update subscription for user ${userId}: ${error.message}`,
-      );
-    }
+    return supabase
+      .from('subscriptions')
+      .upsert(
+        {
+          user_id: userId,
+          product_id: productId,
+          status,
+          transaction_id: transactionId,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' },
+      )
+      .then(({ error }) => {
+        if (error) {
+          this.logger.error(
+            `Failed to update subscription for user ${userId}: ${error.message}`,
+          );
+        }
+      });
   }
 
   /**
    * Updates the auto-renew status for a user.
    */
-  private async updateAutoRenewStatus(
-    userId: string,
-    autoRenew: boolean,
-  ): Promise<void> {
+  private updateAutoRenewStatus(userId: string, autoRenew: boolean): void {
     const supabase = this.supabaseService.getClient();
 
-    const { error } = await supabase
+    void supabase
       .from('subscriptions')
       .update({ auto_renew: autoRenew, updated_at: new Date().toISOString() })
-      .eq('user_id', userId);
-
-    if (error) {
-      this.logger.error(
-        `Failed to update auto-renew status for user ${userId}: ${error.message}`,
-      );
-    }
+      .eq('user_id', userId)
+      .then(({ error }) => {
+        if (error) {
+          this.logger.error(
+            `Failed to update auto-renew status for user ${userId}: ${error.message}`,
+          );
+        }
+      });
   }
 
   /**
    * Updates the renewal product for a user.
    */
-  private async updateRenewalProduct(
-    userId: string,
-    newProductId: string,
-  ): Promise<void> {
+  private updateRenewalProduct(userId: string, newProductId: string): void {
     const supabase = this.supabaseService.getClient();
 
-    const { error } = await supabase
+    void supabase
       .from('subscriptions')
       .update({
         renewal_product_id: newProductId,
         updated_at: new Date().toISOString(),
       })
-      .eq('user_id', userId);
-
-    if (error) {
-      this.logger.error(
-        `Failed to update renewal product for user ${userId}: ${error.message}`,
-      );
-    }
+      .eq('user_id', userId)
+      .then(({ error }) => {
+        if (error) {
+          this.logger.error(
+            `Failed to update renewal product for user ${userId}: ${error.message}`,
+          );
+        }
+      });
   }
 
   /**
    * Notifies the user about a failed renewal.
    */
-  private async notifyUserAboutFailedRenewal(
+  private notifyUserAboutFailedRenewal(
     userId: string,
     gracePeriodExpiresDate: string,
-  ): Promise<void> {
+  ): void {
     // Placeholder: send push notification or in-app message
     this.logger.log(
       `Would notify user ${userId} about failed renewal, grace until ${gracePeriodExpiresDate}`,
@@ -412,40 +423,43 @@ export class AppleNotificationService {
   /**
    * Revokes coins for a refunded transaction.
    */
-  private async revokeCoinsForRefund(
-    userId: string,
-    transactionId: string,
-    _refundAmount: number,
-  ): Promise<void> {
+  private revokeCoinsForRefund(userId: string, transactionId: string): void {
     // Determine how many coins were associated with the refunded purchase
-    const coinsToRevoke = await this.getCoinsForTransaction(transactionId);
-    if (coinsToRevoke <= 0) {
-      return;
-    }
+    this.getCoinsForTransaction(transactionId).then((coinsToRevoke) => {
+      if (coinsToRevoke <= 0) {
+        return;
+      }
 
-    const supabase = this.supabaseService.getClient();
+      const supabase = this.supabaseService.getClient();
 
-    // Deduct coins from user balance
-    const { data: user } = await supabase
-      .from('users')
-      .select('coins_balance')
-      .eq('id', userId)
-      .single();
+      // Deduct coins from user balance
+      supabase
+        .from('users')
+        .select('coins_balance')
+        .eq('id', userId)
+        .single()
+        .then(({ data: user }) => {
+          if (!user) {
+            return;
+          }
 
-    if (!user) {
-      return;
-    }
+          const userData = user as { coins_balance?: number };
+          const newBalance = Math.max(
+            0,
+            (userData.coins_balance ?? 0) - coinsToRevoke,
+          );
 
-    const newBalance = Math.max(0, user.coins_balance - coinsToRevoke);
-
-    await supabase
-      .from('users')
-      .update({ coins_balance: newBalance })
-      .eq('id', userId);
-
-    this.logger.log(
-      `Revoked ${coinsToRevoke} coins from user ${userId} due to refund`,
-    );
+          supabase
+            .from('users')
+            .update({ coins_balance: newBalance })
+            .eq('id', userId)
+            .then(() => {
+              this.logger.log(
+                `Revoked ${coinsToRevoke} coins from user ${userId} due to refund`,
+              );
+            });
+        });
+    });
   }
 
   /**
@@ -460,39 +474,38 @@ export class AppleNotificationService {
       .eq('transaction_id', transactionId)
       .single();
 
-    return (data as any)?.coins_added ?? 0;
+    const row = data as unknown as { coins_added?: number } | null;
+    return row?.coins_added ?? 0;
   }
 
   /**
    * Revokes subscription benefits for a user.
    */
-  private async revokeSubscriptionBenefits(userId: string): Promise<void> {
+  private revokeSubscriptionBenefits(userId: string): void {
     const supabase = this.supabaseService.getClient();
 
     // Set user back to free tier
-    const { error } = await supabase
+    supabase
       .from('users')
       .update({
         is_vip: false,
         vip_tier: 'free',
         updated_at: new Date().toISOString(),
       })
-      .eq('id', userId);
-
-    if (error) {
-      this.logger.error(
-        `Failed to revoke subscription benefits for user ${userId}: ${error.message}`,
-      );
-    }
+      .eq('id', userId)
+      .then(({ error }) => {
+        if (error) {
+          this.logger.error(
+            `Failed to revoke subscription benefits for user ${userId}: ${error.message}`,
+          );
+        }
+      });
   }
 
   /**
    * Notifies the user about a price increase.
    */
-  private async notifyUserAboutPriceIncrease(
-    userId: string,
-    newPrice: number,
-  ): Promise<void> {
+  private notifyUserAboutPriceIncrease(userId: string, newPrice: number): void {
     // Placeholder: send push notification or in-app message
     this.logger.log(
       `Would notify user ${userId} about price increase to ${newPrice}`,
@@ -502,10 +515,7 @@ export class AppleNotificationService {
   /**
    * Provides consumption data to Apple for a specific transaction.
    */
-  private async provideConsumptionData(
-    userId: string,
-    transactionId: string,
-  ): Promise<void> {
+  private provideConsumptionData(userId: string, transactionId: string): void {
     // Placeholder: In production, send consumption data to Apple's API
     this.logger.log(
       `Would provide consumption data for user ${userId}, transaction ${transactionId}`,
@@ -515,39 +525,41 @@ export class AppleNotificationService {
   /**
    * Extends the user's subscription period.
    */
-  private async extendSubscription(
-    userId: string,
-    extensionDays: number,
-  ): Promise<void> {
+  private extendSubscription(userId: string, extensionDays: number): void {
     const supabase = this.supabaseService.getClient();
 
-    const { data: subscription } = await supabase
+    supabase
       .from('subscriptions')
       .select('expires_at')
       .eq('user_id', userId)
-      .single();
+      .single()
+      .then(({ data: subscription }) => {
+        if (!subscription) {
+          return;
+        }
 
-    if (!subscription) {
-      return;
-    }
+        const subData = subscription as { expires_at?: string };
+        const currentExpiry = new Date(
+          subData.expires_at ?? new Date().toISOString(),
+        );
+        const newExpiry = new Date(
+          currentExpiry.getTime() + extensionDays * 24 * 60 * 60 * 1000,
+        );
 
-    const currentExpiry = new Date(subscription.expires_at);
-    const newExpiry = new Date(
-      currentExpiry.getTime() + extensionDays * 24 * 60 * 60 * 1000,
-    );
-
-    const { error } = await supabase
-      .from('subscriptions')
-      .update({
-        expires_at: newExpiry.toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', userId);
-
-    if (error) {
-      this.logger.error(
-        `Failed to extend subscription for user ${userId}: ${error.message}`,
-      );
-    }
+        supabase
+          .from('subscriptions')
+          .update({
+            expires_at: newExpiry.toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', userId)
+          .then(({ error }) => {
+            if (error) {
+              this.logger.error(
+                `Failed to extend subscription for user ${userId}: ${error.message}`,
+              );
+            }
+          });
+      });
   }
 }

@@ -1,8 +1,9 @@
-import { Component, Input, OnInit, inject } from '@angular/core';
+import { Component, Input, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatMessageComponent } from '../chat-message/chat-message.component';
 import { ChatService, ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
+import { SafetyService } from '../../services/safety.service';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -13,9 +14,10 @@ import { FormsModule } from '@angular/forms';
     <div class="flex flex-col h-full">
       <div class="flex-1 overflow-y-auto p-4 space-y-2">
         <app-chat-message
-          *ngFor="let msg of messages"
+          *ngFor="let msg of filteredMessages()"
           [message]="msg"
           [currentUserId]="currentUserId"
+          (messageBlocked)="onMessageBlocked($event)"
         ></app-chat-message>
       </div>
       <div class="border-t p-4">
@@ -42,9 +44,18 @@ export class ChatViewComponent implements OnInit {
 
   private chatService = inject(ChatService);
   private authService = inject(AuthService);
+  private safetyService = inject(SafetyService);
 
   messages: ChatMessage[] = [];
   newMessageText = '';
+
+  private blockedUserIds = signal<Set<string>>(new Set());
+
+  readonly filteredMessages = computed(() => {
+    const blocked = this.blockedUserIds();
+    if (blocked.size === 0) return this.messages;
+    return this.messages.filter(msg => !blocked.has(msg.sender_id));
+  });
 
   async ngOnInit(): Promise<void> {
     // If currentUserId not provided, fall back to auth service
@@ -52,6 +63,7 @@ export class ChatViewComponent implements OnInit {
       this.currentUserId = this.authService.currentUser()?.id;
     }
     await this.loadMessages();
+    await this.loadBlockedUsers();
   }
 
   private async loadMessages(): Promise<void> {
@@ -60,6 +72,27 @@ export class ChatViewComponent implements OnInit {
     } catch (err) {
       console.error('Failed to load messages', err);
     }
+  }
+
+  private async loadBlockedUsers(): Promise<void> {
+    try {
+      const blockedIds = await this.safetyService.getBlockedAndBlockerIds(this.currentUserId!);
+      this.blockedUserIds.set(new Set(blockedIds));
+    } catch (err) {
+      console.error('Failed to load blocked users', err);
+    }
+  }
+
+  onMessageBlocked(userId: string): void {
+    this.blockedUserIds.update(ids => {
+      const newSet = new Set(ids);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);  // Unblock
+      } else {
+        newSet.add(userId);  // Block
+      }
+      return newSet;
+    });
   }
 
   async sendTextMessage(): Promise<void> {

@@ -18,14 +18,17 @@ export class FavouritesController {
 
   @Post()
   async addFavourite(
-    @Req() req: any,
+    @Req() req: { user: { id: string } },
     @Body() dto: { message_id: string; note_text?: string },
-  ) {
+  ): Promise<unknown> {
     return this.favouritesService.addFavourite(req.user.id, dto);
   }
 
   @Delete(':id')
-  async removeFavourite(@Req() req: any, @Param('id') id: string) {
+  async removeFavourite(
+    @Req() req: { user: { id: string } },
+    @Param('id') id: string,
+  ) {
     return this.favouritesService.removeFavourite(req.user.id, id);
   }
 

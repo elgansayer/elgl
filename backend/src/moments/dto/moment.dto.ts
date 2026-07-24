@@ -39,4 +39,12 @@ export class CreateCommentDto {
     corrected: string;
     explanation?: string;
   };
+
+  @IsOptional()
+  @IsString()
+  parent_comment_id?: string;
+
+  @IsOptional()
+  @IsString()
+  reply_to_user_id?: string;
 }

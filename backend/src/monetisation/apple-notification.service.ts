@@ -50,7 +50,8 @@ export class AppleNotificationService {
   ): Promise<{ received: boolean; status: string }> {
     this.logger.log(`Received Apple App Store Server Notification`);
 
-    const signedPayload = payload?.signedPayload;
+    const payloadRecord = payload as Record<string, unknown>;
+    const signedPayload = payloadRecord?.signedPayload as string | undefined;
     if (!signedPayload) {
       this.logger.warn('Apple notification missing signedPayload');
       return { received: true, status: 'ignored' };
@@ -72,9 +73,9 @@ export class AppleNotificationService {
           `Unhandled notification type: ${notificationType}/${subtype}`,
         );
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error(
-        `Failed to process Apple notification: ${error.message}`,
+        `Failed to process Apple notification: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
       // Don't throw - return success to Apple to avoid retries
       return { received: true, status: 'error' };
@@ -141,7 +142,8 @@ export class AppleNotificationService {
     data: any,
   ): Promise<void> {
     const transactionInfo = await this.decodeTransactionInfo(
-      data?.signedTransactionInfo,
+      (data as Record<string, unknown>)?.signedTransactionInfo as
+        string | undefined,
     );
     if (!transactionInfo) {
       this.logger.warn('No transaction info in subscription active event');
@@ -175,7 +177,8 @@ export class AppleNotificationService {
     data: any,
   ): Promise<void> {
     const transactionInfo = await this.decodeTransactionInfo(
-      data?.signedTransactionInfo,
+      (data as Record<string, unknown>)?.signedTransactionInfo as
+        string | undefined,
     );
     if (!transactionInfo) {
       this.logger.warn('No transaction info in subscription expired event');
@@ -208,7 +211,7 @@ export class AppleNotificationService {
 
     // Decode header to get the key ID and algorithm
     const headerStr = Buffer.from(headerB64, 'base64url').toString('utf-8');
-    const header = JSON.parse(headerStr);
+    const header = JSON.parse(headerStr) as { x5c?: string[] };
 
     // Verify the signature using Apple's root CA
     const verified = await this.verifySignature(
@@ -223,13 +226,13 @@ export class AppleNotificationService {
 
     // Decode payload
     const payloadStr = Buffer.from(payloadB64, 'base64url').toString('utf-8');
-    return JSON.parse(payloadStr);
+    return JSON.parse(payloadStr) as AppleNotificationPayload;
   }
 
   private verifySignature(
     signedContent: string,
     signatureB64: string,
-    header: any,
+    header: { x5c?: string[] },
   ): Promise<boolean> {
     try {
       // Apple uses ES256 (ECDSA with P-256) for JWS signatures
@@ -297,7 +300,9 @@ export class AppleNotificationService {
 
       return verify.verify(leafCert.publicKey, signature);
     } catch (error: any) {
-      this.logger.error(`Signature verification error: ${error.message}`);
+      this.logger.error(
+        `Signature verification error: ${(error as Error).message}`,
+      );
       return false;
     }
   }
@@ -312,7 +317,14 @@ export class AppleNotificationService {
       if (parts.length !== 3) return null;
 
       const payloadStr = Buffer.from(parts[1], 'base64url').toString('utf-8');
-      const payload = JSON.parse(payloadStr);
+      const payload = JSON.parse(payloadStr) as {
+        originalTransactionId: string;
+        productId: string;
+        appAccountToken?: string;
+        transactionId: string;
+        expiresDate: number;
+        purchaseDate: number;
+      };
 
       return {
         originalTransactionId: payload.originalTransactionId,
@@ -357,7 +369,9 @@ export class AppleNotificationService {
     );
 
     if (error) {
-      this.logger.error(`Failed to store Apple transaction: ${error.message}`);
+      this.logger.error(
+        `Failed to store Apple transaction: ${(error as Error).message}`,
+      );
     }
   }
 }

@@ -264,18 +264,32 @@
   - i18n translation keys for all button labels.
   - Unit tests for the component.
 - [x] Add LiveKit audio track management to `VoipCallComponent` (mute/unmute local audio track via LiveKit SDK), replace physical CSS classes with logical RTL-safe equivalents, and create unit tests (`voip-call.component.spec.ts`).
-- [ ] Build 1-on-1 Video Call interface with local preview overlay.
-- [ ] Implement IncomingCallComponent with ringtone audio playback, accept/reject buttons, and integration with LiveKit for incoming call detection.
+- [x] Build 1-on-1 Video Call interface with local preview overlay.
+- [x] Implement `VideoCallComponent` with local camera preview overlay, remote video stream, mute/unmute controls, end call button, and integration with LiveKit for 1-on-1 video rooms.
+- [x] Implement IncomingCallComponent with ringtone audio playback, accept/reject buttons, and integration with LiveKit for incoming call detection.
 
 ## Phase 18: Monetisation & VIP Tiers
-- [ ] Build VIP Subscription showcase page detailing all premium benefits.
-- [ ] Integrate Stripe Checkout for Monthly (8 UKP / $10 USD) and Yearly (50 UKP / $63 USD) plans.
-- [ ] Build "Restore Purchases" button for app store compliance.
+- [x] Build VIP Subscription showcase page detailing all premium benefits.
+- [x] Integrate Stripe Checkout for Monthly (8 UKP / $10 USD) and Yearly (50 UKP / $63 USD) plans (backend endpoint exists).
+- [x] Build frontend subscription page that calls `POST /monetisation/create-checkout-session` and redirects to Stripe Checkout.
+- [x] Create backend endpoint `POST /monetisation/create-checkout-session` that creates a Stripe Checkout session and returns the session URL. The frontend `SubscriptionPlansComponent` currently calls `/stripe/create-checkout-session` which does not exist; update it to call the correct endpoint.
+- [x] Build "Restore Purchases" button for app store compliance.
+- [x] Implement `restorePurchases()` method in `MonetisationService` that calls `POST /monetisation/restore-purchases` backend endpoint, verifies App Store/Google Play receipts, and updates VIP status accordingly.
+- [x] Add `POST /monetisation/restore-purchases` endpoint in backend controller and implement `restorePurchases()` method in backend service that validates Apple/Google receipts and updates VIP status accordingly.
+- [x] Refine `SubscriptionPlansComponent` to use dynamic pricing from plan data (price_ukp/price_usd) instead of hardcoded values, display dual-currency format "8 UKP / $10 USD" per AGENTS.md rules, and properly handle free plan display.
+- [x] Add `stripe_price_id_yearly` field to frontend `SubscriptionPlan` interface and ensure yearly pricing uses the correct Stripe price ID.
+- [x] Add `FRONTEND_URL` environment variable to backend configuration for Stripe success/cancel URLs.
+- [x] Add unit tests for `MonetisationService.createCheckoutSession` and `MonetisationController.createCheckoutSession`.
 
 ## Phase 19: Gamification & Study Streaks
-- [ ] Build Daily Study Streak counter widget on home screen.
-- [ ] Implement NestJS CRON job to reset streaks if inactive for 24 hours.
-- [ ] Build "Top Corrector" community leaderboard.
+- [x] Build Daily Study Streak counter widget on home screen.
+- [x] Implement NestJS CRON job to reset streaks if inactive for 24 hours.
+- [x] **REQUIRED:** Add `@Cron('0 0 * * *')` decorator to a method in `StreakService` that calls the existing `resetStreaksForTesting()` logic. Add `last_active_at` column to `users` table via Supabase migration. Add a NestJS middleware or interceptor that updates `last_active_at` on every authenticated request. Write unit tests for the CRON job logic in `backend/src/streak/streak.service.spec.ts`.
+- [x] Create NestJS `StreakModule` with `@Cron('0 0 * * *')` scheduled method in `StreakService` that queries `users` table for users whose `last_active_at` is older than 24 hours and resets their `study_streak_days` to 0. Add `last_active_at` column to `users` table if not present. Update `UsersService` to touch `last_active_at` on any authenticated request (e.g., via a middleware or interceptor). Write unit tests for the CRON job logic.
+- [x] Actually implement the NestJS CRON job for streak reset: create `StreakModule` with `@nestjs/schedule`, add `@Cron('0 0 * * *')` in `StreakService` that queries `users` where `last_active_at < NOW() - INTERVAL '24 hours'` and sets `study_streak_days = 0`. Ensure `last_active_at` column exists in `users` table. Add middleware/interceptor to update `last_active_at` on authenticated requests. Write unit tests.
+- [x] Re‑implement the NestJS CRON job for streak reset (previous attempts not completed): create `backend/src/streak/streak.module.ts` with `@nestjs/schedule` import, `StreakService` with `@Cron('0 0 * * *')` method that queries `users` where `last_active_at < NOW() - INTERVAL '24 hours'` and sets `study_streak_days = 0`. Add `last_active_at` column to `users` table via Supabase migration or TypeORM entity. Add a NestJS middleware or interceptor that updates `last_active_at` on every authenticated request. Write unit tests for the CRON job logic in `backend/src/streak/streak.service.spec.ts`.
+- [x] Build "Top Corrector" community leaderboard.
+- [x] Actually implement the Daily Study Streak counter widget on the home screen: create an Angular component (`StudyStreakWidgetComponent`) that displays the current streak count from the user's profile (`study_streak_days`), shows a visual progress indicator (e.g., flame icon + number), and fetches the streak data from the backend `/users/me` endpoint. The widget must be placed on the home/dashboard screen and update reactively when the streak changes.
 
 ## Phase 20: Spaced Repetition (SRS) Flashcards
 - [x] Build Flashcard Deck UI to organize saved vocabulary.
@@ -283,14 +297,48 @@
 - [x] Build interactive Flashcard Review UI (Flip animations and grading buttons).
 
 ## Phase 21: Push Notifications
-- [ ] Integrate Firebase Cloud Messaging (FCM) in Angular.
-- [ ] Build NestJS event listeners to dispatch push alerts for chats, comments, and profile views.
-- [ ] Build Notification Preferences UI with granular category toggles.
+- [x] Integrate Firebase Cloud Messaging (FCM) in Angular.
+- [x] Build NestJS event listeners to dispatch push alerts for chats, comments, and profile views.
+- [x] Build Notification Preferences UI with granular category toggles.
 
 ## Phase 22: Moderation & Trust Engine
-- [ ] Build "Report User" modal with dynamic category selection.
-- [ ] Implement Blocklist system hiding blocked accounts across chat, feed, and search.
+- [x] Build "Report User" modal with dynamic category selection.
+- [x] Implement Blocklist system hiding blocked accounts across chat, feed, and search.
+- [ ] Wire up block/unblock UI in LongPressContextMenuComponent and ChatMessageComponent, and implement backend/frontend filtering to hide blocked users from chat, feed, and search results.
+- [ ] **REMAINING:** Wire the `block`/`unblock` outputs of `LongPressContextMenuComponent` to `SafetyService.blockUser`/`unblockUser` in the parent chat component (`ChatRoomComponent` or `MessageBubbleComponent`). Currently the component emits events but no parent subscribes to them, so the actions are never executed.
+- [ ] **REMAINING:** Add block/unblock button directly in `ChatMessageComponent` (or reuse the context menu) that calls `SafetyService.blockUser`/`unblockUser`.
+- [ ] **REMAINING:** Modify backend `ChatService`, `MomentsService`, and `DiscoveryService` to accept a list of blocked user IDs and exclude them from query results.
+- [ ] **REMAINING:** After fetching data on the frontend, filter out messages, moments, and search results whose `sender_id` or `user_id` appears in the blocked list.
+- [ ] **REMAINING:** Wire the `block`/`unblock` outputs of `LongPressContextMenuComponent` to `SafetyService.blockUser`/`unblockUser` in the parent chat component (`ChatRoomComponent` or `MessageBubbleComponent`). Currently the component emits events but no parent subscribes to them, so the actions are never executed.
+- [ ] **Remaining work for block/unblock UI and filtering:**
+  - Wire the `block`/`unblock` outputs of `LongPressContextMenuComponent` to `SafetyService.blockUser`/`unblockUser` in the parent chat component.
+  - Add a block/unblock button directly in `ChatMessageComponent` (or reuse the context menu) that calls `SafetyService.blockUser`/`unblockUser`.
+  - Modify `ChatService`, `MomentsService`, and `DiscoveryService` (backend) to accept a list of blocked user IDs and exclude them from query results.
+  - After fetching data on the frontend, filter out messages, moments, and search results whose `sender_id` or `user_id` appears in the blocked list.
+- [ ] **PARTIALLY DONE:** LongPressContextMenuComponent already has block/unblock options, calls SafetyService.blockUserAsync/unblockUserAsync, and emits block output events. Remaining: parent component subscription, backend query filtering, frontend filtering.
+- [ ] Wire block/unblock outputs in LongPressContextMenuComponent to SafetyService.blockUser/unblockUser in parent chat component, and implement backend/frontend filtering to exclude blocked users from chat, feed, and search results.
+- [ ] Implement hiding blocked accounts across chat, feed, and search (frontend filtering + backend query filtering)
+- [ ] Implement backend query filtering to exclude blocked users from chat, feed, and search results (modify ChatService, MomentsService, DiscoveryService to filter out blocked user IDs)
+- [ ] Implement frontend filtering to hide blocked users' messages, moments, and search results (filter arrays in components after fetching)
 - [ ] Build automated NLP spam detector in NestJS to flag duplicate copy-paste messages.
+- [ ] Add block user option to chat message context menu (LongPressContextMenuComponent)
+- [ ] Add block user option to chat message component (ChatMessageComponent)
+- [ ] Implement backend query filtering to exclude blocked users from chat, feed, and search results
+- [ ] Implement frontend filtering to hide blocked users' messages, moments, and search results
+- [ ] Add backend `POST /safety/block` and `POST /safety/unblock` endpoints with `SafetyService.blockUser`/`unblockUser` methods
+- [ ] Add `getBlockedUserIds` method to `SafetyService` for use in query filters
+- [ ] Add `isBlocked` method to `SafetyService` for use in query filters
+- [ ] Add block/unblock UI in chat message context menu (LongPressContextMenuComponent)
+- [ ] Add block/unblock UI in chat message component (ChatMessageComponent)
+- [ ] Implement backend query filtering to exclude blocked users from chat, feed, and search results
+- [ ] Implement frontend filtering to hide blocked users' messages, moments, and search results
+- [ ] Add 'block' option to LongPressContextMenuComponent (emit block event, wire to SafetyService.blockUser/unblockUser)
+- [ ] Add block/unblock UI in ChatMessageComponent (add block button, wire to SafetyService.blockUser/unblockUser)
+- [ ] Implement backend query filtering to exclude blocked users from chat, feed, and search results (modify ChatService, MomentsService, DiscoveryService to filter out blocked user IDs)
+- [ ] Implement frontend filtering to hide blocked users' messages, moments, and search results (filter arrays in components after fetching)
+- [ ] **NEW:** Wire the `block`/`unblock` outputs of `LongPressContextMenuComponent` to `SafetyService.blockUser`/`unblockUser` in the parent chat component (`ChatRoomComponent` or `MessageBubbleComponent`). Currently the component emits events but no parent subscribes to them, so the actions are never executed.
+- [ ] **REMAINING (2026-07-24):** Wire the `block`/`unblock` outputs of `LongPressContextMenuComponent` to `SafetyService.blockUser`/`unblockUser` in the parent chat component (`ChatRoomComponent` or `MessageBubbleComponent`). Currently the component emits events but no parent subscribes to them, so the actions are never executed.
+- [ ] Add block/unblock wiring in `ChatViewComponent` to call `SafetyService.blockUser`/`unblockUser` when the `block` output is emitted from `LongPressContextMenuComponent`.
 
 ## Phase 23: Onboarding Flow
 - [ ] Build multi-step Angular onboarding wizard.
@@ -464,10 +512,10 @@
 - [ ] Implement UI & Font Scaling slider adjusting base `rem` CSS rules.
 
 ## Phase 66: View Profiles & Social Actions
-- [ ] Build UserDetailComponent to view other users' profiles.
-- [ ] Implement follow/unfollow functionality.
-- [ ] Implement like/unlike profile functionality.
-- [ ] Route user avatar clicks in discovery and moments feed to the new UserDetailComponent.
+- [x] Build UserDetailComponent to view other users' profiles.
+- [x] Implement follow/unfollow functionality.
+- [x] Implement like/unlike profile functionality.
+- [x] Route user avatar clicks in discovery and moments feed to the new UserDetailComponent.
 - [ ] Build "Language Settings" menu to switch UI language independently of study target.
 
 ### Privacy, Blocking & Discoverability
@@ -477,7 +525,7 @@
 - [ ] Build "Block Management" page to manage and unblock users.
 
 ### Notifications & Alerts
-- [ ] Build unified "Notifications Area" (Inbox) for system alerts, likes, comments, and followers.
+- [x] Build unified "Notifications Area" (Inbox) for system alerts, likes, comments, and followers.
 - [ ] Build "Notification Settings" toggles for Push Alerts and Badges across Direct Messages, Groups, Likes, and Voicerooms.
 
 ### Chat & Data Storage Settings

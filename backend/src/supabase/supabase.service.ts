@@ -41,4 +41,19 @@ export class SupabaseService implements OnModuleInit {
   getRedisClient(): Redis {
     return this.redisClient;
   }
+
+  async updateLastActivity(userId: string): Promise<void> {
+    const supabase = this.getClient();
+    const { error } = await supabase
+      .from('users')
+      .update({ last_active_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (error) {
+      console.error(
+        `Failed to update last_active_at for user ${userId}:`,
+        error.message,
+      );
+    }
+  }
 }

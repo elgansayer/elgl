@@ -12,12 +12,12 @@ export class EconomyController {
 
   @Get('catalog')
   async getCatalog() {
-    return await this.economyService.getCatalog();
+    return this.economyService.getCatalog();
   }
 
   @Get('packages')
-  async getPackages() {
-    return await this.economyService.getPackages();
+  getPackages() {
+    return this.economyService.getPackages();
   }
 
   @Get('balance')

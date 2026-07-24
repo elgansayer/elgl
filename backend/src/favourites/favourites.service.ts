@@ -8,21 +8,23 @@ export class FavouritesService {
   async addFavourite(
     userId: string,
     dto: { message_id: string; note_text?: string },
-  ) {
+  ): Promise<Record<string, unknown>> {
     const supabase = this.supabaseService.getClient();
 
     // Fetch the message to store as payload
-    const { data: message, error: fetchError } = (await supabase
+    const messageResponse = await supabase
       .from('chat_messages')
       .select('*')
       .eq('id', dto.message_id)
-      .single()) as { data: any; error: any };
+      .single();
 
-    if (fetchError || !message) {
+    if (messageResponse.error || !messageResponse.data) {
       throw new Error('Message not found');
     }
 
-    const { data, error } = (await supabase
+    const message = messageResponse.data as Record<string, unknown>;
+
+    const insertResponse = await supabase
       .from('favourites')
       .insert({
         user_id: userId,
@@ -31,10 +33,10 @@ export class FavouritesService {
         notes: dto.note_text || null,
       })
       .select()
-      .single()) as { data: any; error: any };
+      .single();
 
-    if (error) throw error;
-    return data;
+    if (insertResponse.error) throw insertResponse.error;
+    return insertResponse.data as Record<string, unknown>;
   }
 
   async removeFavourite(userId: string, favouriteId: string) {
@@ -49,7 +51,7 @@ export class FavouritesService {
     return { success: true };
   }
 
-  async getUserFavourites(userId: string) {
+  async getUserFavourites(userId: string): Promise<Record<string, unknown>[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('favourites')
@@ -58,6 +60,6 @@ export class FavouritesService {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data;
+    return (data ?? []) as Record<string, unknown>[];
   }
 }

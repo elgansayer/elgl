@@ -13,6 +13,7 @@ import { WordDefinitionModalComponent } from '../word-definition-modal/word-defi
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.component';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
+import { CorrectionModalComponent } from '../correction-modal/correction-modal.component';
 
 @Component({
   selector: 'app-moments-feed',
@@ -25,7 +26,8 @@ import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrolla
     WordDefinitionModalComponent,
     VisualDiffComponent,
     VoiceRecorderComponent,
-    ScrollablePillsComponent
+    ScrollablePillsComponent,
+    CorrectionModalComponent,
   ],
   templateUrl: './moments-feed.component.html',
   styleUrls: ['./moments-feed.component.scss']
@@ -42,6 +44,8 @@ export class MomentsFeedComponent implements OnInit {
   readonly activeWordContext = signal<string>('');
   readonly openCommentsMap = signal<Set<string>>(new Set());
   readonly expandedMomentIds = signal<Set<string>>(new Set());
+  readonly activeCorrectionMomentId = signal<string | null>(null);
+  readonly activeCorrectionOriginalText = signal<string>('');
 
   readonly filterPills = computed(() => {
     this.i18n.translations();
@@ -177,6 +181,21 @@ export class MomentsFeedComponent implements OnInit {
     }
   }
 
+  // Comment reply state map
+  replyingToMap: Record<string, { parentCommentId: string; replyToUserId: string; replyToName: string } | null> = {};
+
+  startReply(momentId: string, comment: MomentComment): void {
+    this.replyingToMap[momentId] = {
+      parentCommentId: comment.id,
+      replyToUserId: comment.user_id,
+      replyToName: comment.author?.display_name || 'User',
+    };
+  }
+
+  cancelReply(momentId: string): void {
+    this.replyingToMap[momentId] = null;
+  }
+
   async submitComment(moment: MomentRecord): Promise<void> {
     const isCorrection = this.correctionModeMap[moment.id] ?? false;
     if (isCorrection) {
@@ -185,25 +204,33 @@ export class MomentsFeedComponent implements OnInit {
       const exp = this.correctionExplanationMap[moment.id]?.trim();
       if (!orig || !corr) return;
 
+      const replyTo = this.replyingToMap[moment.id];
       await this.momentsStore.addComment(moment.id, {
         correction_payload: {
           original: orig,
           corrected: corr,
           explanation: exp || undefined
-        }
+        },
+        parent_comment_id: replyTo?.parentCommentId,
+        reply_to_user_id: replyTo?.replyToUserId,
       });
       this.correctionOriginalMap[moment.id] = '';
       this.correctionCorrectedMap[moment.id] = '';
       this.correctionExplanationMap[moment.id] = '';
       this.correctionModeMap[moment.id] = false;
+      this.replyingToMap[moment.id] = null;
     } else {
       const text = this.commentInputMap[moment.id]?.trim();
       if (!text) return;
 
+      const replyTo = this.replyingToMap[moment.id];
       await this.momentsStore.addComment(moment.id, {
-        text_content: text
+        text_content: text,
+        parent_comment_id: replyTo?.parentCommentId,
+        reply_to_user_id: replyTo?.replyToUserId,
       });
       this.commentInputMap[moment.id] = '';
+      this.replyingToMap[moment.id] = null;
     }
   }
 
@@ -230,6 +257,34 @@ export class MomentsFeedComponent implements OnInit {
       next.add(momentId);
     }
     this.expandedMomentIds.set(next);
+  }
+
+  openGhostCorrection(moment: MomentRecord, textToCorrect?: string): void {
+    this.activeCorrectionMomentId.set(moment.id);
+    this.activeCorrectionOriginalText.set(textToCorrect || moment.text_content || '');
+  }
+
+  quoteTextToComment(moment: MomentRecord, text: string): void {
+    const existing = this.commentInputMap[moment.id] || '';
+    this.commentInputMap[moment.id] = `"> ${text}"\n` + existing;
+    const map = new Set(this.openCommentsMap());
+    map.add(moment.id);
+    this.openCommentsMap.set(map);
+    showToast(this.i18n.translate('moments.quotedTextAlert'));
+  }
+
+  async onCorrectionModalSubmitted(payload: { original: string; corrected: string; explanation?: string }): Promise<void> {
+    const momentId = this.activeCorrectionMomentId();
+    if (!momentId) return;
+
+    await this.momentsStore.addComment(momentId, {
+      correction_payload: payload
+    });
+    this.activeCorrectionMomentId.set(null);
+    const map = new Set(this.openCommentsMap());
+    map.add(momentId);
+    this.openCommentsMap.set(map);
+    showToast(this.i18n.translate('moments.correctionSentAlert'));
   }
 
   async copyMomentText(moment: MomentRecord): Promise<void> {

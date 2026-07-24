@@ -23,7 +23,7 @@ export class VideoCallsController {
   }
 
   @Post('accept')
-  async acceptCall(
+  acceptCall(
     @Req() req: AuthenticatedRequest,
     @Body('roomName') roomName: string,
   ) {

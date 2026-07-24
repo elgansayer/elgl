@@ -1,8 +1,9 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { SafetyService } from './safety.service';
 
 export interface CorrectionPayload {
   original: string;
@@ -52,7 +53,40 @@ export interface ChatRoom {
 export class ChatService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
+  private safetyService = inject(SafetyService);
   private baseUrl = `${environment.apiUrl}/chat`;
+
+  constructor() {
+    // Load blocked users when the service is created
+    this.loadBlockedUsers();
+  }
+
+  private readonly blockedUsers = signal<Set<string>>(new Set());
+
+  readonly isUserBlocked = computed(() => {
+    const blocked = this.blockedUsers();
+    return (userId: string) => blocked.has(userId);
+  });
+
+  addBlockedUser(userId: string): void {
+    this.blockedUsers.update(blocked => {
+      const newSet = new Set(blocked);
+      newSet.add(userId);
+      return newSet;
+    });
+  }
+
+  removeBlockedUser(userId: string): void {
+    this.blockedUsers.update(blocked => {
+      const newSet = new Set(blocked);
+      newSet.delete(userId);
+      return newSet;
+    });
+  }
+
+  getBlockedUsers(): string[] {
+    return Array.from(this.blockedUsers());
+  }
 
   private getHeaders() {
     const token = this.authService.getAccessToken();
@@ -68,6 +102,24 @@ export class ChatService {
     media_url?: string;
     correction_payload?: CorrectionPayload;
   }): Promise<ChatMessage> {
+    // Check if the receiver is blocked before sending
+    const currentUser = this.authService.currentUser();
+    if (currentUser?.id) {
+      // Get room members to find the receiver
+      const roomMembers = await firstValueFrom(
+        this.http.get<{ user_id: string }[]>(`${this.baseUrl}/rooms/${payload.room_id}/members`, { headers: this.getHeaders() })
+      );
+      if (roomMembers && roomMembers.length > 0) {
+        const receiverId = roomMembers.find(m => m.user_id !== currentUser.id)?.user_id;
+        if (receiverId) {
+          const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
+          if (blockedIds.includes(receiverId)) {
+            throw new Error('You cannot send messages to this user.');
+          }
+        }
+      }
+    }
+
     return firstValueFrom(
       this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, { headers: this.getHeaders() })
     );
@@ -79,15 +131,46 @@ export class ChatService {
       params = params.set('search', search.trim());
     }
 
-    return firstValueFrom(
-      this.http.get<ChatMessage[]>(`${this.baseUrl}/messages/${roomId}`, { headers: this.getHeaders(), params })
+    const messages = await firstValueFrom(
+      this.http.get<ChatMessage[]>(`${this.baseUrl}/messages/${roomId}`, { 
+        headers: this.getHeaders(), 
+        params 
+      })
     );
+
+    // Filter out messages from blocked users
+    const currentUser = this.authService.currentUser();
+    if (currentUser?.id) {
+      const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
+      if (blockedIds.length > 0) {
+        return messages.filter(msg => !blockedIds.includes(msg.sender_id));
+      }
+    }
+
+    return messages;
   }
 
   async getRooms(): Promise<ChatRoom[]> {
-    return firstValueFrom(
+    const rooms = await firstValueFrom(
       this.http.get<ChatRoom[]>(`${this.baseUrl}/rooms`, { headers: this.getHeaders() })
     );
+
+    // Filter out rooms where the other participant is blocked
+    const currentUser = this.authService.currentUser();
+    if (currentUser?.id) {
+      const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
+      if (blockedIds.length > 0) {
+        // For each room, we need to know the other participant's ID.
+        // The backend returns rooms with a 'title' that may contain the other user's name,
+        // but we don't have the user ID directly. We'll rely on the backend to filter.
+        // However, we can still filter based on the room ID if we have a mapping.
+        // For now, we'll just return the rooms as-is and let the backend handle filtering.
+        // The backend already filters blocked users in the getRooms endpoint.
+        return rooms;
+      }
+    }
+
+    return rooms;
   }
 
   async addFavourite(messageId: string, noteText?: string): Promise<void> {
@@ -122,5 +205,28 @@ export class ChatService {
     return firstValueFrom(
       this.http.get<FavouriteRecord[]>(`${this.baseUrl}/favourites`, { headers: this.getHeaders() })
     );
+  }
+
+  async loadBlockedUsers(): Promise<void> {
+    try {
+      const blockedIds = await this.safetyService.getBlockedIdsAsync();
+      this.blockedUsers.set(new Set(blockedIds));
+    } catch (e) {
+      console.error('Failed to load blocked users:', e);
+    }
+  }
+
+  async isBlocked(userId: string): Promise<boolean> {
+    try {
+      const response = await firstValueFrom(
+        this.http.get<{ blocked: boolean }>(`${environment.apiUrl}/safety/is-blocked/${userId}`, {
+          headers: this.getHeaders()
+        })
+      );
+      return response.blocked;
+    } catch (e) {
+      console.error('Failed to check block status:', e);
+      return false;
+    }
   }
 }

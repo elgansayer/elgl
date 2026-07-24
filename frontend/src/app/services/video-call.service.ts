@@ -51,7 +51,7 @@ export class VideoCallService {
       });
 
       this.setupRoomListeners();
-      await this.room.connect(environment.livekitUrl, response.token);
+      await this.room.connect(environment.liveKitUrl, response.token);
       await this.room.localParticipant.enableCameraAndMicrophone();
 
       this.callState.set({
@@ -87,7 +87,7 @@ export class VideoCallService {
       });
 
       this.setupRoomListeners();
-      await this.room.connect(environment.livekitUrl, token);
+      await this.room.connect(environment.liveKitUrl, token);
       await this.room.localParticipant.enableCameraAndMicrophone();
 
       this.callState.set({

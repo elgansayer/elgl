@@ -62,7 +62,7 @@ describe('SafetyController', () => {
       (safetyService.blockUser as jest.Mock).mockResolvedValue(response);
 
       const result = await controller.blockUser(
-        { user: { id: 'user-1' } } as any,
+        { user: { id: 'user-1' } },
         dto,
       );
       expect(safetyService.blockUser).toHaveBeenCalledWith('user-1', dto);
@@ -81,7 +81,7 @@ describe('SafetyController', () => {
 
       const result = await controller.getBlockedIds({
         user: { id: 'user-1' },
-      } as any);
+      });
       expect(safetyService.getBlockedIds).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(ids);
     });

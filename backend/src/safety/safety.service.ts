@@ -1,19 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { PostgrestError } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
-
-export interface UserBlockRow {
-  blocked_id: string;
-}
-
-export interface SafetyReportRow {
-  id: string;
-  reporter_id: string;
-  reported_id: string;
-  reason: string;
-  status: string;
-  created_at: string;
-}
 
 @Injectable()
 export class SafetyService {
@@ -21,21 +9,61 @@ export class SafetyService {
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async reportMessage(reporterId: string, dto: ReportUserDto): Promise<void> {
+  async reportUser(
+    reporterId: string,
+    dto: ReportUserDto,
+  ): Promise<{ id: string }> {
     const supabase = this.supabaseService.getClient();
 
-    const { error } = await supabase.from('reports').insert({
-      reporter_id: reporterId,
-      reported_user_id: dto.reported_id,
-      reason_category: 'message_content',
-      description: dto.reason,
-      context_url: dto.context_url || null,
-      status: 'pending',
-    });
+    // Prevent self-reporting
+    if (reporterId === dto.reported_id) {
+      throw new Error('Cannot report yourself');
+    }
+
+    // Verify reported user exists
+    const { data: reportedUser, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', dto.reported_id)
+      .single();
+
+    if (userError || !reportedUser) {
+      throw new NotFoundException('Reported user not found');
+    }
+
+    const {
+      data,
+      error,
+    }: { data: { id: string } | null; error: PostgrestError | null } =
+      await supabase
+        .from('reports')
+        .insert({
+          reporter_id: reporterId,
+          reported_user_id: dto.reported_id,
+          reason_category: dto.reason_category,
+          description: dto.description || null,
+          context_url: dto.context_url || null,
+          status: 'pending',
+        })
+        .select('id')
+        .single();
 
     if (error) {
+      this.logger.error(
+        `Failed to submit report from ${reporterId} against ${dto.reported_id}: ${error.message}`,
+      );
       throw new Error('Failed to submit report');
     }
+
+    if (!data) {
+      throw new Error('Failed to submit report: no data returned');
+    }
+
+    this.logger.log(
+      `Report submitted: reporter=${reporterId}, reported=${dto.reported_id}, category=${dto.reason_category}`,
+    );
+
+    return { id: data.id };
   }
 
   async blockUser(
@@ -43,6 +71,19 @@ export class SafetyService {
     dto: BlockUserDto,
   ): Promise<{ success: boolean; blocked_id: string }> {
     const supabase = this.supabaseService.getClient();
+    
+    // Check if already blocked
+    const { data: existing } = await supabase
+      .from('blocks')
+      .select('id')
+      .eq('blocker_id', blockerId)
+      .eq('blocked_id', dto.blocked_id)
+      .maybeSingle();
+
+    if (existing) {
+      throw new Error('User is already blocked');
+    }
+
     const { error } = await supabase.from('blocks').insert({
       blocker_id: blockerId,
       blocked_id: dto.blocked_id,
@@ -56,14 +97,75 @@ export class SafetyService {
     return { success: true, blocked_id: dto.blocked_id };
   }
 
-  async getBlockedIds(userId: string): Promise<string[]> {
+  async unblockUser(
+    blockerId: string,
+    blockedId: string,
+  ): Promise<{ success: boolean }> {
     const supabase = this.supabaseService.getClient();
-    const response = await supabase
+    const { error } = await supabase
+      .from('blocks')
+      .delete()
+      .eq('blocker_id', blockerId)
+      .eq('blocked_id', blockedId);
+
+    if (error) {
+      throw new Error(`Failed to unblock user: ${error.message}`);
+    }
+
+    this.logger.log(`User ${blockerId} unblocked ${blockedId}`);
+    return { success: true };
+  }
+
+  async isBlocked(blockerId: string, blockedId: string): Promise<boolean> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('blocks')
+      .select('id')
+      .eq('blocker_id', blockerId)
+      .eq('blocked_id', blockedId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(`Failed to check block status: ${error.message}`);
+      return false;
+    }
+
+    return data !== null;
+  }
+
+  async getBlockedUserIds(userId: string): Promise<string[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
       .from('blocks')
       .select('blocked_id')
       .eq('blocker_id', userId);
-    if (!response.data || response.data.length === 0) return [];
-    const rows = response.data as UserBlockRow[];
-    return rows.map((r) => r.blocked_id);
+
+    if (error) {
+      this.logger.error(`Failed to get blocked user IDs for ${userId}:`, error);
+      return [];
+    }
+    return (data as { blocked_id: string }[]).map((b) => b.blocked_id);
+  }
+
+  async getBlockerUserIds(userId: string): Promise<string[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('blocks')
+      .select('blocker_id')
+      .eq('blocked_id', userId);
+
+    if (error) {
+      this.logger.error(`Failed to get blocker user IDs for ${userId}:`, error);
+      return [];
+    }
+    return (data as { blocker_id: string }[]).map((b) => b.blocker_id);
+  }
+
+  async getBlockedAndBlockerIds(userId: string): Promise<string[]> {
+    const [blocked, blockers] = await Promise.all([
+      this.getBlockedUserIds(userId),
+      this.getBlockerUserIds(userId),
+    ]);
+    return [...new Set([...blocked, ...blockers])];
   }
 }

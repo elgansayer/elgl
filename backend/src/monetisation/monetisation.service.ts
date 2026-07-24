@@ -11,9 +11,14 @@ import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import Stripe from 'stripe';
 import { SupabaseService } from '../supabase/supabase.service';
-import { CreateDiagnosticLogDto } from './dto/monetisation.dto';
+import {
+  CreateDiagnosticLogDto,
+  AppleReceiptValidationResponse,
+} from './dto/monetisation.dto';
 import { AppleNotificationService } from './apple-notification.service';
 import { GooglePlayNotificationService } from './google-play-notification.service';
+import { SubscriptionPlansService } from './services/subscription-plans.service';
+import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
 
 export interface UserVipRow {
   id: string;
@@ -21,12 +26,6 @@ export interface UserVipRow {
   vip_tier?: string | null;
   developer_api_key?: string | null;
   email?: string;
-}
-
-interface DeveloperMetricRow {
-  user_id: string;
-  total_api_calls_today: number;
-  avg_latency_ms: number;
 }
 
 export interface DeveloperDiagnosticLogRow {
@@ -42,6 +41,8 @@ export interface DeveloperDiagnosticLogRow {
 export class MonetisationService {
   private readonly logger = new Logger(MonetisationService.name);
 
+  private readonly stripe: Stripe;
+
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
@@ -49,7 +50,16 @@ export class MonetisationService {
     private readonly appleNotificationService: AppleNotificationService,
     @Inject(forwardRef(() => GooglePlayNotificationService))
     private readonly googlePlayNotificationService: GooglePlayNotificationService,
-  ) {}
+    private readonly subscriptionPlansService: SubscriptionPlansService,
+    private readonly appleReceiptValidatorService: AppleReceiptValidatorService,
+  ) {
+    this.stripe = new Stripe(
+      this.configService.get<string>('STRIPE_SECRET_KEY') || '',
+      {
+        apiVersion: '2025-02-24.acacia' as Stripe.LatestApiVersion,
+      },
+    );
+  }
 
   /**
    * PRIVATE: VIP status must only be changed via verified payment webhooks.
@@ -93,6 +103,50 @@ export class MonetisationService {
     return this.updateVipStatus(userId, isVip, vipTier);
   }
 
+  async createCheckoutSession(
+    userId: string,
+    planId: string,
+    interval: 'month' | 'year',
+  ): Promise<{ sessionUrl: string; sessionId: string }> {
+    const plan = this.subscriptionPlansService.getPlanById(planId);
+    if (!plan) {
+      throw new NotFoundException(`Plan "${planId}" not found`);
+    }
+
+    const priceId =
+      interval === 'year' && plan.stripe_price_id_yearly
+        ? plan.stripe_price_id_yearly
+        : plan.stripe_price_id;
+
+    if (!priceId) {
+      throw new BadRequestException(
+        `No Stripe price ID configured for plan "${planId}" (interval: ${interval})`,
+      );
+    }
+
+    const session = await this.stripe.checkout.sessions.create({
+      mode: 'subscription',
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        userId,
+        planId,
+        interval,
+      },
+      success_url: `${this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4200'}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4200'}/subscription/cancel`,
+    });
+
+    return {
+      sessionUrl: session.url || '',
+      sessionId: session.id,
+    };
+  }
+
   async handleStripeWebhook(
     rawBody: Buffer,
     signature: string,
@@ -104,47 +158,43 @@ export class MonetisationService {
       throw new Error('STRIPE_WEBHOOK_SECRET is not configured');
     }
 
-    const stripe = new Stripe(
-      this.configService.get<string>('STRIPE_SECRET_KEY') || '',
-      {
-        apiVersion: '2025-02-24.acacia' as any,
-      },
-    );
-
     let event: Stripe.Event;
     try {
-      event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
-    } catch (err: any) {
-      this.logger.error(
-        `Webhook signature verification failed: ${err.message}`,
+      event = this.stripe.webhooks.constructEvent(
+        rawBody,
+        signature,
+        webhookSecret,
       );
-      throw new BadRequestException(`Webhook Error: ${err.message}`);
+    } catch (err: unknown) {
+      const error = err as Error;
+      const message = error.message || 'Unknown error';
+      this.logger.error(`Webhook signature verification failed: ${message}`);
+      throw new BadRequestException(`Webhook Error: ${message}`);
     }
 
     this.logger.log(`Received verified Stripe Webhook event: ${event.type}`);
 
-    if (
-      event.type === 'checkout.session.completed' ||
-      event.type === 'customer.subscription.created'
-    ) {
-      const session = event.data.object as any;
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as {
+        metadata?: Record<string, string>;
+      };
       const metadata = session.metadata;
-      if (metadata?.userId && metadata?.tier) {
-        await this.updateVipStatusFromWebhook(
-          metadata.userId as string,
-          true,
-          metadata.tier as string,
-        );
+      if (metadata?.userId) {
+        // Determine tier based on interval
+        const tier =
+          metadata.interval === 'year'
+            ? 'developer_20_ukp_26_usd'
+            : 'consumer_8_ukp_10_usd';
+
+        await this.updateVipStatusFromWebhook(metadata.userId, true, tier);
       }
     } else if (event.type === 'customer.subscription.deleted') {
-      const subscription = event.data.object as any;
+      const subscription = event.data.object as {
+        metadata?: Record<string, string>;
+      };
       const metadata = subscription.metadata;
       if (metadata?.userId) {
-        await this.updateVipStatusFromWebhook(
-          metadata.userId as string,
-          false,
-          null,
-        );
+        await this.updateVipStatusFromWebhook(metadata.userId, false, null);
       }
     }
 
@@ -175,7 +225,7 @@ export class MonetisationService {
       .eq('id', userId)
       .single();
     if (!response.data) throw new NotFoundException('User not found');
-    const user = response.data as UserVipRow;
+    const user = response.data as unknown as UserVipRow;
 
     if (!user.is_vip) {
       throw new ForbiddenException(
@@ -217,7 +267,7 @@ export class MonetisationService {
       .select('user_id, total_api_calls_today, avg_latency_ms')
       .eq('user_id', userId)
       .single();
-    const metric: DeveloperMetricRow | null = metricResponse.data;
+    const metric = metricResponse.data as unknown as { total_api_calls_today?: number; avg_latency_ms?: number } | null;
 
     return {
       api_key: user.developer_api_key || null,
@@ -267,5 +317,44 @@ export class MonetisationService {
     }
 
     return response.data;
+  }
+
+  /**
+   * Restore previous purchases (Apple App Store / Google Play).
+   * Validates receipt and updates VIP status accordingly.
+   */
+  async restorePurchases(
+    userId: string,
+    platform: 'ios' | 'android',
+    receiptData?: string,
+  ): Promise<{ received: boolean; status: string }> {
+    if (platform === 'ios') {
+      if (!receiptData) {
+        throw new BadRequestException('Receipt data is required for iOS');
+      }
+      const validationResult: AppleReceiptValidationResponse =
+        await this.appleReceiptValidatorService.validateReceipt(
+          userId,
+          receiptData,
+          false,
+        );
+      if (validationResult.valid && validationResult.product_id) {
+        const tier = this.subscriptionPlansService.getTierByProductId(
+          validationResult.product_id,
+        );
+        if (tier) {
+          await this.updateVipStatusFromWebhook(userId, true, tier);
+          return { received: true, status: 'restored' };
+        }
+      }
+      return { received: true, status: 'no_valid_subscription' };
+    } else if (platform === 'android') {
+      // Android restore purchases not fully implemented yet
+      this.logger.warn(
+        `Android restore purchases not fully implemented for user ${userId}`,
+      );
+      return { received: true, status: 'not_implemented' };
+    }
+    throw new BadRequestException('Invalid platform');
   }
 }

@@ -94,8 +94,17 @@ export class NlpService {
       );
     }
 
-    const data = await res.json();
-    const translatedText = data.translations[0].text;
+    const jsonResponse = (await res.json()) as unknown as {
+      translations: Array<{ text: string }>;
+    };
+    if (
+      !jsonResponse ||
+      !jsonResponse.translations ||
+      jsonResponse.translations.length === 0
+    ) {
+      throw new BadRequestException('DeepL returned no translations');
+    }
+    const translatedText = jsonResponse.translations[0].text;
 
     // Get glossary/definition via DeepL glossary lookup (if available) or fallback
     let definition = '';
@@ -135,7 +144,9 @@ export class NlpService {
         },
       );
       if (translitRes.ok) {
-        const translitData = await translitRes.json();
+        const translitData = (await translitRes.json()) as {
+          translations: Array<{ text: string }>;
+        };
         transliteration = translitData.translations[0].text;
       }
     } catch {
@@ -186,8 +197,10 @@ export class NlpService {
       );
     }
 
-    const detectData = await detectRes.json();
-    const detectedLang = detectData[0]?.language || 'en';
+    const detectData = (await detectRes.json()) as unknown as Array<{
+      language: string;
+    }>;
+    const detectedLang = detectData?.[0]?.language || 'en';
 
     // Use Azure's dictionary lookup for grammar correction (works best for common languages)
     const dictRes = await fetch(
@@ -209,8 +222,10 @@ export class NlpService {
       );
     }
 
-    const dictData = await dictRes.json();
-    const correctedText = dictData[0]?.displayTarget || orig;
+    const dictData = (await dictRes.json()) as unknown as Array<{
+      displayTarget?: string;
+    }>;
+    const correctedText = dictData?.[0]?.displayTarget || orig;
     const errorsFound = orig === correctedText ? 0 : 1;
 
     // Generate explanation using Azure's translation with "to" parameter
@@ -230,7 +245,9 @@ export class NlpService {
         },
       );
       if (explainRes.ok) {
-        const explainData = await explainRes.json();
+        const explainData = (await explainRes.json()) as Array<{
+          translations: Array<{ text: string }>;
+        }>;
         explanation =
           explainData[0]?.translations[0]?.text || 'Corrected via Azure AI';
       }
@@ -297,7 +314,17 @@ export class NlpService {
       );
     }
 
-    const assessmentData = await assessmentRes.json();
+    const assessmentData = (await assessmentRes.json()) as {
+      NBest?: Array<{
+        PronunciationAssessment?: { AccuracyScore?: number };
+        Words?: Array<{
+          PronunciationAssessment?: {
+            AccuracyScore?: number;
+            ErrorType?: string;
+          };
+        }>;
+      }>;
+    };
     const nBest = assessmentData.NBest?.[0];
 
     if (!nBest) {

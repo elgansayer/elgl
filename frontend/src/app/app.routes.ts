@@ -12,14 +12,21 @@ import { DeveloperDashboardComponent } from './components/developer-dashboard/de
 import { ProfileVisitorsComponent } from './components/profile-visitors/profile-visitors.component';
 import { VideoCallComponent } from './components/video-call/video-call.component';
 import { UserDetailComponent } from './components/user-detail/user-detail.component';
+import { SubscriptionPlansComponent } from './components/subscription-plans/subscription-plans.component';
+import { SubscriptionSuccessComponent } from './components/subscription-success/subscription-success.component';
+import { SubscriptionCancelComponent } from './components/subscription-cancel/subscription-cancel.component';
+
+import { NotificationsInboxComponent } from './components/notifications-inbox/notifications-inbox.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'discovery', pathMatch: 'full' },
   { path: 'discovery', component: DiscoveryComponent },
   { path: 'moments', component: MomentsFeedComponent },
+  { path: 'notifications', component: NotificationsInboxComponent },
   { path: 'audio-rooms', component: AudioRoomComponent },
   { path: 'chat', component: ChatListComponent },
   { path: 'chat/:id', component: ChatRoomComponent },
+  { path: 'leaderboard', loadComponent: () => import('./components/leaderboard/leaderboard.component').then(m => m.LeaderboardComponent) },
   { path: 'favourites', component: FavouritesComponent },
   { path: 'vocabulary', component: VocabularyDashboardComponent },
   { path: 'profile', component: ProfileComponent },
@@ -34,5 +41,31 @@ export const routes: Routes = [
       import('./components/hobby-tags/hobby-tags.component').then(
         (m) => m.HobbyTagsComponent
       ),
+  },
+  {
+    path: 'vip',
+    loadComponent: () =>
+      import('./pages/vip-subscription/vip-subscription.component').then(
+        (m) => m.VipSubscriptionComponent
+      ),
+    title: 'VIP Subscription - HelloTalk',
+  },
+  {
+    path: 'subscription',
+    loadComponent: () =>
+      import('./pages/subscription/subscription-page.component').then(
+        (m) => m.SubscriptionPageComponent
+      ),
+    title: 'Subscription Plans - HelloTalk',
+  },
+  {
+    path: 'subscription/success',
+    component: SubscriptionSuccessComponent,
+    title: 'Subscription Successful - HelloTalk',
+  },
+  {
+    path: 'subscription/cancel',
+    component: SubscriptionCancelComponent,
+    title: 'Subscription Cancelled - HelloTalk',
   },
 ];
