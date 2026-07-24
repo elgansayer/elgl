@@ -4,6 +4,7 @@ import { AuthService } from './services/auth.service';
 import { EconomyStore, VirtualGift } from './services/economy.store';
 import { CentrifugeService } from './services/centrifuge.service';
 import { FcmService } from './services/fcm.service';
+import { SafetyService } from './services/safety.service';
 import { TranslatePipe } from './services/translate.pipe';
 import { IncomingCallModalComponent, IncomingCallData } from './components/incoming-call-modal/incoming-call-modal.component';
 import { ToastComponent } from './components/primitives/toast/toast.component';
@@ -30,6 +31,7 @@ export class AppComponent implements OnInit {
   economyStore = inject(EconomyStore);
   centrifugeService = inject(CentrifugeService);
   fcmService = inject(FcmService);
+  private safetyService = inject(SafetyService);
   reportModalService = inject(ReportUserModalService);
 
   // Incoming call state
@@ -49,6 +51,9 @@ export class AppComponent implements OnInit {
     // Subscribe to personal user notification channel for direct virtual gifts
     const user = this.authService.currentUser();
     if (user) {
+      // Load the blocked user list once the user is available
+      await this.safetyService.loadBlockedUsers();
+
       await this.centrifugeService.connect();
       this.centrifugeService.subscribe(`user_${user.id}`, (data: unknown) => {
         const payload = data as { type?: string; gift?: VirtualGift; sender_name?: string } | null;

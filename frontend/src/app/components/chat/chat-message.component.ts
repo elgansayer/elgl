@@ -1,4 +1,4 @@
-import { Component, input, inject, ViewChild, HostListener } from '@angular/core';
+import { Component, input, inject, ViewChild, HostListener, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { SafetyService } from '../../services/safety.service';
@@ -27,15 +27,15 @@ export class ChatMessageComponent {
 
   private readonly safetyService = inject(SafetyService);
 
-  get isContextMenuDisabled(): boolean {
-    const msg = this.message();
-    return !msg || msg.sender_id === 'system' || msg.sender_id === null;
-  }
-
-  isSenderBlocked(): boolean {
+  readonly isSenderBlocked = computed(() => {
     const sid = this.message()?.sender_id;
     if (!sid) return false;
     return this.safetyService.isUserBlockedCached(sid);
+  });
+
+  get isContextMenuDisabled(): boolean {
+    const msg = this.message();
+    return !msg || msg.sender_id === 'system' || msg.sender_id === null;
   }
 
   onCopy(event: { messageId: string; content: string }): void {
