@@ -42,7 +42,7 @@ const AVAILABLE_GIFTS: GiftItem[] = [
         <button *ngFor="let cat of categories"
                 (click)="selectedCategory.set(cat)"
                 class="px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors"
-                [ngClass]="selectedCategory() === cat ? 'bg-pink-600 text-white' : 'bg-surface-100 text-text-secondary hover:bg-gray-600'">
+                [class]="selectedCategory() === cat ? 'bg-pink-600 text-white' : 'bg-surface-100 text-text-secondary hover:bg-gray-600'">
           {{ cat }}
         </button>
       </div>

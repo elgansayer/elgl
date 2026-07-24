@@ -27,7 +27,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <button *ngFor="let type of messageTypes"
                 (click)="selectedType.set(type)"
                 class="px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors"
-                [ngClass]="selectedType() === type ? 'bg-blue-600 text-white' : 'bg-surface-100 text-text-secondary hover:bg-gray-600'">
+                [class]="selectedType() === type ? 'bg-blue-600 text-white' : 'bg-surface-100 text-text-secondary hover:bg-gray-600'">
           {{ type }}
         </button>
       </div>

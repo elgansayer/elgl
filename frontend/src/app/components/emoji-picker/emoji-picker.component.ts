@@ -33,7 +33,7 @@ const EMOJI_CATEGORIES = [
         <button *ngFor="let cat of categories"
                 (click)="selectedCategory.set(cat.name)"
                 class="px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors"
-                [ngClass]="selectedCategory() === cat.name ? 'bg-blue-600 text-white' : 'bg-surface-100 text-text-secondary hover:bg-gray-600'">
+                [class]="selectedCategory() === cat.name ? 'bg-blue-600 text-white' : 'bg-surface-100 text-text-secondary hover:bg-gray-600'">
           {{ cat.name }}
         </button>
       </div>
