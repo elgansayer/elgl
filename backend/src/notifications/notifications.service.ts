@@ -2,6 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type FirebaseAdmin = any;
+
 @Injectable()
 export class NotificationsService {
   constructor(
@@ -46,7 +49,7 @@ export class NotificationsService {
       data?: Record<string, string>;
     },
   ): Promise<void> {
-    let firebaseAdmin: any;
+    let firebaseAdmin: FirebaseAdmin;
     try {
       firebaseAdmin = await import('firebase-admin');
     } catch {
@@ -114,7 +117,7 @@ export class NotificationsService {
 
       if (response.failureCount > 0) {
         const invalidTokens: string[] = [];
-        response.responses.forEach((resp: any, idx: number) => {
+        response.responses.forEach((resp: FirebaseAdmin, idx: number) => {
           if (
             resp.error &&
             (resp.error.code === 'messaging/invalid-registration-token' ||
