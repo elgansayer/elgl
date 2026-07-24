@@ -468,5 +468,15 @@
   "voip.dismiss": "Dismiss",
   "voip.incomingVoiceCall": "Incoming voice call...",
   "voip.incomingVideoCall": "Incoming video call...",
-  "common.unknownCaller": "Unknown Caller"
+  "common.unknownCaller": "Unknown Caller",
+  "settings.title": "Settings & Privacy",
+  "settings.privacySection": "Privacy settings",
+  "settings.hideLocation": "Hide location in discovery",
+  "settings.hideSearch": "Hide profile from search",
+  "settings.hideAge": "Hide my age",
+  "settings.hideGender": "Hide my gender",
+  "settings.saveBtn": "Save settings",
+  "hobby.add": "+ Add Hobby",
+  "profile.maxLanguagesError": "Max 3 target languages allowed for VIP, 1 for free users.",
+  "profile.settingsLink": "Settings"
 }

@@ -70,6 +70,7 @@
         <a routerLink="/vocabulary" class="app-pill text-center">{{ 'profile.navVocab' | t }}</a>
         <a routerLink="/audio-rooms" class="app-pill text-center">{{ 'profile.navRooms' | t }}</a>
         <a routerLink="/developer" class="app-pill text-center">{{ 'profile.navDev' | t }}</a>
+        <a routerLink="/settings" class="app-pill text-center col-span-2 sm:col-span-4 bg-surface-200 border-surface-300">⚙️ {{ 'profile.settingsLink' | t }}</a>
       </div>
 
       <div class="mt-3 flex flex-wrap gap-1.5">
@@ -114,25 +115,38 @@
           <input type="text" [(ngModel)]="displayName" name="displayName" [placeholder]="'profile.displayNamePlaceholder' | t" class="app-input" />
           <input type="url" [(ngModel)]="avatarUrl" name="avatarUrl" [placeholder]="'profile.avatarUrlPlaceholder' | t" class="app-input" />
 
-          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <input type="text" [(ngModel)]="nativeLanguage" name="nativeLanguage" [placeholder]="'profile.nativeLangPlaceholder' | t" class="app-input uppercase" />
-            <input type="text" [(ngModel)]="targetLanguagesInput" name="targetLanguagesInput" [placeholder]="'profile.targetLangPlaceholder' | t" class="app-input uppercase" />
+          <div class="space-y-4 pt-2">
+            <div>
+              <label class="block text-xs font-semibold uppercase text-text-secondary mb-1">{{ 'profile.nativeLangPlaceholder' | t }}</label>
+              <select [(ngModel)]="nativeLanguage" name="nativeLanguage" class="app-input w-full bg-surface-300">
+                @for (lang of availableLanguages; track lang.code) {
+                  <option [value]="lang.code">{{ lang.flag }} {{ lang.name }}</option>
+                }
+              </select>
+            </div>
+            
+            <div>
+              <label class="block text-xs font-semibold uppercase text-text-secondary mb-1">{{ 'profile.targetLangPlaceholder' | t }}</label>
+              <div class="flex flex-wrap gap-2">
+                @for (lang of availableLanguages; track lang.code) {
+                  <button type="button" 
+                    (click)="toggleTargetLanguage(lang.code)"
+                    class="px-3 py-1.5 rounded-full text-sm font-medium border transition-colors flex items-center gap-1"
+                    [class.bg-primary]="targetLanguages.includes(lang.code)"
+                    [class.border-primary]="targetLanguages.includes(lang.code)"
+                    [class.text-white]="targetLanguages.includes(lang.code)"
+                    [class.bg-surface-300]="!targetLanguages.includes(lang.code)"
+                    [class.border-surface-100]="!targetLanguages.includes(lang.code)"
+                    [class.text-text-secondary]="!targetLanguages.includes(lang.code)">
+                    <span>{{ lang.flag }}</span>
+                    <span>{{ lang.name }}</span>
+                  </button>
+                }
+              </div>
+            </div>
           </div>
 
           <textarea [(ngModel)]="bioText" name="bioText" rows="4" [placeholder]="'profile.bioPlaceholder' | t" class="app-textarea"></textarea>
-
-          <label class="flex items-center gap-2 text-sm text-text-primary">
-            <input type="checkbox" [(ngModel)]="privacyHideLocation" name="privacyHideLocation" class="h-4 w-4 rounded border-surface-100 text-primary" />
-            {{ 'profile.hideLocation' | t }}
-          </label>
-          <label class="flex items-center gap-2 text-sm text-text-primary">
-            <input type="checkbox" [(ngModel)]="privacyHideSearch" name="privacyHideSearch" class="h-4 w-4 rounded border-surface-100 text-primary" />
-            {{ 'profile.hideSearch' | t }}
-          </label>
-          <label class="flex items-center gap-2 text-sm text-text-primary">
-            <input type="checkbox" [(ngModel)]="privacyHideAge" name="privacyHideAge" class="h-4 w-4 rounded border-surface-100 text-primary" />
-            {{ 'profile.hideAge' | t }}
-          </label>
 
           <div class="flex justify-end gap-2 pt-1">
             <button type="button" (click)="toggleEdit()" class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs">{{ 'profile.cancelBtn' | t }}</button>

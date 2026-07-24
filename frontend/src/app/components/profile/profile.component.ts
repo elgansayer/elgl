@@ -64,6 +64,7 @@ export class ProfileComponent implements OnInit {
   async saveProfile(): Promise<void> {
     this.errorMessage.set('');
     this.successMessage.set('');
+    try {
       const updated = await this.userService.updateMyProfile({
         display_name: this.displayName,
         native_language: this.nativeLanguage,
