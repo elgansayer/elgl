@@ -177,6 +177,21 @@ export class MomentsFeedComponent implements OnInit {
     }
   }
 
+  // Comment reply state map
+  replyingToMap: Record<string, { parentCommentId: string; replyToUserId: string; replyToName: string } | null> = {};
+
+  startReply(momentId: string, comment: MomentComment): void {
+    this.replyingToMap[momentId] = {
+      parentCommentId: comment.id,
+      replyToUserId: comment.user_id,
+      replyToName: comment.author?.display_name || 'User',
+    };
+  }
+
+  cancelReply(momentId: string): void {
+    this.replyingToMap[momentId] = null;
+  }
+
   async submitComment(moment: MomentRecord): Promise<void> {
     const isCorrection = this.correctionModeMap[moment.id] ?? false;
     if (isCorrection) {
@@ -185,25 +200,33 @@ export class MomentsFeedComponent implements OnInit {
       const exp = this.correctionExplanationMap[moment.id]?.trim();
       if (!orig || !corr) return;
 
+      const replyTo = this.replyingToMap[moment.id];
       await this.momentsStore.addComment(moment.id, {
         correction_payload: {
           original: orig,
           corrected: corr,
           explanation: exp || undefined
-        }
+        },
+        parent_comment_id: replyTo?.parentCommentId,
+        reply_to_user_id: replyTo?.replyToUserId,
       });
       this.correctionOriginalMap[moment.id] = '';
       this.correctionCorrectedMap[moment.id] = '';
       this.correctionExplanationMap[moment.id] = '';
       this.correctionModeMap[moment.id] = false;
+      this.replyingToMap[moment.id] = null;
     } else {
       const text = this.commentInputMap[moment.id]?.trim();
       if (!text) return;
 
+      const replyTo = this.replyingToMap[moment.id];
       await this.momentsStore.addComment(moment.id, {
-        text_content: text
+        text_content: text,
+        parent_comment_id: replyTo?.parentCommentId,
+        reply_to_user_id: replyTo?.replyToUserId,
       });
       this.commentInputMap[moment.id] = '';
+      this.replyingToMap[moment.id] = null;
     }
   }
 

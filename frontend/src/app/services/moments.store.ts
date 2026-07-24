@@ -16,6 +16,8 @@ export interface MomentComment {
     corrected: string;
     explanation?: string;
   };
+  parent_comment_id?: string;
+  reply_to_user_id?: string;
   created_at: string;
   author?: {
     id: string;
@@ -145,6 +147,8 @@ export class MomentsStore {
       corrected: string;
       explanation?: string;
     };
+    parent_comment_id?: string;
+    reply_to_user_id?: string;
   }): Promise<MomentComment> {
     const created = await firstValueFrom(
       this.http.post<MomentComment>(`${this.baseUrl}/${momentId}/comments`, payload, { headers: this.getHeaders() })

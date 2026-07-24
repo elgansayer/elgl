@@ -176,6 +176,7 @@ export class I18nService {
     'moments.unpinBtn': 'Unpin',
     'moments.likeBtn': 'Like',
     'moments.commentBtn': 'Comment',
+    'moments.replyBtn': 'Reply',
     'moments.showMore': 'Show more',
     'moments.showLess': 'Show less',
     'moments.translate': 'Translate',

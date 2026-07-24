@@ -159,10 +159,15 @@
             @if (openCommentsMap().has(moment.id)) {
               <div class="mt-4 pt-4 border-t border-surface-200 space-y-3">
                 @for (comment of moment.comments || []; track comment.id) {
-                  <div class="bg-surface-300 rounded-2xl p-3">
+                  <div class="bg-surface-300 rounded-2xl p-3" [class.ms-6]="comment.parent_comment_id">
                     <div class="flex items-center justify-between mb-1">
                       <span class="font-bold text-xs text-text-primary">{{ comment.author?.display_name || ('common.unknownUser' | t) }}</span>
-                      <span class="text-[10px] text-text-muted">{{ comment.created_at | date: 'shortTime' }}</span>
+                      <div class="flex items-center gap-2">
+                        <button (click)="startReply(moment.id, comment)" class="text-[10px] text-purple-400 font-bold hover:underline">
+                          {{ 'moments.replyBtn' | t }}
+                        </button>
+                        <span class="text-[10px] text-text-muted">{{ comment.created_at | date: 'shortTime' }}</span>
+                      </div>
                     </div>
                     @if (comment.text_content) {
                       <p class="text-sm text-text-primary">{{ comment.text_content }}</p>
@@ -173,9 +178,17 @@
                   </div>
                 }
 
+                <!-- Replying indicator pill -->
+                @if (replyingToMap[moment.id]; as replyTo) {
+                  <div class="flex items-center justify-between bg-purple-500/20 text-purple-300 text-xs px-3 py-1 rounded-full border border-purple-500/30">
+                    <span>Replying to <strong>@{{ replyTo.replyToName }}</strong></span>
+                    <button (click)="cancelReply(moment.id)" class="text-xs text-text-muted hover:text-white font-bold">✕</button>
+                  </div>
+                }
+
                 <!-- Write Comment -->
                 <div class="flex gap-2 items-center">
-                  <input type="text" [(ngModel)]="commentInputMap[moment.id]" (keyup.enter)="submitComment(moment)" placeholder="Write a comment..." class="flex-1 bg-surface-200 border-none rounded-full px-4 py-2 text-xs text-text-primary focus:ring-1 focus:ring-purple-500 outline-none" />
+                  <input type="text" [(ngModel)]="commentInputMap[moment.id]" (keyup.enter)="submitComment(moment)" [placeholder]="replyingToMap[moment.id] ? ('Write a reply...') : ('Write a comment...')" class="flex-1 bg-surface-200 border-none rounded-full px-4 py-2 text-xs text-text-primary focus:ring-1 focus:ring-purple-500 outline-none" />
                   <button (click)="submitComment(moment)" class="bg-purple-600 text-white rounded-full p-2 h-8 w-8 flex items-center justify-center shrink-0">➤</button>
                 </div>
               </div>
