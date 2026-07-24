@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
 
@@ -12,17 +12,37 @@ export class SafetyService {
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async reportUser(reporterId: string, dto: ReportUserDto): Promise<void> {
+  async reportUser(reporterId: string, dto: ReportUserDto): Promise<{ id: string }> {
     const supabase = this.supabaseService.getClient();
 
-    const { error } = await supabase.from('reports').insert({
-      reporter_id: reporterId,
-      reported_user_id: dto.reported_id,
-      reason_category: dto.reason_category,
-      description: dto.description || null,
-      context_url: dto.context_url || null,
-      status: 'pending',
-    });
+    // Prevent self-reporting
+    if (reporterId === dto.reported_id) {
+      throw new Error('Cannot report yourself');
+    }
+
+    // Verify reported user exists
+    const { data: reportedUser, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', dto.reported_id)
+      .single();
+
+    if (userError || !reportedUser) {
+      throw new NotFoundException('Reported user not found');
+    }
+
+    const { data, error } = await supabase
+      .from('reports')
+      .insert({
+        reporter_id: reporterId,
+        reported_user_id: dto.reported_id,
+        reason_category: dto.reason_category,
+        description: dto.description || null,
+        context_url: dto.context_url || null,
+        status: 'pending',
+      })
+      .select('id')
+      .single();
 
     if (error) {
       this.logger.error(
@@ -34,6 +54,8 @@ export class SafetyService {
     this.logger.log(
       `Report submitted: reporter=${reporterId}, reported=${dto.reported_id}, category=${dto.reason_category}`,
     );
+
+    return { id: data.id };
   }
 
   async blockUser(
