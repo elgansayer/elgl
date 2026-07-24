@@ -1,0 +1,63 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { SupabaseService } from '../supabase/supabase.service';
+
+@Injectable()
+export class StreakService {
+  private readonly logger = new Logger(StreakService.name);
+
+  constructor(private readonly supabaseService: SupabaseService) {}
+
+  /**
+   * Resets study_streak_days to 0 for users who have been inactive
+   * for more than 24 hours. Returns the number of users whose streaks
+   * were reset.
+   */
+  async resetStreaksForTesting(): Promise<number> {
+    const supabase = this.supabaseService.getClient();
+
+    // Calculate the cutoff time (24 hours ago)
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    // Query users whose last_active_at is older than the cutoff
+    const { data: inactiveUsers, error: queryError } = await supabase
+      .from('users')
+      .select('id, study_streak_days, last_active_at')
+      .lt('last_active_at', cutoff);
+
+    if (queryError) {
+      this.logger.error('Failed to query inactive users', queryError.message);
+      return 0;
+    }
+
+    if (!inactiveUsers || inactiveUsers.length === 0) {
+      this.logger.log('No inactive users found for streak reset');
+      return 0;
+    }
+
+    const userIds = inactiveUsers.map((user) => user.id);
+
+    // Reset streaks for the found users
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ study_streak_days: 0 })
+      .in('id', userIds);
+
+    if (updateError) {
+      this.logger.error('Failed to reset streaks', updateError.message);
+      return 0;
+    }
+
+    this.logger.log(`Reset streaks for ${userIds.length} inactive users`);
+    return userIds.length;
+  }
+
+  /**
+   * Scheduled job that runs every hour to reset streaks for inactive users.
+   */
+  @Cron(CronExpression.EVERY_HOUR)
+  async handleStreakResetCron(): Promise<void> {
+    this.logger.log('Running scheduled streak reset job');
+    await this.resetStreaksForTesting();
+  }
+}
