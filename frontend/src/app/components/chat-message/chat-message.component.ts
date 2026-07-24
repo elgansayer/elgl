@@ -8,12 +8,12 @@ import {
   output,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ChatMessage, ChatService } from '../../services/chat.service';
+import { ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { FavouriteService } from '../../services/favourite.service';
 import { SafetyService } from '../../services/safety.service';
-import { Subject } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-chat-message',
@@ -92,34 +92,26 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private favouriteService = inject(FavouriteService);
   private safetyService = inject(SafetyService);
-  private chatService = inject(ChatService);
   private destroy$ = new Subject<void>();
 
   isBlocked = signal(false);
 
   ngOnInit(): void {
-    // Pre-load the blocked‑user cache (idempotent)
-    this.safetyService.loadBlockedUsers();
+    // Initial fast check from cache
+    this.isBlocked.set(
+      this.safetyService.isUserBlockedCached(this.message.sender_id),
+    );
 
-    if (this.message.sender_id) {
-      // Fast synchronous check using the local cache
-      const cachedBlocked = this.safetyService.isUserBlockedCached(
-        this.message.sender_id,
-      );
-      if (cachedBlocked) {
-        this.isBlocked.set(true);
-      } else {
-        // Double‑check with the backend (handles stale cache / cross‑device blocks)
-        this.safetyService
-          .isBlocked(this.message.sender_id)
-          .then((result) => {
-            this.isBlocked.set(result.blocked);
-          })
-          .catch((err) =>
-            console.error('Failed to check block status', err),
-          );
-      }
-    }
+    // Subscribe to changes so we always stay in sync
+    this.safetyService.blockedUserIds$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((blockedIds) => {
+        const currentlyBlocked = blockedIds.has(this.message.sender_id);
+        this.isBlocked.set(currentlyBlocked);
+        if (currentlyBlocked) {
+          this.messageBlocked.emit(this.message.sender_id);
+        }
+      });
   }
 
   ngOnDestroy(): void {
@@ -165,23 +157,17 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
   }
 
   async onBlock(event: { senderId: string; blocked: boolean }): Promise<void> {
-    if (event.blocked) {
-      try {
-        await this.safetyService.blockUser({ blocked_id: event.senderId });
+    try {
+      if (event.blocked) {
+        await this.safetyService.blockUserAsync(event.senderId);
         this.isBlocked.set(true);
         this.messageBlocked.emit(event.senderId);
-      } catch (err) {
-        console.error('Failed to block user', err);
-      }
-    } else {
-      // Unblock – handled through the same (block) output
-      try {
+      } else {
         await this.safetyService.unblockUserAsync(event.senderId);
         this.isBlocked.set(false);
-        this.chatService.removeBlockedUser(event.senderId);
-      } catch (err) {
-        console.error('Failed to unblock user', err);
       }
+    } catch (err) {
+      console.error('Block/unblock failed', err);
     }
   }
 }

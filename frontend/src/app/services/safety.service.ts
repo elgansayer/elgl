@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, lastValueFrom } from 'rxjs';
+import { Observable, BehaviorSubject, lastValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface ReportUserDto {
@@ -30,6 +30,9 @@ export class SafetyService {
   // Local cache for blocked user IDs (bidirectional: blocked + blocker)
   private _blockedUserIds = signal<Set<string>>(new Set());
 
+  private blockedIdsSubject = new BehaviorSubject<Set<string>>(new Set());
+  public blockedUserIds$ = this.blockedIdsSubject.asObservable();
+
   // Public read-only accessor (could be used for reactivity)
   get blockedUserIds(): ReadonlySet<string> {
     return this._blockedUserIds();
@@ -44,7 +47,9 @@ export class SafetyService {
       const ids = await lastValueFrom(
         this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids`),
       );
-      this._blockedUserIds.set(new Set(ids));
+      const newSet = new Set(ids);
+      this._blockedUserIds.set(newSet);
+      this.blockedIdsSubject.next(newSet);
     } catch (e) {
       console.error('Failed to load blocked user IDs', e);
     }
@@ -78,7 +83,12 @@ export class SafetyService {
     blockedId: string,
   ): Promise<{ success: boolean; blocked_id: string }> {
     const res = await lastValueFrom(this.blockUser(blockedId));
-    this._blockedUserIds.update((prev) => new Set([...prev, blockedId]));
+    this._blockedUserIds.update((prev) => {
+      const next = new Set(prev);
+      next.add(blockedId);
+      return next;
+    });
+    this.blockedIdsSubject.next(this._blockedUserIds());
     return res;
   }
 
@@ -97,6 +107,7 @@ export class SafetyService {
       next.delete(blockedId);
       return next;
     });
+    this.blockedIdsSubject.next(this._blockedUserIds());
     return res;
   }
 
