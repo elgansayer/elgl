@@ -28,6 +28,6 @@ export class LeaderboardService {
       throw new Error(`Failed to fetch top correctors: ${error.message}`);
     }
 
-    return data ?? [];
+    return (data ?? []) as Corrector[];
   }
 }
