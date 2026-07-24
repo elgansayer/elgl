@@ -37,6 +37,7 @@ describe('DiscoveryService', () => {
           provide: ConfigService,
           useValue: {
             get: jest.fn().mockReturnValue(undefined),
+            getOrThrow: jest.fn().mockReturnValue(undefined),
           },
         },
       ],
