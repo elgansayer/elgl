@@ -353,7 +353,10 @@ export class MomentsService {
       .from('moments')
       .select('comments_count, user_id')
       .eq('id', momentId)
-      .single()) as { data: (MomentCountRow & { user_id?: string }) | null; error: any };
+      .single()) as {
+      data: (MomentCountRow & { user_id?: string }) | null;
+      error: any;
+    };
     await supabase
       .from('moments')
       .update({ comments_count: (updatedData?.comments_count ?? 0) + 1 })
