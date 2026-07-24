@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, viewChild, afterNextRender } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from './services/auth.service';
 import { EconomyStore, VirtualGift } from './services/economy.store';
@@ -7,6 +7,8 @@ import { FcmService } from './services/fcm.service';
 import { TranslatePipe } from './services/translate.pipe';
 import { IncomingCallModalComponent, IncomingCallData } from './components/incoming-call-modal/incoming-call-modal.component';
 import { ToastComponent } from './components/primitives/toast/toast.component';
+import { ReportUserModalComponent } from './components/report-user-modal/report-user-modal.component';
+import { ReportUserModalService } from './components/report-user-modal/report-user-modal.service';
 
 @Component({
   selector: 'app-root',
@@ -16,7 +18,8 @@ import { ToastComponent } from './components/primitives/toast/toast.component';
     RouterLinkActive, 
     TranslatePipe, 
     IncomingCallModalComponent,
-    ToastComponent
+    ToastComponent,
+    ReportUserModalComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
@@ -27,9 +30,18 @@ export class AppComponent implements OnInit {
   economyStore = inject(EconomyStore);
   centrifugeService = inject(CentrifugeService);
   fcmService = inject(FcmService);
+  reportModalService = inject(ReportUserModalService);
 
   // Incoming call state
   readonly incomingCallData = signal<IncomingCallData | null>(null);
+
+  readonly reportModal = viewChild.required<ReportUserModalComponent>('reportModal');
+
+  constructor() {
+    afterNextRender(() => {
+      this.reportModalService.registerModal(this.reportModal());
+    });
+  }
 
   async ngOnInit(): Promise<void> {
     await this.economyStore.loadInitialData();

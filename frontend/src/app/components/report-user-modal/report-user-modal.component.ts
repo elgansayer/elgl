@@ -1,106 +1,147 @@
-import { Component, inject, signal, output, input } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
-import { SafetyService, ReportUserDto } from '../../services/safety.service';
+import { SafetyService, ReportCategory } from '../../services/safety.service';
 import { ToastService } from '../primitives/toast/toast.service';
-
-export interface ReportCategory {
-  id: string;
-  label: string;
-  description: string;
-  icon: string;
-}
+import { AppCardComponent } from '../primitives/card/card.component';
+import { AppPillComponent } from '../primitives/pill/pill.component';
 
 @Component({
   selector: 'app-report-user-modal',
   standalone: true,
-  imports: [FormsModule],
+  imports: [CommonModule, FormsModule, AppCardComponent, AppPillComponent],
   template: `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" (click)="onBackdropClick($event)">
-      <div class="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden" (click)="$event.stopPropagation()">
-        <!-- Header -->
-        <div class="flex items-center justify-between p-4 border-b border-gray-700">
-          <h2 class="text-lg font-bold text-white">Report User</h2>
-          <button (click)="close.emit()" class="text-gray-400 hover:text-white transition-colors p-1 rounded-full hover:bg-gray-800">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
+    @if (isOpen()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+           (click)="close()">
+        <app-card variant="elevated" customClass="w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
+                  (click)="$event.stopPropagation()">
+          <div class="p-6">
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-white">Report User</h2>
+              <button (click)="close()"
+                      class="text-slate-400 hover:text-white transition-colors p-1 rounded-full hover:bg-slate-700/50">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
 
-        <!-- Category Selection -->
-        <div class="p-4 space-y-3">
-          <p class="text-sm text-gray-400 mb-2">Why are you reporting this user?</p>
-          
-          @for (category of categories; track category.id) {
-            <button
-              (click)="selectedCategory.set(category.id)"
-              class="w-full text-left p-3 rounded-xl border transition-all duration-200"
-              [class.border-purple-500]="selectedCategory() === category.id"
-              [class.border-gray-700]="selectedCategory() !== category.id"
-              [class.bg-purple-500/10]="selectedCategory() === category.id"
-              [class.hover:bg-gray-800]="selectedCategory() !== category.id"
-            >
-              <div class="flex items-start gap-3">
-                <span class="text-xl mt-0.5">{{ category.icon }}</span>
-                <div>
-                  <div class="font-medium text-white">{{ category.label }}</div>
-                  <div class="text-sm text-gray-400 mt-0.5">{{ category.description }}</div>
+            <!-- Step 1: Category Selection -->
+            @if (step() === 'category') {
+              <div>
+                <p class="text-slate-300 mb-4">Why are you reporting this user?</p>
+                <div class="space-y-3">
+                  @for (category of categories(); track category.value) {
+                    <button (click)="selectCategory(category)"
+                            class="w-full text-start p-4 rounded-xl border border-slate-700/50
+                                   hover:border-red-500/50 hover:bg-red-500/5
+                                   transition-all duration-200 group">
+                      <div class="flex items-start gap-3">
+                        <span class="text-2xl">{{ categoryIcons[category.value] || '📝' }}</span>
+                        <div>
+                          <div class="font-semibold text-white group-hover:text-red-300 transition-colors">
+                            {{ category.label }}
+                          </div>
+                          <div class="text-sm text-slate-400 mt-1">{{ categoryDescriptions[category.value] }}</div>
+                        </div>
+                      </div>
+                    </button>
+                  }
                 </div>
               </div>
-            </button>
-          }
-        </div>
-
-        <!-- Description (shown when category selected) -->
-        @if (selectedCategory()) {
-          <div class="px-4 pb-4">
-            <label class="block text-sm text-gray-400 mb-1.5">Additional details (optional)</label>
-            <textarea
-              [(ngModel)]="description"
-              rows="3"
-              maxlength="500"
-              placeholder="Provide any additional context..."
-              class="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-sm"
-            ></textarea>
-            <div class="text-right text-xs text-gray-500 mt-1">{{ description().length }}/500</div>
-          </div>
-        }
-
-        <!-- Actions -->
-        <div class="flex gap-3 p-4 border-t border-gray-700">
-          <button
-            (click)="close.emit()"
-            class="flex-1 px-4 py-2.5 rounded-xl border border-gray-700 text-gray-300 hover:bg-gray-800 transition-colors font-medium"
-          >
-            Cancel
-          </button>
-          <button
-            (click)="submitReport()"
-            [disabled]="!selectedCategory() || isSubmitting()"
-            class="flex-1 px-4 py-2.5 rounded-xl font-medium transition-all duration-200"
-            [class.bg-red-600]="selectedCategory()"
-            [class.hover:bg-red-700]="selectedCategory()"
-            [class.text-white]="selectedCategory()"
-            [class.bg-gray-700]="!selectedCategory()"
-            [class.text-gray-500]="!selectedCategory()"
-            [class.cursor-not-allowed]="!selectedCategory() || isSubmitting()"
-          >
-            @if (isSubmitting()) {
-              <span class="flex items-center justify-center gap-2">
-                <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                </svg>
-                Submitting...
-              </span>
-            } @else {
-              Submit Report
             }
-          </button>
-        </div>
+
+            <!-- Step 2: Details & Submit -->
+            @if (step() === 'details') {
+              <div>
+                <div class="flex items-center gap-2 mb-4">
+                  <button (click)="step.set('category')"
+                          class="text-slate-400 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                  </button>
+                  <span class="text-sm text-slate-400">Back to categories</span>
+                </div>
+
+                <div class="mb-4 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
+                  <div class="flex items-center gap-2">
+                    <span>{{ categoryIcons[selectedCategory()?.value || ''] }}</span>
+                    <span class="font-medium text-white">{{ selectedCategory()?.label }}</span>
+                  </div>
+                </div>
+
+                <div class="mb-4">
+                  <label class="block text-sm font-medium text-slate-300 mb-2">
+                    Additional details (optional)
+                  </label>
+                  <textarea
+                    [(ngModel)]="description"
+                    rows="4"
+                    maxlength="1000"
+                    placeholder="Provide any additional context..."
+                    class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg
+                           text-white placeholder-slate-500 focus:outline-none focus:ring-2
+                           focus:ring-red-500/50 focus:border-red-500/50 resize-none transition-all"
+                  ></textarea>
+                  <div class="text-end text-xs text-slate-500 mt-1">
+                    {{ description().length }}/1000
+                  </div>
+                </div>
+
+                @if (error()) {
+                  <div class="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+                    {{ error() }}
+                  </div>
+                }
+
+                <div class="flex gap-3">
+                  <button (click)="close()"
+                          class="flex-1 px-4 py-2.5 rounded-lg border border-slate-700/50
+                                 text-slate-300 hover:bg-slate-700/50 transition-all font-medium">
+                    Cancel
+                  </button>
+                  <button (click)="submitReport()"
+                          [disabled]="isSubmitting()"
+                          class="flex-1 px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-700
+                                 disabled:opacity-50 disabled:cursor-not-allowed
+                                 text-white font-semibold transition-all">
+                    @if (isSubmitting()) {
+                      <span class="flex items-center justify-center gap-2">
+                        <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        Submitting...
+                      </span>
+                    } @else {
+                      Submit Report
+                    }
+                  </button>
+                </div>
+              </div>
+            }
+
+            <!-- Step 3: Success -->
+            @if (step() === 'success') {
+              <div class="text-center py-8">
+                <div class="text-5xl mb-4">✅</div>
+                <h3 class="text-xl font-bold text-white mb-2">Report Submitted</h3>
+                <p class="text-slate-300 mb-6">
+                  Thank you for helping keep our community safe. Our moderation team will review this report.
+                </p>
+                <button (click)="close()"
+                        class="px-6 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-all">
+                  Done
+                </button>
+              </div>
+            }
+          </div>
+        </app-card>
       </div>
-    </div>
+    }
   `,
   styles: [`
     :host {
@@ -109,81 +150,88 @@ export interface ReportCategory {
   `]
 })
 export class ReportUserModalComponent {
-  private safetyService = inject(SafetyService);
-  private toastService = inject(ToastService);
+  private readonly safetyService = inject(SafetyService);
+  private readonly toastService = inject(ToastService);
 
-  readonly userId = input.required<string>();
-  readonly close = output<void>();
-  readonly reported = output<void>();
-
-  readonly selectedCategory = signal<string>('');
-  readonly description = signal<string>('');
+  readonly isOpen = signal(false);
+  readonly step = signal<'category' | 'details' | 'success'>('category');
+  readonly selectedCategory = signal<ReportCategory | null>(null);
+  readonly description = signal('');
   readonly isSubmitting = signal(false);
+  readonly error = signal<string | null>(null);
 
-  readonly categories: ReportCategory[] = [
-    {
-      id: 'harassment',
-      label: 'Harassment or Bullying',
-      description: 'Unwanted advances, threats, or abusive behaviour',
-      icon: '🚫'
-    },
-    {
-      id: 'spam',
-      label: 'Spam or Scam',
-      description: 'Suspicious links, fake offers, or repetitive messages',
-      icon: '📧'
-    },
-    {
-      id: 'inappropriate_content',
-      label: 'Inappropriate Content',
-      description: 'Sexual, violent, or offensive material',
-      icon: '⚠️'
-    },
-    {
-      id: 'fake_profile',
-      label: 'Fake Profile',
-      description: 'Impersonation, fake identity, or catfishing',
-      icon: '🎭'
-    },
-    {
-      id: 'other',
-      label: 'Other',
-      description: 'Something else not listed above',
-      icon: '📝'
-    }
-  ];
+  private reportedUserId: string | null = null;
 
-  onBackdropClick(event: MouseEvent): void {
-    if ((event.target as HTMLElement).classList.contains('fixed')) {
-      this.close.emit();
-    }
+  readonly categories = computed(() => this.safetyService.getReportCategories());
+
+  readonly categoryIcons: Record<string, string> = {
+    harassment: '🚫',
+    spam: '📧',
+    inappropriate_content: '🔞',
+    fake_profile: '🎭',
+    hate_speech: '⚡',
+    privacy_violation: '🔒',
+    other: '📝'
+  };
+
+  readonly categoryDescriptions: Record<string, string> = {
+    harassment: 'Unwanted advances, threats, or abusive behaviour',
+    spam: 'Unsolicited promotions, phishing, or fraudulent activity',
+    inappropriate_content: 'Sexually explicit, violent, or offensive material',
+    fake_profile: 'Pretending to be someone else or using false identity',
+    hate_speech: 'Racist, sexist, or otherwise discriminatory language',
+    privacy_violation: 'Sharing personal information without consent',
+    other: 'Something else not listed above'
+  };
+
+  open(userId: string): void {
+    this.reportedUserId = userId;
+    this.step.set('category');
+    this.selectedCategory.set(null);
+    this.description.set('');
+    this.error.set(null);
+    this.isSubmitting.set(false);
+    this.isOpen.set(true);
+  }
+
+  close(): void {
+    this.isOpen.set(false);
+    this.reportedUserId = null;
+  }
+
+  selectCategory(category: ReportCategory): void {
+    this.selectedCategory.set(category);
+    this.step.set('details');
+    this.error.set(null);
   }
 
   async submitReport(): Promise<void> {
-    if (!this.selectedCategory() || this.isSubmitting()) return;
+    if (!this.reportedUserId || !this.selectedCategory()) {
+      return;
+    }
 
     this.isSubmitting.set(true);
+    this.error.set(null);
 
     try {
-      const dto: ReportUserDto = {
-        reported_id: this.userId(),
-        reason_category: this.selectedCategory(),
+      await this.safetyService.reportUser({
+        reported_id: this.reportedUserId,
+        reason_category: this.selectedCategory()!.value,
         description: this.description() || undefined
-      };
+      }).toPromise();
 
-      await firstValueFrom(this.safetyService.reportUser(dto));
+      this.step.set('success');
       this.toastService.show({
-        message: 'Report submitted successfully. Our team will review it.',
+        message: 'Report submitted successfully',
         type: 'success',
-        duration: 4000
+        duration: 3000
       });
-      this.reported.emit();
-      this.close.emit();
-    } catch (error) {
+    } catch (err) {
+      this.error.set('Failed to submit report. Please try again.');
       this.toastService.show({
-        message: 'Failed to submit report. Please try again.',
+        message: 'Failed to submit report',
         type: 'error',
-        duration: 4000
+        duration: 5000
       });
     } finally {
       this.isSubmitting.set(false);
