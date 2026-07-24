@@ -177,7 +177,7 @@ export class ChatService {
 
     const response = await query;
     if (response.error || !response.data || response.data.length === 0) {
-      return [
+      const mockMessages = [
         {
           id: 'mock-msg-1',
           room_id: roomId,
@@ -205,6 +205,12 @@ export class ChatService {
           sender: { id: 'me', display_name: 'Me', avatar_url: null },
         },
       ] as ChatMessage[];
+
+      // Filter out blocked users from mock data
+      if (blockedIds.length > 0) {
+        return mockMessages.filter((msg) => !blockedIds.includes(msg.sender_id));
+      }
+      return mockMessages;
     }
     return response.data as ChatMessage[];
   }

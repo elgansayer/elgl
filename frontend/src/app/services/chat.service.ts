@@ -58,6 +58,20 @@ export class ChatService {
 
   private blockedUserIds: string[] = [];
 
+  addBlockedUser(userId: string): void {
+    if (!this.blockedUserIds.includes(userId)) {
+      this.blockedUserIds.push(userId);
+    }
+  }
+
+  removeBlockedUser(userId: string): void {
+    this.blockedUserIds = this.blockedUserIds.filter(id => id !== userId);
+  }
+
+  isUserBlocked(userId: string): boolean {
+    return this.blockedUserIds.includes(userId);
+  }
+
   private getHeaders() {
     const token = this.authService.getAccessToken();
     return {

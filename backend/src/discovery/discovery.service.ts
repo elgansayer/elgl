@@ -77,22 +77,42 @@ export class DiscoveryService {
           !fallbackRes.data ||
           fallbackRes.data.length === 0
         ) {
-          return this.getMockDiscoveryData(query);
+          return this.getMockDiscoveryData(query, blockedIds);
         }
-        return fallbackRes.data as UserProfile[];
+        // Filter fallback results for blocked users
+        let fallbackResults = fallbackRes.data as UserProfile[];
+        if (blockedIds.length > 0) {
+          fallbackResults = fallbackResults.filter((u) => !blockedIds.includes(u.id));
+        }
+        return fallbackResults;
       }
-      return response.data as UserProfile[];
+      // Filter RPC results for blocked users
+      let rpcResults = response.data as UserProfile[];
+      if (blockedIds.length > 0) {
+        rpcResults = rpcResults.filter((u) => !blockedIds.includes(u.id));
+      }
+      return rpcResults;
     }
 
     const response = await queryBuilder.limit(50);
     if (response.error || !response.data || response.data.length === 0) {
-      return this.getMockDiscoveryData(query);
+      return this.getMockDiscoveryData(query, blockedIds);
     }
-    return response.data as UserProfile[];
+    // Filter results for blocked users
+    let results = response.data as UserProfile[];
+    if (blockedIds.length > 0) {
+      results = results.filter((u) => !blockedIds.includes(u.id));
+    }
+    return results;
   }
 
-  private getMockDiscoveryData(query: SearchQueryDto): UserProfile[] {
+  private getMockDiscoveryData(query: SearchQueryDto, blockedIds: string[] = []): UserProfile[] {
     let filtered = MOCK_USERS;
+
+    // Filter out blocked users
+    if (blockedIds.length > 0) {
+      filtered = filtered.filter((u) => !blockedIds.includes(u.id));
+    }
 
     if (query.native_language) {
       filtered = filtered.filter(
