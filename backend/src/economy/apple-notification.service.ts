@@ -26,7 +26,7 @@ export class AppleNotificationService {
    */
   handleNotification(signedPayload: string): void {
     // 1. Verify JWS signature using Apple's public keys
-    const decodedPayload = this.verifyAndDecodeJWS(signedPayload) as unknown as Record<
+    const decodedPayload = this.verifyAndDecodeJWS(signedPayload) as Record<
       string,
       unknown
     > | null;
@@ -151,7 +151,9 @@ export class AppleNotificationService {
   /**
    * Handles a change in auto-renewal status (e.g., user turned off auto-renew).
    */
-  private handleRenewalStatusChange(data: Record<string, unknown> | undefined): void {
+  private handleRenewalStatusChange(
+    data: Record<string, unknown> | undefined,
+  ): void {
     const userId = data?.appAccountToken as string | undefined;
     const autoRenewStatus = data?.autoRenewStatus as number | undefined;
 
@@ -170,7 +172,9 @@ export class AppleNotificationService {
   /**
    * Handles a change in renewal preference (e.g., user switched to a different product).
    */
-  private handleRenewalPreferenceChange(data: Record<string, unknown> | undefined): void {
+  private handleRenewalPreferenceChange(
+    data: Record<string, unknown> | undefined,
+  ): void {
     const userId = data?.appAccountToken as string | undefined;
     const newProductId = data?.autoRenewProductId as string | undefined;
 
@@ -283,7 +287,9 @@ export class AppleNotificationService {
   /**
    * Handles a refund declined notification.
    */
-  private handleRefundDeclined(data: Record<string, unknown> | undefined): void {
+  private handleRefundDeclined(
+    data: Record<string, unknown> | undefined,
+  ): void {
     const userId = data?.appAccountToken as string | undefined;
 
     if (!userId) {
@@ -296,7 +302,9 @@ export class AppleNotificationService {
   /**
    * Handles a consumption request (Apple asks for consumption data).
    */
-  private handleConsumptionRequest(data: Record<string, unknown> | undefined): void {
+  private handleConsumptionRequest(
+    data: Record<string, unknown> | undefined,
+  ): void {
     const signedTransactionInfo = data?.signedTransactionInfo as
       Record<string, unknown> | undefined;
     const userId = data?.appAccountToken as string | undefined;
@@ -318,7 +326,9 @@ export class AppleNotificationService {
   /**
    * Handles a renewal extension notification.
    */
-  private handleRenewalExtension(data: Record<string, unknown> | undefined): void {
+  private handleRenewalExtension(
+    data: Record<string, unknown> | undefined,
+  ): void {
     const userId = data?.appAccountToken as string | undefined;
     const extensionLength = data?.extensionLength as number | undefined;
 
@@ -508,7 +518,10 @@ export class AppleNotificationService {
   /**
    * Notifies the user about a price increase.
    */
-  private notifyUserAboutPriceIncrease(userId: string, newPrice: number | undefined): void {
+  private notifyUserAboutPriceIncrease(
+    userId: string,
+    newPrice: number | undefined,
+  ): void {
     // Placeholder: send push notification or in-app message
     this.logger.log(
       `Would notify user ${userId} about price increase to ${newPrice}`,
@@ -528,7 +541,10 @@ export class AppleNotificationService {
   /**
    * Extends the user's subscription period.
    */
-  private extendSubscription(userId: string, extensionDays: number | undefined): void {
+  private extendSubscription(
+    userId: string,
+    extensionDays: number | undefined,
+  ): void {
     if (!extensionDays) return;
     const supabase = this.supabaseService.getClient();
 
