@@ -310,16 +310,9 @@
 - [ ] Add block user option to chat message component (ChatMessageComponent)
 - [ ] Implement backend query filtering to exclude blocked users from chat, feed, and search results
 - [ ] Implement frontend filtering to hide blocked users' messages, moments, and search results
-- [ ] Add backend `POST /safety/block` and `POST /safety/unblock` endpoints with `SafetyService.blockUser`/`unblockUser` methods
-- [ ] Add `getBlockedUserIds` method to `SafetyService` for use in query filters
-- [ ] Add `isBlocked` method to `SafetyService` for use in query filters
-- [ ] Add block/unblock UI in chat message context menu (LongPressContextMenuComponent)
-- [ ] Add block/unblock UI in chat message component (ChatMessageComponent)
-- [ ] Implement backend query filtering to exclude blocked users from chat, feed, and search results
-- [ ] Implement frontend filtering to hide blocked users' messages, moments, and search results
-- [ ] Add backend `POST /safety/block` and `POST /safety/unblock` endpoints with `SafetyService.blockUser`/`unblockUser` methods
-- [ ] Add `getBlockedUserIds` method to `SafetyService` for use in query filters
-- [ ] Add `isBlocked` method to `SafetyService` for use in query filters
+- [x] Add backend `POST /safety/block` and `POST /safety/unblock` endpoints with `SafetyService.blockUser`/`unblockUser` methods
+- [x] Add `getBlockedUserIds` method to `SafetyService` for use in query filters
+- [x] Add `isBlocked` method to `SafetyService` for use in query filters
 - [ ] Add block/unblock UI in chat message context menu (LongPressContextMenuComponent)
 - [ ] Add block/unblock UI in chat message component (ChatMessageComponent)
 - [ ] Implement backend query filtering to exclude blocked users from chat, feed, and search results
