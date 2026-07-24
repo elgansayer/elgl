@@ -152,7 +152,8 @@ async function runSeed() {
           avatar_url: u.profile.avatar_url,
           native_language: u.profile.native_language,
           target_languages: u.profile.target_languages,
-          location: (supabase.rpc as any)('st_geomfromtext', {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+          location: supabase.rpc('st_geomfromtext', {
             text: u.profile.location,
           }),
         })
