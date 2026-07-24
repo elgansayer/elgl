@@ -255,7 +255,7 @@ export class MomentsService {
       .single();
 
     if (momentData) {
-      const momentAuthorId = momentData.user_id;
+      const momentAuthorId = (momentData as { user_id: string }).user_id;
       const blockedIds =
         await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
       if (blockedIds.includes(userId)) {
@@ -319,7 +319,7 @@ export class MomentsService {
       .single();
 
     if (momentData) {
-      const momentAuthorId = momentData.user_id;
+      const momentAuthorId = (momentData as { user_id: string }).user_id;
       const blockedIds =
         await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
       if (blockedIds.includes(userId)) {
@@ -373,6 +373,7 @@ export class MomentsService {
           ? `Correction: "${dto.correction_payload.original}" → "${dto.correction_payload.corrected}"`
           : '';
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       this.eventEmitter.emit(
         'moment.comment',
         new MomentCommentEvent(userId, momentAuthorId, momentId, preview),
