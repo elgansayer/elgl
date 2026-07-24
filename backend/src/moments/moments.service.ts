@@ -6,6 +6,7 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
+import { SafetyService } from '../safety/safety.service';
 import { CreateCommentDto, CreateMomentDto } from './dto/moment.dto';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { TimelineWorker } from './timeline.worker';
@@ -52,6 +53,7 @@ export class MomentsService {
     private readonly usersService: UsersService,
     private readonly timelineWorker: TimelineWorker,
     private readonly eventEmitter: EventEmitter2,
+    private readonly safetyService: SafetyService,
   ) {}
 
   async createMoment(
@@ -155,11 +157,18 @@ export class MomentsService {
       if (data) moments = data as MomentRecord[];
     }
 
+    // Filter out blocked users
+    if (blockedIds.length > 0) {
+      moments = moments.filter(m => !blockedIds.includes(m.user_id));
+    }
+
     if (moments.length === 0) {
       const generated: MomentRecord[] = [];
       const usedUsers = MOCK_USERS.slice(0, 50); // Get 50 fake users
       for (let i = 0; i < usedUsers.length; i++) {
         const u = usedUsers[i];
+        // Skip blocked users in mock data
+        if (blockedIds.includes(u.id)) continue;
         generated.push({
           id: `mock-moment-${i}`,
           user_id: u.id,

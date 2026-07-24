@@ -48,10 +48,12 @@ export class ChatController {
 
   @Get('messages/:roomId')
   async getMessages(
+    @CurrentUser() user: User | null,
     @Param('roomId') roomId: string,
     @Query('search') search?: string,
   ): Promise<ChatMessage[]> {
-    return await this.chatService.getMessages(roomId, search);
+    if (!user) return [];
+    return await this.chatService.getMessages(roomId, search, user.id);
   }
 
   @Post('favourites')
