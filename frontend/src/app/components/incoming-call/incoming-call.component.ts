@@ -114,13 +114,7 @@ export class IncomingCallComponent implements OnDestroy {
       const userId = user?.id;
       if (!userId) return;
 
-      // Clean up previous subscription if any
-      if (this.unsubscribeCentrifugo) {
-        this.unsubscribeCentrifugo();
-        this.unsubscribeCentrifugo = null;
-      }
-
-      this.unsubscribeCentrifugo = this.centrifugoService.subscribe(`user_${userId}`, (data: unknown) => {
+      this.centrifugoService.subscribe(`user_${userId}`, (data: unknown) => {
         const event = data as { type: string; callInfo: IncomingCallInfo };
         if (event.type === 'incoming_call' && event.callInfo) {
           this.handleIncomingCall(event.callInfo);

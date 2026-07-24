@@ -497,10 +497,10 @@
 - [ ] Implement UI & Font Scaling slider adjusting base `rem` CSS rules.
 
 ## Phase 66: View Profiles & Social Actions
-- [ ] Build UserDetailComponent to view other users' profiles.
-- [ ] Implement follow/unfollow functionality.
-- [ ] Implement like/unlike profile functionality.
-- [ ] Route user avatar clicks in discovery and moments feed to the new UserDetailComponent.
+- [x] Build UserDetailComponent to view other users' profiles.
+- [x] Implement follow/unfollow functionality.
+- [x] Implement like/unlike profile functionality.
+- [x] Route user avatar clicks in discovery and moments feed to the new UserDetailComponent.
 - [ ] Build "Language Settings" menu to switch UI language independently of study target.
 
 ### Privacy, Blocking & Discoverability

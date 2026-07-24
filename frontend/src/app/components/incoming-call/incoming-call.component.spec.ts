@@ -9,16 +9,24 @@ import { signal } from '@angular/core';
 describe('IncomingCallComponent', () => {
   let component: IncomingCallComponent;
   let fixture: ComponentFixture<IncomingCallComponent>;
-  let mockCentrifugoService: jasmine.SpyObj<CentrifugoService>;
-  let mockAuthService: jasmine.SpyObj<AuthService>;
-  let mockLivekitService: jasmine.SpyObj<LivekitService>;
+  let mockCentrifugoService: any;
+  let mockAuthService: any;
+  let mockLivekitService: any;
 
   beforeEach(async () => {
-    mockCentrifugoService = jasmine.createSpyObj('CentrifugoService', ['subscribe', 'publish']);
-    mockAuthService = jasmine.createSpyObj('AuthService', ['currentUser', 'getAccessToken'], {
+    mockCentrifugoService = {
+      subscribe: jest.fn(),
+      publish: jest.fn(),
+      unsubscribe: jest.fn(),
+    };
+    mockAuthService = {
       currentUser: signal({ id: 'test-user-123' }),
-    });
-    mockLivekitService = jasmine.createSpyObj('LivekitService', ['joinRoom', 'leaveRoom']);
+      getAccessToken: jest.fn().mockReturnValue('token'),
+    };
+    mockLivekitService = {
+      joinRoom: jest.fn().mockResolvedValue(undefined),
+      leaveRoom: jest.fn().mockResolvedValue(undefined),
+    };
 
     await TestBed.configureTestingModule({
       imports: [IncomingCallComponent],
@@ -47,14 +55,12 @@ describe('IncomingCallComponent', () => {
       isVideo: false,
     };
 
-    // The subscribe method returns a cleanup function
-    mockCentrifugoService.subscribe.and.returnValue(jasmine.createSpy('unsubscribe'));
+    const subscribeCallback = mockCentrifugoService.subscribe.mock.calls[0]?.[1];
+    if (subscribeCallback) {
+      subscribeCallback({ type: 'incoming_call', callInfo });
+    }
 
-    // Trigger the effect by calling the subscribe callback
-    const subscribeCallback = mockCentrifugoService.subscribe.calls.argsFor(0)[1];
-    subscribeCallback({ type: 'incoming_call', callInfo });
-
-    expect(component.showCallModal()).toBeTrue();
+    expect(component.showCallModal()).toBe(true);
     expect(component.callInfo()).toEqual(callInfo);
   });
 
@@ -66,12 +72,10 @@ describe('IncomingCallComponent', () => {
       isVideo: false,
     };
 
-    mockCentrifugoService.subscribe.and.returnValue(jasmine.createSpy('unsubscribe'));
+    component.callInfo.set(callInfo);
+    component.showCallModal.set(true);
 
-    const subscribeCallback = mockCentrifugoService.subscribe.calls.argsFor(0)[1];
-    subscribeCallback({ type: 'incoming_call', callInfo });
-
-    spyOn(component.callAccepted, 'emit');
+    const emitSpy = jest.spyOn(component.callAccepted, 'emit');
 
     await component.acceptCall();
 
@@ -83,8 +87,8 @@ describe('IncomingCallComponent', () => {
         roomName: 'room-789',
       },
     });
-    expect(component.showCallModal()).toBeFalse();
-    expect(component.callAccepted.emit).toHaveBeenCalledWith(callInfo);
+    expect(component.showCallModal()).toBe(false);
+    expect(emitSpy).toHaveBeenCalledWith(callInfo);
   });
 
   it('should emit callRejected and notify caller on reject', () => {
@@ -95,17 +99,15 @@ describe('IncomingCallComponent', () => {
       isVideo: false,
     };
 
-    mockCentrifugoService.subscribe.and.returnValue(jasmine.createSpy('unsubscribe'));
+    component.callInfo.set(callInfo);
+    component.showCallModal.set(true);
 
-    const subscribeCallback = mockCentrifugoService.subscribe.calls.argsFor(0)[1];
-    subscribeCallback({ type: 'incoming_call', callInfo });
-
-    spyOn(component.callRejected, 'emit');
+    const emitSpy = jest.spyOn(component.callRejected, 'emit');
 
     component.rejectCall();
 
-    expect(component.showCallModal()).toBeFalse();
-    expect(component.callRejected.emit).toHaveBeenCalledWith(callInfo);
+    expect(component.showCallModal()).toBe(false);
+    expect(emitSpy).toHaveBeenCalledWith(callInfo);
     expect(mockCentrifugoService.publish).toHaveBeenCalledWith('user_caller-456', {
       type: 'call_rejected',
       data: {
