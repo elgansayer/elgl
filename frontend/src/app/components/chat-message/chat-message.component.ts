@@ -67,8 +67,13 @@ import { Subject, takeUntil } from 'rxjs';
       </ng-container>
       <ng-template #blockedMessage>
         <div class="flex justify-center">
-          <div class="bg-gray-800/50 rounded-lg p-3 text-center text-gray-400 text-sm italic">
-            {{ i18n.translate('chat.message_blocked') }}
+          <div class="bg-gray-800/50 rounded-lg p-3 text-center text-gray-400 text-sm italic max-w-[80%]">
+            <p>{{ i18n.translate('chat.message_blocked') }}</p>
+            <button 
+              (click)="unblockUser()" 
+              class="text-blue-400 hover:text-blue-300 text-xs mt-2 underline">
+              {{ i18n.translate('chat.unblock_user') }}
+            </button>
           </div>
         </div>
       </ng-template>
@@ -98,11 +103,20 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
   isBlocked = signal(false);
 
   ngOnInit(): void {
-    // Check if this message sender is blocked
+    // Load blocked users from backend to pre-populate the blocked set
+    this.chatService.loadBlockedUsers();
+    
+    // Check if this message sender is blocked using the local cached set first
     if (this.message.sender_id) {
-      this.safetyService.isBlocked(this.message.sender_id).then((result) => {
-        this.isBlocked.set(result.blocked);
-      }).catch(err => console.error('Failed to check block status', err));
+      // First check the local cached set (faster)
+      if (this.chatService.isUserBlocked()(this.message.sender_id)) {
+        this.isBlocked.set(true);
+      } else {
+        // Then check the backend for a definitive answer
+        this.safetyService.isBlocked(this.message.sender_id).then((result) => {
+          this.isBlocked.set(result.blocked);
+        }).catch(err => console.error('Failed to check block status', err));
+      }
     }
   }
 
@@ -155,6 +169,18 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
       this.messageBlocked.emit(event.senderId);
     } else {
       this.chatService.removeBlockedUser(event.senderId);
+    }
+  }
+
+  async unblockUser(): Promise<void> {
+    if (this.message.sender_id) {
+      try {
+        await this.safetyService.unblockUserAsync(this.message.sender_id);
+        this.isBlocked.set(false);
+        this.chatService.removeBlockedUser(this.message.sender_id);
+      } catch (err) {
+        console.error('Failed to unblock user', err);
+      }
     }
   }
 

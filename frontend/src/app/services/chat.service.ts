@@ -56,6 +56,11 @@ export class ChatService {
   private safetyService = inject(SafetyService);
   private baseUrl = `${environment.apiUrl}/chat`;
 
+  constructor() {
+    // Load blocked users when the service is created
+    this.loadBlockedUsers();
+  }
+
   private readonly blockedUsers = signal<Set<string>>(new Set());
 
   readonly isUserBlocked = computed(() => {
