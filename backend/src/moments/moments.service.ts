@@ -211,20 +211,22 @@ export class MomentsService {
     const authorIds = Array.from(new Set(moments.map((m) => m.user_id)));
     const momentIdsList = moments.map((m) => m.id);
 
-    const { data: profiles } = await supabase
+    const profilesResponse = await supabase
       .from('users')
       .select('id, display_name, avatar_url')
       .in('id', authorIds);
-    const profileRows = (profiles ?? []) as UserProfileRow[];
+    const profiles = profilesResponse.data as UserProfileRow[] | null;
+    const profileRows = profiles ?? [];
     const profileMap = new Map<string, UserProfileRow>();
     profileRows.forEach((p) => profileMap.set(p.id, p));
 
-    const { data: myLikes } = await supabase
+    const likesResponse = await supabase
       .from('moment_likes')
       .select('moment_id')
       .eq('user_id', userId)
       .in('moment_id', momentIdsList);
-    const likeRows = (myLikes ?? []) as MomentLikeRow[];
+    const myLikes = likesResponse.data as MomentLikeRow[] | null;
+    const likeRows = myLikes ?? [];
     const likedSet = new Set<string>(likeRows.map((l) => l.moment_id));
 
     return moments.map((m) => {
