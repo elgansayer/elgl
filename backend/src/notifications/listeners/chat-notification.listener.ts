@@ -19,7 +19,7 @@ export class ChatNotificationListener {
 
       const { senderId, messageType, receiverId, messagePreview, roomId } =
         event as any;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const { data: sender } = await supabase
         .from('users')
         .select('display_name, avatar_url')
@@ -28,7 +28,6 @@ export class ChatNotificationListener {
 
       if (!sender) return;
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const senderName = sender.display_name || 'Someone';
       const messageTypeLabels: Record<string, string> = {
         text: 'sent a message',
@@ -49,7 +48,7 @@ export class ChatNotificationListener {
           channel: roomId,
           sender_id: senderId,
           sender_name: senderName,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
           sender_avatar: sender.avatar_url || '',
           room_id: roomId,
         },
