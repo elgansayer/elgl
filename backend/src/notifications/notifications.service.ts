@@ -55,7 +55,9 @@ export class NotificationsService {
     }
 
     if (!firebaseAdmin.apps.length) {
-      const serviceAccountStr = this.configService.get<string>('FIREBASE_SERVICE_ACCOUNT');
+      const serviceAccountStr = this.configService.get<string>(
+        'FIREBASE_SERVICE_ACCOUNT',
+      );
       if (serviceAccountStr) {
         try {
           const serviceAccount = JSON.parse(serviceAccountStr);
@@ -63,7 +65,9 @@ export class NotificationsService {
             credential: firebaseAdmin.credential.cert(serviceAccount),
           });
         } catch {
-          console.warn('Invalid FIREBASE_SERVICE_ACCOUNT config, skipping push');
+          console.warn(
+            'Invalid FIREBASE_SERVICE_ACCOUNT config, skipping push',
+          );
           return;
         }
       } else {
@@ -101,7 +105,9 @@ export class NotificationsService {
     };
 
     try {
-      const response = await firebaseAdmin.messaging().sendEachForMulticast(message);
+      const response = await firebaseAdmin
+        .messaging()
+        .sendEachForMulticast(message);
       console.log(
         `FCM sent: ${response.successCount} success, ${response.failureCount} failures`,
       );
