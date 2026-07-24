@@ -150,6 +150,7 @@ export class ChatService {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       this.eventEmitter.emit(
         'chat.message',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         new ChatMessageEvent(
           senderId,
           receiverId,
