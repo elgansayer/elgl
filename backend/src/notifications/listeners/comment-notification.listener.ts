@@ -25,7 +25,10 @@ export class CommentNotificationListener {
 
       if (!commenter) return;
 
-      const commenterData = commenter as { display_name?: string; avatar_url?: string | null };
+      const commenterData = commenter as {
+        display_name?: string;
+        avatar_url?: string | null;
+      };
       const preview = event.commentPreview
         ? event.commentPreview.substring(0, 100)
         : '';

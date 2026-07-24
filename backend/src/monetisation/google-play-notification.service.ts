@@ -260,7 +260,7 @@ export class GooglePlayNotificationService {
       .eq('purchase_token', purchaseToken)
       .single();
 
-    const row = data as { user_id: string } | null;
+    const row = data;
     return row?.user_id || null;
   }
 

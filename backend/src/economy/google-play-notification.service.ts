@@ -314,7 +314,7 @@ export class GooglePlayNotificationService {
       .eq('purchase_token', purchaseToken)
       .single();
 
-    const row = data as { user_id: string } | null;
+    const row = data;
     return row?.user_id ?? null;
   }
 
@@ -328,21 +328,24 @@ export class GooglePlayNotificationService {
   ): void {
     const supabase = this.supabaseService.getClient();
 
-    supabase.from('subscriptions').upsert(
-      {
-        user_id: userId,
-        product_id: subscriptionId,
-        status,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' },
-    ).then(({ error }) => {
-      if (error) {
-        this.logger.error(
-          `Failed to update subscription for user ${userId}: ${error.message}`,
-        );
-      }
-    });
+    supabase
+      .from('subscriptions')
+      .upsert(
+        {
+          user_id: userId,
+          product_id: subscriptionId,
+          status,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' },
+      )
+      .then(({ error }) => {
+        if (error) {
+          this.logger.error(
+            `Failed to update subscription for user ${userId}: ${error.message}`,
+          );
+        }
+      });
   }
 
   /**

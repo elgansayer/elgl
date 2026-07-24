@@ -170,7 +170,7 @@ export class EconomyService {
       throw new BadRequestException('User not found');
     }
 
-    const user = userResponse.data as { coins_balance: number };
+    const user = userResponse.data;
     const currentBalance = user.coins_balance || 0;
     const newBalance = currentBalance + coinPackage.coins;
 

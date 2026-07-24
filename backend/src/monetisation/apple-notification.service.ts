@@ -75,7 +75,7 @@ export class AppleNotificationService {
       }
     } catch (error: unknown) {
       this.logger.error(
-        `Failed to process Apple notification: ${(error instanceof Error ? error.message : 'Unknown error')}`,
+        `Failed to process Apple notification: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
       // Don't throw - return success to Apple to avoid retries
       return { received: true, status: 'error' };

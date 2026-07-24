@@ -185,9 +185,7 @@ export class AppleNotificationService {
   /**
    * Handles a failed renewal attempt.
    */
-  private handleFailedRenewal(
-    data: Record<string, unknown>,
-  ): void {
+  private handleFailedRenewal(data: Record<string, unknown>): void {
     const userId = data?.appAccountToken as string | undefined;
     const gracePeriodExpiresDate = data?.gracePeriodExpiresDate as
       string | undefined;
@@ -264,9 +262,7 @@ export class AppleNotificationService {
   /**
    * Handles a price increase notification.
    */
-  private handlePriceIncrease(
-    data: Record<string, unknown>,
-  ): void {
+  private handlePriceIncrease(data: Record<string, unknown>): void {
     const userId = data?.appAccountToken as string | undefined;
     const newPrice = data?.price as number | undefined;
 
@@ -296,9 +292,7 @@ export class AppleNotificationService {
   /**
    * Handles a consumption request (Apple asks for consumption data).
    */
-  private handleConsumptionRequest(
-    data: Record<string, unknown>,
-  ): void {
+  private handleConsumptionRequest(data: Record<string, unknown>): void {
     const signedTransactionInfo = data?.signedTransactionInfo as
       Record<string, unknown> | undefined;
     const userId = data?.appAccountToken as string | undefined;
@@ -320,9 +314,7 @@ export class AppleNotificationService {
   /**
    * Handles a renewal extension notification.
    */
-  private handleRenewalExtension(
-    data: Record<string, unknown>,
-  ): void {
+  private handleRenewalExtension(data: Record<string, unknown>): void {
     const userId = data?.appAccountToken as string | undefined;
     const extensionLength = data?.extensionLength as number | undefined;
 
@@ -349,31 +341,31 @@ export class AppleNotificationService {
   ): void {
     const supabase = this.supabaseService.getClient();
 
-    supabase.from('subscriptions').upsert(
-      {
-        user_id: userId,
-        product_id: productId,
-        status,
-        transaction_id: transactionId,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' },
-    ).then(({ error }) => {
-      if (error) {
-        this.logger.error(
-          `Failed to update subscription for user ${userId}: ${error.message}`,
-        );
-      }
-    });
+    supabase
+      .from('subscriptions')
+      .upsert(
+        {
+          user_id: userId,
+          product_id: productId,
+          status,
+          transaction_id: transactionId,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' },
+      )
+      .then(({ error }) => {
+        if (error) {
+          this.logger.error(
+            `Failed to update subscription for user ${userId}: ${error.message}`,
+          );
+        }
+      });
   }
 
   /**
    * Updates the auto-renew status for a user.
    */
-  private updateAutoRenewStatus(
-    userId: string,
-    autoRenew: boolean,
-  ): void {
+  private updateAutoRenewStatus(userId: string, autoRenew: boolean): void {
     const supabase = this.supabaseService.getClient();
 
     supabase
@@ -392,10 +384,7 @@ export class AppleNotificationService {
   /**
    * Updates the renewal product for a user.
    */
-  private updateRenewalProduct(
-    userId: string,
-    newProductId: string,
-  ): void {
+  private updateRenewalProduct(userId: string, newProductId: string): void {
     const supabase = this.supabaseService.getClient();
 
     supabase
@@ -430,12 +419,9 @@ export class AppleNotificationService {
   /**
    * Revokes coins for a refunded transaction.
    */
-  private revokeCoinsForRefund(
-    userId: string,
-    transactionId: string,
-  ): void {
+  private revokeCoinsForRefund(userId: string, transactionId: string): void {
     // Determine how many coins were associated with the refunded purchase
-    this.getCoinsForTransaction(transactionId).then(coinsToRevoke => {
+    this.getCoinsForTransaction(transactionId).then((coinsToRevoke) => {
       if (coinsToRevoke <= 0) {
         return;
       }
@@ -453,7 +439,10 @@ export class AppleNotificationService {
             return;
           }
 
-          const newBalance = Math.max(0, (user as any).coins_balance - coinsToRevoke);
+          const newBalance = Math.max(
+            0,
+            (user as any).coins_balance - coinsToRevoke,
+          );
 
           supabase
             .from('users')
@@ -531,10 +520,7 @@ export class AppleNotificationService {
   /**
    * Extends the user's subscription period.
    */
-  private extendSubscription(
-    userId: string,
-    extensionDays: number,
-  ): void {
+  private extendSubscription(userId: string, extensionDays: number): void {
     const supabase = this.supabaseService.getClient();
 
     supabase
@@ -547,7 +533,9 @@ export class AppleNotificationService {
           return;
         }
 
-        const currentExpiry = new Date((subscription as any).expires_at as string);
+        const currentExpiry = new Date(
+          (subscription as any).expires_at as string,
+        );
         const newExpiry = new Date(
           currentExpiry.getTime() + extensionDays * 24 * 60 * 60 * 1000,
         );
