@@ -37,7 +37,7 @@ export class AppleNotificationController {
     }
 
     try {
-      await this.appleNotificationService.handleNotification(
+      this.appleNotificationService.handleNotification(
         body.signedPayload,
       );
       return { status: 'ok' };

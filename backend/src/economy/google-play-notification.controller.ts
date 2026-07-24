@@ -25,9 +25,9 @@ export class GooglePlayNotificationController {
    */
   @Post()
   @HttpCode(HttpStatus.OK)
-  async handleNotification(
+  handleNotification(
     @Body() body: Record<string, unknown>,
-  ): Promise<{ status: string }> {
+  ): { status: string } {
     this.logger.log('Received Google Play notification');
 
     try {

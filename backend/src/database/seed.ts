@@ -229,7 +229,7 @@ async function runSeed() {
     .eq('is_vip', true)
     .limit(3);
 
-  const vipUsers = vipUsersRaw;
+  const vipUsers = vipUsersRaw as { id: string; email: string }[] | null;
 
   if (vipUsers && vipUsers.length > 0) {
     const subscriptionData = vipUsers.map(
@@ -239,8 +239,8 @@ async function runSeed() {
           index === 0
             ? 'com.linguaexchange.vip.developer'
             : 'com.linguaexchange.vip.consumer',
-        original_transaction_id: `apple_orig_${(user as { id: string }).id.substring(0, 8)}_${Date.now()}`,
-        transaction_id: `apple_txn_${(user as { id: string }).id.substring(0, 8)}_${Date.now()}`,
+        original_transaction_id: `apple_orig_${user.id.substring(0, 8)}_${Date.now()}`,
+        transaction_id: `apple_txn_${user.id.substring(0, 8)}_${Date.now()}`,
         purchase_date: new Date(
           Date.now() - 30 * 24 * 60 * 60 * 1000,
         ).toISOString(),
