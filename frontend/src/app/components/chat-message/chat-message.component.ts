@@ -5,7 +5,6 @@ import {
   signal,
   OnInit,
   OnDestroy,
-  ViewChild,
   output,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -87,8 +86,6 @@ import { Subject } from 'rxjs';
 export class ChatMessageComponent implements OnInit, OnDestroy {
   @Input({ required: true }) message!: ChatMessage;
   @Input() currentUserId?: string;
-
-  @ViewChild(LongPressContextMenuComponent) contextMenu!: LongPressContextMenuComponent;
 
   readonly messageBlocked = output<string>();
 
