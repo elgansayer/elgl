@@ -285,6 +285,7 @@
 - [ ] Build Daily Study Streak counter widget on home screen.
 - [ ] Implement NestJS CRON job to reset streaks if inactive for 24 hours.
 - [ ] Build "Top Corrector" community leaderboard.
+- [ ] Actually implement the Daily Study Streak counter widget on the home screen: create an Angular component (`StudyStreakWidgetComponent`) that displays the current streak count from the user's profile (`study_streak_days`), shows a visual progress indicator (e.g., flame icon + number), and fetches the streak data from the backend `/users/me` endpoint. The widget must be placed on the home/dashboard screen and update reactively when the streak changes.
 
 ## Phase 20: Spaced Repetition (SRS) Flashcards
 - [x] Build Flashcard Deck UI to organize saved vocabulary.
