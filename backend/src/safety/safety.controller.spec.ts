@@ -81,7 +81,7 @@ describe('SafetyController', () => {
       const ids = ['bad-1', 'bad-2'];
       (safetyService.getBlockedIds as jest.Mock).mockResolvedValue(ids);
 
-      const result = await controller.getBlockedIds('user-1');
+      const result = await controller.getBlockedIds({ user: { id: 'user-1' } });
       expect(safetyService.getBlockedIds).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(ids);
     });
