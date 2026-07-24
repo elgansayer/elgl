@@ -65,7 +65,7 @@ export class NotificationPreferencesService {
       .eq('user_id', userId)
       .single();
 
-    const dbError = error as PostgrestError | null;
+    const dbError = error;
     const dbData = data as DbNotificationPreferences | null;
 
     if (dbError && dbError.code !== 'PGRST116') {
@@ -96,7 +96,7 @@ export class NotificationPreferencesService {
       .select()
       .single();
 
-    const dbError = error as PostgrestError | null;
+    const dbError = error;
     const dbData = data as DbNotificationPreferences | null;
 
     if (dbError) {
@@ -117,7 +117,7 @@ export class NotificationPreferencesService {
       .select()
       .single();
 
-    const dbError = error as PostgrestError | null;
+    const dbError = error;
     const dbData = data as DbNotificationPreferences | null;
 
     if (dbError) {

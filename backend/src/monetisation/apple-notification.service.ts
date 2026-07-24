@@ -142,7 +142,8 @@ export class AppleNotificationService {
     data: any,
   ): Promise<void> {
     const transactionInfo = await this.decodeTransactionInfo(
-      (data as Record<string, unknown>)?.signedTransactionInfo as string | undefined,
+      (data as Record<string, unknown>)?.signedTransactionInfo as
+        string | undefined,
     );
     if (!transactionInfo) {
       this.logger.warn('No transaction info in subscription active event');
@@ -176,7 +177,8 @@ export class AppleNotificationService {
     data: any,
   ): Promise<void> {
     const transactionInfo = await this.decodeTransactionInfo(
-      (data as Record<string, unknown>)?.signedTransactionInfo as string | undefined,
+      (data as Record<string, unknown>)?.signedTransactionInfo as
+        string | undefined,
     );
     if (!transactionInfo) {
       this.logger.warn('No transaction info in subscription expired event');

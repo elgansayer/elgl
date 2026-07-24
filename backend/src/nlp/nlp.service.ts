@@ -97,7 +97,11 @@ export class NlpService {
     const jsonResponse = (await res.json()) as {
       translations: Array<{ text: string }>;
     };
-    if (!jsonResponse || !jsonResponse.translations || jsonResponse.translations.length === 0) {
+    if (
+      !jsonResponse ||
+      !jsonResponse.translations ||
+      jsonResponse.translations.length === 0
+    ) {
       throw new BadRequestException('DeepL returned no translations');
     }
     const translatedText = jsonResponse.translations[0].text;
