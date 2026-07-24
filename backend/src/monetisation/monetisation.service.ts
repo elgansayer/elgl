@@ -28,12 +28,6 @@ export interface UserVipRow {
   email?: string;
 }
 
-interface DeveloperMetricRow {
-  user_id: string;
-  total_api_calls_today: number;
-  avg_latency_ms: number;
-}
-
 export interface DeveloperDiagnosticLogRow {
   id: string;
   user_id: string | null;
@@ -273,7 +267,7 @@ export class MonetisationService {
       .select('user_id, total_api_calls_today, avg_latency_ms')
       .eq('user_id', userId)
       .single();
-    const metric = metricResponse.data;
+    const metric = metricResponse.data as unknown as { total_api_calls_today?: number; avg_latency_ms?: number } | null;
 
     return {
       api_key: user.developer_api_key || null,

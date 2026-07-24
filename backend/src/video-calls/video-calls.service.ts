@@ -31,7 +31,7 @@ export class VideoCallsService {
     };
 
     await this.roomService.createRoom(
-      createOptions as import('livekit-server-sdk').CreateRoomOptions,
+      createOptions as any,
     );
 
     const token = this.generateToken(userId, roomName, true);

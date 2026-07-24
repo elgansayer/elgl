@@ -5,7 +5,6 @@ import {
   NotificationPreferences,
   CategoryPreference,
 } from './interfaces/notification-preferences.interface';
-import { PostgrestError } from '@supabase/supabase-js';
 
 interface DbNotificationPreferences {
   user_id: string;
@@ -65,7 +64,7 @@ export class NotificationPreferencesService {
       .eq('user_id', userId)
       .single();
 
-    const dbError = error;
+    const dbError = error as { code?: string } | null;
     const dbData = data as DbNotificationPreferences | null;
 
     if (dbError && dbError.code !== 'PGRST116') {
@@ -96,7 +95,7 @@ export class NotificationPreferencesService {
       .select()
       .single();
 
-    const dbError = error;
+    const dbError = error as { code?: string } | null;
     const dbData = data as DbNotificationPreferences | null;
 
     if (dbError) {
@@ -117,7 +116,7 @@ export class NotificationPreferencesService {
       .select()
       .single();
 
-    const dbError = error;
+    const dbError = error as { code?: string } | null;
     const dbData = data as DbNotificationPreferences | null;
 
     if (dbError) {

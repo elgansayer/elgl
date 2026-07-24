@@ -26,7 +26,7 @@ export class AppleNotificationService {
    */
   handleNotification(signedPayload: string): void {
     // 1. Verify JWS signature using Apple's public keys
-    const decodedPayload = this.verifyAndDecodeJWS(signedPayload) as Record<
+    const decodedPayload = this.verifyAndDecodeJWS(signedPayload) as unknown as Record<
       string,
       unknown
     > | null;
@@ -222,9 +222,7 @@ export class AppleNotificationService {
     );
 
     // Update subscription status to expired
-    void this.updateSubscriptionStatus(userId, null, 'expired', null).catch(
-      () => {},
-    );
+    void this.updateSubscriptionStatus(userId, null, 'expired', null);
   }
 
   /**
@@ -344,10 +342,10 @@ export class AppleNotificationService {
     productId: string | null,
     status: string,
     transactionId: string | null,
-  ): void {
+  ): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
-    void supabase
+    return supabase
       .from('subscriptions')
       .upsert(
         {

@@ -229,7 +229,7 @@ async function runSeed() {
     .eq('is_vip', true)
     .limit(3);
 
-  const vipUsers = vipUsersRaw;
+  const vipUsers = vipUsersRaw as { id: string; email: string }[] | null;
 
   if (vipUsers && vipUsers.length > 0) {
     const subscriptionData = vipUsers.map(

@@ -237,7 +237,7 @@ export class FeedService {
       throw new Error('Moment not found');
     }
 
-    const momentData = momentResponse.data as { author_id: string } | null;
+    const momentData = momentResponse.data as unknown as { author_id: string } | null;
 
     if (!momentData || momentData.author_id !== userId) {
       throw new Error('Not authorized to delete this moment');

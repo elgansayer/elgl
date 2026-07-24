@@ -94,7 +94,7 @@ export class NlpService {
       );
     }
 
-    const jsonResponse = (await res.json()) as {
+    const jsonResponse = (await res.json()) as unknown as {
       translations: Array<{ text: string }>;
     };
     if (
@@ -195,7 +195,7 @@ export class NlpService {
       );
     }
 
-    const detectData = (await detectRes.json()) as Array<{ language: string }>;
+    const detectData = (await detectRes.json()) as unknown as Array<{ language: string }>;
     const detectedLang = detectData?.[0]?.language || 'en';
 
     // Use Azure's dictionary lookup for grammar correction (works best for common languages)
@@ -218,7 +218,7 @@ export class NlpService {
       );
     }
 
-    const dictData = (await dictRes.json()) as Array<{
+    const dictData = (await dictRes.json()) as unknown as Array<{
       displayTarget?: string;
     }>;
     const correctedText = dictData?.[0]?.displayTarget || orig;
