@@ -26,6 +26,10 @@ export class DiscoveryService {
     const searchLat = query.latitude;
     const searchLon = query.longitude;
 
+    // Get blocked user IDs to exclude from search
+    const blockedIds =
+      await this.safetyService.getBlockedAndBlockerIds(currentUserId);
+
     let queryBuilder = supabase
       .from('users')
       .select(
@@ -33,6 +37,11 @@ export class DiscoveryService {
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false);
+
+    // Exclude blocked users
+    if (blockedIds.length > 0) {
+      queryBuilder = queryBuilder.not('id', 'in', `(${blockedIds.join(',')})`);
+    }
 
     // Exclude blocked users
     if (blockedIds.length > 0) {

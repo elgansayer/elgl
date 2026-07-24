@@ -167,6 +167,20 @@ export class SafetyService {
     return (data as { blocker_id: string }[]).map((b) => b.blocker_id);
   }
 
+  async getBlockedUsers(userId: string): Promise<string[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('blocks')
+      .select('blocked_id')
+      .eq('blocker_id', userId);
+
+    if (error) {
+      this.logger.error(`Failed to get blocked users for ${userId}:`, error);
+      return [];
+    }
+    return (data as { blocked_id: string }[]).map((b) => b.blocked_id);
+  }
+
   async getBlockedAndBlockerIds(userId: string): Promise<string[]> {
     const [blocked, blockers] = await Promise.all([
       this.getBlockedUserIds(userId),

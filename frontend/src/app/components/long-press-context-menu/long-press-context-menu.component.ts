@@ -224,14 +224,20 @@ export class LongPressContextMenuComponent implements AfterViewInit {
         this.report.emit({ messageId: id, content, senderId: sId, roomId: rId });
         break;
       case 'block':
-        this.safetyService.blockUserAsync(sId).then(() => {
-          this.block.emit({ senderId: sId, blocked: true });
-        }).catch(err => console.error('Failed to block user', err));
+        this.safetyService.blockUser(sId).subscribe({
+          next: () => {
+            this.block.emit({ senderId: sId, blocked: true });
+          },
+          error: (err) => console.error('Failed to block user', err),
+        });
         break;
       case 'unblock':
-        this.safetyService.unblockUserAsync(sId).then(() => {
-          this.block.emit({ senderId: sId, blocked: false });
-        }).catch(err => console.error('Failed to unblock user', err));
+        this.safetyService.unblockUser(sId).subscribe({
+          next: () => {
+            this.block.emit({ senderId: sId, blocked: false });
+          },
+          error: (err) => console.error('Failed to unblock user', err),
+        });
         break;
     }
     this.close();

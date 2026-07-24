@@ -207,6 +207,14 @@ export class MomentsService {
       );
     }
 
+    // Get blocked user IDs to exclude from feed
+    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
+
+    // Filter out blocked users
+    if (blockedIds.length > 0) {
+      moments = moments.filter((m) => !blockedIds.includes(m.user_id));
+    }
+
     // Hydrate author profiles & likes
     const authorIds = Array.from(new Set(moments.map((m) => m.user_id)));
     const momentIdsList = moments.map((m) => m.id);

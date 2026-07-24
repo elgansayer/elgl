@@ -73,6 +73,22 @@ export class SafetyController {
     return { blocked };
   }
 
+  @Post('block/:blockedId')
+  async blockUser(
+    @Req() req: { user: { id: string } },
+    @Param('blockedId') blockedId: string,
+  ): Promise<{ success: boolean; blocked_id: string }> {
+    return this.safetyService.blockUser(req.user.id, { blocked_id: blockedId });
+  }
+
+  @Post('unblock/:blockedId')
+  async unblockUser(
+    @Req() req: { user: { id: string } },
+    @Param('blockedId') blockedId: string,
+  ): Promise<{ success: boolean }> {
+    return this.safetyService.unblockUser(req.user.id, blockedId);
+  }
+
   @Get('blocked-and-blocker-ids/:userId')
   async getBlockedAndBlockerIds(
     @Param('userId') userId: string,
