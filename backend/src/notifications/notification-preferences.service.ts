@@ -192,12 +192,20 @@ export class NotificationPreferencesService {
     const merged = { ...existing };
 
     for (const category of categories) {
-      const dtoCategory = dto[category];
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const dtoCategory = (dto as any)[category] as
+        | import('./dto/notification-preferences.dto').CategoryPreferenceDto
+        | undefined;
       if (dtoCategory) {
-        merged[category] = {
-          push: dtoCategory.push ?? existing[category]?.push ?? true,
-          email: dtoCategory.email ?? existing[category]?.email ?? false,
-          in_app: dtoCategory.in_app ?? existing[category]?.in_app ?? true,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        const existingCategory = (existing as any)[category] as
+          | import('./interfaces/notification-preferences.interface').CategoryPreference
+          | undefined;
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        (merged as any)[category] = {
+          push: dtoCategory.push ?? existingCategory?.push ?? true,
+          email: dtoCategory.email ?? existingCategory?.email ?? false,
+          in_app: dtoCategory.in_app ?? existingCategory?.in_app ?? true,
         };
       }
     }
