@@ -9,7 +9,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
 @Component({
   selector: 'app-report-user-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, AppCardComponent, AppPillComponent],
+  imports: [CommonModule, FormsModule, AppCardComponent],
   template: `
     @if (isOpen()) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
@@ -217,15 +217,13 @@ export class ReportUserModalComponent {
       });
 
       this.step.set('success');
-      this.toastService.show({
-        message: 'Report submitted successfully',
+      this.toastService.show('Report submitted successfully', {
         type: 'success',
         duration: 3000
       });
     } catch (err) {
       this.error.set('Failed to submit report. Please try again.');
-      this.toastService.show({
-        message: 'Failed to submit report',
+      this.toastService.show('Failed to submit report', {
         type: 'error',
         duration: 5000
       });

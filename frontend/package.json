@@ -23,6 +23,7 @@
     "@angular/forms": "^22.0.8",
     "@angular/platform-browser": "^22.0.8",
     "@angular/router": "^22.0.8",
+    "@angular/service-worker": "^22.0.8",
     "@supabase/supabase-js": "^2.110.8",
     "centrifuge": "^5.7.0",
     "livekit-client": "^2.20.2",

@@ -122,7 +122,7 @@ export class AppleNotificationService {
   /**
    * Handles a new subscription event.
    */
-  private handleSubscribed(data: Record<string, unknown>): void {
+  private handleSubscribed(data: Record<string, unknown> | undefined): void {
     const signedTransactionInfo = data?.signedTransactionInfo as
       Record<string, unknown> | undefined;
     const userId = data?.appAccountToken as string | undefined;
@@ -151,7 +151,7 @@ export class AppleNotificationService {
   /**
    * Handles a change in auto-renewal status (e.g., user turned off auto-renew).
    */
-  private handleRenewalStatusChange(data: Record<string, unknown>): void {
+  private handleRenewalStatusChange(data: Record<string, unknown> | undefined): void {
     const userId = data?.appAccountToken as string | undefined;
     const autoRenewStatus = data?.autoRenewStatus as number | undefined;
 
@@ -170,7 +170,7 @@ export class AppleNotificationService {
   /**
    * Handles a change in renewal preference (e.g., user switched to a different product).
    */
-  private handleRenewalPreferenceChange(data: Record<string, unknown>): void {
+  private handleRenewalPreferenceChange(data: Record<string, unknown> | undefined): void {
     const userId = data?.appAccountToken as string | undefined;
     const newProductId = data?.autoRenewProductId as string | undefined;
 
@@ -189,7 +189,7 @@ export class AppleNotificationService {
   /**
    * Handles a failed renewal attempt.
    */
-  private handleFailedRenewal(data: Record<string, unknown>): void {
+  private handleFailedRenewal(data: Record<string, unknown> | undefined): void {
     const userId = data?.appAccountToken as string | undefined;
     const gracePeriodExpiresDate = data?.gracePeriodExpiresDate as
       string | undefined;
@@ -209,7 +209,7 @@ export class AppleNotificationService {
   /**
    * Handles subscription expiration.
    */
-  private handleExpired(data: Record<string, unknown>): void {
+  private handleExpired(data: Record<string, unknown> | undefined): void {
     const userId = data?.appAccountToken as string | undefined;
     const expirationIntent = data?.expirationIntent as number | undefined;
 
@@ -228,7 +228,7 @@ export class AppleNotificationService {
   /**
    * Handles a refund request.
    */
-  private handleRefund(data: Record<string, unknown>): void {
+  private handleRefund(data: Record<string, unknown> | undefined): void {
     const signedTransactionInfo = data?.signedTransactionInfo as
       Record<string, unknown> | undefined;
     const userId = data?.appAccountToken as string | undefined;
@@ -250,7 +250,7 @@ export class AppleNotificationService {
   /**
    * Handles a revoke notification (e.g., family sharing removal).
    */
-  private handleRevoke(data: Record<string, unknown>): void {
+  private handleRevoke(data: Record<string, unknown> | undefined): void {
     const userId = data?.appAccountToken as string | undefined;
 
     if (!userId) {
@@ -266,7 +266,7 @@ export class AppleNotificationService {
   /**
    * Handles a price increase notification.
    */
-  private handlePriceIncrease(data: Record<string, unknown>): void {
+  private handlePriceIncrease(data: Record<string, unknown> | undefined): void {
     const userId = data?.appAccountToken as string | undefined;
     const newPrice = data?.price as number | undefined;
 
@@ -283,7 +283,7 @@ export class AppleNotificationService {
   /**
    * Handles a refund declined notification.
    */
-  private handleRefundDeclined(data: Record<string, unknown>): void {
+  private handleRefundDeclined(data: Record<string, unknown> | undefined): void {
     const userId = data?.appAccountToken as string | undefined;
 
     if (!userId) {
@@ -296,7 +296,7 @@ export class AppleNotificationService {
   /**
    * Handles a consumption request (Apple asks for consumption data).
    */
-  private handleConsumptionRequest(data: Record<string, unknown>): void {
+  private handleConsumptionRequest(data: Record<string, unknown> | undefined): void {
     const signedTransactionInfo = data?.signedTransactionInfo as
       Record<string, unknown> | undefined;
     const userId = data?.appAccountToken as string | undefined;
@@ -318,7 +318,7 @@ export class AppleNotificationService {
   /**
    * Handles a renewal extension notification.
    */
-  private handleRenewalExtension(data: Record<string, unknown>): void {
+  private handleRenewalExtension(data: Record<string, unknown> | undefined): void {
     const userId = data?.appAccountToken as string | undefined;
     const extensionLength = data?.extensionLength as number | undefined;
 
@@ -345,25 +345,28 @@ export class AppleNotificationService {
   ): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
-    return supabase
-      .from('subscriptions')
-      .upsert(
-        {
-          user_id: userId,
-          product_id: productId,
-          status,
-          transaction_id: transactionId,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id' },
-      )
-      .then(({ error }) => {
-        if (error) {
-          this.logger.error(
-            `Failed to update subscription for user ${userId}: ${error.message}`,
-          );
-        }
-      });
+    return new Promise((resolve) => {
+      supabase
+        .from('subscriptions')
+        .upsert(
+          {
+            user_id: userId,
+            product_id: productId,
+            status,
+            transaction_id: transactionId,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id' },
+        )
+        .then(({ error }) => {
+          if (error) {
+            this.logger.error(
+              `Failed to update subscription for user ${userId}: ${error.message}`,
+            );
+          }
+          resolve();
+        });
+    });
   }
 
   /**
@@ -412,7 +415,7 @@ export class AppleNotificationService {
    */
   private notifyUserAboutFailedRenewal(
     userId: string,
-    gracePeriodExpiresDate: string,
+    gracePeriodExpiresDate: string | undefined,
   ): void {
     // Placeholder: send push notification or in-app message
     this.logger.log(
@@ -505,7 +508,7 @@ export class AppleNotificationService {
   /**
    * Notifies the user about a price increase.
    */
-  private notifyUserAboutPriceIncrease(userId: string, newPrice: number): void {
+  private notifyUserAboutPriceIncrease(userId: string, newPrice: number | undefined): void {
     // Placeholder: send push notification or in-app message
     this.logger.log(
       `Would notify user ${userId} about price increase to ${newPrice}`,
@@ -525,7 +528,8 @@ export class AppleNotificationService {
   /**
    * Extends the user's subscription period.
    */
-  private extendSubscription(userId: string, extensionDays: number): void {
+  private extendSubscription(userId: string, extensionDays: number | undefined): void {
+    if (!extensionDays) return;
     const supabase = this.supabaseService.getClient();
 
     supabase

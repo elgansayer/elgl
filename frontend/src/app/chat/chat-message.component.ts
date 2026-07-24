@@ -65,7 +65,8 @@ export class ChatMessageComponent {
     const msg = this.message();
     this.safetyService.reportUser({
       reported_id: msg.sender_id,
-      reason: 'Inappropriate message content',
+      reason_category: 'inappropriate_content',
+      description: 'Inappropriate message content',
       context_url: `${window.location.origin}/chat/${this.channelId()}`,
     }).subscribe({
       next: () => {

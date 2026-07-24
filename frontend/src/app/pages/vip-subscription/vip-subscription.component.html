@@ -12,14 +12,14 @@
         </p>
         <div class="flex flex-wrap justify-center gap-4">
           <app-gradient-button
-            size="lg"
+            size="md"
             customClass="text-lg px-8 py-4"
             (clicked)="scrollToPlans()"
           >
             See Plans
           </app-gradient-button>
           <app-button-primary
-            size="lg"
+            size="md"
             customClass="bg-white text-purple-700 hover:bg-purple-50 px-8 py-4 text-lg"
             [routerLink]="['/discovery']"
           >
@@ -84,7 +84,7 @@
                 }
               </ul>
               <app-button-primary
-                size="lg"
+                size="md"
                 customClass="w-full"
                 [routerLink]="['/discovery']"
               >
@@ -191,7 +191,7 @@
               <!-- CTA Button -->
               @if (plan.is_popular) {
                 <app-gradient-button
-                  size="lg"
+                  size="md"
                   customClass="w-full text-base py-3"
                   (clicked)="onSubscribe(plan.id)"
                 >
@@ -199,7 +199,7 @@
                 </app-gradient-button>
               } @else {
                 <app-button-primary
-                  size="lg"
+                  size="md"
                   customClass="w-full text-base py-3"
                   (clicked)="onSubscribe(plan.id)"
                 >
@@ -292,14 +292,14 @@
         </p>
         <div class="flex flex-wrap justify-center gap-4">
           <app-gradient-button
-            size="lg"
+            size="md"
             customClass="text-lg px-8 py-4 bg-white text-purple-700 hover:bg-purple-50"
             (clicked)="scrollToPlans()"
           >
             View Plans
           </app-gradient-button>
           <app-button-primary
-            size="lg"
+            size="md"
             customClass="bg-transparent border-2 border-white text-white hover:bg-white/10 px-8 py-4 text-lg"
             [routerLink]="['/discovery']"
           >

@@ -1,18 +1,16 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
-import { StreakWidgetComponent } from '../../shared/streak-widget/streak-widget.component';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, StreakWidgetComponent],
+  imports: [CommonModule],
   template: `
     <div class="min-h-screen bg-gray-900 text-white">
       <header class="p-4 border-b border-gray-700 flex items-center justify-between">
         <h1 class="text-xl font-bold">HelloTalk</h1>
         <div class="flex items-center gap-4">
-          <app-streak-widget></app-streak-widget>
           <span class="text-sm text-gray-400">
             {{ authService.currentUser()?.email }}
           </span>

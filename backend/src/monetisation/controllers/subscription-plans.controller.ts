@@ -1,8 +1,8 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import {
   SubscriptionPlansService,
-  SubscriptionPlan,
 } from '../services/subscription-plans.service';
+import type { SubscriptionPlan } from '../services/subscription-plans.service';
 
 @Controller('subscription-plans')
 export class SubscriptionPlansController {

@@ -19,7 +19,7 @@ export class VideoCallsController {
     @Body('remoteUserId') remoteUserId: string,
   ) {
     const userId = req.user!.id;
-    return this.videoCallsService.createRoom(userId, remoteUserId);
+    return this.videoCallsService.createRoom(userId);
   }
 
   @Post('accept')

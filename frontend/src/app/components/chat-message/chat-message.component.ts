@@ -97,7 +97,7 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
   private favouriteService = inject(FavouriteService);
   private safetyService = inject(SafetyService);
   private chatService = inject(ChatService);
-  private i18n = inject(I18nService);
+  public i18n = inject(I18nService);
   private destroy$ = new Subject<void>();
 
   isBlocked = signal(false);
@@ -109,7 +109,7 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
     // Check if this message sender is blocked using the local cached set first
     if (this.message.sender_id) {
       // First check the local cached set (faster)
-      if (this.chatService.isUserBlocked(this.message.sender_id)) {
+      if (this.chatService.isUserBlocked()(this.message.sender_id)) {
         this.isBlocked.set(true);
       } else {
         // Then check the backend for a definitive answer

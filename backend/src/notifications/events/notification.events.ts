@@ -15,3 +15,13 @@ export class MomentCommentEvent {
     public readonly replyToUserId?: string,
   ) {}
 }
+
+export class ChatMessageEvent {
+  constructor(
+    public readonly senderId: string,
+    public readonly receiverId: string,
+    public readonly roomId: string,
+    public readonly messageType: string,
+    public readonly preview: string,
+  ) {}
+}
