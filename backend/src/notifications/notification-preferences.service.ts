@@ -189,7 +189,7 @@ export class NotificationPreferencesService {
       'audio_room_invite',
     ];
 
-    const merged: Record<string, unknown> = { ...existing };
+    const merged: Partial<NotificationPreferences> = { ...existing };
 
     for (const category of categories) {
       const dtoCategory = (dto as Record<string, unknown>)[category] as
@@ -221,7 +221,7 @@ export class NotificationPreferencesService {
     }
 
     merged.updatedAt = new Date().toISOString();
-    return merged as unknown as NotificationPreferences;
+    return merged as NotificationPreferences;
   }
 
   private mapDbToPreferences(
