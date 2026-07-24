@@ -4,6 +4,8 @@ import { MomentsService } from './moments.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { TimelineWorker } from './timeline.worker';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { SafetyService } from '../safety/safety.service';
 
 describe('MomentsService', () => {
   let service: MomentsService;
@@ -57,6 +59,18 @@ describe('MomentsService', () => {
           provide: TimelineWorker,
           useValue: {
             fanOutMoment: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+        {
+          provide: EventEmitter2,
+          useValue: {
+            emit: jest.fn(),
+          },
+        },
+        {
+          provide: SafetyService,
+          useValue: {
+            getBlockedAndBlockerIds: jest.fn().mockResolvedValue([]),
           },
         },
       ],

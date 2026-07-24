@@ -7,7 +7,7 @@ export interface VisitorUser {
   id: string;
   display_name?: string;
   avatar_url?: string | null;
-  native_language: string;
+  native_languages: string[];
   target_languages: string[];
   bio_text?: string;
   is_vip?: boolean;
@@ -91,7 +91,7 @@ export class ProfileVisitsService {
           id,
           display_name,
           avatar_url,
-          native_language,
+          native_languages,
           target_languages,
           bio_text,
           is_vip
@@ -117,7 +117,7 @@ export class ProfileVisitsService {
           id: 'hidden-vip-only',
           display_name: 'Someone near you',
           avatar_url: null,
-          native_language: visit.visitor?.native_language || 'en',
+          native_languages: visit.visitor?.native_languages || 'en',
           target_languages: visit.visitor?.target_languages || ['es'],
         },
       }));

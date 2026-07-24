@@ -6,6 +6,7 @@ import { HttpService } from '@nestjs/axios';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
+import { of } from 'rxjs';
 
 describe('EconomyService', () => {
   let service: EconomyService;
@@ -152,34 +153,19 @@ describe('EconomyService', () => {
       });
 
       // Mock HttpService for verifyReceipt
-      jest.spyOn(service['httpService'], 'post').mockReturnValue({
-        toPromise: () =>
-          Promise.resolve({
-            data: {
-              status: 0,
-              latest_receipt_info: [
-                {
-                  product_id: 'com.linguaexchange.coins.medium',
-                  transaction_id: 'txn123',
-                },
-              ],
-            },
-          }),
-      } as any);
-
-      // Mock rxjs firstValueFrom
-      const rxjs = await import('rxjs');
-      jest.spyOn(rxjs, 'firstValueFrom').mockResolvedValue({
-        data: {
-          status: 0,
-          latest_receipt_info: [
-            {
-              product_id: 'com.linguaexchange.coins.medium',
-              transaction_id: 'txn123',
-            },
-          ],
-        },
-      });
+      jest.spyOn(service['httpService'], 'post').mockReturnValue(
+        of({
+          data: {
+            status: 0,
+            latest_receipt_info: [
+              {
+                product_id: 'com.linguaexchange.coins.medium',
+                transaction_id: 'txn123',
+              },
+            ],
+          },
+        }) as any,
+      );
 
       // Mock checkDuplicateTransaction
       mockQueryBuilder.maybeSingle = jest

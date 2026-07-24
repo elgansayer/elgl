@@ -65,7 +65,7 @@ export class HobbyTagsService {
   async addUserTag(
     userId: string,
     hobbyTagId: string,
-    proficiencyLevel?: string,
+    proficiencyLevel?: number,
   ): Promise<any> {
     const supabase = this.supabaseService.getClient();
 
@@ -97,7 +97,7 @@ export class HobbyTagsService {
       .insert({
         user_id: userId,
         hobby_tag_id: hobbyTagId,
-        proficiency_level: proficiencyLevel || 'beginner',
+        proficiency_level: proficiencyLevel || 0,
       })
       .select(
         `
@@ -125,7 +125,7 @@ export class HobbyTagsService {
   async updateProficiency(
     userId: string,
     hobbyTagId: string,
-    proficiencyLevel: string,
+    proficiencyLevel: number,
   ): Promise<any> {
     const supabase = this.supabaseService.getClient();
     const updateResponse = await supabase

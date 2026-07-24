@@ -9,7 +9,7 @@ export interface MomentAuthor {
   id: string;
   display_name: string;
   avatar_url?: string | null;
-  native_language?: string;
+  native_languages?: string[];
   target_languages?: string[];
 }
 

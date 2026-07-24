@@ -41,7 +41,7 @@ export class HobbyTagsController {
   @UseGuards(SupabaseAuthGuard)
   async addTag(
     @Req() req: { user?: { id: string } },
-    @Body() body: { hobby_tag_id: string; proficiency_level?: string },
+    @Body() body: { hobby_tag_id: string; proficiency_level?: number },
   ): Promise<unknown> {
     const userId = req.user?.id;
     return this.hobbyTagsService.addUserTag(
@@ -67,7 +67,7 @@ export class HobbyTagsController {
   async updateProficiency(
     @Req() req: { user?: { id: string } },
     @Param('hobbyTagId') hobbyTagId: string,
-    @Body() body: { proficiency_level: string },
+    @Body() body: { proficiency_level: number },
   ): Promise<unknown> {
     const userId = req.user?.id;
     return this.hobbyTagsService.updateProficiency(

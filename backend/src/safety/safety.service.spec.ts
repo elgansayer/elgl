@@ -13,6 +13,8 @@ describe('SafetyService', () => {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       single: jest.fn(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+      or: jest.fn().mockReturnThis(),
     };
 
     mockSupabaseClient = {
@@ -42,12 +44,12 @@ describe('SafetyService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('reportMessage', () => {
+  describe('reportUser', () => {
     it('should submit safety report successfully and return void', async () => {
       const dto: any = {
         reported_id: 'reported-1',
-        reason: 'Spam',
-        details: 'Sent unsolicited links',
+        reason_category: 'message_content',
+        description: 'Spam',
       };
       const reportRow: any = {
         id: 'report-1',
@@ -57,18 +59,23 @@ describe('SafetyService', () => {
         status: 'pending',
       };
 
+      // Mock finding the reported user
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { id: 'bad-user' },
+        error: null,
+      });
+
+      // Mock inserting the report
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: reportRow,
         error: null,
       });
 
-      mockQueryBuilder.insert.mockResolvedValue({ error: null });
-
       const logSpy = jest
         .spyOn((service as any).logger, 'log')
         .mockImplementation(() => {});
 
-      await service.reportMessage('user-1', dto);
+      await service.reportUser('user-1', dto);
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('reports');
       expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
@@ -85,11 +92,18 @@ describe('SafetyService', () => {
     it('should throw Error when report insertion fails', async () => {
       const dto: any = { reported_id: 'reported-1', reason: 'Spam' };
 
-      mockQueryBuilder.insert.mockResolvedValue({
+      // Mock finding the reported user
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { id: 'reported-1' },
+        error: null,
+      });
+
+      // Mock inserting the report failing
+      mockQueryBuilder.single.mockResolvedValueOnce({
         error: { message: 'Database error' },
       });
 
-      await expect(service.reportMessage('user-1', dto)).rejects.toThrow(
+      await expect(service.reportUser('user-1', dto)).rejects.toThrow(
         'Failed to submit report',
       );
     });
@@ -97,7 +111,9 @@ describe('SafetyService', () => {
 
   describe('blockUser', () => {
     it('should insert user block record and return success object', async () => {
-      mockQueryBuilder.insert.mockResolvedValueOnce({});
+      mockQueryBuilder.insert.mockReturnThis();
+      mockQueryBuilder.select.mockReturnThis();
+      mockQueryBuilder.single.mockResolvedValueOnce({ error: null });
       const logSpy = jest
         .spyOn((service as any).logger, 'log')
         .mockImplementation(() => {});
@@ -117,14 +133,14 @@ describe('SafetyService', () => {
     });
   });
 
-  describe('getBlockedIds', () => {
+  describe('getBlockedUserIds', () => {
     it('should return list of blocked user IDs for a user', async () => {
       mockQueryBuilder.eq.mockResolvedValueOnce({
         data: [{ blocked_id: 'blocked-1' }, { blocked_id: 'blocked-2' }],
         error: null,
       });
 
-      const result = await service.getBlockedIds('user-1');
+      const result = await service.getBlockedUserIds('user-1');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
       expect(mockQueryBuilder.select).toHaveBeenCalledWith('blocked_id');
@@ -138,7 +154,7 @@ describe('SafetyService', () => {
         error: null,
       });
 
-      const result = await service.getBlockedIds('user-1');
+      const result = await service.getBlockedUserIds('user-1');
       expect(result).toEqual([]);
     });
   });

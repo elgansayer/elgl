@@ -10,7 +10,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 export class LanguageSelectorComponent {
   readonly i18n = inject(I18nService);
   readonly isOpen = signal(false);
-  readonly customCode = signal('');
   readonly isSwitching = signal(false);
 
   toggleModal(): void {
@@ -29,17 +28,4 @@ export class LanguageSelectorComponent {
     this.closeModal();
   }
 
-  onCustomCodeInput(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    if (target) {
-      this.customCode.set(target.value);
-    }
-  }
-
-  async applyCustomLanguage(): Promise<void> {
-    const code = this.customCode().trim().toLowerCase();
-    if (!code) return;
-    await this.selectLanguage(code);
-    this.customCode.set('');
-  }
 }

@@ -8,7 +8,7 @@ import { AuthService } from './auth.service';
 export interface UserProfile {
   id: string;
   display_name?: string;
-  native_language: string;
+  native_languages: string[];
   target_languages: string[];
   bio_text?: string;
   avatar_url?: string;
@@ -23,6 +23,8 @@ export interface UserProfile {
   privacy_hide_age: boolean;
   privacy_hide_location: boolean;
   privacy_hide_from_search: boolean;
+  gender?: string;
+  privacy_hide_gender: boolean;
   distance_metres?: number;
   created_at: string;
   is_followed_by_me?: boolean;
@@ -37,7 +39,7 @@ export interface VisitorLog {
     id: string;
     display_name?: string;
     avatar_url?: string | null;
-    native_language: string;
+    native_languages: string[];
     target_languages: string[];
     bio_text?: string;
     is_vip?: boolean;
@@ -53,7 +55,7 @@ export interface ProfileVisitor {
     id: string;
     display_name?: string;
     avatar_url?: string;
-    native_language?: string;
+    native_languages?: string[];
     target_languages?: string[];
   };
 }

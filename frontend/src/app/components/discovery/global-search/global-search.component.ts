@@ -15,9 +15,9 @@ import { SearchFilterParams } from '../../../services/discovery.service';
 
       <div class="flex flex-col gap-1.5">
         <label class="text-sm font-medium text-text-primary ">
-          {{ 'discovery.native_language' | t }}
+          {{ 'discovery.native_languages' | t }}
         </label>
-        <select [ngModel]="nativeLanguage()" (ngModelChange)="nativeLanguage.set($event)" class="w-full p-2.5 rounded-lg border border-surface-100  bg-surface-200  text-text-primary  focus:ring-2 focus:ring-blue-500 outline-none">
+        <select [ngModel]="nativeLanguages()" (ngModelChange)="nativeLanguages.set($event)" class="w-full p-2.5 rounded-lg border border-surface-100  bg-surface-200  text-text-primary  focus:ring-2 focus:ring-blue-500 outline-none">
           <option value="">{{ 'discovery.any_language' | t }}</option>
           @for (lang of i18n.availableLanguages; track lang.code) {
             <option [value]="lang.code">{{ lang.nativeName }} {{ lang.flag }}</option>
@@ -60,7 +60,7 @@ export class GlobalSearchComponent {
   
   readonly search = output<SearchFilterParams>();
 
-  readonly nativeLanguage = signal<string>('');
+  readonly nativeLanguages = signal<string>('');
   readonly targetLanguage = signal<string>('');
   readonly level = signal<string>('');
 
@@ -68,7 +68,7 @@ export class GlobalSearchComponent {
 
   applyFilters(): void {
     this.search.emit({
-      native_language: this.nativeLanguage() || undefined,
+      native_languages: this.nativeLanguages() || undefined,
       target_language: this.targetLanguage() || undefined,
       level: this.level() || undefined
     });

@@ -48,7 +48,7 @@ async function runSeed() {
           'Senior Full-Stack Engineer and language enthusiast! Learning Japanese and Spanish. British English native speaker. Feel free to ask about grammar or tech!',
         avatar_url:
           'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-        native_language: 'en',
+        native_languages: ['en'],
         target_languages: ['ja', 'es'],
         location: `POINT(-0.1278 51.5074)`,
       },
@@ -64,7 +64,7 @@ async function runSeed() {
           '¡Hola a todos! Architect from Madrid. Seeking British English practice partners. I love coffee, literature, and travelling across Europe.',
         avatar_url:
           'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-        native_language: 'es',
+        native_languages: ['es'],
         target_languages: ['en'],
         location: `POINT(-3.7038 40.4168)`,
       },
@@ -79,7 +79,7 @@ async function runSeed() {
           'こんにちは！ Tokyo-based UX designer. Want to practice casual conversational English and French. Happy to correct your Japanese Kanji & grammar!',
         avatar_url:
           'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-        native_language: 'ja',
+        native_languages: ['ja'],
         target_languages: ['en', 'fr'],
         location: `POINT(139.6503 35.6762)`,
       },
@@ -95,7 +95,7 @@ async function runSeed() {
           'Bonjour ! Art historian living in Paris. Learning Arabic and British English. Let us exchange voice notes and cultural recommendations.',
         avatar_url:
           'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
-        native_language: 'fr',
+        native_languages: ['fr'],
         target_languages: ['ar', 'en'],
         location: `POINT(2.3522 48.8566)`,
       },
@@ -112,7 +112,7 @@ async function runSeed() {
           'مرحباً بكم! AI researcher and entrepreneur in Riyadh. Fluent in Arabic, mastering German and English. Proud supporter of open language education.',
         avatar_url:
           'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
-        native_language: 'ar',
+        native_languages: ['ar'],
         target_languages: ['de', 'en'],
         location: `POINT(46.6753 24.7136)`,
       },
@@ -150,7 +150,7 @@ async function runSeed() {
           display_name: u.profile.display_name,
           bio_text: u.profile.bio_text,
           avatar_url: u.profile.avatar_url,
-          native_language: u.profile.native_language,
+          native_languages: u.profile.native_languages?.[0],
           target_languages: u.profile.target_languages,
 
           location: supabase.rpc('st_geomfromtext' as any, {

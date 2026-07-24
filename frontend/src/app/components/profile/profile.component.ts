@@ -27,7 +27,7 @@ export class ProfileComponent implements OnInit {
 
   // Editable fields
   displayName = '';
-  nativeLanguage = 'en';
+  nativeLanguages: string[] = ['en'];
   targetLanguages: string[] = ['es'];
   avatarUrl = '';
   bioText = '';
@@ -43,7 +43,7 @@ export class ProfileComponent implements OnInit {
       if (data) {
         this.profile.set(data);
         this.displayName = data.display_name || '';
-        this.nativeLanguage = data.native_language;
+        this.nativeLanguages = data.native_languages;
         this.targetLanguages = data.target_languages || [];
         this.avatarUrl = data.avatar_url || '';
         this.bioText = data.bio_text || '';
@@ -68,7 +68,7 @@ export class ProfileComponent implements OnInit {
     try {
       const updated = await this.userService.updateMyProfile({
         display_name: this.displayName,
-        native_language: this.nativeLanguage,
+        native_languages: this.nativeLanguages,
         target_languages: this.targetLanguages,
         avatar_url: this.avatarUrl,
         bio_text: this.bioText,
@@ -104,6 +104,17 @@ export class ProfileComponent implements OnInit {
 
   getLanguageFlagIcon(code: string): string {
     return getLanguageFlag(code);
+  }
+
+  
+  addNativeLanguage(code: string) {
+    if (this.nativeLanguages.length < 3 && !this.nativeLanguages.includes(code)) {
+      this.nativeLanguages = [...this.nativeLanguages, code];
+    }
+  }
+
+  removeNativeLanguage(code: string) {
+    this.nativeLanguages = this.nativeLanguages.filter(l => l !== code);
   }
 
   addTargetLanguage(code: string): void {

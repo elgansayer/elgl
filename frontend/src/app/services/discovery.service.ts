@@ -11,7 +11,7 @@ export interface SearchFilterParams {
   latitude?: number;
   longitude?: number;
   radius_metres?: number;
-  native_language?: string;
+  native_languages?: string;
   target_language?: string;
   serious_learner_only?: boolean;
   level?: string;
@@ -38,7 +38,7 @@ export class DiscoveryService {
     if (filters.latitude !== undefined) params = params.set('latitude', filters.latitude.toString());
     if (filters.longitude !== undefined) params = params.set('longitude', filters.longitude.toString());
     if (filters.radius_metres !== undefined) params = params.set('radius_metres', filters.radius_metres.toString());
-    if (filters.native_language) params = params.set('native_language', filters.native_language);
+    if (filters.native_languages) params = params.set('native_languages', filters.native_languages);
     if (filters.target_language) params = params.set('target_language', filters.target_language);
     if (filters.serious_learner_only !== undefined) params = params.set('serious_learner_only', filters.serious_learner_only.toString());
     if (filters.level) params = params.set('level', filters.level);

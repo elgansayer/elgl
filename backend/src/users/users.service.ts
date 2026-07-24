@@ -51,7 +51,7 @@ export class UsersService {
           id,
           display_name,
           avatar_url,
-          native_language,
+          native_languages,
           target_languages
         )
       `,
@@ -167,7 +167,7 @@ export class UsersService {
     return {
       id: userId,
       display_name: 'My Profile (Mock)',
-      native_language: 'en',
+      native_languages: ['en'],
       target_languages: ['es', 'ja'],
       bio_text: 'This is my mock profile. I love learning languages!',
       avatar_url: `https://i.pravatar.cc/150?u=${userId}`,
@@ -214,8 +214,8 @@ export class UsersService {
 
     if (dto.display_name !== undefined)
       updatePayload.display_name = dto.display_name;
-    if (dto.native_language !== undefined)
-      updatePayload.native_language = dto.native_language;
+    if (dto.native_languages !== undefined)
+      updatePayload.native_languages = dto.native_languages;
     if (dto.target_languages !== undefined)
       updatePayload.target_languages = dto.target_languages;
     if (dto.bio_text !== undefined) updatePayload.bio_text = dto.bio_text;
@@ -232,6 +232,8 @@ export class UsersService {
       updatePayload.privacy_hide_from_search = dto.privacy_hide_from_search;
     if (dto.privacy_hide_gender !== undefined)
       updatePayload.privacy_hide_gender = dto.privacy_hide_gender;
+    if (dto.gender !== undefined)
+      updatePayload.gender = dto.gender;
 
     if (dto.location) {
       updatePayload.location = `POINT(${dto.location.longitude} ${dto.location.latitude})`;

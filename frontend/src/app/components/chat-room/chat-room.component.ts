@@ -1,5 +1,5 @@
 import { showToast, notImplementedToast } from '../../services/toast.service';
-import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -51,6 +51,12 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   readonly showCorrectionForm = signal<boolean>(false);
   readonly showSearch = signal<boolean>(false);
 
+  readonly blockedUserIds = signal<string[]>([]);
+  readonly filteredMessages = computed(() => {
+    const blocked = this.blockedUserIds();
+    return this.messages().filter(m => !blocked.includes(m.sender_id));
+  });
+
   // Transliteration state: message id -> romaji/pinyin string
   readonly transliterations = signal<Record<string, string>>({});
 
@@ -74,9 +80,19 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
       if (params['id']) {
         this.roomId = params['id'];
       }
+      await this.loadBlockedUsers();
       await this.loadMessages();
       await this.setupRealTime();
     });
+  }
+
+  async loadBlockedUsers(): Promise<void> {
+    try {
+      const ids = await this.safetyService.getBlockedIdsAsync();
+      this.blockedUserIds.set(ids);
+    } catch (e) {
+      console.error('Failed to load blocked users:', e);
+    }
   }
 
   ngOnDestroy(): void {
@@ -210,6 +226,16 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     } catch (e) {
       console.error('Failed to report message:', e);
       showToast(this.i18n.translate('chatRoom.reportErrorAlert'));
+    }
+  }
+
+  onBlockToggle(event: { senderId: string; blocked: boolean }): void {
+    if (event.blocked) {
+      this.blockedUserIds.update(ids => [...ids, event.senderId]);
+      showToast(this.i18n.translate('safety.blockedAlert') || 'User blocked');
+    } else {
+      this.blockedUserIds.update(ids => ids.filter(id => id !== event.senderId));
+      showToast(this.i18n.translate('safety.unblockedAlert') || 'User unblocked');
     }
   }
 

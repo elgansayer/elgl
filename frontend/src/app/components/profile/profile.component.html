@@ -49,7 +49,7 @@
       <div class="mt-4 grid grid-cols-2 gap-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-3 pb-3 text-center sm:grid-cols-4">
         <div>
           <p class="text-[10px] font-semibold uppercase text-text-secondary">{{ 'profile.statNative' | t }}</p>
-          <p class="text-sm font-bold uppercase text-text-primary">{{ profile()?.native_language }}</p>
+          <p class="text-sm font-bold uppercase text-text-primary">{{ profile()?.native_languages?.join(', ') }}</p>
         </div>
         <div>
           <p class="text-[10px] font-semibold uppercase text-text-secondary">{{ 'profile.statTarget' | t }}</p>
@@ -119,7 +119,18 @@
             <div>
               <label class="block text-xs font-semibold uppercase text-text-secondary mb-1">{{ 'profile.nativeLangPlaceholder' | t }}</label>
               <div class="w-full max-w-[300px]">
-                <app-language-picker (languageSelected)="nativeLanguage = $event" [selectedCode]="nativeLanguage"></app-language-picker>
+                <div class="flex flex-wrap gap-2 mb-2">
+                @for (code of nativeLanguages; track code) {
+                  <div class="px-3 py-1.5 rounded-full text-sm font-medium border bg-primary border-primary text-white flex items-center gap-1.5">
+                    <span>{{ getLanguageFlagIcon(code) }}</span>
+                    <span>{{ getLanguageName(code) }}</span>
+                    <button type="button" (click)="removeNativeLanguage(code)" class="text-white/70 hover:text-white" aria-label="Remove language">✕</button>
+                  </div>
+                }
+              </div>
+              <div class="w-full max-w-[300px]">
+                <app-language-picker (languageSelected)="addNativeLanguage($event)"></app-language-picker>
+              </div>
               </div>
             </div>
             

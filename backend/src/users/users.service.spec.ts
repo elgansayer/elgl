@@ -105,7 +105,7 @@ describe('UsersService', () => {
     it('should update profile successfully with all possible fields for a VIP user', async () => {
       const dto = {
         display_name: 'Updated Name',
-        native_language: 'JA',
+        native_languages: ['JA'],
         target_languages: ['EN', 'FR'],
         bio_text: 'Learning English',
         avatar_url: 'https://example.com/avatar.png',
@@ -119,7 +119,7 @@ describe('UsersService', () => {
 
       const expectedPayload = {
         display_name: 'Updated Name',
-        native_language: 'JA',
+        native_languages: ['JA'],
         target_languages: ['EN', 'FR'],
         bio_text: 'Learning English',
         avatar_url: 'https://example.com/avatar.png',

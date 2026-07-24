@@ -155,7 +155,7 @@
               <div class="rounded-card border border-surface-100 bg-surface-300 p-3 flex items-center justify-between">
                 <div>
                   <p class="text-sm font-black text-text-primary">{{ partner.display_name }} @if (partner.is_vip) { <span class="app-chip bg-amber-500/20 text-amber-400">{{ 'discovery.vipBadge' | t }}</span> }</p>
-                  <p class="text-xs text-text-secondary">{{ 'discovery.native' | t: { lang: partner.native_language } }} | {{ 'profile.targetLabel' | t }}: {{ partner.target_languages?.join(', ') }}</p>
+                  <p class="text-xs text-text-secondary">{{ 'discovery.native' | t: { lang: partner.native_languages } }} | {{ 'profile.targetLabel' | t }}: {{ partner.target_languages?.join(', ') }}</p>
                 </div>
                 <span class="text-xs font-bold text-emerald-400">{{ partner.distance_metres ? ('developer.distanceAway' | t: { distance: partner.distance_metres }) : ('developer.nearPoint' | t) }}</span>
               </div>

@@ -18,6 +18,7 @@
   "nav.favourites": "⭐ Favourites",
   "nav.developerApi": "⚡ Developer API",
   "nav.profile": "👤 Me",
+  "profile.saveBtn": "Save",
   "common.coinsBalance": "{{coins}} Coins",
   "common.vipDevLabel": "20 UKP / $26 USD Dev VIP",
   "common.vipStdLabel": "8 UKP / $10 USD VIP",

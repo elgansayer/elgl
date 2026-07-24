@@ -26,7 +26,7 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   @MaxLength(10)
-  native_language?: string;
+  native_languages?: string[];
 
   @IsOptional()
   @IsArray()
@@ -71,6 +71,11 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsBoolean()
   privacy_hide_from_search?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  gender?: string;
 
   @IsOptional()
   @IsBoolean()

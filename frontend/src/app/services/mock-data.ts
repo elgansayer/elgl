@@ -23,7 +23,7 @@ export const MOCK_CURRENT_USER: AppUser = {
 export const MOCK_USER_PROFILE: UserProfile = {
   id: 'mock-user-123',
   display_name: 'Mock User',
-  native_language: 'en',
+  native_languages: ['en'],
   target_languages: ['es', 'ja'],
   bio_text: 'I am a mock user learning Spanish and Japanese.',
   avatar_url: 'https://i.pravatar.cc/150?u=mock-user-123',
@@ -43,7 +43,7 @@ export const MOCK_PARTNERS: UserProfile[] = [
   {
     id: 'partner-1',
     display_name: 'Kenji',
-    native_language: 'ja',
+    native_languages: ['ja'],
     target_languages: ['en'],
     bio_text: 'Hello! I want to practice English and can help with Japanese.',
     avatar_url: 'https://i.pravatar.cc/150?u=partner-1',
@@ -63,7 +63,7 @@ export const MOCK_PARTNERS: UserProfile[] = [
   {
     id: 'partner-2',
     display_name: 'Maria',
-    native_language: 'es',
+    native_languages: ['es'],
     target_languages: ['en'],
     bio_text: 'Soy de Madrid. Let us talk in English!',
     avatar_url: 'https://i.pravatar.cc/150?u=partner-2',
@@ -92,7 +92,7 @@ export const MOCK_VISITORS: ProfileVisitor[] = [
       id: 'partner-1',
       display_name: 'Kenji',
       avatar_url: 'https://i.pravatar.cc/150?u=partner-1',
-      native_language: 'ja',
+      native_languages: ['ja'],
       target_languages: ['en']
     }
   }
@@ -104,7 +104,7 @@ export const MOCK_MOMENTS = [
     user_id: 'partner-1',
     text_content: 'Today I went to the park. The weather is so nice!',
     target_language: 'en',
-    native_language: 'ja',
+    native_languages: ['ja'],
     media_urls: [],
     media_type: null,
     location_name: null,
@@ -125,7 +125,7 @@ export const MOCK_MOMENTS = [
     user_id: 'partner-2',
     text_content: 'Hola a todos! Quiero aprender más inglés.',
     target_language: 'en',
-    native_language: 'es',
+    native_languages: ['es'],
     media_urls: ['https://via.placeholder.com/400'],
     media_type: 'images',
     location_name: 'Madrid',

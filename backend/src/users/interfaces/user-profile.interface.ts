@@ -1,7 +1,7 @@
 export interface UserProfile {
   id: string;
   display_name?: string;
-  native_language: string;
+  native_languages: string[];
   target_languages: string[];
   bio_text?: string;
   avatar_url?: string;
@@ -31,7 +31,7 @@ export interface ProfileVisitor {
     id: string;
     display_name?: string;
     avatar_url?: string;
-    native_language?: string;
+    native_languages?: string[];
     target_languages?: string[];
   };
 }

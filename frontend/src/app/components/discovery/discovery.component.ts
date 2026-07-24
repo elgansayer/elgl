@@ -61,7 +61,7 @@ export class DiscoveryComponent implements OnInit {
   }
 
   getNativeLangs(partner: UserProfile) {
-    return [{ code: partner.native_language || 'EN', level: 5 }];
+    return (partner.native_languages || ['EN']).map(code => ({ code, level: 5 }));
   }
 
   getTargetLangs(partner: UserProfile) {
@@ -98,7 +98,7 @@ export class DiscoveryComponent implements OnInit {
     try {
       const results = await this.discoveryService.findPartners({
         radius_metres: this.selectedDistanceKm() * 1000,
-        native_language: this.selectedNativeLanguage() || undefined,
+        native_languages: this.selectedNativeLanguage() || undefined,
         target_language: this.selectedTargetLanguage() || undefined,
         serious_learner_only: this.seriousLearnerOnly(),
       });

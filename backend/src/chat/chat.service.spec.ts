@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ChatService } from './chat.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { SafetyService } from '../safety/safety.service';
 
 describe('ChatService', () => {
   let service: ChatService;
@@ -17,6 +19,9 @@ describe('ChatService', () => {
       ilike: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
+      neq: jest.fn().mockReturnThis(),
+      not: jest.fn().mockReturnThis(),
+      in: jest.fn().mockReturnThis(),
       single: jest.fn(),
     };
 
@@ -40,6 +45,18 @@ describe('ChatService', () => {
               .fn()
               .mockReturnValue({ token: 'mock-token' }),
             publish: jest.fn().mockResolvedValue(true),
+          },
+        },
+        {
+          provide: EventEmitter2,
+          useValue: {
+            emit: jest.fn(),
+          },
+        },
+        {
+          provide: SafetyService,
+          useValue: {
+            getBlockedAndBlockerIds: jest.fn().mockResolvedValue([]),
           },
         },
       ],
