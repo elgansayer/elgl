@@ -34,6 +34,7 @@ import { Subject } from 'rxjs';
       (favourite)="onFavourite($event)"
       (report)="onReport($event)"
       (block)="onBlock($event)"
+      (unblock)="onUnblock($event)"
     >
       <ng-container *ngIf="!isBlocked(); else blockedMessage">
         <div class="flex" [class.justify-end]="isOwnMessage()" [class.justify-start]="!isOwnMessage()">
@@ -180,13 +181,19 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
   }
 
   async onBlock(event: { senderId: string; blocked: boolean }): Promise<void> {
-    this.isBlocked.set(event.blocked);
     if (event.blocked) {
-      // The SafetyService.blockUserAsync already updates the cache – just emit for the parent
-      this.messageBlocked.emit(event.senderId);
-    } else {
-      this.messageBlocked.emit(event.senderId);
+      try {
+        await this.safetyService.blockUser({ blocked_id: event.senderId });
+        this.isBlocked.set(true);
+        this.messageBlocked.emit(event.senderId);
+      } catch (err) {
+        console.error('Failed to block user', err);
+      }
     }
+  }
+
+  onUnblock(userId: string): void {
+    this.unblockUser();
   }
 
   async unblockUser(): Promise<void> {
