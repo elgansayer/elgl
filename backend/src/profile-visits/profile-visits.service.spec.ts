@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProfileVisitsService } from './profile-visits.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 describe('ProfileVisitsService', () => {
   let service: ProfileVisitsService;
@@ -29,6 +30,10 @@ describe('ProfileVisitsService', () => {
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
           },
+        },
+        {
+          provide: NotificationsService,
+          useValue: {},
         },
       ],
     }).compile();
