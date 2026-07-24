@@ -201,7 +201,7 @@ export class NotificationPreferencesService {
         const existingCategory = (existing as any)[category] as
           | import('./interfaces/notification-preferences.interface').CategoryPreference
           | undefined;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
         (merged as any)[category] = {
           push: dtoCategory.push ?? existingCategory?.push ?? true,
           email: dtoCategory.email ?? existingCategory?.email ?? false,
