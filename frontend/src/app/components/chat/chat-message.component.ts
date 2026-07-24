@@ -23,7 +23,7 @@ export class ChatMessageComponent {
   readonly message = input.required<ChatMessage>();
   readonly currentUserId = input<string>('');
 
-  @ViewChild(LongPressContextMenuComponent) contextMenu!: LongPressContextMenuComponent;
+  @ViewChild(LongPressContextMenuComponent) contextMenu?: LongPressContextMenuComponent;
 
   private readonly safetyService = inject(SafetyService);
 
@@ -51,16 +51,15 @@ export class ChatMessageComponent {
   }
 
   onBlockUnblock(event: { senderId: string; blocked: boolean }): void {
-    if (event.blocked) {
-      this.safetyService.blockUserAsync(event.senderId).catch(() => {});
-    } else {
-      this.safetyService.unblockUserAsync(event.senderId).catch(() => {});
-    }
+    const op = event.blocked
+      ? this.safetyService.blockUserAsync(event.senderId)
+      : this.safetyService.unblockUserAsync(event.senderId);
+    void op.catch(() => {});
   }
 
   @HostListener('contextmenu', ['$event'])
   onContextMenu(event: MouseEvent): void {
-    if (this.isContextMenuDisabled) return;
+    if (this.isContextMenuDisabled || !this.contextMenu) return;
     event.preventDefault();
     this.contextMenu.showMenu(event);
   }
