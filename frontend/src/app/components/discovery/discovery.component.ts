@@ -11,7 +11,7 @@ import { SafetyService } from '../../services/safety.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
 import { AppGradientButtonComponent } from '../primitives/gradient-button/gradient-button.component';
-import { LanguagePickerComponent } from '../primitives/language-picker/language-picker.component';
+import { LanguagePickerComponent, getLanguageFlag } from '../primitives/language-picker/language-picker.component';
 import { RouterLink } from '@angular/router';
 
 @Component({
@@ -72,12 +72,9 @@ export class DiscoveryComponent implements OnInit {
     try {
       const profile = await this.userService.getMyProfile();
       if (profile && profile.target_languages) {
-        const flagMap: Record<string, string> = {
-          en: '🇬🇧', es: '🇪🇸', fr: '🇫🇷', de: '🇩🇪', it: '🇮🇹', pt: '🇵🇹', ja: '🇯🇵', ko: '🇰🇷', zh: '🇨🇳', ar: '🇸🇦', ru: '🇷🇺', hi: '🇮🇳', tr: '🇹🇷', no: '🇳🇴'
-        };
         const langs = profile.target_languages.map(code => ({
           code,
-          flag: flagMap[code.toLowerCase()] || '🌍',
+          flag: getLanguageFlag(code),
           labelKey: `lang.${code.toLowerCase()}`
         }));
         this.myTargetLangs.set(langs);

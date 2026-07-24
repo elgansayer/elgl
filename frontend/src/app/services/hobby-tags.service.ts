@@ -59,8 +59,11 @@ export class HobbyTagsService {
     const formattedName = name
       .trim()
       .split(/\s+/)
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
+      .map((word, index) => {
+        if (index === 0) return word.toLowerCase();
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      })
+      .join('');
 
     return this.http.post<HobbyTag>(this.apiUrl, { name: formattedName, category, icon }).pipe(
       catchError(() => {

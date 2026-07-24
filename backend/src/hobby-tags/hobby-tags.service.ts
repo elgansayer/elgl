@@ -24,8 +24,11 @@ export class HobbyTagsService {
     const formattedName = name
       .trim()
       .split(/\s+/)
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
+      .map((word, index) => {
+        if (index === 0) return word.toLowerCase();
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      })
+      .join('');
 
     const supabase = this.supabaseService.getClient();
     const insertResponse = await supabase

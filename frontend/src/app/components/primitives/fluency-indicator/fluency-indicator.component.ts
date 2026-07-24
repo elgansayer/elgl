@@ -1,5 +1,6 @@
 import { Component, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { getLanguageFlag } from '../language-picker/language-picker.component';
 
 @Component({
   selector: 'app-fluency-indicator',
@@ -42,11 +43,6 @@ export class FluencyIndicatorComponent {
   targetLanguages = input.required<{code: string, level?: number}[]>();
 
   getFlag(code: string): string {
-    const flags: Record<string, string> = {
-      en: '🇬🇧', es: '🇪🇸', fr: '🇫🇷', de: '🇩🇪', it: '🇮🇹', 
-      pt: '🇵🇹', ja: '🇯🇵', ko: '🇰🇷', zh: '🇨🇳', ar: '🇸🇦', 
-      ru: '🇷🇺', hi: '🇮🇳', tr: '🇹🇷'
-    };
-    return flags[code.toLowerCase()] || '🌐';
+    return getLanguageFlag(code);
   }
 }

@@ -128,6 +128,7 @@
               <div class="flex flex-wrap gap-2 mb-2">
                 @for (code of targetLanguages; track code) {
                   <div class="px-3 py-1.5 rounded-full text-sm font-medium border bg-primary border-primary text-white flex items-center gap-1.5">
+                    <span>{{ getLanguageFlagIcon(code) }}</span>
                     <span>{{ getLanguageName(code) }}</span>
                     <button type="button" (click)="removeTargetLanguage(code)" class="text-white/70 hover:text-white" aria-label="Remove language">✕</button>
                   </div>
