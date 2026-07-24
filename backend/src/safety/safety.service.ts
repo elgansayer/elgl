@@ -34,18 +34,19 @@ export class SafetyService {
       throw new NotFoundException('Reported user not found');
     }
 
-    const { data, error }: { data: { id: string } | null; error: any } = await supabase
-      .from('reports')
-      .insert({
-        reporter_id: reporterId,
-        reported_user_id: dto.reported_id,
-        reason_category: dto.reason_category,
-        description: dto.description || null,
-        context_url: dto.context_url || null,
-        status: 'pending',
-      })
-      .select('id')
-      .single();
+    const { data, error }: { data: { id: string } | null; error: any } =
+      await supabase
+        .from('reports')
+        .insert({
+          reporter_id: reporterId,
+          reported_user_id: dto.reported_id,
+          reason_category: dto.reason_category,
+          description: dto.description || null,
+          context_url: dto.context_url || null,
+          status: 'pending',
+        })
+        .select('id')
+        .single();
 
     if (error) {
       this.logger.error(
