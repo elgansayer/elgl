@@ -1,0 +1,36 @@
+<app-long-press-context-menu
+  #contextMenu
+  [messageId]="message().id"
+  [messageContent]="(message().text_content ?? '')"
+  [messageType]="message().message_type"
+  [senderId]="message().sender_id"
+  [roomId]="message().room_id"
+  [isBlocked]="isSenderBlocked()"
+  (copy)="onCopy($event)"
+  (favourite)="onFavourite($event)"
+  (report)="onReport($event)"
+  (block)="onBlockUnblock($event)"
+>
+  <!-- The actual message bubble -->
+  <div
+    class="max-w-[75%] rounded-xl px-4 py-2 shadow-md transition-colors duration-200"
+    [ngClass]="{
+      'self-end bg-blue-600 text-white': message().sender_id === currentUserId(),
+      'self-start bg-gray-700 text-gray-100': message().sender_id !== currentUserId()
+    }"
+  >
+    <div
+      *ngIf="message().text_content"
+      class="text-sm leading-relaxed whitespace-pre-wrap break-words"
+    >
+      {{ message().text_content }}
+    </div>
+    <!-- placeholder for other message types (voice, image, etc.) -->
+    <div
+      *ngIf="message().created_at"
+      class="text-xs opacity-60 mt-1 text-right"
+    >
+      {{ message().created_at | date:'shortTime' }}
+    </div>
+  </div>
+</app-long-press-context-menu>
