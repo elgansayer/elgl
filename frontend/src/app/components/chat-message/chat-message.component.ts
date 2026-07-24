@@ -35,7 +35,6 @@ import { Subject } from 'rxjs';
         (favourite)="onFavourite($event)"
         (report)="onReport($event)"
         (block)="onBlock($event)"
-        (unblock)="onUnblock($event)"
       >
         <div class="flex" [class.justify-end]="isOwnMessage()" [class.justify-start]="!isOwnMessage()">
           <div class="max-w-[70%] rounded-lg p-3"
@@ -179,28 +178,15 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
       } catch (err) {
         console.error('Failed to block user', err);
       }
-    }
-  }
-
-  onUnblock(userId: string): void {
-    this.unblockUser();
-  }
-
-  async unblockUser(): Promise<void> {
-    if (this.message.sender_id) {
+    } else {
+      // Unblock – handled through the same (block) output
       try {
-        await this.safetyService.unblockUserAsync(this.message.sender_id);
+        await this.safetyService.unblockUserAsync(event.senderId);
         this.isBlocked.set(false);
-        this.chatService.removeBlockedUser(this.message.sender_id);
+        this.chatService.removeBlockedUser(event.senderId);
       } catch (err) {
         console.error('Failed to unblock user', err);
       }
-    }
-  }
-
-  onContextMenu(event: MouseEvent): void {
-    if (this.contextMenu) {
-      this.contextMenu.showMenu(event);
     }
   }
 }
