@@ -1,0 +1,63 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" (click)="cancel()">
+  <div
+    class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4 p-6"
+    (click)="$event.stopPropagation()"
+  >
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+      Report User
+    </h2>
+
+    <!-- Category selection -->
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        Reason for reporting
+      </label>
+      <select
+        [(ngModel)]="selectedCategory"
+        class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="" disabled>Select a category</option>
+        <option *ngFor="let cat of categories" [value]="cat.value">
+          {{ cat.label }}
+        </option>
+      </select>
+    </div>
+
+    <!-- Optional description -->
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        Additional details (optional)
+      </label>
+      <textarea
+        [(ngModel)]="description"
+        rows="3"
+        placeholder="Provide any extra context..."
+        class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+      ></textarea>
+    </div>
+
+    <!-- Error message -->
+    <div *ngIf="errorMessage" class="mb-4 text-sm text-red-600 dark:text-red-400">
+      {{ errorMessage }}
+    </div>
+
+    <!-- Action buttons -->
+    <div class="flex justify-end gap-3">
+      <button
+        type="button"
+        (click)="cancel()"
+        class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        (click)="submitReport()"
+        [disabled]="!canSubmit"
+        class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        {{ isSubmitting ? 'Submitting…' : 'Submit Report' }}
+      </button>
+    </div>
+  </div>
+</div>

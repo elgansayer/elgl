@@ -15,6 +15,11 @@ export interface ReportResponse {
   message: string;
 }
 
+export interface ReportCategory {
+  value: string;
+  label: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -32,5 +37,17 @@ export class SafetyService {
 
   getBlockedIds(): Observable<string[]> {
     return this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids`);
+  }
+
+  /** Returns a static list of report categories.
+   *  In a production app this could be fetched from the backend. */
+  getReportCategories(): ReportCategory[] {
+    return [
+      { value: 'spam', label: 'Spam' },
+      { value: 'harassment', label: 'Harassment' },
+      { value: 'inappropriate_content', label: 'Inappropriate Content' },
+      { value: 'fake_profile', label: 'Fake Profile' },
+      { value: 'other', label: 'Other' },
+    ];
   }
 }
