@@ -144,6 +144,11 @@ export class SafetyService {
       this.logger.error(`Failed to get blocked user IDs for ${userId}:`, error);
       return [];
     }
+
+    if (!Array.isArray(data)) {
+      return [];
+    }
+
     return (data as { blocked_id: string }[]).map((b) => b.blocked_id);
   }
 
@@ -158,6 +163,11 @@ export class SafetyService {
       this.logger.error(`Failed to get blocker user IDs for ${userId}:`, error);
       return [];
     }
+
+    if (!Array.isArray(data)) {
+      return [];
+    }
+
     return (data as { blocker_id: string }[]).map((b) => b.blocker_id);
   }
 
