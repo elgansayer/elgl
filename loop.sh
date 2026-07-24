@@ -32,7 +32,7 @@ run_aider_with_fallback() {
     echo "Claude failed or hit quota limit. Reverting and attempting 2: DeepSeek..."
     git reset --hard HEAD
 
-    timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model deepseek/deepseek-chat --editor-model deepseek/deepseek-coder --message "$MESSAGE"
+    timeout 12m aider --yes --no-show-model-warnings $FILES_AND_ARGS --model deepseek/deepseek-v4-pro --editor-model deepseek/deepseek-coder --message "$MESSAGE"
     if [ $? -eq 0 ]; then return 0; fi
     echo "DeepSeek failed. Reverting and attempting 3: Copilot GPT..."
     git reset --hard HEAD
