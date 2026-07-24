@@ -260,7 +260,7 @@ export class MomentsService {
       .eq('id', momentId)
       .single();
 
-    const momentRow = momentData as MomentUserIdRow | null;
+    const momentRow = momentData;
 
     if (momentRow) {
       const momentAuthorId: string = momentRow.user_id;
@@ -328,7 +328,7 @@ export class MomentsService {
       .eq('id', momentId)
       .single();
 
-    const momentRow = momentData as MomentUserIdRow | null;
+    const momentRow = momentData;
 
     if (momentRow) {
       const momentAuthorId: string = momentRow.user_id;
