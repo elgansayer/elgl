@@ -50,7 +50,7 @@ export class AppleNotificationService {
   ): Promise<{ received: boolean; status: string }> {
     this.logger.log(`Received Apple App Store Server Notification`);
 
-    const signedPayload: string | undefined = payload?.signedPayload;
+    const signedPayload: string = payload?.signedPayload as string;
     if (!signedPayload) {
       this.logger.warn('Apple notification missing signedPayload');
       return { received: true, status: 'ignored' };
@@ -140,7 +140,7 @@ export class AppleNotificationService {
     subtype: string | undefined,
     data: any,
   ): Promise<void> {
-    const transactionInfo = await this.decodeTransactionInfo(
+    const transactionInfo: any = await this.decodeTransactionInfo(
       data?.signedTransactionInfo as string | undefined,
     );
     if (!transactionInfo) {
@@ -174,7 +174,7 @@ export class AppleNotificationService {
     subtype: string | undefined,
     data: any,
   ): Promise<void> {
-    const transactionInfo = await this.decodeTransactionInfo(
+    const transactionInfo: any = await this.decodeTransactionInfo(
       data?.signedTransactionInfo as string | undefined,
     );
     if (!transactionInfo) {

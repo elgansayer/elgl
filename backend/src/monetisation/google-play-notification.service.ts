@@ -56,7 +56,7 @@ export class GooglePlayNotificationService {
 
     try {
       // Google Play Developer Notifications come as a Pub/Sub message wrapper
-      const message: { data?: string } | undefined = payload?.message;
+      const message: any = payload?.message;
       if (!message) {
         this.logger.warn('Google notification missing message');
         return { received: true, status: 'ignored' };
@@ -104,7 +104,7 @@ export class GooglePlayNotificationService {
   ): Promise<void> {
     if (!notification) return;
 
-    const { notificationType, purchaseToken, subscriptionId } = notification;
+    const { notificationType, purchaseToken, subscriptionId }: { notificationType: number; purchaseToken: string; subscriptionId: string } = notification;
 
     // notificationType mapping:
     // 1 = SUBSCRIBED (new subscription)
@@ -255,7 +255,7 @@ export class GooglePlayNotificationService {
       .single();
 
     const row = data;
-    return row?.user_id || null;
+    return (row as any)?.user_id || null;
   }
 
   private async storePurchaseToken(
