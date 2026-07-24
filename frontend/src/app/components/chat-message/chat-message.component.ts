@@ -112,7 +112,7 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
   }
 
   isOwnMessage(): boolean {
-    if (this.currentUserId !== undefined) {
+    if (this.currentUserId != null) {
       return this.message.sender_id === this.currentUserId;
     }
     return this.message.sender_id === this.authService.currentUser()?.id;
