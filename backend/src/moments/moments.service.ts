@@ -373,7 +373,10 @@ export class MomentsService {
     // Emit push notification event
     const momentAuthorId = updatedRow?.user_id;
     if (momentAuthorId) {
-      const payload = dto.correction_payload as { original: string; corrected: string; explanation?: string } | null | undefined;
+      const payload = dto.correction_payload as
+        | { original: string; corrected: string; explanation?: string }
+        | null
+        | undefined;
       const preview = dto.text_content
         ? dto.text_content.substring(0, 120)
         : payload
