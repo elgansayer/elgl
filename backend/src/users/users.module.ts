@@ -6,7 +6,10 @@ import { MediaService } from '../media/media.service';
 import { StreakResetCron } from './cron/streak-reset.cron';
 
 @Module({
-  imports: [ScheduleModule.forRoot()],
+  imports: [
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    ScheduleModule.forRoot(),
+  ],
   controllers: [UsersController],
   providers: [UsersService, MediaService, StreakResetCron],
   exports: [UsersService],
