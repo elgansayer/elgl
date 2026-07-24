@@ -31,10 +31,10 @@ export class StreakService {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     // Query users whose last_active_at is older than the cutoff
-    const queryResponse = (await supabase
+    const queryResponse = await (supabase
       .from('users')
       .select('id, study_streak_days, last_active_at')
-      .lt('last_active_at', cutoff)) as unknown as SupabaseResponse<UserRow[]>;
+      .lt('last_active_at', cutoff) as unknown as Promise<SupabaseResponse<UserRow[]>>);
 
     const { data: inactiveUsers, error: queryError } = queryResponse;
 
@@ -51,10 +51,10 @@ export class StreakService {
     const userIds: string[] = inactiveUsers.map((user) => user.id);
 
     // Reset streaks for the found users
-    const updateResponse = (await supabase
+    const updateResponse = await (supabase
       .from('users')
       .update({ study_streak_days: 0 })
-      .in('id', userIds)) as unknown as SupabaseResponse<null>;
+      .in('id', userIds) as unknown as Promise<SupabaseResponse<null>>);
 
     const { error: updateError } = updateResponse;
 
