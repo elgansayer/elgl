@@ -16,10 +16,10 @@ run_aider_with_fallback() {
     local FILES_AND_ARGS="$2"
 
     local MODELS=(
-        "openai/claude-opus-4.7 openai/claude-sonnet-4.5 Claude"
-        "deepseek/deepseek-v4-pro deepseek/deepseek-v4-pro DeepSeek"
+        "openai/claude-opus-4.7 openai/claude-sonnet-4.5 Claude"        
         "openai/gpt-5.5 openai/gpt-4o Copilot-GPT"
         "gemini/gemini-3.1-pro-preview gemini/gemini-3.1-pro-preview Gemini-3-Pro"
+        "deepseek/deepseek-v4-pro deepseek/deepseek-v4-pro DeepSeek"        
         "gemini/gemini-3.5-flash gemini/gemini-3.5-flash Gemini-Flash"
     )
 
