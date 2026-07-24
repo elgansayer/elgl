@@ -110,9 +110,9 @@ describe('SafetyService', () => {
         data: null,
       };
 
-      await expect(
-        service.reportUser('user-1', dto),
-      ).rejects.toThrow('Failed to submit report');
+      await expect(service.reportUser('user-1', dto)).rejects.toThrow(
+        'Failed to submit report',
+      );
     });
   });
 
@@ -137,15 +137,16 @@ describe('SafetyService', () => {
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
       expect(mockQueryBuilder.select).toHaveBeenCalledWith('id');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('blocker_id', 'user-1');
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('blocked_id', 'blocked-user');
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'blocked_id',
+        'blocked-user',
+      );
       expect(mockQueryBuilder.maybeSingle).toHaveBeenCalled();
       expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
         blocker_id: 'user-1',
         blocked_id: 'blocked-user',
       });
-      expect(logSpy).toHaveBeenCalledWith(
-        'User user-1 blocked blocked-user',
-      );
+      expect(logSpy).toHaveBeenCalledWith('User user-1 blocked blocked-user');
       expect(result).toEqual({ success: true, blocked_id: 'blocked-user' });
       logSpy.mockRestore();
     });
@@ -172,7 +173,10 @@ describe('SafetyService', () => {
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
       expect(mockQueryBuilder.delete).toHaveBeenCalled();
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('blocker_id', 'user-1');
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('blocked_id', 'blocked-user');
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'blocked_id',
+        'blocked-user',
+      );
       expect(result).toEqual({ success: true });
     });
   });
@@ -181,7 +185,10 @@ describe('SafetyService', () => {
     it('should return list of blocked user IDs for a user', async () => {
       // Build chain: from('blocks').select('blocked_id').eq('blocker_id', userId)
       mockQueryBuilder.then = jest.fn((resolve: any) =>
-        resolve({ data: [{ blocked_id: 'blocked-1' }, { blocked_id: 'blocked-2' }], error: null }),
+        resolve({
+          data: [{ blocked_id: 'blocked-1' }, { blocked_id: 'blocked-2' }],
+          error: null,
+        }),
       );
       mockQueryBuilder._response = {
         data: [{ blocked_id: 'blocked-1' }, { blocked_id: 'blocked-2' }],
