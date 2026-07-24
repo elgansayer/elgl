@@ -265,15 +265,17 @@ export class MomentsService {
       }
     }
 
-    const { data: existing } = await supabase
+    const existingResponse = await supabase
       .from('moment_likes')
       .select('id')
       .eq('moment_id', momentId)
       .eq('user_id', userId)
       .single();
 
+    const existing = existingResponse.data as MomentLikeRow | null;
+
     if (existing) {
-      const existingRow = existing as MomentLikeRow;
+      const existingRow = existing;
       await supabase.from('moment_likes').delete().eq('id', existingRow.id);
       const { data: updatedData } = await supabase
         .from('moments')
@@ -398,11 +400,12 @@ export class MomentsService {
 
     const commentRows = data as MomentCommentRow[];
     const authorIds = Array.from(new Set(commentRows.map((c) => c.user_id)));
-    const { data: profiles } = await supabase
+    const profilesResponse = await supabase
       .from('users')
       .select('id, display_name, avatar_url')
       .in('id', authorIds);
-    const profileRows = (profiles ?? []) as UserProfileRow[];
+    const profiles = profilesResponse.data as UserProfileRow[] | null;
+    const profileRows = profiles ?? [];
     const profileMap = new Map<string, UserProfileRow>();
     profileRows.forEach((p) => profileMap.set(p.id, p));
 
