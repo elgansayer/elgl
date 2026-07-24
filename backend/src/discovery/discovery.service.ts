@@ -20,7 +20,8 @@ export class DiscoveryService {
     const supabase = this.supabaseService.getClient();
 
     // Get blocked user IDs to exclude from search
-    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUserId);
+    const blockedIds =
+      await this.safetyService.getBlockedAndBlockerIds(currentUserId);
 
     const searchLat = query.latitude;
     const searchLon = query.longitude;
@@ -65,9 +66,17 @@ export class DiscoveryService {
         serious_only: Boolean(query.serious_learner_only),
       });
 
-      if (response.error || !response.data || (response.data as any[]).length === 0) {
+      if (
+        response.error ||
+        !response.data ||
+        (response.data as any[]).length === 0
+      ) {
         const fallbackRes = await queryBuilder.limit(50);
-        if (fallbackRes.error || !fallbackRes.data || fallbackRes.data.length === 0) {
+        if (
+          fallbackRes.error ||
+          !fallbackRes.data ||
+          fallbackRes.data.length === 0
+        ) {
           return this.getMockDiscoveryData(query);
         }
         return fallbackRes.data as UserProfile[];
@@ -84,17 +93,23 @@ export class DiscoveryService {
 
   private getMockDiscoveryData(query: SearchQueryDto): UserProfile[] {
     let filtered = MOCK_USERS;
-    
+
     if (query.native_language) {
-      filtered = filtered.filter(u => u.native_language === query.native_language);
+      filtered = filtered.filter(
+        (u) => u.native_language === query.native_language,
+      );
     }
-    
+
     if (query.target_language) {
-      filtered = filtered.filter(u => u.target_languages.includes(query.target_language!));
+      filtered = filtered.filter((u) =>
+        u.target_languages.includes(query.target_language!),
+      );
     }
-    
+
     if (query.serious_learner_only) {
-      filtered = filtered.filter(u => u.study_streak_days > 7 && u.correction_ratio >= 0.8);
+      filtered = filtered.filter(
+        (u) => u.study_streak_days > 7 && u.correction_ratio >= 0.8,
+      );
     }
 
     // Limit to 50

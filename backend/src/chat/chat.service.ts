@@ -133,13 +133,18 @@ export class ChatService {
     return savedMessage;
   }
 
-  async getMessages(roomId: string, search?: string, currentUserId?: string): Promise<ChatMessage[]> {
+  async getMessages(
+    roomId: string,
+    search?: string,
+    currentUserId?: string,
+  ): Promise<ChatMessage[]> {
     const supabase = this.supabaseService.getClient();
-    
+
     // Get blocked user IDs if current user is provided
     let blockedIds: string[] = [];
     if (currentUserId) {
-      blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUserId);
+      blockedIds =
+        await this.safetyService.getBlockedAndBlockerIds(currentUserId);
     }
 
     let query = supabase

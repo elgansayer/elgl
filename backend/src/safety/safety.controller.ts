@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, UseGuards, Req, Param } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  UseGuards,
+  Req,
+  Param,
+} from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
 import { SafetyService } from './safety.service';

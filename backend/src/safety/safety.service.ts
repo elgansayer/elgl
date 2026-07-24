@@ -114,7 +114,7 @@ export class SafetyService {
       this.logger.error(`Failed to get blocked user IDs for ${userId}:`, error);
       return [];
     }
-    return (data as { blocked_id: string }[]).map(b => b.blocked_id);
+    return (data as { blocked_id: string }[]).map((b) => b.blocked_id);
   }
 
   async getBlockerUserIds(userId: string): Promise<string[]> {
@@ -128,7 +128,7 @@ export class SafetyService {
       this.logger.error(`Failed to get blocker user IDs for ${userId}:`, error);
       return [];
     }
-    return (data as { blocker_id: string }[]).map(b => b.blocker_id);
+    return (data as { blocker_id: string }[]).map((b) => b.blocker_id);
   }
 
   async getBlockedAndBlockerIds(userId: string): Promise<string[]> {
