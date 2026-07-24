@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsOptional, IsString, IsIn, MaxLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsIn,
+  MaxLength,
+} from 'class-validator';
 
 export class ReportUserDto {
   @IsString()
@@ -7,7 +13,13 @@ export class ReportUserDto {
 
   @IsString()
   @IsNotEmpty()
-  @IsIn(['harassment', 'spam', 'inappropriate_content', 'fake_profile', 'other'])
+  @IsIn([
+    'harassment',
+    'spam',
+    'inappropriate_content',
+    'fake_profile',
+    'other',
+  ])
   reason_category!: string;
 
   @IsOptional()
