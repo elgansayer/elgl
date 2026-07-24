@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
-import { PostgrestError } from '@supabase/supabase-js';
 
 // Define Moment interface locally to avoid import issues
 export interface Moment {
@@ -193,7 +192,7 @@ export class FeedService {
   ): Promise<Moment> {
     const supabase = this.supabaseService.getClient();
 
-    const { data, error } = await supabase
+    const insertResponse = await supabase
       .from('moments')
       .insert({
         author_id: authorId,
@@ -216,40 +215,40 @@ export class FeedService {
       )
       .single();
 
-    if (error || !data) {
-      throw new Error(`Failed to create moment: ${error?.message}`);
+    if (insertResponse.error || !insertResponse.data) {
+      throw new Error(`Failed to create moment: ${insertResponse.error?.message}`);
     }
 
-    return data as Moment;
+    return insertResponse.data as Moment;
   }
 
   async deleteMoment(momentId: string, userId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
     // Verify ownership
-    const { data: moment, error: fetchError } = await supabase
+    const momentResponse = await supabase
       .from('moments')
       .select('author_id')
       .eq('id', momentId)
       .single();
 
-    if (fetchError || !moment) {
+    if (momentResponse.error || !momentResponse.data) {
       throw new Error('Moment not found');
     }
 
-    const momentData = moment;
+    const momentData = momentResponse.data as { author_id: string };
 
     if (momentData.author_id !== userId) {
       throw new Error('Not authorized to delete this moment');
     }
 
-    const { error } = await supabase
+    const deleteResponse = await supabase
       .from('moments')
       .delete()
       .eq('id', momentId);
 
-    if (error) {
-      throw new Error(`Failed to delete moment: ${error.message}`);
+    if (deleteResponse.error) {
+      throw new Error(`Failed to delete moment: ${deleteResponse.error.message}`);
     }
   }
 }
