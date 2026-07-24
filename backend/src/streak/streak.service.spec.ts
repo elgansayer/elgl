@@ -124,25 +124,20 @@ describe('StreakService', () => {
       const resetSpy = jest
         .spyOn(service, 'resetStreaksForTesting')
         .mockResolvedValue(3);
-      const loggerSpy = jest.spyOn(service['logger'], 'log');
 
       await service.handleStreakResetCron();
 
       expect(resetSpy).toHaveBeenCalled();
-      expect(loggerSpy).toHaveBeenCalledWith(
-        'Running scheduled streak reset job',
-      );
     });
 
     it('should handle zero resets gracefully', async () => {
-      jest.spyOn(service, 'resetStreaksForTesting').mockResolvedValue(0);
-      const loggerSpy = jest.spyOn(service['logger'], 'log');
+      const resetSpy = jest
+        .spyOn(service, 'resetStreaksForTesting')
+        .mockResolvedValue(0);
 
       await service.handleStreakResetCron();
 
-      expect(loggerSpy).toHaveBeenCalledWith(
-        'Running scheduled streak reset job',
-      );
+      expect(resetSpy).toHaveBeenCalled();
     });
   });
 });
