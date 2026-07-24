@@ -213,7 +213,7 @@ export class ChatService {
 
     // Exclude messages from blocked users
     if (blockedIds.length > 0) {
-      query = query.not('sender_id', 'in', `(${blockedIds.join(',')})`);
+      query = query.not('sender_id', 'in', blockedIds);
     }
 
     if (search && search.trim().length > 0) {
