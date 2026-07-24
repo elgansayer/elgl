@@ -71,6 +71,19 @@ export class SafetyService {
     dto: BlockUserDto,
   ): Promise<{ success: boolean; blocked_id: string }> {
     const supabase = this.supabaseService.getClient();
+    
+    // Check if already blocked
+    const { data: existing } = await supabase
+      .from('blocks')
+      .select('id')
+      .eq('blocker_id', blockerId)
+      .eq('blocked_id', dto.blocked_id)
+      .maybeSingle();
+
+    if (existing) {
+      throw new Error('User is already blocked');
+    }
+
     const { error } = await supabase.from('blocks').insert({
       blocker_id: blockerId,
       blocked_id: dto.blocked_id,

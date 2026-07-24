@@ -107,6 +107,9 @@ export class MomentsService {
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
+    // Get blocked user IDs to exclude from feed
+    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
+
     let moments: MomentRecord[] = [];
 
     if (filter === 'Following') {
@@ -157,8 +160,10 @@ export class MomentsService {
       if (data) moments = data as MomentRecord[];
     }
 
-    // Get blocked user IDs to exclude from feed
-    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
+    // Filter out blocked users
+    if (blockedIds.length > 0) {
+      moments = moments.filter((m) => !blockedIds.includes(m.user_id));
+    }
 
     if (moments.length === 0) {
       const generated: MomentRecord[] = [];
@@ -200,11 +205,6 @@ export class MomentsService {
         (a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
-    }
-
-    // Filter out blocked users
-    if (blockedIds.length > 0) {
-      moments = moments.filter((m) => !blockedIds.includes(m.user_id));
     }
 
     // Hydrate author profiles & likes
