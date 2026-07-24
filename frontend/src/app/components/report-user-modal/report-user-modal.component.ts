@@ -1,5 +1,6 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
 import { SafetyService, ReportCategory } from '../../services/safety.service';
 import { ToastService } from '../primitives/toast/toast.service';
@@ -9,7 +10,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
 @Component({
   selector: 'app-report-user-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, AppCardComponent],
+  imports: [CommonModule, FormsModule, AppCardComponent, TranslatePipe],
   template: `
     @if (isOpen()) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
@@ -101,7 +102,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                   <button (click)="close()"
                           class="flex-1 px-4 py-2.5 rounded-lg border border-slate-700/50
                                  text-slate-300 hover:bg-slate-700/50 transition-all font-medium">
-                    Cancel
+                    {{ 'common.cancel' | t }}
                   </button>
                   <button (click)="submitReport()"
                           [disabled]="isSubmitting()"

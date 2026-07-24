@@ -452,6 +452,7 @@ export class I18nService {
     'profile.updateSuccess': 'Profile updated successfully.',
     'profile.loadError': 'Failed to load profile',
     'profile.updateError': 'Failed to update profile',
+    'hobby.add': '+ Add Hobby',
 
     'visitors.title': 'Who viewed me',
     'visitors.subtitle': 'Recent profile visitors and language matches.',
