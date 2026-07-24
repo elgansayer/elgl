@@ -88,6 +88,92 @@ export class SafetyService {
     return { success: true, blocked_id: dto.blocked_id };
   }
 
+  async unblockUser(
+    blockerId: string,
+    blockedId: string,
+  ): Promise<{ success: boolean }> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('blocks')
+      .delete()
+      .eq('blocker_id', blockerId)
+      .eq('blocked_id', blockedId);
+
+    if (error) {
+      throw new Error(`Failed to unblock user: ${error.message}`);
+    }
+
+    this.logger.log(`User ${blockerId} unblocked ${blockedId}`);
+    return { success: true };
+  }
+
+  async isBlocked(blockerId: string, blockedId: string): Promise<boolean> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('blocks')
+      .select('id')
+      .eq('blocker_id', blockerId)
+      .eq('blocked_id', blockedId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(`Failed to check block status: ${error.message}`);
+      return false;
+    }
+
+    return data !== null;
+  }
+
+  async unblockUser(
+    blockerId: string,
+    blockedId: string,
+  ): Promise<{ success: boolean }> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('blocks')
+      .delete()
+      .eq('blocker_id', blockerId)
+      .eq('blocked_id', blockedId);
+
+    if (error) {
+      throw new Error(`Failed to unblock user: ${error.message}`);
+    }
+
+    this.logger.log(`User ${blockerId} unblocked ${blockedId}`);
+    return { success: true };
+  }
+
+  async getBlockedUserIds(userId: string): Promise<string[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('blocks')
+      .select('blocked_id')
+      .eq('blocker_id', userId);
+
+    if (error) {
+      this.logger.error(`Failed to get blocked user IDs for ${userId}:`, error);
+      return [];
+    }
+    return (data as { blocked_id: string }[]).map((b) => b.blocked_id);
+  }
+
+  async isBlocked(blockerId: string, blockedId: string): Promise<boolean> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('blocks')
+      .select('id')
+      .eq('blocker_id', blockerId)
+      .eq('blocked_id', blockedId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(`Failed to check block status: ${error.message}`);
+      return false;
+    }
+
+    return data !== null;
+  }
+
   async getBlockedIds(userId: string): Promise<string[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
