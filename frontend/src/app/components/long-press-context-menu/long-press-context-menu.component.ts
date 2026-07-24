@@ -243,6 +243,17 @@ export class LongPressContextMenuComponent implements AfterViewInit {
     this.close();
   }
 
+  showMenu(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.position.set({ x: event.clientX, y: event.clientY });
+    this.isOpen.set(true);
+  }
+
+  closeMenu(): void {
+    this.isOpen.set(false);
+  }
+
   private close(): void {
     this.isOpen.set(false);
   }

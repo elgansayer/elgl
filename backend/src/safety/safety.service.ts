@@ -88,6 +88,13 @@ export class SafetyService {
     return { success: true, blocked_id: dto.blocked_id };
   }
 
+  async blockUser(
+    blockerId: string,
+    blockedUserId: string,
+  ): Promise<{ success: boolean; blocked_id: string }> {
+    return this.blockUser(blockerId, { blocked_id: blockedUserId });
+  }
+
   async unblockUser(
     blockerId: string,
     blockedId: string,
@@ -105,6 +112,13 @@ export class SafetyService {
 
     this.logger.log(`User ${blockerId} unblocked ${blockedId}`);
     return { success: true };
+  }
+
+  async unblockUser(
+    blockerId: string,
+    blockedUserId: string,
+  ): Promise<{ success: boolean }> {
+    return this.unblockUser(blockerId, blockedUserId);
   }
 
   async isBlocked(blockerId: string, blockedId: string): Promise<boolean> {

@@ -46,7 +46,7 @@ export class SafetyService {
   }
 
   unblockUser(blockedId: string): Observable<{ success: boolean }> {
-    return this.http.delete<{ success: boolean }>(`${this.apiUrl}/safety/unblock/${blockedId}`);
+    return this.http.post<{ success: boolean }>(`${this.apiUrl}/safety/unblock`, { blocked_id: blockedId });
   }
 
   /** Promise-based version for use with async/await in components */
