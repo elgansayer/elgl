@@ -183,6 +183,7 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
         return;
       }
       this.chatService.removeBlockedUser(event.senderId);
+      this.messageBlocked.emit(event.senderId);
     }
   }
 

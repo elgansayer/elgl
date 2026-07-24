@@ -86,7 +86,11 @@ export class ChatViewComponent implements OnInit {
   onMessageBlocked(userId: string): void {
     this.blockedUserIds.update(ids => {
       const newSet = new Set(ids);
-      newSet.add(userId);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);  // Unblock
+      } else {
+        newSet.add(userId);  // Block
+      }
       return newSet;
     });
   }
