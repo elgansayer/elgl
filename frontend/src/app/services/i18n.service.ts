@@ -560,6 +560,9 @@ export class I18nService {
     'context_menu.copy': 'Copy',
     'context_menu.favourite': 'Favourite',
     'context_menu.report': 'Report',
+    'context_menu.block': 'Block',
+    'context_menu.unblock': 'Unblock',
+    'chat.message_blocked': 'This message is from a blocked user',
 
     // VoIP Call UI
     'voip.mute': 'Mute',

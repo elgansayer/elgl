@@ -5,6 +5,7 @@ import { AuthService } from '../../services/auth.service';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { FavouriteService } from '../../services/favourite.service';
 import { SafetyService } from '../../services/safety.service';
+import { I18nService } from '../../services/i18n.service';
 import { Subject, takeUntil } from 'rxjs';
 
 @Component({
@@ -67,7 +68,7 @@ import { Subject, takeUntil } from 'rxjs';
       <ng-template #blockedMessage>
         <div class="flex justify-center">
           <div class="bg-gray-800/50 rounded-lg p-3 text-center text-gray-400 text-sm italic">
-            {{ 'chat.message_blocked' | translate }}
+            {{ i18n.translate('chat.message_blocked') }}
           </div>
         </div>
       </ng-template>
@@ -87,6 +88,7 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
   private favouriteService = inject(FavouriteService);
   private safetyService = inject(SafetyService);
   private chatService = inject(ChatService);
+  private i18n = inject(I18nService);
   private destroy$ = new Subject<void>();
 
   isBlocked = signal(false);
