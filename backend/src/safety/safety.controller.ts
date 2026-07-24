@@ -46,6 +46,12 @@ export class SafetyController {
     return this.safetyService.getBlockedIds(req.user.id);
   }
 
+  @Get('blocked-users')
+  @UseGuards(SupabaseAuthGuard)
+  async getBlockedUsers(@Req() req: { user: { id: string } }): Promise<string[]> {
+    return this.safetyService.getBlockedIds(req.user.id);
+  }
+
   @Get('blocked-ids/:userId')
   async getBlockedUserIds(@Param('userId') userId: string): Promise<string[]> {
     return this.safetyService.getBlockedUserIds(userId);
