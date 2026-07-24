@@ -8,6 +8,7 @@ services:
     restart: always
     environment:
       - NODE_ENV=production
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:4200}
     env_file:
       - .env
     ports:
