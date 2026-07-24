@@ -25,8 +25,6 @@ export class ProfileViewNotificationListener {
 
       if (!viewer) return;
 
-      const viewerName = viewer.display_name || 'Someone';
-
       await this.notificationsService.createNotification(
         event.viewedUserId,
         event.viewerId,

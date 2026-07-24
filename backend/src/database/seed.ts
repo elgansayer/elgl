@@ -153,7 +153,7 @@ async function runSeed() {
           native_language: u.profile.native_language,
           target_languages: u.profile.target_languages,
 
-          location: supabase.rpc('st_geomfromtext', {
+          location: (supabase.rpc as any)('st_geomfromtext', {
             text: u.profile.location,
           }),
         })

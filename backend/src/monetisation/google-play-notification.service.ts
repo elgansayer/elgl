@@ -127,6 +127,8 @@ export class GooglePlayNotificationService {
 
     const isActive = [1, 2, 3, 7, 13].includes(notificationType);
     const isExpired = [4, 5, 12].includes(notificationType);
+    void purchaseToken;
+    void subscriptionId;
 
     if (isActive) {
       await this.handleSubscriptionActive(notification);
@@ -258,7 +260,7 @@ export class GooglePlayNotificationService {
       .eq('purchase_token', purchaseToken)
       .single();
 
-    const row = data;
+    const row = data as { user_id: string } | null;
     return row?.user_id || null;
   }
 

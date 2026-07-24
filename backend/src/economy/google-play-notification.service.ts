@@ -23,7 +23,7 @@ export class GooglePlayNotificationService {
    * Main entry point for processing a Google Play notification.
    * The notification is received as a Pub/Sub message containing a signed JWT.
    */
-  async handleNotification(message: Record<string, unknown>): Promise<void> {
+  handleNotification(message: Record<string, unknown>): void {
     try {
       // 1. Decode the Pub/Sub message
       const messageData = message?.message as
@@ -314,7 +314,7 @@ export class GooglePlayNotificationService {
       .eq('purchase_token', purchaseToken)
       .single();
 
-    const row = data;
+    const row = data as { user_id: string } | null;
     return row?.user_id ?? null;
   }
 
@@ -328,7 +328,7 @@ export class GooglePlayNotificationService {
   ): void {
     const supabase = this.supabaseService.getClient();
 
-    const { error } = await supabase.from('subscriptions').upsert(
+    supabase.from('subscriptions').upsert(
       {
         user_id: userId,
         product_id: subscriptionId,
@@ -336,13 +336,13 @@ export class GooglePlayNotificationService {
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id' },
-    );
-
-    if (error) {
-      this.logger.error(
-        `Failed to update subscription for user ${userId}: ${error.message}`,
-      );
-    }
+    ).then(({ error }) => {
+      if (error) {
+        this.logger.error(
+          `Failed to update subscription for user ${userId}: ${error.message}`,
+        );
+      }
+    });
   }
 
   /**
@@ -377,19 +377,20 @@ export class GooglePlayNotificationService {
   private revokeSubscriptionBenefits(userId: string): void {
     const supabase = this.supabaseService.getClient();
 
-    const { error } = await supabase
+    supabase
       .from('users')
       .update({
         is_vip: false,
         vip_tier: 'free',
         updated_at: new Date().toISOString(),
       })
-      .eq('id', userId);
-
-    if (error) {
-      this.logger.error(
-        `Failed to revoke subscription benefits for user ${userId}: ${error.message}`,
-      );
-    }
+      .eq('id', userId)
+      .then(({ error }) => {
+        if (error) {
+          this.logger.error(
+            `Failed to revoke subscription benefits for user ${userId}: ${error.message}`,
+          );
+        }
+      });
   }
 }

@@ -18,7 +18,13 @@ export class ChatNotificationListener {
       const supabase = this.supabaseService.getClient() as SupabaseClient;
 
       const { senderId, messageType, receiverId, messagePreview, roomId } =
-        event as any;
+        event as unknown as {
+          senderId: string;
+          messageType: string;
+          receiverId: string;
+          messagePreview: string;
+          roomId: string;
+        };
 
       const { data: sender } = await supabase
         .from('users')
@@ -28,7 +34,8 @@ export class ChatNotificationListener {
 
       if (!sender) return;
 
-      const senderName = sender.display_name || 'Someone';
+      const senderData = sender as { display_name?: string; avatar_url?: string | null };
+      const senderName = senderData.display_name || 'Someone';
       const messageTypeLabels: Record<string, string> = {
         text: 'sent a message',
         voice: 'sent a voice note',
@@ -36,10 +43,8 @@ export class ChatNotificationListener {
         doodle: 'sent a doodle',
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const actionLabel = messageTypeLabels[messageType] || 'sent a message';
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       await this.notificationsService.sendPushNotification(receiverId, {
         type: 'new_message',
         title: senderName,
@@ -48,8 +53,7 @@ export class ChatNotificationListener {
           channel: roomId,
           sender_id: senderId,
           sender_name: senderName,
-
-          sender_avatar: sender.avatar_url || '',
+          sender_avatar: senderData.avatar_url || '',
           room_id: roomId,
         },
       });

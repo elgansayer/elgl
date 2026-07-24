@@ -73,9 +73,9 @@ export class AppleNotificationService {
           `Unhandled notification type: ${notificationType}/${subtype}`,
         );
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error(
-        `Failed to process Apple notification: ${(error as Error).message}`,
+        `Failed to process Apple notification: ${(error instanceof Error ? error.message : 'Unknown error')}`,
       );
       // Don't throw - return success to Apple to avoid retries
       return { received: true, status: 'error' };
@@ -141,7 +141,7 @@ export class AppleNotificationService {
     subtype: string | undefined,
     data: any,
   ): Promise<void> {
-    const transactionInfo = this.decodeTransactionInfo(
+    const transactionInfo = await this.decodeTransactionInfo(
       data?.signedTransactionInfo as string | undefined,
     );
     if (!transactionInfo) {
@@ -175,7 +175,7 @@ export class AppleNotificationService {
     subtype: string | undefined,
     data: any,
   ): Promise<void> {
-    const transactionInfo = this.decodeTransactionInfo(
+    const transactionInfo = await this.decodeTransactionInfo(
       data?.signedTransactionInfo as string | undefined,
     );
     if (!transactionInfo) {

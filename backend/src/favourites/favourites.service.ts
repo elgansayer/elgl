@@ -22,7 +22,7 @@ export class FavouritesService {
       throw new Error('Message not found');
     }
 
-    const message = messageResponse.data;
+    const message = messageResponse.data as Record<string, unknown>;
 
     const insertResponse = await supabase
       .from('favourites')

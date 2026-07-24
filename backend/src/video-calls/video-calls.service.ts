@@ -24,11 +24,11 @@ export class VideoCallsService {
   ): Promise<{ token: string; roomName: string }> {
     const roomName = `video_${uuidv4()}`;
 
-    const createOptions: CreateRoomOptions = {
+    const createOptions = {
       name: roomName,
       emptyTimeout: 30,
       maxParticipants: 2,
-    };
+    } as CreateRoomOptions;
 
     await this.roomService.createRoom(createOptions);
 
