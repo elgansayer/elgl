@@ -306,7 +306,7 @@
 - [x] Implement Blocklist system hiding blocked accounts across chat, feed, and search.
 - [ ] Wire up block/unblock UI in LongPressContextMenuComponent and ChatMessageComponent, and implement backend/frontend filtering to hide blocked users from chat, feed, and search results.
 - [x] Implement hiding blocked accounts across chat, feed, and search (frontend filtering + backend query filtering)
-- [ ] Implement backend query filtering to exclude blocked users from chat, feed, and search results (modify ChatService, MomentsService, DiscoveryService to filter out blocked user IDs)
+- [x] Implement backend query filtering to exclude blocked users from chat, feed, and search results (modify ChatService, MomentsService, DiscoveryService to filter out blocked user IDs)
 - [ ] Implement frontend filtering to hide blocked users' messages, moments, and search results (filter arrays in components after fetching)
 - [ ] Build automated NLP spam detector in NestJS to flag duplicate copy-paste messages.
 - [x] Add block user option to chat message context menu (LongPressContextMenuComponent)
