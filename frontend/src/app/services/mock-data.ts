@@ -35,7 +35,8 @@ export const MOCK_USER_PROFILE: UserProfile = {
   is_serious_learner: true,
   privacy_hide_age: false,
   privacy_hide_location: false,
-  privacy_hide_from_search: false,
+  privacy_hide_from_search: false, privacy_hide_gender: false,
+  privacy_hide_gender: false,
   created_at: new Date().toISOString(),
 };
 
@@ -55,7 +56,7 @@ export const MOCK_PARTNERS: UserProfile[] = [
     is_serious_learner: true,
     privacy_hide_age: false,
     privacy_hide_location: false,
-    privacy_hide_from_search: false,
+    privacy_hide_from_search: false, privacy_hide_gender: false,
     created_at: new Date().toISOString(),
     is_followed_by_me: true,
     is_liked_by_me: false,
@@ -75,7 +76,7 @@ export const MOCK_PARTNERS: UserProfile[] = [
     is_serious_learner: false,
     privacy_hide_age: false,
     privacy_hide_location: false,
-    privacy_hide_from_search: false,
+    privacy_hide_from_search: false, privacy_hide_gender: false,
     created_at: new Date().toISOString(),
     is_followed_by_me: false,
     is_liked_by_me: true,

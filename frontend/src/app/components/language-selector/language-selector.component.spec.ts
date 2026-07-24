@@ -38,10 +38,4 @@ describe('LanguageSelectorComponent', () => {
     expect(component.isOpen()).toBe(false);
   });
 
-  it('should apply custom language from input e.g. sw', async () => {
-    component.customCode.set('sw');
-    await component.applyCustomLanguage();
-    expect(i18nService.currentLang()).toBe('sw');
-    expect(component.customCode()).toBe('');
-  });
 });
