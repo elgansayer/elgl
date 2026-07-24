@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -169,12 +169,8 @@ export class ChatService {
 
   async loadBlockedUsers(): Promise<void> {
     try {
-      const response = await firstValueFrom(
-        this.http.get<string[]>(`${environment.apiUrl}/safety/blocked-ids`, {
-          headers: this.getHeaders()
-        })
-      );
-      this.blockedUserIds = response;
+      const blockedIds = await this.safetyService.getBlockedIdsAsync();
+      this.blockedUsers.set(new Set(blockedIds));
     } catch (e) {
       console.error('Failed to load blocked users:', e);
     }

@@ -207,7 +207,7 @@ export class LongPressContextMenuComponent implements AfterViewInit {
     this.isOpen.set(true);
   }
 
-  onOptionClick(optionId: string): void {
+  async onOptionClick(optionId: string): Promise<void> {
     const id = this.messageId();
     const content = this.messageContent();
     const msgType = this.messageType();
@@ -224,20 +224,20 @@ export class LongPressContextMenuComponent implements AfterViewInit {
         this.report.emit({ messageId: id, content, senderId: sId, roomId: rId });
         break;
       case 'block':
-        this.safetyService.blockUser(sId).subscribe({
-          next: () => {
-            this.block.emit({ senderId: sId, blocked: true });
-          },
-          error: (err) => console.error('Failed to block user', err),
-        });
+        try {
+          await this.safetyService.blockUserAsync(sId);
+          this.block.emit({ senderId: sId, blocked: true });
+        } catch (err) {
+          console.error('Failed to block user', err);
+        }
         break;
       case 'unblock':
-        this.safetyService.unblockUser(sId).subscribe({
-          next: () => {
-            this.block.emit({ senderId: sId, blocked: false });
-          },
-          error: (err) => console.error('Failed to unblock user', err),
-        });
+        try {
+          await this.safetyService.unblockUserAsync(sId);
+          this.block.emit({ senderId: sId, blocked: false });
+        } catch (err) {
+          console.error('Failed to unblock user', err);
+        }
         break;
     }
     this.close();
