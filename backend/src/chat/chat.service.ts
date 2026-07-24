@@ -47,7 +47,7 @@ export class ChatService {
           is_online: false,
           is_pinned: false,
           created_at: new Date(Date.now() - 3600000).toISOString(),
-        }
+        },
       ] as any[];
     }
 
@@ -130,7 +130,11 @@ export class ChatService {
           media_url: null,
           correction_payload: null,
           created_at: new Date(Date.now() - 3600000).toISOString(),
-          sender: { id: 'mock-user-1', display_name: 'Emma', avatar_url: 'https://i.pravatar.cc/150?u=emma' }
+          sender: {
+            id: 'mock-user-1',
+            display_name: 'Emma',
+            avatar_url: 'https://i.pravatar.cc/150?u=emma',
+          },
         },
         {
           id: 'mock-msg-2',
@@ -141,8 +145,8 @@ export class ChatService {
           media_url: null,
           correction_payload: null,
           created_at: new Date().toISOString(),
-          sender: { id: 'me', display_name: 'Me', avatar_url: null }
-        }
+          sender: { id: 'me', display_name: 'Me', avatar_url: null },
+        },
       ] as any[];
     }
     return response.data as ChatMessage[];
