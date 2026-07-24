@@ -82,7 +82,7 @@ export class HobbyTagsService {
       .single()) as { data: any; error: any };
 
     if (error) throw error;
-    return data as any;
+    return data;
   }
 
   async removeUserTag(userId: string, hobbyTagId: string): Promise<void> {
@@ -117,6 +117,6 @@ export class HobbyTagsService {
 
     if (error) throw error;
     if (!data) throw new NotFoundException('User hobby tag not found');
-    return data as any;
+    return data;
   }
 }

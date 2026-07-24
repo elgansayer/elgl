@@ -94,7 +94,9 @@ export class NlpService {
       );
     }
 
-    const data = (await res.json()) as { translations: Array<{ text: string }> };
+    const data = (await res.json()) as {
+      translations: Array<{ text: string }>;
+    };
     const translatedText = data.translations[0].text;
 
     // Get glossary/definition via DeepL glossary lookup (if available) or fallback
@@ -209,7 +211,9 @@ export class NlpService {
       );
     }
 
-    const dictData = (await dictRes.json()) as Array<{ displayTarget?: string }>;
+    const dictData = (await dictRes.json()) as Array<{
+      displayTarget?: string;
+    }>;
     const correctedText = dictData[0]?.displayTarget || orig;
     const errorsFound = orig === correctedText ? 0 : 1;
 
@@ -297,7 +301,17 @@ export class NlpService {
       );
     }
 
-    const assessmentData = (await assessmentRes.json()) as { NBest?: Array<{ PronunciationAssessment?: { AccuracyScore?: number }; Words?: Array<{ PronunciationAssessment?: { AccuracyScore?: number; ErrorType?: string } }> }> };
+    const assessmentData = (await assessmentRes.json()) as {
+      NBest?: Array<{
+        PronunciationAssessment?: { AccuracyScore?: number };
+        Words?: Array<{
+          PronunciationAssessment?: {
+            AccuracyScore?: number;
+            ErrorType?: string;
+          };
+        }>;
+      }>;
+    };
     const nBest = assessmentData.NBest?.[0];
 
     if (!nBest) {

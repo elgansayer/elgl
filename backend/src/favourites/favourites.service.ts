@@ -34,7 +34,7 @@ export class FavouritesService {
       .single()) as { data: any; error: any };
 
     if (error) throw error;
-    return data as any;
+    return data;
   }
 
   async removeFavourite(userId: string, favouriteId: string) {
@@ -58,6 +58,6 @@ export class FavouritesService {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data as any[];
+    return data;
   }
 }

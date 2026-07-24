@@ -51,7 +51,7 @@ export class ChatService {
       ] as any[];
     }
 
-    return response.data as ChatRoomRecord[];
+    return response.data;
   }
 
   async sendMessage(

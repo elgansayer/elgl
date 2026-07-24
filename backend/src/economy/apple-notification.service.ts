@@ -87,9 +87,7 @@ export class AppleNotificationService {
    * In production, this should use a library like `jsonwebtoken` with Apple's root CA.
    * For now, we perform a basic decode without full verification (placeholder).
    */
-  private verifyAndDecodeJWS(
-    signedPayload: string,
-  ): unknown | null {
+  private verifyAndDecodeJWS(signedPayload: string): unknown | null {
     try {
       // JWS format: header.payload.signature
       const parts = signedPayload.split('.');
@@ -488,10 +486,7 @@ export class AppleNotificationService {
   /**
    * Notifies the user about a price increase.
    */
-  private notifyUserAboutPriceIncrease(
-    userId: string,
-    newPrice: number,
-  ): void {
+  private notifyUserAboutPriceIncrease(userId: string, newPrice: number): void {
     // Placeholder: send push notification or in-app message
     this.logger.log(
       `Would notify user ${userId} about price increase to ${newPrice}`,
@@ -501,10 +496,7 @@ export class AppleNotificationService {
   /**
    * Provides consumption data to Apple for a specific transaction.
    */
-  private provideConsumptionData(
-    userId: string,
-    transactionId: string,
-  ): void {
+  private provideConsumptionData(userId: string, transactionId: string): void {
     // Placeholder: In production, send consumption data to Apple's API
     this.logger.log(
       `Would provide consumption data for user ${userId}, transaction ${transactionId}`,

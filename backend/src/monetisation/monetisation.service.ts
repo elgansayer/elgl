@@ -296,7 +296,7 @@ export class MonetisationService {
       return [];
     }
 
-    return response.data as ChatRoomRecord[];
+    return response.data;
   }
 
   async createDiagnosticLog(
