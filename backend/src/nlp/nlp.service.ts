@@ -144,7 +144,9 @@ export class NlpService {
         },
       );
       if (translitRes.ok) {
-        const translitData = (await translitRes.json()) as { translations: Array<{ text: string }> };
+        const translitData = (await translitRes.json()) as {
+          translations: Array<{ text: string }>;
+        };
         transliteration = translitData.translations[0].text;
       }
     } catch {
@@ -243,7 +245,9 @@ export class NlpService {
         },
       );
       if (explainRes.ok) {
-        const explainData = (await explainRes.json()) as Array<{ translations: Array<{ text: string }> }>;
+        const explainData = (await explainRes.json()) as Array<{
+          translations: Array<{ text: string }>;
+        }>;
         explanation =
           explainData[0]?.translations[0]?.text || 'Corrected via Azure AI';
       }
