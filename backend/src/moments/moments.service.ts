@@ -293,12 +293,13 @@ export class MomentsService {
       await supabase
         .from('moment_likes')
         .insert({ moment_id: momentId, user_id: userId });
-      const { data: updatedData } = (await supabase
+      const result = await supabase
         .from('moments')
         .select('likes_count')
         .eq('id', momentId)
-        .single()) as { data: MomentCountRow | null; error: any };
-      const newCount = (updatedData?.likes_count ?? 0) + 1;
+        .single();
+      const updatedRow = result.data as MomentCountRow | null;
+      const newCount = (updatedRow?.likes_count ?? 0) + 1;
       await supabase
         .from('moments')
         .update({ likes_count: newCount })
@@ -349,20 +350,23 @@ export class MomentsService {
       );
     }
 
-    const { data: updatedData } = (await supabase
+    const comment = response.data as MomentComment;
+
+    const result = await supabase
       .from('moments')
       .select('comments_count, user_id')
       .eq('id', momentId)
-      .single()) as {
-      data: (MomentCountRow & { user_id?: string }) | null;
-      error: any;
-    };
+      .single();
+
+    const updatedData = result.data as
+      | (MomentCountRow & { user_id?: string })
+      | null;
+
     await supabase
       .from('moments')
       .update({ comments_count: (updatedData?.comments_count ?? 0) + 1 })
       .eq('id', momentId);
 
-    const comment = response.data as MomentComment;
     const profile = await this.usersService.getProfile(userId);
     comment.author = {
       id: profile?.id ?? userId,
