@@ -74,7 +74,7 @@ export class SafetyController {
   }
 
   @Post('block/:blockedId')
-  async blockUser(
+  async blockUserByParam(
     @Req() req: { user: { id: string } },
     @Param('blockedId') blockedId: string,
   ): Promise<{ success: boolean; blocked_id: string }> {
@@ -82,7 +82,7 @@ export class SafetyController {
   }
 
   @Post('unblock/:blockedId')
-  async unblockUser(
+  async unblockUserByParam(
     @Req() req: { user: { id: string } },
     @Param('blockedId') blockedId: string,
   ): Promise<{ success: boolean }> {
