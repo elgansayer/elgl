@@ -103,11 +103,16 @@
             {{ profile()?.bio_text || ('profile.noBio' | t) }}
           </p>
         </div>
+        
+        <div class="mt-8">
+          <app-hobby-tags />
+        </div>
       }
 
       @if (isEditing()) {
         <form (ngSubmit)="saveProfile()" class="mt-4 space-y-3 border-t border-surface-100 pt-4">
           <input type="text" [(ngModel)]="displayName" name="displayName" [placeholder]="'profile.displayNamePlaceholder' | t" class="app-input" />
+          <input type="url" [(ngModel)]="avatarUrl" name="avatarUrl" [placeholder]="'profile.avatarUrlPlaceholder' | t" class="app-input" />
 
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <input type="text" [(ngModel)]="nativeLanguage" name="nativeLanguage" [placeholder]="'profile.nativeLangPlaceholder' | t" class="app-input uppercase" />
@@ -123,6 +128,10 @@
           <label class="flex items-center gap-2 text-sm text-text-primary">
             <input type="checkbox" [(ngModel)]="privacyHideSearch" name="privacyHideSearch" class="h-4 w-4 rounded border-surface-100 text-primary" />
             {{ 'profile.hideSearch' | t }}
+          </label>
+          <label class="flex items-center gap-2 text-sm text-text-primary">
+            <input type="checkbox" [(ngModel)]="privacyHideAge" name="privacyHideAge" class="h-4 w-4 rounded border-surface-100 text-primary" />
+            {{ 'profile.hideAge' | t }}
           </label>
 
           <div class="flex justify-end gap-2 pt-1">

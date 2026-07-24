@@ -1,20 +1,29 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NotificationsInboxComponent } from './notifications-inbox.component';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { NotificationService } from '../../services/notification.service';
+import { vi } from 'vitest';
 
 describe('NotificationsInboxComponent', () => {
   let component: NotificationsInboxComponent;
   let fixture: ComponentFixture<NotificationsInboxComponent>;
+  let mockNotificationService: any;
 
   beforeEach(async () => {
+    mockNotificationService = {
+      getNotifications: vi.fn().mockResolvedValue([
+        { id: '1', type: 'follow', is_read: false }
+      ]),
+      getUnreadCount: vi.fn().mockResolvedValue(1),
+      markAllAsRead: vi.fn().mockResolvedValue(undefined),
+      markAsRead: vi.fn().mockResolvedValue(undefined),
+    };
+
     await TestBed.configureTestingModule({
       imports: [NotificationsInboxComponent],
       providers: [
         provideRouter([]),
-        provideHttpClient(),
-        provideHttpClientTesting(),
+        { provide: NotificationService, useValue: mockNotificationService }
       ],
     }).compileComponents();
 

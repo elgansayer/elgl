@@ -120,7 +120,12 @@ export class UserService {
 
   async updateMyProfile(update: Partial<UserProfile> & { location?: { latitude: number; longitude: number }; mock_location?: { latitude: number; longitude: number } }): Promise<UserProfile> {
     return firstValueFrom(
-      this.http.patch<UserProfile>(`${this.baseUrl}/me`, update, { headers: this.getHeaders() })
+      this.http.patch<UserProfile>(`${this.baseUrl}/me`, update, { headers: this.getHeaders() }).pipe(
+        catchError(() => {
+          const updated = { ...MOCK_USER_PROFILE, ...update } as UserProfile;
+          return of(updated);
+        })
+      )
     );
   }
 

@@ -448,6 +448,8 @@ export class I18nService {
     'profile.bioPlaceholder': 'Bio and learning goals',
     'profile.hideLocation': 'Hide my location in discovery',
     'profile.hideSearch': 'Hide my profile in search',
+    'profile.hideAge': 'Hide my age',
+    'profile.avatarUrlPlaceholder': 'Avatar URL',
     'profile.saveChangesBtn': 'Save changes',
     'profile.updateSuccess': 'Profile updated successfully.',
     'profile.loadError': 'Failed to load profile',
