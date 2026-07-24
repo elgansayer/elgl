@@ -32,7 +32,7 @@ import { validationSchema } from './config/validation.schema';
       isGlobal: true,
       validationSchema,
     }),
-    EventEmitterModule.forRoot({
+    (EventEmitterModule as any).forRoot({
       wildcard: false,
       delimiter: '.',
       newListener: false,
