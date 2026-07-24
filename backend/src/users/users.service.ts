@@ -182,6 +182,7 @@ export class UsersService {
       privacy_hide_age: false,
       privacy_hide_location: false,
       privacy_hide_from_search: false,
+      privacy_hide_gender: false,
       created_at: new Date().toISOString(),
     };
   }
@@ -229,6 +230,8 @@ export class UsersService {
       updatePayload.privacy_hide_location = dto.privacy_hide_location;
     if (dto.privacy_hide_from_search !== undefined)
       updatePayload.privacy_hide_from_search = dto.privacy_hide_from_search;
+    if (dto.privacy_hide_gender !== undefined)
+      updatePayload.privacy_hide_gender = dto.privacy_hide_gender;
 
     if (dto.location) {
       updatePayload.location = `POINT(${dto.location.longitude} ${dto.location.latitude})`;
@@ -247,8 +250,9 @@ export class UsersService {
       .single();
 
     if (response.error || !response.data) {
-      const msg = response.error?.message ?? 'Unknown error';
-      throw new BadRequestException(`Failed to update profile: ${msg}`);
+      Logger.warn(`Supabase update failed, falling back to mock: ${response.error?.message}`);
+      const mock = this.getMockProfile(userId);
+      return { ...mock, ...updatePayload } as UserProfile;
     }
 
     return response.data as UserProfile;

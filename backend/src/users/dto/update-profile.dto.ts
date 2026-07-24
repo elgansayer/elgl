@@ -71,4 +71,8 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsBoolean()
   privacy_hide_from_search?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  privacy_hide_gender?: boolean;
 }
