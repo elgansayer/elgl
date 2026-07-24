@@ -166,7 +166,7 @@ export class ChatService {
       throw new Error('Message not found');
     }
 
-    const message = messageResponse.data;
+    const message: ChatMessage = messageResponse.data as ChatMessage;
 
     // Store the favourite
     const { error } = await supabase.from('favourites').insert({
