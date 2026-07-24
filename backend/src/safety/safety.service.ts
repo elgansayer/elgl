@@ -3,10 +3,6 @@ import { PostgrestError } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
 
-export interface UserBlockRow {
-  blocked_id: string;
-}
-
 @Injectable()
 export class SafetyService {
   private readonly logger = new Logger(SafetyService.name);
@@ -124,41 +120,6 @@ export class SafetyService {
     return data !== null;
   }
 
-  async isBlockedByUser(
-    blockerId: string,
-    blockedId: string,
-  ): Promise<boolean> {
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from('blocks')
-      .select('id')
-      .eq('blocker_id', blockerId)
-      .eq('blocked_id', blockedId)
-      .maybeSingle();
-
-    if (error) {
-      this.logger.error(`Failed to check block status: ${error.message}`);
-      return false;
-    }
-
-    return data !== null;
-  }
-
-  async getBlockedIds(userId: string): Promise<string[]> {
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from('blocks')
-      .select('blocked_id')
-      .eq('blocker_id', userId);
-    if (error) {
-      this.logger.error(`Failed to fetch blocked IDs: ${error.message}`);
-      return [];
-    }
-    if (!data || data.length === 0) return [];
-    const rows = data as UserBlockRow[];
-    return rows.map((r) => r.blocked_id);
-  }
-
   async getBlockedUserIds(userId: string): Promise<string[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
@@ -185,20 +146,6 @@ export class SafetyService {
       return [];
     }
     return (data as { blocker_id: string }[]).map((b) => b.blocker_id);
-  }
-
-  async getBlockedUsers(userId: string): Promise<string[]> {
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from('blocks')
-      .select('blocked_id')
-      .eq('blocker_id', userId);
-
-    if (error) {
-      this.logger.error(`Failed to get blocked users for ${userId}:`, error);
-      return [];
-    }
-    return (data as { blocked_id: string }[]).map((b) => b.blocked_id);
   }
 
   async getBlockedAndBlockerIds(userId: string): Promise<string[]> {

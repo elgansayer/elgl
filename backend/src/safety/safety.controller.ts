@@ -43,14 +43,14 @@ export class SafetyController {
 
   @Get('blocked-ids')
   async getBlockedIds(@Req() req: { user: { id: string } }): Promise<string[]> {
-    return this.safetyService.getBlockedIds(req.user.id);
+    return this.safetyService.getBlockedUserIds(req.user.id);
   }
 
   @Get('blocked-users')
   async getBlockedUsers(
     @Req() req: { user: { id: string } },
   ): Promise<string[]> {
-    return this.safetyService.getBlockedIds(req.user.id);
+    return this.safetyService.getBlockedUserIds(req.user.id);
   }
 
   @Get('blocked-ids/:userId')
