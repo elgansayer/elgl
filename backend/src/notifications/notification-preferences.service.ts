@@ -195,9 +195,7 @@ export class NotificationPreferencesService {
         | import('./dto/notification-preferences.dto').CategoryPreferenceDto
         | undefined;
       if (dtoCategory) {
-        const existingCategory = (existing as any)[
-          category
-        ] as
+        const existingCategory = (existing as any)[category] as
           | import('./interfaces/notification-preferences.interface').CategoryPreference
           | undefined;
 
