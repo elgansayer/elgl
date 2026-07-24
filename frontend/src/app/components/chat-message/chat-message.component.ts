@@ -147,11 +147,10 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
   }
 
   onBlock(event: { senderId: string; blocked: boolean }): void {
+    this.isBlocked.set(event.blocked);
     if (event.blocked) {
-      this.isBlocked.set(true);
       this.chatService.addBlockedUser(event.senderId);
     } else {
-      this.isBlocked.set(false);
       this.chatService.removeBlockedUser(event.senderId);
     }
   }
