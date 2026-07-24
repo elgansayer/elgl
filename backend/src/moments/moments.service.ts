@@ -159,7 +159,7 @@ export class MomentsService {
 
     // Filter out blocked users
     if (blockedIds.length > 0) {
-      moments = moments.filter(m => !blockedIds.includes(m.user_id));
+      moments = moments.filter((m) => !blockedIds.includes(m.user_id));
     }
 
     if (moments.length === 0) {
@@ -173,23 +173,35 @@ export class MomentsService {
           id: `mock-moment-${i}`,
           user_id: u.id,
           text_content: `Just practicing my ${u.target_languages[0].toUpperCase()} today! How is everyone doing? Let me know if you want to chat.`,
-          media_urls: Math.random() > 0.5 ? [`https://i.pravatar.cc/300?u=moment-${i}`] : [],
+          media_urls:
+            Math.random() > 0.5
+              ? [`https://i.pravatar.cc/300?u=moment-${i}`]
+              : [],
           media_type: Math.random() > 0.5 ? 'images' : 'none',
           target_language: u.target_languages[0],
           likes_count: Math.floor(Math.random() * 100),
           comments_count: Math.floor(Math.random() * 20),
           is_pinned: false,
-          created_at: new Date(Date.now() - Math.random() * 86400000 * 3).toISOString(),
-          author: { id: u.id, display_name: u.display_name, avatar_url: u.avatar_url },
+          created_at: new Date(
+            Date.now() - Math.random() * 86400000 * 3,
+          ).toISOString(),
+          author: {
+            id: u.id,
+            display_name: u.display_name,
+            avatar_url: u.avatar_url,
+          },
           is_liked_by_me: Math.random() > 0.8,
-        } as MomentRecord);
+        });
       }
-      
+
       // Filter the generated mock data same as DB query
       if (filter === 'Classmates' && targetLang) {
-        return generated.filter(m => m.target_language === targetLang);
+        return generated.filter((m) => m.target_language === targetLang);
       }
-      return generated.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      return generated.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
     }
 
     // Hydrate author profiles & likes
@@ -301,7 +313,8 @@ export class MomentsService {
       .select('comments_count, user_id')
       .eq('id', momentId)
       .single();
-    const updatedRow = updatedData as MomentCountRow & { user_id?: string } | null;
+    const updatedRow = updatedData as
+      (MomentCountRow & { user_id?: string }) | null;
     await supabase
       .from('moments')
       .update({ comments_count: (updatedRow?.comments_count ?? 0) + 1 })
@@ -326,12 +339,7 @@ export class MomentsService {
 
       this.eventEmitter.emit(
         'moment.comment',
-        new MomentCommentEvent(
-          userId,
-          momentAuthorId,
-          momentId,
-          preview,
-        ),
+        new MomentCommentEvent(userId, momentAuthorId, momentId, preview),
       );
     }
 
