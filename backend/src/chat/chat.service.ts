@@ -25,8 +25,14 @@ export class ChatService {
     return this.centrifugoService.generateConnectionToken(userId);
   }
 
-  async getRooms(): Promise<ChatRoomRecord[]> {
+  async getRooms(currentUserId?: string): Promise<ChatRoomRecord[]> {
     const supabase = this.supabaseService.getClient();
+
+    // Get blocked user IDs to exclude from rooms
+    const blockedIds = currentUserId
+      ? await this.safetyService.getBlockedAndBlockerIds(currentUserId)
+      : [];
+
     const response = await supabase
       .from('chat_rooms')
       .select('id, title, subtitle, avatar, is_online, is_pinned, created_at')
@@ -34,7 +40,7 @@ export class ChatService {
       .order('created_at', { ascending: true });
 
     if (response.error || !response.data || response.data.length === 0) {
-      return [
+      const mockRooms = [
         {
           id: 'mock-room-1',
           title: 'Spanish Practice',
@@ -54,9 +60,23 @@ export class ChatService {
           created_at: new Date(Date.now() - 3600000).toISOString(),
         },
       ] as ChatRoomRecord[];
+
+      // Filter out blocked users from mock data
+      if (blockedIds.length > 0) {
+        return mockRooms.filter(
+          (room) => !blockedIds.includes(room.id),
+        );
+      }
+      return mockRooms;
     }
 
-    return response.data;
+    // Filter out rooms where the other participant is blocked
+    if (blockedIds.length > 0) {
+      return (response.data as ChatRoomRecord[]).filter(
+        (room) => !blockedIds.includes(room.id),
+      );
+    }
+    return response.data as ChatRoomRecord[];
   }
 
   async sendMessage(
@@ -64,6 +84,26 @@ export class ChatService {
     dto: SendMessageDto,
   ): Promise<ChatMessage> {
     const supabase = this.supabaseService.getClient();
+
+    // Check if sender is blocked by any room member
+    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(senderId);
+
+    // Get room members to check if any are blocked
+    const { data: roomMembers } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', dto.room_id)
+      .neq('user_id', senderId);
+
+    if (roomMembers && roomMembers.length > 0) {
+      const receiverId = (roomMembers as { user_id: string }[])[0].user_id;
+      // Check if the receiver has blocked the sender
+      const receiverBlockedIds = await this.safetyService.getBlockedAndBlockerIds(receiverId);
+      if (receiverBlockedIds.includes(senderId)) {
+        throw new Error('You cannot send messages to this user.');
+      }
+    }
+
     const insertResponse = await supabase
       .from('chat_messages')
       .insert({
@@ -99,13 +139,6 @@ export class ChatService {
     });
 
     // Emit push notification event
-    // Determine receiver from room participants (simplified - in production get from room membership)
-    const { data: roomMembers } = await supabase
-      .from('chat_room_members')
-      .select('user_id')
-      .eq('room_id', dto.room_id)
-      .neq('user_id', senderId);
-
     if (roomMembers && roomMembers.length > 0) {
       const receiverId = (roomMembers as { user_id: string }[])[0].user_id;
       const preview = dto.text_content
@@ -140,12 +173,10 @@ export class ChatService {
   ): Promise<ChatMessage[]> {
     const supabase = this.supabaseService.getClient();
 
-    // Get blocked user IDs if current user is provided
-    let blockedIds: string[] = [];
-    if (currentUserId) {
-      blockedIds =
-        await this.safetyService.getBlockedAndBlockerIds(currentUserId);
-    }
+    // Get blocked user IDs to exclude from messages
+    const blockedIds = currentUserId
+      ? await this.safetyService.getBlockedAndBlockerIds(currentUserId)
+      : [];
 
     let query = supabase
       .from('chat_messages')

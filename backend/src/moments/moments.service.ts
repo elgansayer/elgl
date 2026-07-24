@@ -160,11 +160,6 @@ export class MomentsService {
     // Get blocked user IDs to exclude from feed
     const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
 
-    // Filter out blocked users
-    if (blockedIds.length > 0) {
-      moments = moments.filter((m) => !blockedIds.includes(m.user_id));
-    }
-
     if (moments.length === 0) {
       const generated: MomentRecord[] = [];
       const usedUsers = MOCK_USERS.slice(0, 50); // Get 50 fake users
@@ -206,9 +201,6 @@ export class MomentsService {
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
     }
-
-    // Get blocked user IDs to exclude from feed
-    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
 
     // Filter out blocked users
     if (blockedIds.length > 0) {
@@ -254,6 +246,21 @@ export class MomentsService {
     momentId: string,
   ): Promise<{ likes_count: number; is_liked: boolean }> {
     const supabase = this.supabaseService.getClient();
+
+    // Check if the moment author has blocked the current user
+    const { data: momentData } = await supabase
+      .from('moments')
+      .select('user_id')
+      .eq('id', momentId)
+      .single();
+
+    if (momentData) {
+      const momentAuthorId = (momentData as { user_id: string }).user_id;
+      const blockedIds = await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
+      if (blockedIds.includes(userId)) {
+        throw new Error('You cannot interact with this moment.');
+      }
+    }
 
     const { data: existing } = await supabase
       .from('moment_likes')
@@ -302,6 +309,22 @@ export class MomentsService {
     dto: CreateCommentDto,
   ): Promise<MomentComment> {
     const supabase = this.supabaseService.getClient();
+
+    // Check if the moment author has blocked the current user
+    const { data: momentData } = await supabase
+      .from('moments')
+      .select('user_id')
+      .eq('id', momentId)
+      .single();
+
+    if (momentData) {
+      const momentAuthorId = (momentData as { user_id: string }).user_id;
+      const blockedIds = await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
+      if (blockedIds.includes(userId)) {
+        throw new Error('You cannot comment on this moment.');
+      }
+    }
+
     const response = await supabase
       .from('moment_comments')
       .insert({
