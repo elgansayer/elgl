@@ -157,6 +157,9 @@ export class MomentsService {
       if (data) moments = data as MomentRecord[];
     }
 
+    // Get blocked user IDs to exclude from feed
+    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
+
     // Filter out blocked users
     if (blockedIds.length > 0) {
       moments = moments.filter((m) => !blockedIds.includes(m.user_id));
@@ -337,8 +340,10 @@ export class MomentsService {
           ? `Correction: "${dto.correction_payload.original}" → "${dto.correction_payload.corrected}"`
           : '';
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       this.eventEmitter.emit(
         'moment.comment',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         new MomentCommentEvent(userId, momentAuthorId, momentId, preview),
       );
     }

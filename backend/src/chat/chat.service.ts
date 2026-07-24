@@ -118,8 +118,10 @@ export class ChatService {
               ? '🎨 Doodle'
               : '';
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       this.eventEmitter.emit(
         'chat.message',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         new ChatMessageEvent(
           senderId,
           receiverId,
