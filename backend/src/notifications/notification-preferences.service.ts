@@ -27,7 +27,11 @@ interface DbNotificationPreferences {
 
 type CategoryKeys = keyof Omit<
   NotificationPreferences,
-  'userId' | 'updatedAt' | 'quiet_hours_start' | 'quiet_hours_end' | 'do_not_disturb'
+  | 'userId'
+  | 'updatedAt'
+  | 'quiet_hours_start'
+  | 'quiet_hours_end'
+  | 'do_not_disturb'
 >;
 
 @Injectable()
