@@ -8,6 +8,11 @@ interface UserRow {
   last_active_at: string;
 }
 
+interface SupabaseResponse<T> {
+  data: T | null;
+  error: { message: string } | null;
+}
+
 @Injectable()
 export class StreakService {
   private readonly logger = new Logger(StreakService.name);
@@ -26,10 +31,12 @@ export class StreakService {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     // Query users whose last_active_at is older than the cutoff
-    const { data: inactiveUsers, error: queryError } = (await supabase
+    const queryResponse = (await supabase
       .from('users')
       .select('id, study_streak_days, last_active_at')
-      .lt('last_active_at', cutoff)) as { data: UserRow[] | null; error: any };
+      .lt('last_active_at', cutoff)) as unknown as SupabaseResponse<UserRow[]>;
+
+    const { data: inactiveUsers, error: queryError } = queryResponse;
 
     if (queryError) {
       this.logger.error('Failed to query inactive users', queryError.message);
@@ -44,10 +51,12 @@ export class StreakService {
     const userIds: string[] = inactiveUsers.map((user) => user.id);
 
     // Reset streaks for the found users
-    const { error: updateError } = await supabase
+    const updateResponse = (await supabase
       .from('users')
       .update({ study_streak_days: 0 })
-      .in('id', userIds);
+      .in('id', userIds)) as unknown as SupabaseResponse<null>;
+
+    const { error: updateError } = updateResponse;
 
     if (updateError) {
       this.logger.error('Failed to reset streaks', updateError.message);

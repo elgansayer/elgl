@@ -2,6 +2,10 @@ import { Injectable, Logger, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { SupabaseService } from '../supabase/supabase.service';
 
+interface AuthenticatedRequest extends Request {
+  user?: { sub: string };
+}
+
 @Injectable()
 export class StreakMiddleware implements NestMiddleware {
   private readonly logger = new Logger(StreakMiddleware.name);
@@ -10,7 +14,8 @@ export class StreakMiddleware implements NestMiddleware {
 
   async use(req: Request, res: Response, next: NextFunction): Promise<void> {
     // Only update last_active_at for authenticated requests
-    const userId = (req as any).user?.sub;
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.sub;
     if (userId) {
       try {
         const supabase = this.supabaseService.getClient();
