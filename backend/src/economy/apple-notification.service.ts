@@ -5,6 +5,14 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { EconomyService } from './economy.service';
 
 /**
+ * Typed representation of the transaction info embedded in an Apple notification.
+ */
+interface AppleTransactionInfo {
+  productId?: string;
+  transactionId?: string;
+}
+
+/**
  * Handles Apple App Store Server-to-Server notifications (JWS signed payloads).
  * Processes subscription status changes, renewal notifications, and refunds.
  */
@@ -120,20 +128,29 @@ export class AppleNotificationService {
   }
 
   /**
+   * Extracts typed transaction information from the notification data.
+   */
+  private extractTransactionInfo(
+    data: Record<string, unknown> | undefined,
+  ): AppleTransactionInfo | undefined {
+    const raw = data?.signedTransactionInfo;
+    if (typeof raw !== 'object' || raw === null) return undefined;
+    const obj = raw as Record<string, unknown>;
+    return {
+      productId: typeof obj.productId === 'string' ? obj.productId : undefined,
+      transactionId:
+        typeof obj.transactionId === 'string' ? obj.transactionId : undefined,
+    };
+  }
+
+  /**
    * Handles a new subscription event.
    */
   private handleSubscribed(data: Record<string, unknown> | undefined): void {
-    const rawSignedTransactionInfo: unknown = data?.signedTransactionInfo;
-    const signedTransactionInfo: Record<string, unknown> | undefined =
-      typeof rawSignedTransactionInfo === 'object' &&
-      rawSignedTransactionInfo !== null
-        ? (rawSignedTransactionInfo as Record<string, unknown>)
-        : undefined;
-
+    const signedTransactionInfo = this.extractTransactionInfo(data);
     const userId = (data?.appAccountToken ?? undefined) as string | undefined;
-    const productId = signedTransactionInfo?.productId as string | undefined;
-    const transactionId = signedTransactionInfo?.transactionId as
-      string | undefined;
+    const productId = signedTransactionInfo?.productId;
+    const transactionId = signedTransactionInfo?.transactionId;
 
     if (!userId || !productId || !transactionId) {
       this.logger.warn('Missing required fields in SUBSCRIBED notification');
@@ -238,16 +255,9 @@ export class AppleNotificationService {
    * Handles a refund request.
    */
   private handleRefund(data: Record<string, unknown> | undefined): void {
-    const rawSignedTransactionInfo: unknown = data?.signedTransactionInfo;
-    const signedTransactionInfo: Record<string, unknown> | undefined =
-      typeof rawSignedTransactionInfo === 'object' &&
-      rawSignedTransactionInfo !== null
-        ? (rawSignedTransactionInfo as Record<string, unknown>)
-        : undefined;
-
+    const signedTransactionInfo = this.extractTransactionInfo(data);
     const userId = (data?.appAccountToken ?? undefined) as string | undefined;
-    const transactionId = signedTransactionInfo?.transactionId as
-      string | undefined;
+    const transactionId = signedTransactionInfo?.transactionId;
 
     if (!userId || !transactionId) {
       return;
@@ -315,16 +325,9 @@ export class AppleNotificationService {
   private handleConsumptionRequest(
     data: Record<string, unknown> | undefined,
   ): void {
-    const rawSignedTransactionInfo: unknown = data?.signedTransactionInfo;
-    const signedTransactionInfo: Record<string, unknown> | undefined =
-      typeof rawSignedTransactionInfo === 'object' &&
-      rawSignedTransactionInfo !== null
-        ? (rawSignedTransactionInfo as Record<string, unknown>)
-        : undefined;
-
+    const signedTransactionInfo = this.extractTransactionInfo(data);
     const userId = (data?.appAccountToken ?? undefined) as string | undefined;
-    const transactionId = signedTransactionInfo?.transactionId as
-      string | undefined;
+    const transactionId = signedTransactionInfo?.transactionId;
 
     if (!userId || !transactionId) {
       return;
@@ -453,7 +456,7 @@ export class AppleNotificationService {
    */
   private revokeCoinsForRefund(userId: string, transactionId: string): void {
     // Determine how many coins were associated with the refunded purchase
-    this.getCoinsForTransaction(transactionId).then((coinsToRevoke) => {
+    void this.getCoinsForTransaction(transactionId).then((coinsToRevoke) => {
       if (coinsToRevoke <= 0) {
         return;
       }
@@ -461,7 +464,7 @@ export class AppleNotificationService {
       const supabase = this.supabaseService.getClient();
 
       // Deduct coins from user balance
-      supabase
+      void supabase
         .from('users')
         .select('coins_balance')
         .eq('id', userId)
@@ -477,7 +480,7 @@ export class AppleNotificationService {
             (userData.coins_balance ?? 0) - coinsToRevoke,
           );
 
-          supabase
+          void supabase
             .from('users')
             .update({ coins_balance: newBalance })
             .eq('id', userId)

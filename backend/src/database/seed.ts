@@ -229,11 +229,11 @@ async function runSeed() {
     .eq('is_vip', true)
     .limit(3);
 
-  const vipUsers = vipUsersRaw;
+  const vipUsers = vipUsersRaw as Array<{ id: string; email: string }> | null;
 
   if (vipUsers && vipUsers.length > 0) {
     const subscriptionData = vipUsers.map(
-      (user: { id: string; email: string }, index: number) => ({
+      (user, index) => ({
         user_id: user.id,
         product_id:
           index === 0
@@ -265,12 +265,14 @@ async function runSeed() {
   }
 
   // 5. Seed subscription events for audit trail
-  const { data: firstVip } = await supabase
+  const { data: firstVipRaw } = await supabase
     .from('users')
     .select('id')
     .eq('is_vip', true)
     .limit(1)
     .single();
+
+  const firstVip = firstVipRaw as { id: string } | null;
 
   if (firstVip) {
     await supabase.from('subscription_events').insert([

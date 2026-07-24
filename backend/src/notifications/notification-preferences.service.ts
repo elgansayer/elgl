@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { NotificationPreferencesDto } from './dto/notification-preferences.dto';
+import {
+  NotificationPreferencesDto,
+  CategoryPreferenceDto,
+} from './dto/notification-preferences.dto';
 import {
   NotificationPreferences,
   CategoryPreference,
@@ -58,24 +61,24 @@ export class NotificationPreferencesService {
 
   async getPreferences(userId: string): Promise<NotificationPreferences> {
     const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
+    const response = await supabase
       .from('notification_preferences')
       .select('*')
       .eq('user_id', userId)
       .single();
 
-    const dbError = error as { code?: string } | null;
-    const dbData = data as DbNotificationPreferences | null;
+    const data = response.data as DbNotificationPreferences | null;
+    const error = response.error;
 
-    if (dbError && dbError.code !== 'PGRST116') {
-      throw dbError;
+    if (error && error.code !== 'PGRST116') {
+      throw new Error(error.message || 'Database error');
     }
 
-    if (!dbData) {
+    if (!data) {
       return this.createDefaultPreferences(userId);
     }
 
-    return this.mapDbToPreferences(dbData);
+    return this.mapDbToPreferences(data);
   }
 
   async updatePreferences(
@@ -89,17 +92,17 @@ export class NotificationPreferencesService {
 
     const dbPayload = this.mapPreferencesToDb(userId, merged);
 
-    const { data, error } = await supabase
+    const upsertResponse = await supabase
       .from('notification_preferences')
       .upsert(dbPayload, { onConflict: 'user_id' })
       .select()
       .single();
 
-    const dbError = error as { code?: string } | null;
-    const dbData = data as DbNotificationPreferences | null;
+    const dbData = upsertResponse.data as DbNotificationPreferences | null;
+    const dbError = upsertResponse.error;
 
     if (dbError) {
-      throw dbError;
+      throw new Error(dbError.message || 'Database error');
     }
 
     return this.mapDbToPreferences(dbData!);
@@ -110,17 +113,17 @@ export class NotificationPreferencesService {
     const supabase = this.supabaseService.getClient();
     const dbPayload = this.mapPreferencesToDb(userId, defaults);
 
-    const { data, error } = await supabase
+    const upsertResponse = await supabase
       .from('notification_preferences')
       .upsert(dbPayload, { onConflict: 'user_id' })
       .select()
       .single();
 
-    const dbError = error as { code?: string } | null;
-    const dbData = data as DbNotificationPreferences | null;
+    const dbData = upsertResponse.data as DbNotificationPreferences | null;
+    const dbError = upsertResponse.error;
 
     if (dbError) {
-      throw dbError;
+      throw new Error(dbError.message || 'Database error');
     }
 
     return this.mapDbToPreferences(dbData!);
@@ -188,16 +191,16 @@ export class NotificationPreferencesService {
       'audio_room_invite',
     ];
 
-    const merged: Record<string, unknown> = { ...existing };
+    const merged = { ...existing } as Record<string, unknown>;
 
     for (const category of categories) {
-      const dtoCategory = (dto as any)[category] as
-        | import('./dto/notification-preferences.dto').CategoryPreferenceDto
-        | undefined;
+      const dtoMap = dto as Record<string, CategoryPreferenceDto | undefined>;
+      const existingMap =
+        existing as unknown as Record<string, CategoryPreference | undefined>;
+
+      const dtoCategory = dtoMap[category];
       if (dtoCategory) {
-        const existingCategory = (existing as any)[category] as
-          | import('./interfaces/notification-preferences.interface').CategoryPreference
-          | undefined;
+        const existingCategory = existingMap[category];
 
         merged[category] = {
           push: dtoCategory.push ?? existingCategory?.push ?? true,
