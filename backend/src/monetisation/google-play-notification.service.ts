@@ -104,7 +104,15 @@ export class GooglePlayNotificationService {
   ): Promise<void> {
     if (!notification) return;
 
-    const { notificationType, purchaseToken, subscriptionId }: { notificationType: number; purchaseToken: string; subscriptionId: string } = notification;
+    const {
+      notificationType,
+      purchaseToken,
+      subscriptionId,
+    }: {
+      notificationType: number;
+      purchaseToken: string;
+      subscriptionId: string;
+    } = notification;
 
     // notificationType mapping:
     // 1 = SUBSCRIBED (new subscription)
