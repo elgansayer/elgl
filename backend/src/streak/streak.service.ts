@@ -38,7 +38,9 @@ export class StreakService {
       return 0;
     }
 
-    const userIds: string[] = inactiveUsers.map((user: { id: string }) => user.id);
+    const userIds: string[] = inactiveUsers.map(
+      (user: { id: string }) => user.id,
+    );
 
     // Reset streaks for the found users
     const { error: updateError } = await supabase
