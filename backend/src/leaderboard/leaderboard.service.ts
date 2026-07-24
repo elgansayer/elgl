@@ -9,7 +9,9 @@ export class LeaderboardService {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('users')
-      .select('id, display_name, avatar_url, correction_ratio, study_streak_days, is_serious_learner')
+      .select(
+        'id, display_name, avatar_url, correction_ratio, study_streak_days, is_serious_learner',
+      )
       .order('correction_ratio', { ascending: false })
       .limit(limit);
 
