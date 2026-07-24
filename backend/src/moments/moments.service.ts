@@ -255,8 +255,9 @@ export class MomentsService {
       .single();
 
     if (momentData) {
-      const momentAuthorId = (momentData as { user_id: string }).user_id;
-      const blockedIds = await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
+      const momentAuthorId = momentData.user_id;
+      const blockedIds =
+        await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
       if (blockedIds.includes(userId)) {
         throw new Error('You cannot interact with this moment.');
       }
@@ -318,8 +319,9 @@ export class MomentsService {
       .single();
 
     if (momentData) {
-      const momentAuthorId = (momentData as { user_id: string }).user_id;
-      const blockedIds = await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
+      const momentAuthorId = momentData.user_id;
+      const blockedIds =
+        await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
       if (blockedIds.includes(userId)) {
         throw new Error('You cannot comment on this moment.');
       }
@@ -371,10 +373,7 @@ export class MomentsService {
           ? `Correction: "${dto.correction_payload.original}" → "${dto.correction_payload.corrected}"`
           : '';
 
-      (this.eventEmitter.emit as (
-        event: string,
-        ...args: unknown[]
-      ) => void)(
+      (this.eventEmitter.emit as (event: string, ...args: unknown[]) => void)(
         'moment.comment',
         new MomentCommentEvent(userId, momentAuthorId, momentId, preview),
       );

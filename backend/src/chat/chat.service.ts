@@ -63,9 +63,7 @@ export class ChatService {
 
       // Filter out blocked users from mock data
       if (blockedIds.length > 0) {
-        return mockRooms.filter(
-          (room) => !blockedIds.includes(room.id),
-        );
+        return mockRooms.filter((room) => !blockedIds.includes(room.id));
       }
       return mockRooms;
     }
@@ -76,7 +74,7 @@ export class ChatService {
         (room) => !blockedIds.includes(room.id),
       );
     }
-    return response.data as ChatRoomRecord[];
+    return response.data;
   }
 
   async sendMessage(
@@ -86,7 +84,8 @@ export class ChatService {
     const supabase = this.supabaseService.getClient();
 
     // Check if sender is blocked by any room member
-    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(senderId);
+    const blockedIds =
+      await this.safetyService.getBlockedAndBlockerIds(senderId);
 
     // Get room members to check if any are blocked
     const { data: roomMembers } = await supabase
@@ -98,7 +97,8 @@ export class ChatService {
     if (roomMembers && roomMembers.length > 0) {
       const receiverId = (roomMembers as { user_id: string }[])[0].user_id;
       // Check if the receiver has blocked the sender
-      const receiverBlockedIds = await this.safetyService.getBlockedAndBlockerIds(receiverId);
+      const receiverBlockedIds =
+        await this.safetyService.getBlockedAndBlockerIds(receiverId);
       if (receiverBlockedIds.includes(senderId)) {
         throw new Error('You cannot send messages to this user.');
       }
