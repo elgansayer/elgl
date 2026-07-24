@@ -1,7 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { json, urlencoded } from 'express';
+import { json, urlencoded, Request, Response } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
@@ -9,7 +9,7 @@ async function bootstrap() {
   // Ensure raw body is preserved for Stripe webhook
   app.use(
     json({
-      verify: (req: any, _res: any, buf: Buffer) => {
+      verify: (req: Request & { rawBody?: Buffer }, _res: Response, buf: Buffer) => {
         req.rawBody = buf;
       },
     }),
@@ -17,7 +17,7 @@ async function bootstrap() {
   app.use(
     urlencoded({
       extended: true,
-      verify: (req: any, _res: any, buf: Buffer) => {
+      verify: (req: Request & { rawBody?: Buffer }, _res: Response, buf: Buffer) => {
         req.rawBody = buf;
       },
     }),

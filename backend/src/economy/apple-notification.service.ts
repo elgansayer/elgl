@@ -123,9 +123,13 @@ export class AppleNotificationService {
    * Handles a new subscription event.
    */
   private handleSubscribed(data: Record<string, unknown> | undefined): void {
-    const signedTransactionInfo = data?.signedTransactionInfo as
-      Record<string, unknown> | undefined;
-    const userId = data?.appAccountToken as string | undefined;
+    const rawSignedTransactionInfo: unknown = data?.signedTransactionInfo;
+    const signedTransactionInfo: Record<string, unknown> | undefined =
+      typeof rawSignedTransactionInfo === 'object' && rawSignedTransactionInfo !== null
+        ? (rawSignedTransactionInfo as Record<string, unknown>)
+        : undefined;
+
+    const userId = (data?.appAccountToken ?? undefined) as string | undefined;
     const productId = signedTransactionInfo?.productId as string | undefined;
     const transactionId = signedTransactionInfo?.transactionId as
       string | undefined;
@@ -154,7 +158,7 @@ export class AppleNotificationService {
   private handleRenewalStatusChange(
     data: Record<string, unknown> | undefined,
   ): void {
-    const userId = data?.appAccountToken as string | undefined;
+    const userId = (data?.appAccountToken ?? undefined) as string | undefined;
     const autoRenewStatus = data?.autoRenewStatus as number | undefined;
 
     if (!userId) {
@@ -175,7 +179,7 @@ export class AppleNotificationService {
   private handleRenewalPreferenceChange(
     data: Record<string, unknown> | undefined,
   ): void {
-    const userId = data?.appAccountToken as string | undefined;
+    const userId = (data?.appAccountToken ?? undefined) as string | undefined;
     const newProductId = data?.autoRenewProductId as string | undefined;
 
     if (!userId || !newProductId) {
@@ -194,7 +198,7 @@ export class AppleNotificationService {
    * Handles a failed renewal attempt.
    */
   private handleFailedRenewal(data: Record<string, unknown> | undefined): void {
-    const userId = data?.appAccountToken as string | undefined;
+    const userId = (data?.appAccountToken ?? undefined) as string | undefined;
     const gracePeriodExpiresDate = data?.gracePeriodExpiresDate as
       string | undefined;
 
@@ -214,7 +218,7 @@ export class AppleNotificationService {
    * Handles subscription expiration.
    */
   private handleExpired(data: Record<string, unknown> | undefined): void {
-    const userId = data?.appAccountToken as string | undefined;
+    const userId = (data?.appAccountToken ?? undefined) as string | undefined;
     const expirationIntent = data?.expirationIntent as number | undefined;
 
     if (!userId) {
@@ -233,9 +237,13 @@ export class AppleNotificationService {
    * Handles a refund request.
    */
   private handleRefund(data: Record<string, unknown> | undefined): void {
-    const signedTransactionInfo = data?.signedTransactionInfo as
-      Record<string, unknown> | undefined;
-    const userId = data?.appAccountToken as string | undefined;
+    const rawSignedTransactionInfo: unknown = data?.signedTransactionInfo;
+    const signedTransactionInfo: Record<string, unknown> | undefined =
+      typeof rawSignedTransactionInfo === 'object' && rawSignedTransactionInfo !== null
+        ? (rawSignedTransactionInfo as Record<string, unknown>)
+        : undefined;
+
+    const userId = (data?.appAccountToken ?? undefined) as string | undefined;
     const transactionId = signedTransactionInfo?.transactionId as
       string | undefined;
 
@@ -255,7 +263,7 @@ export class AppleNotificationService {
    * Handles a revoke notification (e.g., family sharing removal).
    */
   private handleRevoke(data: Record<string, unknown> | undefined): void {
-    const userId = data?.appAccountToken as string | undefined;
+    const userId = (data?.appAccountToken ?? undefined) as string | undefined;
 
     if (!userId) {
       return;
@@ -271,7 +279,7 @@ export class AppleNotificationService {
    * Handles a price increase notification.
    */
   private handlePriceIncrease(data: Record<string, unknown> | undefined): void {
-    const userId = data?.appAccountToken as string | undefined;
+    const userId = (data?.appAccountToken ?? undefined) as string | undefined;
     const newPrice = data?.price as number | undefined;
 
     if (!userId) {
@@ -290,7 +298,7 @@ export class AppleNotificationService {
   private handleRefundDeclined(
     data: Record<string, unknown> | undefined,
   ): void {
-    const userId = data?.appAccountToken as string | undefined;
+    const userId = (data?.appAccountToken ?? undefined) as string | undefined;
 
     if (!userId) {
       return;
@@ -305,9 +313,13 @@ export class AppleNotificationService {
   private handleConsumptionRequest(
     data: Record<string, unknown> | undefined,
   ): void {
-    const signedTransactionInfo = data?.signedTransactionInfo as
-      Record<string, unknown> | undefined;
-    const userId = data?.appAccountToken as string | undefined;
+    const rawSignedTransactionInfo: unknown = data?.signedTransactionInfo;
+    const signedTransactionInfo: Record<string, unknown> | undefined =
+      typeof rawSignedTransactionInfo === 'object' && rawSignedTransactionInfo !== null
+        ? (rawSignedTransactionInfo as Record<string, unknown>)
+        : undefined;
+
+    const userId = (data?.appAccountToken ?? undefined) as string | undefined;
     const transactionId = signedTransactionInfo?.transactionId as
       string | undefined;
 
@@ -329,7 +341,7 @@ export class AppleNotificationService {
   private handleRenewalExtension(
     data: Record<string, unknown> | undefined,
   ): void {
-    const userId = data?.appAccountToken as string | undefined;
+    const userId = (data?.appAccountToken ?? undefined) as string | undefined;
     const extensionLength = data?.extensionLength as number | undefined;
 
     if (!userId) {
@@ -548,7 +560,7 @@ export class AppleNotificationService {
     if (!extensionDays) return;
     const supabase = this.supabaseService.getClient();
 
-    supabase
+    void supabase
       .from('subscriptions')
       .select('expires_at')
       .eq('user_id', userId)
@@ -566,7 +578,7 @@ export class AppleNotificationService {
           currentExpiry.getTime() + extensionDays * 24 * 60 * 60 * 1000,
         );
 
-        supabase
+        void supabase
           .from('subscriptions')
           .update({
             expires_at: newExpiry.toISOString(),
