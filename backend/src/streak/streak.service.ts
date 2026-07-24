@@ -26,11 +26,12 @@ export class StreakService {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     // Query users whose last_active_at is older than the cutoff
+    // OR last_active_at is NULL (never active)
     // and who still have a streak > 0
     const { data: inactiveUsers, error: queryError } = await supabase
       .from('users')
       .select('id, study_streak_days, last_active_at')
-      .lt('last_active_at', cutoff)
+      .or(`last_active_at.lt.${cutoff},last_active_at.is.null`)
       .gt('study_streak_days', 0);
 
     if (queryError) {
