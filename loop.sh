@@ -1,5 +1,5 @@
 #!/bin/bash
-# loop.sh (5-Stage Waterfall Architecture with Global Rate Limit Watcher)
+# loop.sh (5-Stage Waterfall Architecture with Global Rate Limit Watcher & Bash Context)
 export OPENAI_MAX_RETRIES=0
 export LITELLM_NUM_RETRIES=0
 export AIDER_RETRIES=0
@@ -88,12 +88,45 @@ while true; do
     echo "========================================"
     echo "STAGE 3: CLEAN UP (Lint & Test)"
     echo "========================================"
-    run_aider_with_fallback "Run the codebase verifications: 'cd frontend && npm run lint' and 'cd backend && npm run lint'. Then run the test suites: 'cd backend && npm test' and 'cd frontend && npm test -- --watch=false'. If ANY tests fail, you MUST fix the code until all tests pass." ""
+    > test_errors.log
+    
+    echo "Linting frontend..."
+    (cd frontend && npm run lint) >> test_errors.log 2>&1
+    LINT_FRONT=$?
+    
+    echo "Linting backend..."
+    (cd backend && npm run lint) >> test_errors.log 2>&1
+    LINT_BACK=$?
+    
+    echo "Testing backend..."
+    (cd backend && npm test) >> test_errors.log 2>&1
+    TEST_BACK=$?
+    
+    echo "Testing frontend..."
+    (cd frontend && npm test -- --watch=false) >> test_errors.log 2>&1
+    TEST_FRONT=$?
+
+    if [ $LINT_FRONT -ne 0 ] || [ $LINT_BACK -ne 0 ] || [ $TEST_BACK -ne 0 ] || [ $TEST_FRONT -ne 0 ]; then
+        echo "Tests failed. Passing logs to AI for fixing..."
+        ERROR_CONTEXT=$(tail -n 100 test_errors.log)
+        run_aider_with_fallback "The automated test suite failed. Review the following error logs and fix the codebase so that the tests pass. Do not invent new features, only fix the errors shown here: $ERROR_CONTEXT" ""
+    else
+        echo "All tests and linting passed!"
+    fi
 
     echo "========================================"
     echo "STAGE 4: POST-MANAGEMENT (Verification)"
     echo "========================================"
-    run_aider_with_fallback "Review the git diff. Did we successfully complete: '$CURRENT_TASK'? If yes, change [ ] to [x] in TODO.md. If we missed requirements, add a new [ ] task below it." "TODO.md"
+    # Grab the first 200 lines of the diff to avoid token overflow
+    GIT_DIFF=$(git diff HEAD | head -n 200)
+    
+    if [ -z "$GIT_DIFF" ]; then
+        echo "No changes detected."
+        run_aider_with_fallback "No changes were made for the task: '$CURRENT_TASK'. Investigate why and update TODO.md if there is a blocker." "TODO.md"
+    else
+        echo "Changes detected. Passing diff to AI for TODO.md updates."
+        run_aider_with_fallback "Review this git diff for task '$CURRENT_TASK': $GIT_DIFF. If the task is fully complete, change [ ] to [x] in TODO.md. If incomplete, add a new [ ] task below it." "TODO.md"
+    fi
 
     echo "========================================"
     echo "STAGE 5: NEXT (Git Sync & Cooldown)"
