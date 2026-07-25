@@ -59,9 +59,9 @@ export class ReportUserModalComponent {
       };
       await this.safetyService.reportUser(payload).toPromise();
       this.reportSent.emit();
-      this.toast.show('Report submitted successfully', 'success');
+      this.toast.show('Report submitted successfully', { type: 'success' });
     } catch (error) {
-      this.toast.show('Failed to submit report', 'error');
+      this.toast.show('Failed to submit report', { type: 'error' });
     } finally {
       this.submitting.set(false);
       this.closed.emit();
