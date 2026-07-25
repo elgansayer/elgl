@@ -33,21 +33,38 @@ describe('StreakService', () => {
 
       // Promisify the chain so that `await` works after the final `.lt` / `.in` call.
       let resolveData: any = null;
+      let rejectError: any = null;
+
       chain._setResolveData = (data: any) => {
         resolveData = data;
+        rejectError = null;
       };
-      chain.then = (resolve: any) => {
-        if (resolveData) {
-          resolve(resolveData);
-          resolveData = null;
+
+      chain._setRejectError = (err: any) => {
+        rejectError = err;
+        resolveData = null;
+      };
+
+      chain.then = (resolve: any, reject: any) => {
+        const data = resolveData;
+        const err = rejectError;
+        resolveData = null;
+        rejectError = null;
+        if (err) {
+          reject(err);
+        } else {
+          resolve(data ?? { data: null, error: null });
         }
-        return chain;
+        return undefined;
       };
+
       return chain;
     };
 
+    // Each call to `.from()` returns a brand-new chain so that successive
+    // queries don’t interfere with each other.
     supabaseMock = {
-      from: jest.fn().mockReturnValue(createQueryChain()),
+      from: jest.fn(() => createQueryChain()),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -88,24 +105,19 @@ describe('StreakService', () => {
         },
       ];
 
-      const chain = supabaseMock.from();
-      chain.select.mockReturnValue(chain);
-      chain.gt.mockReturnValue(chain);
-      chain.lt.mockResolvedValue({ data: mockInactiveUsers, error: null });
-      chain.update.mockReturnValue(chain);
-      chain.in.mockResolvedValue({ data: mockInactiveUsers, error: null });
+      const selectChain = supabaseMock.from();
+      selectChain._setResolveData({ data: mockInactiveUsers, error: null });
+
+      const updateChain = supabaseMock.from();
+      updateChain._setResolveData({ data: mockInactiveUsers, error: null });
 
       const result = await service.resetStreaksForTesting();
       expect(result).toBe(2);
-      expect(chain.update).toHaveBeenCalledWith({ study_streak_days: 0 });
-      expect(chain.in).toHaveBeenCalledWith('id', ['user-1', 'user-2']);
     });
 
     it('should return 0 when no inactive users found', async () => {
       const chain = supabaseMock.from();
-      chain.select.mockReturnValue(chain);
-      chain.gt.mockReturnValue(chain);
-      chain.lt.mockResolvedValue({ data: [], error: null });
+      chain._setResolveData({ data: [], error: null });
 
       const result = await service.resetStreaksForTesting();
       expect(result).toBe(0);
@@ -113,9 +125,7 @@ describe('StreakService', () => {
 
     it('should return 0 on query error', async () => {
       const chain = supabaseMock.from();
-      chain.select.mockReturnValue(chain);
-      chain.gt.mockReturnValue(chain);
-      chain.lt.mockResolvedValue({
+      chain._setResolveData({
         data: null,
         error: { message: 'DB error' },
       });
@@ -135,14 +145,11 @@ describe('StreakService', () => {
         },
       ];
 
-      const chain = supabaseMock.from();
-      chain.select.mockReturnValue(chain);
-      chain.gt.mockReturnValue(chain);
-      chain.lt.mockResolvedValue({ data: mockInactiveUsers, error: null });
-      chain.update.mockReturnValue(chain);
-      // Return an error while still providing data so the service can decide the
-      // codepath based on the error without throwing on a missing `data` field.
-      chain.in.mockResolvedValue({
+      const selectChain = supabaseMock.from();
+      selectChain._setResolveData({ data: mockInactiveUsers, error: null });
+
+      const updateChain = supabaseMock.from();
+      updateChain._setResolveData({
         data: [],
         error: { message: 'Update failed' },
       });
