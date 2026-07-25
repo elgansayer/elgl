@@ -37,7 +37,7 @@ import { ReportUserModalComponent } from '../report-user-modal/report-user-modal
         [reportedUserId]="senderId()"
         [contextUrl]="buildContextUrl()"
         (close)="showReportModal = false"
-        (reported)="onReportSubmitted($event)"
+        (reported)="onReportSubmitted()"
       ></app-report-user-modal>
     }
   `,
@@ -162,7 +162,7 @@ export class LongPressContextMenuComponent {
     this.clearLongPressTimer();
   }
 
-  onReportSubmitted(event: { reported_id: string; reason_category: string; context_url: string }): void {
+  onReportSubmitted(): void {
     this.showReportModal = false;
     this.report.emit({
       messageId: this.messageId(),

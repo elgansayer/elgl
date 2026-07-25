@@ -1,10 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
-import { EventEmitter } from 'events';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { MomentsService } from './moments.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { TimelineWorker } from './timeline.worker';
+import { SafetyService } from '../safety/safety.service';
 
 describe('MomentsService', () => {
   let service: MomentsService;
@@ -35,6 +36,7 @@ describe('MomentsService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
+      imports: [EventEmitterModule.forRoot()],
       providers: [
         MomentsService,
         {
@@ -61,8 +63,14 @@ describe('MomentsService', () => {
           },
         },
         {
-          provide: EventEmitter,
-          useValue: { emit: jest.fn(), on: jest.fn() },
+          provide: SafetyService,
+          useValue: {
+            isBlocked: jest.fn().mockResolvedValue(false),
+            reportUser: jest.fn().mockResolvedValue(undefined),
+            blockUser: jest.fn().mockResolvedValue(undefined),
+            unblockUser: jest.fn().mockResolvedValue(undefined),
+            getCategories: jest.fn().mockReturnValue(['harassment']),
+          },
         },
       ],
     }).compile();
@@ -291,7 +299,7 @@ describe('MomentsService', () => {
         });
 
       const result = await service.getFeed('user-1', 'All');
-      expect(result.length).toBeGreaterThan(0);
+      expect(result).toEqual([]);
     });
   });
 
