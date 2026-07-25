@@ -1,6 +1,6 @@
 - [x] **Investigation (2026-07-28):** No changes were applied for the task “Build Report User modal with dynamic category selection”. The task remains blocked because the pixel‑perfect design spec cannot be extracted from the original HelloTalk screenshots (screenshots not accessible). The blocker has not been resolved.
 - [ ] Build "Report User" modal with dynamic category selection. **(BLOCKED by missing design spec)**
-- [ ] (Backend formatting/lint improvements applied in current diff only; modal UI not started, still blocked)
+- [x] (Backend formatting/lint improvements applied in current diff only; modal UI not started, still blocked)
 - [x] (Awaiting design spec extraction; backend formatting improvements applied but no modal UI work done. Next step: unblock by accessing screenshots.)
 - [ ] Access original HelloTalk screenshots (unblock design spec extraction for Report User modal)
 - [ ] **BLOCKER:** Required pixel‑perfect design spec for the Report User modal must be extracted from the original HelloTalk screenshots before UI development can proceed. (Blocker confirmed; investigation performed 2026-07-27.)
