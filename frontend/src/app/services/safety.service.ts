@@ -29,6 +29,7 @@ export class SafetyService {
 
   // Local cache for blocked user IDs (bidirectional: blocked + blocker)
   private _blockedUserIds = signal<Set<string>>(new Set());
+  public readonly blockedUserIdsSignal = this._blockedUserIds.asReadonly();
 
   private blockedIdsSubject = new BehaviorSubject<Set<string>>(new Set());
   public blockedUserIds$ = this.blockedIdsSubject.asObservable();

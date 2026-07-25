@@ -40,7 +40,7 @@ export interface ContextMenuOption {
           <button
             *ngFor="let option of translatedOptions(); trackBy: trackByOptionId"
             class="w-full flex items-center gap-3 ps-4 pe-4 pt-2.5 pb-2.5 text-sm text-gray-200 hover:bg-surface-200 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-            [disabled]="(option.id === 'block' && isSenderBlocked) || (option.id === 'unblock' && !isSenderBlocked) || option.disabled"
+            [disabled]="(option.id === 'block' && isSenderBlocked()) || (option.id === 'unblock' && !isSenderBlocked()) || option.disabled"
             (click)="onOptionClick(option.id)"
             role="menuitem"
           >
@@ -86,13 +86,13 @@ export class LongPressContextMenuComponent implements AfterViewInit {
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private touchMoved = false;
 
-  /** Dynamically determine if the sender is currently blocked using the safety service signal. */
-  get isSenderBlocked(): boolean {
-    return this.safetyService.blockedUserIds.has(this.senderId());
-  }
+  /** Computed signal that derives blocked status from the reactive safety service. */
+  readonly isSenderBlocked = computed(() =>
+    this.safetyService.blockedUserIdsSignal().has(this.senderId())
+  );
 
   readonly options = computed<ContextMenuOption[]>(() => {
-    const blocked = this.isSenderBlocked;
+    const blocked = this.isSenderBlocked();   // updated to use signal value
     const baseOptions: ContextMenuOption[] = [
       { id: 'copy', label: this.i18n.translate('context_menu.copy'), icon: '📋' },
       { id: 'favourite', label: this.i18n.translate('context_menu.favourite'), icon: '⭐' },
