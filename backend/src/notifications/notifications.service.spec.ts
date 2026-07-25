@@ -17,6 +17,13 @@ describe('NotificationsService', () => {
       in: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       limit: jest.fn().mockResolvedValue({ data: [], error: null }),
+      // Make the builder thenable so awaiting the chain resolves correctly
+      then: jest
+        .fn()
+        .mockImplementation((resolve: (value: any) => void) => {
+          resolve({ data: [], error: null });
+          return Promise.resolve({ data: [], error: null });
+        }),
     };
 
     mockSupabaseClient = {

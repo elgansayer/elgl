@@ -3,6 +3,8 @@ import { UserDetailComponent } from './user-detail.component';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { SafetyService } from '../../services/safety.service';
+import { of } from 'rxjs';
 
 describe('UserDetailComponent', () => {
   let component: UserDetailComponent;
@@ -14,8 +16,14 @@ describe('UserDetailComponent', () => {
       providers: [
         provideRouter([]),
         provideHttpClient(),
-        provideHttpClientTesting()
-      ]
+        provideHttpClientTesting(),
+        {
+          provide: SafetyService,
+          useValue: {
+            getBlockedUserIds: jest.fn().mockReturnValue(of([])),
+          },
+        },
+      ],
     })
     .compileComponents();
     
