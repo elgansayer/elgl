@@ -11,8 +11,6 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReportUserModalComponent } from '../report-user-modal/report-user-modal.component';
-import { SafetyService } from '../../services/safety.service';
-import { ToastService } from '../primitives/toast/toast.service';
 
 @Component({
   selector: 'app-long-press-context-menu',
@@ -39,7 +37,7 @@ import { ToastService } from '../primitives/toast/toast.service';
       [contextUrl]="buildContextUrl()"
       [show]="showReportModal"
       (closed)="showReportModal = false"
-      (submitted)="onReportSubmitted($event)">
+      (submitted)="onReportSubmitted()">
     </app-report-user-modal>
   `,
   styles: [
@@ -101,11 +99,7 @@ export class LongPressContextMenuComponent {
   showReportModal = false;
   longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(
-    private elementRef: ElementRef,
-    private safetyService: SafetyService,
-    private toastService: ToastService,
-  ) {}
+  constructor(private elementRef: ElementRef) {}
 
   onOptionClick(option: string): void {
     if (option === 'copy') {
@@ -117,7 +111,6 @@ export class LongPressContextMenuComponent {
         messageType: this.messageType(),
       });
     } else if (option === 'report') {
-      // Close context menu and open the report modal
       this.close();
       this.showReportModal = true;
       return;
@@ -190,32 +183,15 @@ export class LongPressContextMenuComponent {
     return window.location.href;
   }
 
-  async onReportSubmitted(payload: { reasonCategory: string; description: string }): Promise<void> {
-    const reportedUserId = this.senderId();
-    if (!reportedUserId) {
-      this.toastService.show('Cannot report: missing user information.', { type: 'error', duration: 3000 });
-      this.showReportModal = false;
-      return;
-    }
-    try {
-      await this.safetyService.reportUserAsync({
-        reported_id: reportedUserId,
-        reason_category: payload.reasonCategory,
-        description: payload.description || undefined,
-        context_url: this.buildContextUrl(),
-      });
-      this.toastService.show('Thanks for your report!', { type: 'success', duration: 3000 });
-      // Emit the original report event so parent components can react
-      this.report.emit({
-        messageId: this.messageId(),
-        content: this.messageContent(),
-        senderId: this.senderId(),
-        roomId: this.roomId(),
-      });
-    } catch {
-      this.toastService.show('Failed to submit report', { type: 'error', duration: 5000 });
-    } finally {
-      this.showReportModal = false;
-    }
+  onReportSubmitted(): void {
+    // The modal already submitted the report and shows its own toast.
+    // We just emit the parent report event with the relevant context.
+    this.report.emit({
+      messageId: this.messageId(),
+      content: this.messageContent(),
+      senderId: this.senderId(),
+      roomId: this.roomId(),
+    });
+    this.showReportModal = false;
   }
 }
