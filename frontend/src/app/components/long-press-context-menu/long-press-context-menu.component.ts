@@ -35,10 +35,11 @@ import { SafetyService } from '../../services/safety.service';
     }
     @if (showReportModal) {
       <app-report-user-modal
+        [reportedUserId]="messageAuthorId"
         [show]="showReportModal"
-        [reportedUserId]="senderId()"
         [contextUrl]="buildContextUrl()"
-        (close)="showReportModal = false; onReportSubmitted()">
+        (close)="showReportModal = false"
+        (reported)="onReportSubmitted()">
       </app-report-user-modal>
     }
   `,

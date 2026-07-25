@@ -26,6 +26,7 @@ export class ReportUserModalComponent implements OnInit {
 
   // expose a single close event (used by parent)
   readonly close         = output<void>();
+  readonly reported      = output<void>();
 
   // UI state
   readonly selectedCategory = signal<string | null>(null);
@@ -69,6 +70,7 @@ export class ReportUserModalComponent implements OnInit {
       };
       await firstValueFrom(this.safetyService.reportUser(payload));
       this.toast.show('Report submitted successfully', { type: 'success' });
+      this.reported.emit();
     } catch {
       this.toast.show('Failed to submit report', { type: 'error' });
     } finally {
