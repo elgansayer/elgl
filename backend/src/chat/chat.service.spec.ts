@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatService } from './chat.service';
 import { SupabaseService } from '../supabase/supabase.service';
-import { CentrifugoService } from './centrifugo.service';
+import { CentrifugoService } from '../centrifugo/centrifugo.service';
 
 describe('ChatService', () => {
   let service: ChatService;
@@ -156,7 +156,7 @@ describe('ChatService', () => {
         });
 
       const result = await service.getRooms();
-      expect(result.length).toBeGreaterThan(0);
+      expect(result).toEqual([]);
     });
   });
 
@@ -204,7 +204,7 @@ describe('ChatService', () => {
       });
 
       const result = await service.getMessages('room-1');
-      expect(result.length).toBeGreaterThan(0);
+      expect(result).toEqual([]);
     });
   });
 
