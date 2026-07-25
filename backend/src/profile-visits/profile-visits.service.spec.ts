@@ -34,7 +34,7 @@ describe('ProfileVisitsService', () => {
         },
         {
           provide: NotificationsService,
-          useValue: new Proxy({}, { get: (_, _prop) => jest.fn() }),
+          useValue: new Proxy({}, { get: () => jest.fn() }) as unknown as NotificationsService,
         },
         {
           provide: EventEmitter2,
