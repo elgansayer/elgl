@@ -10,3 +10,8 @@ Added AGENTS.md to the chat (read-only).
 
 https://v22.angular.dev/extended-diagnostics/NG8117[0m
 Scraping https://v22.angular.dev/extended-diagnostics/NG8117[0m...
+Repo-map can't include /root/hellotalk/.agents/skills/langfuse-skills
+Has it been deleted from the file system but not from git?
+litellm.BadRequestError: OpenAIException - model "gpt-5.5" is not accessible via
+the /chat/completions endpoint
+
