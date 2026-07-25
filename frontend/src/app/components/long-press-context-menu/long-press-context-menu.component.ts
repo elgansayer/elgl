@@ -10,7 +10,7 @@ import {
   ElementRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReportUserModalComponent } from './report-user-modal/report-user-modal.component';
+import { ReportUserModalComponent } from '../report-user-modal/report-user-modal.component';
 
 @Component({
   selector: 'app-long-press-context-menu',

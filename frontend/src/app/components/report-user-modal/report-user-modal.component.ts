@@ -1,7 +1,7 @@
-import { Component, input, output, inject, signal } from '@angular/core';
+import { Component, input, output, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { SafetyService } from '../../services/safety.service';
+import { SafetyService, ReportCategory } from '../../services/safety.service';
 import { ToastService } from '../../components/primitives/toast/toast.service';
 
 @Component({
@@ -16,9 +16,13 @@ import { ToastService } from '../../components/primitives/toast/toast.service';
            (click)="$event.stopPropagation()">
         <h2 class="mb-6 text-2xl font-bold text-white text-center">Report User</h2>
 
+        @if (isLoadingCategories()) {
+          <div class="text-sm text-slate-400 mb-4 text-center">Loading categories…</div>
+        }
+
         <!-- Category selection -->
         <div class="mb-6 space-y-3">
-          @for (cat of categories; track cat.value) {
+          @for (cat of categories(); track cat.value) {
             <button
               type="button"
               class="w-full rounded-xl px-4 py-3 text-start transition-all duration-200 text-white border"
@@ -70,7 +74,7 @@ import { ToastService } from '../../components/primitives/toast/toast.service';
     </div>
   `,
 })
-export class ReportUserModalComponent {
+export class ReportUserModalComponent implements OnInit {
   readonly reportedUserId = input.required<string>();
   readonly contextUrl = input<string>('');
   readonly close = output<void>();
@@ -79,18 +83,40 @@ export class ReportUserModalComponent {
   private readonly safetyService = inject(SafetyService);
   private readonly toastService = inject(ToastService);
 
-  readonly categories = [
-    { value: 'harassment', label: 'Harassment or bullying' },
-    { value: 'spam', label: 'Spam or advertising' },
-    { value: 'inappropriate_content', label: 'Inappropriate content' },
-    { value: 'fake_profile', label: 'Fake profile' },
-    { value: 'underage', label: 'Underage user' },
-    { value: 'other', label: 'Other' },
-  ];
+  categories = signal<ReportCategory[]>(this.getStaticCategories());
+  isLoadingCategories = signal(false);
 
   selectedCategory = signal<string | null>(null);
   description = '';
   isSubmitting = signal(false);
+
+  private getStaticCategories(): ReportCategory[] {
+    return [
+      { value: 'harassment', label: 'Harassment', icon: '🚫', description: 'Unwanted advances, threats, or abusive behaviour' },
+      { value: 'spam', label: 'Spam', icon: '📧', description: 'Unsolicited promotions, phishing, or fraudulent activity' },
+      { value: 'inappropriate_content', label: 'Inappropriate Content', icon: '🔞', description: 'Sexually explicit, violent, or offensive material' },
+      { value: 'fake_profile', label: 'Fake Profile', icon: '🎭', description: 'Pretending to be someone else or using false identity' },
+      { value: 'other', label: 'Other', icon: '📝', description: 'Something else not listed above' },
+    ];
+  }
+
+  ngOnInit(): void {
+    this.loadCategories();
+  }
+
+  private loadCategories(): void {
+    this.isLoadingCategories.set(true);
+    this.safetyService.getReportCategories().subscribe({
+      next: (cats) => {
+        this.categories.set(cats.length ? cats : this.getStaticCategories());
+        this.isLoadingCategories.set(false);
+      },
+      error: () => {
+        this.categories.set(this.getStaticCategories());
+        this.isLoadingCategories.set(false);
+      },
+    });
+  }
 
   selectCategory(cat: string) {
     this.selectedCategory.set(cat);
