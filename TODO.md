@@ -185,7 +185,7 @@
 - [STUCK] Step 3: Avatar upload and permissions prompt (Microphone, Camera).
 
 ## Phase 24: Advanced Search Filters
-- [ ] Implement Gender filter in discovery (VIP tier).
+- [STUCK] Implement Gender filter in discovery (VIP tier).
 - [ ] Implement Age Range dual-thumb slider controls.
 - [ ] Add "Voice Room Active" filter to find users currently hosting streams.
 
