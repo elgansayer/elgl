@@ -272,7 +272,7 @@ async function runSeed() {
     .limit(1)
     .single();
 
-  const firstVip: UserIdRow | null = firstVipRaw as UserIdRow | null;
+  const firstVip: UserIdRow | null = firstVipRaw;
 
   if (firstVip) {
     await supabase.from('subscription_events').insert([

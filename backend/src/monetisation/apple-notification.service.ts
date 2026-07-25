@@ -199,9 +199,7 @@ export class AppleNotificationService {
     );
   }
 
-  private verifyJwsPayload(
-    signedPayload: string,
-  ): AppleNotificationPayload {
+  private verifyJwsPayload(signedPayload: string): AppleNotificationPayload {
     const parts = signedPayload.split('.');
     if (parts.length !== 3) {
       throw new BadRequestException('Invalid JWS format');
