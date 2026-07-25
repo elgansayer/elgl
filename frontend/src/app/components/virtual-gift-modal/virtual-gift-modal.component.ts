@@ -1,23 +1,23 @@
 import { Component, EventEmitter, Input, Output, inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { EconomyStore, VirtualGift } from '../../services/economy.store';
 
 @Component({
   selector: 'app-virtual-gift-modal',
-  imports: [CommonModule],
+  imports: [],
   template: `
     <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div
         class="bg-surface-200 rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-surface-100 space-y-5 animate-fadeIn"
       >
-        <div
-          class="flex items-center justify-between border-b border-surface-100 pb-3"
-        >
+        <div class="flex items-center justify-between border-b border-surface-100 pb-3">
           <div>
             <h3 class="text-xl font-black text-text-primary flex items-center gap-2">
               <span>🎁 Send virtual gift to host</span>
             </h3>
-            <p class="text-xs text-text-secondary">Support language partners with animated tokens</p>
+            <p class="text-xs text-text-secondary">
+              Support language partners with animated tokens
+            </p>
           </div>
           <button
             (click)="closed.emit()"
@@ -33,8 +33,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
           <div class="flex items-center gap-2">
             <span class="text-2xl">💰</span>
             <div>
-              <span
-                class="text-[10px] uppercase font-black text-amber-400 block"
+              <span class="text-[10px] uppercase font-black text-amber-400 block"
                 >Your coin balance:</span
               >
               <span class="text-lg font-extrabold text-amber-950"
@@ -142,10 +141,9 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                   "
                 >
                   <span class="text-3xl block">{{ gift.icon }}</span>
-                  <span
-                    class="font-bold text-xs text-text-primary block truncate w-full"
-                    >{{ gift.name }}</span
-                  >
+                  <span class="font-bold text-xs text-text-primary block truncate w-full">{{
+                    gift.name
+                  }}</span>
                   <span class="text-[11px] font-extrabold text-amber-600"
                     >🪙 {{ gift.cost_coins }} Coins</span
                   >

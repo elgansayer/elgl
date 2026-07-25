@@ -1,12 +1,12 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule, Location } from '@angular/common';
+import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
 import { UserService } from '../../services/user.service';
 
 @Component({
   selector: 'app-settings',
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss'],
 })

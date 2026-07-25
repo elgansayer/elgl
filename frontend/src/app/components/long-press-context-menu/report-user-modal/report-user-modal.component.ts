@@ -1,5 +1,5 @@
 import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { SafetyService, ReportUserDto } from '../../../services/safety.service';
 
@@ -14,7 +14,7 @@ const REPORT_CATEGORIES = [
 @Component({
   selector: 'app-report-user-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   templateUrl: './report-user-modal.component.html',
   styleUrls: ['./report-user-modal.component.scss'],
 })

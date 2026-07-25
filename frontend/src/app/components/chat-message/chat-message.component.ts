@@ -70,7 +70,7 @@ import { Subject, takeUntil } from 'rxjs';
               <img [src]="message.media_url" class="max-w-full rounded" alt="Doodle">
             }
 
-            <p class="text-xs mt-1 opacity-60 text-right">{{ message.created_at | date:'shortTime' }}</p>
+            <p class="text-xs mt-1 opacity-60 text-end">{{ message.created_at | date:'shortTime' }}</p>
           </div>
         </div>
       </app-long-press-context-menu>

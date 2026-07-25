@@ -1,20 +1,24 @@
 import { Component, inject, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { HobbyTagsStore } from '../../services/hobby-tags.store';
 import { HobbyTag } from '../../services/hobby-tags.service';
 
 @Component({
   selector: 'app-hobby-tag-selector',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   template: `
     <div class="space-y-4">
       <h3 class="text-lg font-bold text-slate-200">Select your hobbies & interests</h3>
-      <p class="text-sm text-text-muted">Choose tags to get personalised vocabulary recommendations</p>
+      <p class="text-sm text-text-muted">
+        Choose tags to get personalised vocabulary recommendations
+      </p>
 
       @for (category of categories(); track category) {
         <div class="space-y-2">
-          <h4 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">{{ category }}</h4>
+          <h4 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">
+            {{ category }}
+          </h4>
           <div class="flex flex-wrap gap-2">
             @for (tag of tagsByCategory().get(category); track tag.id) {
               <button
@@ -26,7 +30,12 @@ import { HobbyTag } from '../../services/hobby-tags.service';
                 <span>{{ tag.name }}</span>
                 @if (isSelected(tag.id)) {
                   <svg class="w-4 h-4 ms-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                 }
               </button>
@@ -40,12 +49,19 @@ import { HobbyTag } from '../../services/hobby-tags.service';
           <h4 class="text-sm font-semibold text-slate-300 mb-3">Your selected interests</h4>
           <div class="flex flex-wrap gap-2">
             @for (tag of selectedTags(); track tag.id) {
-              <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-500/20 text-indigo-300 rounded-full text-sm border border-indigo-500/30">
+              <span
+                class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-500/20 text-indigo-300 rounded-full text-sm border border-indigo-500/30"
+              >
                 <span>{{ tag.icon }}</span>
                 <span>{{ tag.name }}</span>
                 <button (click)="removeTag(tag.id)" class="ms-1 hover:text-indigo-100">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </span>
@@ -63,7 +79,7 @@ export class HobbyTagSelectorComponent {
   readonly tagsByCategory = computed(() => this.store.tagsByCategory());
   readonly categories = computed(() => Array.from(this.tagsByCategory().keys()));
   readonly selectedTags = computed(() =>
-    this.store.allTags().filter(t => this.store.userTagIds().has(t.id))
+    this.store.allTags().filter((t) => this.store.userTagIds().has(t.id)),
   );
 
   constructor() {
@@ -87,7 +103,8 @@ export class HobbyTagSelectorComponent {
   }
 
   getTagButtonClass(tagId: string): string {
-    const base = 'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 border';
+    const base =
+      'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 border';
     if (this.isSelected(tagId)) {
       return `${base} bg-indigo-500/20 text-indigo-300 border-indigo-500/50 shadow-sm`;
     }

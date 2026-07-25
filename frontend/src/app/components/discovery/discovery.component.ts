@@ -1,6 +1,6 @@
 import { showToast } from '../../services/toast.service';
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -11,12 +11,23 @@ import { SafetyService } from '../../services/safety.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
 import { AppGradientButtonComponent } from '../primitives/gradient-button/gradient-button.component';
-import { LanguagePickerComponent, getLanguageFlag } from '../primitives/language-picker/language-picker.component';
+import {
+  LanguagePickerComponent,
+  getLanguageFlag,
+} from '../primitives/language-picker/language-picker.component';
 import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-discovery',
-  imports: [CommonModule, FormsModule, TranslatePipe, ScrollablePillsComponent, FluencyIndicatorComponent, AppGradientButtonComponent, LanguagePickerComponent, RouterLink],
+  imports: [
+    FormsModule,
+    TranslatePipe,
+    ScrollablePillsComponent,
+    FluencyIndicatorComponent,
+    AppGradientButtonComponent,
+    LanguagePickerComponent,
+    RouterLink,
+  ],
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
 })
@@ -36,13 +47,13 @@ export class DiscoveryComponent implements OnInit {
   readonly selectedNativeLanguage = signal<string>('');
   readonly selectedTargetLanguage = signal<string>('');
   readonly seriousLearnerOnly = signal<boolean>(false);
-  
+
   readonly filterPills = computed(() => {
     this.i18n.translations();
     return [
       { id: 'all', label: this.i18n.translate('discovery.filterAll') },
       { id: 'serious', label: this.i18n.translate('discovery.filterSerious') },
-      { id: 'nearby', label: this.i18n.translate('discovery.filterNearMe') }
+      { id: 'nearby', label: this.i18n.translate('discovery.filterNearMe') },
     ];
   });
   readonly selectedFilter = signal<string>('all');
@@ -61,21 +72,24 @@ export class DiscoveryComponent implements OnInit {
   }
 
   getNativeLangs(partner: UserProfile) {
-    return (partner.native_languages || ['EN']).map(code => ({ code, level: 5 }));
+    return (partner.native_languages || ['EN']).map((code) => ({ code, level: 5 }));
   }
 
   getTargetLangs(partner: UserProfile) {
-    return (partner.target_languages?.length ? partner.target_languages : ['JA']).map(code => ({ code, level: 1 }));
+    return (partner.target_languages?.length ? partner.target_languages : ['JA']).map((code) => ({
+      code,
+      level: 1,
+    }));
   }
 
   async ngOnInit(): Promise<void> {
     try {
       const profile = await this.userService.getMyProfile();
       if (profile && profile.target_languages) {
-        const langs = profile.target_languages.map(code => ({
+        const langs = profile.target_languages.map((code) => ({
           code,
           flag: getLanguageFlag(code),
-          labelKey: `lang.${code.toLowerCase()}`
+          labelKey: `lang.${code.toLowerCase()}`,
         }));
         this.myTargetLangs.set(langs);
       }
@@ -104,9 +118,8 @@ export class DiscoveryComponent implements OnInit {
       });
       // Filter out blocked users
       const blocked = this.blockedUserIds();
-      const filtered = blocked.length > 0
-        ? results.filter(u => !blocked.includes(u.id))
-        : results;
+      const filtered =
+        blocked.length > 0 ? results.filter((u) => !blocked.includes(u.id)) : results;
       this.partners.set(filtered);
     } catch (e) {
       console.error('Partner search failed:', e);

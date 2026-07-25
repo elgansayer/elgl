@@ -1,13 +1,13 @@
 import { showToast, notImplementedToast } from '../../services/toast.service';
 import { Component, EventEmitter, Output, signal, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { TranslatePipe } from '../../services/translate.pipe';
 
 import { UserService } from '../../services/user.service';
 
 @Component({
   selector: 'app-voice-recorder',
-  imports: [CommonModule, TranslatePipe],
+  imports: [TranslatePipe],
   templateUrl: './voice-recorder.component.html',
   styleUrls: ['./voice-recorder.component.scss'],
 })

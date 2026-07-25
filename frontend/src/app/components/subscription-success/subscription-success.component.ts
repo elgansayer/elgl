@@ -1,13 +1,14 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-subscription-success',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   template: `
-    <div class="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center px-4">
+    <div
+      class="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center px-4"
+    >
       <div class="text-center max-w-md">
         <div class="text-6xl mb-6">🎉</div>
         <h1 class="text-3xl font-bold text-white mb-4">Subscription Successful!</h1>
@@ -29,7 +30,7 @@ export class SubscriptionSuccessComponent implements OnInit {
   private router = inject(Router);
 
   ngOnInit(): void {
-    this.route.queryParams.subscribe(params => {
+    this.route.queryParams.subscribe((params) => {
       const sessionId = params['session_id'];
       if (sessionId) {
         // Optionally verify the session with backend

@@ -20,7 +20,11 @@ export class HobbyTagsService {
     return data || [];
   }
 
-  async createTag(name: string, category: string, icon: string = '✨'): Promise<any> {
+  async createTag(
+    name: string,
+    category: string,
+    icon: string = '✨',
+  ): Promise<any> {
     const formattedName = name
       .trim()
       .split(/\s+/)
@@ -37,7 +41,7 @@ export class HobbyTagsService {
         name: formattedName,
         category,
         icon,
-        target_vocabulary: []
+        target_vocabulary: [],
       })
       .select()
       .single();

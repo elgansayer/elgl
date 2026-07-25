@@ -2,7 +2,7 @@ import { showToast, notImplementedToast } from '../../services/toast.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { Component, effect, inject, input, output, signal, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { WordDefinitionModalComponent } from '../word-definition-modal/word-definition-modal.component';
 
@@ -16,9 +16,9 @@ export interface TokenSegmentSpan {
 
 @Component({
   selector: 'app-audio-sync-reader',
-  imports: [CommonModule, TranslatePipe, WordDefinitionModalComponent],
+  imports: [TranslatePipe, WordDefinitionModalComponent],
   templateUrl: './audio-sync-reader.component.html',
-  styleUrls: ['./audio-sync-reader.component.scss']
+  styleUrls: ['./audio-sync-reader.component.scss'],
 })
 export class AudioSyncReaderComponent implements OnDestroy {
   readonly vocabStore = inject(VocabularyStore);
@@ -64,7 +64,7 @@ export class AudioSyncReaderComponent implements OnDestroy {
           isWordLike: item.isWordLike ?? /\w/.test(item.segment),
           index: idx++,
           charStart: item.index,
-          charEnd: item.index + item.segment.length
+          charEnd: item.index + item.segment.length,
         });
       }
     } else {
@@ -80,7 +80,7 @@ export class AudioSyncReaderComponent implements OnDestroy {
             isWordLike: /^\w+$/.test(part),
             index: idx,
             charStart,
-            charEnd
+            charEnd,
           });
         }
       });
@@ -107,11 +107,17 @@ export class AudioSyncReaderComponent implements OnDestroy {
     this.audioElement = new Audio(url);
     this.isPlaying.set(true);
 
-    const wordLikeTokens = this.tokens().filter(t => t.isWordLike);
+    const wordLikeTokens = this.tokens().filter((t) => t.isWordLike);
     const totalWordCount = wordLikeTokens.length;
 
     this.audioElement.ontimeupdate = () => {
-      if (!this.audioElement || !this.isPlaying() || totalWordCount === 0 || !this.audioElement.duration) return;
+      if (
+        !this.audioElement ||
+        !this.isPlaying() ||
+        totalWordCount === 0 ||
+        !this.audioElement.duration
+      )
+        return;
       const progress = this.audioElement.currentTime / this.audioElement.duration;
       const targetIndex = Math.min(Math.floor(progress * totalWordCount), totalWordCount - 1);
       const activeSpan = wordLikeTokens[targetIndex];
@@ -129,7 +135,7 @@ export class AudioSyncReaderComponent implements OnDestroy {
       this.stopPlayback();
     };
 
-    this.audioElement.play().catch(err => {
+    this.audioElement.play().catch((err) => {
       console.error('Failed to start HTML5 audio:', err);
       this.stopPlayback();
     });
@@ -157,7 +163,9 @@ export class AudioSyncReaderComponent implements OnDestroy {
     utterance.onboundary = (event) => {
       if (event.name === 'word') {
         const charIndex = event.charIndex;
-        const matchingToken = this.tokens().find(t => charIndex >= t.charStart && charIndex < t.charEnd);
+        const matchingToken = this.tokens().find(
+          (t) => charIndex >= t.charStart && charIndex < t.charEnd,
+        );
         if (matchingToken) {
           this.activeTokenIndex.set(matchingToken.index);
         }
@@ -206,11 +214,11 @@ export class AudioSyncReaderComponent implements OnDestroy {
     if (!token.isWordLike) return;
     this.selectedToken.set({
       token: token.segment,
-      context: this.text()
+      context: this.text(),
     });
     this.wordClicked.emit({
       token: token.segment,
-      context: this.text()
+      context: this.text(),
     });
   }
 

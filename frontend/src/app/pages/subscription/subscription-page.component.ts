@@ -1,16 +1,18 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { AppCardComponent } from '../../components/primitives/card/card.component';
 import { AppButtonPrimaryComponent } from '../../components/primitives/button-primary/button-primary.component';
 import { AppPillComponent } from '../../components/primitives/pill/pill.component';
 import { AppGradientButtonComponent } from '../../components/primitives/gradient-button/gradient-button.component';
 import { MonetisationService } from '../../services/monetisation.service';
-import { SubscriptionPlansService, SubscriptionPlan } from '../../services/subscription-plans.service';
+import {
+  SubscriptionPlansService,
+  SubscriptionPlan,
+} from '../../services/subscription-plans.service';
 @Component({
   selector: 'app-subscription-page',
   standalone: true,
   imports: [
-    CommonModule,
     AppCardComponent,
     AppButtonPrimaryComponent,
     AppPillComponent,
@@ -21,9 +23,7 @@ import { SubscriptionPlansService, SubscriptionPlan } from '../../services/subsc
       <div class="max-w-6xl mx-auto">
         <!-- Header -->
         <div class="text-center mb-12">
-          <h1 class="text-4xl font-extrabold text-text-primary mb-3">
-            Choose Your Plan
-          </h1>
+          <h1 class="text-4xl font-extrabold text-text-primary mb-3">Choose Your Plan</h1>
           <p class="text-lg text-text-secondary max-w-2xl mx-auto">
             Unlock premium features to accelerate your language learning journey.
           </p>
@@ -32,19 +32,22 @@ import { SubscriptionPlansService, SubscriptionPlan } from '../../services/subsc
         <!-- Loading State -->
         @if (isLoading()) {
           <div class="flex justify-center items-center py-20">
-            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+            <div
+              class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"
+            ></div>
           </div>
         }
 
         <!-- Error State -->
         @if (errorMessage()) {
-          <app-card variant="outlined" customClass="max-w-md mx-auto border-red-500/30 bg-red-500/10">
+          <app-card
+            variant="outlined"
+            customClass="max-w-md mx-auto border-red-500/30 bg-red-500/10"
+          >
             <div class="text-center py-4">
               <p class="text-red-400 font-semibold mb-2">Failed to load plans</p>
               <p class="text-text-secondary text-sm mb-4">{{ errorMessage() }}</p>
-              <app-button-primary (clicked)="loadPlans()" size="sm">
-                Try Again
-              </app-button-primary>
+              <app-button-primary (clicked)="loadPlans()" size="sm"> Try Again </app-button-primary>
             </div>
           </app-card>
         }
@@ -75,7 +78,8 @@ import { SubscriptionPlansService, SubscriptionPlan } from '../../services/subsc
                   <div class="mb-6">
                     <div class="flex items-baseline gap-1">
                       <span class="text-4xl font-extrabold text-text-primary">
-                        {{ plan.currency === 'GBP' ? '£' : '$' }}{{ plan.currency === 'GBP' ? plan.price_ukp : plan.price_usd }}
+                        {{ plan.currency === 'GBP' ? '£' : '$'
+                        }}{{ plan.currency === 'GBP' ? plan.price_ukp : plan.price_usd }}
                       </span>
                       <span class="text-text-secondary text-sm">/{{ plan.interval }}</span>
                     </div>
@@ -99,7 +103,9 @@ import { SubscriptionPlansService, SubscriptionPlan } from '../../services/subsc
                   >
                     @if (subscribingPlanId() === plan.id) {
                       <span class="flex items-center gap-2">
-                        <span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
+                        <span
+                          class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                        ></span>
                         Redirecting...
                       </span>
                     } @else {
@@ -146,7 +152,7 @@ export class SubscriptionPageComponent implements OnInit {
 
   subscribe(planId: string): void {
     this.subscribingPlanId.set(planId);
-    const plan = this.plans().find(p => p.id === planId);
+    const plan = this.plans().find((p) => p.id === planId);
     if (!plan) return;
 
     this.monetisationService.createCheckoutSession(planId, plan.interval).subscribe({

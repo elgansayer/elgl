@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { UserService, UserProfile } from '../../services/user.service';
 import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-cropper.component';
@@ -7,7 +7,7 @@ import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-c
 @Component({
   selector: 'app-profile-edit',
   standalone: true,
-  imports: [CommonModule, FormsModule, CoverPhotoCropperComponent],
+  imports: [FormsModule, CoverPhotoCropperComponent],
   template: `
     <div class="max-w-2xl mx-auto p-6">
       <h2 class="text-2xl font-bold text-white mb-6">Edit Profile</h2>
@@ -17,13 +17,26 @@ import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-c
         <label class="block text-sm font-medium text-text-secondary mb-2">Cover Photo</label>
         <div class="relative h-48 bg-surface-200 rounded-xl overflow-hidden">
           @if (coverPhotoPreview()) {
-            <img [src]="coverPhotoPreview()" alt="Cover preview" class="w-full h-full object-cover" />
+            <img
+              [src]="coverPhotoPreview()"
+              alt="Cover preview"
+              class="w-full h-full object-cover"
+            />
           } @else if (profile()?.cover_photo_url) {
-            <img [src]="profile()?.cover_photo_url" alt="Cover" class="w-full h-full object-cover" />
+            <img
+              [src]="profile()?.cover_photo_url"
+              alt="Cover"
+              class="w-full h-full object-cover"
+            />
           } @else {
             <div class="flex items-center justify-center h-full text-text-muted">
               <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
               </svg>
             </div>
           }
@@ -130,7 +143,7 @@ export class ProfileEditComponent {
       // Get presigned URL for upload
       const { uploadUrl, mediaUrl } = await this.userService.getPresignedCoverPhotoUrl(
         'cover-photo.jpg',
-        'image/jpeg'
+        'image/jpeg',
       );
 
       // Upload the cropped image

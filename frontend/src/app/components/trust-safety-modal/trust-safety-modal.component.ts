@@ -1,20 +1,18 @@
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
 import { EconomyStore } from '../../services/economy.store';
 
 @Component({
   selector: 'app-trust-safety-modal',
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe],
   template: `
     <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div
         class="bg-surface-200 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-surface-100 space-y-5 animate-fadeIn"
       >
-        <div
-          class="flex items-center justify-between border-b border-surface-100 pb-3"
-        >
+        <div class="flex items-center justify-between border-b border-surface-100 pb-3">
           <div>
             <h3 class="text-xl font-black text-text-primary flex items-center gap-2">
               <span>🛡️ Trust and safety moderation</span>
@@ -36,9 +34,7 @@ import { EconomyStore } from '../../services/economy.store';
             (click)="mode = 'report'"
             [class]="
               'flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ' +
-              (mode === 'report'
-                ? 'bg-surface-200 text-primary shadow-sm'
-                : 'text-text-secondary')
+              (mode === 'report' ? 'bg-surface-200 text-primary shadow-sm' : 'text-text-secondary')
             "
           >
             ⚠️ Report user
@@ -47,9 +43,7 @@ import { EconomyStore } from '../../services/economy.store';
             (click)="mode = 'block'"
             [class]="
               'flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ' +
-              (mode === 'block'
-                ? 'bg-red-600 text-white shadow-sm'
-                : 'text-text-secondary')
+              (mode === 'block' ? 'bg-red-600 text-white shadow-sm' : 'text-text-secondary')
             "
           >
             🚫 Block user
@@ -90,9 +84,7 @@ import { EconomyStore } from '../../services/economy.store';
         }
 
         @if (mode === 'block') {
-          <div
-            class="bg-red-500/10 p-4 rounded-2xl border border-red-500/30 space-y-2 text-xs"
-          >
+          <div class="bg-red-500/10 p-4 rounded-2xl border border-red-500/30 space-y-2 text-xs">
             <span class="font-bold text-red-900 block"
               >⚠️ What happens when you block {{ targetName }}:</span
             >

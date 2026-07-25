@@ -174,7 +174,7 @@ When using `[formField]`, you MUST NOT set the following attributes in the templ
 - `[attr.min]`, `[attr.max]`
 - `[disabled]`, `[readonly]` (Already handled by `[formField]`)
 
-**Exception**: Static `value` on `<input type="radio">` and `<input type="checkbox">` is **allowed and required** — it identifies which option the input represents, not the bound field value.
+**Exception**: Static `value` on `<input type="radio">` and `<input type="checkbox">` is **allowed and required** - it identifies which option the input represents, not the bound field value.
 
 ```html
 <!-- CORRECT: value on radio specifies which option this button represents -->

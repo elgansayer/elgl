@@ -1,5 +1,5 @@
 import { Component, inject, signal, effect, OnDestroy, output } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
@@ -20,20 +20,26 @@ export interface IncomingCallInfo {
 @Component({
   selector: 'app-incoming-call',
   standalone: true,
-  imports: [
-    CommonModule,
-    AppButtonPrimaryComponent,
-    AppButtonSecondaryComponent,
-  ],
+  imports: [AppButtonPrimaryComponent, AppButtonSecondaryComponent],
   template: `
     @if (showCallModal()) {
-      <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div class="bg-surface-200 rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden animate-slide-up">
+      <div
+        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      >
+        <div
+          class="bg-surface-200 rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden animate-slide-up"
+        >
           <!-- Caller Info -->
           <div class="flex flex-col items-center pt-8 pb-6 px-6">
-            <div class="w-20 h-20 rounded-full bg-surface-100 flex items-center justify-center text-3xl mb-4 overflow-hidden">
+            <div
+              class="w-20 h-20 rounded-full bg-surface-100 flex items-center justify-center text-3xl mb-4 overflow-hidden"
+            >
               @if (callInfo()?.callerAvatar) {
-                <img [src]="callInfo()?.callerAvatar" alt="Caller avatar" class="w-full h-full object-cover" />
+                <img
+                  [src]="callInfo()?.callerAvatar"
+                  alt="Caller avatar"
+                  class="w-full h-full object-cover"
+                />
               } @else {
                 <span class="text-4xl">👤</span>
               }
@@ -42,7 +48,11 @@ export interface IncomingCallInfo {
               {{ callInfo()?.callerName || i18n.translate('common.unknownCaller') }}
             </h2>
             <p class="text-sm text-text-secondary">
-              {{ callInfo()?.isVideo ? i18n.translate('voip.incomingVideoCall') : i18n.translate('voip.incomingVoiceCall') }}
+              {{
+                callInfo()?.isVideo
+                  ? i18n.translate('voip.incomingVideoCall')
+                  : i18n.translate('voip.incomingVoiceCall')
+              }}
             </p>
             @if (callInfo()?.e2eeKey) {
               <p class="text-xs text-green-500 mt-2 flex items-center gap-1">
@@ -80,21 +90,23 @@ export interface IncomingCallInfo {
       </div>
     }
   `,
-  styles: [`
-    @keyframes slide-up {
-      from {
-        opacity: 0;
-        transform: translateY(20px) scale(0.95);
+  styles: [
+    `
+      @keyframes slide-up {
+        from {
+          opacity: 0;
+          transform: translateY(20px) scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
       }
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
+      .animate-slide-up {
+        animation: slide-up 0.3s ease-out;
       }
-    }
-    .animate-slide-up {
-      animation: slide-up 0.3s ease-out;
-    }
-  `]
+    `,
+  ],
 })
 export class IncomingCallComponent implements OnDestroy {
   readonly i18n = inject(I18nService);
@@ -206,10 +218,10 @@ export class IncomingCallComponent implements OnDestroy {
     try {
       // Join the LiveKit room with E2EE key if provided
       await this.livekitService.joinRoom(
-        info.roomName, 
-        this.authService.currentUser()?.id || 'unknown', 
+        info.roomName,
+        this.authService.currentUser()?.id || 'unknown',
         info.isVideo,
-        info.e2eeKey
+        info.e2eeKey,
       );
 
       // Notify caller that call was accepted

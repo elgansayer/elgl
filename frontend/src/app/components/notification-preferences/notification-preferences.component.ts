@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import {
   NotificationPreferencesService,
@@ -19,7 +19,7 @@ interface CategoryInfo {
 @Component({
   selector: 'app-notification-preferences',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   templateUrl: './notification-preferences.component.html',
   styleUrls: ['./notification-preferences.component.scss'],
 })
@@ -34,16 +34,66 @@ export class NotificationPreferencesComponent implements OnInit {
   readonly quietHoursEnd = signal<string>('08:00');
 
   readonly categories: CategoryInfo[] = [
-    { key: 'new_message', label: 'New Messages', description: 'When someone sends you a direct message', icon: '💬' },
-    { key: 'call_invite', label: 'Call Invites', description: 'When someone invites you to a voice or video call', icon: '📞' },
-    { key: 'moment_like', label: 'Moment Likes', description: 'When someone likes your moments', icon: '❤️' },
-    { key: 'moment_comment', label: 'Moment Comments', description: 'When someone comments on your moments', icon: '💭' },
-    { key: 'correction', label: 'Corrections', description: 'When someone corrects your language', icon: '✏️' },
-    { key: 'gift', label: 'Virtual Gifts', description: 'When someone sends you a virtual gift', icon: '🎁' },
-    { key: 'profile_view', label: 'Profile Views', description: 'When someone views your profile', icon: '👁️' },
-    { key: 'study_reminder', label: 'Study Reminders', description: 'Daily reminders to practice your languages', icon: '📚' },
-    { key: 'friend_request', label: 'Friend Requests', description: 'When someone sends you a friend request', icon: '🤝' },
-    { key: 'audio_room_invite', label: 'Audio Room Invites', description: 'When you are invited to join an audio room', icon: '🎙️' },
+    {
+      key: 'new_message',
+      label: 'New Messages',
+      description: 'When someone sends you a direct message',
+      icon: '💬',
+    },
+    {
+      key: 'call_invite',
+      label: 'Call Invites',
+      description: 'When someone invites you to a voice or video call',
+      icon: '📞',
+    },
+    {
+      key: 'moment_like',
+      label: 'Moment Likes',
+      description: 'When someone likes your moments',
+      icon: '❤️',
+    },
+    {
+      key: 'moment_comment',
+      label: 'Moment Comments',
+      description: 'When someone comments on your moments',
+      icon: '💭',
+    },
+    {
+      key: 'correction',
+      label: 'Corrections',
+      description: 'When someone corrects your language',
+      icon: '✏️',
+    },
+    {
+      key: 'gift',
+      label: 'Virtual Gifts',
+      description: 'When someone sends you a virtual gift',
+      icon: '🎁',
+    },
+    {
+      key: 'profile_view',
+      label: 'Profile Views',
+      description: 'When someone views your profile',
+      icon: '👁️',
+    },
+    {
+      key: 'study_reminder',
+      label: 'Study Reminders',
+      description: 'Daily reminders to practice your languages',
+      icon: '📚',
+    },
+    {
+      key: 'friend_request',
+      label: 'Friend Requests',
+      description: 'When someone sends you a friend request',
+      icon: '🤝',
+    },
+    {
+      key: 'audio_room_invite',
+      label: 'Audio Room Invites',
+      description: 'When you are invited to join an audio room',
+      icon: '🎙️',
+    },
   ];
 
   readonly channels: { key: NotificationChannel; label: string }[] = [
@@ -106,28 +156,30 @@ export class NotificationPreferencesComponent implements OnInit {
     const newValue = !prefs.do_not_disturb;
     this.saving.set(true);
 
-    this.prefsService.toggleDoNotDisturb(
-      newValue,
-      newValue ? this.quietHoursStart() : undefined,
-      newValue ? this.quietHoursEnd() : undefined,
-    ).subscribe({
-      next: (updated) => {
-        this.preferences.set(updated);
-        this.saving.set(false);
-        this.toastService.show(newValue ? 'Do Not Disturb enabled' : 'Do Not Disturb disabled', {
-          type: 'success',
-          duration: 2000,
-        });
-      },
-      error: (err) => {
-        console.error('Failed to update Do Not Disturb', err);
-        this.toastService.show('Failed to update Do Not Disturb setting', {
-          type: 'error',
-          duration: 3000,
-        });
-        this.saving.set(false);
-      },
-    });
+    this.prefsService
+      .toggleDoNotDisturb(
+        newValue,
+        newValue ? this.quietHoursStart() : undefined,
+        newValue ? this.quietHoursEnd() : undefined,
+      )
+      .subscribe({
+        next: (updated) => {
+          this.preferences.set(updated);
+          this.saving.set(false);
+          this.toastService.show(newValue ? 'Do Not Disturb enabled' : 'Do Not Disturb disabled', {
+            type: 'success',
+            duration: 2000,
+          });
+        },
+        error: (err) => {
+          console.error('Failed to update Do Not Disturb', err);
+          this.toastService.show('Failed to update Do Not Disturb setting', {
+            type: 'error',
+            duration: 3000,
+          });
+          this.saving.set(false);
+        },
+      });
   }
 
   updateQuietHours(): void {
@@ -135,24 +187,26 @@ export class NotificationPreferencesComponent implements OnInit {
     if (!prefs || !prefs.do_not_disturb) return;
 
     this.saving.set(true);
-    this.prefsService.toggleDoNotDisturb(true, this.quietHoursStart(), this.quietHoursEnd()).subscribe({
-      next: (updated) => {
-        this.preferences.set(updated);
-        this.saving.set(false);
-        this.toastService.show('Quiet hours updated', {
-          type: 'success',
-          duration: 2000,
-        });
-      },
-      error: (err) => {
-        console.error('Failed to update quiet hours', err);
-        this.toastService.show('Failed to update quiet hours', {
-          type: 'error',
-          duration: 3000,
-        });
-        this.saving.set(false);
-      },
-    });
+    this.prefsService
+      .toggleDoNotDisturb(true, this.quietHoursStart(), this.quietHoursEnd())
+      .subscribe({
+        next: (updated) => {
+          this.preferences.set(updated);
+          this.saving.set(false);
+          this.toastService.show('Quiet hours updated', {
+            type: 'success',
+            duration: 2000,
+          });
+        },
+        error: (err) => {
+          console.error('Failed to update quiet hours', err);
+          this.toastService.show('Failed to update quiet hours', {
+            type: 'error',
+            duration: 3000,
+          });
+          this.saving.set(false);
+        },
+      });
   }
 
   resetToDefaults(): void {

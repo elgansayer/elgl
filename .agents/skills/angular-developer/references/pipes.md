@@ -28,7 +28,7 @@ export class Invoice {
 
 **Do NOT inject pipe classes into services or other classes.** Pipes are template operators, not injectable services. Injecting them causes DI errors in standalone contexts and creates unnecessary coupling.
 
-### Custom pipes — extract the transformation function
+### Custom pipes - extract the transformation function
 
 Extract the logic into a plain function. The pipe delegates to it; services import the function directly.
 
@@ -53,7 +53,7 @@ export class KebabCasePipe implements PipeTransform {
 ```
 
 ```ts
-// formatter.service.ts — import the function, NOT the pipe
+// formatter.service.ts - import the function, NOT the pipe
 import {Injectable} from '@angular/core';
 import {toKebabCase} from './kebab-case';
 
@@ -65,7 +65,7 @@ export class FormatterService {
 }
 ```
 
-### Built-in locale-aware pipes — use standalone formatting functions
+### Built-in locale-aware pipes - use standalone formatting functions
 
 `@angular/common` exports a standalone function for each locale-aware built-in pipe:
 
@@ -79,7 +79,7 @@ export class FormatterService {
 Inject `LOCALE_ID` to get the current locale and pass it to the function.
 
 ```ts
-// CORRECT — use formatNumber instead of injecting DecimalPipe
+// CORRECT - use formatNumber instead of injecting DecimalPipe
 import {Injectable, LOCALE_ID, inject} from '@angular/core';
 import {formatNumber} from '@angular/common';
 
@@ -94,7 +94,7 @@ export class PriceService {
 ```
 
 ```ts
-// WRONG — do not inject pipe classes
+// WRONG - do not inject pipe classes
 import {Injectable} from '@angular/core';
 import {DecimalPipe} from '@angular/common';
 

@@ -1,13 +1,14 @@
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-subscription-cancel',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   template: `
-    <div class="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center px-4">
+    <div
+      class="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center px-4"
+    >
       <div class="text-center max-w-md">
         <div class="text-6xl mb-6">😕</div>
         <h1 class="text-3xl font-bold text-white mb-4">Checkout Cancelled</h1>

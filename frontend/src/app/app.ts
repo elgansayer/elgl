@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { TranslatePipe } from './services/translate.pipe';
@@ -9,9 +8,9 @@ import { EconomyStore, VirtualGift } from './services/economy.store';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, RouterOutlet, RouterLink, TranslatePipe],
+  imports: [RouterOutlet, RouterLink, TranslatePipe],
   templateUrl: './app.html',
-  styleUrl: './app.scss'
+  styleUrl: './app.scss',
 })
 export class App implements OnInit {
   authService = inject(AuthService);
@@ -24,7 +23,7 @@ export class App implements OnInit {
     { path: '/moments', label: 'nav.moments', icon: '📝' },
     { path: '/chat', label: 'nav.chats', icon: '💬' },
     { path: '/audio-rooms', label: 'nav.live', icon: '🎙️' },
-    { path: '/profile', label: 'nav.me', icon: '👤' }
+    { path: '/profile', label: 'nav.me', icon: '👤' },
   ] as const;
 
   readonly currentRoute = signal(this.router.url);
@@ -55,10 +54,10 @@ export class App implements OnInit {
               name: payload.gift.name,
               icon: payload.gift.icon,
               cost_coins: payload.gift.cost_coins,
-              animation_type: payload.gift.animation_type || 'pulse'
+              animation_type: payload.gift.animation_type || 'pulse',
             },
             sender_name: payload.sender_name || 'Language Partner',
-            receiver_name: payload.receiver_name || 'You'
+            receiver_name: payload.receiver_name || 'You',
           });
         }
       });

@@ -1,12 +1,19 @@
-import { Component, ElementRef, EventEmitter, Output, ViewChild, AfterViewInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  Component,
+  ElementRef,
+  EventEmitter,
+  Output,
+  ViewChild,
+  AfterViewInit,
+} from '@angular/core';
+
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-doodle-pad',
-  imports: [CommonModule, TranslatePipe],
+  imports: [TranslatePipe],
   templateUrl: './doodle-pad.component.html',
-  styleUrls: ['./doodle-pad.component.scss']
+  styleUrls: ['./doodle-pad.component.scss'],
 })
 export class DoodlePadComponent implements AfterViewInit {
   @Output() doodleSaved = new EventEmitter<string>();
@@ -106,7 +113,7 @@ export class DoodlePadComponent implements AfterViewInit {
     const scaleY = canvas.height / rect.height;
     return {
       x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY
+      y: (clientY - rect.top) * scaleY,
     };
   }
 }

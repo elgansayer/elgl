@@ -1,15 +1,21 @@
 import { Component, input, output, signal } from '@angular/core';
 import { ImageCropperComponent } from 'ngx-image-cropper';
-import { CommonModule } from '@angular/common';
+
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-cover-photo-cropper',
   standalone: true,
-  imports: [CommonModule, ImageCropperComponent, TranslatePipe],
+  imports: [ImageCropperComponent, TranslatePipe],
   template: `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70" (click)="cancel.emit()">
-      <div class="bg-gray-900 rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl" (click)="$event.stopPropagation()">
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+      (click)="cancel.emit()"
+    >
+      <div
+        class="bg-gray-900 rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl"
+        (click)="$event.stopPropagation()"
+      >
         <h3 class="text-lg font-semibold text-white mb-4">Crop Cover Photo</h3>
 
         <div class="relative max-h-64 overflow-hidden rounded-lg mb-4">

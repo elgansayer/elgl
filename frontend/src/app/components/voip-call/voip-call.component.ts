@@ -1,5 +1,5 @@
 import { Component, inject, input, output, signal, OnDestroy, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { LivekitService } from '../../services/livekit.service';
 import { AuthService } from '../../services/auth.service';
@@ -12,14 +12,18 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
 @Component({
   selector: 'app-voip-call',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   template: `
     @if (showCallUI()) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-        <div class="bg-surface-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center border border-slate-700">
+        <div
+          class="bg-surface-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center border border-slate-700"
+        >
           <!-- Caller/Callee Info -->
           <div class="mb-6">
-            <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-3xl font-bold text-white mb-3">
+            <div
+              class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-3xl font-bold text-white mb-3"
+            >
               {{ displayName()[0]?.toUpperCase() || '?' }}
             </div>
             <h2 class="text-xl font-semibold text-white">{{ displayName() }}</h2>
@@ -37,38 +41,95 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
           <div class="flex justify-center gap-6">
             <!-- Incoming call actions -->
             @if (callDirection() === 'incoming' && callState() === 'ringing') {
-              <button (click)="acceptCall()"
-                      class="w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg">
+              <button
+                (click)="acceptCall()"
+                class="w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg"
+              >
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                  />
                 </svg>
               </button>
-              <button (click)="rejectCall()"
-                      class="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg">
+              <button
+                (click)="rejectCall()"
+                class="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg"
+              >
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             }
 
             <!-- Outgoing / Connected call actions -->
-            @if (callDirection() === 'outgoing' || callState() === 'connected' || callState() === 'connecting') {
-              <button (click)="toggleMute()"
-                      [class]="isMuted() ? 'w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg bg-yellow-500 hover:bg-yellow-600' : 'w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg bg-surface-200 hover:bg-surface-100'">
-                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+            @if (
+              callDirection() === 'outgoing' ||
+              callState() === 'connected' ||
+              callState() === 'connecting'
+            ) {
+              <button
+                (click)="toggleMute()"
+                [class]="
+                  isMuted()
+                    ? 'w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg bg-yellow-500 hover:bg-yellow-600'
+                    : 'w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg bg-surface-200 hover:bg-surface-100'
+                "
+              >
+                <svg
+                  class="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                  />
                 </svg>
               </button>
-              <button (click)="toggleVideo()"
-                      [class]="isVideoEnabled() ? 'w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg bg-surface-200 hover:bg-surface-100' : 'w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg bg-yellow-500 hover:bg-yellow-600'">
-                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+              <button
+                (click)="toggleVideo()"
+                [class]="
+                  isVideoEnabled()
+                    ? 'w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg bg-surface-200 hover:bg-surface-100'
+                    : 'w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg bg-yellow-500 hover:bg-yellow-600'
+                "
+              >
+                <svg
+                  class="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
                 </svg>
               </button>
-              <button (click)="endCall()"
-                      class="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg">
+              <button
+                (click)="endCall()"
+                class="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg"
+              >
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.516l2.257-1.13a1 1 0 00.502-1.21L9.228 3.684A1 1 0 008.28 3H5z"/>
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.516l2.257-1.13a1 1 0 00.502-1.21L9.228 3.684A1 1 0 008.28 3H5z"
+                  />
                 </svg>
               </button>
             }
@@ -77,11 +138,13 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
       </div>
     }
   `,
-  styles: [`
-    :host {
-      display: block;
-    }
-  `]
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+    `,
+  ],
 })
 export class VoipCallComponent implements OnDestroy {
   private livekitService = inject(LivekitService);
@@ -166,7 +229,11 @@ export class VoipCallComponent implements OnDestroy {
       if (!currentUser) throw new Error('User not authenticated');
 
       // Join the LiveKit room
-      this.room = await this.livekitService.joinRoom(this.roomName(), currentUser.id, this.isVideoCall());
+      this.room = await this.livekitService.joinRoom(
+        this.roomName(),
+        currentUser.id,
+        this.isVideoCall(),
+      );
 
       // Publish local tracks
       const tracks = await this.livekitService.publishTracks(this.isVideoCall());
@@ -190,7 +257,7 @@ export class VoipCallComponent implements OnDestroy {
       await this.chatService.sendMessage({
         room_id: this.roomName(),
         message_type: 'text',
-        text_content: 'Call accepted'
+        text_content: 'Call accepted',
       });
     } catch (error) {
       console.error('Failed to accept call:', error);
@@ -207,7 +274,7 @@ export class VoipCallComponent implements OnDestroy {
     await this.chatService.sendMessage({
       room_id: this.roomName(),
       message_type: 'text',
-      text_content: 'Call rejected'
+      text_content: 'Call rejected',
     });
   }
 
@@ -234,7 +301,7 @@ export class VoipCallComponent implements OnDestroy {
   }
 
   async toggleVideo(): Promise<void> {
-    this.isVideoEnabled.update(v => !v);
+    this.isVideoEnabled.update((v) => !v);
     // Toggle the camera on the local participant
     if (this.room) {
       await this.room.localParticipant.setCameraEnabled(this.isVideoEnabled());
@@ -244,7 +311,7 @@ export class VoipCallComponent implements OnDestroy {
   private startDurationTimer(): void {
     this.callDuration.set(0);
     this.durationInterval = setInterval(() => {
-      this.callDuration.update(v => v + 1);
+      this.callDuration.update((v) => v + 1);
     }, 1000);
   }
 

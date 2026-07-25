@@ -1,12 +1,12 @@
 import { Component, EventEmitter, Input, Output, signal, computed, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 
 @Component({
   selector: 'app-correction-modal',
-  imports: [CommonModule, FormsModule, TranslatePipe, VisualDiffComponent],
+  imports: [FormsModule, TranslatePipe, VisualDiffComponent],
   templateUrl: './correction-modal.component.html',
   styleUrls: ['./correction-modal.component.scss'],
 })

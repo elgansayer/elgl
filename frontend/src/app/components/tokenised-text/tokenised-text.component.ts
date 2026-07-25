@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { VocabularyStore } from '../../services/vocabulary.store';
 
 export interface TokenSegment {
@@ -10,9 +10,9 @@ export interface TokenSegment {
 
 @Component({
   selector: 'app-tokenised-text',
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './tokenised-text.component.html',
-  styleUrls: ['./tokenised-text.component.scss']
+  styleUrls: ['./tokenised-text.component.scss'],
 })
 export class TokenisedTextComponent implements OnInit {
   readonly vocabStore = inject(VocabularyStore);
@@ -36,7 +36,7 @@ export class TokenisedTextComponent implements OnInit {
         segments.push({
           segment: item.segment,
           isWordLike: item.isWordLike ?? /\w/.test(item.segment),
-          index: item.index
+          index: item.index,
         });
       }
     } else {
@@ -47,7 +47,7 @@ export class TokenisedTextComponent implements OnInit {
           segments.push({
             segment: part,
             isWordLike: /^\w+$/.test(part),
-            index: idx
+            index: idx,
           });
         }
       });
@@ -59,7 +59,7 @@ export class TokenisedTextComponent implements OnInit {
     if (!token.isWordLike) return;
     this.wordClicked.emit({
       token: token.segment,
-      context: this.text
+      context: this.text,
     });
   }
 }

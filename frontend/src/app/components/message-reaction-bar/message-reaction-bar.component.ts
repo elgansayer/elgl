@@ -1,16 +1,19 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
-import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-message-reaction-bar',
-  imports: [CommonModule],
+  imports: [],
   template: `
     <div class="mt-1 flex flex-wrap gap-1">
       @for (reaction of getReactionEntries(); track reaction.emoji) {
         <button
           (click)="toggleReaction(reaction.emoji)"
-          [class]="'flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors ' + 
-                   (reaction.users.includes(currentUserId) ? 'bg-primary/20 text-primary border border-primary/30' : 'bg-surface-200 text-text-secondary hover:bg-surface-100')"
+          [class]="
+            'flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors ' +
+            (reaction.users.includes(currentUserId)
+              ? 'bg-primary/20 text-primary border border-primary/30'
+              : 'bg-surface-200 text-text-secondary hover:bg-surface-100')
+          "
         >
           <span>{{ reaction.emoji }}</span>
           <span>{{ reaction.users.length }}</span>
@@ -27,7 +30,7 @@ import { CommonModule } from '@angular/common';
         }
       </div>
     </div>
-  `
+  `,
 })
 export class MessageReactionBarComponent {
   @Input() reactions?: Record<string, string[]> = {};

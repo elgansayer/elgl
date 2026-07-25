@@ -1,5 +1,5 @@
 import { Component, output, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -29,9 +29,11 @@ const AVAILABLE_GIFTS: GiftItem[] = [
 @Component({
   selector: 'app-gift-picker',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe],
   template: `
-    <div class="bg-surface-200 border border-surface-100 rounded-xl shadow-2xl w-72 max-h-96 overflow-hidden">
+    <div
+      class="bg-surface-200 border border-surface-100 rounded-xl shadow-2xl w-72 max-h-96 overflow-hidden"
+    >
       <!-- Header -->
       <div class="p-3 border-b border-surface-100">
         <h3 class="text-sm font-semibold text-white">{{ 'giftPicker.title' | t }}</h3>
@@ -39,31 +41,45 @@ const AVAILABLE_GIFTS: GiftItem[] = [
 
       <!-- Category filter -->
       <div class="flex gap-1 p-2 border-b border-surface-100 overflow-x-auto">
-        <button *ngFor="let cat of categories"
-                (click)="selectedCategory.set(cat)"
-                [class]="selectedCategory() === cat ? 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-pink-600 text-white' : 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-surface-100 text-text-secondary hover:bg-gray-600'">
-          {{ cat }}
-        </button>
+        @for (cat of categories; track cat) {
+          <button
+            (click)="selectedCategory.set(cat)"
+            [class]="
+              selectedCategory() === cat
+                ? 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-pink-600 text-white'
+                : 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-surface-100 text-text-secondary hover:bg-gray-600'
+            "
+          >
+            {{ cat }}
+          </button>
+        }
       </div>
 
       <!-- Gift grid -->
       <div class="overflow-y-auto max-h-64 p-2">
         <div class="grid grid-cols-3 gap-2">
-          <button *ngFor="let gift of filteredGifts()"
-                  (click)="selectGift(gift)"
-                  class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-100 transition-colors"
-                  [attr.aria-label]="'Send ' + gift.name">
-            <span class="text-2xl">{{ gift.emoji }}</span>
-            <span class="text-xs text-text-secondary">{{ gift.name }}</span>
-            <span class="text-[10px] text-yellow-400">{{ gift.coinCost }} 🪙</span>
-          </button>
+          @for (gift of filteredGifts(); track gift) {
+            <button
+              (click)="selectGift(gift)"
+              class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-surface-100 transition-colors"
+              [attr.aria-label]="'Send ' + gift.name"
+            >
+              <span class="text-2xl">{{ gift.emoji }}</span>
+              <span class="text-xs text-text-secondary">{{ gift.name }}</span>
+              <span class="text-[10px] text-yellow-400">{{ gift.coinCost }} 🪙</span>
+            </button>
+          }
         </div>
       </div>
     </div>
   `,
-  styles: [`
-    :host { display: block; }
-  `]
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+    `,
+  ],
 })
 export class GiftPickerComponent {
   onGiftSelect = output<string>();
@@ -71,12 +87,12 @@ export class GiftPickerComponent {
   gifts = AVAILABLE_GIFTS;
   selectedCategory = signal('All');
 
-  readonly categories = ['All', ...new Set(this.gifts.map(g => g.category))];
+  readonly categories = ['All', ...new Set(this.gifts.map((g) => g.category))];
 
   readonly filteredGifts = () => {
     const cat = this.selectedCategory();
     if (cat === 'All') return this.gifts;
-    return this.gifts.filter(g => g.category === cat);
+    return this.gifts.filter((g) => g.category === cat);
   };
 
   selectGift(gift: GiftItem): void {

@@ -1,11 +1,11 @@
 import { Component, input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { getLanguageFlag } from '../language-picker/language-picker.component';
 
 @Component({
   selector: 'app-fluency-indicator',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   template: `
     <div class="flex items-center gap-1.5 text-xs font-bold text-text-primary">
       <div class="flex items-center gap-1">
@@ -20,9 +20,9 @@ import { getLanguageFlag } from '../language-picker/language-picker.component';
           }
         }
       </div>
-      
+
       <span class="text-text-muted mx-0.5">⇌</span>
-      
+
       <div class="flex items-center gap-1">
         <!-- Render target languages -->
         @for (lang of targetLanguages(); track lang.code; let last = $last) {
@@ -36,11 +36,11 @@ import { getLanguageFlag } from '../language-picker/language-picker.component';
         }
       </div>
     </div>
-  `
+  `,
 })
 export class FluencyIndicatorComponent {
-  nativeLanguages = input.required<{code: string, level?: number}[]>();
-  targetLanguages = input.required<{code: string, level?: number}[]>();
+  nativeLanguages = input.required<{ code: string; level?: number }[]>();
+  targetLanguages = input.required<{ code: string; level?: number }[]>();
 
   getFlag(code: string): string {
     return getLanguageFlag(code);

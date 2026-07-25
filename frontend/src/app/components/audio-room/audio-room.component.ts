@@ -1,6 +1,6 @@
 import { showToast, notImplementedToast } from '../../services/toast.service';
 import { Component, inject, signal, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -12,7 +12,13 @@ import { TrustSafetyModalComponent } from '../trust-safety-modal/trust-safety-mo
 
 @Component({
   selector: 'app-audio-room',
-  imports: [CommonModule, FormsModule, TranslatePipe, RoomChatComponent, VirtualGiftModalComponent, TrustSafetyModalComponent],
+  imports: [
+    FormsModule,
+    TranslatePipe,
+    RoomChatComponent,
+    VirtualGiftModalComponent,
+    TrustSafetyModalComponent,
+  ],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],
 })
@@ -65,10 +71,7 @@ export class AudioRoomComponent implements OnInit {
   }
 
   async archive(): Promise<void> {
-    if (
-      !confirm(this.i18n.translate('audioRoom.archiveConfirm'))
-    )
-      return;
+    if (!confirm(this.i18n.translate('audioRoom.archiveConfirm'))) return;
     await this.store.archiveRoom();
   }
 }

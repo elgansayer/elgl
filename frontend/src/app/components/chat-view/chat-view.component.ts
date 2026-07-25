@@ -1,5 +1,5 @@
 import { Component, Input, OnInit, inject, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ChatMessageComponent } from '../chat-message/chat-message.component';
 import { ChatService, ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
@@ -9,16 +9,17 @@ import { FormsModule } from '@angular/forms';
 @Component({
   selector: 'app-chat-view',
   standalone: true,
-  imports: [CommonModule, FormsModule, ChatMessageComponent],
+  imports: [FormsModule, ChatMessageComponent],
   template: `
     <div class="flex flex-col h-full">
       <div class="flex-1 overflow-y-auto p-4 space-y-2">
-        <app-chat-message
-          *ngFor="let msg of filteredMessages()"
-          [message]="msg"
-          [currentUserId]="currentUserId"
-          (messageBlocked)="onMessageBlocked($event)"
-        ></app-chat-message>
+        @for (msg of filteredMessages(); track msg) {
+          <app-chat-message
+            [message]="msg"
+            [currentUserId]="currentUserId"
+            (messageBlocked)="onMessageBlocked($event)"
+          ></app-chat-message>
+        }
       </div>
       <div class="border-t p-4">
         <input
@@ -31,12 +32,14 @@ import { FormsModule } from '@angular/forms';
       </div>
     </div>
   `,
-  styles: [`
-    :host {
-      display: block;
-      height: 100%;
-    }
-  `]
+  styles: [
+    `
+      :host {
+        display: block;
+        height: 100%;
+      }
+    `,
+  ],
 })
 export class ChatViewComponent implements OnInit {
   @Input({ required: true }) roomId!: string;
@@ -54,7 +57,7 @@ export class ChatViewComponent implements OnInit {
   readonly filteredMessages = computed(() => {
     const blocked = this.blockedUserIds();
     if (blocked.size === 0) return this.messages;
-    return this.messages.filter(msg => !blocked.has(msg.sender_id));
+    return this.messages.filter((msg) => !blocked.has(msg.sender_id));
   });
 
   async ngOnInit(): Promise<void> {
@@ -84,12 +87,12 @@ export class ChatViewComponent implements OnInit {
   }
 
   onMessageBlocked(userId: string): void {
-    this.blockedUserIds.update(ids => {
+    this.blockedUserIds.update((ids) => {
       const newSet = new Set(ids);
       if (newSet.has(userId)) {
-        newSet.delete(userId);  // Unblock
+        newSet.delete(userId); // Unblock
       } else {
-        newSet.add(userId);  // Block
+        newSet.add(userId); // Block
       }
       return newSet;
     });

@@ -89,7 +89,10 @@ export class FeedService {
           }
         ).target_languages || [];
       const nativeLang: string | undefined = (
-        currentUser as { target_languages?: string[]; native_languages?: string }
+        currentUser as {
+          target_languages?: string[];
+          native_languages?: string;
+        }
       ).native_languages;
 
       // Build OR conditions for language matching

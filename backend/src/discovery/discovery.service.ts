@@ -120,8 +120,8 @@ export class DiscoveryService {
     }
 
     if (query.native_language) {
-      filtered = filtered.filter((u) =>
-        u.native_language === query.native_language,
+      filtered = filtered.filter(
+        (u) => u.native_language === query.native_language,
       );
     }
 

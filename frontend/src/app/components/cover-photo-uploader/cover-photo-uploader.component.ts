@@ -1,5 +1,15 @@
-import { Component, signal, computed, output, input, inject, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  Component,
+  signal,
+  computed,
+  output,
+  input,
+  inject,
+  ElementRef,
+  ViewChild,
+  AfterViewInit,
+} from '@angular/core';
+
 import { TranslatePipe } from '../../services/translate.pipe';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
@@ -14,7 +24,7 @@ interface CropBox {
 @Component({
   selector: 'app-cover-photo-uploader',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [TranslatePipe],
   template: `
     <div class="relative w-full max-w-2xl mx-auto">
       <!-- Hidden file input -->
@@ -30,11 +40,7 @@ interface CropBox {
       @if (!imageSource()) {
         <div class="relative w-full h-48 md:h-64 rounded-xl overflow-hidden group">
           @if (currentCoverUrl()) {
-            <img
-              [src]="currentCoverUrl()"
-              alt="Cover photo"
-              class="w-full h-full object-cover"
-            />
+            <img [src]="currentCoverUrl()" alt="Cover photo" class="w-full h-full object-cover" />
           } @else {
             <div class="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900"></div>
           }
@@ -43,10 +49,22 @@ interface CropBox {
             (click)="fileInput.click()"
           >
             <div class="text-center text-white">
-              <svg class="w-10 h-10 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <svg
+                class="w-10 h-10 mx-auto mb-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
               </svg>
-              <span class="text-sm font-medium">{{ currentCoverUrl() ? 'Change Cover Photo' : 'Add Cover Photo' }}</span>
+              <span class="text-sm font-medium">{{
+                currentCoverUrl() ? 'Change Cover Photo' : 'Add Cover Photo'
+              }}</span>
             </div>
           </div>
         </div>
@@ -63,11 +81,15 @@ interface CropBox {
               draggable="false"
               #imageElement
             />
-            
+
             @if (isCropping()) {
               <div class="absolute inset-0">
                 <!-- Dark overlay with crop window -->
-                <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <svg
+                  class="absolute inset-0 w-full h-full"
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                >
                   <defs>
                     <mask id="cropMask">
                       <rect width="100" height="100" fill="white" />
@@ -94,18 +116,26 @@ interface CropBox {
                   (touchstart)="onCropBoxTouchStart($event)"
                 >
                   <!-- Corner handles -->
-                  <div class="absolute -top-1.5 -start-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-nw-resize"
-                       (mousedown)="onHandleMouseDown($event, 'nw')"
-                       (touchstart)="onHandleTouchStart($event, 'nw')"></div>
-                  <div class="absolute -top-1.5 -end-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-ne-resize"
-                       (mousedown)="onHandleMouseDown($event, 'ne')"
-                       (touchstart)="onHandleTouchStart($event, 'ne')"></div>
-                  <div class="absolute -bottom-1.5 -start-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-sw-resize"
-                       (mousedown)="onHandleMouseDown($event, 'sw')"
-                       (touchstart)="onHandleTouchStart($event, 'sw')"></div>
-                  <div class="absolute -bottom-1.5 -end-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-se-resize"
-                       (mousedown)="onHandleMouseDown($event, 'se')"
-                       (touchstart)="onHandleTouchStart($event, 'se')"></div>
+                  <div
+                    class="absolute -top-1.5 -start-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-nw-resize"
+                    (mousedown)="onHandleMouseDown($event, 'nw')"
+                    (touchstart)="onHandleTouchStart($event, 'nw')"
+                  ></div>
+                  <div
+                    class="absolute -top-1.5 -end-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-ne-resize"
+                    (mousedown)="onHandleMouseDown($event, 'ne')"
+                    (touchstart)="onHandleTouchStart($event, 'ne')"
+                  ></div>
+                  <div
+                    class="absolute -bottom-1.5 -start-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-sw-resize"
+                    (mousedown)="onHandleMouseDown($event, 'sw')"
+                    (touchstart)="onHandleTouchStart($event, 'sw')"
+                  ></div>
+                  <div
+                    class="absolute -bottom-1.5 -end-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-se-resize"
+                    (mousedown)="onHandleMouseDown($event, 'se')"
+                    (touchstart)="onHandleTouchStart($event, 'se')"
+                  ></div>
                 </div>
               </div>
             }
@@ -114,21 +144,37 @@ interface CropBox {
           <!-- Action buttons -->
           <div class="flex gap-2 mt-4">
             @if (!isCropping()) {
-              <button (click)="startCropping()" class="px-4 py-2 bg-surface-200 text-white rounded-lg hover:bg-surface-100 transition-colors text-sm">
+              <button
+                (click)="startCropping()"
+                class="px-4 py-2 bg-surface-200 text-white rounded-lg hover:bg-surface-100 transition-colors text-sm"
+              >
                 Crop
               </button>
             } @else {
-              <button (click)="applyCrop()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors text-sm">
+              <button
+                (click)="applyCrop()"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors text-sm"
+              >
                 Apply Crop
               </button>
-              <button (click)="cancelCrop()" class="px-4 py-2 bg-surface-100 text-white rounded-lg hover:bg-slate-500 transition-colors text-sm">
+              <button
+                (click)="cancelCrop()"
+                class="px-4 py-2 bg-surface-100 text-white rounded-lg hover:bg-slate-500 transition-colors text-sm"
+              >
                 {{ 'common.cancel' | t }}
               </button>
             }
-            <button (click)="uploadCropped()" [disabled]="isUploading()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors text-sm disabled:opacity-50">
+            <button
+              (click)="uploadCropped()"
+              [disabled]="isUploading()"
+              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors text-sm disabled:opacity-50"
+            >
               {{ isUploading() ? 'Uploading...' : 'Upload' }}
             </button>
-            <button (click)="reset()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors text-sm">
+            <button
+              (click)="reset()"
+              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors text-sm"
+            >
               {{ 'common.cancel' | t }}
             </button>
           </div>
@@ -220,8 +266,14 @@ export class CoverPhotoUploaderComponent {
     this.canvas.height = box.height;
     this.ctx.drawImage(
       this.originalImage,
-      box.x, box.y, box.width, box.height,
-      0, 0, box.width, box.height
+      box.x,
+      box.y,
+      box.width,
+      box.height,
+      0,
+      0,
+      box.width,
+      box.height,
     );
     this.croppedPreviewUrl.set(this.canvas.toDataURL('image/jpeg', 0.9));
     this.isCropping.set(false);
@@ -240,14 +292,16 @@ export class CoverPhotoUploaderComponent {
       const filename = `cover-${Date.now()}.jpg`;
 
       // Get presigned URL from backend
-      const presignedResponse = await this.http.post<{ uploadUrl: string; mediaUrl: string; objectKey: string }>(
-        `${environment.apiUrl}/media/cover/presigned-url`,
-        {
-          filename,
-          contentType: 'image/jpeg',
-          folder: 'covers',
-        }
-      ).toPromise();
+      const presignedResponse = await this.http
+        .post<{ uploadUrl: string; mediaUrl: string; objectKey: string }>(
+          `${environment.apiUrl}/media/cover/presigned-url`,
+          {
+            filename,
+            contentType: 'image/jpeg',
+            folder: 'covers',
+          },
+        )
+        .toPromise();
 
       if (!presignedResponse) throw new Error('Failed to get presigned URL');
 
@@ -261,10 +315,11 @@ export class CoverPhotoUploaderComponent {
       if (!uploadResponse.ok) throw new Error('Upload failed');
 
       // Confirm upload with backend
-      const confirmResponse = await this.http.post<{ coverUrl: string }>(
-        `${environment.apiUrl}/media/cover/confirm`,
-        { objectKey: presignedResponse.objectKey }
-      ).toPromise();
+      const confirmResponse = await this.http
+        .post<{ coverUrl: string }>(`${environment.apiUrl}/media/cover/confirm`, {
+          objectKey: presignedResponse.objectKey,
+        })
+        .toPromise();
 
       if (confirmResponse) {
         this.coverPhotoUploaded.emit(confirmResponse.coverUrl);
@@ -297,7 +352,7 @@ export class CoverPhotoUploaderComponent {
       if (!this.isDragging) return;
       const dx = e.clientX - this.dragStartX;
       const dy = e.clientY - this.dragStartY;
-      this.cropBox.update(box => ({
+      this.cropBox.update((box) => ({
         x: Math.max(0, Math.min(this.imageWidth() - box.width, this.dragStartCropBox.x + dx)),
         y: Math.max(0, Math.min(this.imageHeight() - box.height, this.dragStartCropBox.y + dy)),
         width: box.width,
@@ -328,7 +383,7 @@ export class CoverPhotoUploaderComponent {
       const t = e.touches[0];
       const dx = t.clientX - this.dragStartX;
       const dy = t.clientY - this.dragStartY;
-      this.cropBox.update(box => ({
+      this.cropBox.update((box) => ({
         x: Math.max(0, Math.min(this.imageWidth() - box.width, this.dragStartCropBox.x + dx)),
         y: Math.max(0, Math.min(this.imageHeight() - box.height, this.dragStartCropBox.y + dy)),
         width: box.width,

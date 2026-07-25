@@ -33,11 +33,11 @@ When creating a new Angular application for a user, always follow the following 
    Load the contents of that AI configuration into memory so that you can refer to it when generating code for the user. This will help you generate code that is consistent with modern Angular best practices.
 
    Consider these commonly useful flags based on the user's requirements:
-   - `--style=scss|css|less` — stylesheet format
-   - `--routing` — add routing module
-   - `--ssr` — enable server-side rendering
-   - `--prefix=<prefix>` — component selector prefix
-   - `--skip-tests` — only if the user explicitly requests it
+   - `--style=scss|css|less` - stylesheet format
+   - `--routing` - add routing module
+   - `--ssr` - enable server-side rendering
+   - `--prefix=<prefix>` - component selector prefix
+   - `--skip-tests` - only if the user explicitly requests it
 
 3. Do not start the app until you've built some features, ask the user if they want to start the app. You can always run `npx ng build` to check for errors and repair them.
 

@@ -1,10 +1,9 @@
 import { showToast, notImplementedToast } from '../../services/toast.service';
 import { Component, Input, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-text-to-speech',
-  imports: [CommonModule],
+  imports: [],
   template: `
     <button
       (click)="speak($event)"
@@ -19,7 +18,7 @@ import { CommonModule } from '@angular/common';
     >
       <span>{{ isPlaying() ? '🔊 Speaking...' : '🔊 Listen' }}</span>
     </button>
-  `
+  `,
 })
 export class TextToSpeechComponent {
   @Input({ required: true }) text = '';

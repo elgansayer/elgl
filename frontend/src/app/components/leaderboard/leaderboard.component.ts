@@ -1,6 +1,6 @@
 import { Component, signal, OnInit, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { CommonModule } from '@angular/common';
+
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppPillComponent } from '../primitives/pill/pill.component';
 
@@ -16,7 +16,7 @@ interface Corrector {
 @Component({
   selector: 'app-leaderboard',
   standalone: true,
-  imports: [CommonModule, AppCardComponent, AppPillComponent],
+  imports: [AppCardComponent, AppPillComponent],
   template: `
     <div class="max-w-2xl mx-auto ps-4 pe-4 pt-6 pb-6">
       <h1 class="text-2xl font-bold mb-4">Top Correctors</h1>
@@ -29,7 +29,9 @@ interface Corrector {
                 @if (corrector.avatar_url) {
                   <img [src]="corrector.avatar_url" alt="" class="w-full h-full object-cover" />
                 } @else {
-                  <div class="w-full h-full flex items-center justify-center text-text-secondary text-sm">
+                  <div
+                    class="w-full h-full flex items-center justify-center text-text-secondary text-sm"
+                  >
                     {{ corrector.display_name.charAt(0) }}
                   </div>
                 }

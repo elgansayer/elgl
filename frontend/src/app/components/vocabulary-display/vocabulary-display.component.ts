@@ -1,11 +1,11 @@
 import { Component, inject, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { HobbyTagsStore } from '../../services/hobby-tags.store';
 
 @Component({
   selector: 'app-vocabulary-display',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   template: `
     <div class="space-y-4">
       <div class="flex items-center justify-between">
@@ -24,7 +24,9 @@ import { HobbyTagsStore } from '../../services/hobby-tags.store';
       </div>
 
       @if (vocabularyByTag().size === 0) {
-        <div class="p-8 text-center text-text-muted bg-surface-800/30 rounded-xl border border-dashed border-slate-700">
+        <div
+          class="p-8 text-center text-text-muted bg-surface-800/30 rounded-xl border border-dashed border-slate-700"
+        >
           <p class="text-lg mb-2">📚</p>
           <p>No vocabulary yet. Select some hobbies to get started!</p>
         </div>
@@ -38,7 +40,9 @@ import { HobbyTagsStore } from '../../services/hobby-tags.store';
           </h4>
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
             @for (item of entry[1]; track item.word) {
-              <div class="flex items-center justify-between p-3 bg-surface-800/50 rounded-lg border border-slate-700/50 hover:border-slate-600 transition-colors">
+              <div
+                class="flex items-center justify-between p-3 bg-surface-800/50 rounded-lg border border-slate-700/50 hover:border-slate-600 transition-colors"
+              >
                 <div>
                   <p class="text-sm font-medium text-slate-200">{{ item.word }}</p>
                   <p class="text-xs text-text-muted">{{ item.translation }}</p>

@@ -1,19 +1,17 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterLink } from '@angular/router';
-import { SubscriptionPlansService, SubscriptionPlan } from '../../services/subscription-plans.service';
+import {
+  SubscriptionPlansService,
+  SubscriptionPlan,
+} from '../../services/subscription-plans.service';
 import { AppButtonPrimaryComponent } from '../../components/primitives/button-primary/button-primary.component';
 import { AppGradientButtonComponent } from '../../components/primitives/gradient-button/gradient-button.component';
 
 @Component({
   selector: 'app-vip-subscription',
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterLink,
-    AppButtonPrimaryComponent,
-    AppGradientButtonComponent,
-  ],
+  imports: [RouterLink, AppButtonPrimaryComponent, AppGradientButtonComponent],
   templateUrl: './vip-subscription.component.html',
   styleUrls: ['./vip-subscription.component.scss'],
 })
@@ -24,17 +22,11 @@ export class VipSubscriptionComponent implements OnInit {
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
 
-  readonly popularPlan = computed(() =>
-    this.plans().find((p) => p.is_popular)
-  );
+  readonly popularPlan = computed(() => this.plans().find((p) => p.is_popular));
 
-  readonly freePlan = computed(() =>
-    this.plans().find((p) => p.id === 'free')
-  );
+  readonly freePlan = computed(() => this.plans().find((p) => p.id === 'free'));
 
-  readonly paidPlans = computed(() =>
-    this.plans().filter((p) => p.id !== 'free')
-  );
+  readonly paidPlans = computed(() => this.plans().filter((p) => p.id !== 'free'));
 
   ngOnInit(): void {
     this.loadPlans();
@@ -82,7 +74,10 @@ export class VipSubscriptionComponent implements OnInit {
       { name: 'Target Languages', getValue: (p) => p.id !== 'free' || true },
       { name: 'AI Translations', getValue: (p) => p.id !== 'free' },
       { name: 'Voice & Video Messages', getValue: (p) => p.id !== 'free' },
-      { name: 'Location Spoofing', getValue: (p) => p.id === 'consumer_8_ukp_10_usd' || p.id === 'developer_20_ukp_26_usd' },
+      {
+        name: 'Location Spoofing',
+        getValue: (p) => p.id === 'consumer_8_ukp_10_usd' || p.id === 'developer_20_ukp_26_usd',
+      },
       { name: 'Priority Search', getValue: (p) => p.id !== 'free' },
       { name: 'Profile Views', getValue: (p) => p.id !== 'free' },
       { name: 'Ad-Free', getValue: (p) => p.id !== 'free' },

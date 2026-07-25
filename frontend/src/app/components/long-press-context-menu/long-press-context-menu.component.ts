@@ -9,25 +9,50 @@ import {
   HostListener,
   ElementRef,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ReportUserModalComponent } from '../report-user-modal/report-user-modal.component';
 
 @Component({
   selector: 'app-long-press-context-menu',
   standalone: true,
-  imports: [CommonModule, ReportUserModalComponent],
+  imports: [ReportUserModalComponent],
   template: `
     @if (showMenu()) {
-      <div class="context-menu-popup" (click)="$event.stopPropagation()" (contextmenu)="$event.preventDefault()">
+      <div
+        class="context-menu-popup"
+        (click)="$event.stopPropagation()"
+        (contextmenu)="$event.preventDefault()"
+      >
         <ul class="menu-items">
           <li>
-            <button type="button" role="menuitem" (click)="onOptionClick('copy')" [disabled]="disabled()">Copy</button>
+            <button
+              type="button"
+              role="menuitem"
+              (click)="onOptionClick('copy')"
+              [disabled]="disabled()"
+            >
+              Copy
+            </button>
           </li>
           <li>
-            <button type="button" role="menuitem" (click)="onOptionClick('favourite')" [disabled]="disabled()">Favourite</button>
+            <button
+              type="button"
+              role="menuitem"
+              (click)="onOptionClick('favourite')"
+              [disabled]="disabled()"
+            >
+              Favourite
+            </button>
           </li>
           <li>
-            <button type="button" role="menuitem" (click)="onOptionClick('report')" [disabled]="disabled()">Report</button>
+            <button
+              type="button"
+              role="menuitem"
+              (click)="onOptionClick('report')"
+              [disabled]="disabled()"
+            >
+              Report
+            </button>
           </li>
         </ul>
       </div>
@@ -124,7 +149,7 @@ export class LongPressContextMenuComponent {
       });
       this.close();
     } else if (option === 'report') {
-      this.close();               // hide context menu
+      this.close(); // hide context menu
       this.showReportModal.set(true); // open report modal
       return;
     }

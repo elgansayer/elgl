@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 import { SafetyService } from '../../services/safety.service';
 import { ToastService } from '../primitives/toast/toast.service';
 import { ReportUserDto } from '../../services/safety.service';
@@ -9,7 +9,7 @@ import { I18nService } from '../../services/i18n.service';
 @Component({
   selector: 'app-report-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   template: `
     <div
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
