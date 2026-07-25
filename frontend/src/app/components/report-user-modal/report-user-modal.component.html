@@ -9,29 +9,38 @@
 
       <!-- Form body -->
       <div class="px-6 py-5 space-y-5">
-        <!-- Reason selection -->
+        <!-- Reason selection (DYNAMIC) -->
         <fieldset>
           <legend class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Reason for report</legend>
-          <div class="grid grid-cols-1 gap-2">
-            @for (cat of reasonCategories; track cat.value) {
-              <label class="flex items-center p-2.5 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-red-400 dark:hover:border-red-500 transition cursor-pointer"
-                     [class.border-red-500]="selectedCategory() === cat.value"
-                     [class.bg-red-50]="selectedCategory() === cat.value">
-                <input
-                  type="radio"
-                  name="reportCategory"
-                  [value]="cat.value"
-                  [checked]="selectedCategory() === cat.value"
-                  (change)="selectedCategory.set(cat.value)"
-                  class="w-4 h-4 text-red-600 focus:ring-red-500"
-                />
-                <span class="ms-2 text-sm text-gray-800 dark:text-gray-200">{{ cat.label }}</span>
-              </label>
-            }
-          </div>
+
+          @if (loadingCategories()) {
+            <div class="flex items-center text-sm text-gray-500 dark:text-gray-400">
+              <span class="loader me-2"></span> Loading categories…
+            </div>
+          } @else if (loadError()) {
+            <p class="text-sm text-red-500">Failed to load categories. Please try again later.</p>
+          } @else {
+            <div class="grid grid-cols-1 gap-2">
+              @for (cat of categories$ | async; track cat.value) {
+                <label class="flex items-center p-2.5 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-red-400 dark:hover:border-red-500 transition cursor-pointer"
+                       [class.border-red-500]="selectedCategory() === cat.value"
+                       [class.bg-red-50]="selectedCategory() === cat.value">
+                  <input
+                    type="radio"
+                    name="reportCategory"
+                    [value]="cat.value"
+                    [checked]="selectedCategory() === cat.value"
+                    (change)="selectedCategory.set(cat.value)"
+                    class="w-4 h-4 text-red-600 focus:ring-red-500"
+                  />
+                  <span class="ms-2 text-sm text-gray-800 dark:text-gray-200">{{ cat.label }}</span>
+                </label>
+              }
+            </div>
+          }
         </fieldset>
 
-        <!-- Description (optional) -->
+        <!-- Description -->
         <div>
           <label for="reportDesc" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
             Additional details <span class="text-gray-400 dark:text-gray-500">(optional)</span>

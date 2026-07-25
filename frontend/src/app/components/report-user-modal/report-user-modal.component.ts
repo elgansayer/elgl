@@ -1,6 +1,8 @@
-import { Component, input, output, signal } from '@angular/core';
+import { Component, input, output, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Observable, of } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
 import { firstValueFrom } from 'rxjs';
 import { SafetyService } from '../../services/safety.service';
 import { ToastService } from '../../components/primitives/toast/toast.service';
@@ -13,43 +15,49 @@ import type { ReportUserDto } from '../../services/safety.service';
   templateUrl: './report-user-modal.component.html',
   styleUrls: ['./report-user-modal.component.scss']
 })
-export class ReportUserModalComponent {
-  // Inputs
+export class ReportUserModalComponent implements OnInit {
+  private readonly safetyService = inject(SafetyService);
+  private readonly toast = inject(ToastService);
+
+  // Inputs / Outputs
   readonly reportedUserId = input.required<string>();
-  readonly contextUrl = input<string>('');
-  readonly show = input.required<boolean>();
+  readonly contextUrl    = input<string>('');
+  readonly show          = input.required<boolean>();
+  readonly closed        = output<void>();
+  readonly reportSent    = output<void>();
 
-  // Outputs
-  readonly closed = output<void>();
-  readonly reportSent = output<void>();
-
-  // Static categories matching the backend DTO
-  readonly reasonCategories = [
-    { value: 'harassment', label: 'Harassment' },
-    { value: 'spam', label: 'Spam' },
-    { value: 'inappropriate_content', label: 'Inappropriate Content' },
-    { value: 'underage', label: 'Underage User' },
-    { value: 'impersonation', label: 'Impersonation' },
-    { value: 'other', label: 'Other' }
-  ] as const;
-
+  // UI state
   readonly selectedCategory = signal<string | null>(null);
-  readonly description = signal<string>('');
+  readonly description      = signal<string>('');
+  readonly submitting       = signal(false);
 
-  readonly submitting = signal(false);
+  // Dynamic categories
+  categories$: Observable<{ value: string; label: string }[]> = of([]);
+  loadingCategories = signal(false);
+  loadError         = signal(false);
 
-  constructor(
-    private readonly safetyService: SafetyService,
-    private readonly toast: ToastService
-  ) {}
+  ngOnInit(): void {
+    this.loadCategories();
+  }
 
-  cancel() {
+  private loadCategories(): void {
+    this.loadingCategories.set(true);
+    this.categories$ = this.safetyService.getCategories().pipe(
+      tap(() => this.loadingCategories.set(false)),
+      catchError(() => {
+        this.loadError.set(true);
+        this.loadingCategories.set(false);
+        return of([]);
+      })
+    );
+  }
+
+  cancel(): void {
     this.closed.emit();
   }
 
-  async submitReport() {
+  async submitReport(): Promise<void> {
     if (!this.selectedCategory()) return;
-
     this.submitting.set(true);
     try {
       const payload: ReportUserDto = {
@@ -61,7 +69,7 @@ export class ReportUserModalComponent {
       await firstValueFrom(this.safetyService.reportUser(payload));
       this.reportSent.emit();
       this.toast.show('Report submitted successfully', { type: 'success' });
-    } catch (error) {
+    } catch {
       this.toast.show('Failed to submit report', { type: 'error' });
     } finally {
       this.submitting.set(false);
