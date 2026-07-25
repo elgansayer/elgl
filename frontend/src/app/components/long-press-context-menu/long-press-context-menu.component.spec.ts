@@ -50,7 +50,10 @@ describe('LongPressContextMenuComponent', () => {
 
   it('should emit report event when report option is clicked', () => {
     vi.spyOn(component.report, 'emit');
+    // Clicking report opens the modal but does not emit directly
     component['onOptionClick']('report');
+    // After the modal submits, the event is emitted
+    component.onReportSubmitted();
     expect(component.report.emit).toHaveBeenCalledWith({
       messageId: 'test-message-id',
       content: 'Hello world',

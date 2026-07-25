@@ -127,11 +127,17 @@ export class LongPressContextMenuComponent {
 
   onRightClick(event: MouseEvent): void {
     event.preventDefault();
+    if (this.disabled()) {
+      return;
+    }
     this.position.set({ x: event.clientX, y: event.clientY });
     this.showMenu.set(true);
   }
 
   onTouchStart(event: TouchEvent): void {
+    if (this.disabled()) {
+      return;
+    }
     this.clearLongPressTimer();
     const touch = event.touches[0];
     if (touch) {

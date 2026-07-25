@@ -1,8 +1,26 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NotificationsInboxComponent } from './notifications-inbox.component';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { vi } from 'vitest';
+import { NotificationsInboxComponent } from './notifications-inbox.component';
+import { NotificationService, InAppNotification } from '../../services/notification.service';
+import { I18nService } from '../../services/i18n.service';
+
+const mockNotificationService = {
+  getNotifications: vi.fn<[string], Promise<InAppNotification[]>>().mockResolvedValue([
+    { id: '1', type: 'like_moment', actor_id: 'u1', sender_name: 'Alice', message_preview: 'liked your moment', is_read: false, created_at: new Date().toISOString() } as InAppNotification,
+    { id: '2', type: 'comment_moment', actor_id: 'u2', sender_name: 'Bob', message_preview: 'commented', is_read: false, created_at: new Date().toISOString() } as InAppNotification,
+  ]),
+  getUnreadCount: vi.fn<[], Promise<number>>().mockResolvedValue(5),
+  markAllAsRead: vi.fn<[], Promise<void>>().mockResolvedValue(),
+  markAsRead: vi.fn<[string], Promise<void>>().mockResolvedValue(),
+};
+
+const mockI18nService = {
+  translations: vi.fn().mockReturnValue({}),
+  translate: (key: string) => key,
+};
 
 describe('NotificationsInboxComponent', () => {
   let component: NotificationsInboxComponent;
@@ -15,6 +33,8 @@ describe('NotificationsInboxComponent', () => {
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
+        { provide: NotificationService, useValue: mockNotificationService },
+        { provide: I18nService, useValue: mockI18nService },
       ],
     }).compileComponents();
 
