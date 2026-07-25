@@ -180,7 +180,7 @@
 
 ## Phase 23: Onboarding Flow
 - [STUCK] Build multi-step Angular onboarding wizard.
-- [ ] Step 1: Native Language and Target Language selection.
+- [STUCK] Step 1: Native Language and Target Language selection.
 - [ ] Step 2: Proficiency Level assessment.
 - [ ] Step 3: Avatar upload and permissions prompt (Microphone, Camera).
 
