@@ -4,6 +4,7 @@
 - [ ] Build "Report User" modal with dynamic category selection. **(BLOCKED by missing design spec)**
 - [x] (2026-08-19) Reviewed diff; only formatting/lint changes; Build Report User modal task remains incomplete and blocked.
 - [ ] Build Report User modal UI remains incomplete and blocked after 2026-08-19 review (no changes).
+- [ ] (2026-09-01) Reviewed diff; only formatting/lint changes; Build Report User modal remains incomplete and blocked.
 - [x] (2026-08-29) Reviewed diff; only formatting/lint changes; Build Report User modal task remains incomplete and blocked.
 - [x] (2026-08-06) Reviewed diff; only lint/formatting changes; no modal UI progress; task blocked.
 - [x] (2026-08-05) Reviewed latest git diff: formatting/lint changes only; no Report User modal UI work performed; task remains incomplete and blocked.
