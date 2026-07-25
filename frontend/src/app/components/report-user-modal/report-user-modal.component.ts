@@ -12,7 +12,7 @@ import { ToastService } from '../primitives/toast/toast.service';
     <!-- Backdrop -->
     <div
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-      (click)="close.emit()"
+      (click)="onCancel()"
     >
       <!-- Modal dialog -->
       <div
@@ -160,5 +160,9 @@ export class ReportUserModalComponent implements OnInit {
         this.isSubmitting.set(false);
       },
     });
+  }
+
+  onCancel(): void {
+    this.close.emit();
   }
 }
