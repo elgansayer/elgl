@@ -33,11 +33,11 @@ import { ReportUserModalComponent } from '../report-user-modal/report-user-modal
       </div>
     }
     <app-report-user-modal
-      [reportUserId]="senderId()"
+      [reportedUserId]="senderId()"
       [contextUrl]="buildContextUrl()"
       [show]="showReportModal"
       (closed)="showReportModal = false"
-      (submitted)="onReportSubmitted()">
+      (reportSent)="onReportSubmitted()">
     </app-report-user-modal>
   `,
   styles: [
