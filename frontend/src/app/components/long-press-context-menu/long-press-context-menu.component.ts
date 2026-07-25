@@ -35,6 +35,7 @@ import { SafetyService } from '../../services/safety.service';
     }
     @if (showReportModal) {
       <app-report-user-modal
+        [show]="showReportModal"
         [reportedUserId]="senderId()"
         [contextUrl]="buildContextUrl()"
         (close)="showReportModal = false; onReportSubmitted()">
