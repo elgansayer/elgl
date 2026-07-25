@@ -156,7 +156,7 @@
 ## Phase 18: Monetisation & VIP Tiers
 - [STUCK] Build VIP Subscription showcase page detailing all premium benefits.
 - [STUCK] Integrate Stripe Checkout for Monthly (8 UKP / $10 USD) and Yearly (50 UKP / $63 USD) plans.
-- [ ] Build "Restore Purchases" button for app store compliance.
+- [STUCK] Build "Restore Purchases" button for app store compliance.
 
 ## Phase 19: Gamification & Study Streaks
 - [ ] Build Daily Study Streak counter widget on home screen.
