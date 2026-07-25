@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatService } from './chat.service';
 import { SupabaseService } from '../supabase/supabase.service';
-import { CentrifugoService } from '../centrifugo/centrifugo.service';
+import { CentrifugoService } from './centrifugo.service';
 
-jest.mock('../centrifugo/centrifugo.service', () => ({
+jest.mock('./centrifugo.service', () => ({
   CentrifugoService: jest.fn(),
 }));
 
