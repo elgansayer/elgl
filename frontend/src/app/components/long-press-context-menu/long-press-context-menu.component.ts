@@ -270,29 +270,10 @@ export class LongPressContextMenuComponent implements AfterViewInit {
     const payload = this.reportPayload();
     if (!payload) return;
 
-    const dto = {
-      reported_id: payload.senderId,
-      reason_category: data.reasonCategory,
-      description: data.description || undefined,
-      context_url: this.buildReportUrl(payload.messageId, payload.roomId),
-    };
-
-    try {
-      await this.safetyService.reportUserAsync(dto);
-      this.report.emit(payload); // notify parent for any additional UI updates
-      this.showReportModal.set(false);
-      this.reportPayload.set(null);
-      this.toastService.show(
-        this.i18n.translate('report_user.success'),
-        { type: 'success', duration: 3000 }
-      );
-    } catch (error) {
-      console.error('Report submission failed:', error);
-      this.toastService.show(
-        this.i18n.translate('report_user.error_generic'),
-        { type: 'error', duration: 5000 }
-      );
-    }
+    // The report was already submitted by the report modal; just clean up.
+    this.report.emit(payload);            // inform parent if needed
+    this.showReportModal.set(false);
+    this.reportPayload.set(null);
   }
 
   showMenu(event: MouseEvent): void {
