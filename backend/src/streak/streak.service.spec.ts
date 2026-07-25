@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-expressions */
 import { Test, TestingModule } from '@nestjs/testing';
 import { StreakService } from './streak.service';
 import { SupabaseService } from '../supabase/supabase.service';
