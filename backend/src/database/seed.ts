@@ -229,7 +229,7 @@ async function runSeed() {
     .eq('is_vip', true)
     .limit(3);
 
-  const vipUsers = vipUsersRaw;
+  const vipUsers = (vipUsersRaw ?? []) as { id: string; email: string }[];
 
   if (vipUsers && vipUsers.length > 0) {
     const subscriptionData = vipUsers.map((user, index) => ({
@@ -270,7 +270,7 @@ async function runSeed() {
     .limit(1)
     .single();
 
-  const firstVip = firstVipRaw;
+  const firstVip = firstVipRaw as { id: string } | null;
 
   if (firstVip) {
     await supabase.from('subscription_events').insert([
