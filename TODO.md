@@ -2,7 +2,8 @@
 - [x] **Investigation (2026-07-28):** No changes were applied for the task “Build Report User modal with dynamic category selection”. The task remains blocked because the pixel‑perfect design spec cannot be extracted from the original HelloTalk screenshots (screenshots not accessible). The blocker has not been resolved.
 - [x] **Investigation (2026-08-11):** No changes were made for the “(2026-08-06) Reviewed diff” task because the Report User modal UI task remains blocked by the missing design spec (screenshots not accessible). Only lint/formatting changes were applied; all further modal UI work requires access to original HelloTalk screenshots.
 - [ ] Build "Report User" modal with dynamic category selection. **(BLOCKED by missing design spec)**
-- [ ] (2026-08-19) Reviewed diff; only formatting/lint changes; Build Report User modal task remains incomplete and blocked.
+- [x] (2026-08-19) Reviewed diff; only formatting/lint changes; Build Report User modal task remains incomplete and blocked.
+- [ ] Build Report User modal UI remains incomplete and blocked after 2026-08-19 review (no changes).
 - [x] (2026-08-06) Reviewed diff; only lint/formatting changes; no modal UI progress; task blocked.
 - [x] (2026-08-05) Reviewed latest git diff: formatting/lint changes only; no Report User modal UI work performed; task remains incomplete and blocked.
 - [x] (2026-08-06) After review: formatting changes only; task still incomplete and blocked.
