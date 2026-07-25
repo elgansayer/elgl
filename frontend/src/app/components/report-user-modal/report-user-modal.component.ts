@@ -117,8 +117,8 @@ import { Subscription } from 'rxjs';
                   </label>
                   <input
                     type="url"
-                    [ngModel]="contextUrl()"
-                    (ngModelChange)="contextUrl.set($event)"
+                    [ngModel]="internalContextUrl()"
+                    (ngModelChange)="internalContextUrl.set($event)"
                     [placeholder]="translatedLabel('linkToContentPlaceholder')"
                     class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg
                            text-white placeholder-slate-500 focus:outline-none focus:ring-2
@@ -198,7 +198,8 @@ export class ReportUserModalComponent implements OnInit, OnDestroy {
       this.step.set('category');
       this.selectedCategory.set(null);
       this.description.set('');
-      this.contextUrl.set('');
+      // propagate the external context URL from the parent binding
+      this.internalContextUrl.set(this._externalContextUrl || '');
       this.error.set(null);
       this.loadCategories();   // optionally refresh categories every time it opens
     }
@@ -208,6 +209,14 @@ export class ReportUserModalComponent implements OnInit, OnDestroy {
     return this._show;
   }
 
+  // accept a context URL from the parent; stores the value in a backing field
+  @Input()
+  set contextUrl(value: string) {
+    this._externalContextUrl = value;
+  }
+
+  private _externalContextUrl = '';
+
   private readonly safetyService = inject(SafetyService);
   private readonly toastService = inject(ToastService);
   private readonly i18nService = inject(I18nService);
@@ -216,7 +225,7 @@ export class ReportUserModalComponent implements OnInit, OnDestroy {
   readonly categories = signal<ReportCategory[]>([]);
   readonly selectedCategory = signal<ReportCategory | null>(null);
   readonly description = signal('');
-  readonly contextUrl = signal('');
+  readonly internalContextUrl = signal('');
   readonly isSubmitting = signal(false);
   readonly error = signal<string | null>(null);
 
@@ -349,7 +358,7 @@ export class ReportUserModalComponent implements OnInit, OnDestroy {
         reported_id: this.reportUserId,
         reason_category: this.selectedCategory()!.value,
         description: this.description() || undefined,
-        context_url: this.contextUrl() || undefined
+        context_url: this.internalContextUrl() || undefined
       });
 
       this.step.set('success');
