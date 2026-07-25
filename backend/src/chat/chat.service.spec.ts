@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 jest.mock('../centrifugo/centrifugo.service', () => ({
   CentrifugoService: class {},
 }));
