@@ -1227,3 +1227,29 @@ to control flow
 > backend@0.0.1 lint
 > sh -c 'eslint "{src,apps,libs,test}/**/*.ts" --fix' frontend/src/app/components/voip-call/voip-call.component.ts
 
+
+/root/hellotalk/backend/src/nlp/nlp.service.ts
+  187:38  error  Unsafe assignment of an `any` value              @typescript-eslint/no-unsafe-assignment
+  187:59  error  Unsafe member access .message on an `any` value  @typescript-eslint/no-unsafe-member-access
+  305:38  error  Unsafe assignment of an `any` value              @typescript-eslint/no-unsafe-assignment
+  305:59  error  Unsafe member access .message on an `any` value  @typescript-eslint/no-unsafe-member-access
+
+✖ 4 problems (4 errors, 0 warnings)
+
+
+> backend@0.0.1 lint
+> sh -c 'eslint "{src,apps,libs,test}/**/*.ts" --fix' frontend/src/app/app.spec.ts
+
+
+/root/hellotalk/backend/src/nlp/nlp.service.ts
+  187:38  error  Unsafe assignment of an `any` value              @typescript-eslint/no-unsafe-assignment
+  187:59  error  Unsafe member access .message on an `any` value  @typescript-eslint/no-unsafe-member-access
+  305:38  error  Unsafe assignment of an `any` value              @typescript-eslint/no-unsafe-assignment
+  305:59  error  Unsafe member access .message on an `any` value  @typescript-eslint/no-unsafe-member-access
+
+✖ 4 problems (4 errors, 0 warnings)
+
+
+> backend@0.0.1 lint
+> sh -c 'eslint "{src,apps,libs,test}/**/*.ts" --fix' frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts
+

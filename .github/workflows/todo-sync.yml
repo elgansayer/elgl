@@ -22,6 +22,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set +e
           echo "Scanning TODO.md to mirror state to GitHub Issues..."
           
           while IFS= read -r line; do
@@ -33,8 +34,11 @@ jobs:
               
               if [ -z "$TITLE" ]; then continue; fi
               
-              # Search for exact issue title in both open and closed issues
-              ISSUE_JSON=$(gh issue list --search "\"$TITLE\" in:title" --state all --json number,state --jq '.[0]')
+              # Strip quotes from the search query to prevent breaking gh search syntax
+              SEARCH_TITLE=$(echo "$TITLE" | tr -d '"' | tr -d "'")
+              
+              # Search for exact issue title in both open and closed issues (hide errors)
+              ISSUE_JSON=$(gh issue list --search "\"$SEARCH_TITLE\" in:title" --state all --json number,state --jq '.[0]' 2>/dev/null || true)
               
               if [ -z "$ISSUE_JSON" ] || [ "$ISSUE_JSON" == "null" ]; then
                 ISSUE_NUM=""
