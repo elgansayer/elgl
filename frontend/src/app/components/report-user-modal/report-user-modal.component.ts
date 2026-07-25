@@ -187,7 +187,7 @@ import { Subscription } from 'rxjs';
 export class ReportUserModalComponent implements OnInit, OnDestroy {
   @Input() reportUserId!: string;
   @Output() closed = new EventEmitter<void>();
-  @Output() submitted = new EventEmitter<void>();
+  @Output() submitted = new EventEmitter<{ reasonCategory: string; description: string }>();
 
   private _show = false;
 
@@ -362,7 +362,10 @@ export class ReportUserModalComponent implements OnInit, OnDestroy {
       });
 
       this.step.set('success');
-      this.submitted.emit();
+      this.submitted.emit({
+        reasonCategory: this.selectedCategory()!.value,
+        description: this.description(),
+      });
 
       this.toastService.show(
         this.i18nService.translate('report.toast.success', { defaultValue: 'Report submitted successfully' }),

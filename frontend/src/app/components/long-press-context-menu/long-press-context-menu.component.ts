@@ -2,6 +2,7 @@ import { Component, input, output, signal, computed, HostListener, ElementRef, V
 import { CommonModule } from '@angular/common';
 import { I18nService } from '../../services/i18n.service';
 import { SafetyService } from '../../services/safety.service';
+import { ToastService } from '../primitives/toast/toast.service';
 import { ReportUserModalComponent } from '../report-user-modal/report-user-modal.component';
 
 export interface ContextMenuOption {
@@ -57,7 +58,7 @@ export interface ContextMenuOption {
       [reportUserId]="reportPayload()?.senderId ?? ''"
       [contextUrl]="reportUrl()"
       (closed)="onCloseReport()"
-      (submitted)="onReportSubmitted()"
+      (submitted)="onReportSubmitted($event)"
     ></app-report-user-modal>
   `,
   styles: [`
@@ -73,6 +74,7 @@ export class LongPressContextMenuComponent implements AfterViewInit {
   private readonly elementRef = inject(ElementRef);
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
+  private readonly toastService = inject(ToastService);
 
   @ViewChild('menuPanel') menuPanel!: ElementRef<HTMLElement>;
 
@@ -264,12 +266,33 @@ export class LongPressContextMenuComponent implements AfterViewInit {
     this.reportPayload.set(null);
   }
 
-  onReportSubmitted(): void {
+  async onReportSubmitted(data: { reasonCategory: string; description: string }): Promise<void> {
     const payload = this.reportPayload();
-    if (payload) {
-      this.report.emit(payload);
+    if (!payload) return;
+
+    const dto = {
+      reported_id: payload.senderId,
+      reason_category: data.reasonCategory,
+      description: data.description || undefined,
+      context_url: this.buildReportUrl(payload.messageId, payload.roomId),
+    };
+
+    try {
+      await this.safetyService.reportUserAsync(dto);
+      this.report.emit(payload); // notify parent for any additional UI updates
+      this.showReportModal.set(false);
+      this.reportPayload.set(null);
+      this.toastService.show(
+        this.i18n.translate('report_user.success'),
+        { type: 'success', duration: 3000 }
+      );
+    } catch (error) {
+      console.error('Report submission failed:', error);
+      this.toastService.show(
+        this.i18n.translate('report_user.error_generic'),
+        { type: 'error', duration: 5000 }
+      );
     }
-    // do not close the modal immediately; the user can review the success message and press "done"
   }
 
   showMenu(event: MouseEvent): void {
