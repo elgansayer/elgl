@@ -139,6 +139,11 @@ export class LongPressContextMenuComponent {
     // optionally show a toast
   }
 
+  onReportSubmitted(): void {
+    // Hook for test coverage — close report modal after submission
+    this.showReportModal = false;
+  }
+
   onRightClick(event: MouseEvent): void {
     event.preventDefault();
     if (this.disabled()) {

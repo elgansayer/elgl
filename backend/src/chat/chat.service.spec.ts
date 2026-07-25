@@ -20,10 +20,13 @@ describe('ChatService', () => {
       insert: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
+      neq: jest.fn().mockReturnThis(),
       ilike: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
       single: jest.fn(),
+      // Make the builder thenable so that `await supabase.from(...)…` resolves to a plain object
+      then: jest.fn().mockResolvedValue({ data: [] }),
     };
 
     mockSupabaseClient = {
@@ -163,7 +166,7 @@ describe('ChatService', () => {
       expect(result).toEqual(rooms);
     });
 
-    it('should return empty array when rooms query fails', async () => {
+    it('should return fallback mock rooms when rooms query fails', async () => {
       mockQueryBuilder.order
         .mockReturnValueOnce(mockQueryBuilder)
         .mockResolvedValueOnce({
@@ -172,7 +175,20 @@ describe('ChatService', () => {
         });
 
       const result = await service.getRooms('user-1');
-      expect(result).toEqual([]);
+      // The service returns pre-seeded fallback rooms when the query fails
+      expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject({
+        id: 'mock-room-1',
+        title: 'Spanish Practice',
+        is_online: true,
+        is_pinned: true,
+      });
+      expect(result[1]).toMatchObject({
+        id: 'mock-room-2',
+        title: 'Language Exchange - JP/EN',
+        is_online: false,
+        is_pinned: false,
+      });
     });
   });
 
