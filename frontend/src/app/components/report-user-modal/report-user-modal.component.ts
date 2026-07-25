@@ -1,7 +1,7 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { SafetyService, ReportUserDto } from '../../services/safety.service';
+import { SafetyService, ReportUserDto, ReportCategory } from '../../services/safety.service';
 import { ToastService } from '../../components/primitives/toast/toast.service'; // adjust path
 
 @Component({
@@ -27,18 +27,22 @@ import { ToastService } from '../../components/primitives/toast/toast.service'; 
           <!-- Reason -->
           <div class="mb-4">
             <label class="block text-slate-300 text-sm mb-1" for="reason">Reason *</label>
-            <select
-              id="reason"
-              formControlName="reason_category"
-              class="w-full bg-slate-700 text-white rounded px-3 py-2 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              <option value="" disabled>Select a reason</option>
-              <option value="harassment">Harassment</option>
-              <option value="spam">Spam</option>
-              <option value="inappropriate_content">Inappropriate Content</option>
-              <option value="impersonation">Impersonation</option>
-              <option value="other">Other</option>
-            </select>
+            
+            @if (categoriesLoading) {
+              <!-- Skeleton loading state -->
+              <div class="w-full bg-slate-700 rounded px-3 py-2 animate-pulse h-10"></div>
+            } @else {
+              <select
+                id="reason"
+                formControlName="reason_category"
+                class="w-full bg-slate-700 text-white rounded px-3 py-2 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                <option value="" disabled>Select a reason</option>
+                @for (cat of categories; track cat.value) {
+                  <option [value]="cat.value">{{ cat.label }}</option>
+                }
+              </select>
+            }
             <div
               *ngIf="reportForm.get('reason_category')?.invalid && reportForm.get('reason_category')?.touched"
               class="text-red-400 text-xs mt-1"
@@ -111,7 +115,7 @@ import { ToastService } from '../../components/primitives/toast/toast.service'; 
     </div>
   `
 })
-export class ReportUserModalComponent {
+export class ReportUserModalComponent implements OnInit {
   @Input({ required: true }) reportUserId!: string;
   @Input() contextUrl?: string;
   @Output() close = new EventEmitter<void>();
@@ -124,11 +128,28 @@ export class ReportUserModalComponent {
   isSubmitting = false;
   errorMessage = '';
 
+  categories: ReportCategory[] = [];
+  categoriesLoading = true;
+
   reportForm = this.fb.group({
     reason_category: ['', Validators.required],
     description: [''],
     block_user: [false]
   });
+
+  ngOnInit(): void {
+    this.safetyService.getCategories().subscribe({
+      next: (categories) => {
+        this.categories = categories;
+        this.categoriesLoading = false;
+      },
+      error: () => {
+        // Fallback to static list provided by the service
+        this.categories = this.safetyService.getStaticReportCategories();
+        this.categoriesLoading = false;
+      }
+    });
+  }
 
   submitReport() {
     if (this.reportForm.invalid || this.isSubmitting) return;
