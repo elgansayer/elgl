@@ -1,154 +1,179 @@
-import { Component, EventEmitter, Input, Output, inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { SafetyService, ReportUserDto, ReportCategory } from '../../services/safety.service';
-import { ToastService } from '../../components/primitives/toast/toast.service'; // adjust path
+import {
+  Component,
+  computed,
+  EventEmitter,
+  Input,
+  OnInit,
+  Output,
+  signal,
+} from '@angular/core';
+import {
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
+import { SafetyService, ReportUserDto } from '../../services/safety.service';
+import { ToastService } from '../../components/primitives/toast/toast.service';
 
 @Component({
   selector: 'app-report-user-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [ReactiveFormsModule],
   template: `
     <div
       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
       (click)="close.emit()"
     >
       <div
-        class="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4"
+        class="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-xl"
         (click)="$event.stopPropagation()"
-        role="dialog"
-        aria-labelledby="report-dialog-title"
       >
-        <h2 id="report-dialog-title" class="text-xl font-bold text-white mb-4">
-          Report User
-        </h2>
+        <h2 class="text-xl font-bold text-white mb-4">Report User</h2>
 
-        <form [formGroup]="reportForm" (ngSubmit)="submitReport()">
-          <!-- Reason -->
-          <div class="mb-4">
-            <label class="block text-slate-300 text-sm mb-1" for="reason">Reason *</label>
-            
-            @if (categoriesLoading) {
-              <!-- Skeleton loading state -->
-              <div class="w-full bg-slate-700 rounded px-3 py-2 animate-pulse h-10"></div>
-            } @else {
-              <select
-                id="reason"
-                formControlName="reason_category"
-                class="w-full bg-slate-700 text-white rounded px-3 py-2 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                <option value="" disabled>Select a reason</option>
-                @for (cat of categories; track cat.value) {
-                  <option [value]="cat.value">{{ cat.label }}</option>
-                }
-              </select>
-            }
-            <div
-              *ngIf="reportForm.get('reason_category')?.invalid && reportForm.get('reason_category')?.touched"
-              class="text-red-400 text-xs mt-1"
+        <!-- Error message -->
+        @if (errorMessage) {
+          <div class="bg-red-500/20 text-red-300 px-4 py-2 rounded-lg mb-4">
+            {{ errorMessage }}
+          </div>
+        }
+
+        <form [formGroup]="reportForm" (ngSubmit)="submitReport()" class="space-y-4">
+          <!-- Main Reason -->
+          <div>
+            <label class="block text-sm text-slate-400 mb-1"
+              >Reason <span class="text-red-400">*</span></label
             >
-              Reason is required.
-            </div>
+            <select
+              formControlName="mainCategory"
+              class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+            >
+              <option value="" disabled>Select a reason…</option>
+              @for (cat of mainCategories; track cat) {
+                <option [value]="cat">{{ cat }}</option>
+              }
+            </select>
           </div>
 
+          <!-- Sub‑category (shown only if main category has sub options) -->
+          @if (subCategories().length) {
+            <div>
+              <label class="block text-sm text-slate-400 mb-1"
+                >Specific issue</label
+              >
+              <select
+                formControlName="subCategory"
+                class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              >
+                <option value="">None</option>
+                @for (sub of subCategories(); track sub) {
+                  <option [value]="sub">{{ sub }}</option>
+                }
+              </select>
+            </div>
+          }
+
           <!-- Description -->
-          <div class="mb-4">
-            <label class="block text-slate-300 text-sm mb-1" for="description">
-              Description (optional)
-            </label>
+          <div>
+            <label class="block text-sm text-slate-400 mb-1"
+              >Description (optional)</label
+            >
             <textarea
-              id="description"
               formControlName="description"
+              placeholder="Provide more details…"
               rows="3"
-              class="w-full bg-slate-700 text-white rounded px-3 py-2 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500"
-              placeholder="Add details to help us investigate..."
+              class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
             ></textarea>
           </div>
 
           <!-- Block toggle -->
-          <div class="mb-4 flex items-center gap-2">
+          <div class="flex items-center gap-2">
             <input
               type="checkbox"
               id="blockUser"
-              formControlName="block_user"
-              class="rounded border-slate-600 bg-slate-700 text-red-500 focus:ring-red-500"
+              formControlName="blockUser"
+              class="form-checkbox h-4 w-4 rounded text-indigo-500 bg-slate-800 border-slate-600 focus:ring-indigo-500"
             />
-            <label for="blockUser" class="text-slate-300 text-sm">
-              Also block this user
-            </label>
+            <label for="blockUser" class="text-sm text-slate-300"
+              >Block this user immediately</label
+            >
           </div>
 
-          <!-- Error message -->
-          @if (errorMessage) {
-            <div class="mb-4 p-2 bg-red-600/20 border border-red-500 rounded text-red-200 text-sm">
-              {{ errorMessage }}
-            </div>
-          }
-
-          <!-- Buttons -->
-          <div class="flex justify-end gap-3 mt-6">
+          <!-- Actions -->
+          <div class="flex justify-end gap-3 pt-2">
             <button
               type="button"
-              class="px-4 py-2 rounded bg-slate-600 text-white hover:bg-slate-500 transition-colors"
               (click)="close.emit()"
+              class="px-5 py-2 text-sm bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              class="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-500 transition-colors disabled:opacity-50 flex items-center gap-2"
-              [disabled]="reportForm.invalid || isSubmitting"
+              [disabled]="isSubmitting || reportForm.invalid"
+              class="px-5 py-2 text-sm bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold rounded-lg transition-colors"
             >
-              @if (isSubmitting) {
-                <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                </svg>
-                Submitting...
-              } @else {
+              <span class="inline-flex items-center gap-2">
+                @if (isSubmitting) {
+                  <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" />
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                }
                 Submit Report
-              }
+              </span>
             </button>
           </div>
         </form>
       </div>
     </div>
-  `
+  `,
 })
 export class ReportUserModalComponent implements OnInit {
-  @Input({ required: true }) reportUserId!: string;
+  @Input() reportUserId!: string;
   @Input() contextUrl?: string;
   @Output() close = new EventEmitter<void>();
   @Output() reported = new EventEmitter<void>();
 
-  private fb = inject(FormBuilder);
-  private safetyService = inject(SafetyService);
-  private toastService = inject(ToastService);
-
+  reportForm!: FormGroup;
   isSubmitting = false;
-  errorMessage = '';
+  errorMessage: string | null = null;
 
-  categories: ReportCategory[] = [];
-  categoriesLoading = true;
+  private readonly REPORT_CATEGORIES: Record<string, string[]> = {
+    'Harassment': ['Bullying', 'Threats', 'Sexual harassment'],
+    'Spam': ['Fake account / Bot', 'Unwanted promotion'],
+    'Inappropriate content': ['Nudity', 'Violence', 'Hate speech'],
+    'Other': [],
+  };
 
-  reportForm = this.fb.group({
-    reason_category: ['', Validators.required],
-    description: [''],
-    block_user: [false]
+  mainCategories = Object.keys(this.REPORT_CATEGORIES);
+
+  private readonly _mainCategorySignal = signal<string>('');
+
+  subCategories = computed(() => {
+    const main = this._mainCategorySignal();
+    return main ? this.REPORT_CATEGORIES[main] ?? [] : [];
   });
 
+  constructor(
+    private fb: FormBuilder,
+    private safetyService: SafetyService,
+    private toastService: ToastService,
+  ) {}
+
   ngOnInit(): void {
-    this.safetyService.getCategories().subscribe({
-      next: (categories) => {
-        this.categories = categories;
-        this.categoriesLoading = false;
-      },
-      error: () => {
-        // Fallback to static list provided by the service
-        this.categories = this.safetyService.getStaticReportCategories();
-        this.categoriesLoading = false;
-      }
+    this.reportForm = this.fb.group({
+      mainCategory: ['', Validators.required],
+      subCategory: [''],
+      description: [''],
+      blockUser: [false],
     });
+
+    this.reportForm
+      .get('mainCategory')!
+      .valueChanges.subscribe((val: string) =>
+        this._mainCategorySignal.set(val ?? ''),
+      );
   }
 
   submitReport() {
@@ -157,45 +182,31 @@ export class ReportUserModalComponent implements OnInit {
     this.isSubmitting = true;
     this.errorMessage = '';
 
-    const formValue = this.reportForm.value;
+    const { mainCategory, subCategory, description, blockUser } =
+      this.reportForm.value;
+    const reason = subCategory
+      ? `${mainCategory}:${subCategory}`
+      : mainCategory;
+
     const dto: ReportUserDto & { block_user?: boolean } = {
       reported_id: this.reportUserId,
-      reason_category: formValue.reason_category!,
-      description: formValue.description || undefined,
+      reason_category: reason,
+      description: description || undefined,
       context_url: this.contextUrl,
-      block_user: formValue.block_user ?? false
+      block_user: blockUser,
     };
 
-    // Execute report first, then block if requested
-    this.safetyService.reportUser({
-      reported_id: dto.reported_id,
-      reason_category: dto.reason_category,
-      description: dto.description,
-      context_url: dto.context_url
-    }).subscribe({
-      next: async () => {
-        if (dto.block_user) {
-          try {
-            await this.safetyService.blockUserAsync(dto.reported_id);
-          } catch (blockErr) {
-            // Block failed but report succeeded – show a warning
-            this.toastService.show(
-              'Report submitted, but blocking failed. Please block manually from settings.'
-            );
-            this.isSubmitting = false;
-            this.reported.emit();
-            return;
-          }
-        }
-        this.toastService.show('Report submitted successfully');
-        this.isSubmitting = false;
+    this.safetyService.reportUser(dto).subscribe({
+      next: () => {
+        this.toastService.show('Report submitted successfully.', 'success');
         this.reported.emit();
         this.close.emit();
       },
       error: (err) => {
-        this.errorMessage = err?.message || 'Failed to submit report. Please try again.';
+        this.errorMessage =
+          err?.error?.message || 'Failed to submit report. Please try again.';
         this.isSubmitting = false;
-      }
+      },
     });
   }
 }
