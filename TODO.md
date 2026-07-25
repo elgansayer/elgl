@@ -154,7 +154,7 @@
 - [STUCK] Build 1-on-1 Video Call interface with local preview overlay.
 
 ## Phase 18: Monetisation & VIP Tiers
-- [ ] Build VIP Subscription showcase page detailing all premium benefits.
+- [STUCK] Build VIP Subscription showcase page detailing all premium benefits.
 - [ ] Integrate Stripe Checkout for Monthly (8 UKP / $10 USD) and Yearly (50 UKP / $63 USD) plans.
 - [ ] Build "Restore Purchases" button for app store compliance.
 
