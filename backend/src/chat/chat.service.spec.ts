@@ -29,8 +29,8 @@ describe('ChatService', () => {
       update: jest.fn().mockReturnThis(),
       delete: jest.fn().mockReturnThis(),
       single: jest.fn(),
-      // Make the builder thenable so that `await supabase.from(...)…` resolves to a plain object
-      then: jest.fn().mockResolvedValue({ data: [] }),
+      // Make the builder thenable so that `await supabase.from(...)` calls resolve
+      then: jest.fn((resolve) => resolve({ data: [] })),
     };
 
     mockSupabaseClient = {

@@ -1,11 +1,12 @@
 import {
   Component,
   Input,
+  Output,
+  EventEmitter,
   inject,
   signal,
   OnInit,
   OnDestroy,
-  output,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatMessage } from '../../services/chat.service';
@@ -13,26 +14,24 @@ import { AuthService } from '../../services/auth.service';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { FavouriteService } from '../../services/favourite.service';
 import { SafetyService } from '../../services/safety.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-chat-message',
   standalone: true,
-  imports: [CommonModule, LongPressContextMenuComponent],
+  imports: [CommonModule, LongPressContextMenuComponent, TranslatePipe],
   template: `
-    <!-- Entire wrapper rendered only for unblocked users -->
-    <ng-container *ngIf="!isBlocked(); else blockPlaceholder">
+    @if (!isBlocked()) {
       <app-long-press-context-menu
         [messageId]="message.id"
         [messageContent]="message.text_content ?? ''"
         [messageType]="message.message_type"
         [senderId]="message.sender_id"
         [roomId]="message.room_id"
-        [isBlocked]="isBlocked()"
         (copy)="onCopy($event)"
         (favourite)="onFavourite($event)"
         (report)="onReport($event)"
-        (block)="onBlock($event)"
       >
         <div class="flex" [class.justify-end]="isOwnMessage()" [class.justify-start]="!isOwnMessage()">
           <div class="max-w-[70%] rounded-lg p-3"
@@ -40,42 +39,42 @@ import { Subject, takeUntil } from 'rxjs';
                [class.text-white]="isOwnMessage()"
                [class.bg-surface-300]="!isOwnMessage()">
             
-            <!-- Text message -->
-            <p *ngIf="message.message_type === 'text'" class="text-sm">{{ message.text_content }}</p>
+            @if (message.message_type === 'text') {
+              <p class="text-sm">{{ message.text_content }}</p>
+            }
 
-            <!-- Voice message -->
-            <div *ngIf="message.message_type === 'voice'" class="flex items-center gap-2">
-              <button (click)="playVoice()" class="p-2 rounded-full hover:bg-black/10">
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/>
-                </svg>
-              </button>
-              <span class="text-sm">Voice message</span>
-            </div>
+            @if (message.message_type === 'voice') {
+              <div class="flex items-center gap-2">
+                <button (click)="playVoice()" class="p-2 rounded-full hover:bg-black/10">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/>
+                  </svg>
+                </button>
+                <span class="text-sm">{{ 'chatRoom.voiceMessage' | t }}</span>
+              </div>
+            }
 
-            <!-- Correction message -->
-            <div *ngIf="message.message_type === 'correction' && message.correction_payload" class="space-y-1">
-              <p class="text-sm line-through opacity-75">{{ message.correction_payload.original }}</p>
-              <p class="text-sm font-medium">{{ message.correction_payload.corrected }}</p>
-              <p *ngIf="message.correction_payload.explanation" class="text-xs opacity-75 mt-1">
-                {{ message.correction_payload.explanation }}
-              </p>
-            </div>
+            @if (message.message_type === 'correction' && message.correction_payload) {
+              <div class="space-y-1">
+                <p class="text-sm line-through opacity-75">{{ message.correction_payload.original }}</p>
+                <p class="text-sm font-medium">{{ message.correction_payload.corrected }}</p>
+                @if (message.correction_payload.explanation) {
+                  <p class="text-xs opacity-75 mt-1">
+                    {{ message.correction_payload.explanation }}
+                  </p>
+                }
+              </div>
+            }
 
-            <!-- Doodle message -->
-            <div *ngIf="message.message_type === 'doodle' && message.media_url">
+            @if (message.message_type === 'doodle' && message.media_url) {
               <img [src]="message.media_url" class="max-w-full rounded" alt="Doodle">
-            </div>
+            }
 
-            <!-- Timestamp -->
             <p class="text-xs mt-1 opacity-60 text-right">{{ message.created_at | date:'shortTime' }}</p>
           </div>
         </div>
       </app-long-press-context-menu>
-    </ng-container>
-
-    <!-- Empty placeholder: no UI at all for blocked messages -->
-    <ng-template #blockPlaceholder></ng-template>
+    }
   `,
   styles: [`
     :host {
@@ -87,7 +86,7 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
   @Input({ required: true }) message!: ChatMessage;
   @Input() currentUserId?: string;
 
-  readonly messageBlocked = output<string>();
+  @Output() readonly messageBlocked = new EventEmitter<string>();
 
   private authService = inject(AuthService);
   private favouriteService = inject(FavouriteService);
@@ -154,20 +153,5 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
       next: () => console.log('Report submitted'),
       error: (err) => console.error('Failed to report', err),
     });
-  }
-
-  async onBlock(event: { senderId: string; blocked: boolean }): Promise<void> {
-    try {
-      if (event.blocked) {
-        await this.safetyService.blockUserAsync(event.senderId);
-        this.isBlocked.set(true);
-        this.messageBlocked.emit(event.senderId);
-      } else {
-        await this.safetyService.unblockUserAsync(event.senderId);
-        this.isBlocked.set(false);
-      }
-    } catch (err) {
-      console.error('Block/unblock failed', err);
-    }
   }
 }

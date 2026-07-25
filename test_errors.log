@@ -1,0 +1,276 @@
+
+> frontend@0.0.0 lint
+> eslint "src/**/*.ts" --fix
+
+
+/root/hellotalk/frontend/src/app/app.routes.ts
+  15:10  error  'SubscriptionPlansComponent' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/chat/chat-message.component.ts
+  64:21  error  'messageId' is defined but never used        @typescript-eslint/no-unused-vars
+  30:13  error  <img/> element must have a text alternative  @angular-eslint/template/alt-text
+
+/root/hellotalk/frontend/src/app/components/audio-room/audio-room.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+  2:10  error  'I18nService' is defined but never used          @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.spec.ts
+   6:10  error  'provideHttpClient' is defined but never used  @typescript-eslint/no-unused-vars
+  12:24  error  Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.ts
+  1:10  error  'showToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/chat-room/chat-room.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/chat-search/chat-search.component.ts
+  70:3   error  Output bindings, including aliases, should not be named "on", nor prefixed with it (https://angular.dev/guide/components/outputs#choosing-event-names)  @angular-eslint/no-output-on-prefix
+  27:34  error  Use built-in control flow instead of directive ngForOf                                                                                                  @angular-eslint/template/prefer-control-flow
+  37:15  error  Use built-in control flow instead of directive ngIf                                                                                                     @angular-eslint/template/prefer-control-flow
+  40:15  error  Use built-in control flow instead of directive ngIf                                                                                                     @angular-eslint/template/prefer-control-flow
+  44:33  error  Use built-in control flow instead of directive ngForOf                                                                                                  @angular-eslint/template/prefer-control-flow
+
+/root/hellotalk/frontend/src/app/components/chat-view/chat-view.component.ts
+  17:27  error  Use built-in control flow instead of directive ngForOf  @angular-eslint/template/prefer-control-flow
+
+/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts
+  1:58  error  'computed' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/cover-photo-cropper/cover-photo-cropper.component.ts
+  49:12  error  Output bindings, including aliases, should not be named as standard DOM events          @angular-eslint/no-output-native
+  53:25  error  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+  10:5   error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  10:5   error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+  11:7   error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  11:7   error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+
+/root/hellotalk/frontend/src/app/components/cover-photo-uploader/cover-photo-uploader.component.ts
+    1:29  error  'computed' is defined but never used                                                    @typescript-eslint/no-unused-vars
+    1:62  error  'ElementRef' is defined but never used                                                  @typescript-eslint/no-unused-vars
+    1:74  error  'ViewChild' is defined but never used                                                   @typescript-eslint/no-unused-vars
+    1:85  error  'AfterViewInit' is defined but never used                                               @typescript-eslint/no-unused-vars
+  414:9   error  The value assigned to 'newY' is not used in subsequent statements                       no-useless-assignment
+   40:11  error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+   40:11  error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+   58:13  error  <img/> element must have a text alternative                                             @angular-eslint/template/alt-text
+  139:15  error  <img/> element must have a text alternative                                             @angular-eslint/template/alt-text
+
+/root/hellotalk/frontend/src/app/components/developer-dashboard/developer-dashboard.component.ts
+  4:10  error  'Router' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/discovery/discovery.component.spec.ts
+   5:10  error  'provideHttpClient' is defined but never used  @typescript-eslint/no-unused-vars
+   6:13  error  'toast' is defined but never used              @typescript-eslint/no-unused-vars
+  12:29  error  Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/discovery/discovery.component.ts
+  1:10  error  'showToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/discovery/global-search/global-search.component.ts
+  61:12  error  Output bindings, including aliases, should not be named as standard DOM events  @angular-eslint/no-output-native
+  17:9   error  A label component must be associated with a form element                        @angular-eslint/template/label-has-associated-control
+  29:9   error  A label component must be associated with a form element                        @angular-eslint/template/label-has-associated-control
+  41:9   error  A label component must be associated with a form element                        @angular-eslint/template/label-has-associated-control
+
+/root/hellotalk/frontend/src/app/components/emoji-picker/emoji-picker.component.ts
+  61:3   error  Output bindings, including aliases, should not be named "on", nor prefixed with it (https://angular.dev/guide/components/outputs#choosing-event-names)  @angular-eslint/no-output-on-prefix
+  33:33  error  Use built-in control flow instead of directive ngForOf                                                                                                  @angular-eslint/template/prefer-control-flow
+  44:37  error  Use built-in control flow instead of directive ngForOf                                                                                                  @angular-eslint/template/prefer-control-flow
+
+/root/hellotalk/frontend/src/app/components/gift-picker/gift-picker.component.ts
+  70:3   error  Output bindings, including aliases, should not be named "on", nor prefixed with it (https://angular.dev/guide/components/outputs#choosing-event-names)  @angular-eslint/no-output-on-prefix
+  42:33  error  Use built-in control flow instead of directive ngForOf                                                                                                  @angular-eslint/template/prefer-control-flow
+  53:36  error  Use built-in control flow instead of directive ngForOf                                                                                                  @angular-eslint/template/prefer-control-flow
+
+/root/hellotalk/frontend/src/app/components/hobby-tags/hobby-tags.component.ts
+  158:36  error  Unexpected any. Specify a different type                                                                                                                                @typescript-eslint/no-explicit-any
+  171:15  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+
+/root/hellotalk/frontend/src/app/components/incoming-call-modal/incoming-call-modal.component.ts
+  159:66  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.spec.ts
+  14:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  15:24  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  16:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  17:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.ts
+    4:10  error  'TranslatePipe' is defined but never used  @typescript-eslint/no-unused-vars
+  148:62  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts
+    8:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+    9:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   76:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   78:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  136:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  138:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  149:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  152:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  160:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  163:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.ts
+   96:13  error  Output bindings, including aliases, should not be named as standard DOM events                                                                                          @angular-eslint/no-output-native
+  113:15  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+  175:3   error  Prefer using the `host` metadata property in the `@Component` decorator for host listeners instead of the `@HostListener` decorator                                     @angular-eslint/prefer-host-metadata-property
+  183:3   error  Prefer using the `host` metadata property in the `@Component` decorator for host listeners instead of the `@HostListener` decorator                                     @angular-eslint/prefer-host-metadata-property
+  188:3   error  Prefer using the `host` metadata property in the `@Component` decorator for host listeners instead of the `@HostListener` decorator                                     @angular-eslint/prefer-host-metadata-property
+  193:3   error  Prefer using the `host` metadata property in the `@Component` decorator for host listeners instead of the `@HostListener` decorator                                     @angular-eslint/prefer-host-metadata-property
+   21:7   error  click must be accompanied by either keyup, keydown or keypress event for accessibility                                                                                  @angular-eslint/template/click-events-have-key-events
+   21:7   error  Elements with interaction handlers must be focusable                                                                                                                    @angular-eslint/template/interactive-supports-focus
+
+/root/hellotalk/frontend/src/app/components/long-press-context-menu/report-user-modal/report-user-modal.component.ts
+  29:13  error  Output bindings, including aliases, should not be named as standard DOM events  @angular-eslint/no-output-native
+  68:15  error  'err' is defined but never used                                                 @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/message-context-menu/message-context-menu.component.ts
+   1:36  error  'HostListener' is defined but never used                                                @typescript-eslint/no-unused-vars
+   1:50  error  'ElementRef' is defined but never used                                                  @typescript-eslint/no-unused-vars
+  35:3   error  Output bindings, including aliases, should not be named as standard DOM events          @angular-eslint/no-output-native
+  10:5   error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  10:5   error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+  12:9   error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  12:9   error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+
+/root/hellotalk/frontend/src/app/components/moments-feed/moments-feed.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/notifications-inbox/notifications-inbox.component.ts
+  3:18  error  'RouterLink' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/primitives/button/button.component.ts
+  28:12  error  Output bindings, including aliases, should not be named "on", nor prefixed with it (https://angular.dev/guide/components/outputs#choosing-event-names)  @angular-eslint/no-output-on-prefix
+
+/root/hellotalk/frontend/src/app/components/primitives/scrollable-pills/scrollable-pills.component.ts
+  37:3  error  Output bindings, including aliases, should not be named as standard DOM events  @angular-eslint/no-output-native
+
+/root/hellotalk/frontend/src/app/components/primitives/toast/toast.component.ts
+  2:24  error  'ToastMessage' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/profile-edit/profile-edit.component.ts
+  17:9   error  A label component must be associated with a form element  @angular-eslint/template/label-has-associated-control
+  50:11  error  A label component must be associated with a form element  @angular-eslint/template/label-has-associated-control
+
+/root/hellotalk/frontend/src/app/components/report-modal/report-modal.component.ts
+  14:5  error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  14:5  error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+  23:9  error  A label component must be associated with a form element                                @angular-eslint/template/label-has-associated-control
+  50:9  error  A label component must be associated with a form element                                @angular-eslint/template/label-has-associated-control
+
+/root/hellotalk/frontend/src/app/components/report-user-modal/report-user-modal.component.ts
+   27:13  error  Output bindings, including aliases, should not be named as standard DOM events                                                                                          @angular-eslint/no-output-native
+   59:5   error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+   60:5   error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+  129:19  error  Unexpected any. Specify a different type                                                                                                                                @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/text-to-speech/text-to-speech.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/video-call/video-call.component.ts
+   21:3   error  'AudioTrack' is defined but never used                 @typescript-eslint/no-unused-vars
+   29:10  error  'AppButtonPrimaryComponent' is defined but never used  @typescript-eslint/no-unused-vars
+  251:5   error  'publication' is defined but never used                @typescript-eslint/no-unused-vars
+  252:5   error  'participant' is defined but never used                @typescript-eslint/no-unused-vars
+  261:5   error  'publication' is defined but never used                @typescript-eslint/no-unused-vars
+  262:5   error  'participant' is defined but never used                @typescript-eslint/no-unused-vars
+  269:37  error  'participant' is defined but never used                @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/vocabulary-dashboard/vocabulary-dashboard.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/voice-recorder/voice-recorder.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.spec.ts
+   10:16  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+   23:7   error  'mockRemoteAudioTrack' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   24:7   error  'mockRemoteVideoTrack' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  134:19  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  136:36  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  140:36  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  161:19  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  169:46  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.ts
+  176:68  error  'publication' is defined but never used              @typescript-eslint/no-unused-vars
+  176:81  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   18:11  error  Use built-in control flow instead of directive ngIf  @angular-eslint/template/prefer-control-flow
+   30:58  error  Use built-in control flow instead of directive ngIf  @angular-eslint/template/prefer-control-flow
+
+/root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/core/auth.service.ts
+  17:58  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  20:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/pages/chat/chat-page.component.ts
+  18:11  error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  18:11  error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+  18:33  error  Use built-in control flow instead of directive ngForOf                                  @angular-eslint/template/prefer-control-flow
+  28:22  error  Use built-in control flow instead of directive ngIf                                     @angular-eslint/template/prefer-control-flow
+  36:15  error  Use built-in control flow instead of directive ngIf                                     @angular-eslint/template/prefer-control-flow
+  50:47  error  Use built-in control flow instead of directive ngForOf                                  @angular-eslint/template/prefer-control-flow
+  70:15  error  Use built-in control flow instead of directive ngIf                                     @angular-eslint/template/prefer-control-flow
+
+/root/hellotalk/frontend/src/app/pages/home/home.component.ts
+  34:3  error  Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+
+/root/hellotalk/frontend/src/app/services/audio-rooms.store.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/services/economy.store.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/services/favourite.service.ts
+  18:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  22:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  26:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  27:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/services/feed.service.ts
+  130:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  132:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  138:64  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/services/livekit.service.ts
+  12:57  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  37:18  error  'roomName' is defined but never used      @typescript-eslint/no-unused-vars
+  37:36  error  'userId' is defined but never used        @typescript-eslint/no-unused-vars
+  37:52  error  'isVideoCall' is defined but never used   @typescript-eslint/no-unused-vars
+  42:23  error  'isVideoCall' is defined but never used   @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/services/media-upload.service.spec.ts
+  1:10  error  'TestBed' is defined but never used             @typescript-eslint/no-unused-vars
+  2:10  error  'MediaUploadService' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/services/moments.store.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/services/monetisation.service.ts
+  62:15  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+
+/root/hellotalk/frontend/src/app/services/notification-preferences.service.ts
+  63:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  77:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/services/restore-purchases.service.ts
+  19:5   error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+  20:5   error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+  97:14  error  'error' is defined but never used                                                                                                                                       @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/services/video-call.service.ts
+  168:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 155 problems (155 errors, 0 warnings)
+
+
+> backend@0.0.1 lint
+> sh -c 'eslint "{src,apps,libs,test}/**/*.ts" --fix'
+

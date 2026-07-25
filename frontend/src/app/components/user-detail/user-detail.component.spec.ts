@@ -5,6 +5,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { SafetyService } from '../../services/safety.service';
 import { of } from 'rxjs';
+import { vi } from 'vitest';
 
 describe('UserDetailComponent', () => {
   let component: UserDetailComponent;
@@ -20,7 +21,7 @@ describe('UserDetailComponent', () => {
         {
           provide: SafetyService,
           useValue: {
-            getBlockedUserIds: jest.fn().mockReturnValue(of([])),
+            getBlockedUserIds: vi.fn().mockReturnValue(of([])),
           },
         },
       ],

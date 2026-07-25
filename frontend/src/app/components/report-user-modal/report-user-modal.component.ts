@@ -22,10 +22,17 @@ import { ToastService } from '../../components/primitives/toast/toast.service';
   templateUrl: './report-user-modal.component.html',
 })
 export class ReportUserModalComponent implements OnInit {
-  @Input() reportUserId!: string;
+  @Input({ required: false }) reportUserId: string = '';
   @Input() contextUrl?: string;
   @Output() close = new EventEmitter<void>();
   @Output() reported = new EventEmitter<void>();
+
+  open(userId: string): void {
+    this.reportUserId = userId;
+    this.selectedCategory.set(null);
+    this.description.set('');
+    this.errorMessage.set(null);
+  }
 
   // Loading / error states for categories
   loadingCategories = signal(false);

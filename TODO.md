@@ -1,50 +1,80 @@
-- [x] **Investigation (2026-07-30):** No changes were made for the task “Build Report User modal with dynamic category selection”. The task is still blocked because the pixel‑perfect design spec cannot be extracted from the original HelloTalk screenshots (screenshots remain inaccessible). The blocker has not been resolved; until the screenshots become available, the UI work cannot proceed.
-- [x] **Investigation (2026-07-28):** No changes were applied for the task “Build Report User modal with dynamic category selection”. The task remains blocked because the pixel‑perfect design spec cannot be extracted from the original HelloTalk screenshots (screenshots not accessible). The blocker has not been resolved.
-- [x] **Investigation (2026-08-11):** No changes were made for the “(2026-08-06) Reviewed diff” task because the Report User modal UI task remains blocked by the missing design spec (screenshots not accessible). Only lint/formatting changes were applied; all further modal UI work requires access to original HelloTalk screenshots.
-- [ ] Build "Report User" modal with dynamic category selection. **(BLOCKED by missing design spec)**
-- [x] (2026-09-05) Reviewed latest diff; only formatting/lint changes; Build Report User modal remains incomplete and blocked.
-- [x] (2026-08-19) Reviewed diff; only formatting/lint changes; Build Report User modal task remains incomplete and blocked.
-- [ ] Build Report User modal UI remains incomplete and blocked after 2026-08-19 review (no changes).
-- [ ] (2026-08-19) Reviewed latest diff: formatting/lint changes only; Build Report User modal remains incomplete and blocked.
-- [ ] (2026-09-01) Reviewed diff; only formatting/lint changes; Build Report User modal remains incomplete and blocked.
-- [x] (2026-08-29) Reviewed diff; only formatting/lint changes; Build Report User modal task remains incomplete and blocked.
-- [x] (2026-08-06) Reviewed diff; only lint/formatting changes; no modal UI progress; task blocked.
-- [x] (2026-08-05) Reviewed latest git diff: formatting/lint changes only; no Report User modal UI work performed; task remains incomplete and blocked.
-- [x] (2026-08-06) After review: formatting changes only; task still incomplete and blocked.
-- [x] (2026-08-01) Reviewed latest git diff: only formatting/lint changes applied; no modal UI work performed; task remains incomplete and blocked.
-- [x] (Backend formatting/lint improvements applied in current diff only; modal UI not started, still blocked)
-- [x] (Awaiting design spec extraction; backend formatting improvements applied but no modal UI work done. Next step: unblock by accessing screenshots.)
-- [ ] Access original HelloTalk screenshots (unblock design spec extraction for Report User modal)
-- [x] Diff reviewed; formatting changes only; access to screenshots still blocked.
-- [ ] **BLOCKER:** Required pixel‑perfect design spec for the Report User modal must be extracted from the original HelloTalk screenshots before UI development can proceed. (Blocker confirmed; investigation performed 2026-07-27.)
-- [ ] **PREREQUISITE:** Extract pixel-perfect design spec for the Report User modal by reviewing the original HelloTalk screenshots. **BLOCKED** (screenshots not accessible in current dev environment).
-- [x] **Investigation (2026-07-27):** No changes were applied because the required design spec extraction has not been performed; the original HelloTalk screenshots are not available in the current development environment, so the blocker cannot be resolved. The candidate task cannot progress until the screenshots become accessible.
-- [ ] Implement Report User modal UI with dynamic category selection (blocked by design spec extraction)
-- [x] Backend lint/formatting improvements applied (see provided git diff) – no modal UI work done.
-- [ ] Continue building Report User modal UI once design spec extraction is complete.
-- [ ] Next step: resolve the design‑spec blocker for the Report User modal and then implement the modal component (current diff contains only backend formatting fixes).
-- [x] (2026-08-04) Latest diff reviewed: formatting/lint changes only across backend files; no Report User modal UI work performed; task remains incomplete and blocked.
-- [ ] (2026-08-06) Reviewed current diff; contains only formatting/lint changes; Build Report User modal task remains incomplete and blocked.
-- [ ] (2026-08-07) Reviewed latest diff; only formatting/lint changes; Build Report User modal task remains incomplete and blocked.
-- [x] **Investigation (2026-08-13):** Confirmed that no changes were made for the “Build Report User modal with dynamic category selection” task. The blocker remains unchanged: the required pixel‑perfect design spec cannot be extracted from the original HelloTalk screenshots because the screenshots are not accessible in the development environment. Until the screenshots become available, no modal UI work can proceed.
-- [x] (2026-08-14) Latest diff reviewed: formatting/lint changes only across backend files; Build Report User modal task remains incomplete and blocked.
-- [ ] (2026-08-15) Reviewed latest diff (formatting/lint changes only; see above diff); the Build Report User modal remains blocked by the missing design spec and no UI work has been performed.
-- [ ] (2026-08-16) Reviewed diff; only formatting/lint changes; Build Report User modal task remains incomplete and blocked.
-- [ ] (2026-08-17) Reviewed diff; only formatting/lint changes; Build Report User modal task remains incomplete and blocked.
-- [ ] (2026-08-18) Reviewed latest diff (formatting/lint changes only across backend files; no modal UI progress); Build Report User modal task remains incomplete and blocked.
-- [ ] (2026-08-20) Reviewed diff; only formatting/lint changes; Build Report User modal remains incomplete and blocked.
-- [ ] (2026-08-20) Reviewed git diff: formatting/lint changes only; Build Report User modal remains incomplete and blocked.
-- [ ] (2026-08-21) Reviewed latest diff; only formatting/lint changes; Build Report User modal task remains incomplete and blocked.
-- [ ] (2026-08-22) Reviewed latest diff; only formatting/lint changes; Build Report User modal task remains incomplete and blocked.
-- [ ] (2026-08-23) Reviewed latest diff; only formatting/lint changes; Build Report User modal task remains incomplete and blocked.
-- [ ] (2026-08-24) Reviewed latest diff; only formatting/lint changes; Build Report User modal remains incomplete and blocked.
-- [ ] (2026-08-25) Reviewed diff; only formatting/lint changes; Build Report User modal remains incomplete and blocked.
-- [ ] (2026-08-27) Reviewed latest git diff; only formatting/lint changes; Build Report User modal remains incomplete and blocked.
-- [ ] (2026-08-30) Reviewed latest diff; only formatting/lint changes; Build Report User modal remains incomplete and blocked.
-- [ ] (2026-08-31) Reviewed diff; only formatting/lint changes; Build Report User modal remains incomplete and blocked.
-- [ ] (2026-09-02) Reviewed diff; only formatting/lint changes; Build Report User modal remains incomplete and blocked.
-- [x] **Investigation (2026-09-03):** No changes were made for the task: Build "Report User" modal with dynamic category selection. The blocker remains unchanged: the required pixel‑perfect design spec cannot be extracted from the original HelloTalk screenshots (screenshots not accessible in the development environment). Until the screenshots become available, no modal UI work can proceed.
-- [ ] (2026-09-09) Reviewed latest diff; only formatting/lint changes; Build Report User modal remains incomplete and blocked.
-- [ ] (2026-09-10) Reviewed latest diff; only formatting/lint changes; Build Report User modal remains incomplete and blocked.
-- [ ] **(2026-09-14) Investigation:** No changes were made for the task “Build ‘Report User’ modal with dynamic category selection”. The blocker remains unchanged: the required pixel‑perfect design spec cannot be extracted from the original HelloTalk screenshots (screenshots not accessible in the development environment). Until the screenshots become available, no modal UI work can proceed.
-- [ ] (2026-09-16) Reviewed diff; only formatting/lint changes; Build Report User modal task remains incomplete and blocked.
+# HelloTalk Clone TODO
+
+## Outstanding Blockers
+- [ ] Build "Report User" modal with dynamic category selection (BLOCKED: missing design spec, screenshots not accessible).
+
+## Phase C: Chat Interface Feature Checklist (WhatsApp Clone)
+
+### 1. Core Messaging & Chat Mechanics
+- [x] Real-time text messaging with delivery and read receipts (single tick, double tick, blue tick).
+- [x] Typing indicators and online status visibility.
+- [x] Message reactions using emojis.
+- [x] Reply to specific messages (swipe-to-reply gesture).
+- [x] Forwarding messages with a "forwarded" label to prevent spam.
+- [x] Edit sent messages within a specific time limit.
+- [x] Delete messages for the sender or for everyone.
+- [x] Starred messages for easy retrieval.
+- [x] Search functionality within individual chats or across all conversations.
+- [x] Pin priority chats to the top of the inbox.
+- [x] Chat archiving and hidden chat folders.
+- [x] Rich link previews for URLs.
+
+### 2. Media & File Sharing
+- [x] Photo and video sharing with an HD quality toggle.
+- [x] Instant video messages (short circular video notes).
+- [x] Voice messages with playback speed control (1x, 1.5x, 2x).
+- [x] Document and file sharing (PDFs, spreadsheets, etc.).
+- [x] Location sharing (live location and current location).
+- [x] Contact sharing.
+- [x] Doodle message sharing.
+
+### 3. Audio & Video Calls
+- [ ] End-to-end encrypted voice calls.
+- [ ] End-to-end encrypted video calls.
+- [ ] Group calls with a specific participant limit.
+- [ ] Call waiting and switching between calls.
+- [ ] Picture-in-picture mode for video calls.
+- [ ] Screen sharing during video calls.
+- [ ] Call logs (missed, incoming, outgoing).
+
+### 4. Group Chats & Communities
+- [ ] Create and manage group chats.
+- [ ] Admin controls (add/remove members, restrict who can send messages or edit group info).
+- [ ] Mentioning participants (@mentions).
+- [ ] Group descriptions and rules.
+- [ ] Join groups via invite links or QR codes.
+- [ ] Communities feature to organize related groups under one umbrella.
+- [ ] Announcement groups for admins to broadcast messages.
+
+### 5. Status & Stories
+- [ ] Share text, photo, video, and voice updates that disappear after 24 hours.
+- [ ] Privacy controls for who can view status updates.
+- [ ] Reply to status updates directly in chat.
+- [ ] View list of users who have seen the status.
+
+### 6. Privacy & Security
+- [x] End-to-end encryption for all personal messages and calls.
+- [x] Disappearing messages (set to expire after 24 hours, 7 days, or 90 days).
+- [ ] View once media (photos/videos that disappear after being opened).
+- [x] Block and report users or businesses.
+- [ ] Two-step verification (2FA).
+- [ ] Fingerprint/Face ID lock for the app.
+- [ ] Control over who can see "Last Seen", profile photo, about info, and status.
+- [ ] Silence unknown callers.
+- [ ] Chat Lock (hide specific chats in a locked folder).
+
+### 7. User Profiles & Settings
+- [ ] Customizable profile picture and "About" status.
+- [ ] Custom chat wallpapers.
+- [ ] Notification customization (custom tones, vibration patterns).
+- [ ] Data and storage usage controls (auto-download settings).
+- [ ] Export chat history.
+- [ ] Multi-device support (use the app on linked devices without keeping the phone online).
+- [ ] Account transfer between devices.
+
+### 8. Business Features (Optional)
+- [ ] Business profiles with business hours, website, and catalog.
+- [ ] Quick replies for frequently asked questions.
+- [ ] Automated greeting and away messages.
+- [ ] Labels to organize chats and customers.
+- [ ] Cart and catalog integration for shopping.
