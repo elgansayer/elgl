@@ -2,7 +2,7 @@ import { Component, input, output, signal, computed, HostListener, ElementRef, V
 import { CommonModule } from '@angular/common';
 import { I18nService } from '../../services/i18n.service';
 import { SafetyService } from '../../services/safety.service';
-import { ReportModalComponent } from '../report-modal/report-modal.component';
+import { ReportUserModalComponent } from '../report-user-modal/report-user-modal.component';
 
 export interface ContextMenuOption {
   id: 'copy' | 'favourite' | 'report' | 'block' | 'unblock';
@@ -14,7 +14,7 @@ export interface ContextMenuOption {
 @Component({
   selector: 'app-long-press-context-menu',
   standalone: true,
-  imports: [CommonModule, ReportModalComponent],
+  imports: [CommonModule, ReportUserModalComponent],
   template: `
     <div
       class="relative inline-block"
@@ -52,13 +52,13 @@ export interface ContextMenuOption {
       </div>
     </div>
 
-    <app-report-modal
+    <app-report-user-modal
       *ngIf="showReportModal()"
-      [targetUserId]="reportPayload()?.senderId ?? ''"
+      [reportedUserId]="reportPayload()?.senderId ?? ''"
       [contextUrl]="reportUrl()"
       (closed)="onCloseReport()"
       (submitted)="onReportSubmitted()"
-    ></app-report-modal>
+    ></app-report-user-modal>
   `,
   styles: [`
     :host {
