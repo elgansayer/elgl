@@ -29,7 +29,7 @@ export class DiscoveryService {
     let queryBuilder = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, created_at',
+        'id, display_name, native_language, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, created_at',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false);
@@ -39,10 +39,8 @@ export class DiscoveryService {
       queryBuilder = queryBuilder.not('id', 'in', blockedIds);
     }
 
-    if (query.native_languages) {
-      queryBuilder = queryBuilder.contains('native_languages', [
-        query.native_languages,
-      ]);
+    if (query.native_language) {
+      queryBuilder = queryBuilder.eq('native_language', query.native_language);
     }
 
     if (query.target_language) {
@@ -63,7 +61,7 @@ export class DiscoveryService {
         search_lon: searchLon,
         radius_m: query.radius_metres || 50000,
         exclude_user_id: currentUserId,
-        filter_native: query.native_languages || null,
+        filter_native: query.native_language || null,
         filter_target: query.target_language || null,
         serious_only: Boolean(query.serious_learner_only),
       });
@@ -121,9 +119,9 @@ export class DiscoveryService {
       filtered = filtered.filter((u) => !blockedIds.includes(u.id));
     }
 
-    if (query.native_languages) {
+    if (query.native_language) {
       filtered = filtered.filter((u) =>
-        u.native_languages?.includes(query.native_languages!),
+        u.native_language === query.native_language,
       );
     }
 
