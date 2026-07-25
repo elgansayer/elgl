@@ -5,7 +5,7 @@
 - [x] (2026-08-06) Reviewed diff; only lint/formatting changes; no modal UI progress; task blocked.
 - [x] (2026-08-05) Reviewed latest git diff: formatting/lint changes only; no Report User modal UI work performed; task remains incomplete and blocked.
 - [x] (2026-08-06) After review: formatting changes only; task still incomplete and blocked.
-- [ ] (2026-08-01) Reviewed latest git diff: only formatting/lint changes applied; no modal UI work performed; task remains incomplete and blocked.
+- [x] (2026-08-01) Reviewed latest git diff: only formatting/lint changes applied; no modal UI work performed; task remains incomplete and blocked.
 - [x] (Backend formatting/lint improvements applied in current diff only; modal UI not started, still blocked)
 - [x] (Awaiting design spec extraction; backend formatting improvements applied but no modal UI work done. Next step: unblock by accessing screenshots.)
 - [ ] Access original HelloTalk screenshots (unblock design spec extraction for Report User modal)
