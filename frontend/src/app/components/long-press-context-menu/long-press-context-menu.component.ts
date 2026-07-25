@@ -10,11 +10,12 @@ import {
   ElementRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ReportUserModalComponent } from './report-user-modal/report-user-modal.component';
 
 @Component({
   selector: 'app-long-press-context-menu',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ReportUserModalComponent],
   template: `
     @if (showMenu()) {
       <div class="context-menu-popup" (click)="$event.stopPropagation()" (contextmenu)="$event.preventDefault()">
@@ -30,6 +31,15 @@ import { CommonModule } from '@angular/common';
           </li>
         </ul>
       </div>
+    }
+    @if (showReportModal) {
+      <app-report-user-modal
+        [visible]="true"
+        [reportedUserId]="senderId()"
+        [contextUrl]="buildContextUrl()"
+        (close)="onReportClose()"
+        (reportSuccess)="onReportSuccess()"
+      ></app-report-user-modal>
     }
   `,
   styles: [
@@ -99,6 +109,8 @@ export class LongPressContextMenuComponent {
 
   longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
+  showReportModal = false;
+
   constructor(private elementRef: ElementRef) {}
 
   onOptionClick(option: string): void {
@@ -113,19 +125,18 @@ export class LongPressContextMenuComponent {
       });
       this.close();
     } else if (option === 'report') {
-      this.report.emit({
-        messageId: this.messageId(),
-        content: this.messageContent(),
-        senderId: this.senderId(),
-        roomId: this.roomId(),
-      });
       this.close();
+      this.showReportModal = true;
       return;
     }
   }
 
-  onReportSubmitted(): void {
-    this.close();
+  onReportClose(): void {
+    this.showReportModal = false;
+  }
+
+  onReportSuccess(): void {
+    // optionally show a toast
   }
 
   onRightClick(event: MouseEvent): void {

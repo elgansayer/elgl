@@ -1,83 +1,79 @@
-import { Component, Inject, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
-import { MatInputModule } from '@angular/material/input';
-import { NgForOf, NgIf } from '@angular/common';
-import { ReportService } from '../../../services/report.service';
+import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { SafetyService, ReportUserDto } from '../../../services/safety.service';
 
-export interface ReportDialogData {
-  reportedUserId: string;
-  reportedUserName?: string;
-  contextUrl?: string;
-}
+const REPORT_CATEGORIES = [
+  { value: 'harassment', label: 'Harassment' },
+  { value: 'spam', label: 'Spam' },
+  { value: 'inappropriate_content', label: 'Inappropriate Content' },
+  { value: 'impersonation', label: 'Impersonation' },
+  { value: 'other', label: 'Other' },
+];
 
 @Component({
-  standalone: true,
   selector: 'app-report-user-modal',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
   templateUrl: './report-user-modal.component.html',
   styleUrls: ['./report-user-modal.component.scss'],
-  imports: [
-    ReactiveFormsModule,
-    MatDialogModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatSelectModule,
-    MatInputModule,
-    NgIf,
-    NgForOf
-  ]
 })
-export class ReportUserModalComponent implements OnInit {
-  reportForm!: FormGroup;
+export class ReportUserModalComponent {
+  private safetyService = inject(SafetyService);
 
-  reasonOptions = [
-    { value: 'spam', label: 'Spam' },
-    { value: 'harassment', label: 'Harassment' },
-    { value: 'inappropriate_content', label: 'Inappropriate Content' },
-    { value: 'fake_profile', label: 'Fake Profile' },
-    { value: 'other', label: 'Other' }
-  ];
+  @Input() visible = false;
+  @Input() reportedUserId = '';
+  @Input() reportedUserName?: string;
+  @Input() contextUrl?: string;
 
-  constructor(
-    public dialogRef: MatDialogRef<ReportUserModalComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: ReportDialogData,
-    private fb: FormBuilder,
-    private reportService: ReportService
-  ) {}
+  @Output() close = new EventEmitter<void>();
+  @Output() reportSuccess = new EventEmitter<void>();
 
-  ngOnInit(): void {
-    this.reportForm = this.fb.group({
-      reasonCategory: ['', Validators.required],
-      description: ['', [Validators.required, Validators.maxLength(500)]]
-    });
+  categories = REPORT_CATEGORIES;
+  selectedCategory = '';
+  description = '';
+  submitting = false;
+  errorMessage = '';
+
+  reset() {
+    this.selectedCategory = '';
+    this.description = '';
+    this.submitting = false;
+    this.errorMessage = '';
   }
 
-  submitReport(): void {
-    if (this.reportForm.invalid) {
+  submitReport() {
+    if (!this.selectedCategory) {
+      this.errorMessage = 'Please select a reason.';
       return;
     }
 
-    const payload = {
-      reported_id: this.data.reportedUserId,
-      reason_category: this.reportForm.value.reasonCategory,
-      description: this.reportForm.value.description,
-      context_url: this.data.contextUrl ?? window.location.href
+    this.submitting = true;
+    this.errorMessage = '';
+
+    const dto: ReportUserDto = {
+      reported_id: this.reportedUserId,
+      reason_category: this.selectedCategory,
+      description: this.description || undefined,
+      context_url: this.contextUrl || undefined,
     };
 
-    this.reportService.createReport(payload).subscribe({
+    this.safetyService.reportUser(dto).subscribe({
       next: () => {
-        this.dialogRef.close(true);
+        this.submitting = false;
+        this.reset();
+        this.reportSuccess.emit();
+        this.close.emit();
       },
       error: (err) => {
-        console.error('Report failed', err);
-      }
+        this.submitting = false;
+        this.errorMessage = 'Failed to submit report. Please try again.';
+      },
     });
   }
 
-  onCancel(): void {
-    this.dialogRef.close(false);
+  cancel() {
+    this.reset();
+    this.close.emit();
   }
 }
