@@ -182,7 +182,7 @@
 - [STUCK] Build multi-step Angular onboarding wizard.
 - [STUCK] Step 1: Native Language and Target Language selection.
 - [STUCK] Step 2: Proficiency Level assessment.
-- [ ] Step 3: Avatar upload and permissions prompt (Microphone, Camera).
+- [STUCK] Step 3: Avatar upload and permissions prompt (Microphone, Camera).
 
 ## Phase 24: Advanced Search Filters
 - [ ] Implement Gender filter in discovery (VIP tier).
