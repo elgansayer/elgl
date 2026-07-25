@@ -53,8 +53,8 @@ export interface ContextMenuOption {
     </div>
 
     <app-report-user-modal
-      *ngIf="showReportModal()"
-      [reportedUserId]="reportPayload()?.senderId ?? ''"
+      [show]="showReportModal()"
+      [reportUserId]="reportPayload()?.senderId ?? ''"
       [contextUrl]="reportUrl()"
       (closed)="onCloseReport()"
       (submitted)="onReportSubmitted()"
@@ -269,7 +269,7 @@ export class LongPressContextMenuComponent implements AfterViewInit {
     if (payload) {
       this.report.emit(payload);
     }
-    this.onCloseReport();
+    // do not close the modal immediately; the user can review the success message and press "done"
   }
 
   showMenu(event: MouseEvent): void {

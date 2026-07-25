@@ -187,6 +187,7 @@ import { Subscription } from 'rxjs';
 export class ReportUserModalComponent implements OnInit, OnDestroy {
   @Input() reportUserId!: string;
   @Output() closed = new EventEmitter<void>();
+  @Output() submitted = new EventEmitter<void>();
 
   private _show = false;
 
@@ -352,6 +353,8 @@ export class ReportUserModalComponent implements OnInit, OnDestroy {
       });
 
       this.step.set('success');
+      this.submitted.emit();
+
       this.toastService.show(
         this.i18nService.translate('report.toast.success', { defaultValue: 'Report submitted successfully' }),
         { type: 'success', duration: 3000 }
