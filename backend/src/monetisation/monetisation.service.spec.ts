@@ -10,14 +10,21 @@ import { AppleNotificationService } from './apple-notification.service';
 import { GooglePlayNotificationService } from './google-play-notification.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SubscriptionPlansService } from './services/subscription-plans.service';
+import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
 
 const mockConstructEvent = jest.fn();
+const mockCheckoutSessionCreate = jest.fn();
 
 jest.mock('stripe', () => {
   return jest.fn().mockImplementation(() => {
     return {
       webhooks: {
         constructEvent: (...args: any[]) => mockConstructEvent(...args),
+      },
+      checkout: {
+        sessions: {
+          create: mockCheckoutSessionCreate,
+        },
       },
     };
   });
@@ -78,6 +85,12 @@ describe('MonetisationService', () => {
           provide: SubscriptionPlansService,
           useValue: {
             getPlanById: jest.fn(),
+          },
+        },
+        {
+          provide: AppleReceiptValidatorService,
+          useValue: {
+            validateReceipt: jest.fn(),
           },
         },
       ],
