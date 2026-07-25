@@ -8,6 +8,8 @@ Added AGENTS.md to the chat (read-only).
 Added SPEC.md to the chat (read-only).
 
 
+backend/src/nlp/nlp.service.ts
+
 https://v22.angular.dev/extended-diagnostics/NG8109[0m
 Scraping https://v22.angular.dev/extended-diagnostics/NG8109[0m...
 
