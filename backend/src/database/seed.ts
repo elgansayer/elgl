@@ -263,6 +263,8 @@ async function runSeed() {
   }
 
   // 5. Seed subscription events for audit trail
+  type UserIdRow = { id: string };
+
   const { data: firstVipRaw } = await supabase
     .from('users')
     .select('id')
@@ -270,7 +272,7 @@ async function runSeed() {
     .limit(1)
     .single();
 
-  const firstVip = firstVipRaw;
+  const firstVip: UserIdRow | null = firstVipRaw as UserIdRow | null;
 
   if (firstVip) {
     await supabase.from('subscription_events').insert([

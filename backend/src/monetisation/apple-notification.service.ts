@@ -59,7 +59,7 @@ export class AppleNotificationService {
 
     try {
       // Verify the JWS signature
-      const verifiedPayload = await this.verifyJwsPayload(signedPayload);
+      const verifiedPayload = this.verifyJwsPayload(signedPayload);
 
       const { notificationType, subtype, data } = verifiedPayload;
 
@@ -199,9 +199,9 @@ export class AppleNotificationService {
     );
   }
 
-  private async verifyJwsPayload(
+  private verifyJwsPayload(
     signedPayload: string,
-  ): Promise<AppleNotificationPayload> {
+  ): AppleNotificationPayload {
     const parts = signedPayload.split('.');
     if (parts.length !== 3) {
       throw new BadRequestException('Invalid JWS format');

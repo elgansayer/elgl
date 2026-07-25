@@ -114,7 +114,7 @@ export class AppleNotificationService {
       const payloadJson = Buffer.from(payloadBase64, 'base64url').toString(
         'utf-8',
       );
-      const payload = JSON.parse(payloadJson);
+      const payload: unknown = JSON.parse(payloadJson) as unknown;
 
       // In production, verify the JWS signature using Apple's public keys
       // For now, we trust the payload (placeholder)
