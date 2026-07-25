@@ -13,7 +13,8 @@ describe('ChatListComponent', () => {
 
   beforeEach(async () => {
     mockChatService = {
-      getRecentChats: vi.fn().mockResolvedValue([])
+      getRecentChats: vi.fn().mockResolvedValue([]),
+      getRooms: vi.fn().mockResolvedValue([]),
     };
 
     await TestBed.configureTestingModule({
