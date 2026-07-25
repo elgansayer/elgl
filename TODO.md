@@ -305,7 +305,8 @@
 - [x] Build "Report User" modal with dynamic category selection.
 - [x] Implement Blocklist system hiding blocked accounts across chat, feed, and search.
 - [ ] Wire up block/unblock UI in LongPressContextMenuComponent and ChatMessageComponent, and implement backend/frontend filtering to hide blocked users from chat, feed, and search results.
-- [ ] **DIFF REVIEW (2026-07-25):** The latest git diff only contains formatting/lint cleanups; no block/unblock UI wiring or filtering implemented.
+- [x] **DIFF REVIEW (2026-07-25):** The latest git diff only contains formatting/lint cleanups; no block/unblock UI wiring or filtering implemented.
+- [ ] **ACTION REMAINING:** Implement the actual block/unblock UI wiring and backend/frontend filtering that was missing from the reviewed diff (only lint cleanups were present).
 - [ ] **REVIEW UPDATE:** The corresponding git diff only shows lint cleanups; actual block/unblock work still needed.
 - [ ] **DIFF REVIEW:** The provided git diff for this task included only formatting/lint changes and did not implement any block/unblock UI wiring or filtering. Need to implement the actual feature.
 - [ ] **ACTION REQUIRED:** The submitted diff for block/unblock wiring only included formatting/lint cleanups; actual block/unblock UI wiring and backend/frontend filtering remain unimplemented. Task is still incomplete.
@@ -345,6 +346,7 @@
 - [ ] Add block/unblock wiring in `ChatViewComponent` to call `SafetyService.blockUser`/`unblockUser` when the `block` output is emitted from `LongPressContextMenuComponent`.
 - [ ] **DIFF REVIEW (2026-07-25):** The latest submitted git diff only included formatting/lint cleanups; still no block/unblock UI wiring or filtering. Task remains incomplete.
 - [ ] **DIFF REVIEW (latest):** Reviewed git diff contains only formatting/lint cleanups; no block/unblock UI wiring or filtering implemented.
+- [ ] Complete block/unblock UI wiring and backend/frontend filtering for blocked users (2026-07-25 audit: diff only included lint cleanups, no actual wiring/filtering implemented).
 
 ## Phase 23: Onboarding Flow
 - [ ] Build multi-step Angular onboarding wizard.
