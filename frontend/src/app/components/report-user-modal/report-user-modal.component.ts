@@ -112,8 +112,8 @@ export class ReportUserModalComponent implements OnInit {
 
       this.toast.show(
         this.blockUser()
-          ? 'Report submitted & user blocked'
-          : 'Report submitted successfully',
+          ? 'Report sent & user blocked'
+          : 'Report sent! Thanks for the feedback',
         { type: 'success' }
       );
       this.reported.emit();
