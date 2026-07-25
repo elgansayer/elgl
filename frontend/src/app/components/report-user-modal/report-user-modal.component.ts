@@ -30,6 +30,12 @@ export class ReportUserModalComponent implements OnInit {
 
   readonly close         = output<void>();
   readonly reported      = output<void>();
+  readonly reportSubmitted = output<{
+    reported_id: string;
+    reason_category: string;
+    description?: string;
+    context_url: string;
+  }>();
 
   readonly selectedCategory = signal<string | null>(null);
   readonly description      = signal<string>('');
@@ -102,13 +108,12 @@ export class ReportUserModalComponent implements OnInit {
         description: this.description().trim() || undefined,
         context_url: this.contextUrl() || undefined
       };
-      const requests: Promise<any>[] = [lastValueFrom(this.safetyService.reportUser(payload))];
 
       if (this.blockUser()) {
-        requests.push(lastValueFrom(this.safetyService.blockUser(this.reportedUserId())));
+        await lastValueFrom(this.safetyService.blockUser(this.reportedUserId()));
       }
 
-      await Promise.all(requests);
+      this.reportSubmitted.emit(payload);
 
       this.toast.show(
         this.blockUser()

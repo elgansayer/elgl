@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReportUserModalComponent } from './report-user-modal/report-user-modal.component';
+import { SafetyService } from '../../services/safety.service';
 
 @Component({
   selector: 'app-long-press-context-menu',
@@ -34,11 +35,11 @@ import { ReportUserModalComponent } from './report-user-modal/report-user-modal.
     }
     @if (showReportModal) {
       <app-report-user-modal
-        [visible]="true"
+        [show]="showReportModal"
         [reportedUserId]="senderId()"
         [contextUrl]="buildContextUrl()"
         (close)="onReportClose()"
-        (reportSuccess)="onReportSubmitted()"
+        (reportSubmitted)="onReportSubmitted($event)"
       ></app-report-user-modal>
     }
   `,
@@ -111,7 +112,10 @@ export class LongPressContextMenuComponent {
 
   showReportModal = false;
 
-  constructor(private elementRef: ElementRef) {}
+  constructor(
+    private elementRef: ElementRef,
+    private safetyService: SafetyService
+  ) {}
 
   onOptionClick(option: string): void {
     if (option === 'copy') {
@@ -135,18 +139,26 @@ export class LongPressContextMenuComponent {
     this.showReportModal = false;
   }
 
-  onReportSuccess(): void {
-    // delegate to the same logic that closes the modal and emits the report event
-    this.onReportSubmitted();
-  }
-
-  onReportSubmitted(): void {
-    this.showReportModal = false;
-    this.report.emit({
-      messageId: this.messageId(),
-      content: this.messageContent(),
-      senderId: this.senderId(),
-      roomId: this.roomId(),
+  onReportSubmitted(payload: {
+    reported_id: string;
+    reason_category: string;
+    description?: string;
+    context_url: string;
+  }): void {
+    this.safetyService.reportUser(payload).subscribe({
+      next: () => {
+        this.showReportModal = false;
+        this.report.emit({
+          messageId: this.messageId(),
+          content: this.messageContent(),
+          senderId: this.senderId(),
+          roomId: this.roomId(),
+        });
+      },
+      error: (err) => {
+        console.error('Report failed:', err);
+        this.showReportModal = false;
+      }
     });
   }
 
