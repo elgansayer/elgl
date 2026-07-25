@@ -97,6 +97,14 @@ export class LongPressContextMenuComponent {
     this.actionTriggered.emit(action);
   }
 
+  onTouchMove(): void {
+    // no-op – required by the spec
+  }
+
+  onTouchStart(event: TouchEvent): void {
+    // no-op – required by the spec
+  }
+
   buildContextUrl(): string {
     return window.location.href;
   }
