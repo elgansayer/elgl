@@ -186,8 +186,26 @@ import { Subscription } from 'rxjs';
 })
 export class ReportUserModalComponent implements OnInit, OnDestroy {
   @Input() reportUserId!: string;
-  @Input() show = false;
   @Output() closed = new EventEmitter<void>();
+
+  private _show = false;
+
+  @Input()
+  set show(value: boolean) {
+    this._show = value;
+    if (value) {
+      this.step.set('category');
+      this.selectedCategory.set(null);
+      this.description.set('');
+      this.contextUrl.set('');
+      this.error.set(null);
+      this.loadCategories();   // optionally refresh categories every time it opens
+    }
+  }
+
+  get show(): boolean {
+    return this._show;
+  }
 
   private readonly safetyService = inject(SafetyService);
   private readonly toastService = inject(ToastService);
@@ -249,9 +267,7 @@ export class ReportUserModalComponent implements OnInit, OnDestroy {
   // Lifecycle
   // ------------------------------------------------------------------
   ngOnInit(): void {
-    if (this.show) {
-      this.loadCategories();
-    }
+    // Modal state reset and category loading are handled by the show setter.
   }
 
   ngOnDestroy(): void {
@@ -261,6 +277,9 @@ export class ReportUserModalComponent implements OnInit, OnDestroy {
   private loadCategories(): void {
     this.loadingCategories.set(true);
     this.loadCategoriesError.set('');
+
+    // Unsubscribe from any previous request to avoid memory leaks
+    this.categorySubscription?.unsubscribe();
 
     this.categorySubscription = this.safetyService.getReportCategories().subscribe({
       next: (cats) => {
