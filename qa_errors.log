@@ -15237,3 +15237,311 @@ ReferenceError: describe is not defined
     at /root/hellotalk/frontend/src/app/services/translate.pipe.spec.ts:5:1
 Error: No tests found
 
+TypeError: Cannot read properties of undefined (reading 'config')
+
+   at src/app/app.spec.ts:11
+
+   9 | import { CentrifugeService } from './services/centrifuge.service';
+  10 |
+> 11 | describe('App', () => {
+     | ^
+  12 |   beforeEach(async () => {
+  13 |     await TestBed.configureTestingModule({
+  14 |       imports: [App],
+    at initSuite (/root/hellotalk/frontend/node_modules/@vitest/runner/dist/chunk-artifact.js:1848:23)
+    at createSuiteCollector (/root/hellotalk/frontend/node_modules/@vitest/runner/dist/chunk-artifact.js:1709:2)
+    at Object.suiteFn (/root/hellotalk/frontend/node_modules/@vitest/runner/dist/chunk-artifact.js:1951:10)
+    at describe (/root/hellotalk/frontend/node_modules/@vitest/runner/dist/chunk-artifact.js:599:14)
+    at /root/hellotalk/frontend/src/app/app.spec.ts:11:1
+TypeError: Cannot read properties of undefined (reading 'config')
+
+   at src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:8
+
+   6 | import { signal } from '@angular/core';
+   7 |
+>  8 | describe('AudioSyncReaderComponent', () => {
+     | ^
+   9 |   let component: AudioSyncReaderComponent;
+  10 |   let fixture: ComponentFixture<AudioSyncReaderComponent>;
+  11 |   let mockVocabStore: Partial<VocabularyStore>;
+    at initSuite (/root/hellotalk/frontend/node_modules/@vitest/runner/dist/chunk-artifact.js:1848:23)
+    at createSuiteCollector (/root/hellotalk/frontend/node_modules/@vitest/runner/dist/chunk-artifact.js:1709:2)
+    at Object.suiteFn (/root/hellotalk/frontend/node_modules/@vitest/runner/dist/chunk-artifact.js:1951:10)
+    at describe (/root/hellotalk/frontend/node_modules/@vitest/runner/dist/chunk-artifact.js:599:14)
+    at /root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:8:1
+TypeError: Cannot read properties of undefined (reading 'config')
+
+   at src/app/components/chat-list/chat-list.component.spec.ts:8
+
+   6 | import { provideRouter } from '@angular/router';
+   7 |
+>  8 | describe('ChatListComponent', () => {
+     | ^
+   9 |   let component: ChatListComponent;
+  10 |   let fixture: ComponentFixture<ChatListComponent>;
+  11 |   let mockChatService: any;
+    at initSuite (/root/hellotalk/frontend/node_modules/@vitest/runner/dist/chunk-artifact.js:1848:23)
+    at createSuiteCollector (/root/hellotalk/frontend/node_modules/@vitest/runner/dist/chunk-artifact.js:1709:2)
+    at Object.suiteFn (/root/hellotalk/frontend/node_modules/@vitest/runner/dist/chunk-artifact.js:1951:10)
+    at describe (/root/hellotalk/frontend/node_modules/@vitest/runner/dist/chunk-artifact.js:599:14)
+    at /root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.spec.ts:8:1
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at PropDecorator (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts:3:1813)
+    at /root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts:3:3514
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts:3:3685)
+    at /root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts:50:2
+ReferenceError: describe is not defined
+
+   at src/app/components/discovery/discovery.component.spec.ts:9
+
+   7 | import { provideRouter } from '@angular/router';
+   8 |
+>  9 | describe('DiscoveryComponent', () => {
+     | ^
+  10 |   let component: DiscoveryComponent;
+  11 |   let fixture: ComponentFixture<DiscoveryComponent>;
+  12 |   let mockDiscoveryService: any;
+    at /root/hellotalk/frontend/src/app/components/discovery/discovery.component.spec.ts:9:1
+ReferenceError: describe is not defined
+
+   at src/app/components/incoming-call/incoming-call.component.spec.ts:11
+
+   9 | import { vi } from 'vitest';
+  10 |
+> 11 | describe('IncomingCallComponent', () => {
+     | ^
+  12 |   let component: IncomingCallComponent;
+  13 |   let fixture: ComponentFixture<IncomingCallComponent>;
+  14 |   let mockCentrifugoService: any;
+    at /root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:11:1
+ReferenceError: describe is not defined
+
+   at src/app/components/language-selector/language-selector.component.spec.ts:6
+
+  4 | import { TranslatePipe } from '../../services/translate.pipe';
+  5 |
+> 6 | describe('LanguageSelectorComponent', () => {
+    | ^
+  7 |   let component: LanguageSelectorComponent;
+  8 |   let fixture: ComponentFixture<LanguageSelectorComponent>;
+  9 |   let i18nService: I18nService;
+    at /root/hellotalk/frontend/src/app/components/language-selector/language-selector.component.spec.ts:6:1
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at PropDecorator (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/report-user-modal/report-user-modal.component.ts:3:1813)
+    at /root/hellotalk/frontend/src/app/components/report-user-modal/report-user-modal.component.ts:3:3514
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/report-user-modal/report-user-modal.component.ts:3:3685)
+    at /root/hellotalk/frontend/src/app/components/report-user-modal/report-user-modal.component.ts:137:2
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at PropDecorator (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:3:1813)
+    at /root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:3:3514
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:3:3685)
+    at /root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:53:2
+ReferenceError: describe is not defined
+
+   at src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:41
+
+  39 | };
+  40 |
+> 41 | describe('NotificationsInboxComponent', () => {
+     | ^
+  42 |   let component: NotificationsInboxComponent;
+  43 |   let fixture: ComponentFixture<NotificationsInboxComponent>;
+  44 |
+    at /root/hellotalk/frontend/src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:41:1
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-primary/button-primary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonPrimaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at /root/hellotalk/frontend/src/app/components/primitives/button-primary/button-primary.component.spec.ts:31:1
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonSecondaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at /root/hellotalk/frontend/src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31:1
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/card/card.component.spec.ts:19
+
+  17 | }
+  18 |
+> 19 | describe('AppCardComponent', () => {
+     | ^
+  20 |   let fixture: ComponentFixture<TestHostComponent>;
+  21 |   let host: TestHostComponent;
+  22 |   let cardElement: HTMLElement;
+    at /root/hellotalk/frontend/src/app/components/primitives/card/card.component.spec.ts:19:1
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/chip/chip.component.spec.ts:39
+
+  37 | }
+  38 |
+> 39 | describe('AppChipComponent', () => {
+     | ^
+  40 |   let fixture: ComponentFixture<TestHostComponent>;
+  41 |   let host: TestHostComponent;
+  42 |   let chipElement: HTMLElement;
+    at /root/hellotalk/frontend/src/app/components/primitives/chip/chip.component.spec.ts:39:1
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/empty-state/empty-state.component.spec.ts:33
+
+  31 | }
+  32 |
+> 33 | describe('AppEmptyStateComponent', () => {
+     | ^
+  34 |   let fixture: ComponentFixture<TestHostComponent>;
+  35 |   let host: TestHostComponent;
+  36 |   let emptyStateElement: HTMLElement;
+    at /root/hellotalk/frontend/src/app/components/primitives/empty-state/empty-state.component.spec.ts:33:1
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/input/input.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppInputComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let inputElement: HTMLInputElement;
+    at /root/hellotalk/frontend/src/app/components/primitives/input/input.component.spec.ts:49:1
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/language-picker/language-picker.component.spec.ts:5
+
+  3 | import { TranslatePipe } from '../../../services/translate.pipe';
+  4 |
+> 5 | describe('LanguagePickerComponent', () => {
+    | ^
+  6 |   let component: LanguagePickerComponent;
+  7 |   let fixture: ComponentFixture<LanguagePickerComponent>;
+  8 |
+    at /root/hellotalk/frontend/src/app/components/primitives/language-picker/language-picker.component.spec.ts:5:1
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/pill/pill.component.spec.ts:25
+
+  23 | }
+  24 |
+> 25 | describe('AppPillComponent', () => {
+     | ^
+  26 |   let fixture: ComponentFixture<TestHostComponent>;
+  27 |   let host: TestHostComponent;
+  28 |   let pillElement: HTMLElement;
+    at /root/hellotalk/frontend/src/app/components/primitives/pill/pill.component.spec.ts:25:1
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/textarea/textarea.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppTextareaComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let textareaElement: HTMLTextAreaElement;
+    at /root/hellotalk/frontend/src/app/components/primitives/textarea/textarea.component.spec.ts:49:1
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/toast/toast.spec.ts:5
+
+  3 | import { Toast } from './toast';
+  4 |
+> 5 | describe('Toast', () => {
+    | ^
+  6 |   let component: Toast;
+  7 |   let fixture: ComponentFixture<Toast>;
+  8 |
+    at /root/hellotalk/frontend/src/app/components/primitives/toast/toast.spec.ts:5:1
+ReferenceError: describe is not defined
+
+   at src/app/components/settings/settings.component.spec.ts:5
+
+  3 | import { SettingsComponent } from './settings.component';
+  4 |
+> 5 | describe('SettingsComponent', () => {
+    | ^
+  6 |   let component: SettingsComponent;
+  7 |   let fixture: ComponentFixture<SettingsComponent>;
+  8 |
+    at /root/hellotalk/frontend/src/app/components/settings/settings.component.spec.ts:5:1
+ReferenceError: describe is not defined
+
+   at src/app/components/user-detail/user-detail.component.spec.ts:10
+
+   8 | import { vi } from 'vitest';
+   9 |
+> 10 | describe('UserDetailComponent', () => {
+     | ^
+  11 |   let component: UserDetailComponent;
+  12 |   let fixture: ComponentFixture<UserDetailComponent>;
+  13 |
+    at /root/hellotalk/frontend/src/app/components/user-detail/user-detail.component.spec.ts:10:1
+ReferenceError: describe is not defined
+
+   at src/app/components/voip-call/voip-call.component.spec.ts:14
+
+  12 | };
+  13 |
+> 14 | describe('VoipCallComponent', () => {
+     | ^
+  15 |   let component: VoipCallComponent;
+  16 |   let fixture: ComponentFixture<VoipCallComponent>;
+  17 |   let componentRef: ComponentRef<VoipCallComponent>;
+    at /root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.spec.ts:14:1
+ReferenceError: describe is not defined
+
+   at src/app/services/i18n.service.spec.ts:4
+
+  2 | import { I18nService } from './i18n.service';
+  3 |
+> 4 | describe('I18nService', () => {
+    | ^
+  5 |   let service: I18nService;
+  6 |
+  7 |   beforeEach(() => {
+    at /root/hellotalk/frontend/src/app/services/i18n.service.spec.ts:4:1
+ReferenceError: describe is not defined
+
+   at src/app/services/media-upload.service.spec.ts:4
+
+  2 | import { MediaUploadService } from './media-upload.service';
+  3 |
+> 4 | describe('MediaUploadService', () => {
+    | ^
+  5 |   it('should exist', () => {
+  6 |     // Placeholder test so the spec file compiles without failing due to
+  7 |     // unresolved dependencies.  Full integration tests for MediaUploadService
+    at /root/hellotalk/frontend/src/app/services/media-upload.service.spec.ts:4:1
+ReferenceError: describe is not defined
+
+   at src/app/services/translate.pipe.spec.ts:5
+
+  3 | import { I18nService } from './i18n.service';
+  4 |
+> 5 | describe('TranslatePipe', () => {
+    | ^
+  6 |   let pipe: TranslatePipe;
+  7 |
+  8 |   beforeEach(() => {
+    at /root/hellotalk/frontend/src/app/services/translate.pipe.spec.ts:5:1
+Error: No tests found
+
