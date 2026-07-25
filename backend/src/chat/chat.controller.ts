@@ -42,9 +42,7 @@ export class ChatController {
   }
 
   @Get('rooms')
-  async getRooms(
-    @CurrentUser() user: User | null,
-  ): Promise<ChatRoomRecord[]> {
+  async getRooms(@CurrentUser() user: User | null): Promise<ChatRoomRecord[]> {
     if (!user) return [];
     return await this.chatService.getRooms(user.id);
   }
