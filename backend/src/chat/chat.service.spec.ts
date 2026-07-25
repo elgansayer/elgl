@@ -1,20 +1,26 @@
+const mockCentrifugoInstance = {
+  generateConnectionToken: jest.fn().mockReturnValue({ token: 'mock-token' }),
+  publish: jest.fn().mockResolvedValue(true),
+};
+
+jest.mock('../centrifugo/centrifugo.service', () => ({
+  CentrifugoService: jest.fn(() => mockCentrifugoInstance),
+}));
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatService } from './chat.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from '../centrifugo/centrifugo.service';
 
-class MockCentrifugoService {
-  generateConnectionToken = jest.fn().mockReturnValue({ token: 'mock-token' });
-  publish = jest.fn().mockResolvedValue(true);
-}
-
 describe('ChatService', () => {
   let service: ChatService;
-  let centrifugoService: MockCentrifugoService;
+  let centrifugoService: typeof mockCentrifugoInstance;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
 
   beforeEach(async () => {
+    centrifugoService = mockCentrifugoInstance;
+
     mockQueryBuilder = {
       insert: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
@@ -40,13 +46,12 @@ describe('ChatService', () => {
         },
         {
           provide: CentrifugoService,
-          useClass: MockCentrifugoService,
+          useValue: mockCentrifugoInstance,
         },
       ],
     }).compile();
 
     service = module.get<ChatService>(ChatService);
-    centrifugoService = module.get<MockCentrifugoService>(CentrifugoService);
   });
 
   afterEach(() => {
@@ -163,7 +168,6 @@ describe('ChatService', () => {
   describe('getMessages', () => {
     it('should return messages for room without search filter', async () => {
       const messages = [{ id: 'msg-1', text_content: 'Hi' }];
-      // When limit is called, it returns a promise resolving to { data, error }
       mockQueryBuilder.limit.mockResolvedValue({
         data: messages,
         error: null,
