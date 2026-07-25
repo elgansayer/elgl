@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ProfileVisitsService } from './profile-visits.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('ProfileVisitsService', () => {
   let service: ProfileVisitsService;
@@ -34,6 +35,10 @@ describe('ProfileVisitsService', () => {
         {
           provide: NotificationsService,
           useValue: {},
+        },
+        {
+          provide: EventEmitter2,
+          useValue: { emit: jest.fn() },
         },
       ],
     }).compile();
