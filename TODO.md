@@ -303,7 +303,7 @@
 
 ## Phase 22: Moderation & Trust Engine
 - [ ] Build "Report User" modal with dynamic category selection.
-- [ ] **STATUS (2026-07-27):** Backend endpoint `POST /safety/report` exists (Phase 7). Frontend reporting modal and UI flow not yet implemented; previous commit contained only lint/formatting cleanups. No technical blocker identified -- just pending development effort.
+- [ ] **STATUS (2026-07-27):** Backend endpoint `POST /safety/report` exists (Phase 7). Frontend reporting modal and UI flow not yet implemented; previous commit contained only lint/formatting cleanups. **Blocker identified (2026-07-27):** The required pixel-perfect design spec for the Report User modal has not been extracted from the original HelloTalk screenshots; this blocks UI development.
 - [ ] Implement Blocklist system hiding blocked accounts across chat, feed, and search.
 - [ ] Wire up block/unblock UI in LongPressContextMenuComponent and ChatMessageComponent, and implement backend/frontend filtering to hide blocked users from chat, feed, and search results.
 - [ ] **(Current diff review 2026-07-26):** The git diff only contains formatting changes; implement actual block/unblock UI wiring and backend/frontend filtering.
