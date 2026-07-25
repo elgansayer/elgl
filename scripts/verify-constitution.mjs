@@ -45,7 +45,7 @@ function getAllFiles(dir, fileList = []) {
   if (!fs.existsSync(dir)) return fileList;
   const files = fs.readdirSync(dir);
   for (const file of files) {
-    if (file === 'node_modules' || file === 'dist' || file === '.git' || file === 'original-hello-talk-screenshots') continue;
+    if (file === 'node_modules' || file === 'dist' || file === '.git' || file === 'original-hello-talk-screenshots' || file.startsWith('.aider')) continue;
     const filePath = path.join(dir, file);
     const stat = fs.statSync(filePath);
     if (stat.isDirectory()) {
