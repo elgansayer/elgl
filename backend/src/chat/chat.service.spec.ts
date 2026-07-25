@@ -1,4 +1,3 @@
-import { jest } from '@jest/globals';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatService } from './chat.service';
 import { SupabaseService } from '../supabase/supabase.service';
