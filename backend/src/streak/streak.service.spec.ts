@@ -7,14 +7,42 @@ describe('StreakService', () => {
   let supabaseMock: any;
 
   beforeEach(async () => {
-    // Create a mock query builder chain
+    // Create a mock query builder chain that covers the full Supabase PostgREST
+    // fluent API so the service doesn't throw when it calls methods like `.order`.
     const createQueryChain = () => {
       const chain: any = {};
-      chain.select = jest.fn().mockReturnValue(chain);
-      chain.gt = jest.fn().mockReturnValue(chain);
-      chain.lt = jest.fn().mockReturnValue(chain);
-      chain.in = jest.fn().mockReturnValue(chain);
-      chain.update = jest.fn().mockReturnValue(chain);
+      const methods = [
+        'select',
+        'from',
+        'gt',
+        'gte',
+        'lt',
+        'lte',
+        'neq',
+        'eq',
+        'order',
+        'limit',
+        'in',
+        'update',
+        'single',
+        'maybeSingle',
+      ];
+      methods.forEach((method) => {
+        chain[method] = jest.fn().mockReturnValue(chain);
+      });
+
+      // Promisify the chain so that `await` works after the final `.lt` / `.in` call.
+      let resolveData: any = null;
+      chain._setResolveData = (data: any) => {
+        resolveData = data;
+      };
+      chain.then = (resolve: any) => {
+        if (resolveData) {
+          resolve(resolveData);
+          resolveData = null;
+        }
+        return chain;
+      };
       return chain;
     };
 
@@ -65,7 +93,7 @@ describe('StreakService', () => {
       chain.gt.mockReturnValue(chain);
       chain.lt.mockResolvedValue({ data: mockInactiveUsers, error: null });
       chain.update.mockReturnValue(chain);
-      chain.in.mockResolvedValue({ error: null });
+      chain.in.mockResolvedValue({ data: mockInactiveUsers, error: null });
 
       const result = await service.resetStreaksForTesting();
       expect(result).toBe(2);
@@ -112,7 +140,12 @@ describe('StreakService', () => {
       chain.gt.mockReturnValue(chain);
       chain.lt.mockResolvedValue({ data: mockInactiveUsers, error: null });
       chain.update.mockReturnValue(chain);
-      chain.in.mockResolvedValue({ error: { message: 'Update failed' } });
+      // Return an error while still providing data so the service can decide the
+      // codepath based on the error without throwing on a missing `data` field.
+      chain.in.mockResolvedValue({
+        data: [],
+        error: { message: 'Update failed' },
+      });
 
       const result = await service.resetStreaksForTesting();
       expect(result).toBe(0);
