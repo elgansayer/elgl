@@ -61,12 +61,12 @@
               </p>
             </div>
           }
-          @if (contextSentence) {
+          @if (contextSentence()) {
             <div
               class="text-xs text-text-secondary italic bg-amber-500/10/50 p-3 rounded-app border border-amber-500/30/50"
             >
               <span class="font-bold not-italic text-amber-400">Context:</span>
-              "{{ contextSentence }}"
+              "{{ contextSentence() }}"
             </div>
           }
         </div>
