@@ -36,7 +36,7 @@ jobs:
               # Search for exact issue title in both open and closed issues
               ISSUE_JSON=$(gh issue list --search "\"$TITLE\" in:title" --state all --json number,state --jq '.[0]')
               
-              if [ -z "$ISSUE_JSON" ]; then
+              if [ -z "$ISSUE_JSON" ] || [ "$ISSUE_JSON" == "null" ]; then
                 ISSUE_NUM=""
                 ISSUE_STATE=""
               else

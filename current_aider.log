@@ -662,3 +662,568 @@ remove the file manually to continue.'
 > backend@0.0.1 lint
 > sh -c 'eslint "{src,apps,libs,test}/**/*.ts" --fix' frontend/src/app/components/emoji-picker/emoji-picker.component.ts
 
+
+/root/hellotalk/backend/src/nlp/nlp.service.ts
+  187:38  error  Unsafe assignment of an `any` value              @typescript-eslint/no-unsafe-assignment
+  187:59  error  Unsafe member access .message on an `any` value  @typescript-eslint/no-unsafe-member-access
+  305:38  error  Unsafe assignment of an `any` value              @typescript-eslint/no-unsafe-assignment
+  305:59  error  Unsafe member access .message on an `any` value  @typescript-eslint/no-unsafe-member-access
+
+✖ 4 problems (4 errors, 0 warnings)
+
+
+# Fix any errors below, if possible.
+
+## Running: cd backend && npm run lint 
+frontend/src/app/components/voip-call/voip-call.component.ts
+
+
+> backend@0.0.1 lint
+> sh -c 'eslint "{src,apps,libs,test}/**/*.ts" --fix' 
+frontend/src/app/components/voip-call/voip-call.component.ts
+
+
+/root/hellotalk/backend/src/nlp/nlp.service.ts
+  187:38  error  Unsafe assignment of an `any` value              
+@typescript-eslint/no-unsafe-assignment
+  187:59  error  Unsafe member access .message on an `any` value  
+@typescript-eslint/no-unsafe-member-access
+  305:38  error  Unsafe assignment of an `any` value              
+@typescript-eslint/no-unsafe-assignment
+  305:59  error  Unsafe member access .message on an `any` value  
+@typescript-eslint/no-unsafe-member-access
+
+✖ 4 problems (4 errors, 0 warnings)
+
+
+## See relevant line below marked with █.
+
+frontend/src/app/components/voip-call/voip-call.component.ts:
+
+
+# Fix any errors below, if possible.
+
+## Running: cd backend && npm run lint frontend/src/app/app.spec.ts
+
+
+> backend@0.0.1 lint
+> sh -c 'eslint "{src,apps,libs,test}/**/*.ts" --fix' 
+frontend/src/app/app.spec.ts
+
+
+/root/hellotalk/backend/src/nlp/nlp.service.ts
+  187:38  error  Unsafe assignment of an `any` value              
+@typescript-eslint/no-unsafe-assignment
+  187:59  error  Unsafe member access .message on an `any` value  
+@typescript-eslint/no-unsafe-member-access
+  305:38  error  Unsafe assignment of an `any` value              
+@typescript-eslint/no-unsafe-assignment
+  305:59  error  Unsafe member access .message on an `any` value  
+@typescript-eslint/no-unsafe-member-access
+
+✖ 4 problems (4 errors, 0 warnings)
+
+
+## See relevant line below marked with █.
+
+frontend/src/app/app.spec.ts:
+
+
+# Fix any errors below, if possible.
+
+## Running: cd backend && npm run lint 
+frontend/src/app/components/word-definition-modal/word-definition-modal
+.component.ts
+
+
+> backend@0.0.1 lint
+> sh -c 'eslint "{src,apps,libs,test}/**/*.ts" --fix' 
+frontend/src/app/components/word-definition-modal/word-definition-modal
+.component.ts
+
+
+/root/hellotalk/backend/src/nlp/nlp.service.ts
+  187:38  error  Unsafe assignment of an `any` value              
+@typescript-eslint/no-unsafe-assignment
+  187:59  error  Unsafe member access .message on an `any` value  
+@typescript-eslint/no-unsafe-member-access
+  305:38  error  Unsafe assignment of an `any` value              
+@typescript-eslint/no-unsafe-assignment
+  305:59  error  Unsafe member access .message on an `any` value  
+@typescript-eslint/no-unsafe-member-access
+
+✖ 4 problems (4 errors, 0 warnings)
+
+
+## See relevant line below marked with █.
+
+frontend/src/app/components/word-definition-modal/word-definition-modal
+.component.ts:
+
+
+# Fix any errors below, if possible.
+
+## Running: cd backend && npm run lint 
+frontend/src/app/components/chat-search/chat-search.component.ts
+
+
+> backend@0.0.1 lint
+> sh -c 'eslint "{src,apps,libs,test}/**/*.ts" --fix' 
+frontend/src/app/components/chat-search/chat-search.component.ts
+
+
+/root/hellotalk/backend/src/nlp/nlp.service.ts
+  187:38  error  Unsafe assignment of an `any` value              
+@typescript-eslint/no-unsafe-assignment
+  187:59  error  Unsafe member access .message on an `any` value  
+@typescript-eslint/no-unsafe-member-access
+  305:38  error  Unsafe assignment of an `any` value              
+@typescript-eslint/no-unsafe-assignment
+  305:59  error  Unsafe member access .message on an `any` value  
+@typescript-eslint/no-unsafe-member-access
+
+✖ 4 problems (4 errors, 0 warnings)
+
+
+## See relevant line below marked with █.
+
+frontend/src/app/components/chat-search/chat-search.component.ts:
+
+
+# Fix any errors below, if possible.
+
+## Running: cd backend && npm run lint 
+frontend/src/app/components/emoji-picker/emoji-picker.component.ts
+
+
+> backend@0.0.1 lint
+> sh -c 'eslint "{src,apps,libs,test}/**/*.ts" --fix' 
+frontend/src/app/components/emoji-picker/emoji-picker.component.ts
+
+
+/root/hellotalk/backend/src/nlp/nlp.service.ts
+  187:38  error  Unsafe assignment of an `any` value              
+@typescript-eslint/no-unsafe-assignment
+  187:59  error  Unsafe member access .message on an `any` value  
+@typescript-eslint/no-unsafe-member-access
+  305:38  error  Unsafe assignment of an `any` value              
+@typescript-eslint/no-unsafe-assignment
+  305:59  error  Unsafe member access .message on an `any` value  
+@typescript-eslint/no-unsafe-member-access
+
+✖ 4 problems (4 errors, 0 warnings)
+
+
+## See relevant line below marked with █.
+
+frontend/src/app/components/emoji-picker/emoji-picker.component.ts:
+
+
+I will now output the updated files with all the required fixes. This  
+includes:                                                              
+
+ 1 Replacing any remaining *ngIf or *ngFor with native Angular control 
+   flow (@if, @for) in voip-call.component.ts.                         
+ 2 Replacing [ngClass] with native [class] bindings in all components. 
+ 3 Adding Vitest imports to app.spec.ts.                               
+ 4 Converting standard decorators to modern Signals in                 
+   word-definition-modal.component.ts.                                 
+
+frontend/src/app/app.spec.ts                                           
+
+                                                                       
+@@ -1,5 +1,6 @@                                                        
+ import { describe, it, expect, beforeEach } from 'vitest';            
+
+frontend/src/app/components/chat-search/chat-search.component.ts       
+
+                                                                       
+@@ -1,4 +1,5 @@                                                        
+ import { Component, inject, input, output, signal } from              
+'@angular/core';                                                       
+                  (input)="onSearch()"                                 
+
+                                                                       
+@@ -1,4 +1,5 @@                                                        
+ import { Component, output, signal } from '@angular/core';            
+ import { FormsModule } from '@angular/forms';                         
+                                                                       
+ const EMOJI_CATEGORIES = [                                            
+   { name: 'Smileys', emojis:                                          
+['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰',
+'😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','
+🤭','🫢','🫣','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','🫥','😏','😒',' 
+😵','🤯','🥳','🥺','😢','😭','😤','😠','😡','🤬','💀','☠️','💩','🤡',' 
+👹','👺','👻','👽','👾','🤖','😺','😸','😹','😻','😼','😽','🙀','😿',' 
+😾'] },                                                                
+   { name: 'People', emojis:                                           
+['👋','🤚','🖐','✋','🖖','🫱','🫲','🫳','🫴','👌','🤌','🤏','✌️','🤞','
+👊','🤛','🤜','👏','🙌','🫶','👐','🤲','🤝','🙏','✍️','💅','🤳','💪',' 
+🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁','👅','👄','🫦
+'] },                                                                  
+   { name: 'Animals', emojis:                                          
+['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐻‍❄️','🐨','🐯','🦁','🐮','🐷',
+'🐸','🐵','🙈','🙉','🙊','🐒','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦅','
+🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🪰','🪲',' 
+🪳','🦟','🦗','🕷','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀
+','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🪸','🐊','🐅','🐆','🦓','🦍','🦧'
+'🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐕‍🦺','🐈','🐈‍⬛','🪶','🐓','🦃','🦤','
+🦚','🦜','🦢','🦩','🕊','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🐁','🐀','🐿'
+,'🦔','🐾','🐉','🐲'] },                                               
+   { name: 'Food', emojis:                                             
+['🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭',
+'🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶','🫑','🌽','🥕','🫒',' 
+🧄','🧅','🥔','🍠','🫘','🥐','🍞','🥖','🥨','🧀','🥚','🍳','🧈','🥞',' 
+🧇','🥓','🥩','🍗','🍖','🦴','🌭','🍔','🍟','🍕','🫓','🥪','🥙','🧆',' 
+🌮','🌯','🫔','🥗','🥘','🫕','🥫','🍝','🍜','🍲','🍛','🍣','🍱','🥟',' 
+🦪','🍤','🍙','🍚','🍘','🍥','🥠','🥮','🍢','🍡','🍧','🍨','🍦','🥧',' 
+🧁','🍰','🎂','🍮','🍭','🍬','🍫','🍿','🍩','🍪','🌰','🥜','🍯','🥛',' 
+🍼','🫖','☕️','🍵','🧃','🥤','🧋','🍶','🍺','🍻','🥂','🍷','🫗','🥃',' 
+🍸','🍹','🧉','🍾','🧊','🥄','🍴','🍽','🥣','🥡','🥢','🧂'] },          
++  { name: 'Travel', emojis:                                           
+['🌍','🌎','🌏','🌐','🗺','🗾','🧭','🏔','⛰','🌋','🗻','🏕','🏖','🏜','🏝','🏞
+','🏟','🏛','🏗','🧱','🪨','🪵','🛖','🏘','🏚','🏠','🏡','🏢','🏣','🏤','🏥'
+,'🏦','🏨','🏩','🏪','🏫','🏬','🏭','🏯','🏰','💒','🗼','🗽','⛪️','🕌',
+'🛕','🕍','⛩','🕋','⛲','⛺','🌁','🌃','🏙','🌄','🌅','🌆','🌇','🌉','♨️
+','🎠','🛝','🎡','🎢','💈','🎪','🚂','🚃','🚄','🚅','🚆','🚇','🚈','🚉'
+,'🚊','🚝','🚞','🚋','🚌','🚍','🚎','🚐','🎟','🚒','🚓','🚔','🚕','🚖','
+'🚗','🚘','🚙','🛻','🚚','🚛','🚜','🏎','🏍','🛵','🛺','🚲','🛴','🛹','🛼
+','🚏','🛣','🛤','🛢','⛽️','🛞','🚨','🚥','🚦','🛑','🚧','⚓️','🛟','⛵️',' 
+🛶','🚤','🛳','⛴','🛥','🚢','✈️','🛩','🛫','🛬','🪂','💺','🚁','🚟','🚠','
+🚡','🛰','🚀','🛸'] },                                                  
++  { name: 'Travel', emojis:                                           
+['🌍','🌎','🌏','🌐','🗺','🗾','🧭','🏔','⛰','🌋','🗻','🏕','🏖','🏜','🏝','🏞
+','🏟','🏛','🏗','🧱','🪨','🪵','🛖','🏘','🏚','🏠','🏡','🏢','🏣','🏤','🏥'
+,'🏦','🏨','🏩','🏪','🏫','🏬','🏭','🏯','🏰','💒','🗼','🗽','⛪️','🕌',
+'🛕','🕍','⛩','🕋','⛲','⛺','🌁','🌃','🏙','🌄','🌅','🌆','🌇','🌉','♨️
+','🎠','🛝','🎡','🎢','💈','🎪','🚂','🚃','🚄','🚅','🚆','🚇','🚈','🚉'
+,'🚊','🚝','🚞','🚋','🚌','🚍','🚎','🚐','🎟','🚒','🚓','🚔','🚕','🚖','
+🚗','🚘','🚙','🛻','🚚','🚛','🚜','🏎','🏍','🛵','🛺','🚲','🛴','🛹','🛼'
+,'🚏','🛣','🛤','🛢','⛽️','🛞','🚨','🚥','🚦','🛑','🚧','⚓️','🛟','⛵️','🛶
+','🚤','🛳','⛴','🛥','🚢','✈️','🛩','🛫','🛬','🪂','💺','🚁','🚟','🚠','🚡
+','🛰','🚀','🛸'] },                                                    
+   { name: 'Activities', emojis:                                       
+['⚽️','🏀','🏈','⚾️','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒',
+'🏑','🥍','🏏','🪃','🥅','⛳️','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','
+🛼','🛷','⛸','🥌','🎿','⛷','🏂','🪂','🏋️','🤼','🤸','🤺','⛹️','🤾','🏌️'
+,'🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚵','🚴','🎪','🎭','🎨','🎬','🎤',
+'🎧','🎼','🎹','🥁','🪘','🎷','🎺','🪗','🎸','🪕','🎻','🎲','♟','🎯',' 
+🎳','🎮','🕹','🎰','🧩','🎴','🀄️','♠️','♥️','♦️','♣️','🃏','🖼','🎞','📽','
+🎥','📹','📺','📻','🎙','📡','🔊','🔉','🔈','🔇','📢','📣','📯','🔔','🔕
+','🎵','🎶','💤','💢','💣','💥','💫','💦','💨','🕳','💬','🗯','💭','🫧','
+💌','💘','💝','💖','💗','💓','💞','💕','💟','❣️','💔','❤️‍🔥','❤️‍🩹','❤️',' 
+🩷','🧡','💛','💚','💙','🩵','💜','🤎','🖤','🩶','🤍','💋','💯'] },    
+   { name: 'Objects', emojis:                                          
+['⌚️','📱','💻','⌨️','🖥','🖨','🖱','🖲','🕹','🗜','💽','💾','💿','📀','📼','
+📷','📸','📹','🎥','📽','🎞','📞','☎️','📟','📠','📺','📻','🎙','🎚','🎛',' 
+🧭','⏱','⏲','⏰','🕰','⌛️','📡','🔋','🪫','🔌','💡','🔦','🕯','🪔','🧯','
+🗑','🛢','💸','💵','💴','💶','💷','🪙','💰','💳','💎','⚖️','🪜','🧰','🪛'
+,'🔧','🔨','⚒','🛠','⛏','🪚','🔩','⚙️','🪤','🧱','⛓','🪝','🧲','🔫','💣'
+,'🧨','🪓','🔪','🗡','⚔️','🛡','🚬','⚰️','🪦','⚱️','🏺','🔮','📿','🧿',' 
+🪬','💈','⚗️','🔭','🔬','🕳','🩻','🩼','🩺','💊','💉','🩸','🧬','🦠','🧫
+','🧪','🌡','🧹','🪠','🧺','🧻','🚽','🚰','🚿','🛁','🛀','🧼','🪥','🪒',
+'🧽','🪣','🧴','🛎','🔑','🗝','🚪','🪑','🛋','🛏','🛌','🧸','🪆','🖼','🪞','
+🪟','🛍','🛒','🎁','🎈','🎏','🎀','🪄','🪅','🎊','🎉','🎎','🏮','🎐','🧧
+','✉️','📩','📨','📧','💌','📥','📤','📦','🏷','🪧','📪','📫','📬','📭',
+'📮','📯','📜','📃','📄','📑','🧾','📊','📈','📉','🗒','🗓','📆','📅','🗑'
+,'📇','🗃','🗳','🗄','📋','📁','📂','🗂','🗞','📰','📓','📔','📒','📕','📗',
+'📘','📙','📚','📖','🔖','🧷','🔗','📎','🖇','📐','📏','🧮','📌','📍',' 
+✂️','🖊','🖋','✒️','🖌','🖍','📝','✏️','🔍','🔎','🔏','🔐','🔒','🔓'] },   
+   { name: 'Symbols', emojis:                                          
+['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓',
+'💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉','☸️','✡️','🔯','🕎','☯️',' 
+☦️','🛐','⛎','♈️','♉️','♊️','♋️','♌️','♍️','♎️','♏️','♐️','♑️','♒️',' 
+♓️','🆔','⚛️','🉑','☢️','☣️','📴','📳','🈶','🈚️','🈸','🈺','🈷️','✴️',' 
+🆚','💮','🉐','㊙️','㊗️','🈴','🈵','🈹','🈲','🅰️','🅱️','🆎','🆑','🅾️',' 
+🆘','❌','⭕️','🛑','⛔️','📛','🚫','💢','♨️','🚷','🚯','🚳','🚱','🔞',' 
+📵','🚭','❗️','❕','❓','❔','‼️','⁉️','🔅','🔆','〽️','⚠️','🚸','🔱',' 
+⚜️','🔰','♻️','✅','🈯️','💹','❇️','✳️','❎','🌐','💠','Ⓜ️','🌀','💤',' 
+🏧','🚾','♿️','🅿️','🛗','🈳','🈂️','🛂','🛃','🛄','🛅','🚹','🚺','🚼','⚧
+','🚻','🚮','🎦','📶','🈁','🔣','ℹ️','🔤','🔡','🔠','🆖','🆗','🆙','🆒'
+,'🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢',
+'#️⃣','*️⃣','⏏️','▶️','⏸','⏯','⏹','⏺','⏭','⏮','⏩','⏪','⏫','⏬','◀️',' 
+🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','🔄','◻️',' 
+◼️','◽️','◾️','▪️','▫️','🔺','🔻','🔸','🔹','🔶','🔷','🔳','🔲','⬛️',' 
+⬜️','🟥','🟧','🟨','🟩','🟦','🟪','🟫','⚪️','⚫️','🔴','🟠','🟡','🟢',' 
+🔵','🟣','🟤','🔘'] },                                                 
+   { name: 'Flags', emojis:                                            
+['🏳️','🏴','🏁','🚩','🎌','🏴‍☠️','🇺🇳','🇦🇫','🇦🇽','🇦🇱','🇩🇿','🇦🇸','🇦🇩','🇦🇴',
+'🇦🇮','🇦🇶','🇦🇬','🇦🇷','🇦🇲','🇦🇼','🇦🇺','🇦🇹','🇦🇿','🇧🇸','🇧🇭','🇧🇩','🇧🇧','🇧🇾','
+🇧🇪','🇧🇿','🇧🇯','🇧🇲','🇧🇹','🇧🇴','🇧🇦','🇧🇼','🇧🇷','🇮🇴','🇻🇬','🇧🇳','🇧🇬','🇧🇫','🇧
+🇮','🇰🇭','🇨🇲','🇨🇦','🇮🇨','🇨🇻','🇧長','🇰🇾','🇨🇫','🇹🇩','🇨🇱','🇨🇳','🇨🇽','🇨🇨','🇨
+🇴','🇰🇲','🇨🇬','🇨🇩','🇨🇰','🇨🇷','🇨🇮','🇭🇷','🇨🇺','🇨🇼','🇨🇾','🇨🇿','🇩🇰','🇩🇯','🇩🇲
+','🇩🇴','🇪🇨','🇪🇬','🇸🇻','🇬🇶','🇪🇷','🇪🇪','🇸🇿','🇪🇹','🇪🇺','🇫🇰','🇫🇴','🇫🇯','🇫🇮'
+,'🇫🇷','🇬🇫','🇵🇫','🇹🇫','🇬🇦','🇬🇲','🇬🇪','🇩🇪','🇬🇭','🇬🇮','🇬🇷','🇬🇱','🇬🇩','🇬🇵',
+'🇬🇺','🇬🇹','🇬🇬','🇬🇳','🇬🇼','🇬🇾','🇭🇹','🇭🇳','🇭🇰','🇭🇺','🇮🇸','🇮🇳','🇮🇩','🇮🇷','
+🇮🇶','🇮🇪','🇮🇲','🇮🇱','🇮🇹','🇯🇲','🇯🇵','🇯🇪','🇯🇴','🇰🇿','🇰🇪','🇰🇮','🇽🇰','🇰🇼','🇰
+🇬','🇱🇦','🇱🇻','🇱🇧','🇱🇸','🇱🇷','🇱🇾','🇱🇮','🇱🇹','🇱🇺','🇲🇴','🇲🇬','🇲🇼','🇲🇾','🇲🇻
+','🇲🇱','🇲🇹','🇲🇭','🇲🇶','🇲🇷','🇲🇺','🇾🇹','🇲🇽','🇫🇲','🇲🇩','🇲🇨','🇲🇳','🇲🇪','🇲🇸'
+,'🇲🇦','🇲🇿','🇲🇲','🇳🇦','🇳🇷','🇳🇵','🇳🇱','🇳🇨','🇳🇿','🇳🇮','🇳🇪','🇳🇬','🇳🇺','🇳🇫',
+'🇰🇵','🇲🇰','🇲🇵','🇳🇴','🇴🇲','🇵🇰','🇵🇼','🇵🇸','🇵🇦','🇵🇬','🇵🇾','🇵🇪','🇵🇭','🇵🇳','
+🇵🇱','🇵🇹','🇵🇷','🇶🇦','🇷🇪','🇷🇴','🇷🇺','🇷🇼','🇼🇸','🇸🇲','🇸🇦','🇸🇳','🇷🇸','🇸🇨','🇸
+🇱','🇸🇬','🇸🇽','🇸🇰','🇸🇮','🇸🇧','🇸🇴','🇿🇦','🇬🇸','🇰🇷','🇸🇸','🇪🇸','🇱🇰','🇧🇱','🇸🇭
+','🇰🇳','🇱🇨','🇲🇫','🇵🇲','🇻🇨','🇸🇩','🇸🇷','🇸🇪','🇨🇭','🇸🇾','🇹🇼','🇹🇯','🇹🇿','🇹🇭'
+,'🇹🇱','🇹🇬','🇹🇰','🇹🇴','🇹🇹','🇹🇳','🇹🇷','🇹🇲','🇹🇨','🇹🇻','🇺🇬','🇺🇦','🇦🇪','🇬🇧',
+'🇺🇸','🇻🇮','🇺🇾','🇺🇿','🇻🇺','🇻🇦','🇻🇪','🇻🇳','🇼🇫','🇪🇭','🇾🇪','🇿🇲','🇿🇼'] }    
+ ];                                                                    
+@@ -17,5 +17,6 @@                                                      
+ @Component({                                                          
+                placeholder="Search emoji..."                          
+                class="w-full bg-surface-100 text-white text-sm        
+                                                                       
+@@ -4,5 +4,6 @@                                                        
+ import { LivekitService } from '../../services/livekit.service';      
+   selector: 'app-voip-call',                                          
+   standalone: true,                                                   
+   imports: [CommonModule, FormsModule],                               
+   template: `                                                         
++    @if (showCallUI()) {                                              
++      <div class="fixed inset-0 z-50 flex items-center justify-center 
+bg-black/70 backdrop-blur-sm">                                         
++        <div class="bg-surface-800 rounded-2xl shadow-2xl w-full      
+max-w-sm p-6 text-center border border-slate-700">                     
++          <!-- Caller/Callee Info -->                                 
++          <div class="mb-6">                                          
++            <div class="w-20 h-20 mx-auto rounded-full                
+from-purple-500 to-pink-500 flex items-center justify-center text-3xl  
+font-bold text-white mb-3">                                            
+-            {{ displayName()[0]?.toUpperCase() || '?' }}              
++    @if (showCallUI()) {                                              
++      <div class="fixed inset-0 z-50 flex items-center justify-center 
+bg-black/70 backdrop-blur-sm">                                         
++        <div class="bg-surface-800 rounded-2xl shadow-2xl w-full      
+max-w-sm p-6 text-center border border-slate-700">                     
++          <!-- Caller/Callee Info -->                                 
++          <div class="mb-6">                                          
++            <div class="w-20 h-20 mx-auto rounded-full                
+bg-gradient-to-br from-purple-500 to-pink-500 flex items-center        
+justify-center text-3xl font-bold text-white mb-3">                    
++              {{ displayName()[0]?.toUpperCase() || '?' }}            
++            </div>                                                    
++            <h2 class="text-xl font-semibold text-white">{{           
+displayName() }}</h2>                                                  
++            <p class="text-text-muted text-sm mt-1">{{ callStatusText 
+}}</p>                                                                 
+           </div>                                                      
+-          <h2 class="text-xl font-semibold text-white">{{             
+displayName() }}</h2>                                                  
+-          <p class="text-text-muted text-sm mt-1">{{ callStatusText   
+}}</p>                                                                 
+-        </div>                                                        
+                                                                       
+-        <!-- Call Timer (when connected) -->                          
+-        <div class="text-3xl font-mono text-white mb-6"               
+*ngIf="callState() === 'connected'">                                   
+-          {{ formattedDuration }}                                     
+-        </div>                                                        
+-                                                                      
+-        <!-- Action Buttons -->                                       
+-        <div class="flex justify-center gap-6">                       
+-          <!-- Incoming call actions -->                              
+-          @if (callDirection() === 'incoming' && callState() ===      
+'ringing') {                                                           
+-            <button (click)="acceptCall()"                            
+-                    class="w-16 h-16 rounded-full bg-green-500        
+hover:bg-green-600 text-white flex items-center justify-center         
+transition-all hover:scale-110 shadow-lg">                             
+-              <svg class="w-8 h-8" fill="none" stroke="currentColor"  
+viewBox="0 0 24 24">                                                   
+-                <path stroke-linecap="round" stroke-linejoin="round"  
+stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498       
+4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516           
+5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 
+0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>                                
+-              </svg>                                                  
+-            </button>                                                 
+-            <button (click)="rejectCall()"                            
+-                    class="w-16 h-16 rounded-full bg-red-500          
+hover:bg-red-600 text-white flex items-center justify-center           
+transition-all hover:scale-110 shadow-lg">                             
+-              <svg class="w-8 h-8" fill="none" stroke="currentColor"  
+viewBox="0 0 24 24">                                                   
+-                <path stroke-linecap="round" stroke-linejoin="round"  
+stroke-width="2" d="M6 18L18 6M6 6l12 12"/>                            
+-              </svg>                                                  
+-            </button>                                                 
++          <!-- Call Timer (when connected) -->                        
++          @if (callState() === 'connected') {                         
++            <div class="text-3xl font-mono text-white mb-6">          
++              {{ formattedDuration }}                                 
++            </div>                                                    
+           }                                                           
+                                                                       
++          <!-- Action Buttons -->                                     
++          <div class="flex justify-center gap-6">                     
++            <!-- Incoming call actions -->                            
++            @if (callDirection() === 'incoming' && callState() ===    
+'ringing') {                                                           
++              <button (click)="acceptCall()"                          
++                      class="w-16 h-16 rounded-full bg-green-500      
+hover:bg-green-600 text-white flex items-center justify-center         
+transition-all hover:scale-110 shadow-lg">                             
++                <svg class="w-8 h-8" fill="none" stroke="currentColor"
+viewBox="0 0 24 24">                                                   
++                  <path stroke-linecap="round" stroke-linejoin="round"
+stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498       
+4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516           
+5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 
+-            </button>                                                 
+-            <button (click)="toggleVideo()"                           
+-                    [class]="isVideoEnabled() ? 'w-14 h-14            
+rounded-full flex items-center justify-center transition-all           
+hover:scale-110 shadow-lg bg-surface-200 hover:bg-surface-100' : 'w-14 
+h-14 rounded-full flex items-center justify-center transition-all      
+hover:scale-110 shadow-lg bg-yellow-500 hover:bg-yellow-600'">         
+-              <svg class="w-6 h-6 text-white" fill="none"             
+stroke="currentColor" viewBox="0 0 24 24">                             
+-                <path stroke-linecap="round" stroke-linejoin="round"  
+stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0    
+01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2
+2 0 002 2z"/>                                                          
+-              </svg>                                                  
+-            </button>                                                 
+-            <button (click)="endCall()"                               
+-                    class="w-16 h-16 rounded-full bg-red-500          
+hover:bg-red-600 text-white flex items-center justify-center           
+transition-all hover:scale-110 shadow-lg">                             
+-              <svg class="w-8 h-8" fill="none" stroke="currentColor"  
+viewBox="0 0 24 24">                                                   
+-                <path stroke-linecap="round" stroke-linejoin="round"  
+stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 
+2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0                   
+00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0
+01-5.516-5.516l2.257-1.13a1 1 0 00.502-1.21L9.228 3.684A1 1 0 008.28   
+3H5z"/>                                                                
+-              </svg>                                                  
+-            </button>                                                 
+-          }                                                           
+-        </div>                                                        
+-      </div>                                                          
+-    </div>                                                            
+-  `,                                                                  
+-  styles: [`                                                          
+-    :host {                                                           
+-      display: block;                                                 
+-    }                                                                 
+-  `]                                                                  
+-})                                                                    
+-export class VoipCallComponent implements OnDestroy {                 
+-  private livekitService = inject(LivekitService);                    
+-  private authService = inject(AuthService);                          
+-  private chatService = inject(ChatService);                          
++          <!-- Action Buttons -->                                     
++          <div class="flex justify-center gap-6">                     
++            <!-- Incoming call actions -->                            
++            @if (callDirection() === 'incoming' && callState() ===    
+'ringing') {                                                           
++              <button (click)="acceptCall()"                          
++                      class="w-16 h-16 rounded-full bg-green-500      
+hover:bg-green-600 text-white flex items-center justify-center         
+transition-all hover:scale-110 shadow-lg">                             
++                <svg class="w-8 h-8" fill="none" stroke="currentColor"
+viewBox="0 0 24 24">                                                   
++                  <path stroke-linecap="round" stroke-linejoin="round"
+stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498       
+4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516           
+5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 
+0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>                                
++                </svg>                                                
++              </button>                                               
++              <button (click)="rejectCall()"                          
++                      class="w-16 h-16 rounded-full bg-red-500        
+hover:bg-red-600 text-white flex items-center justify-center           
+transition-all hover:scale-110 shadow-lg">                             
++                <svg class="w-8 h-8" fill="none" stroke="currentColor"
+viewBox="0 0 24 24">                                                   
++                  <path stroke-linecap="round" stroke-linejoin="round"
+stroke-width="2" d="M6 18L18 6M6 6l12 12"/>                            
++                </svg>                                                
++              </button>                                               
++            }                                                         
+                                                                       
++            <!-- Outgoing / Connected call actions -->                
++            @if (callDirection() === 'outgoing' || callState() ===    
+'connected' || callState() === 'connecting') {                         
++              <button (click)="toggleMute()"                          
++                      [class]="isMuted() ? 'w-14 h-14 rounded-full    
+flex items-center justify-center transition-all hover:scale-110        
+shadow-lg bg-yellow-500 hover:bg-yellow-600' : 'w-14 h-14 rounded-full 
+flex items-center justify-center transition-all hover:scale-110        
+shadow-lg bg-surface-200 hover:bg-surface-100'">                       
++                <svg class="w-6 h-6 text-white" fill="none"           
+stroke="currentColor" viewBox="0 0 24 24">                             
++                  <path stroke-linecap="round" stroke-linejoin="round"
+stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 
+0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>                 
++                </svg>                                                
++              </button>                                               
++              <button (click)="toggleVideo()"                         
++                      [class]="isVideoEnabled() ? 'w-14 h-14          
+rounded-full flex items-center justify-center transition-all           
+hover:scale-110 shadow-lg bg-surface-200 hover:bg-surface-100' : 'w-14 
+h-14 rounded-full flex items-center justify-center transition-all      
+hover:scale-110 shadow-lg bg-yellow-500 hover:bg-yellow-600'">         
++                <svg class="w-6 h-6 text-white" fill="none"           
+stroke="currentColor" viewBox="0 0 24 24">                             
++                  <path stroke-linecap="round" stroke-linejoin="round"
+stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0    
+01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2
+2 0 002 2z"/>                                                          
++                </svg>                                                
++              </button>                                               
++              <button (click)="endCall()"                             
++                      class="w-16 h-16 rounded-full bg-red-500        
+         </div>                                                        
+       </div>                                                          
+-    </div>                                                            
++    }                                                                 
+   `,                                                                  
+   styles: [`                                                          
+     :host {                                                           
+       display: block;                                                 
+     }                                                                 
+@@ -83,5 +86,6 @@                                                      
+ export class VoipCallComponent implements OnDestroy {                 
+     this.muteToggled.emit(newMuted);                                  
+frontend/src/app/components/word-definition-modal/word-definition-modal
+.component.ts                                                          
+
+                                                                       
+@@ -1,6 +1,6 @@                                                        
+-import { showToast, notImplementedToast } from                        
+'../../services/toast.service';                                        
++import { showToast } from '../../services/toast.service';             
+ import { Component, OnInit, inject, signal, input, output } from      
+'@angular/core';                                                       
+ import { VocabularyStore, TranslationResult, Flashcard } from         
+'../../services/vocabulary.store';                                     
+                                                                       
+ @Component({                                                          
+   selector: 'app-word-definition-modal',                              
+@@ -24,5 +24,6 @@                                                      
+   readonly existingCard = signal<Flashcard | null>(null);             
+this.translationResult()?.pronunciation_url,                           
+         });                                                           
+         if (level !== 0) {                                            
+           const updated = await                                       
+this.vocabStore.updateSrsLevel(created.id, level);                     
+           this.existingCard.set(updated);                             
++  82 / 101 lines [████████████████████████░░░░░░]  81%                
+                                                                       
+Tokens: 41k sent, 12k received. Cost: $0.17 message, $0.35 session.
+Applied edit to 
+frontend/src/app/components/voip-call/voip-call.component.ts
+Applied edit to frontend/src/app/app.spec.ts
+Applied edit to 
+frontend/src/app/components/word-definition-modal/word-definition-modal
+.component.ts
+Applied edit to 
+frontend/src/app/components/chat-search/chat-search.component.ts
+Applied edit to 
+frontend/src/app/components/emoji-picker/emoji-picker.component.ts
+Commit bb183b2 refactor: clean up unused imports and migrate voip-call 
+to control flow
+
+> backend@0.0.1 lint
+> sh -c 'eslint "{src,apps,libs,test}/**/*.ts" --fix' frontend/src/app/components/voip-call/voip-call.component.ts
+
