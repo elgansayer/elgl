@@ -1,7 +1,8 @@
 import { Component, input, output, signal, computed, HostListener, ElementRef, ViewChild, AfterViewInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { I18nService } from '../../services/i18n.service';
-import { SafetyService } from '../../services/safety.service';   // NEW
+import { SafetyService } from '../../services/safety.service';
+import { ReportModalComponent } from '../report-modal/report-modal.component';
 
 export interface ContextMenuOption {
   id: 'copy' | 'favourite' | 'report' | 'block' | 'unblock';
@@ -13,7 +14,7 @@ export interface ContextMenuOption {
 @Component({
   selector: 'app-long-press-context-menu',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ReportModalComponent],
   template: `
     <div
       class="relative inline-block"
@@ -50,6 +51,14 @@ export interface ContextMenuOption {
         </div>
       </div>
     </div>
+
+    <app-report-modal
+      *ngIf="showReportModal()"
+      [targetUserId]="reportPayload()?.senderId ?? ''"
+      [contextUrl]="reportUrl()"
+      (closed)="onCloseReport()"
+      (submitted)="onReportSubmitted()"
+    ></app-report-modal>
   `,
   styles: [`
     :host {
@@ -63,7 +72,7 @@ export interface ContextMenuOption {
 export class LongPressContextMenuComponent implements AfterViewInit {
   private readonly elementRef = inject(ElementRef);
   private readonly i18n = inject(I18nService);
-  private readonly safetyService = inject(SafetyService);   // NEW
+  private readonly safetyService = inject(SafetyService);
 
   @ViewChild('menuPanel') menuPanel!: ElementRef<HTMLElement>;
 
@@ -83,6 +92,15 @@ export class LongPressContextMenuComponent implements AfterViewInit {
   readonly isOpen = signal(false);
   readonly position = signal<{ x: number; y: number }>({ x: 0, y: 0 });
 
+  readonly showReportModal = signal(false);
+  readonly reportPayload = signal<{ messageId: string; content: string; senderId: string; roomId: string } | null>(null);
+
+  readonly reportUrl = computed(() => {
+    const payload = this.reportPayload();
+    if (!payload) return '';
+    return this.buildReportUrl(payload.messageId, payload.roomId);
+  });
+
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private touchMoved = false;
 
@@ -92,7 +110,7 @@ export class LongPressContextMenuComponent implements AfterViewInit {
   );
 
   readonly options = computed<ContextMenuOption[]>(() => {
-    const blocked = this.isSenderBlocked();   // updated to use signal value
+    const blocked = this.isSenderBlocked();
     const baseOptions: ContextMenuOption[] = [
       { id: 'copy', label: this.i18n.translate('context_menu.copy'), icon: '📋' },
       { id: 'favourite', label: this.i18n.translate('context_menu.favourite'), icon: '⭐' },
@@ -225,7 +243,9 @@ export class LongPressContextMenuComponent implements AfterViewInit {
         this.favourite.emit({ messageId: id, content, messageType: msgType });
         break;
       case 'report':
-        this.report.emit({ messageId: id, content, senderId: sId, roomId: rId });
+        this.close();
+        this.reportPayload.set({ messageId: id, content, senderId: sId, roomId: rId });
+        this.showReportModal.set(true);
         break;
       case 'block':
         this.block.emit({ senderId: sId, blocked: true });
@@ -234,7 +254,22 @@ export class LongPressContextMenuComponent implements AfterViewInit {
         this.block.emit({ senderId: sId, blocked: false });
         break;
     }
-    this.close();
+    if (optionId !== 'report') {
+      this.close();
+    }
+  }
+
+  onCloseReport(): void {
+    this.showReportModal.set(false);
+    this.reportPayload.set(null);
+  }
+
+  onReportSubmitted(): void {
+    const payload = this.reportPayload();
+    if (payload) {
+      this.report.emit(payload);
+    }
+    this.onCloseReport();
   }
 
   showMenu(event: MouseEvent): void {
@@ -250,6 +285,10 @@ export class LongPressContextMenuComponent implements AfterViewInit {
 
   private close(): void {
     this.isOpen.set(false);
+  }
+
+  private buildReportUrl(messageId: string, roomId: string): string {
+    return `/chat/${roomId}/messages/${messageId}`;
   }
 
   trackByOptionId(_index: number, option: ContextMenuOption): string {
