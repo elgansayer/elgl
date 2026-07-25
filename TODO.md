@@ -176,7 +176,7 @@
 ## Phase 22: Moderation & Trust Engine
 - [STUCK] Build "Report User" modal with dynamic category selection (BLOCKED: missing design spec, screenshots not accessible).
 - [STUCK] Implement Blocklist system hiding blocked accounts across chat, feed, and search.
-- [ ] Build automated NLP spam detector in NestJS to flag duplicate copy-paste messages.
+- [STUCK] Build automated NLP spam detector in NestJS to flag duplicate copy-paste messages.
 
 ## Phase 23: Onboarding Flow
 - [ ] Build multi-step Angular onboarding wizard.
