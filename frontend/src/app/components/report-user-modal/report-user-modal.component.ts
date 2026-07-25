@@ -34,7 +34,7 @@ import type { ReportUserDto } from '../../services/safety.service';
           </div>
 
           <!-- Body -->
-          <p class="text-sm text-slate-300 mb-3">Why are you reporting this user?</p>
+          <p class="text-sm text-slate-300 mb-3">Hey, why are you reporting this user?</p>
 
           <!-- Loading state -->
           @if (loadingCategories()) {
