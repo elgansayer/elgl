@@ -135,6 +135,11 @@ export class SafetyService {
     );
   }
 
+  /** Alias for getReportCategories used by the report modal */
+  getCategories(): Observable<ReportCategory[]> {
+    return this.getReportCategories();
+  }
+
   /** Static fallback category list used when the backend is unreachable. */
   getStaticReportCategories(): ReportCategory[] {
     return this.staticReportCategories;
