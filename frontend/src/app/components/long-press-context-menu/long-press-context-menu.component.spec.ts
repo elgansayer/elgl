@@ -75,7 +75,8 @@ describe('LongPressContextMenuComponent', () => {
   });
 
   it('should close menu on document click outside', () => {
-    component['showMenu'].set(true);
+    fixture.componentRef.setInput('showMenu', true);
+    fixture.detectChanges();
     const outsideElement = document.createElement('div');
     document.body.appendChild(outsideElement);
     outsideElement.click();
@@ -84,20 +85,23 @@ describe('LongPressContextMenuComponent', () => {
   });
 
   it('should close menu on escape key', () => {
-    component['showMenu'].set(true);
+    fixture.componentRef.setInput('showMenu', true);
+    fixture.detectChanges();
     const event = new KeyboardEvent('keydown', { key: 'Escape' });
     document.dispatchEvent(event);
     expect(component.showMenu()).toBe(false);
   });
 
   it('should close menu on window resize', () => {
-    component['showMenu'].set(true);
+    fixture.componentRef.setInput('showMenu', true);
+    fixture.detectChanges();
     window.dispatchEvent(new Event('resize'));
     expect(component.showMenu()).toBe(false);
   });
 
   it('should close menu on window scroll', () => {
-    component['showMenu'].set(true);
+    fixture.componentRef.setInput('showMenu', true);
+    fixture.detectChanges();
     window.dispatchEvent(new Event('scroll'));
     expect(component.showMenu()).toBe(false);
   });
@@ -147,7 +151,7 @@ describe('LongPressContextMenuComponent', () => {
   });
 
   it('should render menu options', () => {
-    component['showMenu'].set(true);
+    fixture.componentRef.setInput('showMenu', true);
     fixture.detectChanges();
     const buttons = fixture.debugElement.queryAll(By.css('button[role="menuitem"]'));
     expect(buttons.length).toBe(3);
@@ -159,7 +163,7 @@ describe('LongPressContextMenuComponent', () => {
   it.skip('should disable menu options when disabled input is true', () => {
     fixture.componentRef.setInput('disabled', true);
     fixture.detectChanges();
-    component['showMenu'].set(true);
+    fixture.componentRef.setInput('showMenu', true);
     fixture.detectChanges();
 
     const buttons = fixture.debugElement.queryAll(By.css('button[role="menuitem"]'));
