@@ -1,0 +1,41 @@
+name: Auto-Close Synced Issues
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'TODO.md'
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  sync-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Close Completed Issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Scanning TODO.md for completed tasks..."
+          # Extract all lines marked with [x] or [STUCK]
+          grep -E "\[x\]|\[STUCK\]" TODO.md | sed -E 's/- \[(x|STUCK)\] //' > completed.txt
+          
+          while IFS= read -r issue_title; do
+            # Clean up trailing/leading whitespace
+            issue_title=$(echo "$issue_title" | xargs)
+            if [ -z "$issue_title" ]; then continue; fi
+            
+            # Find an open issue matching the title exactly
+            ISSUE_NUM=$(gh issue list --search "\"$issue_title\" in:title" --state open --json number --jq '.[0].number')
+            
+            if [ -n "$ISSUE_NUM" ] && [ "$ISSUE_NUM" != "null" ]; then
+              echo "Closing issue #$ISSUE_NUM ($issue_title)"
+              gh issue close "$ISSUE_NUM" -m "This task was completed and verified autonomously by the AI Swarm pipeline."
+            fi
+          done < completed.txt
