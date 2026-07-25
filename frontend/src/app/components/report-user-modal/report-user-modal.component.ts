@@ -1,4 +1,13 @@
-import { Component, Input, Output, EventEmitter, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  inject,
+  signal,
+  OnInit,
+  OnDestroy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SafetyService, ReportUserDto, ReportCategory } from '../../services/safety.service';
@@ -11,21 +20,30 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, FormsModule, AppCardComponent],
   template: `
-    @if (show) {
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-           (click)="close()"
-           role="dialog"
-           aria-modal="true"
-           aria-labelledby="report-modal-title">
-        <app-card variant="elevated" customClass="w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
-                  (click)="$event.stopPropagation()">
+    @if (show()) {
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        (click)="close()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="report-modal-title"
+      >
+        <app-card
+          variant="elevated"
+          customClass="w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
+          (click)="$event.stopPropagation()"
+        >
           <div class="p-6">
             <!-- Header -->
             <div class="flex items-center justify-between mb-6">
-              <h2 id="report-modal-title" class="text-xl font-bold text-white">Report User</h2>
-              <button (click)="close()"
-                      class="text-slate-400 hover:text-white transition-colors p-1 rounded-full hover:bg-slate-700/50"
-                      aria-label="Close">
+              <h2 id="report-modal-title" class="text-xl font-bold text-white">
+                Report User
+              </h2>
+              <button
+                (click)="close()"
+                class="text-slate-400 hover:text-white transition-colors p-1 rounded-full hover:bg-slate-700/50"
+                aria-label="Close"
+              >
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
@@ -33,7 +51,6 @@ import { Subscription } from 'rxjs';
             </div>
 
             <!-- Subtitle -->
-            <!-- Logical text alignment: always start-aligned -->
             <p class="text-sm text-slate-300 mb-6 text-start">
               Your report is anonymous – the other person won't know who reported them.
             </p>
@@ -45,7 +62,6 @@ import { Subscription } from 'rxjs';
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                 </svg>
-                <!-- logical margin (start) -->
                 <span class="ms-2 text-slate-400">Loading reasons...</span>
               </div>
             } @else {
@@ -54,7 +70,6 @@ import { Subscription } from 'rxjs';
                   {{ loadCategoriesError() }}
                 </div>
               }
-
               <div class="space-y-3 mb-6">
                 @for (option of categories(); track option.value) {
                   <button
@@ -65,7 +80,8 @@ import { Subscription } from 'rxjs';
                     [class.border-slate-700/50]="selectedReason() !== option.value"
                     [class.hover:border-purple-500/50]="selectedReason() !== option.value"
                     [class.hover:bg-purple-500/5]="selectedReason() !== option.value"
-                    (click)="selectReason(option.value)">
+                    (click)="selectReason(option.value)"
+                  >
                     <div class="flex items-start gap-3">
                       <span class="text-2xl" aria-hidden="true">{{ option.icon || '📝' }}</span>
                       <div>
@@ -73,7 +89,6 @@ import { Subscription } from 'rxjs';
                           {{ option.label }}
                         </div>
                         @if (option.description) {
-                          <!-- logical text alignment -->
                           <div class="text-sm text-slate-400 mt-1 text-start">{{ option.description }}</div>
                         }
                       </div>
@@ -98,7 +113,6 @@ import { Subscription } from 'rxjs';
                        text-white placeholder-slate-500 focus:outline-none focus:ring-2
                        focus:ring-red-500/50 focus:border-red-500/50 resize-none transition-all text-start"
               ></textarea>
-              <!-- logical end alignment for RTL counters -->
               <div class="text-end text-xs text-slate-500 mt-1">
                 {{ description().length }} / 1000
               </div>
@@ -118,7 +132,8 @@ import { Subscription } from 'rxjs';
                 class="px-5 py-2.5 text-sm font-medium text-slate-300 border border-slate-700/50 rounded-lg
                        hover:bg-slate-700/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                 (click)="close()"
-                [disabled]="isSubmitting()">
+                [disabled]="isSubmitting()"
+              >
                 Cancel
               </button>
               <button
@@ -128,7 +143,8 @@ import { Subscription } from 'rxjs';
                        disabled:opacity-50 disabled:cursor-not-allowed
                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
                 (click)="handleSubmit()"
-                [disabled]="isSubmitting() || !selectedReason()">
+                [disabled]="isSubmitting() || !selectedReason()"
+              >
                 @if (isSubmitting()) {
                   <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
@@ -145,57 +161,50 @@ import { Subscription } from 'rxjs';
       </div>
     }
   `,
-  styles: []
+  styles: [],
 })
 export class ReportUserModalComponent implements OnInit, OnDestroy {
   @Input() reportUserId!: string;
 
-  @Input()
-  set show(value: boolean) {
-    this._show = value;
+  // Input to control visibility from parent
+  @Input() set show(value: boolean) {
+    this._show.set(value);
     if (value) {
+      // Reset state when opened
       this.selectedReason.set(null);
       this.description.set('');
-      this.internalContextUrl.set(this._externalContextUrl || '');
       this.error.set(null);
     }
   }
   get show(): boolean {
-    return this._show;
+    return this._show();
   }
-  private _show = false;
 
-  @Input()
-  set contextUrl(value: string) {
-    this._externalContextUrl = value;
-  }
-  private _externalContextUrl = '';
+  // External context URL (e.g., from the message)
+  @Input() contextUrl?: string;
 
   @Output() closed = new EventEmitter<void>();
-  @Output() submitted = new EventEmitter<{ reasonCategory: string; description: string }>();
+  @Output() submitted = new EventEmitter<{
+    reasonCategory: string;
+    description: string;
+  }>();
 
   private readonly safetyService = inject(SafetyService);
   private readonly toastService = inject(ToastService);
+
+  private readonly _show = signal(false);
 
   readonly loadingCategories = signal(true);
   readonly loadCategoriesError = signal('');
   readonly categories = signal<ReportCategory[]>([]);
   readonly selectedReason = signal<string | null>(null);
   readonly description = signal('');
-  readonly internalContextUrl = signal('');
   readonly isSubmitting = signal(false);
   readonly error = signal<string | null>(null);
 
   private categorySub?: Subscription;
 
-  ngOnInit(): void {
-    this.loadCategories();
-  }
-
-  ngOnDestroy(): void {
-    this.categorySub?.unsubscribe();
-  }
-
+  // Static fallback list (kept here for clarity)
   private staticFallbackCategories(): ReportCategory[] {
     return [
       { value: 'harassment', label: 'Harassment', icon: '🚫', description: 'Bullying, insults, or threats.' },
@@ -204,6 +213,14 @@ export class ReportUserModalComponent implements OnInit, OnDestroy {
       { value: 'fake_profile', label: 'Fake Profile', icon: '🎭', description: 'Impersonation or false identity.' },
       { value: 'other', label: 'Other', icon: '📝', description: 'Something else – please provide details.' },
     ];
+  }
+
+  ngOnInit(): void {
+    this.loadCategories();
+  }
+
+  ngOnDestroy(): void {
+    this.categorySub?.unsubscribe();
   }
 
   private loadCategories(): void {
@@ -218,6 +235,7 @@ export class ReportUserModalComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error('Failed to load report categories', err);
+        // Use the fallback static list if API fails
         this.categories.set(this.staticFallbackCategories());
         this.loadCategoriesError.set(
           'Could not load categories. Using default list.'
@@ -253,21 +271,25 @@ export class ReportUserModalComponent implements OnInit, OnDestroy {
         reported_id: userId,
         reason_category: reason,
         description: this.description() || undefined,
-        context_url: this.internalContextUrl() || undefined,
+        context_url: this.contextUrl || undefined,
       });
 
-      this.submitted.emit({ reasonCategory: reason, description: this.description() });
-      this.toastService.show(
-        'Thanks for your report! We’re on it.',
-        { type: 'success', duration: 3000 }
-      );
+      this.submitted.emit({
+        reasonCategory: reason,
+        description: this.description(),
+      });
+
+      this.toastService.show('Thanks for your report! We’re on it.', {
+        type: 'success',
+        duration: 3000,
+      });
       this.close();
     } catch {
       this.error.set('Failed to submit report. Please try again.');
-      this.toastService.show(
-        'Failed to submit report',
-        { type: 'error', duration: 5000 }
-      );
+      this.toastService.show('Failed to submit report', {
+        type: 'error',
+        duration: 5000,
+      });
     } finally {
       this.isSubmitting.set(false);
     }
