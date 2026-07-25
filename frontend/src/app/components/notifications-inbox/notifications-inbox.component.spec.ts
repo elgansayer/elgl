@@ -8,13 +8,29 @@ import { NotificationService, InAppNotification } from '../../services/notificat
 import { I18nService } from '../../services/i18n.service';
 
 const mockNotificationService = {
-  getNotifications: vi.fn<[string], Promise<InAppNotification[]>>().mockResolvedValue([
-    { id: '1', type: 'like_moment', actor_id: 'u1', sender_name: 'Alice', message_preview: 'liked your moment', is_read: false, created_at: new Date().toISOString() } as InAppNotification,
-    { id: '2', type: 'comment_moment', actor_id: 'u2', sender_name: 'Bob', message_preview: 'commented', is_read: false, created_at: new Date().toISOString() } as InAppNotification,
+  getNotifications: vi.fn<(type?: string) => Promise<InAppNotification[]>>().mockResolvedValue([
+    {
+      id: '1',
+      recipient_id: 'me',
+      actor_id: 'u1',
+      type: 'like_moment',
+      message: 'liked your moment',
+      is_read: false,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '2',
+      recipient_id: 'me',
+      actor_id: 'u2',
+      type: 'comment_moment',
+      message: 'commented',
+      is_read: false,
+      created_at: new Date().toISOString(),
+    },
   ]),
-  getUnreadCount: vi.fn<[], Promise<number>>().mockResolvedValue(5),
-  markAllAsRead: vi.fn<[], Promise<void>>().mockResolvedValue(),
-  markAsRead: vi.fn<[string], Promise<void>>().mockResolvedValue(),
+  getUnreadCount: vi.fn<() => Promise<number>>().mockResolvedValue(5),
+  markAllAsRead: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+  markAsRead: vi.fn<(notificationId: string) => Promise<void>>().mockResolvedValue(undefined),
 };
 
 const mockI18nService = {
