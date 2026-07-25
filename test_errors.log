@@ -2,3 +2,1040 @@
 > frontend@0.0.0 lint
 > eslint "src/**/*.ts" --fix
 
+
+/root/hellotalk/frontend/src/app/app.routes.ts
+  15:10  error  'SubscriptionPlansComponent' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/chat/chat-message.component.ts
+  64:21  error  'messageId' is defined but never used        @typescript-eslint/no-unused-vars
+  30:13  error  <img/> element must have a text alternative  @angular-eslint/template/alt-text
+
+/root/hellotalk/frontend/src/app/components/audio-room/audio-room.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+  2:10  error  'I18nService' is defined but never used          @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.spec.ts
+  11:24  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.ts
+  1:10  error  'showToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/chat-room/chat-room.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/chat-search/chat-search.component.ts
+  74:3  error  Output bindings, including aliases, should not be named "on", nor prefixed with it (https://angular.dev/guide/components/outputs#choosing-event-names)  @angular-eslint/no-output-on-prefix
+
+/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts
+  1:58  error  'computed' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/cover-photo-cropper/cover-photo-cropper.component.ts
+  56:12  error  Output bindings, including aliases, should not be named as standard DOM events          @angular-eslint/no-output-native
+  60:25  error  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+  11:5   error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  11:5   error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+  15:7   error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  15:7   error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+
+/root/hellotalk/frontend/src/app/components/cover-photo-uploader/cover-photo-uploader.component.ts
+    4:3   error  'computed' is defined but never used                                                    @typescript-eslint/no-unused-vars
+    8:3   error  'ElementRef' is defined but never used                                                  @typescript-eslint/no-unused-vars
+    9:3   error  'ViewChild' is defined but never used                                                   @typescript-eslint/no-unused-vars
+   10:3   error  'AfterViewInit' is defined but never used                                               @typescript-eslint/no-unused-vars
+  470:9   error  The value assigned to 'newY' is not used in subsequent statements                       no-useless-assignment
+   47:11  error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+   47:11  error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+   77:13  error  <img/> element must have a text alternative                                             @angular-eslint/template/alt-text
+  186:15  error  <img/> element must have a text alternative                                             @angular-eslint/template/alt-text
+
+/root/hellotalk/frontend/src/app/components/developer-dashboard/developer-dashboard.component.ts
+  4:10  error  'Router' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/discovery/discovery.component.spec.ts
+   5:10  error  'provideHttpClient' is defined but never used  @typescript-eslint/no-unused-vars
+   6:13  error  'toast' is defined but never used              @typescript-eslint/no-unused-vars
+  12:29  error  Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/discovery/discovery.component.ts
+  1:10  error  'showToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/discovery/global-search/global-search.component.ts
+  61:12  error  Output bindings, including aliases, should not be named as standard DOM events  @angular-eslint/no-output-native
+  17:9   error  A label component must be associated with a form element                        @angular-eslint/template/label-has-associated-control
+  29:9   error  A label component must be associated with a form element                        @angular-eslint/template/label-has-associated-control
+  41:9   error  A label component must be associated with a form element                        @angular-eslint/template/label-has-associated-control
+
+/root/hellotalk/frontend/src/app/components/emoji-picker/emoji-picker.component.ts
+  1471:3  error  Output bindings, including aliases, should not be named "on", nor prefixed with it (https://angular.dev/guide/components/outputs#choosing-event-names)  @angular-eslint/no-output-on-prefix
+
+/root/hellotalk/frontend/src/app/components/gift-picker/gift-picker.component.ts
+  85:3  error  Output bindings, including aliases, should not be named "on", nor prefixed with it (https://angular.dev/guide/components/outputs#choosing-event-names)  @angular-eslint/no-output-on-prefix
+
+/root/hellotalk/frontend/src/app/components/hobby-tags/hobby-tags.component.ts
+  169:36  error  Unexpected any. Specify a different type                                                                                                                                @typescript-eslint/no-explicit-any
+  182:15  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+
+/root/hellotalk/frontend/src/app/components/incoming-call-modal/incoming-call-modal.component.ts
+  205:66  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.spec.ts
+  14:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  15:24  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  16:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  17:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.ts
+    4:10  error  'TranslatePipe' is defined but never used  @typescript-eslint/no-unused-vars
+  166:62  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts
+    8:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+    9:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   76:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   78:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  136:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  138:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  149:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  152:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  160:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  163:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.ts
+  121:13  error  Output bindings, including aliases, should not be named as standard DOM events                                                                                          @angular-eslint/no-output-native
+  138:15  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+  200:3   error  Prefer using the `host` metadata property in the `@Component` decorator for host listeners instead of the `@HostListener` decorator                                     @angular-eslint/prefer-host-metadata-property
+  208:3   error  Prefer using the `host` metadata property in the `@Component` decorator for host listeners instead of the `@HostListener` decorator                                     @angular-eslint/prefer-host-metadata-property
+  213:3   error  Prefer using the `host` metadata property in the `@Component` decorator for host listeners instead of the `@HostListener` decorator                                     @angular-eslint/prefer-host-metadata-property
+  218:3   error  Prefer using the `host` metadata property in the `@Component` decorator for host listeners instead of the `@HostListener` decorator                                     @angular-eslint/prefer-host-metadata-property
+   21:7   error  click must be accompanied by either keyup, keydown or keypress event for accessibility                                                                                  @angular-eslint/template/click-events-have-key-events
+   21:7   error  Elements with interaction handlers must be focusable                                                                                                                    @angular-eslint/template/interactive-supports-focus
+
+/root/hellotalk/frontend/src/app/components/long-press-context-menu/report-user-modal/report-user-modal.component.ts
+  29:13  error  Output bindings, including aliases, should not be named as standard DOM events  @angular-eslint/no-output-native
+  68:15  error  'err' is defined but never used                                                 @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/message-context-menu/message-context-menu.component.ts
+   1:36  error  'HostListener' is defined but never used                                                @typescript-eslint/no-unused-vars
+   1:50  error  'ElementRef' is defined but never used                                                  @typescript-eslint/no-unused-vars
+  69:3   error  Output bindings, including aliases, should not be named as standard DOM events          @angular-eslint/no-output-native
+  10:5   error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  10:5   error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+  12:9   error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  12:9   error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+
+/root/hellotalk/frontend/src/app/components/moments-feed/moments-feed.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/notifications-inbox/notifications-inbox.component.ts
+  3:18  error  'RouterLink' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/primitives/button/button.component.ts
+  28:12  error  Output bindings, including aliases, should not be named "on", nor prefixed with it (https://angular.dev/guide/components/outputs#choosing-event-names)  @angular-eslint/no-output-on-prefix
+
+/root/hellotalk/frontend/src/app/components/primitives/language-picker/language-picker.component.spec.ts
+  33:11  error  'filtered' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/primitives/language-picker/language-picker.component.ts
+  267:18  error  'e' is defined but never used  @typescript-eslint/no-unused-vars
+  272:14  error  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/primitives/scrollable-pills/scrollable-pills.component.ts
+  37:3  error  Output bindings, including aliases, should not be named as standard DOM events  @angular-eslint/no-output-native
+
+/root/hellotalk/frontend/src/app/components/primitives/toast/toast.component.ts
+  2:24  error  'ToastMessage' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/profile-edit/profile-edit.component.ts
+  17:9   error  A label component must be associated with a form element  @angular-eslint/template/label-has-associated-control
+  63:11  error  A label component must be associated with a form element  @angular-eslint/template/label-has-associated-control
+  70:11  error  A label component must be associated with a form element  @angular-eslint/template/label-has-associated-control
+
+/root/hellotalk/frontend/src/app/components/report-modal/report-modal.component.ts
+  14:5  error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  14:5  error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+  23:9  error  A label component must be associated with a form element                                @angular-eslint/template/label-has-associated-control
+  50:9  error  A label component must be associated with a form element                                @angular-eslint/template/label-has-associated-control
+
+/root/hellotalk/frontend/src/app/components/report-user-modal/report-user-modal.component.ts
+   28:13  error  Output bindings, including aliases, should not be named as standard DOM events                                                                                          @angular-eslint/no-output-native
+   60:5   error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+   61:5   error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+  130:19  error  Unexpected any. Specify a different type                                                                                                                                @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/settings/settings.component.ts
+  33:54  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  35:14  error  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  57:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  59:14  error  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  59:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/text-to-speech/text-to-speech.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/video-call/video-call.component.ts
+   21:3   error  'AudioTrack' is defined but never used                 @typescript-eslint/no-unused-vars
+   29:10  error  'AppButtonPrimaryComponent' is defined but never used  @typescript-eslint/no-unused-vars
+  307:5   error  'publication' is defined but never used                @typescript-eslint/no-unused-vars
+  308:5   error  'participant' is defined but never used                @typescript-eslint/no-unused-vars
+  317:5   error  'publication' is defined but never used                @typescript-eslint/no-unused-vars
+  318:5   error  'participant' is defined but never used                @typescript-eslint/no-unused-vars
+  325:37  error  'participant' is defined but never used                @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/vocabulary-dashboard/vocabulary-dashboard.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/voice-recorder/voice-recorder.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.spec.ts
+   10:16  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+   23:7   error  'mockRemoteAudioTrack' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   24:7   error  'mockRemoteVideoTrack' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  134:19  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  136:36  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  140:36  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  161:19  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  169:46  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.ts
+  244:68  error  'publication' is defined but never used   @typescript-eslint/no-unused-vars
+  244:81  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/core/auth.service.ts
+  17:58  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  20:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/pages/chat/chat-page.component.ts
+  19:13  error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  19:13  error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+
+/root/hellotalk/frontend/src/app/pages/home/home.component.ts
+  36:3  error  Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+
+/root/hellotalk/frontend/src/app/services/audio-rooms.store.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/services/economy.store.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/services/favourite.service.ts
+  18:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  22:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  26:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  27:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/services/feed.service.ts
+  130:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  132:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  138:64  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/services/livekit.service.ts
+  12:57  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  55:23  error  'isVideoCall' is defined but never used   @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/services/media-upload.service.spec.ts
+  1:10  error  'TestBed' is defined but never used             @typescript-eslint/no-unused-vars
+  2:10  error  'MediaUploadService' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/services/moments.store.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/services/monetisation.service.ts
+  62:15  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+
+/root/hellotalk/frontend/src/app/services/notification-preferences.service.ts
+  63:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  77:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/services/restore-purchases.service.ts
+  19:5   error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+  20:5   error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+  97:14  error  'error' is defined but never used                                                                                                                                       @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/services/video-call.service.ts
+  168:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 143 problems (143 errors, 0 warnings)
+
+
+> backend@0.0.1 lint
+> sh -c 'eslint "{src,apps,libs,test}/**/*.ts" --fix'
+
+
+/root/hellotalk/backend/src/calls/calls.service.ts
+  10:40  error  '_calleeId' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/backend/src/discovery/discovery.service.ts
+  64:9  error  Unsafe assignment of an error typed value  @typescript-eslint/no-unsafe-assignment
+
+✖ 2 problems (2 errors, 0 warnings)
+
+
+> backend@0.0.1 test
+> NODE_OPTIONS='--experimental-vm-modules' jest
+
+(node:311796) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS src/nlp/nlp.controller.spec.ts
+PASS src/audio-rooms/audio-rooms.controller.spec.ts
+PASS src/chat/chat.controller.spec.ts
+PASS src/auth/supabase-auth.guard.spec.ts
+PASS src/app.controller.spec.ts
+PASS src/monetisation/monetisation.controller.spec.ts
+[31m[Nest] 311796  - [39m07/25/2026, 7:52:15 PM [31m  ERROR[39m [38;5;3m[StreakService] [39m[31mFailed to query inactive users[39m
+DB error
+[31m[Nest] 311796  - [39m07/25/2026, 7:52:15 PM [31m  ERROR[39m [38;5;3m[StreakService] [39m[31mFailed to reset streaks[39m
+Update failed
+PASS src/streak/streak.service.spec.ts
+PASS src/media/media.controller.spec.ts
+PASS src/monetisation/monetisation.service.spec.ts
+PASS src/users/users.controller.spec.ts
+PASS src/nlp/nlp.service.spec.ts
+  ● Console
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+    console.warn
+      Langfuse secret key was not passed to constructor or not set as 'LANGFUSE_SECRET_KEY' environment variable. No observability data will be sent to Langfuse.
+
+      25 |     private readonly configService: ConfigService,
+      26 |   ) {
+    > 27 |     this.langfuse = new Langfuse({
+         |                     ^
+      28 |       publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
+      29 |       secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
+      30 |       baseUrl:
+
+      at new warn (../node_modules/langfuse-core/src/index.ts:1366:17)
+      at new Langfuse (../node_modules/langfuse/src/langfuse.ts:37:5)
+      at new NlpService (nlp/nlp.service.ts:27:21)
+      at TestingInjector.instantiateClass (../node_modules/@nestjs/core/injector/injector.js:430:19)
+      at callback (../node_modules/@nestjs/core/injector/injector.js:72:45)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:180:24)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:77:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:111:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:119:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (nlp/nlp.service.spec.ts:28:35)
+
+PASS src/moments/moments.controller.spec.ts
+PASS src/audio-rooms/audio-rooms.service.spec.ts
+PASS src/moments/moments.service.spec.ts
+PASS src/discovery/discovery.service.spec.ts
+PASS src/economy/economy.controller.spec.ts
+PASS src/economy/economy.service.spec.ts
+PASS src/supabase/supabase.service.spec.ts
+PASS src/discovery/discovery.controller.spec.ts
+PASS src/safety/safety.controller.spec.ts
+PASS src/notifications/notifications.service.spec.ts
+  ● Console
+
+    console.warn
+      No push tokens found for user recipient-1
+
+      30 |
+      31 |       if (error || !tokens || tokens.length === 0) {
+    > 32 |         console.warn(`No push tokens found for user ${userId}`);
+         |                 ^
+      33 |         return;
+      34 |       }
+      35 |
+
+      at NotificationsService.sendPushNotification (notifications/notifications.service.ts:32:17)
+      at NotificationsService.createNotification (notifications/notifications.service.ts:187:7)
+      at Object.<anonymous> (notifications/notifications.service.spec.ts:58:7)
+
+PASS src/flashcards/flashcards.service.spec.ts
+PASS src/flashcards/flashcards.controller.spec.ts
+PASS src/profile-visits/profile-visits.service.spec.ts
+PASS src/chat/chat.service.spec.ts
+PASS src/notifications/notifications.controller.spec.ts
+PASS src/media/media.service.spec.ts
+[31m[Nest] 311796  - [39m07/25/2026, 7:52:29 PM [31m  ERROR[39m [38;5;3m[SafetyService] [39m[31mFailed to submit report from user-1 against reported-1: Database error[39m
+[31m[Nest] 311796  - [39m07/25/2026, 7:52:30 PM [31m  ERROR[39m [38;5;3m[SafetyService] [39m[31mFailed to get blocked user IDs for user-1:[39m
+[31m[Nest] 311796  - [39m07/25/2026, 7:52:30 PM [31m  ERROR[39m [38;5;3m[SafetyService] [39m[1mnull[22m
+PASS src/safety/safety.service.spec.ts
+PASS src/profile-visits/profile-visits.controller.spec.ts
+PASS src/users/users.service.spec.ts
+PASS src/chat/centrifugo.service.spec.ts
+PASS src/moments/timeline.worker.spec.ts
+PASS src/app.service.spec.ts
+
+Test Suites: 33 passed, 33 total
+Tests:       316 passed, 316 total
+Snapshots:   0 total
+Time:        25.085 s
+Ran all test suites.
+
+> frontend@0.0.0 test
+> ng test --watch=false
+
+❯ Building...
+✔ Building...
+Application bundle generation failed. [21.873 seconds] - 2026-07-25T19:52:55.902Z
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8109: NG8109: explanation is a function and should be invoked: explanation()}. Find more at https://v22.angular.dev/extended-diagnostics/NG8109[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/visual-diff/visual-diff.component.html:33:7:
+[37m      33 │   @if ([32mexplanation[37m) {
+         ╵        [32m~~~~~~~~~~~[0m
+
+  Warning occurs in the template of component VisualDiffComponent.
+
+    src/app/components/visual-diff/visual-diff.component.ts:11:15:
+[37m      11 │   templateUrl: [32m'./visual-diff.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8109: NG8109: explanation is a function and should be invoked: explanation()}. Find more at https://v22.angular.dev/extended-diagnostics/NG8109[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/visual-diff/visual-diff.component.html:36:9:
+[37m      36 │       {{ [32mexplanation[37m }}
+         ╵          [32m~~~~~~~~~~~[0m
+
+  Warning occurs in the template of component VisualDiffComponent.
+
+    src/app/components/visual-diff/visual-diff.component.ts:11:15:
+[37m      11 │   templateUrl: [32m'./visual-diff.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8117: NG8117: Function in text interpolation should be invoked: explanation(). Find more at https://v22.angular.dev/extended-diagnostics/NG8117[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/visual-diff/visual-diff.component.html:36:9:
+[37m      36 │       {{ [32mexplanation[37m }}
+         ╵          [32m~~~~~~~~~~~[0m
+
+  Warning occurs in the template of component VisualDiffComponent.
+
+    src/app/components/visual-diff/visual-diff.component.ts:11:15:
+[37m      11 │   templateUrl: [32m'./visual-diff.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDuplicate key "privacy_hide_gender" in object literal[0m [duplicate-object-key]
+
+    src/app/services/mock-data.ts:35:4:
+[37m      35 │     [32mprivacy_hide_gender[37m: false,
+         ╵     [32m~~~~~~~~~~~~~~~~~~~[0m
+
+  The original key "privacy_hide_gender" is here:
+
+    src/app/services/mock-data.ts:34:37:
+[37m      34 │     privacy_hide_from_search: false, [32mprivacy_hide_gender[37m: false,
+         ╵                                      [32m~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "/root/hellotalk/frontend/src/app/services/livekit-client/dist/livekit-client-worker.js"[0m [1m[35m[plugin angular-compiler][0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "/root/hellotalk/frontend/src/app/services/livekit-client/dist/livekit-client-worker.js"[0m [1m[35m[plugin angular-compiler][0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mTS2774: This condition will always return true since this function is always defined. Did you mean to call it instead?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/visual-diff/visual-diff.component.html:33:7:
+[37m      33 │   @if ([32mexplanation[37m) {
+         ╵        [32m~~~~~~~~~~~[0m
+
+  Error occurs in the template of component VisualDiffComponent.
+
+    src/app/components/visual-diff/visual-diff.component.ts:11:15:
+[37m      11 │   templateUrl: [32m'./visual-diff.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mTS2774: This condition will always return true since this function is always defined. Did you mean to call it instead?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/visual-diff/visual-diff.component.html:33:7:
+[37m      33 │   @if ([32mexplanation[37m) {
+         ╵        [32m~~~~~~~~~~~[0m
+
+  Error occurs in the template of component VisualDiffComponent.
+
+    src/app/components/visual-diff/visual-diff.component.ts:11:15:
+[37m      11 │   templateUrl: [32m'./visual-diff.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mTS1117: An object literal cannot have multiple properties with the same name.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/services/mock-data.ts:39:2:
+[37m      39 │   [32mprivacy_hide_gender[37m: false,
+         ╵   [32m~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mTS1117: An object literal cannot have multiple properties with the same name.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/services/mock-data.ts:39:2:
+[37m      39 │   [32mprivacy_hide_gender[37m: false,
+         ╵   [32m~~~~~~~~~~~~~~~~~~~[0m
+
+
