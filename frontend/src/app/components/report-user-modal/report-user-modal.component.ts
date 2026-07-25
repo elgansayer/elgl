@@ -1,10 +1,11 @@
-import { Component, Input, Output, EventEmitter, inject, OnInit, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SafetyService, ReportCategory } from '../../services/safety.service';
 import { ToastService } from '../primitives/toast/toast.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { I18nService } from '../../services/i18n.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-report-user-modal',
@@ -32,24 +33,41 @@ import { I18nService } from '../../services/i18n.service';
             @if (step() === 'category') {
               <div>
                 <p class="text-slate-300 mb-4">{{ translatedLabel('reportReason') }}</p>
-                <div class="space-y-3">
-                  @for (category of categories(); track category.value) {
-                    <button (click)="selectCategory(category)"
-                            class="w-full text-start p-4 rounded-xl border border-slate-700/50
-                                   hover:border-red-500/50 hover:bg-red-500/5
-                                   transition-all duration-200 group">
-                      <div class="flex items-start gap-3">
-                        <span class="text-2xl">{{ categoryIcons[category.value] || '📝' }}</span>
-                        <div>
-                          <div class="font-semibold text-white group-hover:text-red-300 transition-colors">
-                            {{ translatedLabel(category.value) }}
-                          </div>
-                          <div class="text-sm text-slate-400 mt-1">{{ translatedDescription(category.value) }}</div>
-                        </div>
-                      </div>
-                    </button>
+
+                @if (loadingCategories()) {
+                  <div class="flex justify-center py-8">
+                    <svg class="animate-spin h-6 w-6 text-slate-400" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                    <span class="ms-2 text-slate-400">{{ translatedLabel('loadingCategories') }}</span>
+                  </div>
+                } @else {
+                  @if (loadCategoriesError()) {
+                    <div class="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 text-sm">
+                      {{ loadCategoriesError() }}
+                    </div>
                   }
-                </div>
+
+                  <div class="space-y-3">
+                    @for (category of categories(); track category.value) {
+                      <button (click)="selectCategory(category)"
+                              class="w-full text-start p-4 rounded-xl border border-slate-700/50
+                                     hover:border-red-500/50 hover:bg-red-500/5
+                                     transition-all duration-200 group">
+                        <div class="flex items-start gap-3">
+                          <span class="text-2xl">{{ categoryIcons[category.value] || '📝' }}</span>
+                          <div>
+                            <div class="font-semibold text-white group-hover:text-red-300 transition-colors">
+                              {{ translatedLabel(category.value) }}
+                            </div>
+                            <div class="text-sm text-slate-400 mt-1">{{ translatedDescription(category.value) }}</div>
+                          </div>
+                        </div>
+                      </button>
+                    }
+                  </div>
+                }
               </div>
             }
 
@@ -166,7 +184,7 @@ import { I18nService } from '../../services/i18n.service';
     }
   `]
 })
-export class ReportUserModalComponent implements OnInit {
+export class ReportUserModalComponent implements OnInit, OnDestroy {
   @Input() reportUserId!: string;
   @Input() show = false;
   @Output() closed = new EventEmitter<void>();
@@ -182,6 +200,11 @@ export class ReportUserModalComponent implements OnInit {
   readonly contextUrl = signal('');
   readonly isSubmitting = signal(false);
   readonly error = signal<string | null>(null);
+
+  readonly loadingCategories = signal(false);
+  readonly loadCategoriesError = signal('');
+
+  private categorySubscription?: Subscription;
 
   readonly categoryIcons: Record<string, string> = {
     harassment: '🚫',
@@ -226,25 +249,52 @@ export class ReportUserModalComponent implements OnInit {
   // Lifecycle
   // ------------------------------------------------------------------
   ngOnInit(): void {
-    const allCategories = this.safetyService.getReportCategories();
-    this.categories.set(allCategories);
-
-    // Build lookup maps so we can fall back to English labels / descriptions
-    for (const cat of allCategories) {
-      this.categoryLabelMap.set(cat.value, cat.label);
-      // desc is not part of ReportCategory? We'll use the static descriptions from the map below
+    if (this.show) {
+      this.loadCategories();
     }
+  }
 
-    // Populate the description lookup from our static map
-    const staticDescriptions: Record<string, string> = {
-      harassment: 'Unwanted advances, threats, or abusive behaviour',
-      spam: 'Unsolicited promotions, phishing, or fraudulent activity',
-      inappropriate_content: 'Sexually explicit, violent, or offensive material',
-      fake_profile: 'Pretending to be someone else or using false identity',
-      other: 'Something else not listed above'
-    };
-    for (const [key, desc] of Object.entries(staticDescriptions)) {
-      this.categoryDescriptionMap.set(key, desc);
+  ngOnDestroy(): void {
+    this.categorySubscription?.unsubscribe();
+  }
+
+  private loadCategories(): void {
+    this.loadingCategories.set(true);
+    this.loadCategoriesError.set('');
+
+    this.categorySubscription = this.safetyService.getReportCategories().subscribe({
+      next: (cats) => {
+        this.categories.set(cats);
+        this.populateMapsFromCategories(cats);
+        this.loadingCategories.set(false);
+      },
+      error: (err) => {
+        console.error('Failed to load report categories', err);
+        const fallback = this.safetyService.getStaticReportCategories();
+        this.categories.set(fallback);
+        this.populateMapsFromCategories(fallback);
+        this.loadingCategories.set(false);
+        this.loadCategoriesError.set(
+          this.i18nService.translate('report.error.load_categories', {
+            defaultValue: 'Could not load categories. Using default list.',
+          })
+        );
+      },
+    });
+  }
+
+  private populateMapsFromCategories(cats: ReportCategory[]): void {
+    this.categoryLabelMap.clear();
+    this.categoryDescriptionMap.clear();
+
+    for (const cat of cats) {
+      this.categoryLabelMap.set(cat.value, cat.label);
+      if (cat.icon) {
+        this.categoryIcons[cat.value] = cat.icon;
+      }
+      if (cat.description) {
+        this.categoryDescriptionMap.set(cat.value, cat.description);
+      }
     }
   }
 

@@ -18,6 +18,8 @@ export interface ReportResponse {
 export interface ReportCategory {
   value: string;
   label: string;
+  icon?: string;
+  description?: string;
 }
 
 @Injectable({
@@ -121,17 +123,51 @@ export class SafetyService {
     return lastValueFrom(this.getBlockedIds());
   }
 
-  /** Returns a static list of report categories.
-   *  In a production app this could be fetched from the backend. */
-  getReportCategories(): ReportCategory[] {
-    return [
-      { value: 'harassment', label: 'Harassment' },
-      { value: 'spam', label: 'Spam' },
-      { value: 'inappropriate_content', label: 'Inappropriate Content' },
-      { value: 'fake_profile', label: 'Fake Profile' },
-      { value: 'other', label: 'Other' },
-    ];
+  /** Returns report categories from the backend.
+   *  The response must be localised using the Accept-Language header. */
+  getReportCategories(): Observable<ReportCategory[]> {
+    return this.http.get<ReportCategory[]>(
+      `${this.apiUrl}/safety/report-categories`,
+    );
   }
+
+  /** Static fallback category list used when the backend is unreachable. */
+  getStaticReportCategories(): ReportCategory[] {
+    return this.staticReportCategories;
+  }
+
+  private staticReportCategories: ReportCategory[] = [
+    {
+      value: 'harassment',
+      label: 'Harassment',
+      icon: '🚫',
+      description: 'Unwanted advances, threats, or abusive behaviour',
+    },
+    {
+      value: 'spam',
+      label: 'Spam',
+      icon: '📧',
+      description: 'Unsolicited promotions, phishing, or fraudulent activity',
+    },
+    {
+      value: 'inappropriate_content',
+      label: 'Inappropriate Content',
+      icon: '🔞',
+      description: 'Sexually explicit, violent, or offensive material',
+    },
+    {
+      value: 'fake_profile',
+      label: 'Fake Profile',
+      icon: '🎭',
+      description: 'Pretending to be someone else or using false identity',
+    },
+    {
+      value: 'other',
+      label: 'Other',
+      icon: '📝',
+      description: 'Something else not listed above',
+    },
+  ];
 
   async getBlockedUserIds(userId: string): Promise<string[]> {
     try {
