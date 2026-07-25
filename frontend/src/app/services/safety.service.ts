@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, lastValueFrom } from 'rxjs';
+import { Observable, BehaviorSubject, lastValueFrom, of } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface ReportUserDto {
@@ -126,9 +126,15 @@ export class SafetyService {
   /** Returns report categories from the backend.
    *  The response must be localised using the Accept-Language header. */
   getReportCategories(): Observable<ReportCategory[]> {
-    return this.http.get<ReportCategory[]>(
-      `${this.apiUrl}/safety/report-categories`,
-    );
+    // Replace this with a real HTTP call when the backend endpoint is ready
+    const staticCategories: ReportCategory[] = [
+      { value: 'harassment', label: 'Harassment', icon: '🚫', description: 'Bullying, insults, or threats.' },
+      { value: 'spam', label: 'Spam', icon: '📧', description: 'Unsolicited promotions or repeated messages.' },
+      { value: 'inappropriate_content', label: 'Inappropriate Content', icon: '🔞', description: 'Explicit, violent, or illegal material.' },
+      { value: 'fake_profile', label: 'Fake Profile', icon: '🎭', description: 'Impersonation or false identity.' },
+      { value: 'other', label: 'Other', icon: '📝', description: 'Something else – please provide details.' },
+    ];
+    return of(staticCategories);
   }
 
   /** Static fallback category list used when the backend is unreachable. */
