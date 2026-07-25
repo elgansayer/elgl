@@ -6,3 +6,4 @@
 - [ ] Implement Report User modal UI with dynamic category selection (blocked by design spec extraction)
 - [x] Backend lint/formatting improvements applied (see provided git diff) – no modal UI work done.
 - [ ] Continue building Report User modal UI once design spec extraction is complete.
+- [ ] Next step: resolve the design‑spec blocker for the Report User modal and then implement the modal component (current diff contains only backend formatting fixes).
