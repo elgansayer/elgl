@@ -208,37 +208,65 @@ describe('ChatService', () => {
   });
 
   describe('addFavourite', () => {
+    // We create independent builders for this describe block so they don't
+    // interfere with the shared `mockQueryBuilder` used by other tests.
+    let mockChatMessagesBuilder: any;
+    let mockFavouritesBuilder: any;
+
+    beforeEach(() => {
+      mockChatMessagesBuilder = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn(),
+      };
+
+      mockFavouritesBuilder = {
+        insert: jest.fn(),
+      };
+
+      // Override `mockSupabaseClient.from` only inside `addFavourite` tests.
+      // We restore the default behaviour in afterEach.
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'chat_messages') {
+          return mockChatMessagesBuilder;
+        }
+        if (table === 'favourites') {
+          return mockFavouritesBuilder;
+        }
+        return mockQueryBuilder;
+      });
+    });
+
+    afterEach(() => {
+      // Restore the default `from` behaviour for other test suites.
+      mockSupabaseClient.from.mockReturnValue(mockQueryBuilder);
+    });
+
     it('should save favourite record and return void', async () => {
       const dto: any = { message_id: 'msg-1', note_text: 'My favourite note' };
       const message = { id: 'msg-1', text_content: 'Hello' };
 
-      mockQueryBuilder.single.mockResolvedValue({
+      mockChatMessagesBuilder.single.mockResolvedValue({
         data: message,
         error: null,
       });
-      // Override insert to return a promise resolving to { error: null }
-      mockQueryBuilder.insert.mockResolvedValueOnce({ error: null });
+      mockFavouritesBuilder.insert.mockResolvedValue({ error: null });
 
       await service.addFavourite('user-1', dto);
 
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('chat_messages');
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('favourites');
-      expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
+      expect(mockChatMessagesBuilder.single).toHaveBeenCalled();
+      expect(mockFavouritesBuilder.insert).toHaveBeenCalledWith({
         user_id: 'user-1',
         item_type: 'message',
         item_payload: message,
         notes: 'My favourite note',
       });
-
-      // Restore insert mock
-      mockQueryBuilder.insert.mockReturnThis();
     });
 
     it('should throw Error when addFavourite fails with error message', async () => {
       const dto: any = { message_id: 'msg-1' };
 
-      // Simulate message not found
-      mockQueryBuilder.single.mockResolvedValue({
+      mockChatMessagesBuilder.single.mockResolvedValue({
         data: null,
         error: { message: 'Message not found error' },
       });
