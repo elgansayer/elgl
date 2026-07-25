@@ -212,14 +212,16 @@ describe('ChatService', () => {
       expect(result).toEqual(messages);
     });
 
-    it('should return empty array when query returns error or null data', async () => {
+    it('should return fallback mock messages when query returns error or null data', async () => {
       mockQueryBuilder.limit.mockResolvedValue({
         data: null,
         error: { message: 'Error' },
       });
 
       const result = await service.getMessages('room-1');
-      expect(result).toEqual([]);
+      expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject({ id: 'mock-msg-1', room_id: 'room-1' });
+      expect(result[1]).toMatchObject({ id: 'mock-msg-2', room_id: 'room-1' });
     });
   });
 

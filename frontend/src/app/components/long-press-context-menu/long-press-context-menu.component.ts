@@ -8,17 +8,13 @@ import {
   signal,
   HostListener,
   ElementRef,
-  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { ReportUserModalComponent } from '../report-user-modal/report-user-modal.component';
-import { SafetyService } from '../../services/safety.service';
 
 @Component({
   selector: 'app-long-press-context-menu',
   standalone: true,
-  imports: [CommonModule, MatDialogModule],
+  imports: [CommonModule],
   template: `
     @if (showMenu()) {
       <div class="context-menu-popup" (click)="$event.stopPropagation()" (contextmenu)="$event.preventDefault()">
@@ -101,14 +97,9 @@ export class LongPressContextMenuComponent {
     roomId: string;
   }>();
 
-  private dialog = inject(MatDialog);
-
   longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(
-    private elementRef: ElementRef,
-    private safetyService: SafetyService
-  ) {}
+  constructor(private elementRef: ElementRef) {}
 
   onOptionClick(option: string): void {
     if (option === 'copy') {
@@ -122,25 +113,19 @@ export class LongPressContextMenuComponent {
       });
       this.close();
     } else if (option === 'report') {
+      this.report.emit({
+        messageId: this.messageId(),
+        content: this.messageContent(),
+        senderId: this.senderId(),
+        roomId: this.roomId(),
+      });
       this.close();
-      const dialogRef = this.dialog.open(ReportUserModalComponent, {
-        data: {
-          reportedUserId: this.messageAuthorId ?? '',
-          contextUrl: this.buildContextUrl(),
-        },
-      });
-      dialogRef.afterClosed().subscribe((result) => {
-        if (result) {
-          this.report.emit({
-            messageId: this.messageId(),
-            content: this.messageContent(),
-            senderId: this.senderId(),
-            roomId: this.roomId(),
-          });
-        }
-      });
       return;
     }
+  }
+
+  onReportSubmitted(): void {
+    this.close();
   }
 
   onRightClick(event: MouseEvent): void {
