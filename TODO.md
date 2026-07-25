@@ -2,3 +2,4 @@
 - [ ] **STATUS & BLOCKER (2026-07-27):** ... **Blocker:** Required pixel‑perfect design spec for the Report User modal must be extracted from the original HelloTalk screenshots before UI development can proceed.
 - [ ] **PREREQUISITE:** Extract pixel-perfect design spec for the Report User modal by reviewing the original HelloTalk screenshots.
 - [ ] **Investigation (2026-07-27):** No changes were applied because the required design spec extraction has not been performed; the original HelloTalk screenshots are not available in the current development environment, so the blocker cannot be resolved. The candidate task cannot progress until the screenshots become accessible.
+- [ ] Implement Report User modal UI with dynamic category selection (blocked by design spec extraction)
