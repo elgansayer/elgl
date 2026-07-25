@@ -158,21 +158,15 @@ export class ReportUserModalComponent {
             await this.safetyService.blockUserAsync(dto.reported_id);
           } catch (blockErr) {
             // Block failed but report succeeded – show a warning
-            this.toastService.show({
-              message: 'Report submitted, but blocking failed. Please block manually from settings.',
-              type: 'warning',
-              duration: 4000
-            });
+            this.toastService.show(
+              'Report submitted, but blocking failed. Please block manually from settings.'
+            );
             this.isSubmitting = false;
             this.reported.emit();
             return;
           }
         }
-        this.toastService.show({
-          message: 'Report submitted successfully',
-          type: 'success',
-          duration: 3000
-        });
+        this.toastService.show('Report submitted successfully');
         this.isSubmitting = false;
         this.reported.emit();
         this.close.emit();

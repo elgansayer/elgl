@@ -24,6 +24,7 @@ describe('MonetisationController', () => {
             getDeveloperAnalytics: jest.fn(),
             getDiagnosticLogs: jest.fn(),
             createDiagnosticLog: jest.fn(),
+            createCheckoutSession: jest.fn(),
           },
         },
         {

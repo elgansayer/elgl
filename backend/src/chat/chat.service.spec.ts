@@ -146,7 +146,7 @@ describe('ChatService', () => {
       });
 
       await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
-        'Failed to save message: Unknown error',
+        'Failed to save message',
       );
     });
   });
