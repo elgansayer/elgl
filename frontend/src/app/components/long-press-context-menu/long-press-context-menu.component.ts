@@ -38,7 +38,7 @@ import { ReportUserModalComponent } from './report-user-modal/report-user-modal.
         [reportedUserId]="senderId()"
         [contextUrl]="buildContextUrl()"
         (close)="onReportClose()"
-        (reportSuccess)="onReportSuccess()"
+        (reportSuccess)="onReportSubmitted()"
       ></app-report-user-modal>
     }
   `,
@@ -136,12 +136,18 @@ export class LongPressContextMenuComponent {
   }
 
   onReportSuccess(): void {
-    // optionally show a toast
+    // delegate to the same logic that closes the modal and emits the report event
+    this.onReportSubmitted();
   }
 
   onReportSubmitted(): void {
-    // Hook for test coverage — close report modal after submission
     this.showReportModal = false;
+    this.report.emit({
+      messageId: this.messageId(),
+      content: this.messageContent(),
+      senderId: this.senderId(),
+      roomId: this.roomId(),
+    });
   }
 
   onRightClick(event: MouseEvent): void {
