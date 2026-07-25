@@ -356,7 +356,7 @@ export class ReportUserModalComponent implements OnInit, OnDestroy {
         this.i18nService.translate('report.toast.success', { defaultValue: 'Report submitted successfully' }),
         { type: 'success', duration: 3000 }
       );
-    } catch (_err) {
+    } catch {
       this.error.set(
         this.i18nService.translate('report.error.submit_failed', { defaultValue: 'Failed to submit report. Please try again.' })
       );
