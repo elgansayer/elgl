@@ -1,6 +1,7 @@
 import { Component, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { SafetyService } from '../../services/safety.service';
 import { ToastService } from '../../components/primitives/toast/toast.service';
 import type { ReportUserDto } from '../../services/safety.service';
@@ -57,7 +58,7 @@ export class ReportUserModalComponent {
         description: this.description() || undefined,
         context_url: this.contextUrl() || undefined
       };
-      await this.safetyService.reportUser(payload).toPromise();
+      await firstValueFrom(this.safetyService.reportUser(payload));
       this.reportSent.emit();
       this.toast.show('Report submitted successfully', { type: 'success' });
     } catch (error) {

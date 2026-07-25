@@ -12,7 +12,6 @@ import {
 import { CommonModule } from '@angular/common';
 import { ReportUserModalComponent } from '../report-user-modal/report-user-modal.component';
 import { SafetyService } from '../../services/safety.service';
-import { ReportUserDto } from '../../services/safety.service';
 
 @Component({
   selector: 'app-long-press-context-menu',
@@ -39,7 +38,7 @@ import { ReportUserDto } from '../../services/safety.service';
       [contextUrl]="buildContextUrl()"
       [show]="showReportModal"
       (closed)="showReportModal = false"
-      (reportSent)="onReportSubmitted($event)">
+      (reportSent)="onReportSubmitted()">
     </app-report-user-modal>
   `,
   styles: [
@@ -118,7 +117,7 @@ export class LongPressContextMenuComponent {
       });
       this.close();
     } else if (option === 'report') {
-      this.close();             // close the context menu first
+      this.close();
       this.showReportModal = true;
       return;
     }
@@ -189,23 +188,9 @@ export class LongPressContextMenuComponent {
     return window.location.href;
   }
 
-  onReportSubmitted(reportData: { reason_category: string; description?: string }): void {
-    const dto: ReportUserDto = {
-      reported_id: this.senderId(),
-      reason_category: reportData.reason_category,
-      description: reportData.description,
-      context_url: this.buildContextUrl(),
-    };
-    this.safetyService.reportUser(dto).subscribe({
-      next: () => {
-        // Optionally show a success toast
-        console.log('Report submitted successfully');
-      },
-      error: (err) => console.error('Failed to submit report', err)
-    });
-    this.showReportModal = false;
-
-    // Still emit the parent event for analytics
+  onReportSubmitted(): void {
+    // The ReportUserModal has already submitted the report to the backend.
+    // Emit the parent event for analytics and close the modal.
     this.report.emit({
       messageId: this.messageId(),
       content: this.messageContent(),
