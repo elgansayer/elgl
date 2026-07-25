@@ -77,7 +77,8 @@ import { AppCardComponent } from '../primitives/card/card.component';
                     Additional details (optional)
                   </label>
                   <textarea
-                    [(ngModel)]="description"
+                    [ngModel]="description()"
+                    (ngModelChange)="description.set($event)"
                     rows="4"
                     maxlength="1000"
                     placeholder="Provide any additional context..."
@@ -97,7 +98,8 @@ import { AppCardComponent } from '../primitives/card/card.component';
                   </label>
                   <input
                     type="url"
-                    [(ngModel)]="contextUrl"
+                    [ngModel]="contextUrl()"
+                    (ngModelChange)="contextUrl.set($event)"
                     placeholder="Paste a direct link..."
                     class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg
                            text-white placeholder-slate-500 focus:outline-none focus:ring-2
