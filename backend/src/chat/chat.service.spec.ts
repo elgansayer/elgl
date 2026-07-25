@@ -3,15 +3,6 @@ import { ChatService } from './chat.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from '../centrifugo/centrifugo.service';
 
-// Set up a module-level mock so the test can run even if the real
-// CentrifugoService file is not present in the current workspace.
-jest.mock('../centrifugo/centrifugo.service', () => ({
-  CentrifugoService: jest.fn().mockImplementation(() => ({
-    generateConnectionToken: jest.fn().mockReturnValue({ token: 'mock-token' }),
-    publish: jest.fn().mockResolvedValue(true),
-  })),
-}));
-
 describe('ChatService', () => {
   let service: ChatService;
   let centrifugoService: any;
