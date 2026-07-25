@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { EventEmitter } from 'events';
 import { MomentsService } from './moments.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
@@ -58,6 +59,10 @@ describe('MomentsService', () => {
           useValue: {
             fanOutMoment: jest.fn().mockResolvedValue(undefined),
           },
+        },
+        {
+          provide: EventEmitter,
+          useValue: { emit: jest.fn(), on: jest.fn() },
         },
       ],
     }).compile();

@@ -19,7 +19,7 @@ describe('LongPressContextMenuComponent', () => {
         {
           provide: SafetyService,
           useValue: {
-            reportUser: jest.fn().mockReturnValue(of(null)),
+            reportUser: vi.fn().mockReturnValue(of(null)),
           },
         },
       ],
