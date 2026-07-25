@@ -11,11 +11,12 @@ import { SafetyService } from '../../services/safety.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
 import { AppGradientButtonComponent } from '../primitives/gradient-button/gradient-button.component';
+import { LanguagePickerComponent, getLanguageFlag } from '../primitives/language-picker/language-picker.component';
 import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-discovery',
-  imports: [CommonModule, FormsModule, TranslatePipe, ScrollablePillsComponent, FluencyIndicatorComponent, AppGradientButtonComponent, RouterLink],
+  imports: [CommonModule, FormsModule, TranslatePipe, ScrollablePillsComponent, FluencyIndicatorComponent, AppGradientButtonComponent, LanguagePickerComponent, RouterLink],
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
 })
@@ -29,40 +30,6 @@ export class DiscoveryComponent implements OnInit {
   readonly isLoading = signal<boolean>(true);
   readonly myTargetLangs = signal<{ code: string; flag: string; labelKey: string }[]>([]);
   readonly blockedUserIds = signal<string[]>([]);
-
-  readonly nativeLanguageOptions = [
-    { value: '', labelKey: 'lang.anyNative' },
-    { value: 'en', labelKey: 'lang.en' },
-    { value: 'es', labelKey: 'lang.es' },
-    { value: 'fr', labelKey: 'lang.fr' },
-    { value: 'de', labelKey: 'lang.de' },
-    { value: 'it', labelKey: 'lang.it' },
-    { value: 'pt', labelKey: 'lang.pt' },
-    { value: 'ja', labelKey: 'lang.ja' },
-    { value: 'ko', labelKey: 'lang.ko' },
-    { value: 'zh', labelKey: 'lang.zh' },
-    { value: 'ar', labelKey: 'lang.ar' },
-    { value: 'ru', labelKey: 'lang.ru' },
-    { value: 'hi', labelKey: 'lang.hi' },
-    { value: 'tr', labelKey: 'lang.tr' },
-  ] as const;
-
-  readonly targetLanguageOptions = [
-    { value: '', labelKey: 'lang.anyTarget' },
-    { value: 'en', labelKey: 'lang.en' },
-    { value: 'es', labelKey: 'lang.es' },
-    { value: 'fr', labelKey: 'lang.fr' },
-    { value: 'de', labelKey: 'lang.de' },
-    { value: 'it', labelKey: 'lang.it' },
-    { value: 'pt', labelKey: 'lang.pt' },
-    { value: 'ja', labelKey: 'lang.ja' },
-    { value: 'ko', labelKey: 'lang.ko' },
-    { value: 'zh', labelKey: 'lang.zh' },
-    { value: 'ar', labelKey: 'lang.ar' },
-    { value: 'ru', labelKey: 'lang.ru' },
-    { value: 'hi', labelKey: 'lang.hi' },
-    { value: 'tr', labelKey: 'lang.tr' },
-  ] as const;
 
   readonly distanceBandsKm = [10, 25, 50, 100, 250] as const;
   readonly selectedDistanceKm = signal<number>(50);
@@ -94,7 +61,7 @@ export class DiscoveryComponent implements OnInit {
   }
 
   getNativeLangs(partner: UserProfile) {
-    return [{ code: partner.native_language || 'EN', level: 5 }];
+    return (partner.native_languages || ['EN']).map(code => ({ code, level: 5 }));
   }
 
   getTargetLangs(partner: UserProfile) {
@@ -105,12 +72,9 @@ export class DiscoveryComponent implements OnInit {
     try {
       const profile = await this.userService.getMyProfile();
       if (profile && profile.target_languages) {
-        const flagMap: Record<string, string> = {
-          en: '🇬🇧', es: '🇪🇸', fr: '🇫🇷', de: '🇩🇪', it: '🇮🇹', pt: '🇵🇹', ja: '🇯🇵', ko: '🇰🇷', zh: '🇨🇳', ar: '🇸🇦', ru: '🇷🇺', hi: '🇮🇳', tr: '🇹🇷', no: '🇳🇴'
-        };
         const langs = profile.target_languages.map(code => ({
           code,
-          flag: flagMap[code.toLowerCase()] || '🌍',
+          flag: getLanguageFlag(code),
           labelKey: `lang.${code.toLowerCase()}`
         }));
         this.myTargetLangs.set(langs);
@@ -134,7 +98,7 @@ export class DiscoveryComponent implements OnInit {
     try {
       const results = await this.discoveryService.findPartners({
         radius_metres: this.selectedDistanceKm() * 1000,
-        native_language: this.selectedNativeLanguage() || undefined,
+        native_languages: this.selectedNativeLanguage() || undefined,
         target_language: this.selectedTargetLanguage() || undefined,
         serious_learner_only: this.seriousLearnerOnly(),
       });

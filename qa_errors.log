@@ -1,0 +1,3227 @@
+ReferenceError: describe is not defined
+
+   at src/app/app.spec.ts:10
+
+   8 | import { CentrifugeService } from './services/centrifuge.service';
+   9 |
+> 10 | describe('App', () => {
+     | ^
+  11 |   beforeEach(async () => {
+  12 |     await TestBed.configureTestingModule({
+  13 |       imports: [App],
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/app.spec.ts:10:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:4:97)
+    at /root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:4:97
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:4:97)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:102:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.ts:7:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:3:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/chat-list/chat-list.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { ChatListComponent } from './chat-list.component';
+  4 | import { ChatService } from '../../services/chat.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at /root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:70:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts:5:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/discovery/discovery.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { DiscoveryComponent } from './discovery.component';
+  4 | import { DiscoveryService } from '../../services/discovery.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/discovery/discovery.component.spec.ts:1:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/incoming-call/incoming-call.component.spec.ts:9
+
+   7 | import { SafetyService } from '../../services/safety.service';
+   8 | import { signal } from '@angular/core';
+>  9 | import { vi } from 'vitest';
+     | ^
+  10 |
+  11 | describe('IncomingCallComponent', () => {
+  12 |   let component: IncomingCallComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:9:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/language-selector/language-selector.component.spec.ts:6
+
+  4 | import { TranslatePipe } from '../../services/translate.pipe';
+  5 |
+> 6 | describe('LanguageSelectorComponent', () => {
+    | ^
+  7 |   let component: LanguageSelectorComponent;
+  8 |   let fixture: ComponentFixture<LanguageSelectorComponent>;
+  9 |   let i18nService: I18nService;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/language-selector/language-selector.component.spec.ts:6:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { By } from '@angular/platform-browser';
+  4 | import { LongPressContextMenuComponent } from './long-press-context-menu.component';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at /root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:50:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5
+
+  3 | import { provideHttpClient } from '@angular/common/http';
+  4 | import { provideHttpClientTesting } from '@angular/common/http/testing';
+> 5 | import { vi } from 'vitest';
+    | ^
+  6 | import { NotificationsInboxComponent } from './notifications-inbox.component';
+  7 | import { NotificationService, InAppNotification } from '../../services/notification.service';
+  8 | import { I18nService } from '../../services/i18n.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-primary/button-primary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonPrimaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-primary/button-primary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonSecondaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/card/card.component.spec.ts:19
+
+  17 | }
+  18 |
+> 19 | describe('AppCardComponent', () => {
+     | ^
+  20 |   let fixture: ComponentFixture<TestHostComponent>;
+  21 |   let host: TestHostComponent;
+  22 |   let cardElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/card/card.component.spec.ts:19:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/chip/chip.component.spec.ts:39
+
+  37 | }
+  38 |
+> 39 | describe('AppChipComponent', () => {
+     | ^
+  40 |   let fixture: ComponentFixture<TestHostComponent>;
+  41 |   let host: TestHostComponent;
+  42 |   let chipElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/chip/chip.component.spec.ts:39:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/empty-state/empty-state.component.spec.ts:33
+
+  31 | }
+  32 |
+> 33 | describe('AppEmptyStateComponent', () => {
+     | ^
+  34 |   let fixture: ComponentFixture<TestHostComponent>;
+  35 |   let host: TestHostComponent;
+  36 |   let emptyStateElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/empty-state/empty-state.component.spec.ts:33:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/input/input.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppInputComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let inputElement: HTMLInputElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/input/input.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/pill/pill.component.spec.ts:25
+
+  23 | }
+  24 |
+> 25 | describe('AppPillComponent', () => {
+     | ^
+  26 |   let fixture: ComponentFixture<TestHostComponent>;
+  27 |   let host: TestHostComponent;
+  28 |   let pillElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/pill/pill.component.spec.ts:25:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/textarea/textarea.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppTextareaComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let textareaElement: HTMLTextAreaElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/textarea/textarea.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/toast/toast.spec.ts:5
+
+  3 | import { Toast } from './toast';
+  4 |
+> 5 | describe('Toast', () => {
+    | ^
+  6 |   let component: Toast;
+  7 |   let fixture: ComponentFixture<Toast>;
+  8 |
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/toast/toast.spec.ts:5:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/user-detail/user-detail.component.spec.ts:8
+
+   6 | import { SafetyService } from '../../services/safety.service';
+   7 | import { of } from 'rxjs';
+>  8 | import { vi } from 'vitest';
+     | ^
+   9 |
+  10 | describe('UserDetailComponent', () => {
+  11 |   let component: UserDetailComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/user-detail/user-detail.component.spec.ts:8:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/voip-call/voip-call.component.spec.ts:1
+
+> 1 | import { vi, Mocked } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { VoipCallComponent } from './voip-call.component';
+  4 | import { ComponentRef } from '@angular/core';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.spec.ts:1:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/i18n.service.spec.ts:4
+
+  2 | import { I18nService } from './i18n.service';
+  3 |
+> 4 | describe('I18nService', () => {
+    | ^
+  5 |   let service: I18nService;
+  6 |
+  7 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/i18n.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/media-upload.service.spec.ts:4
+
+  2 | import { MediaUploadService } from './media-upload.service';
+  3 |
+> 4 | describe('MediaUploadService', () => {
+    | ^
+  5 |   it('should exist', () => {
+  6 |     // Placeholder test so the spec file compiles without failing due to
+  7 |     // unresolved dependencies.  Full integration tests for MediaUploadService
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/media-upload.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/translate.pipe.spec.ts:5
+
+  3 | import { I18nService } from './i18n.service';
+  4 |
+> 5 | describe('TranslatePipe', () => {
+    | ^
+  6 |   let pipe: TranslatePipe;
+  7 |
+  8 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/translate.pipe.spec.ts:5:1)
+Error: No tests found
+
+ReferenceError: describe is not defined
+
+   at src/app/app.spec.ts:10
+
+   8 | import { CentrifugeService } from './services/centrifuge.service';
+   9 |
+> 10 | describe('App', () => {
+     | ^
+  11 |   beforeEach(async () => {
+  12 |     await TestBed.configureTestingModule({
+  13 |       imports: [App],
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/app.spec.ts:10:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:4:97)
+    at /root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:4:97
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:4:97)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:102:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.ts:7:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:3:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/chat-list/chat-list.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { ChatListComponent } from './chat-list.component';
+  4 | import { ChatService } from '../../services/chat.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at /root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:70:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts:5:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/discovery/discovery.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { DiscoveryComponent } from './discovery.component';
+  4 | import { DiscoveryService } from '../../services/discovery.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/discovery/discovery.component.spec.ts:1:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/incoming-call/incoming-call.component.spec.ts:9
+
+   7 | import { SafetyService } from '../../services/safety.service';
+   8 | import { signal } from '@angular/core';
+>  9 | import { vi } from 'vitest';
+     | ^
+  10 |
+  11 | describe('IncomingCallComponent', () => {
+  12 |   let component: IncomingCallComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:9:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/language-selector/language-selector.component.spec.ts:6
+
+  4 | import { TranslatePipe } from '../../services/translate.pipe';
+  5 |
+> 6 | describe('LanguageSelectorComponent', () => {
+    | ^
+  7 |   let component: LanguageSelectorComponent;
+  8 |   let fixture: ComponentFixture<LanguageSelectorComponent>;
+  9 |   let i18nService: I18nService;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/language-selector/language-selector.component.spec.ts:6:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { By } from '@angular/platform-browser';
+  4 | import { LongPressContextMenuComponent } from './long-press-context-menu.component';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at /root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:50:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5
+
+  3 | import { provideHttpClient } from '@angular/common/http';
+  4 | import { provideHttpClientTesting } from '@angular/common/http/testing';
+> 5 | import { vi } from 'vitest';
+    | ^
+  6 | import { NotificationsInboxComponent } from './notifications-inbox.component';
+  7 | import { NotificationService, InAppNotification } from '../../services/notification.service';
+  8 | import { I18nService } from '../../services/i18n.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-primary/button-primary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonPrimaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-primary/button-primary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonSecondaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/card/card.component.spec.ts:19
+
+  17 | }
+  18 |
+> 19 | describe('AppCardComponent', () => {
+     | ^
+  20 |   let fixture: ComponentFixture<TestHostComponent>;
+  21 |   let host: TestHostComponent;
+  22 |   let cardElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/card/card.component.spec.ts:19:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/chip/chip.component.spec.ts:39
+
+  37 | }
+  38 |
+> 39 | describe('AppChipComponent', () => {
+     | ^
+  40 |   let fixture: ComponentFixture<TestHostComponent>;
+  41 |   let host: TestHostComponent;
+  42 |   let chipElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/chip/chip.component.spec.ts:39:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/empty-state/empty-state.component.spec.ts:33
+
+  31 | }
+  32 |
+> 33 | describe('AppEmptyStateComponent', () => {
+     | ^
+  34 |   let fixture: ComponentFixture<TestHostComponent>;
+  35 |   let host: TestHostComponent;
+  36 |   let emptyStateElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/empty-state/empty-state.component.spec.ts:33:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/input/input.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppInputComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let inputElement: HTMLInputElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/input/input.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/pill/pill.component.spec.ts:25
+
+  23 | }
+  24 |
+> 25 | describe('AppPillComponent', () => {
+     | ^
+  26 |   let fixture: ComponentFixture<TestHostComponent>;
+  27 |   let host: TestHostComponent;
+  28 |   let pillElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/pill/pill.component.spec.ts:25:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/textarea/textarea.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppTextareaComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let textareaElement: HTMLTextAreaElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/textarea/textarea.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/toast/toast.spec.ts:5
+
+  3 | import { Toast } from './toast';
+  4 |
+> 5 | describe('Toast', () => {
+    | ^
+  6 |   let component: Toast;
+  7 |   let fixture: ComponentFixture<Toast>;
+  8 |
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/toast/toast.spec.ts:5:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/user-detail/user-detail.component.spec.ts:8
+
+   6 | import { SafetyService } from '../../services/safety.service';
+   7 | import { of } from 'rxjs';
+>  8 | import { vi } from 'vitest';
+     | ^
+   9 |
+  10 | describe('UserDetailComponent', () => {
+  11 |   let component: UserDetailComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/user-detail/user-detail.component.spec.ts:8:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/voip-call/voip-call.component.spec.ts:1
+
+> 1 | import { vi, Mocked } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { VoipCallComponent } from './voip-call.component';
+  4 | import { ComponentRef } from '@angular/core';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.spec.ts:1:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/i18n.service.spec.ts:4
+
+  2 | import { I18nService } from './i18n.service';
+  3 |
+> 4 | describe('I18nService', () => {
+    | ^
+  5 |   let service: I18nService;
+  6 |
+  7 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/i18n.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/media-upload.service.spec.ts:4
+
+  2 | import { MediaUploadService } from './media-upload.service';
+  3 |
+> 4 | describe('MediaUploadService', () => {
+    | ^
+  5 |   it('should exist', () => {
+  6 |     // Placeholder test so the spec file compiles without failing due to
+  7 |     // unresolved dependencies.  Full integration tests for MediaUploadService
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/media-upload.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/translate.pipe.spec.ts:5
+
+  3 | import { I18nService } from './i18n.service';
+  4 |
+> 5 | describe('TranslatePipe', () => {
+    | ^
+  6 |   let pipe: TranslatePipe;
+  7 |
+  8 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/translate.pipe.spec.ts:5:1)
+Error: No tests found
+
+ReferenceError: describe is not defined
+
+   at src/app/app.spec.ts:10
+
+   8 | import { CentrifugeService } from './services/centrifuge.service';
+   9 |
+> 10 | describe('App', () => {
+     | ^
+  11 |   beforeEach(async () => {
+  12 |     await TestBed.configureTestingModule({
+  13 |       imports: [App],
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/app.spec.ts:10:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:4:97)
+    at /root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:4:97
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:4:97)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:102:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.ts:7:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:3:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/chat-list/chat-list.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { ChatListComponent } from './chat-list.component';
+  4 | import { ChatService } from '../../services/chat.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at /root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:70:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts:5:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/discovery/discovery.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { DiscoveryComponent } from './discovery.component';
+  4 | import { DiscoveryService } from '../../services/discovery.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/discovery/discovery.component.spec.ts:1:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/incoming-call/incoming-call.component.spec.ts:9
+
+   7 | import { SafetyService } from '../../services/safety.service';
+   8 | import { signal } from '@angular/core';
+>  9 | import { vi } from 'vitest';
+     | ^
+  10 |
+  11 | describe('IncomingCallComponent', () => {
+  12 |   let component: IncomingCallComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:9:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/language-selector/language-selector.component.spec.ts:6
+
+  4 | import { TranslatePipe } from '../../services/translate.pipe';
+  5 |
+> 6 | describe('LanguageSelectorComponent', () => {
+    | ^
+  7 |   let component: LanguageSelectorComponent;
+  8 |   let fixture: ComponentFixture<LanguageSelectorComponent>;
+  9 |   let i18nService: I18nService;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/language-selector/language-selector.component.spec.ts:6:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { By } from '@angular/platform-browser';
+  4 | import { LongPressContextMenuComponent } from './long-press-context-menu.component';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at /root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:50:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5
+
+  3 | import { provideHttpClient } from '@angular/common/http';
+  4 | import { provideHttpClientTesting } from '@angular/common/http/testing';
+> 5 | import { vi } from 'vitest';
+    | ^
+  6 | import { NotificationsInboxComponent } from './notifications-inbox.component';
+  7 | import { NotificationService, InAppNotification } from '../../services/notification.service';
+  8 | import { I18nService } from '../../services/i18n.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-primary/button-primary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonPrimaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-primary/button-primary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonSecondaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/card/card.component.spec.ts:19
+
+  17 | }
+  18 |
+> 19 | describe('AppCardComponent', () => {
+     | ^
+  20 |   let fixture: ComponentFixture<TestHostComponent>;
+  21 |   let host: TestHostComponent;
+  22 |   let cardElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/card/card.component.spec.ts:19:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/chip/chip.component.spec.ts:39
+
+  37 | }
+  38 |
+> 39 | describe('AppChipComponent', () => {
+     | ^
+  40 |   let fixture: ComponentFixture<TestHostComponent>;
+  41 |   let host: TestHostComponent;
+  42 |   let chipElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/chip/chip.component.spec.ts:39:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/empty-state/empty-state.component.spec.ts:33
+
+  31 | }
+  32 |
+> 33 | describe('AppEmptyStateComponent', () => {
+     | ^
+  34 |   let fixture: ComponentFixture<TestHostComponent>;
+  35 |   let host: TestHostComponent;
+  36 |   let emptyStateElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/empty-state/empty-state.component.spec.ts:33:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/input/input.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppInputComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let inputElement: HTMLInputElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/input/input.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/pill/pill.component.spec.ts:25
+
+  23 | }
+  24 |
+> 25 | describe('AppPillComponent', () => {
+     | ^
+  26 |   let fixture: ComponentFixture<TestHostComponent>;
+  27 |   let host: TestHostComponent;
+  28 |   let pillElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/pill/pill.component.spec.ts:25:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/textarea/textarea.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppTextareaComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let textareaElement: HTMLTextAreaElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/textarea/textarea.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/toast/toast.spec.ts:5
+
+  3 | import { Toast } from './toast';
+  4 |
+> 5 | describe('Toast', () => {
+    | ^
+  6 |   let component: Toast;
+  7 |   let fixture: ComponentFixture<Toast>;
+  8 |
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/toast/toast.spec.ts:5:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/user-detail/user-detail.component.spec.ts:8
+
+   6 | import { SafetyService } from '../../services/safety.service';
+   7 | import { of } from 'rxjs';
+>  8 | import { vi } from 'vitest';
+     | ^
+   9 |
+  10 | describe('UserDetailComponent', () => {
+  11 |   let component: UserDetailComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/user-detail/user-detail.component.spec.ts:8:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/voip-call/voip-call.component.spec.ts:1
+
+> 1 | import { vi, Mocked } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { VoipCallComponent } from './voip-call.component';
+  4 | import { ComponentRef } from '@angular/core';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.spec.ts:1:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/i18n.service.spec.ts:4
+
+  2 | import { I18nService } from './i18n.service';
+  3 |
+> 4 | describe('I18nService', () => {
+    | ^
+  5 |   let service: I18nService;
+  6 |
+  7 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/i18n.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/media-upload.service.spec.ts:4
+
+  2 | import { MediaUploadService } from './media-upload.service';
+  3 |
+> 4 | describe('MediaUploadService', () => {
+    | ^
+  5 |   it('should exist', () => {
+  6 |     // Placeholder test so the spec file compiles without failing due to
+  7 |     // unresolved dependencies.  Full integration tests for MediaUploadService
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/media-upload.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/translate.pipe.spec.ts:5
+
+  3 | import { I18nService } from './i18n.service';
+  4 |
+> 5 | describe('TranslatePipe', () => {
+    | ^
+  6 |   let pipe: TranslatePipe;
+  7 |
+  8 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/translate.pipe.spec.ts:5:1)
+Error: No tests found
+
+ReferenceError: describe is not defined
+
+   at src/app/app.spec.ts:10
+
+   8 | import { CentrifugeService } from './services/centrifuge.service';
+   9 |
+> 10 | describe('App', () => {
+     | ^
+  11 |   beforeEach(async () => {
+  12 |     await TestBed.configureTestingModule({
+  13 |       imports: [App],
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/app.spec.ts:10:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:4:97)
+    at /root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:4:97
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:4:97)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:102:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.ts:7:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:3:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/chat-list/chat-list.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { ChatListComponent } from './chat-list.component';
+  4 | import { ChatService } from '../../services/chat.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at /root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:70:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts:5:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/discovery/discovery.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { DiscoveryComponent } from './discovery.component';
+  4 | import { DiscoveryService } from '../../services/discovery.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/discovery/discovery.component.spec.ts:1:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/incoming-call/incoming-call.component.spec.ts:9
+
+   7 | import { SafetyService } from '../../services/safety.service';
+   8 | import { signal } from '@angular/core';
+>  9 | import { vi } from 'vitest';
+     | ^
+  10 |
+  11 | describe('IncomingCallComponent', () => {
+  12 |   let component: IncomingCallComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:9:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/language-selector/language-selector.component.spec.ts:6
+
+  4 | import { TranslatePipe } from '../../services/translate.pipe';
+  5 |
+> 6 | describe('LanguageSelectorComponent', () => {
+    | ^
+  7 |   let component: LanguageSelectorComponent;
+  8 |   let fixture: ComponentFixture<LanguageSelectorComponent>;
+  9 |   let i18nService: I18nService;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/language-selector/language-selector.component.spec.ts:6:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { By } from '@angular/platform-browser';
+  4 | import { LongPressContextMenuComponent } from './long-press-context-menu.component';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at /root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:50:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5
+
+  3 | import { provideHttpClient } from '@angular/common/http';
+  4 | import { provideHttpClientTesting } from '@angular/common/http/testing';
+> 5 | import { vi } from 'vitest';
+    | ^
+  6 | import { NotificationsInboxComponent } from './notifications-inbox.component';
+  7 | import { NotificationService, InAppNotification } from '../../services/notification.service';
+  8 | import { I18nService } from '../../services/i18n.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-primary/button-primary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonPrimaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-primary/button-primary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonSecondaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/card/card.component.spec.ts:19
+
+  17 | }
+  18 |
+> 19 | describe('AppCardComponent', () => {
+     | ^
+  20 |   let fixture: ComponentFixture<TestHostComponent>;
+  21 |   let host: TestHostComponent;
+  22 |   let cardElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/card/card.component.spec.ts:19:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/chip/chip.component.spec.ts:39
+
+  37 | }
+  38 |
+> 39 | describe('AppChipComponent', () => {
+     | ^
+  40 |   let fixture: ComponentFixture<TestHostComponent>;
+  41 |   let host: TestHostComponent;
+  42 |   let chipElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/chip/chip.component.spec.ts:39:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/empty-state/empty-state.component.spec.ts:33
+
+  31 | }
+  32 |
+> 33 | describe('AppEmptyStateComponent', () => {
+     | ^
+  34 |   let fixture: ComponentFixture<TestHostComponent>;
+  35 |   let host: TestHostComponent;
+  36 |   let emptyStateElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/empty-state/empty-state.component.spec.ts:33:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/input/input.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppInputComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let inputElement: HTMLInputElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/input/input.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/pill/pill.component.spec.ts:25
+
+  23 | }
+  24 |
+> 25 | describe('AppPillComponent', () => {
+     | ^
+  26 |   let fixture: ComponentFixture<TestHostComponent>;
+  27 |   let host: TestHostComponent;
+  28 |   let pillElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/pill/pill.component.spec.ts:25:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/textarea/textarea.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppTextareaComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let textareaElement: HTMLTextAreaElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/textarea/textarea.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/toast/toast.spec.ts:5
+
+  3 | import { Toast } from './toast';
+  4 |
+> 5 | describe('Toast', () => {
+    | ^
+  6 |   let component: Toast;
+  7 |   let fixture: ComponentFixture<Toast>;
+  8 |
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/toast/toast.spec.ts:5:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/user-detail/user-detail.component.spec.ts:8
+
+   6 | import { SafetyService } from '../../services/safety.service';
+   7 | import { of } from 'rxjs';
+>  8 | import { vi } from 'vitest';
+     | ^
+   9 |
+  10 | describe('UserDetailComponent', () => {
+  11 |   let component: UserDetailComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/user-detail/user-detail.component.spec.ts:8:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/voip-call/voip-call.component.spec.ts:1
+
+> 1 | import { vi, Mocked } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { VoipCallComponent } from './voip-call.component';
+  4 | import { ComponentRef } from '@angular/core';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.spec.ts:1:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/i18n.service.spec.ts:4
+
+  2 | import { I18nService } from './i18n.service';
+  3 |
+> 4 | describe('I18nService', () => {
+    | ^
+  5 |   let service: I18nService;
+  6 |
+  7 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/i18n.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/media-upload.service.spec.ts:4
+
+  2 | import { MediaUploadService } from './media-upload.service';
+  3 |
+> 4 | describe('MediaUploadService', () => {
+    | ^
+  5 |   it('should exist', () => {
+  6 |     // Placeholder test so the spec file compiles without failing due to
+  7 |     // unresolved dependencies.  Full integration tests for MediaUploadService
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/media-upload.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/translate.pipe.spec.ts:5
+
+  3 | import { I18nService } from './i18n.service';
+  4 |
+> 5 | describe('TranslatePipe', () => {
+    | ^
+  6 |   let pipe: TranslatePipe;
+  7 |
+  8 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/translate.pipe.spec.ts:5:1)
+Error: No tests found
+
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/app.spec.ts:1
+
+> 1 | import { describe, it, expect, beforeEach } from 'vitest';
+    | ^
+  2 | import { TestBed } from '@angular/core/testing';
+  3 | import { provideHttpClient } from '@angular/common/http';
+  4 | import { provideRouter } from '@angular/router';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/app.spec.ts:1:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:7
+
+   5 | import { signal } from '@angular/core';
+   6 |
+>  7 | describe('AudioSyncReaderComponent', () => {
+     | ^
+   8 |   let component: AudioSyncReaderComponent;
+   9 |   let fixture: ComponentFixture<AudioSyncReaderComponent>;
+  10 |   let mockVocabStore: Partial<VocabularyStore>;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:7:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/chat-list/chat-list.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { ChatListComponent } from './chat-list.component';
+  4 | import { ChatService } from '../../services/chat.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at /root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:70:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts:5:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/discovery/discovery.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { DiscoveryComponent } from './discovery.component';
+  4 | import { DiscoveryService } from '../../services/discovery.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/discovery/discovery.component.spec.ts:1:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/incoming-call/incoming-call.component.spec.ts:9
+
+   7 | import { SafetyService } from '../../services/safety.service';
+   8 | import { signal } from '@angular/core';
+>  9 | import { vi } from 'vitest';
+     | ^
+  10 |
+  11 | describe('IncomingCallComponent', () => {
+  12 |   let component: IncomingCallComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:9:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/language-selector/language-selector.component.spec.ts:6
+
+  4 | import { TranslatePipe } from '../../services/translate.pipe';
+  5 |
+> 6 | describe('LanguageSelectorComponent', () => {
+    | ^
+  7 |   let component: LanguageSelectorComponent;
+  8 |   let fixture: ComponentFixture<LanguageSelectorComponent>;
+  9 |   let i18nService: I18nService;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/language-selector/language-selector.component.spec.ts:6:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { By } from '@angular/platform-browser';
+  4 | import { LongPressContextMenuComponent } from './long-press-context-menu.component';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at /root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:50:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5
+
+  3 | import { provideHttpClient } from '@angular/common/http';
+  4 | import { provideHttpClientTesting } from '@angular/common/http/testing';
+> 5 | import { vi } from 'vitest';
+    | ^
+  6 | import { NotificationsInboxComponent } from './notifications-inbox.component';
+  7 | import { NotificationService, InAppNotification } from '../../services/notification.service';
+  8 | import { I18nService } from '../../services/i18n.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-primary/button-primary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonPrimaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-primary/button-primary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonSecondaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/card/card.component.spec.ts:19
+
+  17 | }
+  18 |
+> 19 | describe('AppCardComponent', () => {
+     | ^
+  20 |   let fixture: ComponentFixture<TestHostComponent>;
+  21 |   let host: TestHostComponent;
+  22 |   let cardElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/card/card.component.spec.ts:19:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/chip/chip.component.spec.ts:39
+
+  37 | }
+  38 |
+> 39 | describe('AppChipComponent', () => {
+     | ^
+  40 |   let fixture: ComponentFixture<TestHostComponent>;
+  41 |   let host: TestHostComponent;
+  42 |   let chipElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/chip/chip.component.spec.ts:39:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/empty-state/empty-state.component.spec.ts:33
+
+  31 | }
+  32 |
+> 33 | describe('AppEmptyStateComponent', () => {
+     | ^
+  34 |   let fixture: ComponentFixture<TestHostComponent>;
+  35 |   let host: TestHostComponent;
+  36 |   let emptyStateElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/empty-state/empty-state.component.spec.ts:33:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/input/input.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppInputComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let inputElement: HTMLInputElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/input/input.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/pill/pill.component.spec.ts:25
+
+  23 | }
+  24 |
+> 25 | describe('AppPillComponent', () => {
+     | ^
+  26 |   let fixture: ComponentFixture<TestHostComponent>;
+  27 |   let host: TestHostComponent;
+  28 |   let pillElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/pill/pill.component.spec.ts:25:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/textarea/textarea.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppTextareaComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let textareaElement: HTMLTextAreaElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/textarea/textarea.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/toast/toast.spec.ts:5
+
+  3 | import { Toast } from './toast';
+  4 |
+> 5 | describe('Toast', () => {
+    | ^
+  6 |   let component: Toast;
+  7 |   let fixture: ComponentFixture<Toast>;
+  8 |
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/toast/toast.spec.ts:5:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/user-detail/user-detail.component.spec.ts:8
+
+   6 | import { SafetyService } from '../../services/safety.service';
+   7 | import { of } from 'rxjs';
+>  8 | import { vi } from 'vitest';
+     | ^
+   9 |
+  10 | describe('UserDetailComponent', () => {
+  11 |   let component: UserDetailComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/user-detail/user-detail.component.spec.ts:8:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/voip-call/voip-call.component.spec.ts:1
+
+> 1 | import { vi, Mocked } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { VoipCallComponent } from './voip-call.component';
+  4 | import { ComponentRef } from '@angular/core';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.spec.ts:1:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/i18n.service.spec.ts:4
+
+  2 | import { I18nService } from './i18n.service';
+  3 |
+> 4 | describe('I18nService', () => {
+    | ^
+  5 |   let service: I18nService;
+  6 |
+  7 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/i18n.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/media-upload.service.spec.ts:4
+
+  2 | import { MediaUploadService } from './media-upload.service';
+  3 |
+> 4 | describe('MediaUploadService', () => {
+    | ^
+  5 |   it('should exist', () => {
+  6 |     // Placeholder test so the spec file compiles without failing due to
+  7 |     // unresolved dependencies.  Full integration tests for MediaUploadService
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/media-upload.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/translate.pipe.spec.ts:5
+
+  3 | import { I18nService } from './i18n.service';
+  4 |
+> 5 | describe('TranslatePipe', () => {
+    | ^
+  6 |   let pipe: TranslatePipe;
+  7 |
+  8 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/translate.pipe.spec.ts:5:1)
+Error: No tests found
+
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/app.spec.ts:1
+
+> 1 | import { describe, it, expect, beforeEach } from 'vitest';
+    | ^
+  2 | import { TestBed } from '@angular/core/testing';
+  3 | import { provideHttpClient } from '@angular/common/http';
+  4 | import { provideRouter } from '@angular/router';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/app.spec.ts:1:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:7
+
+   5 | import { signal } from '@angular/core';
+   6 |
+>  7 | describe('AudioSyncReaderComponent', () => {
+     | ^
+   8 |   let component: AudioSyncReaderComponent;
+   9 |   let fixture: ComponentFixture<AudioSyncReaderComponent>;
+  10 |   let mockVocabStore: Partial<VocabularyStore>;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:7:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/chat-list/chat-list.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { ChatListComponent } from './chat-list.component';
+  4 | import { ChatService } from '../../services/chat.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at /root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:70:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts:5:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/discovery/discovery.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { DiscoveryComponent } from './discovery.component';
+  4 | import { DiscoveryService } from '../../services/discovery.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/discovery/discovery.component.spec.ts:1:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/incoming-call/incoming-call.component.spec.ts:9
+
+   7 | import { SafetyService } from '../../services/safety.service';
+   8 | import { signal } from '@angular/core';
+>  9 | import { vi } from 'vitest';
+     | ^
+  10 |
+  11 | describe('IncomingCallComponent', () => {
+  12 |   let component: IncomingCallComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:9:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/language-selector/language-selector.component.spec.ts:6
+
+  4 | import { TranslatePipe } from '../../services/translate.pipe';
+  5 |
+> 6 | describe('LanguageSelectorComponent', () => {
+    | ^
+  7 |   let component: LanguageSelectorComponent;
+  8 |   let fixture: ComponentFixture<LanguageSelectorComponent>;
+  9 |   let i18nService: I18nService;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/language-selector/language-selector.component.spec.ts:6:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { By } from '@angular/platform-browser';
+  4 | import { LongPressContextMenuComponent } from './long-press-context-menu.component';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at /root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:50:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5
+
+  3 | import { provideHttpClient } from '@angular/common/http';
+  4 | import { provideHttpClientTesting } from '@angular/common/http/testing';
+> 5 | import { vi } from 'vitest';
+    | ^
+  6 | import { NotificationsInboxComponent } from './notifications-inbox.component';
+  7 | import { NotificationService, InAppNotification } from '../../services/notification.service';
+  8 | import { I18nService } from '../../services/i18n.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-primary/button-primary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonPrimaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-primary/button-primary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonSecondaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/card/card.component.spec.ts:19
+
+  17 | }
+  18 |
+> 19 | describe('AppCardComponent', () => {
+     | ^
+  20 |   let fixture: ComponentFixture<TestHostComponent>;
+  21 |   let host: TestHostComponent;
+  22 |   let cardElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/card/card.component.spec.ts:19:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/chip/chip.component.spec.ts:39
+
+  37 | }
+  38 |
+> 39 | describe('AppChipComponent', () => {
+     | ^
+  40 |   let fixture: ComponentFixture<TestHostComponent>;
+  41 |   let host: TestHostComponent;
+  42 |   let chipElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/chip/chip.component.spec.ts:39:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/empty-state/empty-state.component.spec.ts:33
+
+  31 | }
+  32 |
+> 33 | describe('AppEmptyStateComponent', () => {
+     | ^
+  34 |   let fixture: ComponentFixture<TestHostComponent>;
+  35 |   let host: TestHostComponent;
+  36 |   let emptyStateElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/empty-state/empty-state.component.spec.ts:33:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/input/input.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppInputComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let inputElement: HTMLInputElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/input/input.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/pill/pill.component.spec.ts:25
+
+  23 | }
+  24 |
+> 25 | describe('AppPillComponent', () => {
+     | ^
+  26 |   let fixture: ComponentFixture<TestHostComponent>;
+  27 |   let host: TestHostComponent;
+  28 |   let pillElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/pill/pill.component.spec.ts:25:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/textarea/textarea.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppTextareaComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let textareaElement: HTMLTextAreaElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/textarea/textarea.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/toast/toast.spec.ts:5
+
+  3 | import { Toast } from './toast';
+  4 |
+> 5 | describe('Toast', () => {
+    | ^
+  6 |   let component: Toast;
+  7 |   let fixture: ComponentFixture<Toast>;
+  8 |
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/toast/toast.spec.ts:5:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/user-detail/user-detail.component.spec.ts:8
+
+   6 | import { SafetyService } from '../../services/safety.service';
+   7 | import { of } from 'rxjs';
+>  8 | import { vi } from 'vitest';
+     | ^
+   9 |
+  10 | describe('UserDetailComponent', () => {
+  11 |   let component: UserDetailComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/user-detail/user-detail.component.spec.ts:8:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/voip-call/voip-call.component.spec.ts:1
+
+> 1 | import { vi, Mocked } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { VoipCallComponent } from './voip-call.component';
+  4 | import { ComponentRef } from '@angular/core';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.spec.ts:1:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/i18n.service.spec.ts:4
+
+  2 | import { I18nService } from './i18n.service';
+  3 |
+> 4 | describe('I18nService', () => {
+    | ^
+  5 |   let service: I18nService;
+  6 |
+  7 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/i18n.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/media-upload.service.spec.ts:4
+
+  2 | import { MediaUploadService } from './media-upload.service';
+  3 |
+> 4 | describe('MediaUploadService', () => {
+    | ^
+  5 |   it('should exist', () => {
+  6 |     // Placeholder test so the spec file compiles without failing due to
+  7 |     // unresolved dependencies.  Full integration tests for MediaUploadService
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/media-upload.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/translate.pipe.spec.ts:5
+
+  3 | import { I18nService } from './i18n.service';
+  4 |
+> 5 | describe('TranslatePipe', () => {
+    | ^
+  6 |   let pipe: TranslatePipe;
+  7 |
+  8 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/translate.pipe.spec.ts:5:1)
+Error: No tests found
+
+ReferenceError: describe is not defined
+
+   at src/app/app.spec.ts:10
+
+   8 | import { CentrifugeService } from './services/centrifuge.service';
+   9 |
+> 10 | describe('App', () => {
+     | ^
+  11 |   beforeEach(async () => {
+  12 |     await TestBed.configureTestingModule({
+  13 |       imports: [App],
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/app.spec.ts:10:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:7
+
+   5 | import { signal } from '@angular/core';
+   6 |
+>  7 | describe('AudioSyncReaderComponent', () => {
+     | ^
+   8 |   let component: AudioSyncReaderComponent;
+   9 |   let fixture: ComponentFixture<AudioSyncReaderComponent>;
+  10 |   let mockVocabStore: Partial<VocabularyStore>;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:7:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/chat-list/chat-list.component.spec.ts:7
+
+   5 | import { provideRouter } from '@angular/router';
+   6 |
+>  7 | describe('ChatListComponent', () => {
+     | ^
+   8 |   let component: ChatListComponent;
+   9 |   let fixture: ComponentFixture<ChatListComponent>;
+  10 |   let mockChatService: any;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.spec.ts:7:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at /root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:70:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts:5:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/discovery/discovery.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { DiscoveryComponent } from './discovery.component';
+  4 | import { DiscoveryService } from '../../services/discovery.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/discovery/discovery.component.spec.ts:1:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/incoming-call/incoming-call.component.spec.ts:9
+
+   7 | import { SafetyService } from '../../services/safety.service';
+   8 | import { signal } from '@angular/core';
+>  9 | import { vi } from 'vitest';
+     | ^
+  10 |
+  11 | describe('IncomingCallComponent', () => {
+  12 |   let component: IncomingCallComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:9:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/language-selector/language-selector.component.spec.ts:6
+
+  4 | import { TranslatePipe } from '../../services/translate.pipe';
+  5 |
+> 6 | describe('LanguageSelectorComponent', () => {
+    | ^
+  7 |   let component: LanguageSelectorComponent;
+  8 |   let fixture: ComponentFixture<LanguageSelectorComponent>;
+  9 |   let i18nService: I18nService;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/language-selector/language-selector.component.spec.ts:6:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { By } from '@angular/platform-browser';
+  4 | import { LongPressContextMenuComponent } from './long-press-context-menu.component';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at /root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:50:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5
+
+  3 | import { provideHttpClient } from '@angular/common/http';
+  4 | import { provideHttpClientTesting } from '@angular/common/http/testing';
+> 5 | import { vi } from 'vitest';
+    | ^
+  6 | import { NotificationsInboxComponent } from './notifications-inbox.component';
+  7 | import { NotificationService, InAppNotification } from '../../services/notification.service';
+  8 | import { I18nService } from '../../services/i18n.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-primary/button-primary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonPrimaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-primary/button-primary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonSecondaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/card/card.component.spec.ts:19
+
+  17 | }
+  18 |
+> 19 | describe('AppCardComponent', () => {
+     | ^
+  20 |   let fixture: ComponentFixture<TestHostComponent>;
+  21 |   let host: TestHostComponent;
+  22 |   let cardElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/card/card.component.spec.ts:19:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/chip/chip.component.spec.ts:39
+
+  37 | }
+  38 |
+> 39 | describe('AppChipComponent', () => {
+     | ^
+  40 |   let fixture: ComponentFixture<TestHostComponent>;
+  41 |   let host: TestHostComponent;
+  42 |   let chipElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/chip/chip.component.spec.ts:39:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/empty-state/empty-state.component.spec.ts:33
+
+  31 | }
+  32 |
+> 33 | describe('AppEmptyStateComponent', () => {
+     | ^
+  34 |   let fixture: ComponentFixture<TestHostComponent>;
+  35 |   let host: TestHostComponent;
+  36 |   let emptyStateElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/empty-state/empty-state.component.spec.ts:33:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/input/input.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppInputComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let inputElement: HTMLInputElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/input/input.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/pill/pill.component.spec.ts:25
+
+  23 | }
+  24 |
+> 25 | describe('AppPillComponent', () => {
+     | ^
+  26 |   let fixture: ComponentFixture<TestHostComponent>;
+  27 |   let host: TestHostComponent;
+  28 |   let pillElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/pill/pill.component.spec.ts:25:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/textarea/textarea.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppTextareaComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let textareaElement: HTMLTextAreaElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/textarea/textarea.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/toast/toast.spec.ts:5
+
+  3 | import { Toast } from './toast';
+  4 |
+> 5 | describe('Toast', () => {
+    | ^
+  6 |   let component: Toast;
+  7 |   let fixture: ComponentFixture<Toast>;
+  8 |
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/toast/toast.spec.ts:5:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/user-detail/user-detail.component.spec.ts:8
+
+   6 | import { SafetyService } from '../../services/safety.service';
+   7 | import { of } from 'rxjs';
+>  8 | import { vi } from 'vitest';
+     | ^
+   9 |
+  10 | describe('UserDetailComponent', () => {
+  11 |   let component: UserDetailComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/user-detail/user-detail.component.spec.ts:8:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/voip-call/voip-call.component.spec.ts:1
+
+> 1 | import { vi, Mocked } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { VoipCallComponent } from './voip-call.component';
+  4 | import { ComponentRef } from '@angular/core';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.spec.ts:1:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/i18n.service.spec.ts:4
+
+  2 | import { I18nService } from './i18n.service';
+  3 |
+> 4 | describe('I18nService', () => {
+    | ^
+  5 |   let service: I18nService;
+  6 |
+  7 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/i18n.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/media-upload.service.spec.ts:4
+
+  2 | import { MediaUploadService } from './media-upload.service';
+  3 |
+> 4 | describe('MediaUploadService', () => {
+    | ^
+  5 |   it('should exist', () => {
+  6 |     // Placeholder test so the spec file compiles without failing due to
+  7 |     // unresolved dependencies.  Full integration tests for MediaUploadService
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/media-upload.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/translate.pipe.spec.ts:5
+
+  3 | import { I18nService } from './i18n.service';
+  4 |
+> 5 | describe('TranslatePipe', () => {
+    | ^
+  6 |   let pipe: TranslatePipe;
+  7 |
+  8 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/translate.pipe.spec.ts:5:1)
+Error: No tests found
+
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/app.spec.ts:1
+
+> 1 | import { describe, it, expect, beforeEach } from 'vitest';
+    | ^
+  2 | import { TestBed } from '@angular/core/testing';
+  3 | import { provideHttpClient } from '@angular/common/http';
+  4 | import { provideRouter } from '@angular/router';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/app.spec.ts:1:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:1
+
+> 1 | import { describe, it, expect, beforeEach } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { HttpClientTestingModule } from '@angular/common/http/testing';
+  4 | import { AudioSyncReaderComponent } from './audio-sync-reader.component';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:1:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/chat-list/chat-list.component.spec.ts:1
+
+> 1 | import { describe, it, expect, beforeEach } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { ChatListComponent } from './chat-list.component';
+  4 | import { ChatService } from '../../services/chat.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at /root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:70:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts:5:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/discovery/discovery.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { DiscoveryComponent } from './discovery.component';
+  4 | import { DiscoveryService } from '../../services/discovery.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/discovery/discovery.component.spec.ts:1:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/incoming-call/incoming-call.component.spec.ts:9
+
+   7 | import { SafetyService } from '../../services/safety.service';
+   8 | import { signal } from '@angular/core';
+>  9 | import { vi } from 'vitest';
+     | ^
+  10 |
+  11 | describe('IncomingCallComponent', () => {
+  12 |   let component: IncomingCallComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:9:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/language-selector/language-selector.component.spec.ts:6
+
+  4 | import { TranslatePipe } from '../../services/translate.pipe';
+  5 |
+> 6 | describe('LanguageSelectorComponent', () => {
+    | ^
+  7 |   let component: LanguageSelectorComponent;
+  8 |   let fixture: ComponentFixture<LanguageSelectorComponent>;
+  9 |   let i18nService: I18nService;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/language-selector/language-selector.component.spec.ts:6:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { By } from '@angular/platform-browser';
+  4 | import { LongPressContextMenuComponent } from './long-press-context-menu.component';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at /root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:50:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5
+
+  3 | import { provideHttpClient } from '@angular/common/http';
+  4 | import { provideHttpClientTesting } from '@angular/common/http/testing';
+> 5 | import { vi } from 'vitest';
+    | ^
+  6 | import { NotificationsInboxComponent } from './notifications-inbox.component';
+  7 | import { NotificationService, InAppNotification } from '../../services/notification.service';
+  8 | import { I18nService } from '../../services/i18n.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-primary/button-primary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonPrimaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-primary/button-primary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonSecondaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/card/card.component.spec.ts:19
+
+  17 | }
+  18 |
+> 19 | describe('AppCardComponent', () => {
+     | ^
+  20 |   let fixture: ComponentFixture<TestHostComponent>;
+  21 |   let host: TestHostComponent;
+  22 |   let cardElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/card/card.component.spec.ts:19:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/chip/chip.component.spec.ts:39
+
+  37 | }
+  38 |
+> 39 | describe('AppChipComponent', () => {
+     | ^
+  40 |   let fixture: ComponentFixture<TestHostComponent>;
+  41 |   let host: TestHostComponent;
+  42 |   let chipElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/chip/chip.component.spec.ts:39:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/empty-state/empty-state.component.spec.ts:33
+
+  31 | }
+  32 |
+> 33 | describe('AppEmptyStateComponent', () => {
+     | ^
+  34 |   let fixture: ComponentFixture<TestHostComponent>;
+  35 |   let host: TestHostComponent;
+  36 |   let emptyStateElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/empty-state/empty-state.component.spec.ts:33:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/input/input.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppInputComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let inputElement: HTMLInputElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/input/input.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/pill/pill.component.spec.ts:25
+
+  23 | }
+  24 |
+> 25 | describe('AppPillComponent', () => {
+     | ^
+  26 |   let fixture: ComponentFixture<TestHostComponent>;
+  27 |   let host: TestHostComponent;
+  28 |   let pillElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/pill/pill.component.spec.ts:25:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/textarea/textarea.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppTextareaComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let textareaElement: HTMLTextAreaElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/textarea/textarea.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/toast/toast.spec.ts:5
+
+  3 | import { Toast } from './toast';
+  4 |
+> 5 | describe('Toast', () => {
+    | ^
+  6 |   let component: Toast;
+  7 |   let fixture: ComponentFixture<Toast>;
+  8 |
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/toast/toast.spec.ts:5:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/user-detail/user-detail.component.spec.ts:8
+
+   6 | import { SafetyService } from '../../services/safety.service';
+   7 | import { of } from 'rxjs';
+>  8 | import { vi } from 'vitest';
+     | ^
+   9 |
+  10 | describe('UserDetailComponent', () => {
+  11 |   let component: UserDetailComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/user-detail/user-detail.component.spec.ts:8:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/voip-call/voip-call.component.spec.ts:1
+
+> 1 | import { vi, Mocked } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { VoipCallComponent } from './voip-call.component';
+  4 | import { ComponentRef } from '@angular/core';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.spec.ts:1:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/i18n.service.spec.ts:4
+
+  2 | import { I18nService } from './i18n.service';
+  3 |
+> 4 | describe('I18nService', () => {
+    | ^
+  5 |   let service: I18nService;
+  6 |
+  7 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/i18n.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/media-upload.service.spec.ts:4
+
+  2 | import { MediaUploadService } from './media-upload.service';
+  3 |
+> 4 | describe('MediaUploadService', () => {
+    | ^
+  5 |   it('should exist', () => {
+  6 |     // Placeholder test so the spec file compiles without failing due to
+  7 |     // unresolved dependencies.  Full integration tests for MediaUploadService
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/media-upload.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/translate.pipe.spec.ts:5
+
+  3 | import { I18nService } from './i18n.service';
+  4 |
+> 5 | describe('TranslatePipe', () => {
+    | ^
+  6 |   let pipe: TranslatePipe;
+  7 |
+  8 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/translate.pipe.spec.ts:5:1)
+Error: No tests found
+
+(node:286760) Warning: Failed to load the ES module: /root/hellotalk/frontend/src/app/services/livekit.service.ts. Make sure to set "type": "module" in the nearest package.json file or use the .mjs extension.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/app.spec.ts:1
+
+> 1 | import { describe, it, expect, beforeEach } from 'vitest';
+    | ^
+  2 | import { TestBed } from '@angular/core/testing';
+  3 | import { provideHttpClient } from '@angular/common/http';
+  4 | import { provideRouter } from '@angular/router';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/app.spec.ts:1:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:1
+
+> 1 | import { describe, it, expect, beforeEach } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { HttpClientTestingModule } from '@angular/common/http/testing';
+  4 | import { AudioSyncReaderComponent } from './audio-sync-reader.component';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:1:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/chat-list/chat-list.component.spec.ts:1
+
+> 1 | import { describe, it, expect, beforeEach } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { ChatListComponent } from './chat-list.component';
+  4 | import { ChatService } from '../../services/chat.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at /root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:70:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts:5:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/discovery/discovery.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { DiscoveryComponent } from './discovery.component';
+  4 | import { DiscoveryService } from '../../services/discovery.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/discovery/discovery.component.spec.ts:1:1)
+SyntaxError: Cannot use 'import.meta' outside a module
+
+   at src/app/components/incoming-call/incoming-call.component.ts:9
+
+   7 | import { CentrifugoService } from '../../services/centrifugo.service';
+   8 | import { AuthService } from '../../services/auth.service';
+>  9 | import { LivekitService } from '../../services/livekit.service';
+     | ^
+  10 |
+  11 | export interface IncomingCallInfo {
+  12 |   callerId: string;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.ts:9:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:2:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/language-selector/language-selector.component.spec.ts:6
+
+  4 | import { TranslatePipe } from '../../services/translate.pipe';
+  5 |
+> 6 | describe('LanguageSelectorComponent', () => {
+    | ^
+  7 |   let component: LanguageSelectorComponent;
+  8 |   let fixture: ComponentFixture<LanguageSelectorComponent>;
+  9 |   let i18nService: I18nService;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/language-selector/language-selector.component.spec.ts:6:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { By } from '@angular/platform-browser';
+  4 | import { LongPressContextMenuComponent } from './long-press-context-menu.component';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at /root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:50:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5
+
+  3 | import { provideHttpClient } from '@angular/common/http';
+  4 | import { provideHttpClientTesting } from '@angular/common/http/testing';
+> 5 | import { vi } from 'vitest';
+    | ^
+  6 | import { NotificationsInboxComponent } from './notifications-inbox.component';
+  7 | import { NotificationService, InAppNotification } from '../../services/notification.service';
+  8 | import { I18nService } from '../../services/i18n.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-primary/button-primary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonPrimaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-primary/button-primary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonSecondaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/card/card.component.spec.ts:19
+
+  17 | }
+  18 |
+> 19 | describe('AppCardComponent', () => {
+     | ^
+  20 |   let fixture: ComponentFixture<TestHostComponent>;
+  21 |   let host: TestHostComponent;
+  22 |   let cardElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/card/card.component.spec.ts:19:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/chip/chip.component.spec.ts:39
+
+  37 | }
+  38 |
+> 39 | describe('AppChipComponent', () => {
+     | ^
+  40 |   let fixture: ComponentFixture<TestHostComponent>;
+  41 |   let host: TestHostComponent;
+  42 |   let chipElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/chip/chip.component.spec.ts:39:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/empty-state/empty-state.component.spec.ts:33
+
+  31 | }
+  32 |
+> 33 | describe('AppEmptyStateComponent', () => {
+     | ^
+  34 |   let fixture: ComponentFixture<TestHostComponent>;
+  35 |   let host: TestHostComponent;
+  36 |   let emptyStateElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/empty-state/empty-state.component.spec.ts:33:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/input/input.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppInputComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let inputElement: HTMLInputElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/input/input.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/pill/pill.component.spec.ts:25
+
+  23 | }
+  24 |
+> 25 | describe('AppPillComponent', () => {
+     | ^
+  26 |   let fixture: ComponentFixture<TestHostComponent>;
+  27 |   let host: TestHostComponent;
+  28 |   let pillElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/pill/pill.component.spec.ts:25:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/textarea/textarea.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppTextareaComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let textareaElement: HTMLTextAreaElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/textarea/textarea.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/toast/toast.spec.ts:5
+
+  3 | import { Toast } from './toast';
+  4 |
+> 5 | describe('Toast', () => {
+    | ^
+  6 |   let component: Toast;
+  7 |   let fixture: ComponentFixture<Toast>;
+  8 |
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/toast/toast.spec.ts:5:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/user-detail/user-detail.component.spec.ts:8
+
+   6 | import { SafetyService } from '../../services/safety.service';
+   7 | import { of } from 'rxjs';
+>  8 | import { vi } from 'vitest';
+     | ^
+   9 |
+  10 | describe('UserDetailComponent', () => {
+  11 |   let component: UserDetailComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/user-detail/user-detail.component.spec.ts:8:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/voip-call/voip-call.component.spec.ts:1
+
+> 1 | import { vi, Mocked } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { VoipCallComponent } from './voip-call.component';
+  4 | import { ComponentRef } from '@angular/core';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.spec.ts:1:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/i18n.service.spec.ts:4
+
+  2 | import { I18nService } from './i18n.service';
+  3 |
+> 4 | describe('I18nService', () => {
+    | ^
+  5 |   let service: I18nService;
+  6 |
+  7 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/i18n.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/media-upload.service.spec.ts:4
+
+  2 | import { MediaUploadService } from './media-upload.service';
+  3 |
+> 4 | describe('MediaUploadService', () => {
+    | ^
+  5 |   it('should exist', () => {
+  6 |     // Placeholder test so the spec file compiles without failing due to
+  7 |     // unresolved dependencies.  Full integration tests for MediaUploadService
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/media-upload.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/translate.pipe.spec.ts:5
+
+  3 | import { I18nService } from './i18n.service';
+  4 |
+> 5 | describe('TranslatePipe', () => {
+    | ^
+  6 |   let pipe: TranslatePipe;
+  7 |
+  8 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/translate.pipe.spec.ts:5:1)
+Error: No tests found
+
+(node:287271) Warning: Failed to load the ES module: /root/hellotalk/frontend/src/app/services/livekit.service.ts. Make sure to set "type": "module" in the nearest package.json file or use the .mjs extension.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/app.spec.ts:1
+
+> 1 | import { describe, it, expect, beforeEach } from 'vitest';
+    | ^
+  2 | import { TestBed } from '@angular/core/testing';
+  3 | import { provideHttpClient } from '@angular/common/http';
+  4 | import { provideRouter } from '@angular/router';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/app.spec.ts:1:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:1
+
+> 1 | import { describe, it, expect, beforeEach } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { HttpClientTestingModule } from '@angular/common/http/testing';
+  4 | import { AudioSyncReaderComponent } from './audio-sync-reader.component';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:1:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/chat-list/chat-list.component.spec.ts:1
+
+> 1 | import { describe, it, expect, beforeEach } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { ChatListComponent } from './chat-list.component';
+  4 | import { ChatService } from '../../services/chat.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at /root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:70:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts:5:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/discovery/discovery.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { DiscoveryComponent } from './discovery.component';
+  4 | import { DiscoveryService } from '../../services/discovery.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/discovery/discovery.component.spec.ts:1:1)
+SyntaxError: Cannot use 'import.meta' outside a module
+
+   at src/app/components/incoming-call/incoming-call.component.ts:9
+
+   7 | import { CentrifugoService } from '../../services/centrifugo.service';
+   8 | import { AuthService } from '../../services/auth.service';
+>  9 | import { LivekitService } from '../../services/livekit.service';
+     | ^
+  10 |
+  11 | export interface IncomingCallInfo {
+  12 |   callerId: string;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.ts:9:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:2:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/language-selector/language-selector.component.spec.ts:6
+
+  4 | import { TranslatePipe } from '../../services/translate.pipe';
+  5 |
+> 6 | describe('LanguageSelectorComponent', () => {
+    | ^
+  7 |   let component: LanguageSelectorComponent;
+  8 |   let fixture: ComponentFixture<LanguageSelectorComponent>;
+  9 |   let i18nService: I18nService;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/language-selector/language-selector.component.spec.ts:6:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { By } from '@angular/platform-browser';
+  4 | import { LongPressContextMenuComponent } from './long-press-context-menu.component';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at /root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:50:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5
+
+  3 | import { provideHttpClient } from '@angular/common/http';
+  4 | import { provideHttpClientTesting } from '@angular/common/http/testing';
+> 5 | import { vi } from 'vitest';
+    | ^
+  6 | import { NotificationsInboxComponent } from './notifications-inbox.component';
+  7 | import { NotificationService, InAppNotification } from '../../services/notification.service';
+  8 | import { I18nService } from '../../services/i18n.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-primary/button-primary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonPrimaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-primary/button-primary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonSecondaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/card/card.component.spec.ts:19
+
+  17 | }
+  18 |
+> 19 | describe('AppCardComponent', () => {
+     | ^
+  20 |   let fixture: ComponentFixture<TestHostComponent>;
+  21 |   let host: TestHostComponent;
+  22 |   let cardElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/card/card.component.spec.ts:19:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/chip/chip.component.spec.ts:39
+
+  37 | }
+  38 |
+> 39 | describe('AppChipComponent', () => {
+     | ^
+  40 |   let fixture: ComponentFixture<TestHostComponent>;
+  41 |   let host: TestHostComponent;
+  42 |   let chipElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/chip/chip.component.spec.ts:39:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/empty-state/empty-state.component.spec.ts:33
+
+  31 | }
+  32 |
+> 33 | describe('AppEmptyStateComponent', () => {
+     | ^
+  34 |   let fixture: ComponentFixture<TestHostComponent>;
+  35 |   let host: TestHostComponent;
+  36 |   let emptyStateElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/empty-state/empty-state.component.spec.ts:33:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/input/input.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppInputComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let inputElement: HTMLInputElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/input/input.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/pill/pill.component.spec.ts:25
+
+  23 | }
+  24 |
+> 25 | describe('AppPillComponent', () => {
+     | ^
+  26 |   let fixture: ComponentFixture<TestHostComponent>;
+  27 |   let host: TestHostComponent;
+  28 |   let pillElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/pill/pill.component.spec.ts:25:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/textarea/textarea.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppTextareaComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let textareaElement: HTMLTextAreaElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/textarea/textarea.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/toast/toast.spec.ts:5
+
+  3 | import { Toast } from './toast';
+  4 |
+> 5 | describe('Toast', () => {
+    | ^
+  6 |   let component: Toast;
+  7 |   let fixture: ComponentFixture<Toast>;
+  8 |
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/toast/toast.spec.ts:5:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/user-detail/user-detail.component.spec.ts:8
+
+   6 | import { SafetyService } from '../../services/safety.service';
+   7 | import { of } from 'rxjs';
+>  8 | import { vi } from 'vitest';
+     | ^
+   9 |
+  10 | describe('UserDetailComponent', () => {
+  11 |   let component: UserDetailComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/user-detail/user-detail.component.spec.ts:8:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/voip-call/voip-call.component.spec.ts:1
+
+> 1 | import { vi, Mocked } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { VoipCallComponent } from './voip-call.component';
+  4 | import { ComponentRef } from '@angular/core';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.spec.ts:1:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/i18n.service.spec.ts:4
+
+  2 | import { I18nService } from './i18n.service';
+  3 |
+> 4 | describe('I18nService', () => {
+    | ^
+  5 |   let service: I18nService;
+  6 |
+  7 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/i18n.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/media-upload.service.spec.ts:4
+
+  2 | import { MediaUploadService } from './media-upload.service';
+  3 |
+> 4 | describe('MediaUploadService', () => {
+    | ^
+  5 |   it('should exist', () => {
+  6 |     // Placeholder test so the spec file compiles without failing due to
+  7 |     // unresolved dependencies.  Full integration tests for MediaUploadService
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/media-upload.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/translate.pipe.spec.ts:5
+
+  3 | import { I18nService } from './i18n.service';
+  4 |
+> 5 | describe('TranslatePipe', () => {
+    | ^
+  6 |   let pipe: TranslatePipe;
+  7 |
+  8 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/translate.pipe.spec.ts:5:1)
+Error: No tests found
+
+(node:287600) Warning: Failed to load the ES module: /root/hellotalk/frontend/src/app/services/livekit.service.ts. Make sure to set "type": "module" in the nearest package.json file or use the .mjs extension.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/app.spec.ts:1
+
+> 1 | import { describe, it, expect, beforeEach } from 'vitest';
+    | ^
+  2 | import { TestBed } from '@angular/core/testing';
+  3 | import { provideHttpClient } from '@angular/common/http';
+  4 | import { provideRouter } from '@angular/router';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/app.spec.ts:1:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:1
+
+> 1 | import { describe, it, expect, beforeEach } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { HttpClientTestingModule } from '@angular/common/http/testing';
+  4 | import { AudioSyncReaderComponent } from './audio-sync-reader.component';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:1:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/chat-list/chat-list.component.spec.ts:1
+
+> 1 | import { describe, it, expect, beforeEach } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { ChatListComponent } from './chat-list.component';
+  4 | import { ChatService } from '../../services/chat.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at /root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:70:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts:5:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/discovery/discovery.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { DiscoveryComponent } from './discovery.component';
+  4 | import { DiscoveryService } from '../../services/discovery.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/discovery/discovery.component.spec.ts:1:1)
+SyntaxError: Cannot use 'import.meta' outside a module
+
+   at src/app/components/incoming-call/incoming-call.component.ts:9
+
+   7 | import { CentrifugoService } from '../../services/centrifugo.service';
+   8 | import { AuthService } from '../../services/auth.service';
+>  9 | import { LivekitService } from '../../services/livekit.service';
+     | ^
+  10 |
+  11 | export interface IncomingCallInfo {
+  12 |   callerId: string;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.ts:9:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:2:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/language-selector/language-selector.component.spec.ts:6
+
+  4 | import { TranslatePipe } from '../../services/translate.pipe';
+  5 |
+> 6 | describe('LanguageSelectorComponent', () => {
+    | ^
+  7 |   let component: LanguageSelectorComponent;
+  8 |   let fixture: ComponentFixture<LanguageSelectorComponent>;
+  9 |   let i18nService: I18nService;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/language-selector/language-selector.component.spec.ts:6:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { By } from '@angular/platform-browser';
+  4 | import { LongPressContextMenuComponent } from './long-press-context-menu.component';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at /root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:50:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5
+
+  3 | import { provideHttpClient } from '@angular/common/http';
+  4 | import { provideHttpClientTesting } from '@angular/common/http/testing';
+> 5 | import { vi } from 'vitest';
+    | ^
+  6 | import { NotificationsInboxComponent } from './notifications-inbox.component';
+  7 | import { NotificationService, InAppNotification } from '../../services/notification.service';
+  8 | import { I18nService } from '../../services/i18n.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-primary/button-primary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonPrimaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-primary/button-primary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonSecondaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/card/card.component.spec.ts:19
+
+  17 | }
+  18 |
+> 19 | describe('AppCardComponent', () => {
+     | ^
+  20 |   let fixture: ComponentFixture<TestHostComponent>;
+  21 |   let host: TestHostComponent;
+  22 |   let cardElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/card/card.component.spec.ts:19:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/chip/chip.component.spec.ts:39
+
+  37 | }
+  38 |
+> 39 | describe('AppChipComponent', () => {
+     | ^
+  40 |   let fixture: ComponentFixture<TestHostComponent>;
+  41 |   let host: TestHostComponent;
+  42 |   let chipElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/chip/chip.component.spec.ts:39:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/empty-state/empty-state.component.spec.ts:33
+
+  31 | }
+  32 |
+> 33 | describe('AppEmptyStateComponent', () => {
+     | ^
+  34 |   let fixture: ComponentFixture<TestHostComponent>;
+  35 |   let host: TestHostComponent;
+  36 |   let emptyStateElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/empty-state/empty-state.component.spec.ts:33:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/input/input.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppInputComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let inputElement: HTMLInputElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/input/input.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/pill/pill.component.spec.ts:25
+
+  23 | }
+  24 |
+> 25 | describe('AppPillComponent', () => {
+     | ^
+  26 |   let fixture: ComponentFixture<TestHostComponent>;
+  27 |   let host: TestHostComponent;
+  28 |   let pillElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/pill/pill.component.spec.ts:25:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/textarea/textarea.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppTextareaComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let textareaElement: HTMLTextAreaElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/textarea/textarea.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/toast/toast.spec.ts:5
+
+  3 | import { Toast } from './toast';
+  4 |
+> 5 | describe('Toast', () => {
+    | ^
+  6 |   let component: Toast;
+  7 |   let fixture: ComponentFixture<Toast>;
+  8 |
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/toast/toast.spec.ts:5:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/user-detail/user-detail.component.spec.ts:8
+
+   6 | import { SafetyService } from '../../services/safety.service';
+   7 | import { of } from 'rxjs';
+>  8 | import { vi } from 'vitest';
+     | ^
+   9 |
+  10 | describe('UserDetailComponent', () => {
+  11 |   let component: UserDetailComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/user-detail/user-detail.component.spec.ts:8:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/voip-call/voip-call.component.spec.ts:1
+
+> 1 | import { vi, Mocked } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { VoipCallComponent } from './voip-call.component';
+  4 | import { ComponentRef } from '@angular/core';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.spec.ts:1:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/i18n.service.spec.ts:4
+
+  2 | import { I18nService } from './i18n.service';
+  3 |
+> 4 | describe('I18nService', () => {
+    | ^
+  5 |   let service: I18nService;
+  6 |
+  7 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/i18n.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/media-upload.service.spec.ts:4
+
+  2 | import { MediaUploadService } from './media-upload.service';
+  3 |
+> 4 | describe('MediaUploadService', () => {
+    | ^
+  5 |   it('should exist', () => {
+  6 |     // Placeholder test so the spec file compiles without failing due to
+  7 |     // unresolved dependencies.  Full integration tests for MediaUploadService
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/media-upload.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/translate.pipe.spec.ts:5
+
+  3 | import { I18nService } from './i18n.service';
+  4 |
+> 5 | describe('TranslatePipe', () => {
+    | ^
+  6 |   let pipe: TranslatePipe;
+  7 |
+  8 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/translate.pipe.spec.ts:5:1)
+Error: No tests found
+

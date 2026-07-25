@@ -18,7 +18,7 @@ export interface Moment {
     id: string;
     display_name: string;
     avatar_url?: string | null;
-    native_language?: string;
+    native_languages?: string[];
     target_languages?: string[];
   } | null;
 }
@@ -51,7 +51,7 @@ export class FeedService {
           id,
           display_name,
           avatar_url,
-          native_language,
+          native_languages,
           target_languages
         )
       `,
@@ -69,7 +69,7 @@ export class FeedService {
       // Get current user's target languages
       const { data: currentUser, error: userError } = await supabase
         .from('users')
-        .select('target_languages, native_language')
+        .select('target_languages, native_languages')
         .eq('id', currentUserId)
         .single();
 
@@ -85,18 +85,18 @@ export class FeedService {
         (
           currentUser as {
             target_languages?: string[];
-            native_language?: string;
+            native_languages?: string[];
           }
         ).target_languages || [];
       const nativeLang: string | undefined = (
-        currentUser as { target_languages?: string[]; native_language?: string }
-      ).native_language;
+        currentUser as { target_languages?: string[]; native_languages?: string }
+      ).native_languages;
 
       // Build OR conditions for language matching
       const conditions: string[] = [];
       if (targetLangs.length > 0) {
         conditions.push(
-          `author.native_language.in.(${targetLangs.map((l: string) => `"${l}"`).join(',')})`,
+          `author.native_languages.in.(${targetLangs.map((l: string) => `"${l}"`).join(',')})`,
         );
       }
       if (nativeLang) {
@@ -158,7 +158,7 @@ export class FeedService {
           id,
           display_name,
           avatar_url,
-          native_language,
+          native_languages,
           target_languages
         )
       `,
@@ -207,7 +207,7 @@ export class FeedService {
           id,
           display_name,
           avatar_url,
-          native_language,
+          native_languages,
           target_languages
         )
       `,

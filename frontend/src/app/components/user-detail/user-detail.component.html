@@ -69,7 +69,7 @@
       <div class="grid grid-cols-2 gap-4 mb-6">
         <div class="bg-surface-300 p-4 rounded-2xl">
           <p class="text-text-secondary text-xs font-bold uppercase mb-1">{{ 'profile.nativeLang' | t }}</p>
-          <p class="text-lg font-bold">{{ profile()?.native_language | uppercase }}</p>
+          <p class="text-lg font-bold">{{ profile()?.native_languages?.join(', ') | uppercase }}</p>
         </div>
         <div class="bg-surface-300 p-4 rounded-2xl">
           <p class="text-text-secondary text-xs font-bold uppercase mb-1">{{ 'profile.targetLang' | t }}</p>

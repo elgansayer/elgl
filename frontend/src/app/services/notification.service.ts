@@ -17,7 +17,7 @@ export interface InAppNotification {
     id: string;
     display_name?: string;
     avatar_url?: string;
-    native_language?: string;
+    native_languages?: string[];
     target_languages?: string[];
   };
 }
@@ -83,7 +83,7 @@ export class NotificationService {
           id: 'user-201',
           display_name: 'Sofia Tanaka',
           avatar_url: 'https://i.pravatar.cc/150?u=user-201',
-          native_language: 'ja',
+          native_languages: ['ja'],
           target_languages: ['en'],
         },
       },
@@ -98,7 +98,7 @@ export class NotificationService {
           id: 'user-202',
           display_name: 'Mateo Garcia',
           avatar_url: 'https://i.pravatar.cc/150?u=user-202',
-          native_language: 'es',
+          native_languages: ['es'],
           target_languages: ['en'],
         },
       },
@@ -114,7 +114,7 @@ export class NotificationService {
           id: 'user-203',
           display_name: 'Emma Watson',
           avatar_url: 'https://i.pravatar.cc/150?u=user-203',
-          native_language: 'en',
+          native_languages: ['en'],
           target_languages: ['fr'],
         },
       },
@@ -129,7 +129,7 @@ export class NotificationService {
           id: 'user-204',
           display_name: 'Kenji Sato',
           avatar_url: 'https://i.pravatar.cc/150?u=user-204',
-          native_language: 'ja',
+          native_languages: ['ja'],
           target_languages: ['es'],
         },
       },
@@ -144,7 +144,7 @@ export class NotificationService {
           id: 'user-205',
           display_name: 'Lucas Bernard',
           avatar_url: 'https://i.pravatar.cc/150?u=user-205',
-          native_language: 'fr',
+          native_languages: ['fr'],
           target_languages: ['en'],
         },
       },

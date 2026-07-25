@@ -17,7 +17,7 @@ export class User {
 
   @Column({ type: 'varchar', length: 2, nullable: true })
   @Index()
-  native_language!: string | null;
+  native_languages!: string[];
 
   @Column('text', { array: true, nullable: true })
   target_languages!: string[] | null;

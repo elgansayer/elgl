@@ -89,6 +89,9 @@ export class I18nService {
     // Language Selector & Header
     'lang.label': 'Language',
     'lang.selectTitle': 'Select App Language (Any Language)',
+    'lang.selectLanguage': 'Select a language',
+    'lang.searchPlaceholder': 'Search languages...',
+    'lang.selectPlaceholder': 'Select language',
     'lang.customPlaceholder': 'Enter ISO code e.g. sv, th, id...',
     'lang.applyCustom': 'Switch Language',
     'lang.anyNative': 'Any native language',
@@ -448,10 +451,13 @@ export class I18nService {
     'profile.bioPlaceholder': 'Bio and learning goals',
     'profile.hideLocation': 'Hide my location in discovery',
     'profile.hideSearch': 'Hide my profile in search',
+    'profile.hideAge': 'Hide my age',
+    'profile.avatarUrlPlaceholder': 'Avatar URL',
     'profile.saveChangesBtn': 'Save changes',
     'profile.updateSuccess': 'Profile updated successfully.',
     'profile.loadError': 'Failed to load profile',
     'profile.updateError': 'Failed to update profile',
+    'hobby.add': '+ Add Hobby',
 
     'visitors.title': 'Who viewed me',
     'visitors.subtitle': 'Recent profile visitors and language matches.',

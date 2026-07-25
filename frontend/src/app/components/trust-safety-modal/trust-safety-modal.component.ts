@@ -1,11 +1,12 @@
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
 import { EconomyStore } from '../../services/economy.store';
 
 @Component({
   selector: 'app-trust-safety-modal',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div
@@ -108,7 +109,7 @@ import { EconomyStore } from '../../services/economy.store';
             (click)="closed.emit()"
             class="px-4 py-2 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs"
           >
-            Cancel
+            {{ 'safety.cancelBtn' | t }}
           </button>
           @if (mode === 'report') {
             <button

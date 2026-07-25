@@ -1,5 +1,6 @@
 import { Component, signal, computed, output, input, inject, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
@@ -13,7 +14,7 @@ interface CropBox {
 @Component({
   selector: 'app-cover-photo-uploader',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   template: `
     <div class="relative w-full max-w-2xl mx-auto">
       <!-- Hidden file input -->
@@ -121,14 +122,14 @@ interface CropBox {
                 Apply Crop
               </button>
               <button (click)="cancelCrop()" class="px-4 py-2 bg-surface-100 text-white rounded-lg hover:bg-slate-500 transition-colors text-sm">
-                Cancel
+                {{ 'common.cancel' | t }}
               </button>
             }
             <button (click)="uploadCropped()" [disabled]="isUploading()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors text-sm disabled:opacity-50">
               {{ isUploading() ? 'Uploading...' : 'Upload' }}
             </button>
             <button (click)="reset()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors text-sm">
-              Cancel
+              {{ 'common.cancel' | t }}
             </button>
           </div>
 

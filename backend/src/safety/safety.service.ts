@@ -177,7 +177,7 @@ export class SafetyService {
       .select('blocked_id')
       .eq('blocker_id', userId);
 
-    if (error) {
+    if (error || !data) {
       this.logger.error(`Failed to get blocked user IDs for ${userId}:`, error);
       return [];
     }
@@ -196,7 +196,7 @@ export class SafetyService {
       .select('blocker_id')
       .eq('blocked_id', userId);
 
-    if (error) {
+    if (error || !data) {
       this.logger.error(`Failed to get blocker user IDs for ${userId}:`, error);
       return [];
     }

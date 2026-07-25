@@ -53,6 +53,18 @@ import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-c
             class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           />
         </div>
+        <div>
+          <label class="block text-sm font-medium text-text-secondary mb-1">Gender</label>
+          <select
+            [(ngModel)]="gender"
+            class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          >
+            <option value="">Prefer not to say</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
       </div>
 
       <button
@@ -77,6 +89,7 @@ export class ProfileEditComponent {
 
   readonly profile = signal<UserProfile | null>(null);
   readonly displayName = signal('');
+  readonly gender = signal('');
   readonly coverPhotoPreview = signal<string | null>(null);
   readonly showCropper = signal(false);
   readonly selectedFile = signal<File | null>(null);
@@ -91,6 +104,7 @@ export class ProfileEditComponent {
     if (profile) {
       this.profile.set(profile);
       this.displayName.set(profile.display_name || '');
+      this.gender.set(profile.gender || '');
     }
   }
 
@@ -145,6 +159,7 @@ export class ProfileEditComponent {
   async saveProfile() {
     await this.userService.updateMyProfile({
       display_name: this.displayName(),
+      gender: this.gender(),
     });
   }
 }

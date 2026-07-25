@@ -37,15 +37,17 @@
       <div class="pt-10 text-center text-sm text-text-secondary">{{ 'chatRoom.noMessages' | t }}</div>
     }
 
-    @for (msg of messages(); track msg.id) {
+    @for (msg of filteredMessages(); track msg.id) {
       <app-long-press-context-menu
         [messageId]="msg.id"
         [messageContent]="msg.text_content ?? ''"
         [messageType]="msg.message_type"
         [senderId]="msg.sender_id"
         [roomId]="roomId"
+        [isBlocked]="blockedUserIds().includes(msg.sender_id)"
         (favourite)="bookmark(msg)"
         (report)="reportMessage(msg)"
+        (block)="onBlockToggle($event)"
       >
         <div
           [class]="

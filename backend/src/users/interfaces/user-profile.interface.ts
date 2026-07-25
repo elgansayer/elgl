@@ -1,7 +1,7 @@
 export interface UserProfile {
   id: string;
   display_name?: string;
-  native_language: string;
+  native_languages: string[];
   target_languages: string[];
   bio_text?: string;
   avatar_url?: string;
@@ -18,6 +18,7 @@ export interface UserProfile {
   privacy_hide_age: boolean;
   privacy_hide_location: boolean;
   privacy_hide_from_search: boolean;
+  privacy_hide_gender: boolean;
   created_at: string;
 }
 
@@ -30,7 +31,7 @@ export interface ProfileVisitor {
     id: string;
     display_name?: string;
     avatar_url?: string;
-    native_language?: string;
+    native_languages?: string[];
     target_languages?: string[];
   };
 }

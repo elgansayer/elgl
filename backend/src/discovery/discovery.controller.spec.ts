@@ -55,7 +55,7 @@ describe('DiscoveryController', () => {
     it('should get user profile and search partners when user is provided', async () => {
       const mockProfile: any = { id: 'user-1', display_name: 'Test' };
       const mockPartners: any[] = [{ id: 'partner-1' }];
-      const query: any = { native_language: 'JA' };
+      const query: any = { native_languages: ['JA'] };
 
       (usersService.getProfile as jest.Mock).mockResolvedValue(mockProfile);
       (discoveryService.searchPartners as jest.Mock).mockResolvedValue(

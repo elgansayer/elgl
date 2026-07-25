@@ -16,7 +16,7 @@ export interface InAppNotification {
     id: string;
     display_name?: string;
     avatar_url?: string;
-    native_language?: string;
+    native_languages?: string[];
     target_languages?: string[];
   };
 }

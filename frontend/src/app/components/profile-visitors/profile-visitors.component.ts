@@ -43,9 +43,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   </p>
                 </div>
               </a>
-              @if (visit.visitor?.native_language) {
+              @if (visit.visitor?.native_languages) {
                 <span class="text-xs px-2 py-1 bg-slate-700 rounded-full text-slate-300">
-                  {{ visit.visitor.native_language | uppercase }}
+                  {{ (visit.visitor.native_languages || []).join(', ') | uppercase }}
                 </span>
               }
             </div>

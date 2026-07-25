@@ -21,6 +21,9 @@
         </button>
       }
       <button (click)="setLanguage('')" class="flex items-center justify-center px-4 py-1.5 rounded-full bg-surface-200 text-text-secondary font-bold border border-surface-100 whitespace-nowrap">{{ 'discovery.langAny' | t }}</button>
+      <div class="ms-2 self-center shrink-0">
+        <app-language-picker (languageSelected)="setLanguage($event)" [selectedCode]="selectedTargetLanguage()"></app-language-picker>
+      </div>
     </div>
   </header>
 

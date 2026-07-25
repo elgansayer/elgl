@@ -38,7 +38,7 @@ export class SearchQueryDto {
 
   @IsOptional()
   @IsString()
-  native_language?: string;
+  native_languages?: string;
 
   @IsOptional()
   @IsString()

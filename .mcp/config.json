@@ -26,6 +26,13 @@
         "--repository",
         "/home/elgan/dev/hellotalk"
       ]
+    },
+    "flyonui": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "flyonui-mcp"
+      ]
     }
   }
 }

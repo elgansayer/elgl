@@ -160,7 +160,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
             (click)="closed.emit()"
             class="px-4 py-2 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs"
           >
-            Cancel
+            {{ 'giftModal.cancelBtn' | t }}
           </button>
           @if (!showCoinPackages) {
             <button
