@@ -23,3 +23,740 @@ Use logical direction utilities only: ps/pe/ms/me/border-s/border-e.
 > frontend@0.0.0 lint
 > eslint "src/**/*.ts" --fix
 
+
+/root/hellotalk/frontend/src/app/app.routes.ts
+  15:10  error  'SubscriptionPlansComponent' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/chat/chat-message.component.ts
+  64:21  error  'messageId' is defined but never used        @typescript-eslint/no-unused-vars
+  30:13  error  <img/> element must have a text alternative  @angular-eslint/template/alt-text
+
+/root/hellotalk/frontend/src/app/components/audio-room/audio-room.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+  2:10  error  'I18nService' is defined but never used          @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.spec.ts
+  10:24  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.ts
+  1:10  error  'showToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/chat-room/chat-room.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/chat-search/chat-search.component.ts
+  74:3  error  Output bindings, including aliases, should not be named "on", nor prefixed with it (https://angular.dev/guide/components/outputs#choosing-event-names)  @angular-eslint/no-output-on-prefix
+
+/root/hellotalk/frontend/src/app/components/chat-view/chat-view.component.ts
+  17:27  error  Use built-in control flow instead of directive ngForOf  @angular-eslint/template/prefer-control-flow
+
+/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts
+  1:58  error  'computed' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/cover-photo-cropper/cover-photo-cropper.component.ts
+  49:12  error  Output bindings, including aliases, should not be named as standard DOM events          @angular-eslint/no-output-native
+  53:25  error  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+  10:5   error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  10:5   error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+  11:7   error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  11:7   error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+
+/root/hellotalk/frontend/src/app/components/cover-photo-uploader/cover-photo-uploader.component.ts
+    1:29  error  'computed' is defined but never used                                                    @typescript-eslint/no-unused-vars
+    1:62  error  'ElementRef' is defined but never used                                                  @typescript-eslint/no-unused-vars
+    1:74  error  'ViewChild' is defined but never used                                                   @typescript-eslint/no-unused-vars
+    1:85  error  'AfterViewInit' is defined but never used                                               @typescript-eslint/no-unused-vars
+  414:9   error  The value assigned to 'newY' is not used in subsequent statements                       no-useless-assignment
+   40:11  error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+   40:11  error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+   58:13  error  <img/> element must have a text alternative                                             @angular-eslint/template/alt-text
+  139:15  error  <img/> element must have a text alternative                                             @angular-eslint/template/alt-text
+
+/root/hellotalk/frontend/src/app/components/developer-dashboard/developer-dashboard.component.ts
+  4:10  error  'Router' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/discovery/discovery.component.spec.ts
+   5:10  error  'provideHttpClient' is defined but never used  @typescript-eslint/no-unused-vars
+   6:13  error  'toast' is defined but never used              @typescript-eslint/no-unused-vars
+  12:29  error  Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/discovery/discovery.component.ts
+  1:10  error  'showToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/discovery/global-search/global-search.component.ts
+  61:12  error  Output bindings, including aliases, should not be named as standard DOM events  @angular-eslint/no-output-native
+  17:9   error  A label component must be associated with a form element                        @angular-eslint/template/label-has-associated-control
+  29:9   error  A label component must be associated with a form element                        @angular-eslint/template/label-has-associated-control
+  41:9   error  A label component must be associated with a form element                        @angular-eslint/template/label-has-associated-control
+
+/root/hellotalk/frontend/src/app/components/emoji-picker/emoji-picker.component.ts
+  62:3  error  Output bindings, including aliases, should not be named "on", nor prefixed with it (https://angular.dev/guide/components/outputs#choosing-event-names)  @angular-eslint/no-output-on-prefix
+
+/root/hellotalk/frontend/src/app/components/gift-picker/gift-picker.component.ts
+  69:3   error  Output bindings, including aliases, should not be named "on", nor prefixed with it (https://angular.dev/guide/components/outputs#choosing-event-names)  @angular-eslint/no-output-on-prefix
+  42:33  error  Use built-in control flow instead of directive ngForOf                                                                                                  @angular-eslint/template/prefer-control-flow
+  52:36  error  Use built-in control flow instead of directive ngForOf                                                                                                  @angular-eslint/template/prefer-control-flow
+
+/root/hellotalk/frontend/src/app/components/hobby-tags/hobby-tags.component.ts
+  158:36  error  Unexpected any. Specify a different type                                                                                                                                @typescript-eslint/no-explicit-any
+  171:15  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+
+/root/hellotalk/frontend/src/app/components/incoming-call-modal/incoming-call-modal.component.ts
+  159:66  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.spec.ts
+  14:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  15:24  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  16:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  17:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.ts
+    4:10  error  'TranslatePipe' is defined but never used  @typescript-eslint/no-unused-vars
+  148:62  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts
+    8:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+    9:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   76:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   78:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  136:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  138:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  149:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  152:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  160:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  163:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.ts
+   96:13  error  Output bindings, including aliases, should not be named as standard DOM events                                                                                          @angular-eslint/no-output-native
+  113:15  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+  175:3   error  Prefer using the `host` metadata property in the `@Component` decorator for host listeners instead of the `@HostListener` decorator                                     @angular-eslint/prefer-host-metadata-property
+  183:3   error  Prefer using the `host` metadata property in the `@Component` decorator for host listeners instead of the `@HostListener` decorator                                     @angular-eslint/prefer-host-metadata-property
+  188:3   error  Prefer using the `host` metadata property in the `@Component` decorator for host listeners instead of the `@HostListener` decorator                                     @angular-eslint/prefer-host-metadata-property
+  193:3   error  Prefer using the `host` metadata property in the `@Component` decorator for host listeners instead of the `@HostListener` decorator                                     @angular-eslint/prefer-host-metadata-property
+   21:7   error  click must be accompanied by either keyup, keydown or keypress event for accessibility                                                                                  @angular-eslint/template/click-events-have-key-events
+   21:7   error  Elements with interaction handlers must be focusable                                                                                                                    @angular-eslint/template/interactive-supports-focus
+
+/root/hellotalk/frontend/src/app/components/long-press-context-menu/report-user-modal/report-user-modal.component.ts
+  29:13  error  Output bindings, including aliases, should not be named as standard DOM events  @angular-eslint/no-output-native
+  68:15  error  'err' is defined but never used                                                 @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/message-context-menu/message-context-menu.component.ts
+   1:36  error  'HostListener' is defined but never used                                                @typescript-eslint/no-unused-vars
+   1:50  error  'ElementRef' is defined but never used                                                  @typescript-eslint/no-unused-vars
+  35:3   error  Output bindings, including aliases, should not be named as standard DOM events          @angular-eslint/no-output-native
+  10:5   error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  10:5   error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+  12:9   error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  12:9   error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+
+/root/hellotalk/frontend/src/app/components/moments-feed/moments-feed.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/notifications-inbox/notifications-inbox.component.ts
+  3:18  error  'RouterLink' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/primitives/button/button.component.ts
+  28:12  error  Output bindings, including aliases, should not be named "on", nor prefixed with it (https://angular.dev/guide/components/outputs#choosing-event-names)  @angular-eslint/no-output-on-prefix
+
+/root/hellotalk/frontend/src/app/components/primitives/scrollable-pills/scrollable-pills.component.ts
+  37:3  error  Output bindings, including aliases, should not be named as standard DOM events  @angular-eslint/no-output-native
+
+/root/hellotalk/frontend/src/app/components/primitives/toast/toast.component.ts
+  2:24  error  'ToastMessage' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/profile-edit/profile-edit.component.ts
+  17:9   error  A label component must be associated with a form element  @angular-eslint/template/label-has-associated-control
+  50:11  error  A label component must be associated with a form element  @angular-eslint/template/label-has-associated-control
+
+/root/hellotalk/frontend/src/app/components/report-modal/report-modal.component.ts
+  14:5  error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  14:5  error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+  23:9  error  A label component must be associated with a form element                                @angular-eslint/template/label-has-associated-control
+  50:9  error  A label component must be associated with a form element                                @angular-eslint/template/label-has-associated-control
+
+/root/hellotalk/frontend/src/app/components/report-user-modal/report-user-modal.component.ts
+   28:13  error  Output bindings, including aliases, should not be named as standard DOM events                                                                                          @angular-eslint/no-output-native
+   60:5   error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+   61:5   error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+  130:19  error  Unexpected any. Specify a different type                                                                                                                                @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/text-to-speech/text-to-speech.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/video-call/video-call.component.ts
+   21:3   error  'AudioTrack' is defined but never used                 @typescript-eslint/no-unused-vars
+   29:10  error  'AppButtonPrimaryComponent' is defined but never used  @typescript-eslint/no-unused-vars
+  251:5   error  'publication' is defined but never used                @typescript-eslint/no-unused-vars
+  252:5   error  'participant' is defined but never used                @typescript-eslint/no-unused-vars
+  261:5   error  'publication' is defined but never used                @typescript-eslint/no-unused-vars
+  262:5   error  'participant' is defined but never used                @typescript-eslint/no-unused-vars
+  269:37  error  'participant' is defined but never used                @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/vocabulary-dashboard/vocabulary-dashboard.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/voice-recorder/voice-recorder.component.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.spec.ts
+   10:16  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+   23:7   error  'mockRemoteAudioTrack' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   24:7   error  'mockRemoteVideoTrack' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  134:19  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  136:36  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  140:36  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  161:19  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  169:46  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.ts
+  177:68  error  'publication' is defined but never used   @typescript-eslint/no-unused-vars
+  177:81  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/core/auth.service.ts
+  17:58  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  20:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/pages/chat/chat-page.component.ts
+  18:11  error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  18:11  error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+  18:33  error  Use built-in control flow instead of directive ngForOf                                  @angular-eslint/template/prefer-control-flow
+  28:22  error  Use built-in control flow instead of directive ngIf                                     @angular-eslint/template/prefer-control-flow
+  36:15  error  Use built-in control flow instead of directive ngIf                                     @angular-eslint/template/prefer-control-flow
+  50:47  error  Use built-in control flow instead of directive ngForOf                                  @angular-eslint/template/prefer-control-flow
+  70:15  error  Use built-in control flow instead of directive ngIf                                     @angular-eslint/template/prefer-control-flow
+
+/root/hellotalk/frontend/src/app/pages/home/home.component.ts
+  34:3  error  Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+
+/root/hellotalk/frontend/src/app/services/audio-rooms.store.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/services/economy.store.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/services/favourite.service.ts
+  18:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  22:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  26:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  27:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/services/feed.service.ts
+  130:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  132:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  138:64  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/services/livekit.service.ts
+  12:57  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  37:18  error  'roomName' is defined but never used      @typescript-eslint/no-unused-vars
+  37:36  error  'userId' is defined but never used        @typescript-eslint/no-unused-vars
+  37:52  error  'isVideoCall' is defined but never used   @typescript-eslint/no-unused-vars
+  42:23  error  'isVideoCall' is defined but never used   @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/services/media-upload.service.spec.ts
+  1:10  error  'TestBed' is defined but never used             @typescript-eslint/no-unused-vars
+  2:10  error  'MediaUploadService' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/services/moments.store.ts
+  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/services/monetisation.service.ts
+  62:15  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+
+/root/hellotalk/frontend/src/app/services/notification-preferences.service.ts
+  63:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  77:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/root/hellotalk/frontend/src/app/services/restore-purchases.service.ts
+  19:5   error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+  20:5   error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+  97:14  error  'error' is defined but never used                                                                                                                                       @typescript-eslint/no-unused-vars
+
+/root/hellotalk/frontend/src/app/services/video-call.service.ts
+  168:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 145 problems (145 errors, 0 warnings)
+
+
+> backend@0.0.1 lint
+> sh -c 'eslint "{src,apps,libs,test}/**/*.ts" --fix'
+
+
+> backend@0.0.1 test
+> NODE_OPTIONS='--experimental-vm-modules' jest
+
+(node:285771) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS src/nlp/nlp.controller.spec.ts
+PASS src/monetisation/monetisation.controller.spec.ts
+PASS src/nlp/nlp.service.spec.ts
+  ● Console
+
+    console.error
+      [Langfuse SDK] Unknown error: TypeError: Cannot read properties of undefined (reading 'status')
+          at status (/root/hellotalk/backend/node_modules/langfuse-core/src/index.ts:1249:17)
+          at retriable (/root/hellotalk/backend/node_modules/langfuse-core/src/utils.ts:35:19)
+          at Langfuse.fetchWithRetry (/root/hellotalk/backend/node_modules/langfuse-core/src/index.ts:1236:12)
+
+      at error (../node_modules/langfuse-core/src/index.ts:180:13)
+      at logIngestionError (../node_modules/langfuse-core/src/index.ts:1052:13)
+      at done (../node_modules/langfuse-core/src/index.ts:1094:15)
+      at done (../node_modules/langfuse-core/src/index.ts:1132:9)
+
+    console.error
+      [Langfuse SDK] Unknown error: TypeError: Cannot read properties of undefined (reading 'status')
+          at status (/root/hellotalk/backend/node_modules/langfuse-core/src/index.ts:1249:17)
+          at retriable (/root/hellotalk/backend/node_modules/langfuse-core/src/utils.ts:35:19)
+          at Langfuse.fetchWithRetry (/root/hellotalk/backend/node_modules/langfuse-core/src/index.ts:1236:12)
+
+      at error (../node_modules/langfuse-core/src/index.ts:180:13)
+      at logIngestionError (../node_modules/langfuse-core/src/index.ts:1052:13)
+      at done (../node_modules/langfuse-core/src/index.ts:1094:15)
+      at done (../node_modules/langfuse-core/src/index.ts:1132:9)
+
+    console.error
+      [Langfuse SDK] Unknown error: TypeError: Cannot read properties of undefined (reading 'status')
+          at status (/root/hellotalk/backend/node_modules/langfuse-core/src/index.ts:1249:17)
+          at retriable (/root/hellotalk/backend/node_modules/langfuse-core/src/utils.ts:35:19)
+          at Langfuse.fetchWithRetry (/root/hellotalk/backend/node_modules/langfuse-core/src/index.ts:1236:12)
+
+      at error (../node_modules/langfuse-core/src/index.ts:180:13)
+      at logIngestionError (../node_modules/langfuse-core/src/index.ts:1052:13)
+      at done (../node_modules/langfuse-core/src/index.ts:1094:15)
+      at done (../node_modules/langfuse-core/src/index.ts:1132:9)
+
+    console.error
+      [Langfuse SDK] Unknown error: TypeError: Cannot read properties of undefined (reading 'status')
+          at status (/root/hellotalk/backend/node_modules/langfuse-core/src/index.ts:1249:17)
+          at retriable (/root/hellotalk/backend/node_modules/langfuse-core/src/utils.ts:35:19)
+          at Langfuse.fetchWithRetry (/root/hellotalk/backend/node_modules/langfuse-core/src/index.ts:1236:12)
+
+      at error (../node_modules/langfuse-core/src/index.ts:180:13)
+      at logIngestionError (../node_modules/langfuse-core/src/index.ts:1052:13)
+      at done (../node_modules/langfuse-core/src/index.ts:1094:15)
+      at done (../node_modules/langfuse-core/src/index.ts:1132:9)
+
+    console.error
+      [Langfuse SDK] Unknown error: TypeError: Cannot read properties of undefined (reading 'status')
+          at status (/root/hellotalk/backend/node_modules/langfuse-core/src/index.ts:1249:17)
+          at retriable (/root/hellotalk/backend/node_modules/langfuse-core/src/utils.ts:35:19)
+          at Langfuse.fetchWithRetry (/root/hellotalk/backend/node_modules/langfuse-core/src/index.ts:1236:12)
+
+      at error (../node_modules/langfuse-core/src/index.ts:180:13)
+      at logIngestionError (../node_modules/langfuse-core/src/index.ts:1052:13)
+      at done (../node_modules/langfuse-core/src/index.ts:1094:15)
+      at done (../node_modules/langfuse-core/src/index.ts:1132:9)
+
+PASS src/safety/safety.controller.spec.ts
+PASS src/economy/economy.controller.spec.ts
+PASS src/audio-rooms/audio-rooms.controller.spec.ts
+PASS src/profile-visits/profile-visits.controller.spec.ts
+PASS src/users/users.controller.spec.ts
+PASS src/monetisation/monetisation.service.spec.ts
+PASS src/audio-rooms/audio-rooms.service.spec.ts
+PASS src/chat/chat.controller.spec.ts
+PASS src/moments/moments.controller.spec.ts
+PASS src/moments/moments.service.spec.ts
+PASS src/flashcards/flashcards.controller.spec.ts
+PASS src/media/media.controller.spec.ts
+PASS src/notifications/notifications.service.spec.ts
+  ● Console
+
+    console.warn
+      No push tokens found for user recipient-1
+
+      30 |
+      31 |       if (error || !tokens || tokens.length === 0) {
+    > 32 |         console.warn(`No push tokens found for user ${userId}`);
+         |                 ^
+      33 |         return;
+      34 |       }
+      35 |
+
+      at NotificationsService.sendPushNotification (notifications/notifications.service.ts:32:17)
+      at NotificationsService.createNotification (notifications/notifications.service.ts:187:7)
+      at Object.<anonymous> (notifications/notifications.service.spec.ts:58:7)
+
+PASS src/supabase/supabase.service.spec.ts
+PASS src/discovery/discovery.controller.spec.ts
+PASS src/economy/economy.service.spec.ts
+PASS src/chat/chat.service.spec.ts
+PASS src/flashcards/flashcards.service.spec.ts
+PASS src/media/media.service.spec.ts
+PASS src/users/users.service.spec.ts
+PASS src/chat/centrifugo.service.spec.ts
+PASS src/moments/timeline.worker.spec.ts
+PASS src/auth/supabase-auth.guard.spec.ts
+PASS src/discovery/discovery.service.spec.ts
+[31m[Nest] 285771  - [39m07/25/2026, 6:24:52 PM [31m  ERROR[39m [38;5;3m[SafetyService] [39m[31mFailed to submit report from user-1 against reported-1: Database error[39m
+PASS src/safety/safety.service.spec.ts
+[31m[Nest] 285771  - [39m07/25/2026, 6:24:53 PM [31m  ERROR[39m [38;5;3m[StreakService] [39m[31mFailed to query inactive users[39m
+DB error
+[31m[Nest] 285771  - [39m07/25/2026, 6:24:53 PM [31m  ERROR[39m [38;5;3m[StreakService] [39m[31mFailed to reset streaks[39m
+Update failed
+PASS src/streak/streak.service.spec.ts
+PASS src/profile-visits/profile-visits.service.spec.ts
+PASS src/notifications/notifications.controller.spec.ts
+PASS src/app.service.spec.ts
+PASS src/app.controller.spec.ts
+
+Test Suites: 33 passed, 33 total
+Tests:       316 passed, 316 total
+Snapshots:   0 total
+Time:        28.621 s, estimated 29 s
+Ran all test suites.
+
+> frontend@0.0.0 test
+> ng test --watch=false
+
+❯ Building...
+✔ Building...
+Application bundle generation failed. [16.266 seconds] - 2026-07-25T18:25:13.630Z
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8109: NG8109: contextSentence is a function and should be invoked: contextSentence()}. Find more at https://v22.angular.dev/extended-diagnostics/NG8109[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/word-definition-modal/word-definition-modal.component.html:64:15:
+[37m      64 │           @if ([32mcontextSentence[37m) {
+         ╵                [32m~~~~~~~~~~~~~~~[0m
+
+  Warning occurs in the template of component WordDefinitionModalComponent.
+
+    src/app/components/word-definition-modal/word-definition-modal.component.ts:8:15:
+[37m      8 │   templateUrl: [32m'./word-definition-modal.component.html'[37m,
+        ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8109: NG8109: contextSentence is a function and should be invoked: contextSentence()}. Find more at https://v22.angular.dev/extended-diagnostics/NG8109[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/word-definition-modal/word-definition-modal.component.html:69:18:
+[37m      69 │               "{{ [32mcontextSentence[37m }}"
+         ╵                   [32m~~~~~~~~~~~~~~~[0m
+
+  Warning occurs in the template of component WordDefinitionModalComponent.
+
+    src/app/components/word-definition-modal/word-definition-modal.component.ts:8:15:
+[37m      8 │   templateUrl: [32m'./word-definition-modal.component.html'[37m,
+        ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8117: NG8117: Function in text interpolation should be invoked: contextSentence(). Find more at https://v22.angular.dev/extended-diagnostics/NG8117[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/word-definition-modal/word-definition-modal.component.html:69:18:
+[37m      69 │               "{{ [32mcontextSentence[37m }}"
+         ╵                   [32m~~~~~~~~~~~~~~~[0m
+
+  Warning occurs in the template of component WordDefinitionModalComponent.
+
+    src/app/components/word-definition-modal/word-definition-modal.component.ts:8:15:
+[37m      8 │   templateUrl: [32m'./word-definition-modal.component.html'[37m,
+        ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mTS2774: This condition will always return true since this function is always defined. Did you mean to call it instead?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/word-definition-modal/word-definition-modal.component.html:64:15:
+[37m      64 │           @if ([32mcontextSentence[37m) {
+         ╵                [32m~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component WordDefinitionModalComponent.
+
+    src/app/components/word-definition-modal/word-definition-modal.component.ts:8:15:
+[37m      8 │   templateUrl: [32m'./word-definition-modal.component.html'[37m,
+        ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+ReferenceError: describe is not defined
+
+   at src/app/app.spec.ts:10
+
+   8 | import { CentrifugeService } from './services/centrifuge.service';
+   9 |
+> 10 | describe('App', () => {
+     | ^
+  11 |   beforeEach(async () => {
+  12 |     await TestBed.configureTestingModule({
+  13 |       imports: [App],
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/app.spec.ts:10:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:7
+
+   5 | import { signal } from '@angular/core';
+   6 |
+>  7 | describe('AudioSyncReaderComponent', () => {
+     | ^
+   8 |   let component: AudioSyncReaderComponent;
+   9 |   let fixture: ComponentFixture<AudioSyncReaderComponent>;
+  10 |   let mockVocabStore: Partial<VocabularyStore>;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:7:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/chat-list/chat-list.component.spec.ts:7
+
+   5 | import { provideRouter } from '@angular/router';
+   6 |
+>  7 | describe('ChatListComponent', () => {
+     | ^
+   8 |   let component: ChatListComponent;
+   9 |   let fixture: ComponentFixture<ChatListComponent>;
+  10 |   let mockChatService: any;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.spec.ts:7:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at /root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:70:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts:5:1)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/discovery/discovery.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { DiscoveryComponent } from './discovery.component';
+  4 | import { DiscoveryService } from '../../services/discovery.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/discovery/discovery.component.spec.ts:1:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/incoming-call/incoming-call.component.spec.ts:9
+
+   7 | import { SafetyService } from '../../services/safety.service';
+   8 | import { signal } from '@angular/core';
+>  9 | import { vi } from 'vitest';
+     | ^
+  10 |
+  11 | describe('IncomingCallComponent', () => {
+  12 |   let component: IncomingCallComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:9:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/language-selector/language-selector.component.spec.ts:6
+
+  4 | import { TranslatePipe } from '../../services/translate.pipe';
+  5 |
+> 6 | describe('LanguageSelectorComponent', () => {
+    | ^
+  7 |   let component: LanguageSelectorComponent;
+  8 |   let fixture: ComponentFixture<LanguageSelectorComponent>;
+  9 |   let i18nService: I18nService;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/language-selector/language-selector.component.spec.ts:6:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1
+
+> 1 | import { vi } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { By } from '@angular/platform-browser';
+  4 | import { LongPressContextMenuComponent } from './long-press-context-menu.component';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1:1)
+Error: Standard Angular field decorators are not supported in JIT mode.
+    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
+    at applyDec (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at /root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48
+    at _applyDecs (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:50:2)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.spec.ts:2:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5
+
+  3 | import { provideHttpClient } from '@angular/common/http';
+  4 | import { provideHttpClientTesting } from '@angular/common/http/testing';
+> 5 | import { vi } from 'vitest';
+    | ^
+  6 | import { NotificationsInboxComponent } from './notifications-inbox.component';
+  7 | import { NotificationService, InAppNotification } from '../../services/notification.service';
+  8 | import { I18nService } from '../../services/i18n.service';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-primary/button-primary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonPrimaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-primary/button-primary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31
+
+  29 | }
+  30 |
+> 31 | describe('AppButtonSecondaryComponent', () => {
+     | ^
+  32 |   let fixture: ComponentFixture<TestHostComponent>;
+  33 |   let host: TestHostComponent;
+  34 |   let buttonElement: HTMLButtonElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/card/card.component.spec.ts:19
+
+  17 | }
+  18 |
+> 19 | describe('AppCardComponent', () => {
+     | ^
+  20 |   let fixture: ComponentFixture<TestHostComponent>;
+  21 |   let host: TestHostComponent;
+  22 |   let cardElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/card/card.component.spec.ts:19:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/chip/chip.component.spec.ts:39
+
+  37 | }
+  38 |
+> 39 | describe('AppChipComponent', () => {
+     | ^
+  40 |   let fixture: ComponentFixture<TestHostComponent>;
+  41 |   let host: TestHostComponent;
+  42 |   let chipElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/chip/chip.component.spec.ts:39:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/empty-state/empty-state.component.spec.ts:33
+
+  31 | }
+  32 |
+> 33 | describe('AppEmptyStateComponent', () => {
+     | ^
+  34 |   let fixture: ComponentFixture<TestHostComponent>;
+  35 |   let host: TestHostComponent;
+  36 |   let emptyStateElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/empty-state/empty-state.component.spec.ts:33:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/input/input.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppInputComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let inputElement: HTMLInputElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/input/input.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/pill/pill.component.spec.ts:25
+
+  23 | }
+  24 |
+> 25 | describe('AppPillComponent', () => {
+     | ^
+  26 |   let fixture: ComponentFixture<TestHostComponent>;
+  27 |   let host: TestHostComponent;
+  28 |   let pillElement: HTMLElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/pill/pill.component.spec.ts:25:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/textarea/textarea.component.spec.ts:49
+
+  47 | }
+  48 |
+> 49 | describe('AppTextareaComponent', () => {
+     | ^
+  50 |   let fixture: ComponentFixture<TestHostComponent>;
+  51 |   let host: TestHostComponent;
+  52 |   let textareaElement: HTMLTextAreaElement;
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/textarea/textarea.component.spec.ts:49:1)
+ReferenceError: describe is not defined
+
+   at src/app/components/primitives/toast/toast.spec.ts:5
+
+  3 | import { Toast } from './toast';
+  4 |
+> 5 | describe('Toast', () => {
+    | ^
+  6 |   let component: Toast;
+  7 |   let fixture: ComponentFixture<Toast>;
+  8 |
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/toast/toast.spec.ts:5:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/user-detail/user-detail.component.spec.ts:8
+
+   6 | import { SafetyService } from '../../services/safety.service';
+   7 | import { of } from 'rxjs';
+>  8 | import { vi } from 'vitest';
+     | ^
+   9 |
+  10 | describe('UserDetailComponent', () => {
+  11 |   let component: UserDetailComponent;
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/user-detail/user-detail.component.spec.ts:8:1)
+Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+
+If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+
+   at src/app/components/voip-call/voip-call.component.spec.ts:1
+
+> 1 | import { vi, Mocked } from 'vitest';
+    | ^
+  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
+  3 | import { VoipCallComponent } from './voip-call.component';
+  4 | import { ComponentRef } from '@angular/core';
+    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.spec.ts:1:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/i18n.service.spec.ts:4
+
+  2 | import { I18nService } from './i18n.service';
+  3 |
+> 4 | describe('I18nService', () => {
+    | ^
+  5 |   let service: I18nService;
+  6 |
+  7 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/i18n.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/media-upload.service.spec.ts:4
+
+  2 | import { MediaUploadService } from './media-upload.service';
+  3 |
+> 4 | describe('MediaUploadService', () => {
+    | ^
+  5 |   it('should exist', () => {
+  6 |     // Placeholder test so the spec file compiles without failing due to
+  7 |     // unresolved dependencies.  Full integration tests for MediaUploadService
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/media-upload.service.spec.ts:4:1)
+ReferenceError: describe is not defined
+
+   at src/app/services/translate.pipe.spec.ts:5
+
+  3 | import { I18nService } from './i18n.service';
+  4 |
+> 5 | describe('TranslatePipe', () => {
+    | ^
+  6 |   let pipe: TranslatePipe;
+  7 |
+  8 |   beforeEach(() => {
+    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/translate.pipe.spec.ts:5:1)
+Error: No tests found
+

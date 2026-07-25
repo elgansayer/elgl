@@ -52,6 +52,7 @@ jobs:
                 echo "Creating new issue for: $TITLE"
                 ISSUE_URL=$(gh issue create --title "$TITLE" --body "Tracked in TODO.md by the AI Swarm pipeline.")
                 ISSUE_NUM=${ISSUE_URL##*/}
+                sleep 3 # Bypass GitHub anti-spam rate limits
                 
                 # If the task was already completed in TODO.md, close the newly created issue immediately
                 if [[ "$STATUS" == "x" || "$STATUS" == "X" || "$STATUS" == "STUCK" ]]; then
