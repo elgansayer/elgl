@@ -9,7 +9,7 @@
 - [x] (Backend formatting/lint improvements applied in current diff only; modal UI not started, still blocked)
 - [x] (Awaiting design spec extraction; backend formatting improvements applied but no modal UI work done. Next step: unblock by accessing screenshots.)
 - [ ] Access original HelloTalk screenshots (unblock design spec extraction for Report User modal)
-- [ ] Diff reviewed; formatting changes only; access to screenshots still blocked.
+- [x] Diff reviewed; formatting changes only; access to screenshots still blocked.
 - [ ] **BLOCKER:** Required pixel‑perfect design spec for the Report User modal must be extracted from the original HelloTalk screenshots before UI development can proceed. (Blocker confirmed; investigation performed 2026-07-27.)
 - [ ] **PREREQUISITE:** Extract pixel-perfect design spec for the Report User modal by reviewing the original HelloTalk screenshots. **BLOCKED** (screenshots not accessible in current dev environment).
 - [x] **Investigation (2026-07-27):** No changes were applied because the required design spec extraction has not been performed; the original HelloTalk screenshots are not available in the current development environment, so the blocker cannot be resolved. The candidate task cannot progress until the screenshots become accessible.
