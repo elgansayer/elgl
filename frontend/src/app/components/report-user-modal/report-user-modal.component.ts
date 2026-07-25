@@ -120,7 +120,7 @@ import { I18nService } from '../../services/i18n.service';
                                  text-slate-300 hover:bg-slate-700/50 transition-all font-medium">
                     {{ translatedLabel('cancel') }}
                   </button>
-                  <button (click)="submitReport()"
+                  <button (click)="handleSubmit()"
                           [disabled]="isSubmitting()"
                           class="flex-1 px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-700
                                  disabled:opacity-50 disabled:cursor-not-allowed
@@ -262,7 +262,11 @@ export class ReportUserModalComponent implements OnInit {
     this.error.set(null);
   }
 
-  async submitReport(): Promise<void> {
+  handleSubmit(): void {
+    void this.submitReport();
+  }
+
+  private async submitReport(): Promise<void> {
     if (!this.reportUserId || !this.selectedCategory()) {
       return;
     }
@@ -283,7 +287,7 @@ export class ReportUserModalComponent implements OnInit {
         this.i18nService.translate('report.toast.success', { defaultValue: 'Report submitted successfully' }),
         { type: 'success', duration: 3000 }
       );
-    } catch (err) {
+    } catch (_err) {
       this.error.set(
         this.i18nService.translate('report.error.submit_failed', { defaultValue: 'Failed to submit report. Please try again.' })
       );
