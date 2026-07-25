@@ -161,7 +161,7 @@
 ## Phase 19: Gamification & Study Streaks
 - [STUCK] Build Daily Study Streak counter widget on home screen.
 - [STUCK] Implement NestJS CRON job to reset streaks if inactive for 24 hours.
-- [ ] Build "Top Corrector" community leaderboard.
+- [STUCK] Build "Top Corrector" community leaderboard.
 
 ## Phase 20: Spaced Repetition (SRS) Flashcards
 - [x] Build Flashcard Deck UI to organize saved vocabulary.
