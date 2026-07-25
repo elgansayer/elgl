@@ -39,7 +39,7 @@ import { SafetyService } from '../../services/safety.service';
         [reportedUserId]="senderId()"
         [contextUrl]="buildContextUrl()"
         (close)="onReportClose()"
-        (reportSubmitted)="onReportSubmitted($event)"
+        (reportSubmitted)="onReportSubmitted($any($event))"
       ></app-report-user-modal>
     }
   `,

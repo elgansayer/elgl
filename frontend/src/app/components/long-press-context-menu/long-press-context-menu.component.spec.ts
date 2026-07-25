@@ -2,6 +2,8 @@ import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { LongPressContextMenuComponent } from './long-press-context-menu.component';
+import { of } from 'rxjs';
+import { SafetyService } from '../../services/safety.service';
 
 (globalThis as any).Touch = class Touch {};
 (globalThis as any).TouchEvent = class TouchEvent extends Event {};
@@ -13,6 +15,14 @@ describe('LongPressContextMenuComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [LongPressContextMenuComponent],
+      providers: [
+        {
+          provide: SafetyService,
+          useValue: {
+            reportUser: jest.fn().mockReturnValue(of(null)),
+          },
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LongPressContextMenuComponent);
@@ -53,7 +63,11 @@ describe('LongPressContextMenuComponent', () => {
     // Clicking report opens the modal but does not emit directly
     component['onOptionClick']('report');
     // After the modal submits, the event is emitted
-    component.onReportSubmitted();
+    component.onReportSubmitted({
+      reported_id: 'user-123',
+      reason_category: 'spam',
+      context_url: '',
+    });
     expect(component.report.emit).toHaveBeenCalledWith({
       messageId: 'test-message-id',
       content: 'Hello world',

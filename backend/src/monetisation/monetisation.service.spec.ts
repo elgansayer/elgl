@@ -32,6 +32,7 @@ jest.mock('stripe', () => {
 
 describe('MonetisationService', () => {
   let service: MonetisationService;
+  let module: TestingModule;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
 
@@ -50,7 +51,7 @@ describe('MonetisationService', () => {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         MonetisationService,
         {
