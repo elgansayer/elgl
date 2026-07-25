@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, signal, computed } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -10,7 +10,7 @@ import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
   templateUrl: './correction-modal.component.html',
   styleUrls: ['./correction-modal.component.scss'],
 })
-export class CorrectionModalComponent {
+export class CorrectionModalComponent implements OnInit {
   @Input({ required: true }) originalText = '';
   @Input() authorName = '';
 

@@ -499,5 +499,15 @@
       "load_categories": "Could not load categories. Using default list.",
       "submit_failed": "Failed to submit report. Please try again."
     }
-  }
+  },
+  "settings.title": "Settings & Privacy",
+  "settings.privacySection": "Privacy settings",
+  "settings.hideLocation": "Hide location in discovery",
+  "settings.hideSearch": "Hide profile from search",
+  "settings.hideAge": "Hide my age",
+  "settings.hideGender": "Hide my gender",
+  "settings.saveBtn": "Save settings",
+  "hobby.add": "+ Add Hobby",
+  "profile.maxLanguagesError": "Max 3 target languages allowed for VIP, 1 for free users.",
+  "profile.settingsLink": "Settings"
 }
