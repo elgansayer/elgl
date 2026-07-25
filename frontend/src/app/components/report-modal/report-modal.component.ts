@@ -142,11 +142,11 @@ export class ReportModalComponent implements OnInit {
 
     this.safetyService.reportUser(dto).subscribe({
       next: () => {
-        this.toast.show('report.success', 'success');
+        this.toast.show('report.success', { type: 'success' });
         this.submitted.emit();
       },
       error: () => {
-        this.toast.show('report.error', 'error');
+        this.toast.show('report.error', { type: 'error' });
       },
     });
   }
