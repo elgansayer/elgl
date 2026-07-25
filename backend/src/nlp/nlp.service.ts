@@ -184,7 +184,11 @@ export class NlpService {
       await this.langfuse.flushAsync();
       return finalResult;
     } catch (error) {
-      trace.update({ level: 'ERROR', statusMessage: error.message });
+      const msg = error instanceof Error ? error.message : String(error);
+      trace.update({
+        level: 'ERROR',
+        statusMessage: msg || 'Unknown error',
+      });
       await this.langfuse.flushAsync();
       throw error;
     }
@@ -302,7 +306,11 @@ export class NlpService {
       await this.langfuse.flushAsync();
       return finalResult;
     } catch (error) {
-      trace.update({ level: 'ERROR', statusMessage: error.message });
+      const msg = error instanceof Error ? error.message : String(error);
+      trace.update({
+        level: 'ERROR',
+        statusMessage: msg || 'Unknown error',
+      });
       await this.langfuse.flushAsync();
       throw error;
     }
