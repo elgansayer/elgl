@@ -302,9 +302,11 @@
 - [x] Build Notification Preferences UI with granular category toggles.
 
 ## Phase 22: Moderation & Trust Engine
-- [x] Build "Report User" modal with dynamic category selection.
-- [x] Implement Blocklist system hiding blocked accounts across chat, feed, and search.
+- [ ] Build "Report User" modal with dynamic category selection.
+- [ ] Implement Blocklist system hiding blocked accounts across chat, feed, and search.
 - [ ] Wire up block/unblock UI in LongPressContextMenuComponent and ChatMessageComponent, and implement backend/frontend filtering to hide blocked users from chat, feed, and search results.
+- [ ] **(Current diff review 2026-07-26):** The git diff only contains formatting changes; implement actual block/unblock UI wiring and backend/frontend filtering.
+- [ ] **IMPLEMENTATION REQUIRED:** The submitted git diff only contained formatting/lint cleanups; implement the actual block/unblock UI wiring and backend/frontend filtering.
 - [x] **DIFF REVIEW (2026-07-25):** The latest git diff only contains formatting/lint cleanups; no block/unblock UI wiring or filtering implemented.
 - [ ] **ACTION REMAINING:** Implement the actual block/unblock UI wiring and backend/frontend filtering that was missing from the reviewed diff (only lint cleanups were present).
 - [ ] **REVIEW UPDATE:** The corresponding git diff only shows lint cleanups; actual block/unblock work still needed.
