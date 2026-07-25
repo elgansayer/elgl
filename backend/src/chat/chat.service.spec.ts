@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ChatService } from './chat.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { SafetyService } from '../safety/safety.service';
 
 jest.mock('./centrifugo.service', () => ({
   CentrifugoService: jest.fn(),
@@ -44,6 +46,16 @@ describe('ChatService', () => {
               .fn()
               .mockReturnValue({ token: 'mock-token' }),
             publish: jest.fn().mockResolvedValue(true),
+          },
+        },
+        {
+          provide: EventEmitter2,
+          useValue: { emit: jest.fn() },
+        },
+        {
+          provide: SafetyService,
+          useValue: {
+            getBlockedAndBlockerIds: jest.fn().mockResolvedValue([]),
           },
         },
       ],
@@ -146,7 +158,7 @@ describe('ChatService', () => {
           error: null,
         });
 
-      const result = await service.getRooms();
+      const result = await service.getRooms('user-1');
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('chat_rooms');
       expect(result).toEqual(rooms);
     });
@@ -159,7 +171,7 @@ describe('ChatService', () => {
           error: { message: 'Query failed' },
         });
 
-      const result = await service.getRooms();
+      const result = await service.getRooms('user-1');
       expect(result).toEqual([]);
     });
   });
