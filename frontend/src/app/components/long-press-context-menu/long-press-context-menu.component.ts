@@ -1,6 +1,7 @@
 import { Component, input, output, signal, computed, HostListener, ElementRef, ViewChild, AfterViewInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { I18nService } from '../../services/i18n.service';
+import { SafetyService } from '../../services/safety.service';   // NEW
 
 export interface ContextMenuOption {
   id: 'copy' | 'favourite' | 'report' | 'block' | 'unblock';
@@ -39,7 +40,7 @@ export interface ContextMenuOption {
           <button
             *ngFor="let option of translatedOptions(); trackBy: trackByOptionId"
             class="w-full flex items-center gap-3 ps-4 pe-4 pt-2.5 pb-2.5 text-sm text-gray-200 hover:bg-surface-200 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-            [disabled]="option.disabled"
+            [disabled]="(option.id === 'block' && isSenderBlocked) || (option.id === 'unblock' && !isSenderBlocked) || option.disabled"
             (click)="onOptionClick(option.id)"
             role="menuitem"
           >
@@ -62,6 +63,7 @@ export interface ContextMenuOption {
 export class LongPressContextMenuComponent implements AfterViewInit {
   private readonly elementRef = inject(ElementRef);
   private readonly i18n = inject(I18nService);
+  private readonly safetyService = inject(SafetyService);   // NEW
 
   @ViewChild('menuPanel') menuPanel!: ElementRef<HTMLElement>;
 
@@ -72,7 +74,6 @@ export class LongPressContextMenuComponent implements AfterViewInit {
   readonly roomId = input<string>('');
   readonly disabled = input<boolean>(false);
   readonly longPressDuration = input<number>(600);
-  readonly isBlocked = input<boolean>(false);
 
   readonly copy = output<{ messageId: string; content: string }>();
   readonly favourite = output<{ messageId: string; content: string; messageType: string }>();
@@ -85,21 +86,26 @@ export class LongPressContextMenuComponent implements AfterViewInit {
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private touchMoved = false;
 
+  /** Dynamically determine if the sender is currently blocked using the safety service signal. */
+  get isSenderBlocked(): boolean {
+    return this.safetyService.blockedUserIds.has(this.senderId());
+  }
+
   readonly options = computed<ContextMenuOption[]>(() => {
+    const blocked = this.isSenderBlocked;
     const baseOptions: ContextMenuOption[] = [
       { id: 'copy', label: this.i18n.translate('context_menu.copy'), icon: '📋' },
       { id: 'favourite', label: this.i18n.translate('context_menu.favourite'), icon: '⭐' },
       { id: 'report', label: this.i18n.translate('context_menu.report'), icon: '🚩' },
     ];
 
-    // Add block/unblock option if senderId is provided
     if (this.senderId()) {
       baseOptions.push({
-        id: this.isBlocked() ? 'unblock' : 'block',
-        label: this.isBlocked()
+        id: blocked ? 'unblock' : 'block',
+        label: blocked
           ? this.i18n.translate('context_menu.unblock')
           : this.i18n.translate('context_menu.block'),
-        icon: this.isBlocked() ? '🔓' : '🔒',
+        icon: blocked ? '🔓' : '🔒',
       });
     }
 

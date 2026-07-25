@@ -33,6 +33,9 @@ export class ChatMessageComponent {
     return this.safetyService.isUserBlockedCached(sid);
   });
 
+  /** Whether the message should be shown; false if sender is blocked. */
+  readonly showMessage = computed(() => !this.isSenderBlocked());
+
   get isContextMenuDisabled(): boolean {
     const msg = this.message();
     return !msg || msg.sender_id === 'system' || msg.sender_id === null;
