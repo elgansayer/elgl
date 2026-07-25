@@ -7,6 +7,7 @@ import {
   signal,
   OnInit,
   OnDestroy,
+  HostListener,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -203,6 +204,15 @@ export class ReportUserModalComponent implements OnInit, OnDestroy {
   readonly error = signal<string | null>(null);
 
   private categorySub?: Subscription;
+
+  // Keyboard accessibility: close modal on Esc
+  @HostListener('document:keydown.escape', ['$event'])
+  onEscape(event: KeyboardEvent) {
+    if (this.show) {
+      event.preventDefault();
+      this.close();
+    }
+  }
 
   // Static fallback list (kept here for clarity)
   private staticFallbackCategories(): ReportCategory[] {
