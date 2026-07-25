@@ -2,7 +2,7 @@
 - [x] **Investigation (2026-07-28):** No changes were applied for the task “Build Report User modal with dynamic category selection”. The task remains blocked because the pixel‑perfect design spec cannot be extracted from the original HelloTalk screenshots (screenshots not accessible). The blocker has not been resolved.
 - [ ] Build "Report User" modal with dynamic category selection. **(BLOCKED by missing design spec)**
 - [x] (2026-08-05) Reviewed latest git diff: formatting/lint changes only; no Report User modal UI work performed; task remains incomplete and blocked.
-- [ ] (2026-08-06) After review: formatting changes only; task still incomplete and blocked.
+- [x] (2026-08-06) After review: formatting changes only; task still incomplete and blocked.
 - [ ] (2026-08-01) Reviewed latest git diff: only formatting/lint changes applied; no modal UI work performed; task remains incomplete and blocked.
 - [x] (Backend formatting/lint improvements applied in current diff only; modal UI not started, still blocked)
 - [x] (Awaiting design spec extraction; backend formatting improvements applied but no modal UI work done. Next step: unblock by accessing screenshots.)
@@ -15,4 +15,5 @@
 - [x] Backend lint/formatting improvements applied (see provided git diff) – no modal UI work done.
 - [ ] Continue building Report User modal UI once design spec extraction is complete.
 - [ ] Next step: resolve the design‑spec blocker for the Report User modal and then implement the modal component (current diff contains only backend formatting fixes).
-- [ ] (2026-08-04) Latest diff reviewed: formatting/lint changes only across backend files; no Report User modal UI work performed; task remains incomplete and blocked.
+- [x] (2026-08-04) Latest diff reviewed: formatting/lint changes only across backend files; no Report User modal UI work performed; task remains incomplete and blocked.
+- [ ] (2026-08-06) Reviewed current diff; contains only formatting/lint changes; Build Report User modal task remains incomplete and blocked.
