@@ -36,11 +36,11 @@ import { I18nService } from '../../services/i18n.service';
           <option value="spam">
             {{ spamLabel }}
           </option>
-          <option value="impersonation">
-            {{ impersonationLabel }}
-          </option>
           <option value="inappropriate_content">
             {{ inappropriateLabel }}
+          </option>
+          <option value="fake_profile">
+            {{ fakeProfileLabel }}
           </option>
           <option value="other">
             {{ otherLabel }}
@@ -95,7 +95,7 @@ export class ReportModalComponent implements OnInit {
   selectReasonLabel = '';
   harassmentLabel = '';
   spamLabel = '';
-  impersonationLabel = '';
+  fakeProfileLabel = '';
   inappropriateLabel = '';
   otherLabel = '';
   descriptionOptionalLabel = '';
@@ -108,7 +108,7 @@ export class ReportModalComponent implements OnInit {
     this.selectReasonLabel = this.i18n.translate('report.select_reason');
     this.harassmentLabel = this.i18n.translate('report.harassment');
     this.spamLabel = this.i18n.translate('report.spam');
-    this.impersonationLabel = this.i18n.translate('report.impersonation');
+    this.fakeProfileLabel = this.i18n.translate('report.fake_profile');
     this.inappropriateLabel = this.i18n.translate('report.inappropriate');
     this.otherLabel = this.i18n.translate('report.other');
     this.descriptionOptionalLabel = this.i18n.translate('report.description_optional');
