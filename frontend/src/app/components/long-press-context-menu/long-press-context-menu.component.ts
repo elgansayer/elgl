@@ -8,15 +8,17 @@ import {
   signal,
   HostListener,
   ElementRef,
+  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ReportUserModalComponent } from '../report-user-modal/report-user-modal.component';
 import { SafetyService } from '../../services/safety.service';
 
 @Component({
   selector: 'app-long-press-context-menu',
   standalone: true,
-  imports: [CommonModule, ReportUserModalComponent],
+  imports: [CommonModule, MatDialogModule],
   template: `
     @if (showMenu()) {
       <div class="context-menu-popup" (click)="$event.stopPropagation()" (contextmenu)="$event.preventDefault()">
@@ -32,15 +34,6 @@ import { SafetyService } from '../../services/safety.service';
           </li>
         </ul>
       </div>
-    }
-    @if (showReportModal) {
-      <app-report-user-modal
-        [reportedUserId]="messageAuthorId ?? ''"
-        [show]="showReportModal"
-        [contextUrl]="buildContextUrl()"
-        (close)="showReportModal = false"
-        (reported)="onReportSubmitted()">
-      </app-report-user-modal>
     }
   `,
   styles: [
@@ -96,10 +89,20 @@ export class LongPressContextMenuComponent {
   @Input() messageAuthorId?: string;
 
   @Output() copy = new EventEmitter<{ messageId: string; content: string }>();
-  @Output() favourite = new EventEmitter<{ messageId: string; content: string; messageType: string }>();
-  @Output() report = new EventEmitter<{ messageId: string; content: string; senderId: string; roomId: string }>();
+  @Output() favourite = new EventEmitter<{
+    messageId: string;
+    content: string;
+    messageType: string;
+  }>();
+  @Output() report = new EventEmitter<{
+    messageId: string;
+    content: string;
+    senderId: string;
+    roomId: string;
+  }>();
 
-  showReportModal = false;
+  private dialog = inject(MatDialog);
+
   longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
@@ -120,7 +123,22 @@ export class LongPressContextMenuComponent {
       this.close();
     } else if (option === 'report') {
       this.close();
-      this.showReportModal = true;
+      const dialogRef = this.dialog.open(ReportUserModalComponent, {
+        data: {
+          reportedUserId: this.messageAuthorId ?? '',
+          contextUrl: this.buildContextUrl(),
+        },
+      });
+      dialogRef.afterClosed().subscribe((result) => {
+        if (result) {
+          this.report.emit({
+            messageId: this.messageId(),
+            content: this.messageContent(),
+            senderId: this.senderId(),
+            roomId: this.roomId(),
+          });
+        }
+      });
       return;
     }
   }
@@ -194,16 +212,5 @@ export class LongPressContextMenuComponent {
 
   buildContextUrl(): string {
     return window.location.href;
-  }
-
-  onReportSubmitted(): void {
-    // The ReportUserModal has already submitted the report to the backend.
-    // Emit the parent event for analytics and close the modal.
-    this.report.emit({
-      messageId: this.messageId(),
-      content: this.messageContent(),
-      senderId: this.senderId(),
-      roomId: this.roomId(),
-    });
   }
 }

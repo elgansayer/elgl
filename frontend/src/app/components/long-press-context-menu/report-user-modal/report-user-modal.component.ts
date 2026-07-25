@@ -11,6 +11,7 @@ import { ReportService } from '../../../services/report.service';
 export interface ReportDialogData {
   reportedUserId: string;
   reportedUserName?: string;
+  contextUrl?: string;
 }
 
 @Component({
@@ -58,11 +59,14 @@ export class ReportUserModalComponent implements OnInit {
     if (this.reportForm.invalid) {
       return;
     }
+
     const payload = {
-      reportedUserId: this.data.reportedUserId,
-      reasonCategory: this.reportForm.value.reasonCategory,
-      description: this.reportForm.value.description
+      reported_id: this.data.reportedUserId,
+      reason_category: this.reportForm.value.reasonCategory,
+      description: this.reportForm.value.description,
+      context_url: this.data.contextUrl ?? window.location.href
     };
+
     this.reportService.createReport(payload).subscribe({
       next: () => {
         this.dialogRef.close(true);
