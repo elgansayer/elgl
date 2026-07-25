@@ -3,9 +3,14 @@ import { ChatService } from './chat.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from '../centrifugo/centrifugo.service';
 
+class MockCentrifugoService {
+  generateConnectionToken = jest.fn().mockReturnValue({ token: 'mock-token' });
+  publish = jest.fn().mockResolvedValue(true);
+}
+
 describe('ChatService', () => {
   let service: ChatService;
-  let centrifugoService: CentrifugoService;
+  let centrifugoService: MockCentrifugoService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
 
@@ -35,18 +40,13 @@ describe('ChatService', () => {
         },
         {
           provide: CentrifugoService,
-          useValue: {
-            generateConnectionToken: jest
-              .fn()
-              .mockReturnValue({ token: 'mock-token' }),
-            publish: jest.fn().mockResolvedValue(true),
-          },
+          useClass: MockCentrifugoService,
         },
       ],
     }).compile();
 
     service = module.get<ChatService>(ChatService);
-    centrifugoService = module.get<CentrifugoService>(CentrifugoService);
+    centrifugoService = module.get<MockCentrifugoService>(CentrifugoService);
   });
 
   afterEach(() => {
