@@ -1,9 +1,8 @@
-import { Component, Input, Output, EventEmitter, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { SafetyService } from '../../services/safety.service';
 import { ToastService } from '../primitives/toast/toast.service';
-import { I18nService } from '../../services/i18n.service';
 import { ReportUserDto } from '../../services/safety.service';
 
 @Component({
@@ -88,7 +87,6 @@ export class ReportModalComponent {
   constructor(
     private readonly safetyService: SafetyService,
     private readonly toast: ToastService,
-    private readonly i18n: I18nService,
   ) {}
 
   get isValid(): boolean {
