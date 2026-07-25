@@ -40,7 +40,9 @@ export class DiscoveryService {
     }
 
     if (query.native_languages) {
-      queryBuilder = queryBuilder.contains('native_languages', [query.native_languages]);
+      queryBuilder = queryBuilder.contains('native_languages', [
+        query.native_languages,
+      ]);
     }
 
     if (query.target_language) {
@@ -120,8 +122,8 @@ export class DiscoveryService {
     }
 
     if (query.native_languages) {
-      filtered = filtered.filter(
-        (u) => u.native_languages?.includes(query.native_languages!),
+      filtered = filtered.filter((u) =>
+        u.native_languages?.includes(query.native_languages!),
       );
     }
 
