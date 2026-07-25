@@ -11,6 +11,8 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReportUserModalComponent } from '../report-user-modal/report-user-modal.component';
+import { SafetyService } from '../../services/safety.service';
+import { ReportUserDto } from '../../services/safety.service';
 
 @Component({
   selector: 'app-long-press-context-menu',
@@ -37,7 +39,7 @@ import { ReportUserModalComponent } from '../report-user-modal/report-user-modal
       [contextUrl]="buildContextUrl()"
       [show]="showReportModal"
       (closed)="showReportModal = false"
-      (reportSent)="onReportSubmitted()">
+      (reportSent)="onReportSubmitted($event)">
     </app-report-user-modal>
   `,
   styles: [
@@ -99,7 +101,10 @@ export class LongPressContextMenuComponent {
   showReportModal = false;
   longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(private elementRef: ElementRef) {}
+  constructor(
+    private elementRef: ElementRef,
+    private safetyService: SafetyService
+  ) {}
 
   onOptionClick(option: string): void {
     if (option === 'copy') {
@@ -184,14 +189,28 @@ export class LongPressContextMenuComponent {
     return window.location.href;
   }
 
-  onReportSubmitted(): void {
-    // Emit optional parent event, can be used for analytics
+  onReportSubmitted(reportData: { reason_category: string; description?: string }): void {
+    const dto: ReportUserDto = {
+      reported_id: this.senderId(),
+      reason_category: reportData.reason_category,
+      description: reportData.description,
+      context_url: this.buildContextUrl(),
+    };
+    this.safetyService.reportUser(dto).subscribe({
+      next: () => {
+        // Optionally show a success toast
+        console.log('Report submitted successfully');
+      },
+      error: (err) => console.error('Failed to submit report', err)
+    });
+    this.showReportModal = false;
+
+    // Still emit the parent event for analytics
     this.report.emit({
       messageId: this.messageId(),
       content: this.messageContent(),
       senderId: this.senderId(),
       roomId: this.roomId(),
     });
-    this.showReportModal = false;
   }
 }
