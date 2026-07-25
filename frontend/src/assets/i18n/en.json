@@ -468,5 +468,34 @@
   "voip.dismiss": "Dismiss",
   "voip.incomingVoiceCall": "Incoming voice call...",
   "voip.incomingVideoCall": "Incoming video call...",
-  "common.unknownCaller": "Unknown Caller"
+  "common.unknownCaller": "Unknown Caller",
+  "report": {
+    "title": "Report User",
+    "reportReason": "What's the reason for this report?",
+    "loadingCategories": "Loading categories...",
+    "harassment": "Harassment",
+    "spam": "Spam",
+    "inappropriate_content": "Inappropriate Content",
+    "fake_profile": "Fake Profile",
+    "other": "Other",
+    "backToCategories": "Back to categories",
+    "additionalDetails": "Additional details (optional)",
+    "additionalDetailsPlaceholder": "Describe the issue...",
+    "linkToContent": "Link to content (optional)",
+    "linkToContentPlaceholder": "Paste a URL...",
+    "cancel": "Cancel",
+    "submitReport": "Submit Report",
+    "submitting": "Submitting...",
+    "reportSubmitted": "Report Submitted",
+    "reportSubmittedMessage": "Thank you for helping keep the community safe. We'll review your report shortly.",
+    "done": "Done",
+    "toast": {
+      "success": "Report submitted successfully",
+      "error": "Failed to submit report"
+    },
+    "error": {
+      "load_categories": "Could not load categories. Using default list.",
+      "submit_failed": "Failed to submit report. Please try again."
+    }
+  }
 }
