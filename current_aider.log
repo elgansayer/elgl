@@ -1,1 +1,20 @@
 ────────────────────────────────────────────────────────────────────────────────
+Aider v0.86.2
+Model: openai/gpt-5.5 with whole edit format
+Git repo: .git with 692 files
+Repo-map: using 4096 tokens, auto refresh
+Added TODO.md to the chat.
+Added SPEC.md to the chat (read-only).
+Added AGENTS.md to the chat (read-only).
+
+
+https://v22.angular.dev/extended-diagnostics/NG8109[0m
+Scraping https://v22.angular.dev/extended-diagnostics/NG8109[0m...
+
+https://v22.angular.dev/extended-diagnostics/NG8117[0m
+Scraping https://v22.angular.dev/extended-diagnostics/NG8117[0m...
+Repo-map can't include /root/hellotalk/.agents/skills/langfuse-skills
+Has it been deleted from the file system but not from git?
+litellm.BadRequestError: OpenAIException - model "gpt-5.5" is not accessible via
+the /chat/completions endpoint
+
