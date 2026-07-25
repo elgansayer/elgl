@@ -7,9 +7,7 @@ import { CentrifugoService } from '../centrifugo/centrifugo.service';
 // CentrifugoService file is not present in the current workspace.
 jest.mock('../centrifugo/centrifugo.service', () => ({
   CentrifugoService: jest.fn().mockImplementation(() => ({
-    generateConnectionToken: jest
-      .fn()
-      .mockReturnValue({ token: 'mock-token' }),
+    generateConnectionToken: jest.fn().mockReturnValue({ token: 'mock-token' }),
     publish: jest.fn().mockResolvedValue(true),
   })),
 }));
