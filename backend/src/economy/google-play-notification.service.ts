@@ -75,7 +75,10 @@ export class GooglePlayNotificationService {
           void this.handleSubscriptionOnHold(purchaseToken, subscriptionId);
           break;
         case 6: // SUBSCRIPTION_IN_GRACE_PERIOD
-          void this.handleSubscriptionInGracePeriod(purchaseToken, subscriptionId);
+          void this.handleSubscriptionInGracePeriod(
+            purchaseToken,
+            subscriptionId,
+          );
           break;
         case 7: // SUBSCRIPTION_RESTARTED
           void this.handleSubscriptionRestarted(purchaseToken, subscriptionId);

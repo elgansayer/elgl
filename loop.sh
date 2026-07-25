@@ -1,5 +1,9 @@
 #!/bin/bash
 # loop.sh (Multi-Provider Autonomous Agent Swarm)
+set -a
+source .env 2>/dev/null || true
+set +a
+
 export OPENAI_MAX_RETRIES=0
 export LITELLM_NUM_RETRIES=0
 export AIDER_RETRIES=0
@@ -103,10 +107,16 @@ while true; do
     fi
 
     echo "========================================"
+    echo "STAGE 1.5: ARCHITECT (Gemini Pro)"
+    echo "========================================"
+    echo "Drafting Technical Spec for: $CURRENT_TASK"
+    run_context_auditor "You are the Principal Architect. The next task is: '$CURRENT_TASK'. Analyze the current codebase and write a highly detailed, step-by-step implementation guide in TECH_SPEC.md. The coder agent will strictly follow this document. Include exact file paths, Angular control flow requirements, and database schema changes. DO NOT WRITE THE FINAL CODE, only write the TECH_SPEC.md." "TODO.md"
+
+    echo "========================================"
     echo "STAGE 2: CODER (Claude / DeepSeek / GPT-4o)"
     echo "========================================"
     echo "Executing: $CURRENT_TASK"
-    run_heavy_coder "Execute task: '$CURRENT_TASK'. Write the code. Also write or update 'backend/src/database/seed.ts' to automatically generate mock data for this new feature." "--architect --read SPEC.md"
+    run_heavy_coder "Execute task: '$CURRENT_TASK'. Strictly follow the instructions in TECH_SPEC.md to write the code. Also write or update 'backend/src/database/seed.ts' to automatically generate mock data for this new feature." "--architect --read SPEC.md --read TECH_SPEC.md"
 
     echo "========================================"
     echo "STAGE 3: FAST FIXER (Gemini Flash / Haiku)"

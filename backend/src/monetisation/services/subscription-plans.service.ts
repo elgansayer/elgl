@@ -150,10 +150,10 @@ export class SubscriptionPlansService {
       (p) =>
         p.stripe_price_id === productId ||
         p.stripe_price_id_yearly === productId ||
-        p.id === productId // if apple product id is same as tier
+        p.id === productId, // if apple product id is same as tier
     );
     if (plan) return plan.id;
-    
+
     // Apple specific fallback mapping (as seen in PRODUCT_TIER_MAP)
     const PRODUCT_TIER_MAP: Record<string, string> = {
       'com.hellotalk.vip.monthly': 'consumer_8_ukp_10_usd',

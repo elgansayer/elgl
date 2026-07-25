@@ -30,9 +30,7 @@ export class VideoCallsService {
       maxParticipants: 2,
     };
 
-    await this.roomService.createRoom(
-      createOptions as any,
-    );
+    await this.roomService.createRoom(createOptions);
 
     const token = await this.generateToken(userId, roomName, true);
 

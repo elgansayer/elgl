@@ -1,5 +1,8 @@
 #!/bin/bash
 # qa-loop.sh (Adversarial QA Agent)
+set -a
+source .env 2>/dev/null || true
+set +a
 export LITELLM_NUM_RETRIES=0
 
 echo "Starting 24/7 Adversarial QA Swarm..."

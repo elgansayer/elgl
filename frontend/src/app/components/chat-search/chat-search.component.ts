@@ -24,38 +24,42 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
       <!-- Filter by type -->
       <div class="flex gap-1 p-2 border-b border-surface-100 overflow-x-auto">
-        <button *ngFor="let type of messageTypes"
-                (click)="selectedType.set(type)"
-                class="px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors"
-                [ngClass]="selectedType() === type ? 'bg-blue-600 text-white' : 'bg-surface-100 text-text-secondary hover:bg-gray-600'">
-          {{ type }}
-        </button>
+        @for (type of messageTypes; track type) {
+          <button (click)="selectedType.set(type)"
+                  [class]="selectedType() === type ? 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-blue-600 text-white' : 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-surface-100 text-text-secondary hover:bg-gray-600'">
+            {{ type }}
+          </button>
+        }
       </div>
 
       <!-- Results -->
       <div class="overflow-y-auto max-h-64">
-        <div *ngIf="isSearching()" class="p-4 text-center text-sm text-text-muted">
-          {{ 'chatSearch.searching' | t }}
-        </div>
-        <div *ngIf="!isSearching() && results().length === 0 && query().length > 0"
-             class="p-4 text-center text-sm text-text-muted">
-          {{ 'chatSearch.noResults' | t }}
-        </div>
-        <button *ngFor="let msg of results()"
-                (click)="onMessageSelect.emit(msg)"
-                class="w-full text-left px-3 py-2 hover:bg-surface-100 transition-colors border-b border-surface-100 last:border-b-0">
-          <div class="ms-3 min-w-0 flex-1">
-            <p class="text-sm font-bold text-text-primary truncate">
-              {{ msg.sender?.display_name || ('common.unknownSender' | t) }}
-            </p>
+        @if (isSearching()) {
+          <div class="p-4 text-center text-sm text-text-muted">
+            {{ 'chatSearch.searching' | t }}
           </div>
-          <div class="text-sm text-gray-200 truncate">
-            {{ msg.text_content || msg.message_type }}
+        }
+        @if (!isSearching() && results().length === 0 && query().length > 0) {
+          <div class="p-4 text-center text-sm text-text-muted">
+            {{ 'chatSearch.noResults' | t }}
           </div>
-          <div class="text-[10px] text-text-muted mt-1">
-            {{ msg.created_at | date:'short' }}
-          </div>
-        </button>
+        }
+        @for (msg of results(); track msg.id) {
+          <button (click)="onMessageSelect.emit(msg)"
+                  class="w-full text-left px-3 py-2 hover:bg-surface-100 transition-colors border-b border-surface-100 last:border-b-0">
+            <div class="ms-3 min-w-0 flex-1">
+              <p class="text-sm font-bold text-text-primary truncate">
+                {{ msg.sender?.display_name || ('common.unknownSender' | t) }}
+              </p>
+            </div>
+            <div class="text-sm text-gray-200 truncate">
+              {{ msg.text_content || msg.message_type }}
+            </div>
+            <div class="text-[10px] text-text-muted mt-1">
+              {{ msg.created_at | date:'short' }}
+            </div>
+          </button>
+        }
       </div>
     </div>
   `,
