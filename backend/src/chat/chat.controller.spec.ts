@@ -91,16 +91,16 @@ describe('ChatController', () => {
       );
       expect(result).toEqual(messages);
     });
+  });
 
-    describe('getRooms', () => {
-      it('should call chatService.getRooms', async () => {
-        const rooms: any[] = [{ id: 'global-exchange' }];
-        (chatService.getRooms as jest.Mock).mockResolvedValue(rooms);
+  describe('getRooms', () => {
+    it('should call chatService.getRooms', async () => {
+      const rooms: any[] = [{ id: 'global-exchange' }];
+      (chatService.getRooms as jest.Mock).mockResolvedValue(rooms);
 
-        const result = await controller.getRooms();
-        expect(chatService.getRooms).toHaveBeenCalled();
-        expect(result).toEqual(rooms);
-      });
+      const result = await controller.getRooms({ id: 'user-1' } as any);
+      expect(chatService.getRooms).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(rooms);
     });
   });
 
