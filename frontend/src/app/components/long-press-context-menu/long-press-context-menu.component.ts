@@ -104,18 +104,19 @@ export class LongPressContextMenuComponent {
   onOptionClick(option: string): void {
     if (option === 'copy') {
       this.copy.emit({ messageId: this.messageId(), content: this.messageContent() });
+      this.close();
     } else if (option === 'favourite') {
       this.favourite.emit({
         messageId: this.messageId(),
         content: this.messageContent(),
         messageType: this.messageType(),
       });
-    } else if (option === 'report') {
       this.close();
+    } else if (option === 'report') {
+      this.close();             // close the context menu first
       this.showReportModal = true;
       return;
     }
-    this.close();
   }
 
   onRightClick(event: MouseEvent): void {
@@ -184,8 +185,7 @@ export class LongPressContextMenuComponent {
   }
 
   onReportSubmitted(): void {
-    // The modal already submitted the report and shows its own toast.
-    // We just emit the parent report event with the relevant context.
+    // Emit optional parent event, can be used for analytics
     this.report.emit({
       messageId: this.messageId(),
       content: this.messageContent(),
