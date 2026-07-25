@@ -42,7 +42,7 @@ export class LivekitService {
       roomOptions = {
         e2ee: {
           keyProvider,
-          worker: new Worker(new URL('livekit-client/e2ee-worker', import.meta.url))
+          worker: new Worker(new URL('livekit-client/dist/livekit-client-worker.js', import.meta.url))
         }
       };
       await keyProvider.setKey(e2eeKey);

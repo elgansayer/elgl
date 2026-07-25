@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, signal } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 
 interface DiffSegment {
   type: 'unchanged' | 'removed' | 'added';
@@ -11,29 +11,26 @@ interface DiffSegment {
   templateUrl: './visual-diff.component.html',
   styleUrls: ['./visual-diff.component.scss'],
 })
-export class VisualDiffComponent implements OnInit {
-  @Input({ required: true }) original = '';
-  @Input({ required: true }) corrected = '';
-  @Input() explanation?: string;
+export class VisualDiffComponent {
+  readonly original = input.required<string>();
+  readonly corrected = input.required<string>();
+  readonly explanation = input<string>();
 
-  readonly segments = signal<DiffSegment[]>([]);
+  readonly segments = computed<DiffSegment[]>(() => {
+    const orig = this.original();
+    const corr = this.corrected();
 
-  ngOnInit(): void {
-    this.computeWordDiff();
-  }
-
-  private computeWordDiff(): void {
     // Universal tokenisation: use native Intl.Segmenter (word granularity) per Rule 3
     let origTokens: string[];
     let corrTokens: string[];
 
     if (typeof Intl !== 'undefined' && Intl.Segmenter) {
       const segmenter = new Intl.Segmenter('en', { granularity: 'word' });
-      origTokens = Array.from(segmenter.segment(this.original)).map((s) => s.segment);
-      corrTokens = Array.from(segmenter.segment(this.corrected)).map((s) => s.segment);
+      origTokens = Array.from(segmenter.segment(orig)).map((s) => s.segment);
+      corrTokens = Array.from(segmenter.segment(corr)).map((s) => s.segment);
     } else {
-      origTokens = this.original.split(/(\s+)/);
-      corrTokens = this.corrected.split(/(\s+)/);
+      origTokens = orig.split(/(\s+)/);
+      corrTokens = corr.split(/(\s+)/);
     }
 
     // Simple LCS-based or sequential diffing algorithm
@@ -65,6 +62,6 @@ export class VisualDiffComponent implements OnInit {
       }
     }
 
-    this.segments.set(result);
-  }
+    return result;
+  });
 }
