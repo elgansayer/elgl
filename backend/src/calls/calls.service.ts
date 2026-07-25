@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 export class CallsService {
   constructor(private configService: ConfigService) {}
 
-  async initiateCall(callerId: string, calleeId: string) {
+  async initiateCall(callerId: string, _calleeId: string) {
     const roomName = `call_${uuidv4()}`;
     const apiKey =
       this.configService.get<string>('LIVEKIT_API_KEY') || 'devkey';
