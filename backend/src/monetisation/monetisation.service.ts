@@ -56,7 +56,7 @@ export class MonetisationService {
     this.stripe = new Stripe(
       this.configService.get<string>('STRIPE_SECRET_KEY') || '',
       {
-        apiVersion: '2023-10-16' as Stripe.LatestApiVersion,
+        apiVersion: '2023-10-16',
       },
     );
   }
@@ -269,7 +269,10 @@ export class MonetisationService {
       .select('user_id, total_api_calls_today, avg_latency_ms')
       .eq('user_id', userId)
       .single();
-    const metric = metricResponse.data as unknown as { total_api_calls_today?: number; avg_latency_ms?: number } | null;
+    const metric = metricResponse.data as unknown as {
+      total_api_calls_today?: number;
+      avg_latency_ms?: number;
+    } | null;
 
     return {
       api_key: user.developer_api_key || null,
