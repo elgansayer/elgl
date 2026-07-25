@@ -223,12 +223,12 @@ export class ReportUserModalComponent implements OnInit {
         this.blockUser()
           ? 'Report submitted & user blocked'
           : 'Report submitted successfully',
-        { type: 'success' }
+        'success'
       );
       this.reported.emit();
       this.close.emit();
     } catch {
-      this.toast.show('Failed to submit report', { type: 'error' });
+      this.toast.show('Failed to submit report', 'error');
     } finally {
       this.submitting.set(false);
     }
