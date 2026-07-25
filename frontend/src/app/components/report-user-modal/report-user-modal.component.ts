@@ -1,88 +1,84 @@
-import { Component, input, output, signal, inject, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import {
+  Component,
+  OnInit,
+  Input,
+  Output,
+  EventEmitter,
+  signal,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { SafetyService, ReportCategory } from '../../services/safety.service';
-import { ToastService } from '../primitives/toast/toast.service';
 
 @Component({
   selector: 'app-report-user-modal',
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <!-- Backdrop -->
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-      (click)="onCancel()"
-    >
-      <!-- Modal dialog -->
-      <div
-        class="w-full max-w-md rounded-3xl bg-slate-800 p-6 shadow-2xl border border-slate-700"
-        (click)="$event.stopPropagation()"
-      >
-        <h2 class="mb-6 text-2xl font-bold text-white text-center">Report User</h2>
+    <!-- Backdrop overlay -->
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" (click)="close.emit()">
+      <!-- Modal card -->
+      <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-lg m-4 text-slate-100" (click)="$event.stopPropagation()">
+        <h2 class="text-xl font-bold mb-4">Report User</h2>
+        
+        <p class="text-slate-400 mb-4">Please select a reason and provide any additional details.</p>
 
-        @if (isLoadingCategories()) {
-          <div class="mb-6 flex items-center justify-center gap-2 text-sm text-slate-400">
-            <svg class="h-5 w-5 animate-spin text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Loading categories…
-          </div>
-        } @else {
-          <!-- Category selection pills -->
-          <div class="mb-6 flex flex-wrap gap-2">
-            @for (cat of categories(); track cat.value) {
-              <button
-                type="button"
-                class="rounded-full px-4 py-1.5 text-sm font-semibold transition
-                  {{
-                    selectedCategory() === cat.value
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-slate-700/50 text-slate-200 hover:bg-slate-700'
-                  }}"
-                (click)="selectedCategory.set(cat.value)"
-              >
-                {{ cat.label }}
-              </button>
+        <!-- Category selection -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2">Reason</label>
+          <div class="space-y-2">
+            @for (category of categories(); track category.value) {
+              <label class="flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors"
+                     [class.bg-indigo-600/20]="selectedCategory() === category.value"
+                     [class.hover:bg-slate-700/50]="selectedCategory() !== category.value">
+                <input type="radio"
+                       name="report-category"
+                       [value]="category.value" 
+                       [ngModel]="selectedCategory()" 
+                       (ngModelChange)="selectedCategory.set($event)" 
+                       class="mt-0.5" />
+                <div>
+                  <span class="font-medium">{{ category.icon }} {{ category.label }}</span>
+                  @if (category.description) {
+                    <p class="text-xs text-slate-400 mt-1">{{ category.description }}</p>
+                  }
+                </div>
+              </label>
             }
           </div>
+        </div>
+
+        <!-- Description -->
+        <div class="mb-4">
+          <label for="report-description" class="block text-sm font-medium mb-2">Additional details (optional)</label>
+          <textarea id="report-description"
+                    [ngModel]="description()"
+                    (ngModelChange)="description.set($event)"
+                    rows="3"
+                    maxlength="500"
+                    placeholder="Please describe what happened..."
+                    class="w-full bg-slate-700 border border-slate-600 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"></textarea>
+        </div>
+
+        <!-- Error message -->
+        @if (errorMessage()) {
+          <div class="text-red-400 text-sm mb-4">{{ errorMessage() }}</div>
         }
 
-        <!-- Optional description (only after category selection) -->
-        @if (selectedCategory()) {
-          <div class="mb-6">
-            <label for="report-description" class="mb-2 block text-sm font-medium text-slate-300">
-              Additional details (optional)
-            </label>
-            <textarea
-              id="report-description"
-              [(ngModel)]="description"
-              rows="3"
-              maxlength="500"
-              class="w-full rounded-xl border border-slate-600 bg-slate-700 px-4 py-3 text-white
-                placeholder-slate-400 focus:border-purple-500 focus:outline-none focus:ring-1
-                focus:ring-purple-500"
-              placeholder="Provide more context…"
-            ></textarea>
-          </div>
-        }
-
-        <!-- Action buttons -->
+        <!-- Actions -->
         <div class="flex justify-end gap-3">
-          <button
-            class="rounded-full px-6 py-2.5 text-sm font-semibold text-slate-300 hover:bg-slate-700 transition"
-            (click)="close.emit()"
-          >
+          <button type="button"
+                  (click)="close.emit()"
+                  class="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 transition-colors"
+                  [disabled]="isSubmitting()">
             Cancel
           </button>
-          <button
-            class="rounded-full px-6 py-2.5 text-sm font-semibold bg-purple-600 text-white hover:bg-purple-500
-              disabled:opacity-50 disabled:cursor-not-allowed transition"
-            [disabled]="!selectedCategory() || isSubmitting()"
-            (click)="submitReport()"
-          >
-            {{ isSubmitting() ? 'Submitting…' : 'Submit Report' }}
+          <button type="button"
+                  (click)="submitReport()"
+                  class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50"
+                  [disabled]="isSubmitting() || !selectedCategory()">
+            {{ isSubmitting() ? 'Submitting...' : 'Submit Report' }}
           </button>
         </div>
       </div>
@@ -90,79 +86,52 @@ import { ToastService } from '../primitives/toast/toast.service';
   `,
 })
 export class ReportUserModalComponent implements OnInit {
-  readonly reportedUserId = input.required<string>();
-  readonly contextUrl = input('');
+  private safetyService = inject(SafetyService);
 
-  readonly close = output<void>();
-  readonly submitted = output<void>();
+  @Input({ required: true }) reportedUserId!: string;
+  @Input() contextUrl?: string;
 
-  private readonly safetyService = inject(SafetyService);
-  private readonly toastService = inject(ToastService);
+  @Output() close = new EventEmitter<void>();
+  @Output() submitted = new EventEmitter<void>();
 
   categories = signal<ReportCategory[]>([]);
-  isLoadingCategories = signal(true);
-  selectedCategory = signal<string | null>(null);
-  isSubmitting = signal(false);
-  description = '';
+  selectedCategory = signal<string>('');
+  description = signal<string>('');
+  isSubmitting = signal<boolean>(false);
+  errorMessage = signal<string>('');
 
   ngOnInit(): void {
-    this.loadCategories();
-  }
-
-  private loadCategories(): void {
-    this.isLoadingCategories.set(true);
     this.safetyService.getReportCategories().subscribe({
-      next: (cats) => {
-        this.categories.set(cats.length > 0 ? cats : this.getStaticCategories());
-        this.isLoadingCategories.set(false);
-      },
+      next: (cats) => this.categories.set(cats),
       error: () => {
-        this.categories.set(this.getStaticCategories());
-        this.isLoadingCategories.set(false);
-      },
+        // Fallback to static list if API fails (service already handles this)
+        this.categories.set(this.safetyService.getStaticReportCategories());
+      }
     });
   }
 
-  private getStaticCategories(): ReportCategory[] {
-    return [
-      { value: 'harassment', label: 'Harassment', icon: '🚫', description: '' },
-      { value: 'spam', label: 'Spam', icon: '📧', description: '' },
-      { value: 'inappropriate_content', label: 'Inappropriate Content', icon: '🔞', description: '' },
-      { value: 'impersonation', label: 'Impersonation', icon: '🎭', description: '' },
-      { value: 'underage', label: 'Underage User', icon: '👶', description: '' },
-      { value: 'other', label: 'Other', icon: '📝', description: '' },
-    ];
-  }
-
-  submitReport(): void {
+  async submitReport(): Promise<void> {
     const category = this.selectedCategory();
-    if (!category || this.isSubmitting()) return;
+    if (!category) {
+      this.errorMessage.set('Please select a reason.');
+      return;
+    }
 
+    this.errorMessage.set('');
     this.isSubmitting.set(true);
 
-    const dto = {
-      reported_id: this.reportedUserId(),
-      reason_category: category,
-      description: this.description.trim() || undefined,
-      context_url: this.contextUrl() || window.location.href,
-    };
-
-    this.safetyService.reportUser(dto).subscribe({
-      next: () => {
-        this.toastService.show('Report submitted. We will review it shortly.', { type: 'success' });
-        this.submitted.emit();
-        this.isSubmitting.set(false);
-        this.close.emit();
-      },
-      error: (err) => {
-        console.error('Report failed', err);
-        this.toastService.show('Failed to submit report. Please try again.', { type: 'error' });
-        this.isSubmitting.set(false);
-      },
-    });
-  }
-
-  onCancel(): void {
-    this.close.emit();
+    try {
+      await this.safetyService.reportUserAsync({
+        reported_id: this.reportedUserId,
+        reason_category: category,
+        description: this.description() || undefined,
+        context_url: this.contextUrl || undefined,
+      });
+      this.submitted.emit();
+    } catch (err: any) {
+      this.errorMessage.set(err?.message || 'Failed to submit report. Please try again.');
+    } finally {
+      this.isSubmitting.set(false);
+    }
   }
 }
