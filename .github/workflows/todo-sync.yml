@@ -36,10 +36,15 @@ jobs:
               # Search for exact issue title in both open and closed issues
               ISSUE_JSON=$(gh issue list --search "\"$TITLE\" in:title" --state all --json number,state --jq '.[0]')
               
-              ISSUE_NUM=$(echo "$ISSUE_JSON" | jq -r '.number // empty')
-              ISSUE_STATE=$(echo "$ISSUE_JSON" | jq -r '.state // empty')
+              if [ -z "$ISSUE_JSON" ]; then
+                ISSUE_NUM=""
+                ISSUE_STATE=""
+              else
+                ISSUE_NUM=$(echo "$ISSUE_JSON" | jq -r '.number')
+                ISSUE_STATE=$(echo "$ISSUE_JSON" | jq -r '.state')
+              fi
               
-              if [ -z "$ISSUE_NUM" ]; then
+              if [ -z "$ISSUE_NUM" ] || [ "$ISSUE_NUM" == "null" ]; then
                 echo "Creating new issue for: $TITLE"
                 ISSUE_URL=$(gh issue create --title "$TITLE" --body "Tracked in TODO.md by the AI Swarm pipeline.")
                 ISSUE_NUM=${ISSUE_URL##*/}
