@@ -79,3 +79,4 @@
 - [ ] Labels to organize chats and customers.
 - [ ] Cart and catalog integration for shopping.
 
+ 
