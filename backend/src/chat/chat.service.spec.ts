@@ -1,13 +1,3 @@
-jest.mock('../centrifugo/centrifugo.service', () => {
-  const instance = {
-    generateConnectionToken: jest.fn().mockReturnValue({ token: 'mock-token' }),
-    publish: jest.fn().mockResolvedValue(true),
-  };
-  return {
-    CentrifugoService: jest.fn().mockImplementation(() => instance),
-  };
-});
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatService } from './chat.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -43,7 +33,13 @@ describe('ChatService', () => {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
           },
         },
-        CentrifugoService,
+        {
+          provide: CentrifugoService,
+          useValue: {
+            generateConnectionToken: jest.fn().mockReturnValue({ token: 'mock-token' }),
+            publish: jest.fn().mockResolvedValue(true),
+          },
+        },
       ],
     }).compile();
 
