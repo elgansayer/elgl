@@ -881,3 +881,63 @@ PASS src/moments/moments.service.spec.ts
 PASS src/economy/economy.service.spec.ts
 PASS src/economy/economy.controller.spec.ts
 PASS src/audio-rooms/audio-rooms.service.spec.ts
+PASS src/media/media.controller.spec.ts
+PASS src/monetisation/monetisation.service.spec.ts
+PASS src/flashcards/flashcards.service.spec.ts
+PASS src/supabase/supabase.service.spec.ts
+PASS src/flashcards/flashcards.controller.spec.ts
+PASS src/safety/safety.controller.spec.ts
+PASS src/moments/timeline.worker.spec.ts
+PASS src/users/users.service.spec.ts
+PASS src/chat/chat.controller.spec.ts
+[31m[Nest] 292104  - [39m07/25/2026, 7:04:00 PM [31m  ERROR[39m [38;5;3m[StreakService] [39m[31mFailed to query inactive users[39m
+DB error
+[31m[Nest] 292104  - [39m07/25/2026, 7:04:00 PM [31m  ERROR[39m [38;5;3m[StreakService] [39m[31mFailed to reset streaks[39m
+Update failed
+PASS src/streak/streak.service.spec.ts
+[31m[Nest] 292104  - [39m07/25/2026, 7:04:01 PM [31m  ERROR[39m [38;5;3m[SafetyService] [39m[31mFailed to submit report from user-1 against reported-1: Database error[39m
+[31m[Nest] 292104  - [39m07/25/2026, 7:04:01 PM [31m  ERROR[39m [38;5;3m[SafetyService] [39m[31mFailed to get blocked user IDs for user-1:[39m
+[31m[Nest] 292104  - [39m07/25/2026, 7:04:01 PM [31m  ERROR[39m [38;5;3m[SafetyService] [39m[1mnull[22m
+PASS src/safety/safety.service.spec.ts
+PASS src/chat/chat.service.spec.ts
+PASS src/profile-visits/profile-visits.service.spec.ts
+PASS src/profile-visits/profile-visits.controller.spec.ts
+PASS src/auth/supabase-auth.guard.spec.ts
+PASS src/media/media.service.spec.ts
+PASS src/discovery/discovery.service.spec.ts
+PASS src/notifications/notifications.service.spec.ts
+  ● Console
+
+    console.warn
+      No push tokens found for user recipient-1
+
+      30 |
+      31 |       if (error || !tokens || tokens.length === 0) {
+    > 32 |         console.warn(`No push tokens found for user ${userId}`);
+         |                 ^
+      33 |         return;
+      34 |       }
+      35 |
+
+      at NotificationsService.sendPushNotification (notifications/notifications.service.ts:32:17)
+      at NotificationsService.createNotification (notifications/notifications.service.ts:187:7)
+      at Object.<anonymous> (notifications/notifications.service.spec.ts:58:7)
+
+PASS src/chat/centrifugo.service.spec.ts
+PASS src/notifications/notifications.controller.spec.ts
+PASS src/app.service.spec.ts
+PASS src/app.controller.spec.ts
+
+Test Suites: 33 passed, 33 total
+Tests:       316 passed, 316 total
+Snapshots:   0 total
+Time:        33.245 s, estimated 36 s
+Ran all test suites.
+Jest did not exit one second after the test run has completed.
+
+'This usually means that there are asynchronous operations that weren't stopped in your tests. Consider running Jest with `--detectOpenHandles` to troubleshoot this issue.
+
+> frontend@0.0.0 test
+> ng test --watch=false
+
+❯ Building...
