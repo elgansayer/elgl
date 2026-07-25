@@ -34,10 +34,10 @@ import { ReportUserModalComponent } from '../report-user-modal/report-user-modal
     }
     @if (showReportModal()) {
       <app-report-user-modal
-        [reportedUserId]="senderId()"
+        [reportUserId]="senderId()"
         [contextUrl]="buildContextUrl()"
         (close)="showReportModal.set(false)"
-        (submitted)="onReportSubmitted()"
+        (reported)="onReportSubmitted()"
       ></app-report-user-modal>
     }
   `,
