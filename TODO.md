@@ -521,3 +521,117 @@
 - [ ] Automated greeting and away messages.
 - [ ] Labels to organize chats and customers.
 - [ ] Cart and catalog integration for shopping.
+
+## Phase 80: The Moments Engine (HelloTalk Features)
+
+### Post Creation & Sharing
+- [ ] Implement Multimedia Posts (text, photos, and voice notes).
+- [ ] Build Targeted Visibility routing (posts display to native speakers of target language).
+
+### Feedback & Corrections
+- [ ] Implement Instant Grammar Fixes (direct text editing by native speakers).
+- [ ] Build Voice Feedback functionality for pronunciation corrections.
+- [ ] Add Detailed Explanations UI for context and alternative expressions.
+
+### Community & Q&A
+- [ ] Build Language Questions post type.
+- [ ] Implement Cultural Insights tagging and filtering.
+- [ ] Build Milestone Tracking for progress and study buddy matching.
+
+### Content Management
+- [ ] Build Resource Library for saving helpful posts and tips.
+- [ ] Implement Organised Collections (sort by topic/difficulty).
+- [ ] Build Offline Access functionality for saved content.
+
+## Phase 81: HelloTalk Profile System
+
+### Basic User Information
+- [ ] Build Avatar upload and client-side cropping tool.
+- [ ] Implement Native Language and Target Language selection with proficiency levels.
+- [ ] Display Nationality, Region, Age, and Gender fields.
+
+### Multimedia & Introductions
+- [ ] Build Profile Cover Photo upload and positioning.
+- [ ] Implement Text Bio section with inline translation support.
+- [ ] Build 30-second Audio Introduction recording and playback widget.
+- [ ] Add selectable Hobbies and Interests tags.
+
+### Stats & Gamification
+- [ ] Display Daily Study Streak counter.
+- [ ] Show total lifetime counts for Translations, Corrections, and Moments.
+- [ ] Display earned user badges (VIP status, Serious Learner).
+
+### Social & Interactivity
+- [ ] Implement Followers and Following lists with numeric counters.
+- [ ] Build direct "Send Message" and "Follow" action buttons on external profiles.
+- [ ] Implement "Who Viewed Me" visitor logs.
+
+### Privacy & Settings
+- [ ] Build toggles to hide or show exact location and online status.
+- [ ] Implement Block User and Report User workflows directly from the profile.
+- [ ] Add incognito mode for profile visiting (VIP feature).
+
+## Phase 82: HelloTalk Settings System
+
+### Account & Security
+- [ ] Build Linked Accounts management (Email, Google, Apple).
+- [ ] Implement Password reset and change workflows.
+- [ ] Build Account Deletion and data export requests.
+
+### Privacy & Discoverability
+- [ ] Implement "Who can message me" filters (Age, Gender, Native Language).
+- [ ] Build Location Privacy toggles (Exact location vs. Region only).
+- [ ] Add "Hide Online Status" and "Hide VIP Status" toggles.
+- [ ] Build Blocked Users management list.
+
+### Notifications
+- [ ] Build granular Push Notification toggles (Messages, Comments, Likes, Followers).
+- [ ] Implement In-App Sound and Vibration settings.
+- [ ] Add "Do Not Disturb" scheduling.
+
+### Chat & Language Settings
+- [ ] Build App UI Language selector.
+- [ ] Set Default Translation Language.
+- [ ] Implement Chat specific settings (Enter to send, Text size customisation).
+
+### Data & Storage
+- [ ] Build Local Storage management (Clear cache, Delete old media).
+- [ ] Implement Auto-Download preferences (Wi-Fi only vs. Cellular).
+- [ ] Build Chat Backup and Restore functionality.
+
+### VIP & Subscriptions
+- [ ] Build Subscription Management portal.
+- [ ] Add "Restore Purchases" workflow.
+
+### Help & About
+- [ ] Add Support Centre and FAQ viewer.
+- [ ] Implement App Version display and update checker.
+- [ ] Build Terms of Service and Privacy Policy document viewers.
+
+## Phase 83: HelloTalk Find Partners System
+
+### Core Discovery & Sorting
+- [ ] Implement sorting algorithms (Best Match, Online Now, Nearest, Newest).
+- [ ] Build global user query engine based on Native and Target language pairs.
+- [ ] Add "Serious Learner" toggle to filter for active study streaks.
+
+### Advanced Search Filters
+- [ ] Build Age Range dual-thumb slider.
+- [ ] Implement Gender filter dropdown (often restricted to VIP).
+- [ ] Add Language Proficiency filter (Beginner, Intermediate, Advanced).
+- [ ] Implement "Has Audio Intro" required filter.
+
+### Location & Proximity Search
+- [ ] Build GPS-based "Nearby" search rendering distance in miles or kilometres.
+- [ ] Implement specific Country and City manual search.
+- [ ] Build Location Spoofing functionality for VIP users to search as if in another country.
+
+### Discovery UI & Interactions
+- [ ] Build Profile Discovery Cards displaying avatar, name, languages, and short bio.
+- [ ] Implement inline Audio Intro play button directly on the search card.
+- [ ] Add quick-action "Send Message" and "Follow" buttons on list items.
+- [ ] Display online status indicators (green dot) and last active timestamps.
+
+### Algorithmic Recommendations
+- [ ] Build "Recommended for You" carousel based on mutual interests and activity levels.
+- [ ] Implement new user spotlight to highlight recently joined native speakers.
