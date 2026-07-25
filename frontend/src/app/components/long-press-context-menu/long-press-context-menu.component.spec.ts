@@ -70,36 +70,36 @@ describe('LongPressContextMenuComponent', () => {
     vi.spyOn(event, 'preventDefault');
     component.onRightClick(event);
     expect(event.preventDefault).toHaveBeenCalled();
-    expect(component.isOpen()).toBe(true);
+    expect(component.showMenu()).toBe(true);
     expect(component.position()).toEqual({ x: 100, y: 200 });
   });
 
   it('should close menu on document click outside', () => {
-    component['isOpen'].set(true);
+    component['showMenu'].set(true);
     const outsideElement = document.createElement('div');
     document.body.appendChild(outsideElement);
     outsideElement.click();
-    expect(component.isOpen()).toBe(false);
+    expect(component.showMenu()).toBe(false);
     document.body.removeChild(outsideElement);
   });
 
   it('should close menu on escape key', () => {
-    component['isOpen'].set(true);
+    component['showMenu'].set(true);
     const event = new KeyboardEvent('keydown', { key: 'Escape' });
     document.dispatchEvent(event);
-    expect(component.isOpen()).toBe(false);
+    expect(component.showMenu()).toBe(false);
   });
 
   it('should close menu on window resize', () => {
-    component['isOpen'].set(true);
+    component['showMenu'].set(true);
     window.dispatchEvent(new Event('resize'));
-    expect(component.isOpen()).toBe(false);
+    expect(component.showMenu()).toBe(false);
   });
 
   it('should close menu on window scroll', () => {
-    component['isOpen'].set(true);
+    component['showMenu'].set(true);
     window.dispatchEvent(new Event('scroll'));
-    expect(component.isOpen()).toBe(false);
+    expect(component.showMenu()).toBe(false);
   });
 
   it('should not open menu when disabled', () => {
@@ -107,7 +107,7 @@ describe('LongPressContextMenuComponent', () => {
     fixture.detectChanges();
     const event = new MouseEvent('contextmenu', { clientX: 100, clientY: 200 });
     component.onRightClick(event);
-    expect(component.isOpen()).toBe(false);
+    expect(component.showMenu()).toBe(false);
   });
 
   it('should start long press timer on touch start', () => {
@@ -120,7 +120,7 @@ describe('LongPressContextMenuComponent', () => {
     component.onTouchStart(touchEvent);
     expect((component as any).longPressTimer).not.toBeNull();
     vi.advanceTimersByTime(component.longPressDuration());
-    expect(component.isOpen()).toBe(true);
+    expect(component.showMenu()).toBe(true);
     vi.useRealTimers();
   });
 
@@ -147,7 +147,7 @@ describe('LongPressContextMenuComponent', () => {
   });
 
   it('should render menu options', () => {
-    component['isOpen'].set(true);
+    component['showMenu'].set(true);
     fixture.detectChanges();
     const buttons = fixture.debugElement.queryAll(By.css('button[role="menuitem"]'));
     expect(buttons.length).toBe(3);
@@ -159,7 +159,7 @@ describe('LongPressContextMenuComponent', () => {
   it.skip('should disable menu options when disabled input is true', () => {
     fixture.componentRef.setInput('disabled', true);
     fixture.detectChanges();
-    component['isOpen'].set(true);
+    component['showMenu'].set(true);
     fixture.detectChanges();
 
     const buttons = fixture.debugElement.queryAll(By.css('button[role="menuitem"]'));
