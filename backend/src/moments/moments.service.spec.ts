@@ -296,6 +296,18 @@ describe('MomentsService', () => {
               limit: jest.fn().mockResolvedValue({ data: [] }),
             };
           }
+          if (table === 'users') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              in: jest.fn().mockResolvedValue({ data: [] }),
+            };
+          }
+          if (table === 'moment_likes') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              in: jest.fn().mockResolvedValue({ data: [] }),
+            };
+          }
           return mockQueryBuilder;
         });
 
