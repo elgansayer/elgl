@@ -1,3 +1,7 @@
+jest.mock('../centrifugo/centrifugo.service', () => ({
+  CentrifugoService: class {},
+}));
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatService } from './chat.service';
 import { SupabaseService } from '../supabase/supabase.service';
