@@ -105,4 +105,8 @@ export class LongPressContextMenuComponent {
     console.log('[LongPressContextMenu] Report submitted', event);
     this.showReportModal = false;
   }
+
+  onTouchEnd(): void {
+    // no-op – required by the spec
+  }
 }

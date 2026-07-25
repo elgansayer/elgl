@@ -207,7 +207,7 @@ export class ReportUserModalComponent implements OnInit, OnDestroy {
 
   // Keyboard accessibility: close modal on Esc
   @HostListener('document:keydown.escape', ['$event'])
-  onEscape(event: KeyboardEvent) {
+  onEscape(event: Event) {
     if (this.show) {
       event.preventDefault();
       this.close();
