@@ -63,11 +63,7 @@ describe('LongPressContextMenuComponent', () => {
     // Clicking report opens the modal but does not emit directly
     component['onOptionClick']('report');
     // After the modal submits, the event is emitted
-    component.onReportSubmitted({
-      reported_id: 'user-123',
-      reason_category: 'spam',
-      context_url: '',
-    });
+    component.onReportSubmitted();
     expect(component.report.emit).toHaveBeenCalledWith({
       messageId: 'test-message-id',
       content: 'Hello world',

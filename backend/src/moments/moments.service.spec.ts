@@ -70,6 +70,7 @@ describe('MomentsService', () => {
             blockUser: jest.fn().mockResolvedValue(undefined),
             unblockUser: jest.fn().mockResolvedValue(undefined),
             getCategories: jest.fn().mockReturnValue(['harassment']),
+            getBlockedAndBlockerIds: jest.fn().mockResolvedValue([]),
           },
         },
       ],
