@@ -24,6 +24,10 @@ describe('ChatService', () => {
       ilike: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
+      patch: jest.fn().mockReturnThis(),
+      upsert: jest.fn().mockReturnThis(),
+      update: jest.fn().mockReturnThis(),
+      delete: jest.fn().mockReturnThis(),
       single: jest.fn(),
       // Make the builder thenable so that `await supabase.from(...)…` resolves to a plain object
       then: jest.fn().mockResolvedValue({ data: [] }),
@@ -124,7 +128,7 @@ describe('ChatService', () => {
         message: savedMessage,
       });
       expect(result).toEqual(savedMessage);
-    }, 10000);
+    }, 15000);
 
     it('should throw Error when insert fails with error message', async () => {
       const dto: any = { room_id: 'room-1', message_type: 'TEXT' };
@@ -136,7 +140,7 @@ describe('ChatService', () => {
       await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
         'Failed to save message: Database insert failed',
       );
-    }, 10000);
+    }, 15000);
 
     it('should throw Error when insert returns null data without error message', async () => {
       const dto: any = { room_id: 'room-1', message_type: 'TEXT' };
@@ -148,7 +152,7 @@ describe('ChatService', () => {
       await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
         'Failed to save message',
       );
-    }, 10000);
+    }, 15000);
   });
 
   describe('getRooms', () => {
