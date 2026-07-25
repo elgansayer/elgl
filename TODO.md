@@ -303,6 +303,7 @@
 
 ## Phase 22: Moderation & Trust Engine
 - [ ] Build "Report User" modal with dynamic category selection.
+- [ ] **REMAINING:** The actual "Report User" modal has not been implemented; the diff only contains formatting/lint cleanups. Need to implement the full frontend modal and backend reporting flow.
 - [ ] Implement Blocklist system hiding blocked accounts across chat, feed, and search.
 - [ ] Wire up block/unblock UI in LongPressContextMenuComponent and ChatMessageComponent, and implement backend/frontend filtering to hide blocked users from chat, feed, and search results.
 - [ ] **(Current diff review 2026-07-26):** The git diff only contains formatting changes; implement actual block/unblock UI wiring and backend/frontend filtering.
