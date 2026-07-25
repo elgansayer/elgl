@@ -187,7 +187,7 @@ export class MonetisationService {
       };
       const metadata = obj.metadata;
       if (metadata?.userId) {
-        const tier = tierForInterval(metadata.interval ?? 'month');
+        const tier = metadata.tier ?? tierForInterval(metadata.interval ?? 'month');
         await this.updateVipStatusFromWebhook(metadata.userId, true, tier);
       }
     } else if (event.type === 'customer.subscription.deleted') {
