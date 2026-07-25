@@ -305,7 +305,9 @@ export class GooglePlayNotificationService {
   /**
    * Retrieves the user ID associated with a purchase token.
    */
-  private async getUserIdByPurchaseToken(purchaseToken: string): Promise<string | null> {
+  private async getUserIdByPurchaseToken(
+    purchaseToken: string,
+  ): Promise<string | null> {
     const supabase = this.supabaseService.getClient();
 
     const { data } = await supabase
