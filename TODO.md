@@ -169,7 +169,7 @@
 - [x] Build interactive Flashcard Review UI (Flip animations and grading buttons).
 
 ## Phase 21: Push Notifications
-- [ ] Integrate Firebase Cloud Messaging (FCM) in Angular.
+- [STUCK] Integrate Firebase Cloud Messaging (FCM) in Angular.
 - [ ] Build NestJS event listeners to dispatch push alerts for chats, comments, and profile views.
 - [ ] Build Notification Preferences UI with granular category toggles.
 
