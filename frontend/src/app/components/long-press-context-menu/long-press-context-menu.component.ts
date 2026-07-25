@@ -4,46 +4,32 @@ import {
   Output,
   EventEmitter,
   input,
+  model,
+  signal,
   HostListener,
+  ElementRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReportUserModalComponent } from '../report-user-modal/report-user-modal.component';
 
 @Component({
   selector: 'app-long-press-context-menu',
   standalone: true,
-  imports: [CommonModule, ReportUserModalComponent],
+  imports: [CommonModule],
   template: `
-    <!-- Existing popup menu -->
     @if (showMenu()) {
-      <div
-        class="context-menu-popup"
-        (click)="$event.stopPropagation()"
-        (contextmenu)="$event.preventDefault()"
-      >
+      <div class="context-menu-popup" (click)="$event.stopPropagation()" (contextmenu)="$event.preventDefault()">
         <ul class="menu-items">
           <li>
-            <button type="button" (click)="onAction('copy')">Copy</button>
+            <button type="button" role="menuitem" (click)="onOptionClick('copy')" [disabled]="disabled()">Copy</button>
           </li>
           <li>
-            <button type="button" (click)="onAction('reply')">Reply</button>
+            <button type="button" role="menuitem" (click)="onOptionClick('favourite')" [disabled]="disabled()">Favourite</button>
           </li>
           <li>
-            <button type="button" (click)="onAction('report')">Report</button>
+            <button type="button" role="menuitem" (click)="onOptionClick('report')" [disabled]="disabled()">Report</button>
           </li>
         </ul>
       </div>
-    }
-
-    <!-- Report modal -->
-    @if (showReportModal) {
-      <app-report-user-modal
-        [reportUserId]="messageAuthorId ?? ''"
-        [contextUrl]="buildContextUrl()"
-        [show]="showReportModal"
-        (closed)="showReportModal = false"
-        (submitted)="onReportSubmitted($event)"
-      />
     }
   `,
   styles: [
@@ -77,44 +63,109 @@ import { ReportUserModalComponent } from '../report-user-modal/report-user-modal
       .menu-items button:hover {
         background: var(--surface-hover, #334155);
       }
+      .menu-items button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
     `,
   ],
 })
 export class LongPressContextMenuComponent {
   readonly messageId = input<string>('');
+  readonly messageContent = input<string>('');
+  readonly messageType = input<string>('text');
+  readonly senderId = input<string>('');
+  readonly roomId = input<string>('');
+  readonly disabled = input<boolean>(false);
+  readonly longPressDuration = input<number>(600);
+
+  showMenu = model(false);
+  position = signal({ x: 0, y: 0 });
+
   @Input() messageAuthorId?: string;
-  @Output() actionTriggered = new EventEmitter<string>();
 
-  readonly showMenu = input<boolean>(false);
+  @Output() copy = new EventEmitter<{ messageId: string; content: string }>();
+  @Output() favourite = new EventEmitter<{ messageId: string; content: string; messageType: string }>();
+  @Output() report = new EventEmitter<{ messageId: string; content: string; senderId: string; roomId: string }>();
 
-  showReportModal = false;
+  longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
-  onAction(action: string): void {
-    if (action === 'report') {
-      this.showReportModal = true;
-      return; // prevent emitting 'report' to parent
+  constructor(private elementRef: ElementRef) {}
+
+  onOptionClick(option: string): void {
+    if (option === 'copy') {
+      this.copy.emit({ messageId: this.messageId(), content: this.messageContent() });
+    } else if (option === 'favourite') {
+      this.favourite.emit({ messageId: this.messageId(), content: this.messageContent(), messageType: this.messageType() });
+    } else if (option === 'report') {
+      this.report.emit({
+        messageId: this.messageId(),
+        content: this.messageContent(),
+        senderId: this.senderId(),
+        roomId: this.roomId(),
+      });
     }
-    this.actionTriggered.emit(action);
+    this.close();
   }
 
-  onTouchMove(): void {
-    // no-op – required by the spec
+  onRightClick(event: MouseEvent): void {
+    event.preventDefault();
+    this.position.set({ x: event.clientX, y: event.clientY });
+    this.showMenu.set(true);
   }
 
   onTouchStart(event: TouchEvent): void {
-    // no-op – required by the spec
+    this.clearLongPressTimer();
+    const touch = event.touches[0];
+    if (touch) {
+      this.longPressTimer = setTimeout(() => {
+        this.position.set({ x: touch.clientX, y: touch.clientY });
+        this.showMenu.set(true);
+        this.longPressTimer = null;
+      }, this.longPressDuration());
+    }
   }
 
-  buildContextUrl(): string {
-    return window.location.href;
-  }
-
-  onReportSubmitted(event: { reasonCategory: string; description: string }): void {
-    console.log('[LongPressContextMenu] Report submitted', event);
-    this.showReportModal = false;
+  onTouchMove(): void {
+    this.clearLongPressTimer();
   }
 
   onTouchEnd(): void {
-    // no-op – required by the spec
+    this.clearLongPressTimer();
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const clickedInside = this.elementRef.nativeElement?.contains(event.target);
+    if (!clickedInside) {
+      this.close();
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.close();
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    this.close();
+  }
+
+  @HostListener('window:scroll')
+  onScroll(): void {
+    this.close();
+  }
+
+  close(): void {
+    this.showMenu.set(false);
+    this.clearLongPressTimer();
+  }
+
+  private clearLongPressTimer(): void {
+    if (this.longPressTimer) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
   }
 }
