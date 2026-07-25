@@ -1,8 +1,8 @@
-import { Component, input, output, inject, signal, OnInit } from '@angular/core';
+import { Component, input, output, signal, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { SafetyService, ReportCategory } from '../../services/safety.service';
-import { ToastService } from '../../components/primitives/toast/toast.service';
+import { ToastService } from '../primitives/toast/toast.service';
 
 @Component({
   selector: 'app-report-user-modal',
@@ -10,36 +10,46 @@ import { ToastService } from '../../components/primitives/toast/toast.service';
   imports: [CommonModule, FormsModule],
   template: `
     <!-- Backdrop -->
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <!-- Modal container -->
-      <div class="w-full max-w-md rounded-3xl bg-slate-800 p-6 shadow-2xl border border-slate-700"
-           (click)="$event.stopPropagation()">
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      (click)="close.emit()"
+    >
+      <!-- Modal dialog -->
+      <div
+        class="w-full max-w-md rounded-3xl bg-slate-800 p-6 shadow-2xl border border-slate-700"
+        (click)="$event.stopPropagation()"
+      >
         <h2 class="mb-6 text-2xl font-bold text-white text-center">Report User</h2>
 
         @if (isLoadingCategories()) {
-          <div class="text-sm text-slate-400 mb-4 text-center">Loading categories…</div>
+          <div class="mb-6 flex items-center justify-center gap-2 text-sm text-slate-400">
+            <svg class="h-5 w-5 animate-spin text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Loading categories…
+          </div>
+        } @else {
+          <!-- Category selection pills -->
+          <div class="mb-6 flex flex-wrap gap-2">
+            @for (cat of categories(); track cat.value) {
+              <button
+                type="button"
+                class="rounded-full px-4 py-1.5 text-sm font-semibold transition
+                  {{
+                    selectedCategory() === cat.value
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-700/50 text-slate-200 hover:bg-slate-700'
+                  }}"
+                (click)="selectedCategory.set(cat.value)"
+              >
+                {{ cat.label }}
+              </button>
+            }
+          </div>
         }
 
-        <!-- Category selection -->
-        <div class="mb-6 space-y-3">
-          @for (cat of categories(); track cat.value) {
-            <button
-              type="button"
-              class="w-full rounded-xl px-4 py-3 text-start transition-all duration-200 text-white border"
-              [class.bg-blue-600]="selectedCategory() === cat.value"
-              [class.border-blue-400]="selectedCategory() === cat.value"
-              [class.bg-slate-700]="selectedCategory() !== cat.value"
-              [class.border-slate-600]="selectedCategory() !== cat.value"
-              (click)="selectCategory(cat.value)">
-              <span class="font-semibold">{{ cat.label }}</span>
-              @if (selectedCategory() === cat.value) {
-                <span class="float-end text-blue-200 text-sm">✓</span>
-              }
-            </button>
-          }
-        </div>
-
-        <!-- Description field (shown after category selection) -->
+        <!-- Optional description (only after category selection) -->
         @if (selectedCategory()) {
           <div class="mb-6">
             <label for="report-description" class="mb-2 block text-sm font-medium text-slate-300">
@@ -50,7 +60,9 @@ import { ToastService } from '../../components/primitives/toast/toast.service';
               [(ngModel)]="description"
               rows="3"
               maxlength="500"
-              class="w-full rounded-xl border border-slate-600 bg-slate-700 px-4 py-3 text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              class="w-full rounded-xl border border-slate-600 bg-slate-700 px-4 py-3 text-white
+                placeholder-slate-400 focus:border-purple-500 focus:outline-none focus:ring-1
+                focus:ring-purple-500"
               placeholder="Provide more context…"
             ></textarea>
           </div>
@@ -59,14 +71,17 @@ import { ToastService } from '../../components/primitives/toast/toast.service';
         <!-- Action buttons -->
         <div class="flex justify-end gap-3">
           <button
-            class="rounded-full px-6 py-2.5 text-sm font-semibold text-slate-300 hover:bg-slate-700 transition-colors"
-            (click)="closeModal()">
+            class="rounded-full px-6 py-2.5 text-sm font-semibold text-slate-300 hover:bg-slate-700 transition"
+            (click)="close.emit()"
+          >
             Cancel
           </button>
           <button
-            class="rounded-full px-6 py-2.5 text-sm font-semibold bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="rounded-full px-6 py-2.5 text-sm font-semibold bg-purple-600 text-white hover:bg-purple-500
+              disabled:opacity-50 disabled:cursor-not-allowed transition"
             [disabled]="!selectedCategory() || isSubmitting()"
-            (click)="submitReport()">
+            (click)="submitReport()"
+          >
             {{ isSubmitting() ? 'Submitting…' : 'Submit Report' }}
           </button>
         </div>
@@ -76,29 +91,19 @@ import { ToastService } from '../../components/primitives/toast/toast.service';
 })
 export class ReportUserModalComponent implements OnInit {
   readonly reportedUserId = input.required<string>();
-  readonly contextUrl = input<string>('');
+  readonly contextUrl = input('');
+
   readonly close = output<void>();
-  readonly reported = output<void>();
+  readonly submitted = output<void>();
 
   private readonly safetyService = inject(SafetyService);
   private readonly toastService = inject(ToastService);
 
-  categories = signal<ReportCategory[]>(this.getStaticCategories());
-  isLoadingCategories = signal(false);
-
+  categories = signal<ReportCategory[]>([]);
+  isLoadingCategories = signal(true);
   selectedCategory = signal<string | null>(null);
-  description = '';
   isSubmitting = signal(false);
-
-  private getStaticCategories(): ReportCategory[] {
-    return [
-      { value: 'harassment', label: 'Harassment', icon: '🚫', description: 'Unwanted advances, threats, or abusive behaviour' },
-      { value: 'spam', label: 'Spam', icon: '📧', description: 'Unsolicited promotions, phishing, or fraudulent activity' },
-      { value: 'inappropriate_content', label: 'Inappropriate Content', icon: '🔞', description: 'Sexually explicit, violent, or offensive material' },
-      { value: 'fake_profile', label: 'Fake Profile', icon: '🎭', description: 'Pretending to be someone else or using false identity' },
-      { value: 'other', label: 'Other', icon: '📝', description: 'Something else not listed above' },
-    ];
-  }
+  description = '';
 
   ngOnInit(): void {
     this.loadCategories();
@@ -108,7 +113,7 @@ export class ReportUserModalComponent implements OnInit {
     this.isLoadingCategories.set(true);
     this.safetyService.getReportCategories().subscribe({
       next: (cats) => {
-        this.categories.set(cats.length ? cats : this.getStaticCategories());
+        this.categories.set(cats.length > 0 ? cats : this.getStaticCategories());
         this.isLoadingCategories.set(false);
       },
       error: () => {
@@ -118,38 +123,41 @@ export class ReportUserModalComponent implements OnInit {
     });
   }
 
-  selectCategory(cat: string) {
-    this.selectedCategory.set(cat);
+  private getStaticCategories(): ReportCategory[] {
+    return [
+      { value: 'harassment', label: 'Harassment', icon: '🚫', description: '' },
+      { value: 'spam', label: 'Spam', icon: '📧', description: '' },
+      { value: 'inappropriate_content', label: 'Inappropriate Content', icon: '🔞', description: '' },
+      { value: 'impersonation', label: 'Impersonation', icon: '🎭', description: '' },
+      { value: 'underage', label: 'Underage User', icon: '👶', description: '' },
+      { value: 'other', label: 'Other', icon: '📝', description: '' },
+    ];
   }
 
-  closeModal() {
-    this.selectedCategory.set(null);
-    this.description = '';
-    this.close.emit();
-  }
-
-  submitReport() {
-    const cat = this.selectedCategory();
-    if (!cat || this.isSubmitting()) return;
+  submitReport(): void {
+    const category = this.selectedCategory();
+    if (!category || this.isSubmitting()) return;
 
     this.isSubmitting.set(true);
+
     const dto = {
       reported_id: this.reportedUserId(),
-      reason_category: cat,
-      description: this.description || undefined,
+      reason_category: category,
+      description: this.description.trim() || undefined,
       context_url: this.contextUrl() || window.location.href,
     };
 
     this.safetyService.reportUser(dto).subscribe({
       next: () => {
-        this.isSubmitting.set(false);
-        this.reported.emit();
         this.toastService.show('Report submitted. We will review it shortly.', { type: 'success' });
+        this.submitted.emit();
+        this.isSubmitting.set(false);
+        this.close.emit();
       },
       error: (err) => {
         console.error('Report failed', err);
-        this.isSubmitting.set(false);
         this.toastService.show('Failed to submit report. Please try again.', { type: 'error' });
+        this.isSubmitting.set(false);
       },
     });
   }

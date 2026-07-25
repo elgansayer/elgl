@@ -32,12 +32,12 @@ import { ReportUserModalComponent } from '../report-user-modal/report-user-modal
         </ul>
       </div>
     }
-    @if (showReportModal) {
+    @if (showReportModal()) {
       <app-report-user-modal
         [reportedUserId]="senderId()"
         [contextUrl]="buildContextUrl()"
-        (close)="showReportModal = false"
-        (reported)="onReportSubmitted()"
+        (close)="showReportModal.set(false)"
+        (submitted)="onReportSubmitted()"
       ></app-report-user-modal>
     }
   `,
@@ -108,7 +108,7 @@ export class LongPressContextMenuComponent {
 
   longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
-  showReportModal = false;
+  showReportModal = signal(false);
 
   constructor(private elementRef: ElementRef) {}
 
@@ -125,7 +125,7 @@ export class LongPressContextMenuComponent {
       this.close();
     } else if (option === 'report') {
       this.close();               // hide context menu
-      this.showReportModal = true; // open report modal
+      this.showReportModal.set(true); // open report modal
       return;
     }
   }
@@ -163,7 +163,7 @@ export class LongPressContextMenuComponent {
   }
 
   onReportSubmitted(): void {
-    this.showReportModal = false;
+    this.showReportModal.set(false);
     this.report.emit({
       messageId: this.messageId(),
       content: this.messageContent(),
