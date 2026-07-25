@@ -11,7 +11,6 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReportUserModalComponent } from './report-user-modal/report-user-modal.component';
-import { SafetyService } from '../../services/safety.service';
 
 @Component({
   selector: 'app-long-press-context-menu',
@@ -35,11 +34,10 @@ import { SafetyService } from '../../services/safety.service';
     }
     @if (showReportModal) {
       <app-report-user-modal
-        [show]="showReportModal"
         [reportedUserId]="senderId()"
         [contextUrl]="buildContextUrl()"
-        (close)="onReportClose()"
-        (reportSubmitted)="onReportSubmitted($any($event))"
+        (close)="showReportModal = false"
+        (reported)="showReportModal = false"
       ></app-report-user-modal>
     }
   `,
@@ -112,10 +110,7 @@ export class LongPressContextMenuComponent {
 
   showReportModal = false;
 
-  constructor(
-    private elementRef: ElementRef,
-    private safetyService: SafetyService
-  ) {}
+  constructor(private elementRef: ElementRef) {}
 
   onOptionClick(option: string): void {
     if (option === 'copy') {
@@ -129,37 +124,10 @@ export class LongPressContextMenuComponent {
       });
       this.close();
     } else if (option === 'report') {
-      this.close();
-      this.showReportModal = true;
+      this.close();               // hide context menu
+      this.showReportModal = true; // open report modal
       return;
     }
-  }
-
-  onReportClose(): void {
-    this.showReportModal = false;
-  }
-
-  onReportSubmitted(payload: {
-    reported_id: string;
-    reason_category: string;
-    description?: string;
-    context_url: string;
-  }): void {
-    this.safetyService.reportUser(payload).subscribe({
-      next: () => {
-        this.showReportModal = false;
-        this.report.emit({
-          messageId: this.messageId(),
-          content: this.messageContent(),
-          senderId: this.senderId(),
-          roomId: this.roomId(),
-        });
-      },
-      error: (err) => {
-        console.error('Report failed:', err);
-        this.showReportModal = false;
-      }
-    });
   }
 
   onRightClick(event: MouseEvent): void {
