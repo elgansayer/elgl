@@ -22,6 +22,7 @@ describe('EconomyService', () => {
       eq: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       single: jest.fn(),
+      maybeSingle: jest.fn(),
     };
 
     mockSupabaseClient = {
@@ -167,9 +168,7 @@ describe('EconomyService', () => {
       );
 
       // Mock checkDuplicateTransaction
-      mockQueryBuilder.maybeSingle = jest
-        .fn()
-        .mockResolvedValue({ data: null });
+      mockQueryBuilder.maybeSingle.mockResolvedValue({ data: null });
 
       const result = await service.purchaseCoins('user-1', {
         amount: 500,
