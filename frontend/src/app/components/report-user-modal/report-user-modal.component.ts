@@ -53,7 +53,7 @@ import { Subscription } from 'rxjs';
 
             <!-- Subtitle -->
             <p class="text-sm text-slate-300 mb-6 text-start">
-              Hey, your report is anonymous – the other person won't know who reported them.
+              Hey there! Your report is totally anonymous – the other person won't know who reported them.
             </p>
 
             <!-- Dynamic category list -->
