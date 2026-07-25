@@ -5,6 +5,7 @@ import {
   Output,
   EventEmitter,
   signal,
+  computed,
   inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -15,75 +16,7 @@ import { SafetyService, ReportCategory } from '../../services/safety.service';
   selector: 'app-report-user-modal',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  template: `
-    <!-- Backdrop overlay -->
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" (click)="close.emit()">
-      <!-- Modal card -->
-      <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-lg m-4 text-slate-100" (click)="$event.stopPropagation()">
-        <h2 class="text-xl font-bold mb-4">Report User</h2>
-        
-        <p class="text-slate-400 mb-4">Please select a reason and provide any additional details.</p>
-
-        <!-- Category selection -->
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-2">Reason</label>
-          <div class="space-y-2">
-            @for (category of categories(); track category.value) {
-              <label class="flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors"
-                     [class.bg-indigo-600/20]="selectedCategory() === category.value"
-                     [class.hover:bg-slate-700/50]="selectedCategory() !== category.value">
-                <input type="radio"
-                       name="report-category"
-                       [value]="category.value" 
-                       [ngModel]="selectedCategory()" 
-                       (ngModelChange)="selectedCategory.set($event)" 
-                       class="mt-0.5" />
-                <div>
-                  <span class="font-medium">{{ category.icon }} {{ category.label }}</span>
-                  @if (category.description) {
-                    <p class="text-xs text-slate-400 mt-1">{{ category.description }}</p>
-                  }
-                </div>
-              </label>
-            }
-          </div>
-        </div>
-
-        <!-- Description -->
-        <div class="mb-4">
-          <label for="report-description" class="block text-sm font-medium mb-2">Additional details (optional)</label>
-          <textarea id="report-description"
-                    [ngModel]="description()"
-                    (ngModelChange)="description.set($event)"
-                    rows="3"
-                    maxlength="500"
-                    placeholder="Please describe what happened..."
-                    class="w-full bg-slate-700 border border-slate-600 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"></textarea>
-        </div>
-
-        <!-- Error message -->
-        @if (errorMessage()) {
-          <div class="text-red-400 text-sm mb-4">{{ errorMessage() }}</div>
-        }
-
-        <!-- Actions -->
-        <div class="flex justify-end gap-3">
-          <button type="button"
-                  (click)="close.emit()"
-                  class="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 transition-colors"
-                  [disabled]="isSubmitting()">
-            Cancel
-          </button>
-          <button type="button"
-                  (click)="submitReport()"
-                  class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50"
-                  [disabled]="isSubmitting() || !selectedCategory()">
-            {{ isSubmitting() ? 'Submitting...' : 'Submit Report' }}
-          </button>
-        </div>
-      </div>
-    </div>
-  `,
+  templateUrl: './report-user-modal.component.html',
 })
 export class ReportUserModalComponent implements OnInit {
   private safetyService = inject(SafetyService);
@@ -100,14 +33,53 @@ export class ReportUserModalComponent implements OnInit {
   isSubmitting = signal<boolean>(false);
   errorMessage = signal<string>('');
 
+  // Loading and error states for category fetch
+  loadingCategories = signal<boolean>(true);
+  loadError = signal<boolean>(false);
+  blockUser = signal<boolean>(false);
+
+  // Derived view of categories for the template
+  categoriesToShow = computed(() => this.categories());
+
   ngOnInit(): void {
-    this.safetyService.getReportCategories().subscribe({
-      next: (cats) => this.categories.set(cats),
+    this.loadingCategories.set(true);
+    this.loadError.set(false);
+    this.safetyService.getCategories().subscribe({
+      next: (cats) => {
+        this.categories.set(cats);
+        this.loadingCategories.set(false);
+      },
       error: () => {
-        // Fallback to static list if API fails (service already handles this)
+        // Fallback to static list; service already handles this, but ensure we have something
         this.categories.set(this.safetyService.getStaticReportCategories());
-      }
+        this.loadError.set(true);
+        this.loadingCategories.set(false);
+      },
     });
+  }
+
+  selectCategory(value: string): void {
+    this.selectedCategory.set(value);
+  }
+
+  retryLoadCategories(): void {
+    this.loadingCategories.set(true);
+    this.loadError.set(false);
+    this.safetyService.getCategories().subscribe({
+      next: (cats) => {
+        this.categories.set(cats);
+        this.loadingCategories.set(false);
+      },
+      error: () => {
+        this.categories.set(this.safetyService.getStaticReportCategories());
+        this.loadError.set(true);
+        this.loadingCategories.set(false);
+      },
+    });
+  }
+
+  cancel(): void {
+    this.close.emit();
   }
 
   async submitReport(): Promise<void> {
@@ -127,9 +99,17 @@ export class ReportUserModalComponent implements OnInit {
         description: this.description() || undefined,
         context_url: this.contextUrl || undefined,
       });
+
+      // If the user also chose to block, perform the block
+      if (this.blockUser()) {
+        await this.safetyService.blockUserAsync(this.reportedUserId);
+      }
+
       this.submitted.emit();
     } catch (err: any) {
-      this.errorMessage.set(err?.message || 'Failed to submit report. Please try again.');
+      this.errorMessage.set(
+        err?.message || 'Failed to submit report. Please try again.',
+      );
     } finally {
       this.isSubmitting.set(false);
     }
