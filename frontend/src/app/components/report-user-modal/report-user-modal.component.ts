@@ -33,7 +33,8 @@ import { Subscription } from 'rxjs';
             </div>
 
             <!-- Subtitle -->
-            <p class="text-sm text-slate-300 mb-6">
+            <!-- Logical text alignment: always start-aligned -->
+            <p class="text-sm text-slate-300 mb-6 text-start">
               Your report is anonymous – the other person won't know who reported them.
             </p>
 
@@ -44,11 +45,12 @@ import { Subscription } from 'rxjs';
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                 </svg>
+                <!-- logical margin (start) -->
                 <span class="ms-2 text-slate-400">Loading reasons...</span>
               </div>
             } @else {
               @if (loadCategoriesError()) {
-                <div class="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 text-sm">
+                <div class="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 text-sm text-start">
                   {{ loadCategoriesError() }}
                 </div>
               }
@@ -67,11 +69,12 @@ import { Subscription } from 'rxjs';
                     <div class="flex items-start gap-3">
                       <span class="text-2xl" aria-hidden="true">{{ option.icon || '📝' }}</span>
                       <div>
-                        <div class="font-semibold text-white group-hover:text-purple-300 transition-colors">
+                        <div class="font-semibold text-white group-hover:text-purple-300 transition-colors text-start">
                           {{ option.label }}
                         </div>
                         @if (option.description) {
-                          <div class="text-sm text-slate-400 mt-1">{{ option.description }}</div>
+                          <!-- logical text alignment -->
+                          <div class="text-sm text-slate-400 mt-1 text-start">{{ option.description }}</div>
                         }
                       </div>
                     </div>
@@ -82,7 +85,7 @@ import { Subscription } from 'rxjs';
 
             <!-- Description textarea -->
             <div class="mb-4">
-              <label class="block text-sm font-medium text-slate-300 mb-2">
+              <label class="block text-sm font-medium text-slate-300 mb-2 text-start">
                 Additional details <span class="text-slate-500">(optional)</span>
               </label>
               <textarea
@@ -93,8 +96,9 @@ import { Subscription } from 'rxjs';
                 placeholder="What happened? Any helpful context..."
                 class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg
                        text-white placeholder-slate-500 focus:outline-none focus:ring-2
-                       focus:ring-red-500/50 focus:border-red-500/50 resize-none transition-all"
+                       focus:ring-red-500/50 focus:border-red-500/50 resize-none transition-all text-start"
               ></textarea>
+              <!-- logical end alignment for RTL counters -->
               <div class="text-end text-xs text-slate-500 mt-1">
                 {{ description().length }} / 1000
               </div>
@@ -102,7 +106,7 @@ import { Subscription } from 'rxjs';
 
             <!-- Error message -->
             @if (error()) {
-              <div class="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+              <div class="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm text-start">
                 {{ error() }}
               </div>
             }
@@ -193,7 +197,6 @@ export class ReportUserModalComponent implements OnInit, OnDestroy {
   }
 
   private staticFallbackCategories(): ReportCategory[] {
-    // Exact values must match the backend enum in safety.dto.ts
     return [
       { value: 'harassment', label: 'Harassment', icon: '🚫', description: 'Bullying, insults, or threats.' },
       { value: 'spam', label: 'Spam', icon: '📧', description: 'Unsolicited promotions or repeated messages.' },
