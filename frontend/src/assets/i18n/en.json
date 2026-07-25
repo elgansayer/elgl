@@ -458,6 +458,8 @@
   "context_menu.copy": "Copy",
   "context_menu.favourite": "Favourite",
   "context_menu.report": "Report",
+  "context_menu.block": "Block",
+  "context_menu.unblock": "Unblock",
   "voip.mute": "Mute",
   "voip.speaker": "Speaker",
   "voip.endCall": "End Call",
