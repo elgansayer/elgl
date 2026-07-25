@@ -21,6 +21,7 @@ const createQueryChain = () => {
     'update',
     'single',
     'maybeSingle',
+    'or',
   ];
   methods.forEach((method) => {
     chain[method] = jest.fn().mockReturnValue(chain);
