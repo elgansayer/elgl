@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { UserDetailComponent } from './user-detail.component';
 import { provideRouter } from '@angular/router';

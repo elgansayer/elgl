@@ -198,7 +198,7 @@ export class ReportUserModalComponent implements OnInit {
 
     this.safetyService.reportUser(dto).subscribe({
       next: () => {
-        this.toastService.show('Report submitted successfully.', 'success');
+        this.toastService.show('Report submitted successfully.', { type: 'success' });
         this.reported.emit();
         this.close.emit();
       },

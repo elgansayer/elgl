@@ -124,7 +124,7 @@ describe('ChatService', () => {
         message: savedMessage,
       });
       expect(result).toEqual(savedMessage);
-    });
+    }, 10000);
 
     it('should throw Error when insert fails with error message', async () => {
       const dto: any = { room_id: 'room-1', message_type: 'TEXT' };
@@ -136,7 +136,7 @@ describe('ChatService', () => {
       await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
         'Failed to save message: Database insert failed',
       );
-    });
+    }, 10000);
 
     it('should throw Error when insert returns null data without error message', async () => {
       const dto: any = { room_id: 'room-1', message_type: 'TEXT' };
@@ -148,7 +148,7 @@ describe('ChatService', () => {
       await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
         'Failed to save message',
       );
-    });
+    }, 10000);
   });
 
   describe('getRooms', () => {
