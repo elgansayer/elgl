@@ -171,9 +171,8 @@ describe('EconomyService', () => {
       mockQueryBuilder.maybeSingle.mockResolvedValue({ data: null });
 
       const result = await service.purchaseCoins('user-1', {
-        amount: 500,
-        package_id: 'coins_medium',
         receipt_token: 'ios_token123',
+        platform: 'ios',
       });
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
