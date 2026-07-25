@@ -36,7 +36,9 @@ describe('ChatService', () => {
         {
           provide: CentrifugoService,
           useValue: {
-            generateConnectionToken: jest.fn().mockReturnValue({ token: 'mock-token' }),
+            generateConnectionToken: jest
+              .fn()
+              .mockReturnValue({ token: 'mock-token' }),
             publish: jest.fn().mockResolvedValue(true),
           },
         },
