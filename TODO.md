@@ -187,7 +187,7 @@
 ## Phase 24: Advanced Search Filters
 - [STUCK] Implement Gender filter in discovery (VIP tier).
 - [STUCK] Implement Age Range dual-thumb slider controls.
-- [ ] Add "Voice Room Active" filter to find users currently hosting streams.
+- [STUCK] Add "Voice Room Active" filter to find users currently hosting streams.
 
 ## Phase 25: Voiceroom Management
 - [ ] Build Voiceroom Creation modal (Title, Language Pair, Topic).
