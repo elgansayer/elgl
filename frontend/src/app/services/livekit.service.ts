@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { Room, LocalTrack, RemoteTrack } from 'livekit-client';
+import { Room, LocalTrack, RemoteTrack, RoomOptions, ExternalE2EEKeyProvider } from 'livekit-client';
 
 @Injectable({
   providedIn: 'root'
@@ -34,8 +34,21 @@ export class LivekitService {
     return environment.liveKitUrl;
   }
 
-  async joinRoom(roomName: string, userId: string, isVideoCall: boolean): Promise<Room> {
-    const room = new Room();
+  async joinRoom(roomName: string, userId: string, isVideoCall: boolean, e2eeKey?: string): Promise<Room> {
+    let roomOptions: RoomOptions = {};
+    
+    if (e2eeKey) {
+      const keyProvider = new ExternalE2EEKeyProvider();
+      roomOptions = {
+        e2ee: {
+          keyProvider,
+          worker: new Worker(new URL('livekit-client/e2ee-worker', import.meta.url))
+        }
+      };
+      await keyProvider.setKey(e2eeKey);
+    }
+
+    const room = new Room(roomOptions);
     return room;
   }
 

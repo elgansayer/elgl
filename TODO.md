@@ -29,7 +29,7 @@
 - [x] Doodle message sharing.
 
 ### 3. Audio & Video Calls
-- [ ] End-to-end encrypted voice calls.
+- [x] End-to-end encrypted voice calls.
 - [ ] End-to-end encrypted video calls.
 - [ ] Group calls with a specific participant limit.
 - [ ] Call waiting and switching between calls.

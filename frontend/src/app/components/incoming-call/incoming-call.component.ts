@@ -14,6 +14,7 @@ export interface IncomingCallInfo {
   callerAvatar?: string;
   roomName: string;
   isVideo: boolean;
+  e2eeKey?: string;
 }
 
 @Component({
@@ -43,6 +44,11 @@ export interface IncomingCallInfo {
             <p class="text-sm text-text-secondary">
               {{ callInfo()?.isVideo ? i18n.translate('voip.incomingVideoCall') : i18n.translate('voip.incomingVoiceCall') }}
             </p>
+            @if (callInfo()?.e2eeKey) {
+              <p class="text-xs text-green-500 mt-2 flex items-center gap-1">
+                <span>🔒</span> {{ i18n.translate('voip.endToEndEncrypted') }}
+              </p>
+            }
           </div>
 
           <!-- Action Buttons -->
@@ -198,8 +204,13 @@ export class IncomingCallComponent implements OnDestroy {
     this.showCallModal.set(false);
 
     try {
-      // Join the LiveKit room
-      await this.livekitService.joinRoom(info.roomName, this.authService.currentUser()?.id || 'unknown', info.isVideo);
+      // Join the LiveKit room with E2EE key if provided
+      await this.livekitService.joinRoom(
+        info.roomName, 
+        this.authService.currentUser()?.id || 'unknown', 
+        info.isVideo,
+        info.e2eeKey
+      );
 
       // Notify caller that call was accepted
       this.centrifugoService.publish(`user_${info.callerId}`, {

@@ -24,6 +24,7 @@ import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { StreakModule } from './streak/streak.module';
 import { StreakMiddleware } from './streak/streak.middleware';
 import { NotificationsModule } from './notifications/notifications.module';
+import { CallsModule } from './calls/calls.module';
 import { validationSchema } from './config/validation.schema';
 
 @Module({
@@ -62,6 +63,7 @@ import { validationSchema } from './config/validation.schema';
     LeaderboardModule,
     StreakModule,
     NotificationsModule,
+    CallsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
