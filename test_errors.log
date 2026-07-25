@@ -7,10 +7,6 @@ Angular control flow check passed.
 > frontend@0.0.0 check:template-bindings
 > if grep -rnE '\[ngClass\]|\[ngStyle\]' src --include='*.html' --include='*.ts'; then echo 'Use native class/style bindings only.' && exit 1; else echo 'Template binding check passed.'; fi
 
-src/app/components/emoji-picker/emoji-picker.component.ts:36:                [ngClass]="selectedCategory() === cat.name ? 'bg-blue-600 text-white' : 'bg-surface-100 text-text-secondary hover:bg-gray-600'">
-src/app/components/chat-search/chat-search.component.ts:30:                [ngClass]="selectedType() === type ? 'bg-blue-600 text-white' : 'bg-surface-100 text-text-secondary hover:bg-gray-600'">
-src/app/components/voip-call/voip-call.component.ts:56:                    [ngClass]="isMuted() ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-surface-200 hover:bg-surface-100'">
-src/app/components/voip-call/voip-call.component.ts:63:                    [ngClass]="isVideoEnabled() ? 'bg-surface-200 hover:bg-surface-100' : 'bg-yellow-500 hover:bg-yellow-600'">
 src/app/components/gift-picker/gift-picker.component.ts:45:                [ngClass]="selectedCategory() === cat ? 'bg-pink-600 text-white' : 'bg-surface-100 text-text-secondary hover:bg-gray-600'">
 Use native class/style bindings only.
 
@@ -43,11 +39,7 @@ Use native class/style bindings only.
   1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
 
 /root/hellotalk/frontend/src/app/components/chat-search/chat-search.component.ts
-  70:3   error  Output bindings, including aliases, should not be named "on", nor prefixed with it (https://angular.dev/guide/components/outputs#choosing-event-names)  @angular-eslint/no-output-on-prefix
-  27:34  error  Use built-in control flow instead of directive ngForOf                                                                                                  @angular-eslint/template/prefer-control-flow
-  37:15  error  Use built-in control flow instead of directive ngIf                                                                                                     @angular-eslint/template/prefer-control-flow
-  40:15  error  Use built-in control flow instead of directive ngIf                                                                                                     @angular-eslint/template/prefer-control-flow
-  44:33  error  Use built-in control flow instead of directive ngForOf                                                                                                  @angular-eslint/template/prefer-control-flow
+  74:3  error  Output bindings, including aliases, should not be named "on", nor prefixed with it (https://angular.dev/guide/components/outputs#choosing-event-names)  @angular-eslint/no-output-on-prefix
 
 /root/hellotalk/frontend/src/app/components/chat-view/chat-view.component.ts
   17:27  error  Use built-in control flow instead of directive ngForOf  @angular-eslint/template/prefer-control-flow
@@ -92,9 +84,7 @@ Use native class/style bindings only.
   41:9   error  A label component must be associated with a form element                        @angular-eslint/template/label-has-associated-control
 
 /root/hellotalk/frontend/src/app/components/emoji-picker/emoji-picker.component.ts
-  61:3   error  Output bindings, including aliases, should not be named "on", nor prefixed with it (https://angular.dev/guide/components/outputs#choosing-event-names)  @angular-eslint/no-output-on-prefix
-  33:33  error  Use built-in control flow instead of directive ngForOf                                                                                                  @angular-eslint/template/prefer-control-flow
-  44:37  error  Use built-in control flow instead of directive ngForOf                                                                                                  @angular-eslint/template/prefer-control-flow
+  62:3  error  Output bindings, including aliases, should not be named "on", nor prefixed with it (https://angular.dev/guide/components/outputs#choosing-event-names)  @angular-eslint/no-output-on-prefix
 
 /root/hellotalk/frontend/src/app/components/gift-picker/gift-picker.component.ts
   70:3   error  Output bindings, including aliases, should not be named "on", nor prefixed with it (https://angular.dev/guide/components/outputs#choosing-event-names)  @angular-eslint/no-output-on-prefix
@@ -213,13 +203,8 @@ Use native class/style bindings only.
   169:46  error  Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
 
 /root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.ts
-  176:68  error  'publication' is defined but never used              @typescript-eslint/no-unused-vars
-  176:81  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
-   18:11  error  Use built-in control flow instead of directive ngIf  @angular-eslint/template/prefer-control-flow
-   30:58  error  Use built-in control flow instead of directive ngIf  @angular-eslint/template/prefer-control-flow
-
-/root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts
-  1:21  error  'notImplementedToast' is defined but never used  @typescript-eslint/no-unused-vars
+  177:68  error  'publication' is defined but never used   @typescript-eslint/no-unused-vars
+  177:81  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
 /root/hellotalk/frontend/src/app/core/auth.service.ts
   17:58  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -283,7 +268,7 @@ Use native class/style bindings only.
 /root/hellotalk/frontend/src/app/services/video-call.service.ts
   168:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-✖ 155 problems (155 errors, 0 warnings)
+✖ 146 problems (146 errors, 0 warnings)
 
 
 > backend@0.0.1 lint
@@ -302,18 +287,10 @@ Use native class/style bindings only.
 > backend@0.0.1 test
 > NODE_OPTIONS='--experimental-vm-modules' jest
 
-(node:283131) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(node:284900) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
 PASS src/nlp/nlp.controller.spec.ts
-PASS src/chat/centrifugo.service.spec.ts
-PASS src/economy/economy.controller.spec.ts
-PASS src/chat/chat.controller.spec.ts
-PASS src/monetisation/monetisation.controller.spec.ts
-PASS src/flashcards/flashcards.controller.spec.ts
-PASS src/moments/moments.service.spec.ts
-PASS src/audio-rooms/audio-rooms.service.spec.ts
-PASS src/audio-rooms/audio-rooms.controller.spec.ts
-PASS src/economy/economy.service.spec.ts
+PASS src/media/media.service.spec.ts
 PASS src/nlp/nlp.service.spec.ts
   ● Console
 
@@ -372,13 +349,7 @@ PASS src/nlp/nlp.service.spec.ts
       at done (../node_modules/langfuse-core/src/index.ts:1094:15)
       at done (../node_modules/langfuse-core/src/index.ts:1132:9)
 
-PASS src/moments/moments.controller.spec.ts
-PASS src/users/users.controller.spec.ts
-PASS src/media/media.controller.spec.ts
-PASS src/safety/safety.controller.spec.ts
-PASS src/discovery/discovery.service.spec.ts
-PASS src/supabase/supabase.service.spec.ts
-PASS src/discovery/discovery.controller.spec.ts
+PASS src/economy/economy.controller.spec.ts
 PASS src/notifications/notifications.service.spec.ts
   ● Console
 
@@ -397,399 +368,47 @@ PASS src/notifications/notifications.service.spec.ts
       at NotificationsService.createNotification (notifications/notifications.service.ts:187:7)
       at Object.<anonymous> (notifications/notifications.service.spec.ts:58:7)
 
-PASS src/notifications/notifications.controller.spec.ts
-PASS src/users/users.service.spec.ts
+PASS src/audio-rooms/audio-rooms.controller.spec.ts
+PASS src/monetisation/monetisation.controller.spec.ts
 PASS src/monetisation/monetisation.service.spec.ts
-PASS src/flashcards/flashcards.service.spec.ts
-[31m[Nest] 283131  - [39m07/25/2026, 6:04:14 PM [31m  ERROR[39m [38;5;3m[SafetyService] [39m[31mFailed to submit report from user-1 against reported-1: Database error[39m
+PASS src/media/media.controller.spec.ts
+PASS src/flashcards/flashcards.controller.spec.ts
+PASS src/moments/moments.controller.spec.ts
+PASS src/chat/chat.controller.spec.ts
+[31m[Nest] 284900  - [39m07/25/2026, 6:18:26 PM [31m  ERROR[39m [38;5;3m[SafetyService] [39m[31mFailed to submit report from user-1 against reported-1: Database error[39m
 PASS src/safety/safety.service.spec.ts
-PASS src/profile-visits/profile-visits.service.spec.ts
-PASS src/chat/chat.service.spec.ts
 PASS src/profile-visits/profile-visits.controller.spec.ts
+PASS src/supabase/supabase.service.spec.ts
+PASS src/users/users.controller.spec.ts
+PASS src/economy/economy.service.spec.ts
 PASS src/auth/supabase-auth.guard.spec.ts
-[31m[Nest] 283131  - [39m07/25/2026, 6:04:18 PM [31m  ERROR[39m [38;5;3m[StreakService] [39m[31mFailed to query inactive users[39m
+PASS src/users/users.service.spec.ts
+PASS src/audio-rooms/audio-rooms.service.spec.ts
+PASS src/chat/chat.service.spec.ts
+PASS src/safety/safety.controller.spec.ts
+PASS src/moments/moments.service.spec.ts
+PASS src/profile-visits/profile-visits.service.spec.ts
+PASS src/flashcards/flashcards.service.spec.ts
+PASS src/notifications/notifications.controller.spec.ts
+PASS src/discovery/discovery.controller.spec.ts
+PASS src/moments/timeline.worker.spec.ts
+[31m[Nest] 284900  - [39m07/25/2026, 6:18:37 PM [31m  ERROR[39m [38;5;3m[StreakService] [39m[31mFailed to query inactive users[39m
 DB error
-[31m[Nest] 283131  - [39m07/25/2026, 6:04:18 PM [31m  ERROR[39m [38;5;3m[StreakService] [39m[31mFailed to reset streaks[39m
+[31m[Nest] 284900  - [39m07/25/2026, 6:18:37 PM [31m  ERROR[39m [38;5;3m[StreakService] [39m[31mFailed to reset streaks[39m
 Update failed
 PASS src/streak/streak.service.spec.ts
-PASS src/media/media.service.spec.ts
-PASS src/moments/timeline.worker.spec.ts
+PASS src/discovery/discovery.service.spec.ts
+PASS src/chat/centrifugo.service.spec.ts
 PASS src/app.service.spec.ts
 PASS src/app.controller.spec.ts
 
 Test Suites: 33 passed, 33 total
 Tests:       316 passed, 316 total
 Snapshots:   0 total
-Time:        27.544 s, estimated 28 s
+Time:        29.912 s
 Ran all test suites.
 
 > frontend@0.0.0 test
 > ng test --watch=false
 
 ❯ Building...
-✔ Building...
-Application bundle generation complete. [16.912 seconds] - 2026-07-25T18:04:39.656Z
-
-
-[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90m/root/hellotalk/frontend[39m
-
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts [2m([22m[2m16 tests[22m[2m | [22m[33m1 skipped[39m[2m)[22m[33m 599[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/voip-call/voip-call.component.spec.ts [2m([22m[2m15 tests[22m[2m | [22m[33m3 skipped[39m[2m)[22m[33m 360[2mms[22m[39m
-[90mstderr[2m | src/app/components/chat-list/chat-list.component.spec.ts[2m > [22m[2mChatListComponent[2m > [22m[2mnotImplemented should show toast
-[22m[39mGoTrueClient@sb-mock-auth-token:1 (2.110.8) 2026-07-25T18:04:45.629Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
-
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/chat-list/chat-list.component.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 129[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 109[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/correction-modal/correction-modal.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 165[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/textarea/textarea.component.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 57[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/notifications-inbox/notifications-inbox.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 114[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/input/input.component.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 111[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/empty-state/empty-state.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 80[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/app.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 75[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/chip/chip.component.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 139[2mms[22m[39m
-[90mstderr[2m | src/app/components/discovery/discovery.component.spec.ts[2m > [22m[2mDiscoveryComponent[2m > [22m[2mshould create
-[22m[39mGoTrueClient@sb-mock-auth-token:2 (2.110.8) 2026-07-25T18:04:47.227Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
-
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/discovery/discovery.component.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 59[2mms[22m[39m
-[90mstderr[2m | src/app/components/incoming-call/incoming-call.component.spec.ts
-[22m[39mCould not load blocked user IDs HttpErrorResponse {
-  headers: HttpHeaders {
-    headers: Map(0) {},
-    normalizedNames: Map(0) {},
-    lazyInit: [90mundefined[39m,
-    lazyUpdate: [1mnull[22m
-  },
-  status: [33m0[39m,
-  statusText: [32m'Unknown Error'[39m,
-  url: [32m'http://localhost:3000/api/safety/blocked-ids'[39m,
-  ok: [33mfalse[39m,
-  type: [90mundefined[39m,
-  redirected: [90mundefined[39m,
-  responseType: [90mundefined[39m,
-  name: [32m'HttpErrorResponse'[39m,
-  message: [32m'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined'[39m,
-  error: TypeError: fetch failed
-  [90m    at node:internal/deps/undici/undici:15141:13[39m
-  [90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m {
-    [cause]: AggregateError: 
-    [90m    at internalConnectMultiple (node:net:1135:18)[39m
-    [90m    at afterConnectMultiple (node:net:1716:7)[39m {
-      code: [32m'ECONNREFUSED'[39m,
-      [errors]: [36m[Array][39m
-    }
-  }
-}
-
-Not implemented: HTMLMediaElement's play() method
-Not implemented: HTMLMediaElement's pause() method
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/incoming-call/incoming-call.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 53[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/button-primary/button-primary.component.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 54[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/language-selector/language-selector.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 48[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/card/card.component.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 20[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/services/i18n.service.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 22[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/button-secondary/button-secondary.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 31[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/pill/pill.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 29[2mms[22m[39m
-[90mstderr[2m | src/app/components/user-detail/user-detail.component.spec.ts[2m > [22m[2mUserDetailComponent[2m > [22m[2mshould create
-[22m[39mGoTrueClient@sb-mock-auth-token:3 (2.110.8) 2026-07-25T18:04:47.907Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
-
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/user-detail/user-detail.component.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 20[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/services/translate.pipe.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 15[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/message-reaction-bar/message-reaction-bar.component.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 11[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/toast/toast.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/services/media-upload.service.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 1[2mms[22m[39m
-
-[2m Test Files [22m [1m[32m24 passed[39m[22m[90m (24)[39m
-[2m      Tests [22m [1m[32m100 passed[39m[22m[2m | [22m[33m4 skipped[39m[90m (104)[39m
-[2m   Start at [22m 18:04:40
-[2m   Duration [22m 7.83s[2m (transform 1.50s, setup 872ms, import 2.22s, tests 2.31s, environment 1.75s)[22m
-
-ReferenceError: describe is not defined
-
-   at src/app/app.spec.ts:10
-
-   8 | import { CentrifugeService } from './services/centrifuge.service';
-   9 |
-> 10 | describe('App', () => {
-     | ^
-  11 |   beforeEach(async () => {
-  12 |     await TestBed.configureTestingModule({
-  13 |       imports: [App],
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/app.spec.ts:10:1)
-Error: Standard Angular field decorators are not supported in JIT mode.
-    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
-    at applyDec (/root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:4:97)
-    at /root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:4:97
-    at _applyDecs (/root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:4:97)
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts:102:2)
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.ts:7:1)
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts:3:1)
-Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
-
-If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
-
-   at src/app/components/chat-list/chat-list.component.spec.ts:1
-
-> 1 | import { vi } from 'vitest';
-    | ^
-  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
-  3 | import { ChatListComponent } from './chat-list.component';
-  4 | import { ChatService } from '../../services/chat.service';
-    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/chat-list/chat-list.component.spec.ts:1:1)
-Error: Standard Angular field decorators are not supported in JIT mode.
-    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
-    at applyDec (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
-    at /root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66
-    at _applyDecs (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:1:66)
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/visual-diff/visual-diff.component.ts:70:2)
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.ts:5:1)
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/correction-modal/correction-modal.component.spec.ts:2:1)
-Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
-
-If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
-
-   at src/app/components/discovery/discovery.component.spec.ts:1
-
-> 1 | import { vi } from 'vitest';
-    | ^
-  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
-  3 | import { DiscoveryComponent } from './discovery.component';
-  4 | import { DiscoveryService } from '../../services/discovery.service';
-    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/discovery/discovery.component.spec.ts:1:1)
-Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
-
-If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
-
-   at src/app/components/incoming-call/incoming-call.component.spec.ts:9
-
-   7 | import { SafetyService } from '../../services/safety.service';
-   8 | import { signal } from '@angular/core';
->  9 | import { vi } from 'vitest';
-     | ^
-  10 |
-  11 | describe('IncomingCallComponent', () => {
-  12 |   let component: IncomingCallComponent;
-    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:9:1)
-ReferenceError: describe is not defined
-
-   at src/app/components/language-selector/language-selector.component.spec.ts:6
-
-  4 | import { TranslatePipe } from '../../services/translate.pipe';
-  5 |
-> 6 | describe('LanguageSelectorComponent', () => {
-    | ^
-  7 |   let component: LanguageSelectorComponent;
-  8 |   let fixture: ComponentFixture<LanguageSelectorComponent>;
-  9 |   let i18nService: I18nService;
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/language-selector/language-selector.component.spec.ts:6:1)
-Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
-
-If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
-
-   at src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1
-
-> 1 | import { vi } from 'vitest';
-    | ^
-  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
-  3 | import { By } from '@angular/platform-browser';
-  4 | import { LongPressContextMenuComponent } from './long-press-context-menu.component';
-    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts:1:1)
-Error: Standard Angular field decorators are not supported in JIT mode.
-    at call (/root/hellotalk/darwin_arm64-fastbuild-ST-fdfa778d11ba/bin/packages/core/src/util/decorators.ts:173:17)
-    at applyDec (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
-    at /root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48
-    at _applyDecs (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:2:48)
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts:50:2)
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.spec.ts:2:1)
-Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
-
-If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
-
-   at src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5
-
-  3 | import { provideHttpClient } from '@angular/common/http';
-  4 | import { provideHttpClientTesting } from '@angular/common/http/testing';
-> 5 | import { vi } from 'vitest';
-    | ^
-  6 | import { NotificationsInboxComponent } from './notifications-inbox.component';
-  7 | import { NotificationService, InAppNotification } from '../../services/notification.service';
-  8 | import { I18nService } from '../../services/i18n.service';
-    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/notifications-inbox/notifications-inbox.component.spec.ts:5:1)
-ReferenceError: describe is not defined
-
-   at src/app/components/primitives/button-primary/button-primary.component.spec.ts:31
-
-  29 | }
-  30 |
-> 31 | describe('AppButtonPrimaryComponent', () => {
-     | ^
-  32 |   let fixture: ComponentFixture<TestHostComponent>;
-  33 |   let host: TestHostComponent;
-  34 |   let buttonElement: HTMLButtonElement;
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-primary/button-primary.component.spec.ts:31:1)
-ReferenceError: describe is not defined
-
-   at src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31
-
-  29 | }
-  30 |
-> 31 | describe('AppButtonSecondaryComponent', () => {
-     | ^
-  32 |   let fixture: ComponentFixture<TestHostComponent>;
-  33 |   let host: TestHostComponent;
-  34 |   let buttonElement: HTMLButtonElement;
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/button-secondary/button-secondary.component.spec.ts:31:1)
-ReferenceError: describe is not defined
-
-   at src/app/components/primitives/card/card.component.spec.ts:19
-
-  17 | }
-  18 |
-> 19 | describe('AppCardComponent', () => {
-     | ^
-  20 |   let fixture: ComponentFixture<TestHostComponent>;
-  21 |   let host: TestHostComponent;
-  22 |   let cardElement: HTMLElement;
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/card/card.component.spec.ts:19:1)
-ReferenceError: describe is not defined
-
-   at src/app/components/primitives/chip/chip.component.spec.ts:39
-
-  37 | }
-  38 |
-> 39 | describe('AppChipComponent', () => {
-     | ^
-  40 |   let fixture: ComponentFixture<TestHostComponent>;
-  41 |   let host: TestHostComponent;
-  42 |   let chipElement: HTMLElement;
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/chip/chip.component.spec.ts:39:1)
-ReferenceError: describe is not defined
-
-   at src/app/components/primitives/empty-state/empty-state.component.spec.ts:33
-
-  31 | }
-  32 |
-> 33 | describe('AppEmptyStateComponent', () => {
-     | ^
-  34 |   let fixture: ComponentFixture<TestHostComponent>;
-  35 |   let host: TestHostComponent;
-  36 |   let emptyStateElement: HTMLElement;
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/empty-state/empty-state.component.spec.ts:33:1)
-ReferenceError: describe is not defined
-
-   at src/app/components/primitives/input/input.component.spec.ts:49
-
-  47 | }
-  48 |
-> 49 | describe('AppInputComponent', () => {
-     | ^
-  50 |   let fixture: ComponentFixture<TestHostComponent>;
-  51 |   let host: TestHostComponent;
-  52 |   let inputElement: HTMLInputElement;
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/input/input.component.spec.ts:49:1)
-ReferenceError: describe is not defined
-
-   at src/app/components/primitives/pill/pill.component.spec.ts:25
-
-  23 | }
-  24 |
-> 25 | describe('AppPillComponent', () => {
-     | ^
-  26 |   let fixture: ComponentFixture<TestHostComponent>;
-  27 |   let host: TestHostComponent;
-  28 |   let pillElement: HTMLElement;
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/pill/pill.component.spec.ts:25:1)
-ReferenceError: describe is not defined
-
-   at src/app/components/primitives/textarea/textarea.component.spec.ts:49
-
-  47 | }
-  48 |
-> 49 | describe('AppTextareaComponent', () => {
-     | ^
-  50 |   let fixture: ComponentFixture<TestHostComponent>;
-  51 |   let host: TestHostComponent;
-  52 |   let textareaElement: HTMLTextAreaElement;
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/textarea/textarea.component.spec.ts:49:1)
-ReferenceError: describe is not defined
-
-   at src/app/components/primitives/toast/toast.spec.ts:5
-
-  3 | import { Toast } from './toast';
-  4 |
-> 5 | describe('Toast', () => {
-    | ^
-  6 |   let component: Toast;
-  7 |   let fixture: ComponentFixture<Toast>;
-  8 |
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/primitives/toast/toast.spec.ts:5:1)
-Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
-
-If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
-
-   at src/app/components/user-detail/user-detail.component.spec.ts:8
-
-   6 | import { SafetyService } from '../../services/safety.service';
-   7 | import { of } from 'rxjs';
->  8 | import { vi } from 'vitest';
-     | ^
-   9 |
-  10 | describe('UserDetailComponent', () => {
-  11 |   let component: UserDetailComponent;
-    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/user-detail/user-detail.component.spec.ts:8:1)
-Error: Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
-
-If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
-
-   at src/app/components/voip-call/voip-call.component.spec.ts:1
-
-> 1 | import { vi, Mocked } from 'vitest';
-    | ^
-  2 | import { ComponentFixture, TestBed } from '@angular/core/testing';
-  3 | import { VoipCallComponent } from './voip-call.component';
-  4 | import { ComponentRef } from '@angular/core';
-    at Object.<anonymous> (/root/hellotalk/frontend/node_modules/vitest/index.cjs:1:7)
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/components/voip-call/voip-call.component.spec.ts:1:1)
-ReferenceError: describe is not defined
-
-   at src/app/services/i18n.service.spec.ts:4
-
-  2 | import { I18nService } from './i18n.service';
-  3 |
-> 4 | describe('I18nService', () => {
-    | ^
-  5 |   let service: I18nService;
-  6 |
-  7 |   beforeEach(() => {
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/i18n.service.spec.ts:4:1)
-ReferenceError: describe is not defined
-
-   at src/app/services/media-upload.service.spec.ts:4
-
-  2 | import { MediaUploadService } from './media-upload.service';
-  3 |
-> 4 | describe('MediaUploadService', () => {
-    | ^
-  5 |   it('should exist', () => {
-  6 |     // Placeholder test so the spec file compiles without failing due to
-  7 |     // unresolved dependencies.  Full integration tests for MediaUploadService
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/media-upload.service.spec.ts:4:1)
-ReferenceError: describe is not defined
-
-   at src/app/services/translate.pipe.spec.ts:5
-
-  3 | import { I18nService } from './i18n.service';
-  4 |
-> 5 | describe('TranslatePipe', () => {
-    | ^
-  6 |   let pipe: TranslatePipe;
-  7 |
-  8 |   beforeEach(() => {
-    at Object.<anonymous> (/root/hellotalk/frontend/src/app/services/translate.pipe.spec.ts:5:1)
-Error: No tests found
-
