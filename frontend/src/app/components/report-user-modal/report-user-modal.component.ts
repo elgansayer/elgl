@@ -14,11 +14,12 @@ import {
   ReportUserDto,
 } from '../../services/safety.service';
 import { ToastService } from '../../components/primitives/toast/toast.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-report-user-modal',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, TranslatePipe],
   templateUrl: './report-user-modal.component.html',
 })
 export class ReportUserModalComponent implements OnInit {

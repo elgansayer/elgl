@@ -1,95 +1,116 @@
-<div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" (click)="cancel()">
-  <div class="w-full sm:max-w-md mx-auto bg-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl border border-slate-700 max-h-[90vh] overflow-y-auto p-6" (click)="$event.stopPropagation()">
+<div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" (click)="cancel()">
+  <div class="w-full sm:max-w-md mx-auto bg-[#121212] rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-800 max-h-[90vh] flex flex-col" (click)="$event.stopPropagation()">
     
     <!-- Header -->
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-xl font-bold text-white">Report user</h2>
-      <button type="button" class="text-slate-400 hover:text-white transition-colors" (click)="cancel()" aria-label="Close">
+    <div class="flex items-center justify-between p-5 border-b border-slate-800/50 shrink-0">
+      <h2 class="text-xl font-bold text-slate-100">{{ 'report.title' | t }}</h2>
+      <button type="button" class="text-slate-500 hover:text-slate-300 transition-colors p-2 -me-2 rounded-full hover:bg-slate-800" (click)="cancel()" [attr.aria-label]="'report.close' | t">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
 
-    <!-- Error banner -->
-    @if (errorMessage()) {
-      <div class="bg-red-500/20 text-red-300 px-4 py-2 rounded-lg mb-4">
-        {{ errorMessage() }}
-      </div>
-    }
-
-    <!-- Category loading -->
-    @if (loadingCategories()) {
-      <div class="flex items-center justify-center py-8">
-        <div class="animate-spin rounded-full h-8 w-8 border-2 border-slate-600 border-t-red-500"></div>
-      </div>
-    } @else if (loadError()) {
-      <div class="text-center py-6">
-        <p class="text-slate-400 mb-3">Could not load report categories</p>
-        <button class="px-4 py-2 rounded-full bg-slate-700 text-sm font-medium text-white hover:bg-slate-600" (click)="retryLoadCategories()">
-          Retry
-        </button>
-      </div>
-    } @else {
-      <!-- Reason selection -->
-      <div class="mb-5">
-        <label class="block text-sm font-medium text-slate-300 mb-2">Reason</label>
-        <div class="grid grid-cols-2 gap-2">
-          @for (cat of categoriesToShow(); track cat.value) {
-            <label
-              [class]="selectedCategory() === cat.value
-                ? 'bg-red-600/20 border-red-500 text-red-300'
-                : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'"
-              class="flex items-center justify-center p-3 rounded-full border cursor-pointer text-sm font-medium transition-colors"
-            >
-              <input
-                type="radio"
-                [value]="cat.value"
-                class="sr-only"
-                [checked]="selectedCategory() === cat.value"
-                (change)="selectCategory(cat.value)"
-              />
-              {{ cat.label }}
-            </label>
-          }
+    <div class="p-5 overflow-y-auto overscroll-contain">
+      <!-- Error banner -->
+      @if (errorMessage()) {
+        <div class="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl mb-5 text-sm font-medium">
+          {{ errorMessage() }}
         </div>
-      </div>
+      }
 
-      <!-- Description -->
-      <div class="mb-4">
-        <label for="reportDesc" class="block text-sm font-medium text-slate-300 mb-1">Additional details (optional)</label>
-        <textarea
-          id="reportDesc"
-          rows="3"
-          class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none text-sm"
-          placeholder="Add any context..."
-          [ngModel]="description()"
-          (ngModelChange)="description.set($event)"
-        ></textarea>
-      </div>
+      <!-- Category loading -->
+      @if (loadingCategories()) {
+        <div class="flex items-center justify-center py-12">
+          <div class="animate-spin rounded-full h-10 w-10 border-4 border-slate-800 border-t-red-500"></div>
+        </div>
+      } @else if (loadError()) {
+        <div class="text-center py-10">
+          <p class="text-slate-400 mb-4">{{ 'report.load_error' | t }}</p>
+          <button class="px-6 py-2.5 rounded-full bg-slate-800 text-sm font-bold text-slate-200 hover:bg-slate-700 transition-colors" (click)="retryLoadCategories()">
+            {{ 'report.retry' | t }}
+          </button>
+        </div>
+      } @else {
+        <!-- Reason selection -->
+        <div class="mb-6">
+          <label class="block text-sm font-bold text-slate-300 mb-3 ps-1">{{ 'report.reason_label' | t }}</label>
+          <div class="flex flex-col gap-3">
+            @for (cat of categoriesToShow(); track cat.value) {
+              <label
+                [class]="selectedCategory() === cat.value
+                  ? 'bg-red-500/10 border-red-500/50 text-red-400'
+                  : 'bg-slate-800/40 border-slate-700/50 text-slate-300 hover:bg-slate-800/80'"
+                class="flex items-start p-4 rounded-2xl border cursor-pointer transition-all duration-200"
+              >
+                <input
+                  type="radio"
+                  [value]="cat.value"
+                  class="sr-only"
+                  [checked]="selectedCategory() === cat.value"
+                  (change)="selectCategory(cat.value)"
+                />
+                @if (cat.icon) {
+                  <span class="text-2xl me-4 mt-0.5 opacity-90">{{ cat.icon }}</span>
+                }
+                <div class="flex flex-col flex-1">
+                  <span class="font-bold text-base">{{ cat.label }}</span>
+                  @if (cat.description) {
+                    <span class="text-xs mt-1 opacity-70 leading-relaxed">{{ cat.description }}</span>
+                  }
+                </div>
+                <div class="ms-3 flex-shrink-0 mt-1">
+                  <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
+                       [class]="selectedCategory() === cat.value ? 'border-red-500' : 'border-slate-600'">
+                    @if (selectedCategory() === cat.value) {
+                      <div class="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                    }
+                  </div>
+                </div>
+              </label>
+            }
+          </div>
+        </div>
 
-      <!-- Block user toggle -->
-      <label class="flex items-center gap-3 mb-6 cursor-pointer">
-        <input type="checkbox" class="w-4 h-4 rounded border-slate-500 text-red-500 focus:ring-red-500 bg-slate-700" [checked]="blockUser()" (change)="blockUser.set(!blockUser())" />
-        <span class="text-sm text-slate-300">Also block this user</span>
-      </label>
+        <!-- Description -->
+        <div class="mb-6">
+          <label for="reportDesc" class="block text-sm font-bold text-slate-300 mb-3 ps-1">{{ 'report.details_label' | t }}</label>
+          <textarea
+            id="reportDesc"
+            rows="3"
+            class="w-full bg-slate-900/50 border border-slate-700/50 rounded-2xl px-4 py-3 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 resize-none text-sm transition-all"
+            [placeholder]="'report.details_placeholder' | t"
+            [ngModel]="description()"
+            (ngModelChange)="description.set($event)"
+          ></textarea>
+        </div>
 
-      <!-- Actions -->
-      <div class="flex justify-end gap-3">
-        <button
-          type="button"
-          class="px-5 py-2 rounded-full text-sm font-semibold bg-slate-700 hover:bg-slate-600 text-white transition-colors"
-          (click)="cancel()"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          [disabled]="!selectedCategory() || isSubmitting()"
-          class="px-5 py-2 rounded-full text-sm font-semibold bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors"
-          (click)="submitReport()"
-        >
-          {{ isSubmitting() ? 'Submitting...' : 'Submit report' }}
-        </button>
-      </div>
-    }
+        <!-- Block user toggle -->
+        <label class="flex items-center gap-4 mb-2 p-4 rounded-2xl bg-slate-800/30 border border-slate-700/30 cursor-pointer hover:bg-slate-800/50 transition-colors">
+          <div class="relative flex items-center">
+            <input type="checkbox" class="sr-only peer" [checked]="blockUser()" (change)="blockUser.set(!blockUser())" />
+            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
+          </div>
+          <span class="text-sm font-bold text-slate-200">{{ 'report.block_user' | t }}</span>
+        </label>
+      }
+    </div>
+
+    <!-- Actions -->
+    <div class="p-5 border-t border-slate-800/50 shrink-0 flex gap-3">
+      <button
+        type="button"
+        class="flex-1 py-3.5 rounded-full text-sm font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors"
+        (click)="cancel()"
+      >
+        {{ 'report.cancel' | t }}
+      </button>
+      <button
+        type="button"
+        [disabled]="!selectedCategory() || isSubmitting()"
+        class="flex-1 py-3.5 rounded-full text-sm font-bold bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:hover:bg-red-600 text-white transition-colors shadow-lg shadow-red-900/20"
+        (click)="submitReport()"
+      >
+        {{ isSubmitting() ? ('report.submitting' | t) : ('report.submit' | t) }}
+      </button>
+    </div>
   </div>
 </div>
