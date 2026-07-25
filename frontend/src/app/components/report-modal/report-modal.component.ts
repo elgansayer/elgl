@@ -1,9 +1,10 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { SafetyService } from '../../services/safety.service';
 import { ToastService } from '../primitives/toast/toast.service';
 import { ReportUserDto } from '../../services/safety.service';
+import { I18nService } from '../../services/i18n.service';
 
 @Component({
   selector: 'app-report-modal',
@@ -16,38 +17,38 @@ import { ReportUserDto } from '../../services/safety.service';
     >
       <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-md mx-4">
         <h2 class="text-xl font-bold text-white mb-4">
-          {{ 'report.modal_title' | translate }}
+          {{ modalTitle }}
         </h2>
 
         <label class="block text-sm text-slate-400 mb-1">
-          {{ 'report.reason' | translate }}
+          {{ reasonLabel }}
         </label>
         <select
           [(ngModel)]="selectedReason"
           class="w-full p-2 rounded bg-slate-700 text-white border border-slate-600 mb-4"
         >
           <option value="" disabled hidden>
-            {{ 'report.select_reason' | translate }}
+            {{ selectReasonLabel }}
           </option>
           <option value="harassment">
-            {{ 'report.harassment' | translate }}
+            {{ harassmentLabel }}
           </option>
           <option value="spam">
-            {{ 'report.spam' | translate }}
+            {{ spamLabel }}
           </option>
           <option value="impersonation">
-            {{ 'report.impersonation' | translate }}
+            {{ impersonationLabel }}
           </option>
           <option value="inappropriate_content">
-            {{ 'report.inappropriate' | translate }}
+            {{ inappropriateLabel }}
           </option>
           <option value="other">
-            {{ 'report.other' | translate }}
+            {{ otherLabel }}
           </option>
         </select>
 
         <label class="block text-sm text-slate-400 mb-1">
-          {{ 'report.description_optional' | translate }}
+          {{ descriptionOptionalLabel }}
         </label>
         <textarea
           [(ngModel)]="description"
@@ -60,21 +61,21 @@ import { ReportUserDto } from '../../services/safety.service';
             (click)="onCancel()"
             class="px-4 py-2 rounded-lg bg-slate-700 text-white hover:bg-slate-600"
           >
-            {{ 'common.cancel' | translate }}
+            {{ cancelLabel }}
           </button>
           <button
             (click)="onSubmit()"
             [disabled]="!isValid"
             class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-500 disabled:opacity-50"
           >
-            {{ 'report.submit' | translate }}
+            {{ submitLabel }}
           </button>
         </div>
       </div>
     </div>
   `,
 })
-export class ReportModalComponent {
+export class ReportModalComponent implements OnInit {
   @Input() targetUserId!: string;
   @Input() contextUrl?: string;
 
@@ -84,10 +85,36 @@ export class ReportModalComponent {
   selectedReason = '';
   description = '';
 
-  constructor(
-    private readonly safetyService: SafetyService,
-    private readonly toast: ToastService,
-  ) {}
+  private readonly safetyService = inject(SafetyService);
+  private readonly toast = inject(ToastService);
+  private readonly i18n = inject(I18nService);
+
+  // Translated labels (populated in ngOnInit)
+  modalTitle = '';
+  reasonLabel = '';
+  selectReasonLabel = '';
+  harassmentLabel = '';
+  spamLabel = '';
+  impersonationLabel = '';
+  inappropriateLabel = '';
+  otherLabel = '';
+  descriptionOptionalLabel = '';
+  cancelLabel = '';
+  submitLabel = '';
+
+  ngOnInit(): void {
+    this.modalTitle = this.i18n.translate('report.modal_title');
+    this.reasonLabel = this.i18n.translate('report.reason');
+    this.selectReasonLabel = this.i18n.translate('report.select_reason');
+    this.harassmentLabel = this.i18n.translate('report.harassment');
+    this.spamLabel = this.i18n.translate('report.spam');
+    this.impersonationLabel = this.i18n.translate('report.impersonation');
+    this.inappropriateLabel = this.i18n.translate('report.inappropriate');
+    this.otherLabel = this.i18n.translate('report.other');
+    this.descriptionOptionalLabel = this.i18n.translate('report.description_optional');
+    this.cancelLabel = this.i18n.translate('common.cancel');
+    this.submitLabel = this.i18n.translate('report.submit');
+  }
 
   get isValid(): boolean {
     return this.targetUserId != null && this.selectedReason.length > 0;
