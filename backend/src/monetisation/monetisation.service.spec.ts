@@ -8,28 +8,31 @@ import { ConfigService } from '@nestjs/config';
 import { MonetisationService } from './monetisation.service';
 import { AppleNotificationService } from './apple-notification.service';
 import { GooglePlayNotificationService } from './google-play-notification.service';
-import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SubscriptionPlansService } from './services/subscription-plans.service';
+import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
 
 const mockConstructEvent = jest.fn();
+const mockCheckoutSessionCreate = jest.fn();
 
 jest.mock('stripe', () => {
-  return jest.fn().mockImplementation(() => ({
-    webhooks: {
-      constructEvent: mockConstructEvent,
-    },
-    checkout: {
-      sessions: {
-        create: jest.fn(),
+  return jest.fn().mockImplementation(() => {
+    return {
+      webhooks: {
+        constructEvent: (...args: any[]) => mockConstructEvent(...args),
       },
-    },
-  }));
+      checkout: {
+        sessions: {
+          create: mockCheckoutSessionCreate,
+        },
+      },
+    };
+  });
 });
 
 describe('MonetisationService', () => {
   let service: MonetisationService;
-  let plansService: SubscriptionPlansService;
+  let module: TestingModule;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
 
@@ -48,7 +51,7 @@ describe('MonetisationService', () => {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         MonetisationService,
         {
@@ -95,7 +98,6 @@ describe('MonetisationService', () => {
     }).compile();
 
     service = module.get<MonetisationService>(MonetisationService);
-    plansService = module.get<SubscriptionPlansService>(SubscriptionPlansService);
   });
 
   afterEach(() => {
@@ -130,9 +132,32 @@ describe('MonetisationService', () => {
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
       expect(mockQueryBuilder.update).toHaveBeenCalledWith({
         is_vip: true,
-        vip_tier: 'consumer_8_ukp_10_usd',
+        vip_tier: 'developer',
       });
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'user-1');
+      expect(result).toEqual({ received: true, status: 'processed' });
+    });
+
+    it('should upgrade user when customer.subscription.created with metadata', async () => {
+      const event: any = {
+        type: 'customer.subscription.created',
+        data: {
+          object: {
+            metadata: {
+              userId: 'user-2',
+              tier: 'consumer',
+            },
+          },
+        },
+      };
+      mockConstructEvent.mockReturnValue(event);
+
+      const result = await service.handleStripeWebhook(Buffer.from(''), 'sig');
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        is_vip: true,
+        vip_tier: 'consumer',
+      });
       expect(result).toEqual({ received: true, status: 'processed' });
     });
 
@@ -314,6 +339,9 @@ describe('MonetisationService', () => {
         id: 'cs_test_abc123',
       };
 
+      const plansService = module.get<SubscriptionPlansService>(
+        SubscriptionPlansService,
+      );
       (plansService.getPlanById as jest.Mock).mockReturnValue(mockPlan);
 
       (service as any).stripe.checkout.sessions.create = jest
@@ -361,6 +389,9 @@ describe('MonetisationService', () => {
         id: 'cs_test_def456',
       };
 
+      const plansService = module.get<SubscriptionPlansService>(
+        SubscriptionPlansService,
+      );
       (plansService.getPlanById as jest.Mock).mockReturnValue(mockPlan);
       (service as any).stripe.checkout.sessions.create = jest
         .fn()
@@ -390,7 +421,10 @@ describe('MonetisationService', () => {
       });
     });
 
-  it('should throw NotFoundException when plan does not exist', async () => {
+    it('should throw NotFoundException when plan does not exist', async () => {
+      const plansService = module.get<SubscriptionPlansService>(
+        SubscriptionPlansService,
+      );
       (plansService.getPlanById as jest.Mock).mockImplementation(() => {
         throw new NotFoundException(
           'Subscription plan with id "invalid_plan" not found',
@@ -410,6 +444,9 @@ describe('MonetisationService', () => {
         stripe_price_id_yearly: undefined,
       };
 
+      const plansService = module.get<SubscriptionPlansService>(
+        SubscriptionPlansService,
+      );
       (plansService.getPlanById as jest.Mock).mockReturnValue(mockPlan);
 
       await expect(
@@ -424,6 +461,9 @@ describe('MonetisationService', () => {
         stripe_price_id: 'price_consumer_vip_monthly',
       };
 
+      const plansService = module.get<SubscriptionPlansService>(
+        SubscriptionPlansService,
+      );
       (plansService.getPlanById as jest.Mock).mockReturnValue(mockPlan);
       (service as any).stripe.checkout.sessions.create = jest
         .fn()

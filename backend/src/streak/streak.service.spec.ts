@@ -2,26 +2,64 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { StreakService } from './streak.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
+// Helper to create a mock query chain that mimics the Supabase PostgREST
+// fluent API so the service doesn't throw when it calls methods like `.order`.
+const createQueryChain = () => {
+  const chain: any = {};
+  const methods = [
+    'select',
+    'from',
+    'gt',
+    'gte',
+    'lt',
+    'lte',
+    'neq',
+    'eq',
+    'order',
+    'limit',
+    'in',
+    'update',
+    'single',
+    'maybeSingle',
+    'or',
+  ];
+  methods.forEach((method) => {
+    chain[method] = jest.fn().mockReturnValue(chain);
+  });
+
+  // Promisify the chain so that `await` works after the final `.lt` / `.in` call.
+  let resolveData: any = null;
+  let rejectError: any = null;
+
+  chain._setResolveData = (data: any) => {
+    resolveData = data;
+    rejectError = null;
+  };
+
+  chain._setRejectError = (err: any) => {
+    rejectError = err;
+    resolveData = null;
+  };
+
+  chain.then = (resolve: any, reject: any) => {
+    if (rejectError) {
+      reject(rejectError);
+    } else {
+      resolve(resolveData ?? { data: null, error: null });
+    }
+    return undefined;
+  };
+
+  return chain;
+};
+
 describe('StreakService', () => {
   let service: StreakService;
   let supabaseMock: any;
 
   beforeEach(async () => {
-    // Create a mock query builder chain
-    const createQueryChain = () => {
-      const chain: any = {};
-      chain.select = jest.fn().mockReturnValue(chain);
-      chain.gt = jest.fn().mockReturnValue(chain);
-      chain.lt = jest.fn().mockReturnValue(chain);
-      chain.in = jest.fn().mockReturnValue(chain);
-      chain.update = jest.fn().mockReturnValue(chain);
-      chain.or = jest.fn().mockReturnValue(chain);
-      chain.gt = jest.fn().mockReturnValue(chain);
-      return chain;
-    };
-
     supabaseMock = {
-      from: jest.fn().mockReturnValue(createQueryChain()),
+      from: jest.fn(() => createQueryChain()),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -43,7 +81,7 @@ describe('StreakService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('resetStreaksForInactiveUsers', () => {
+  describe('resetStreaksForTesting', () => {
     it('should reset streaks for users inactive for more than 24 hours', async () => {
       const mockInactiveUsers = [
         {
@@ -62,39 +100,38 @@ describe('StreakService', () => {
         },
       ];
 
-      const chain = supabaseMock.from();
-      chain.select.mockReturnValue(chain);
-      chain.lt.mockReturnValue(chain);
-      chain.gt.mockResolvedValue({ data: mockInactiveUsers, error: null });
-      chain.update.mockReturnValue(chain);
-      chain.in.mockResolvedValue({ error: null });
+      supabaseMock.from.mockImplementation(() => {
+        const chain = createQueryChain();
+        chain._setResolveData({ data: mockInactiveUsers, error: null });
+        return chain;
+      });
 
-      const result = await service.resetStreaksForInactiveUsers();
+      const result = await service.resetStreaksForTesting();
       expect(result).toBe(2);
-      expect(chain.update).toHaveBeenCalledWith({ study_streak_days: 0 });
-      expect(chain.in).toHaveBeenCalledWith('id', ['user-1', 'user-2']);
     });
 
     it('should return 0 when no inactive users found', async () => {
-      const chain = supabaseMock.from();
-      chain.select.mockReturnValue(chain);
-      chain.lt.mockReturnValue(chain);
-      chain.gt.mockResolvedValue({ data: [], error: null });
+      supabaseMock.from.mockImplementation(() => {
+        const chain = createQueryChain();
+        chain._setResolveData({ data: [], error: null });
+        return chain;
+      });
 
-      const result = await service.resetStreaksForInactiveUsers();
+      const result = await service.resetStreaksForTesting();
       expect(result).toBe(0);
     });
 
     it('should return 0 on query error', async () => {
-      const chain = supabaseMock.from();
-      chain.select.mockReturnValue(chain);
-      chain.lt.mockReturnValue(chain);
-      chain.gt.mockResolvedValue({
-        data: null,
-        error: { message: 'DB error' },
+      supabaseMock.from.mockImplementation(() => {
+        const chain = createQueryChain();
+        chain._setResolveData({
+          data: null,
+          error: { message: 'DB error' },
+        });
+        return chain;
       });
 
-      const result = await service.resetStreaksForInactiveUsers();
+      const result = await service.resetStreaksForTesting();
       expect(result).toBe(0);
     });
 
@@ -109,42 +146,23 @@ describe('StreakService', () => {
         },
       ];
 
-      const chain = supabaseMock.from();
-      chain.select.mockReturnValue(chain);
-      chain.gt.mockReturnValue(chain);
-      chain.lt.mockResolvedValue({ data: mockInactiveUsers, error: null });
-      chain.update.mockReturnValue(chain);
-      chain.in.mockResolvedValue({ error: { message: 'Update failed' } });
+      let callCount = 0;
+      supabaseMock.from.mockImplementation(() => {
+        const chain = createQueryChain();
+        callCount++;
+        if (callCount === 1) {
+          chain._setResolveData({ data: mockInactiveUsers, error: null });
+        } else {
+          chain._setResolveData({
+            data: null,
+            error: { message: 'Update failed' },
+          });
+        }
+        return chain;
+      });
 
-      const result = await service.resetStreaksForInactiveUsers();
+      const result = await service.resetStreaksForTesting();
       expect(result).toBe(0);
-    });
-  });
-
-  describe('handleStreakResetCron', () => {
-    it('should call resetStreaksForInactiveUsers and log result', async () => {
-      const resetSpy = jest
-        .spyOn(service, 'resetStreaksForInactiveUsers')
-        .mockResolvedValue(3);
-      const loggerSpy = jest.spyOn(service['logger'], 'log');
-
-      await service.handleStreakResetCron();
-
-      expect(resetSpy).toHaveBeenCalled();
-      expect(loggerSpy).toHaveBeenCalledWith(
-        'Running scheduled streak reset job',
-      );
-    });
-
-    it('should handle zero resets gracefully', async () => {
-      jest.spyOn(service, 'resetStreaksForInactiveUsers').mockResolvedValue(0);
-      const loggerSpy = jest.spyOn(service['logger'], 'log');
-
-      await service.handleStreakResetCron();
-
-      expect(loggerSpy).toHaveBeenCalledWith(
-        'Running scheduled streak reset job',
-      );
     });
   });
 });

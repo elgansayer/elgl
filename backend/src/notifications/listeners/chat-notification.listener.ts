@@ -34,7 +34,10 @@ export class ChatNotificationListener {
 
       if (!sender) return;
 
-      const senderData = sender as { display_name?: string; avatar_url?: string | null };
+      const senderData = sender as {
+        display_name?: string;
+        avatar_url?: string | null;
+      };
       const senderName = senderData.display_name || 'Someone';
       const messageTypeLabels: Record<string, string> = {
         text: 'sent a message',

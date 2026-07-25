@@ -1,7 +1,5 @@
 import { Controller, Get, Param } from '@nestjs/common';
-import {
-  SubscriptionPlansService,
-} from '../services/subscription-plans.service';
+import { SubscriptionPlansService } from '../services/subscription-plans.service';
 import type { SubscriptionPlan } from '../services/subscription-plans.service';
 
 @Controller('subscription-plans')

@@ -22,6 +22,7 @@ describe('EconomyService', () => {
       eq: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       single: jest.fn(),
+      maybeSingle: jest.fn(),
     };
 
     mockSupabaseClient = {
@@ -152,7 +153,6 @@ describe('EconomyService', () => {
         error: null,
       });
 
-      // Mock HttpService for verifyReceipt
       jest.spyOn(service['httpService'], 'post').mockReturnValue(
         of({
           data: {
@@ -164,18 +164,15 @@ describe('EconomyService', () => {
               },
             ],
           },
-        }) as any,
+        }),
       );
 
       // Mock checkDuplicateTransaction
-      mockQueryBuilder.maybeSingle = jest
-        .fn()
-        .mockResolvedValue({ data: null });
+      mockQueryBuilder.maybeSingle.mockResolvedValue({ data: null });
 
       const result = await service.purchaseCoins('user-1', {
-        amount: 500,
-        package_id: 'coins_medium',
         receipt_token: 'ios_token123',
+        platform: 'ios',
       });
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');

@@ -2,6 +2,8 @@ import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { LongPressContextMenuComponent } from './long-press-context-menu.component';
+import { of } from 'rxjs';
+import { SafetyService } from '../../services/safety.service';
 
 (globalThis as any).Touch = class Touch {};
 (globalThis as any).TouchEvent = class TouchEvent extends Event {};
@@ -13,6 +15,14 @@ describe('LongPressContextMenuComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [LongPressContextMenuComponent],
+      providers: [
+        {
+          provide: SafetyService,
+          useValue: {
+            reportUser: vi.fn().mockReturnValue(of(null)),
+          },
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LongPressContextMenuComponent);
@@ -50,7 +60,10 @@ describe('LongPressContextMenuComponent', () => {
 
   it('should emit report event when report option is clicked', () => {
     vi.spyOn(component.report, 'emit');
+    // Clicking report opens the modal but does not emit directly
     component['onOptionClick']('report');
+    // After the modal submits, the event is emitted
+    component.onReportSubmitted();
     expect(component.report.emit).toHaveBeenCalledWith({
       messageId: 'test-message-id',
       content: 'Hello world',
@@ -70,36 +83,40 @@ describe('LongPressContextMenuComponent', () => {
     vi.spyOn(event, 'preventDefault');
     component.onRightClick(event);
     expect(event.preventDefault).toHaveBeenCalled();
-    expect(component.isOpen()).toBe(true);
+    expect(component.showMenu()).toBe(true);
     expect(component.position()).toEqual({ x: 100, y: 200 });
   });
 
   it('should close menu on document click outside', () => {
-    component['isOpen'].set(true);
+    fixture.componentRef.setInput('showMenu', true);
+    fixture.detectChanges();
     const outsideElement = document.createElement('div');
     document.body.appendChild(outsideElement);
     outsideElement.click();
-    expect(component.isOpen()).toBe(false);
+    expect(component.showMenu()).toBe(false);
     document.body.removeChild(outsideElement);
   });
 
   it('should close menu on escape key', () => {
-    component['isOpen'].set(true);
+    fixture.componentRef.setInput('showMenu', true);
+    fixture.detectChanges();
     const event = new KeyboardEvent('keydown', { key: 'Escape' });
     document.dispatchEvent(event);
-    expect(component.isOpen()).toBe(false);
+    expect(component.showMenu()).toBe(false);
   });
 
   it('should close menu on window resize', () => {
-    component['isOpen'].set(true);
+    fixture.componentRef.setInput('showMenu', true);
+    fixture.detectChanges();
     window.dispatchEvent(new Event('resize'));
-    expect(component.isOpen()).toBe(false);
+    expect(component.showMenu()).toBe(false);
   });
 
   it('should close menu on window scroll', () => {
-    component['isOpen'].set(true);
+    fixture.componentRef.setInput('showMenu', true);
+    fixture.detectChanges();
     window.dispatchEvent(new Event('scroll'));
-    expect(component.isOpen()).toBe(false);
+    expect(component.showMenu()).toBe(false);
   });
 
   it('should not open menu when disabled', () => {
@@ -107,7 +124,7 @@ describe('LongPressContextMenuComponent', () => {
     fixture.detectChanges();
     const event = new MouseEvent('contextmenu', { clientX: 100, clientY: 200 });
     component.onRightClick(event);
-    expect(component.isOpen()).toBe(false);
+    expect(component.showMenu()).toBe(false);
   });
 
   it('should start long press timer on touch start', () => {
@@ -120,7 +137,7 @@ describe('LongPressContextMenuComponent', () => {
     component.onTouchStart(touchEvent);
     expect((component as any).longPressTimer).not.toBeNull();
     vi.advanceTimersByTime(component.longPressDuration());
-    expect(component.isOpen()).toBe(true);
+    expect(component.showMenu()).toBe(true);
     vi.useRealTimers();
   });
 
@@ -147,7 +164,7 @@ describe('LongPressContextMenuComponent', () => {
   });
 
   it('should render menu options', () => {
-    component['isOpen'].set(true);
+    fixture.componentRef.setInput('showMenu', true);
     fixture.detectChanges();
     const buttons = fixture.debugElement.queryAll(By.css('button[role="menuitem"]'));
     expect(buttons.length).toBe(4);
@@ -160,7 +177,7 @@ describe('LongPressContextMenuComponent', () => {
   it.skip('should disable menu options when disabled input is true', () => {
     fixture.componentRef.setInput('disabled', true);
     fixture.detectChanges();
-    component['isOpen'].set(true);
+    fixture.componentRef.setInput('showMenu', true);
     fixture.detectChanges();
 
     const buttons = fixture.debugElement.queryAll(By.css('button[role="menuitem"]'));

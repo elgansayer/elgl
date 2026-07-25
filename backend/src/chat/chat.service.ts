@@ -25,13 +25,12 @@ export class ChatService {
     return this.centrifugoService.generateConnectionToken(userId);
   }
 
-  async getRooms(currentUserId?: string): Promise<ChatRoomRecord[]> {
+  async getRooms(currentUserId: string): Promise<ChatRoomRecord[]> {
     const supabase = this.supabaseService.getClient();
 
     // Get blocked user IDs to exclude from rooms
-    const blockedIds = currentUserId
-      ? await this.safetyService.getBlockedAndBlockerIds(currentUserId)
-      : [];
+    const blockedIds =
+      await this.safetyService.getBlockedAndBlockerIds(currentUserId);
 
     const response = await supabase
       .from('chat_rooms')
@@ -70,8 +69,8 @@ export class ChatService {
 
     const rooms = response.data as ChatRoomRecord[];
 
-    // If we have a current user, filter out rooms where the other participant is blocked
-    if (currentUserId && blockedIds.length > 0) {
+    // Filter out rooms where the other participant is blocked
+    if (blockedIds.length > 0) {
       // Get room members for all rooms
       const roomIds = rooms.map((r) => r.id);
       const { data: members } = await supabase
@@ -166,10 +165,9 @@ export class ChatService {
               ? '🎨 Doodle'
               : '';
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       this.eventEmitter.emit(
         'chat.message',
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+
         new ChatMessageEvent(
           senderId,
           receiverId,
@@ -213,7 +211,7 @@ export class ChatService {
 
     // Exclude messages from blocked users
     if (blockedIds.length > 0) {
-      query = query.not('sender_id', 'in', `(${blockedIds.join(',')})`);
+      query = query.not('sender_id', 'in', blockedIds);
     }
 
     if (search && search.trim().length > 0) {
@@ -228,7 +226,7 @@ export class ChatService {
           room_id: roomId,
           sender_id: 'mock-user-1',
           message_type: 'text',
-          text_content: 'Hello! I would love to practice languages with you.',
+          text_content: 'Hey! I would love to practice languages with you.',
           media_url: undefined,
           correction_payload: undefined,
           is_read: true,

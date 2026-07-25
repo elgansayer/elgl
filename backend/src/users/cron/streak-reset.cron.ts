@@ -9,7 +9,7 @@ export class StreakResetCron {
   constructor(private readonly usersService: UsersService) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  async handleCron() {
+  handleCron() {
     this.logger.debug('Running streak reset cron job');
     // Actual implementation to reset streaks
   }

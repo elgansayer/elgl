@@ -22,7 +22,7 @@ export class StripeService {
       throw new Error('STRIPE_SECRET_KEY is required');
     }
     this.stripe = new Stripe(secretKey, {
-      apiVersion: '2023-10-16' as Stripe.LatestApiVersion,
+      apiVersion: '2023-10-16',
     });
   }
 

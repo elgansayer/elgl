@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProfileVisitsService } from './profile-visits.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('ProfileVisitsService', () => {
@@ -32,10 +33,12 @@ describe('ProfileVisitsService', () => {
           },
         },
         {
+          provide: NotificationsService,
+          useValue: new Proxy({}, { get: () => jest.fn() }),
+        },
+        {
           provide: EventEmitter2,
-          useValue: {
-            emit: jest.fn(),
-          },
+          useValue: { emit: jest.fn() },
         },
       ],
     }).compile();
@@ -143,7 +146,7 @@ describe('ProfileVisitsService', () => {
             id: 'visitor-1',
             display_name: 'John',
             avatar_url: 'avatar.png',
-            native_languages: ['en'],
+            native_language: 'en',
             target_languages: ['fr'],
           },
         },
@@ -164,7 +167,7 @@ describe('ProfileVisitsService', () => {
             id: 'visitor-1',
             display_name: 'John',
             avatar_url: 'avatar.png',
-            native_languages: ['en'],
+            native_language: 'en',
             target_languages: ['fr'],
           },
         },
@@ -180,7 +183,7 @@ describe('ProfileVisitsService', () => {
             id: 'visitor-2',
             display_name: 'Secret User',
             avatar_url: 'secret.png',
-            native_languages: ['ja'],
+            native_language: 'ja',
             target_languages: ['en'],
           },
         },
@@ -201,14 +204,14 @@ describe('ProfileVisitsService', () => {
             id: 'hidden-vip-only',
             display_name: 'Someone near you',
             avatar_url: null,
-            native_languages: ['ja'],
+            native_language: 'ja',
             target_languages: ['en'],
           },
         },
       ]);
     });
 
-    it('should use default native_languages and target_languages if visitor fields are null or undefined when blurring', async () => {
+    it('should use default native_language and target_languages if visitor fields are null or undefined when blurring', async () => {
       const rows = [
         {
           id: 'v-3',
@@ -223,7 +226,7 @@ describe('ProfileVisitsService', () => {
 
       const result = await service.getVisitors('owner-free', false);
 
-      expect(result[0].visitor.native_languages).toBe('en');
+      expect(result[0].visitor.native_language).toBe('en');
       expect(result[0].visitor.target_languages).toEqual(['es']);
     });
 

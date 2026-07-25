@@ -3,11 +3,48 @@ import { PostgrestError } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
 
+export const SAFETY_CATEGORIES = [
+  {
+    value: 'harassment',
+    label: 'Harassment',
+    icon: '🚫',
+    description: 'Unwanted advances, threats, or abusive behaviour',
+  },
+  {
+    value: 'spam',
+    label: 'Spam',
+    icon: '📧',
+    description: 'Unsolicited promotions, phishing, or fraudulent activity',
+  },
+  {
+    value: 'inappropriate_content',
+    label: 'Inappropriate Content',
+    icon: '🔞',
+    description: 'Sexually explicit, violent, or offensive material',
+  },
+  {
+    value: 'fake_profile',
+    label: 'Fake Profile',
+    icon: '🎭',
+    description: 'Impersonation or false identity',
+  },
+  {
+    value: 'other',
+    label: 'Other',
+    icon: '📝',
+    description: 'Something else not listed above',
+  },
+];
+
 @Injectable()
 export class SafetyService {
   private readonly logger = new Logger(SafetyService.name);
 
   constructor(private readonly supabaseService: SupabaseService) {}
+
+  getCategories() {
+    return SAFETY_CATEGORIES;
+  }
 
   async reportUser(
     reporterId: string,
@@ -71,7 +108,7 @@ export class SafetyService {
     dto: BlockUserDto,
   ): Promise<{ success: boolean; blocked_id: string }> {
     const supabase = this.supabaseService.getClient();
-    
+
     // Check if already blocked
     const { data: existing } = await supabase
       .from('blocks')
@@ -144,6 +181,11 @@ export class SafetyService {
       this.logger.error(`Failed to get blocked user IDs for ${userId}:`, error);
       return [];
     }
+
+    if (!Array.isArray(data)) {
+      return [];
+    }
+
     return (data as { blocked_id: string }[]).map((b) => b.blocked_id);
   }
 
@@ -158,6 +200,11 @@ export class SafetyService {
       this.logger.error(`Failed to get blocker user IDs for ${userId}:`, error);
       return [];
     }
+
+    if (!Array.isArray(data)) {
+      return [];
+    }
+
     return (data as { blocker_id: string }[]).map((b) => b.blocker_id);
   }
 

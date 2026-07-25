@@ -16,6 +16,11 @@ import { SafetyService } from './safety.service';
 export class SafetyController {
   constructor(private readonly safetyService: SafetyService) {}
 
+  @Get('report-categories')
+  getReportCategories() {
+    return this.safetyService.getCategories();
+  }
+
   @Post('report')
   async reportUser(
     @Req() req: { user: { id: string } },

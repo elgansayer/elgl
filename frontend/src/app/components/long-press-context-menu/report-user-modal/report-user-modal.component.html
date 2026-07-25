@@ -1,0 +1,71 @@
+@if (visible) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" (click)="cancel()">
+    <div
+      class="bg-slate-900 rounded-xl shadow-2xl p-6 w-full max-w-md mx-4 border border-slate-700"
+      (click)="$event.stopPropagation()"
+    >
+      <h2 class="text-xl font-bold text-white mb-4">Report User</h2>
+
+      @if (reportedUserName) {
+        <p class="text-sm text-slate-400 mb-4">
+          Reporting <span class="font-semibold text-white">{{ reportedUserName }}</span>
+        </p>
+      }
+
+      <!-- Category radio buttons -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-slate-300 mb-2">Reason</label>
+        <div class="space-y-2">
+          @for (cat of categories; track cat.value) {
+            <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-800 hover:bg-slate-700 cursor-pointer">
+              <input
+                type="radio"
+                name="reportCategory"
+                [value]="cat.value"
+                [(ngModel)]="selectedCategory"
+                class="text-blue-500 focus:ring-blue-500"
+              />
+              <span class="text-slate-200">{{ cat.label }}</span>
+            </label>
+          }
+        </div>
+      </div>
+
+      <!-- Optional description -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-slate-300 mb-1">Additional details (optional)</label>
+        <textarea
+          [(ngModel)]="description"
+          rows="3"
+          class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Provide more context..."
+        ></textarea>
+      </div>
+
+      <!-- Error message -->
+      @if (errorMessage) {
+        <p class="text-red-400 text-sm mb-3">{{ errorMessage }}</p>
+      }
+
+      <!-- Actions -->
+      <div class="flex justify-end gap-3">
+        <button
+          type="button"
+          class="px-4 py-2 text-sm font-medium text-slate-300 bg-slate-700 hover:bg-slate-600 rounded-lg"
+          (click)="cancel()"
+          [disabled]="submitting"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-500 rounded-lg disabled:opacity-50"
+          (click)="submitReport()"
+          [disabled]="submitting"
+        >
+          @if (submitting) { Submitting... } @else { Report }
+        </button>
+      </div>
+    </div>
+  </div>
+}

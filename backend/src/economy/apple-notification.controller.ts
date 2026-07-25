@@ -26,9 +26,9 @@ export class AppleNotificationController {
    */
   @Post()
   @HttpCode(HttpStatus.OK)
-  handleNotification(
-    @Body() body: { signedPayload: string },
-  ): { status: string } {
+  handleNotification(@Body() body: { signedPayload: string }): {
+    status: string;
+  } {
     this.logger.log('Received Apple server notification');
 
     if (!body.signedPayload) {

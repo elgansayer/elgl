@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { MomentsService } from './moments.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { TimelineWorker } from './timeline.worker';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SafetyService } from '../safety/safety.service';
 
 describe('MomentsService', () => {
@@ -36,6 +36,7 @@ describe('MomentsService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
+      imports: [EventEmitterModule.forRoot()],
       providers: [
         MomentsService,
         {
@@ -62,14 +63,13 @@ describe('MomentsService', () => {
           },
         },
         {
-          provide: EventEmitter2,
-          useValue: {
-            emit: jest.fn(),
-          },
-        },
-        {
           provide: SafetyService,
           useValue: {
+            isBlocked: jest.fn().mockResolvedValue(false),
+            reportUser: jest.fn().mockResolvedValue(undefined),
+            blockUser: jest.fn().mockResolvedValue(undefined),
+            unblockUser: jest.fn().mockResolvedValue(undefined),
+            getCategories: jest.fn().mockReturnValue(['harassment']),
             getBlockedAndBlockerIds: jest.fn().mockResolvedValue([]),
           },
         },
@@ -285,7 +285,7 @@ describe('MomentsService', () => {
       expect(result).toHaveLength(1);
     });
 
-    it('should return empty array when query returns no moments', async () => {
+    it('should return generated mock moments when DB returns no moments', async () => {
       mockSupabaseClient.from = jest
         .fn()
         .mockImplementation((table: string) => {
@@ -296,11 +296,25 @@ describe('MomentsService', () => {
               limit: jest.fn().mockResolvedValue({ data: [] }),
             };
           }
+          if (table === 'users') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              in: jest.fn().mockResolvedValue({ data: [] }),
+            };
+          }
+          if (table === 'moment_likes') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              in: jest.fn().mockResolvedValue({ data: [] }),
+            };
+          }
           return mockQueryBuilder;
         });
 
       const result = await service.getFeed('user-1', 'All');
+      // The service generates fallback mock moments when the DB returns nothing.
       expect(result.length).toBeGreaterThan(0);
+      expect(result[0].id).toMatch(/^mock-moment-/);
     });
   });
 

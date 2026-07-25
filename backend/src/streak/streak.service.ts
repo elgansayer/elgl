@@ -58,9 +58,17 @@ export class StreakService {
   }
 
   /**
+   * Convenience method for automated tests that resets streaks for
+   * inactive users. Calls the shared business logic directly.
+   */
+  async resetStreaksForTesting(): Promise<number> {
+    return this.resetStreaksForInactiveUsers();
+  }
+
+  /**
    * Scheduled job that runs every hour to reset streaks for inactive users.
    */
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+
   @Cron('0 * * * *')
   async handleStreakResetCron(): Promise<void> {
     this.logger.log('Running scheduled streak reset job');

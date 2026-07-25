@@ -36,7 +36,7 @@ export class DiscoveryService {
 
     // Exclude blocked users
     if (blockedIds.length > 0) {
-      queryBuilder = queryBuilder.not('id', 'in', `(${blockedIds.join(',')})`);
+      queryBuilder = queryBuilder.not('id', 'in', blockedIds);
     }
 
     if (query.native_languages) {

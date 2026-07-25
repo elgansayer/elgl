@@ -60,40 +60,43 @@ export class GooglePlayNotificationService {
       // 4. Route to appropriate handler based on notification type
       switch (notificationType) {
         case 1: // SUBSCRIPTION_RECOVERED
-          this.handleSubscriptionRecovered(purchaseToken, subscriptionId);
+          void this.handleSubscriptionRecovered(purchaseToken, subscriptionId);
           break;
         case 2: // SUBSCRIPTION_RENEWED
-          this.handleSubscriptionRenewed(purchaseToken, subscriptionId);
+          void this.handleSubscriptionRenewed(purchaseToken, subscriptionId);
           break;
         case 3: // SUBSCRIPTION_CANCELED
-          this.handleSubscriptionCanceled(purchaseToken, subscriptionId);
+          void this.handleSubscriptionCanceled(purchaseToken, subscriptionId);
           break;
         case 4: // SUBSCRIPTION_PURCHASED
-          this.handleSubscriptionPurchased(purchaseToken, subscriptionId);
+          void this.handleSubscriptionPurchased(purchaseToken, subscriptionId);
           break;
         case 5: // SUBSCRIPTION_ON_HOLD
-          this.handleSubscriptionOnHold(purchaseToken, subscriptionId);
+          void this.handleSubscriptionOnHold(purchaseToken, subscriptionId);
           break;
         case 6: // SUBSCRIPTION_IN_GRACE_PERIOD
-          this.handleSubscriptionInGracePeriod(purchaseToken, subscriptionId);
+          void this.handleSubscriptionInGracePeriod(
+            purchaseToken,
+            subscriptionId,
+          );
           break;
         case 7: // SUBSCRIPTION_RESTARTED
-          this.handleSubscriptionRestarted(purchaseToken, subscriptionId);
+          void this.handleSubscriptionRestarted(purchaseToken, subscriptionId);
           break;
         case 8: // SUBSCRIPTION_PRICE_CHANGE_CONFIRMED
-          this.handleSubscriptionPriceChangeConfirmed(
+          void this.handleSubscriptionPriceChangeConfirmed(
             purchaseToken,
             subscriptionId,
           );
           break;
         case 9: // SUBSCRIPTION_DEFERRED
-          this.handleSubscriptionDeferred(purchaseToken, subscriptionId);
+          void this.handleSubscriptionDeferred(purchaseToken, subscriptionId);
           break;
         case 12: // SUBSCRIPTION_REVOKED
-          this.handleSubscriptionRevoked(purchaseToken, subscriptionId);
+          void this.handleSubscriptionRevoked(purchaseToken, subscriptionId);
           break;
         case 13: // SUBSCRIPTION_EXPIRED
-          this.handleSubscriptionExpired(purchaseToken, subscriptionId);
+          void this.handleSubscriptionExpired(purchaseToken, subscriptionId);
           break;
         default:
           this.logger.warn(
@@ -305,7 +308,9 @@ export class GooglePlayNotificationService {
   /**
    * Retrieves the user ID associated with a purchase token.
    */
-  private async getUserIdByPurchaseToken(purchaseToken: string): Promise<string | null> {
+  private async getUserIdByPurchaseToken(
+    purchaseToken: string,
+  ): Promise<string | null> {
     const supabase = this.supabaseService.getClient();
 
     const { data } = await supabase

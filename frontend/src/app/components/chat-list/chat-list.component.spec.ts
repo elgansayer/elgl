@@ -1,9 +1,7 @@
-import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ChatListComponent } from './chat-list.component';
 import { ChatService } from '../../services/chat.service';
 import * as toast from '../../services/toast.service';
-import { provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 
 describe('ChatListComponent', () => {
@@ -13,7 +11,8 @@ describe('ChatListComponent', () => {
 
   beforeEach(async () => {
     mockChatService = {
-      getRecentChats: vi.fn().mockResolvedValue([])
+      getRecentChats: () => Promise.resolve([]),
+      getRooms: () => Promise.resolve([]),
     };
 
     await TestBed.configureTestingModule({

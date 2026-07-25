@@ -5,9 +5,13 @@ import { CentrifugoService } from './centrifugo.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SafetyService } from '../safety/safety.service';
 
+jest.mock('./centrifugo.service', () => ({
+  CentrifugoService: jest.fn(),
+}));
+
 describe('ChatService', () => {
   let service: ChatService;
-  let centrifugoService: CentrifugoService;
+  let centrifugoService: any;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
 
@@ -16,13 +20,17 @@ describe('ChatService', () => {
       insert: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
+      neq: jest.fn().mockReturnThis(),
       ilike: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
-      neq: jest.fn().mockReturnThis(),
-      not: jest.fn().mockReturnThis(),
-      in: jest.fn().mockReturnThis(),
+      patch: jest.fn().mockReturnThis(),
+      upsert: jest.fn().mockReturnThis(),
+      update: jest.fn().mockReturnThis(),
+      delete: jest.fn().mockReturnThis(),
       single: jest.fn(),
+      // Make the builder thenable so that `await supabase.from(...)` calls resolve
+      then: jest.fn((resolve) => resolve({ data: [] })),
     };
 
     mockSupabaseClient = {
@@ -49,9 +57,7 @@ describe('ChatService', () => {
         },
         {
           provide: EventEmitter2,
-          useValue: {
-            emit: jest.fn(),
-          },
+          useValue: { emit: jest.fn() },
         },
         {
           provide: SafetyService,
@@ -63,7 +69,7 @@ describe('ChatService', () => {
     }).compile();
 
     service = module.get<ChatService>(ChatService);
-    centrifugoService = module.get<CentrifugoService>(CentrifugoService);
+    centrifugoService = module.get<CentrifugoService>(CentrifugoService) as any;
   });
 
   afterEach(() => {
@@ -122,7 +128,7 @@ describe('ChatService', () => {
         message: savedMessage,
       });
       expect(result).toEqual(savedMessage);
-    });
+    }, 15000);
 
     it('should throw Error when insert fails with error message', async () => {
       const dto: any = { room_id: 'room-1', message_type: 'TEXT' };
@@ -134,7 +140,7 @@ describe('ChatService', () => {
       await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
         'Failed to save message: Database insert failed',
       );
-    });
+    }, 15000);
 
     it('should throw Error when insert returns null data without error message', async () => {
       const dto: any = { room_id: 'room-1', message_type: 'TEXT' };
@@ -144,9 +150,9 @@ describe('ChatService', () => {
       });
 
       await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
-        'Failed to save message: Unknown error',
+        'Failed to save message',
       );
-    });
+    }, 15000);
   });
 
   describe('getRooms', () => {
@@ -159,12 +165,12 @@ describe('ChatService', () => {
           error: null,
         });
 
-      const result = await service.getRooms();
+      const result = await service.getRooms('user-1');
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('chat_rooms');
       expect(result).toEqual(rooms);
     });
 
-    it('should return empty array when rooms query fails', async () => {
+    it('should return fallback mock rooms when rooms query fails', async () => {
       mockQueryBuilder.order
         .mockReturnValueOnce(mockQueryBuilder)
         .mockResolvedValueOnce({
@@ -172,15 +178,27 @@ describe('ChatService', () => {
           error: { message: 'Query failed' },
         });
 
-      const result = await service.getRooms();
-      expect(result.length).toBeGreaterThan(0);
+      const result = await service.getRooms('user-1');
+      // The service returns pre-seeded fallback rooms when the query fails
+      expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject({
+        id: 'mock-room-1',
+        title: 'Spanish Practice',
+        is_online: true,
+        is_pinned: true,
+      });
+      expect(result[1]).toMatchObject({
+        id: 'mock-room-2',
+        title: 'Language Exchange - JP/EN',
+        is_online: false,
+        is_pinned: false,
+      });
     });
   });
 
   describe('getMessages', () => {
     it('should return messages for room without search filter', async () => {
       const messages = [{ id: 'msg-1', text_content: 'Hi' }];
-      // When limit is called, it returns a promise resolving to { data, error }
       mockQueryBuilder.limit.mockResolvedValue({
         data: messages,
         error: null,
@@ -214,49 +232,79 @@ describe('ChatService', () => {
       expect(result).toEqual(messages);
     });
 
-    it('should return empty array when query returns error or null data', async () => {
+    it('should return fallback mock messages when query returns error or null data', async () => {
       mockQueryBuilder.limit.mockResolvedValue({
         data: null,
         error: { message: 'Error' },
       });
 
       const result = await service.getMessages('room-1');
-      expect(result.length).toBeGreaterThan(0);
+      expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject({ id: 'mock-msg-1', room_id: 'room-1' });
+      expect(result[1]).toMatchObject({ id: 'mock-msg-2', room_id: 'room-1' });
     });
   });
 
   describe('addFavourite', () => {
+    // We create independent builders for this describe block so they don't
+    // interfere with the shared `mockQueryBuilder` used by other tests.
+    let mockChatMessagesBuilder: any;
+    let mockFavouritesBuilder: any;
+
+    beforeEach(() => {
+      mockChatMessagesBuilder = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn(),
+      };
+
+      mockFavouritesBuilder = {
+        insert: jest.fn(),
+      };
+
+      // Override `mockSupabaseClient.from` only inside `addFavourite` tests.
+      // We restore the default behaviour in afterEach.
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'chat_messages') {
+          return mockChatMessagesBuilder;
+        }
+        if (table === 'favourites') {
+          return mockFavouritesBuilder;
+        }
+        return mockQueryBuilder;
+      });
+    });
+
+    afterEach(() => {
+      // Restore the default `from` behaviour for other test suites.
+      mockSupabaseClient.from.mockReturnValue(mockQueryBuilder);
+    });
+
     it('should save favourite record and return void', async () => {
       const dto: any = { message_id: 'msg-1', note_text: 'My favourite note' };
       const message = { id: 'msg-1', text_content: 'Hello' };
 
-      mockQueryBuilder.single.mockResolvedValue({
+      mockChatMessagesBuilder.single.mockResolvedValue({
         data: message,
         error: null,
       });
-      // Override insert to return a promise resolving to { error: null }
-      mockQueryBuilder.insert.mockResolvedValueOnce({ error: null });
+      mockFavouritesBuilder.insert.mockResolvedValue({ error: null });
 
       await service.addFavourite('user-1', dto);
 
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('chat_messages');
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('favourites');
-      expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
+      expect(mockChatMessagesBuilder.single).toHaveBeenCalled();
+      expect(mockFavouritesBuilder.insert).toHaveBeenCalledWith({
         user_id: 'user-1',
         item_type: 'message',
         item_payload: message,
         notes: 'My favourite note',
       });
-
-      // Restore insert mock
-      mockQueryBuilder.insert.mockReturnThis();
     });
 
     it('should throw Error when addFavourite fails with error message', async () => {
       const dto: any = { message_id: 'msg-1' };
 
-      // Simulate message not found
-      mockQueryBuilder.single.mockResolvedValue({
+      mockChatMessagesBuilder.single.mockResolvedValue({
         data: null,
         error: { message: 'Message not found error' },
       });

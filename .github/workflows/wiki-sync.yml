@@ -1,0 +1,53 @@
+name: Auto-Sync Wiki
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'TODO.md'
+      - 'AGENTS.md'
+      - 'SPEC.md'
+      - 'README.md'
+
+permissions:
+  contents: write
+
+jobs:
+  update-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Main Repository
+        uses: actions/checkout@v4
+        with:
+          path: main-repo
+
+      - name: Checkout Wiki Repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki-repo
+        continue-on-error: true # If the wiki hasn't been initialized yet, don't crash
+
+      - name: Sync Files to Wiki
+        run: |
+          # Check if the wiki repo was successfully cloned (it only exists if the user clicked "Create first page")
+          if [ ! -d "wiki-repo/.git" ]; then
+            echo "Wiki repository not found. Please initialize the wiki by creating the first page on GitHub."
+            exit 0
+          fi
+          
+          # Copy the core documentation files to the Wiki
+          cp main-repo/README.md wiki-repo/Home.md
+          cp main-repo/TODO.md wiki-repo/Live-Task-Board.md
+          cp main-repo/AGENTS.md wiki-repo/AI-Constitution.md
+          cp main-repo/SPEC.md wiki-repo/Product-Spec.md
+          
+          cd wiki-repo
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          git add .
+          # Only commit and push if there are actual changes
+          git commit -m "docs(wiki): auto-sync documentation from main repo" || echo "No changes to commit"
+          git push

@@ -4,6 +4,7 @@ import { I18nService } from '../../services/i18n.service';
 import { CentrifugoService } from '../../services/centrifugo.service';
 import { AuthService } from '../../services/auth.service';
 import { LivekitService } from '../../services/livekit.service';
+import { SafetyService } from '../../services/safety.service';
 import { signal } from '@angular/core';
 import { vi } from 'vitest';
 
@@ -13,6 +14,7 @@ describe('IncomingCallComponent', () => {
   let mockCentrifugoService: any;
   let mockAuthService: any;
   let mockLivekitService: any;
+  let mockSafetyService: any;
 
   beforeEach(async () => {
     mockCentrifugoService = {
@@ -28,6 +30,10 @@ describe('IncomingCallComponent', () => {
       joinRoom: vi.fn().mockResolvedValue(undefined),
       leaveRoom: vi.fn().mockResolvedValue(undefined),
     };
+    mockSafetyService = {
+      loadBlockedUserIds: vi.fn().mockResolvedValue(undefined),
+      blockedUserIdsSignal: signal(new Set<string>()),
+    };
 
     await TestBed.configureTestingModule({
       imports: [IncomingCallComponent],
@@ -36,6 +42,7 @@ describe('IncomingCallComponent', () => {
         { provide: CentrifugoService, useValue: mockCentrifugoService },
         { provide: AuthService, useValue: mockAuthService },
         { provide: LivekitService, useValue: mockLivekitService },
+        { provide: SafetyService, useValue: mockSafetyService },
       ],
     }).compileComponents();
 

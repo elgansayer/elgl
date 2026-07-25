@@ -1,7 +1,12 @@
+/// <reference types="jest" />
 import { Test, TestingModule } from '@nestjs/testing';
 import { DiscoveryService } from './discovery.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
+
+jest.mock('../mock-data', () => ({
+  MOCK_USERS: [],
+}));
 
 describe('DiscoveryService', () => {
   let service: DiscoveryService;
@@ -13,7 +18,6 @@ describe('DiscoveryService', () => {
       select: jest.fn().mockReturnThis(),
       neq: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      not: jest.fn().mockReturnThis(),
       contains: jest.fn().mockReturnThis(),
       gt: jest.fn().mockReturnThis(),
       gte: jest.fn().mockReturnThis(),
@@ -83,12 +87,12 @@ describe('DiscoveryService', () => {
       });
 
       const result = await service.searchPartners('user-1', null, {
-        native_languages: 'ES',
+        native_language: 'ES',
         target_language: 'EN',
         serious_learner_only: true,
       });
 
-      expect(mockQueryBuilder.contains).toHaveBeenCalledWith('native_languages', ['ES']);
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('native_language', 'ES');
       expect(mockQueryBuilder.contains).toHaveBeenCalledWith(
         'target_languages',
         ['EN'],
@@ -112,7 +116,7 @@ describe('DiscoveryService', () => {
         latitude: 51.5074,
         longitude: -0.1278,
         radius_metres: 10000,
-        native_languages: 'FR',
+        native_language: 'FR',
       });
 
       expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
@@ -165,7 +169,7 @@ describe('DiscoveryService', () => {
         longitude: 139.6917,
       });
 
-      expect(result.length).toBeGreaterThan(0);
+      expect(result).toHaveLength(0);
     });
 
     it('should return empty array when standard query returns error or null data', async () => {
@@ -175,8 +179,7 @@ describe('DiscoveryService', () => {
       });
 
       const result = await service.searchPartners('user-1', null, {});
-      expect(result.length).toBeGreaterThan(0);
-      expect(result[0].id).toBeDefined();
+      expect(result).toHaveLength(0);
     });
   });
 });

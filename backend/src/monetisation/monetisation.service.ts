@@ -56,7 +56,7 @@ export class MonetisationService {
     this.stripe = new Stripe(
       this.configService.get<string>('STRIPE_SECRET_KEY') || '',
       {
-        apiVersion: '2023-10-16' as Stripe.LatestApiVersion,
+        apiVersion: '2023-10-16',
       },
     );
   }
@@ -174,18 +174,21 @@ export class MonetisationService {
 
     this.logger.log(`Received verified Stripe Webhook event: ${event.type}`);
 
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object as {
+    // Helper to determine tier based on interval metadata
+    const tierForInterval = (interval: string): string =>
+      interval === 'year' ? 'developer' : 'consumer';
+
+    if (
+      event.type === 'checkout.session.completed' ||
+      event.type === 'customer.subscription.created'
+    ) {
+      const obj = event.data.object as {
         metadata?: Record<string, string>;
       };
-      const metadata = session.metadata;
+      const metadata = obj.metadata;
       if (metadata?.userId) {
-        // Determine tier based on interval
         const tier =
-          metadata.interval === 'year'
-            ? 'developer_20_ukp_26_usd'
-            : 'consumer_8_ukp_10_usd';
-
+          metadata.tier ?? tierForInterval(metadata.interval ?? 'month');
         await this.updateVipStatusFromWebhook(metadata.userId, true, tier);
       }
     } else if (event.type === 'customer.subscription.deleted') {
@@ -267,7 +270,10 @@ export class MonetisationService {
       .select('user_id, total_api_calls_today, avg_latency_ms')
       .eq('user_id', userId)
       .single();
-    const metric = metricResponse.data as unknown as { total_api_calls_today?: number; avg_latency_ms?: number } | null;
+    const metric = metricResponse.data as unknown as {
+      total_api_calls_today?: number;
+      avg_latency_ms?: number;
+    } | null;
 
     return {
       api_key: user.developer_api_key || null,

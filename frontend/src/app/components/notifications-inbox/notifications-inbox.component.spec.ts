@@ -1,29 +1,56 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NotificationsInboxComponent } from './notifications-inbox.component';
 import { provideRouter } from '@angular/router';
-import { NotificationService } from '../../services/notification.service';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { vi } from 'vitest';
+import { NotificationsInboxComponent } from './notifications-inbox.component';
+import { NotificationService, InAppNotification } from '../../services/notification.service';
+import { I18nService } from '../../services/i18n.service';
+
+const mockNotificationService = {
+  getNotifications: vi.fn<(type?: string) => Promise<InAppNotification[]>>().mockResolvedValue([
+    {
+      id: '1',
+      recipient_id: 'me',
+      actor_id: 'u1',
+      type: 'like_moment',
+      message: 'liked your moment',
+      is_read: false,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '2',
+      recipient_id: 'me',
+      actor_id: 'u2',
+      type: 'comment_moment',
+      message: 'commented',
+      is_read: false,
+      created_at: new Date().toISOString(),
+    },
+  ]),
+  getUnreadCount: vi.fn<() => Promise<number>>().mockResolvedValue(5),
+  markAllAsRead: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+  markAsRead: vi.fn<(notificationId: string) => Promise<void>>().mockResolvedValue(undefined),
+};
+
+const mockI18nService = {
+  translations: vi.fn().mockReturnValue({}),
+  translate: (key: string) => key,
+};
 
 describe('NotificationsInboxComponent', () => {
   let component: NotificationsInboxComponent;
   let fixture: ComponentFixture<NotificationsInboxComponent>;
-  let mockNotificationService: any;
 
   beforeEach(async () => {
-    mockNotificationService = {
-      getNotifications: vi.fn().mockResolvedValue([
-        { id: '1', type: 'follow', is_read: false }
-      ]),
-      getUnreadCount: vi.fn().mockResolvedValue(1),
-      markAllAsRead: vi.fn().mockResolvedValue(undefined),
-      markAsRead: vi.fn().mockResolvedValue(undefined),
-    };
-
     await TestBed.configureTestingModule({
       imports: [NotificationsInboxComponent],
       providers: [
         provideRouter([]),
-        { provide: NotificationService, useValue: mockNotificationService }
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: NotificationService, useValue: mockNotificationService },
+        { provide: I18nService, useValue: mockI18nService },
       ],
     }).compileComponents();
 

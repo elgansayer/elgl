@@ -205,6 +205,10 @@ export class AppleReceiptValidatorService {
       );
     }
 
-    return { valid: isActive, product_id: productId, expiration_date: expiresDate || undefined };
+    return {
+      valid: isActive,
+      product_id: productId,
+      expiration_date: expiresDate || undefined,
+    };
   }
 }

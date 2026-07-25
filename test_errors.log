@@ -1,0 +1,25 @@
+
+> frontend@0.0.0 check:control-flow
+> if grep -rnE '\*ngIf|\*ngFor|\*ngSwitch|\*ngSwitchCase|\*ngSwitchDefault' src --include='*.html'; then echo 'Use Angular control flow syntax only: @if/@for/@switch.' && exit 1; else echo 'Angular control flow check passed.'; fi
+
+Angular control flow check passed.
+
+> frontend@0.0.0 check:template-bindings
+> if grep -rnE '\[ngClass\]|\[ngStyle\]' src --include='*.html' --include='*.ts'; then echo 'Use native class/style bindings only.' && exit 1; else echo 'Template binding check passed.'; fi
+
+Template binding check passed.
+
+> frontend@0.0.0 check:rtl-logical
+> if grep -rnE '\b(pl-|pr-|ml-|mr-|left-|right-|border-l\b|border-r\b)' src --include='*.html' --include='*.ts' --include='*.scss'; then echo 'Use logical direction utilities only: ps/pe/ms/me/border-s/border-e.' && exit 1; else echo 'RTL logical class check passed.'; fi
+
+src/app/pages/subscription/subscription-page.component.ts:62:                  <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+src/app/pages/vip-subscription/vip-subscription.component.html:119:              <div class="absolute -top-4 left-1/2 -translate-x-1/2">
+src/app/pages/vip-subscription/vip-subscription.component.html:128:              <div class="absolute -top-4 left-1/2 -translate-x-1/2">
+src/app/pages/vip-subscription/vip-subscription.component.html:151:                  <span class="text-gray-500 dark:text-gray-400 ml-2">billed monthly</span>
+src/app/components/subscription-plans/subscription-plans.component.ts:43:              <span class="text-xs ml-1 text-green-400">Save 48%</span>
+src/app/components/subscription-plans/subscription-plans.component.ts:55:                <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+Use logical direction utilities only: ps/pe/ms/me/border-s/border-e.
+
+> frontend@0.0.0 lint
+> eslint "src/**/*.ts" --fix
+

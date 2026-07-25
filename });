@@ -1,0 +1,8 @@
+
+---
+
+To also fix the frontend compilation errors, please add  
+
+**`frontend/src/app/services/media-upload.service.spec.ts`**  
+
+to the chat so I can propose the necessary imports (`jest`, `SpyInstance`) and any other adjustments.

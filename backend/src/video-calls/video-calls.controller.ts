@@ -14,10 +14,7 @@ export class VideoCallsController {
   constructor(private readonly videoCallsService: VideoCallsService) {}
 
   @Post('start')
-  async startCall(
-    @Req() req: AuthenticatedRequest,
-    @Body('remoteUserId') remoteUserId: string,
-  ) {
+  async startCall(@Req() req: AuthenticatedRequest) {
     const userId = req.user!.id;
     return this.videoCallsService.createRoom(userId);
   }

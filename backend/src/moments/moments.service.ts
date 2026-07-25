@@ -107,7 +107,7 @@ export class MomentsService {
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
-    // Get blocked user IDs to exclude from feed
+    // 1) Get blocked+blocker user IDs (bidirectional)
     const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
 
     let moments: MomentRecord[] = [];
@@ -167,11 +167,11 @@ export class MomentsService {
 
     if (moments.length === 0) {
       const generated: MomentRecord[] = [];
-      const usedUsers = MOCK_USERS.slice(0, 50); // Get 50 fake users
-      for (let i = 0; i < usedUsers.length; i++) {
-        const u = usedUsers[i];
-        // Skip blocked users in mock data
-        if (blockedIds.includes(u.id)) continue;
+      const eligibleUsers = MOCK_USERS.filter(
+        (u) => !blockedIds.includes(u.id),
+      );
+      for (let i = 0; i < Math.min(eligibleUsers.length, 50); i++) {
+        const u = eligibleUsers[i];
         generated.push({
           id: `mock-moment-${i}`,
           user_id: u.id,
@@ -257,7 +257,7 @@ export class MomentsService {
       .single();
 
     if (momentData) {
-      const momentAuthorId = momentData.user_id;
+      const momentAuthorId = momentData.user_id as string;
       const blockedIds =
         await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
       if (blockedIds.includes(userId)) {
@@ -293,13 +293,12 @@ export class MomentsService {
       await supabase
         .from('moment_likes')
         .insert({ moment_id: momentId, user_id: userId });
-      const response = await supabase
+      const result = await supabase
         .from('moments')
         .select('likes_count')
         .eq('id', momentId)
         .single();
-      const updatedData = response.data as unknown;
-      const updatedRow = updatedData as MomentCountRow | null;
+      const updatedRow = result.data as MomentCountRow | null;
       const newCount = (updatedRow?.likes_count ?? 0) + 1;
       await supabase
         .from('moments')
@@ -324,7 +323,7 @@ export class MomentsService {
       .single();
 
     if (momentData) {
-      const momentAuthorId = momentData.user_id;
+      const momentAuthorId = momentData.user_id as string;
       const blockedIds =
         await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
       if (blockedIds.includes(userId)) {
@@ -351,19 +350,22 @@ export class MomentsService {
       );
     }
 
-    const { data: updatedData } = await supabase
+    const comment = response.data as MomentComment;
+
+    const result = await supabase
       .from('moments')
       .select('comments_count, user_id')
       .eq('id', momentId)
       .single();
-    const updatedRow = updatedData as
+
+    const updatedData = result.data as
       (MomentCountRow & { user_id?: string }) | null;
+
     await supabase
       .from('moments')
-      .update({ comments_count: (updatedRow?.comments_count ?? 0) + 1 })
+      .update({ comments_count: (updatedData?.comments_count ?? 0) + 1 })
       .eq('id', momentId);
 
-    const comment = response.data as MomentComment;
     const profile = await this.usersService.getProfile(userId);
     comment.author = {
       id: profile?.id ?? userId,
@@ -372,12 +374,16 @@ export class MomentsService {
     };
 
     // Emit push notification event
-    const momentAuthorId = updatedRow?.user_id;
+    const momentAuthorId = updatedData?.user_id;
     if (momentAuthorId) {
+      const payload = dto.correction_payload as
+        | { original: string; corrected: string; explanation?: string }
+        | null
+        | undefined;
       const preview = dto.text_content
         ? dto.text_content.substring(0, 120)
-        : dto.correction_payload
-          ? `Correction: "${dto.correction_payload.original}" → "${dto.correction_payload.corrected}"`
+        : payload
+          ? `Correction: "${payload.original}" → "${payload.corrected}"`
           : '';
 
       this.eventEmitter.emit(
