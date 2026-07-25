@@ -505,6 +505,7 @@ export class AppleNotificationService {
       .eq('transaction_id', transactionId)
       .single();
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const row = data as unknown as { coins_added?: number } | null;
     return row?.coins_added ?? 0;
   }

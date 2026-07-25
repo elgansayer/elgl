@@ -141,7 +141,7 @@ export class AppleNotificationService {
     subtype: string | undefined,
     data: any,
   ): Promise<void> {
-    const transactionInfo = await this.decodeTransactionInfo(
+    const transactionInfo = this.decodeTransactionInfo(
       (data as Record<string, unknown>)?.signedTransactionInfo as
         string | undefined,
     );
@@ -176,7 +176,7 @@ export class AppleNotificationService {
     subtype: string | undefined,
     data: any,
   ): Promise<void> {
-    const transactionInfo = await this.decodeTransactionInfo(
+    const transactionInfo = this.decodeTransactionInfo(
       (data as Record<string, unknown>)?.signedTransactionInfo as
         string | undefined,
     );
@@ -214,7 +214,7 @@ export class AppleNotificationService {
     const header = JSON.parse(headerStr) as { x5c?: string[] };
 
     // Verify the signature using Apple's root CA
-    const verified = await this.verifySignature(
+    const verified = this.verifySignature(
       `${headerB64}.${payloadB64}`,
       signatureB64,
       header,
@@ -229,11 +229,11 @@ export class AppleNotificationService {
     return JSON.parse(payloadStr) as AppleNotificationPayload;
   }
 
-  private async verifySignature(
+  private verifySignature(
     signedContent: string,
     signatureB64: string,
     header: { x5c?: string[] },
-  ): Promise<boolean> {
+  ): boolean {
     try {
       // Apple uses ES256 (ECDSA with P-256) for JWS signatures
       // The x5c header contains the certificate chain
@@ -307,9 +307,9 @@ export class AppleNotificationService {
     }
   }
 
-  private async decodeTransactionInfo(
+  private decodeTransactionInfo(
     signedTransactionInfo?: string,
-  ): Promise<AppleTransactionInfo | null> {
+  ): AppleTransactionInfo | null {
     if (!signedTransactionInfo) return null;
 
     try {
