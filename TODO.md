@@ -1,7 +1,7 @@
 # HelloTalk Clone TODO
 
 ## Outstanding Blockers
-- [ ] Build "Report User" modal with dynamic category selection (BLOCKED: missing design spec, screenshots not accessible).
+- [STUCK] Build "Report User" modal with dynamic category selection (BLOCKED: missing design spec, screenshots not accessible).
 
 ## Phase C: Chat Interface Feature Checklist (WhatsApp Clone)
 
