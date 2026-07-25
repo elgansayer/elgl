@@ -1,7 +1,7 @@
 import { Component, input, output, signal, inject, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { lastValueFrom, of, forkJoin } from 'rxjs';
+import { lastValueFrom, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { SafetyService, ReportCategory } from '../../services/safety.service';
 import { ToastService } from '../../components/primitives/toast/toast.service';
