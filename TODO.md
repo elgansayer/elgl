@@ -635,3 +635,33 @@
 ### Algorithmic Recommendations
 - [ ] Build "Recommended for You" carousel based on mutual interests and activity levels.
 - [ ] Implement new user spotlight to highlight recently joined native speakers.
+
+## Phase 84: Tandem Parity (Core Features)
+> **Why Tandem is considered better by some:** Tandem focuses heavily on a structured, serious learning environment with fewer social-media "distractions" (like a global feed) compared to HelloTalk. It provides stronger matching algorithms, detailed filtering by learning goals, and a cleaner interface dedicated solely to 1-on-1 and group language exchange.
+- [ ] Build a "Serious Learner" mode toggle that hides social feeds and prioritizes 1-on-1 matching based on strict language goals.
+- [ ] Implement advanced, detailed search filters matching Tandem (e.g., search by exact availability times, specific learning goals).
+- [ ] Build a dedicated web application (Tandem Web parity) allowing users to chat and correct messages from a desktop browser.
+- [ ] Implement in-app translations and language corrections with an interface mirroring Tandem's highly structured correction UI.
+- [ ] Design and implement a "Pro" subscription tier mimicking Tandem Pro (unlimited translations, advanced visitor logs, nearby members visibility, ad-free).
+- [ ] Build a robust community moderation tool to strictly enforce learning-only behavior (preventing dating-app behavior), which is a key selling point for Tandem.
+
+## Phase 85: Tandem Language Groups (Text-based)
+- [ ] Build "Group Chats" feature allowing 2 to 19 partners to collaborate in a single thread based on specific interests (e.g., "Beginner French Grammar").
+- [ ] Implement real-time text correction tools specifically designed to work within Group Chats (allowing members to correct each other's messages).
+- [ ] Build a "Groups Discovery" tab within the chat interface for users to browse and join active group chats by topic.
+- [ ] Implement Group Admin controls to manage membership and moderate shared resources/links within the group.
+
+## Phase 86: Tandem Parties (Live Audio Rooms)
+- [ ] Build "Language Parties" live audio rooms dedicated to spoken practice in a group setting.
+- [ ] Implement audio room categorization by topic and target language level.
+- [ ] Build "Private Parties" feature (VIP/Pro tier) allowing invite-only audio rooms for specific friends or study partners.
+- [ ] Implement exclusive animated emojis and reactions during live audio sessions for Pro members.
+
+## Phase 87: Scheduled Events & Meetups
+- [ ] Build a centralized "Events" discovery feed for users to find upcoming scheduled activities.
+- [ ] Implement "Create Event" modal requiring fields: Title (What), Date & Time (When), Platform/Location (Where - e.g., Audio Room, Zoom, In-person), and Description.
+- [ ] Build Event categories (e.g., Audio Rooms, Learning Seminars, In-person Meetups, Cultural Exchanges).
+- [ ] Implement RSVP functionality allowing users to mark "Attending" or "Interested".
+- [ ] Build automated push notification reminders (e.g., "Your Spanish Learning Event starts in 15 minutes").
+- [ ] Integrate events with the "Language Parties" system, allowing scheduled audio rooms to automatically spin up at the designated time.
+- [ ] Implement a calendar view for users to track all their upcoming RSVP'd events.
