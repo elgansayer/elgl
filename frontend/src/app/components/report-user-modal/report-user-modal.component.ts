@@ -246,9 +246,27 @@ export class ReportUserModalComponent implements OnInit, OnDestroy {
   private readonly categoryDescriptionMap = new Map<string, string>();
 
   // ------------------------------------------------------------------
+  // Casual greeting overrides for key UI strings
+  // ------------------------------------------------------------------
+  private readonly casualOverrides: Record<string, string> = {
+    title: "👋 Let's make the community safer",
+    reportSubmitted: "We got your report!",
+    reportSubmittedMessage: "Thanks for helping keep the community awesome 🌟",
+    done: "Cool",
+    cancel: "Nah, I'll keep it",
+    submitReport: "Send report",
+    submitting: "Sending...",
+  };
+
+  // ------------------------------------------------------------------
   // Translation helpers
   // ------------------------------------------------------------------
   translatedLabel(key: string): string {
+    // Use the casual greeting / modern label if it exists
+    if (this.casualOverrides[key]) {
+      return this.casualOverrides[key];
+    }
+
     // Try a dedicated i18n key first; fall back to the original English label stored in the map
     const i18nKey = `report.category.${key}`;
     const translated = this.i18nService.translate(i18nKey, { defaultValue: '' });
@@ -368,7 +386,7 @@ export class ReportUserModalComponent implements OnInit, OnDestroy {
       });
 
       this.toastService.show(
-        this.i18nService.translate('report.toast.success', { defaultValue: 'Report submitted successfully' }),
+        this.i18nService.translate('report.toast.success', { defaultValue: 'Thanks for your report! We’re on it.' }),
         { type: 'success', duration: 3000 }
       );
     } catch {
