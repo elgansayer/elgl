@@ -1,17 +1,16 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SafetyService, ReportCategory } from '../../services/safety.service';
 import { ToastService } from '../primitives/toast/toast.service';
 import { AppCardComponent } from '../primitives/card/card.component';
-import { AppPillComponent } from '../primitives/pill/pill.component';
 
 @Component({
   selector: 'app-report-user-modal',
   standalone: true,
   imports: [CommonModule, FormsModule, AppCardComponent],
   template: `
-    @if (isOpen()) {
+    @if (show) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
            (click)="close()">
         <app-card variant="elevated" customClass="w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
@@ -91,6 +90,21 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                   </div>
                 </div>
 
+                <!-- Context URL (optional) -->
+                <div class="mb-4">
+                  <label class="block text-sm font-medium text-slate-300 mb-2">
+                    Link to message / moment (optional)
+                  </label>
+                  <input
+                    type="url"
+                    [(ngModel)]="contextUrl"
+                    placeholder="Paste a direct link..."
+                    class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg
+                           text-white placeholder-slate-500 focus:outline-none focus:ring-2
+                           focus:ring-red-500/50 focus:border-red-500/50 transition-all"
+                  />
+                </div>
+
                 @if (error()) {
                   <div class="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
                     {{ error() }}
@@ -149,20 +163,21 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
     }
   `]
 })
-export class ReportUserModalComponent {
+export class ReportUserModalComponent implements OnInit {
+  @Input() reportUserId!: string;
+  @Input() show = false;
+  @Output() closed = new EventEmitter<void>();
+
   private readonly safetyService = inject(SafetyService);
   private readonly toastService = inject(ToastService);
 
-  readonly isOpen = signal(false);
   readonly step = signal<'category' | 'details' | 'success'>('category');
+  readonly categories = signal<ReportCategory[]>([]);
   readonly selectedCategory = signal<ReportCategory | null>(null);
   readonly description = signal('');
+  readonly contextUrl = signal('');
   readonly isSubmitting = signal(false);
   readonly error = signal<string | null>(null);
-
-  private reportedUserId: string | null = null;
-
-  readonly categories = computed(() => this.safetyService.getReportCategories());
 
   readonly categoryIcons: Record<string, string> = {
     harassment: '🚫',
@@ -180,19 +195,14 @@ export class ReportUserModalComponent {
     other: 'Something else not listed above'
   };
 
-  open(userId: string): void {
-    this.reportedUserId = userId;
-    this.step.set('category');
-    this.selectedCategory.set(null);
-    this.description.set('');
-    this.error.set(null);
-    this.isSubmitting.set(false);
-    this.isOpen.set(true);
+  ngOnInit(): void {
+    // Fetch categories once and store them
+    this.categories.set(this.safetyService.getReportCategories());
   }
 
   close(): void {
-    this.isOpen.set(false);
-    this.reportedUserId = null;
+    this.show = false;
+    this.closed.emit();
   }
 
   selectCategory(category: ReportCategory): void {
@@ -202,7 +212,7 @@ export class ReportUserModalComponent {
   }
 
   async submitReport(): Promise<void> {
-    if (!this.reportedUserId || !this.selectedCategory()) {
+    if (!this.reportUserId || !this.selectedCategory()) {
       return;
     }
 
@@ -211,9 +221,10 @@ export class ReportUserModalComponent {
 
     try {
       await this.safetyService.reportUserAsync({
-        reported_id: this.reportedUserId,
+        reported_id: this.reportUserId,
         reason_category: this.selectedCategory()!.value,
-        description: this.description() || undefined
+        description: this.description() || undefined,
+        context_url: this.contextUrl() || undefined  // include context URL
       });
 
       this.step.set('success');
