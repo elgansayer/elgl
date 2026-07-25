@@ -227,7 +227,7 @@ export class ChatService {
           room_id: roomId,
           sender_id: 'mock-user-1',
           message_type: 'text',
-          text_content: 'Hello! I would love to practice languages with you.',
+          text_content: 'Hey! I would love to practice languages with you.',
           media_url: undefined,
           correction_payload: undefined,
           is_read: true,
