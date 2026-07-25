@@ -1,4 +1,4 @@
-import { Component, input, output, signal, inject, OnInit } from '@angular/core';
+import { Component, input, Output, output, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable, of } from 'rxjs';
@@ -23,8 +23,9 @@ export class ReportUserModalComponent implements OnInit {
   readonly reportedUserId = input.required<string>();
   readonly contextUrl    = input<string>('');
   readonly show          = input.required<boolean>();
-  readonly closed        = output<void>();
-  readonly reportSent    = output<void>();
+
+  // expose a single close event (used by parent)
+  readonly close         = output<void>();
 
   // UI state
   readonly selectedCategory = signal<string | null>(null);
@@ -53,7 +54,7 @@ export class ReportUserModalComponent implements OnInit {
   }
 
   cancel(): void {
-    this.closed.emit();
+    this.close.emit();
   }
 
   async submitReport(): Promise<void> {
@@ -67,13 +68,12 @@ export class ReportUserModalComponent implements OnInit {
         context_url: this.contextUrl() || undefined
       };
       await firstValueFrom(this.safetyService.reportUser(payload));
-      this.reportSent.emit();
       this.toast.show('Report submitted successfully', { type: 'success' });
     } catch {
       this.toast.show('Failed to submit report', { type: 'error' });
     } finally {
       this.submitting.set(false);
-      this.closed.emit();
+      this.close.emit();
     }
   }
 }

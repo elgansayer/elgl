@@ -33,13 +33,13 @@ import { SafetyService } from '../../services/safety.service';
         </ul>
       </div>
     }
-    <app-report-user-modal
-      [reportedUserId]="senderId()"
-      [contextUrl]="buildContextUrl()"
-      [show]="showReportModal"
-      (closed)="showReportModal = false"
-      (reportSent)="onReportSubmitted()">
-    </app-report-user-modal>
+    @if (showReportModal) {
+      <app-report-user-modal
+        [reportedUserId]="senderId()"
+        [contextUrl]="buildContextUrl()"
+        (close)="showReportModal = false; onReportSubmitted()">
+      </app-report-user-modal>
+    }
   `,
   styles: [
     `
