@@ -3,6 +3,10 @@ import { ChatService } from './chat.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from '../centrifugo/centrifugo.service';
 
+jest.mock('../centrifugo/centrifugo.service', () => ({
+  CentrifugoService: jest.fn(),
+}));
+
 describe('ChatService', () => {
   let service: ChatService;
   let centrifugoService: any;

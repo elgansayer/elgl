@@ -35,7 +35,7 @@ import { SafetyService } from '../../services/safety.service';
     }
     @if (showReportModal) {
       <app-report-user-modal
-        [reportedUserId]="messageAuthorId"
+        [reportedUserId]="messageAuthorId ?? ''"
         [show]="showReportModal"
         [contextUrl]="buildContextUrl()"
         (close)="showReportModal = false"
