@@ -1,7 +1,8 @@
-import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SafetyService, ReportUserDto } from '../../services/safety.service';
+import { Observable } from 'rxjs';
+import { SafetyService, ReportUserDto, ReportCategory } from '../../services/safety.service';
 
 @Component({
   selector: 'app-report-user-modal',
@@ -48,11 +49,9 @@ import { SafetyService, ReportUserDto } from '../../services/safety.service';
                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-indigo-400 dark:focus:ring-indigo-500"
               >
                 <option value="" disabled>Select a reason</option>
-                <option value="harassment">Harassment</option>
-                <option value="spam">Spam</option>
-                <option value="impersonation">Impersonation</option>
-                <option value="inappropriate_content">Inappropriate content</option>
-                <option value="other">Other</option>
+                <option *ngFor="let cat of categories$ | async" [value]="cat.value">
+                  {{ cat.label }}
+                </option>
               </select>
             </div>
 
@@ -108,7 +107,7 @@ import { SafetyService, ReportUserDto } from '../../services/safety.service';
     `,
   ],
 })
-export class ReportUserModalComponent {
+export class ReportUserModalComponent implements OnInit {
   @Input() reportUserId!: string;
   @Input() show: boolean = false;
   @Input() contextUrl?: string;
@@ -120,7 +119,13 @@ export class ReportUserModalComponent {
   description: string = '';
   submitting: boolean = false;
 
+  categories$!: Observable<ReportCategory[]>;
+
   private readonly safetyService = inject(SafetyService);
+
+  ngOnInit(): void {
+    this.categories$ = this.safetyService.getReportCategories();
+  }
 
   onBackdropClick(event: MouseEvent): void {
     if (event.target === event.currentTarget) {
