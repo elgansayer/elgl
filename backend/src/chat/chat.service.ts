@@ -29,7 +29,8 @@ export class ChatService {
     const supabase = this.supabaseService.getClient();
 
     // Get blocked user IDs to exclude from rooms
-    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUserId);
+    const blockedIds =
+      await this.safetyService.getBlockedAndBlockerIds(currentUserId);
 
     const response = await supabase
       .from('chat_rooms')
