@@ -9,18 +9,20 @@ export class CallsService {
 
   async initiateCall(callerId: string, calleeId: string) {
     const roomName = `call_${uuidv4()}`;
-    const apiKey = this.configService.get<string>('LIVEKIT_API_KEY') || 'devkey';
-    const apiSecret = this.configService.get<string>('LIVEKIT_SECRET') || 'secret';
+    const apiKey =
+      this.configService.get<string>('LIVEKIT_API_KEY') || 'devkey';
+    const apiSecret =
+      this.configService.get<string>('LIVEKIT_SECRET') || 'secret';
 
     const at = new AccessToken(apiKey, apiSecret, {
       identity: callerId,
     });
-    
-    at.addGrant({ 
-      roomJoin: true, 
-      room: roomName, 
-      canPublish: true, 
-      canSubscribe: true 
+
+    at.addGrant({
+      roomJoin: true,
+      room: roomName,
+      canPublish: true,
+      canSubscribe: true,
     });
 
     return {
