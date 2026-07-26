@@ -294,8 +294,9 @@
 - [x] Actually implement the @mention logic in the comments service and frontend (the previous diff only contained audio-room co-host changes).
 
 ## Phase 41: Language Assessment Test
-- [ ] Build dynamic diagnostic quiz component for new sign-ups.
-- [ ] Fetch multiple-choice assessment questions from backend database.
+- [x] Build dynamic diagnostic quiz component for new sign-ups.
+- [x] Implement frontend Angular component for the diagnostic quiz.
+- [x] Fetch multiple-choice assessment questions from backend database.
 
 ## Phase 42: Daily Check-in Rewards
 - [ ] Build daily login modal granting 5 to 10 free virtual coins upon first daily login.
