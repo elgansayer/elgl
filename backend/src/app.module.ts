@@ -29,6 +29,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { CallsModule } from './calls/calls.module';
 import { StatsModule } from './stats/stats.module';
 import { QuizModule } from './quiz/quiz.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { RecommendationsModule } from './recommendations/recommendations.module';
 import { validationSchema } from './config/validation.schema';
 
 @Module({
@@ -37,6 +39,7 @@ import { validationSchema } from './config/validation.schema';
       isGlobal: true,
       validationSchema,
     }),
+    ScheduleModule.forRoot(),
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     ThrottlerModule.forRoot([
       {
@@ -76,6 +79,7 @@ import { validationSchema } from './config/validation.schema';
     CallsModule,
     StatsModule,
     QuizModule,
+    RecommendationsModule,
   ],
   controllers: [AppController],
   providers: [
