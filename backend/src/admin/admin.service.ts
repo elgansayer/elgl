@@ -103,9 +103,7 @@ export class AdminService {
       blocked_id: targetUserId,
     });
     if (error) {
-      this.logger.error(
-        `Failed to ban user ${targetUserId}: ${error.message}`,
-      );
+      this.logger.error(`Failed to ban user ${targetUserId}: ${error.message}`);
       throw new NotFoundException(`Unable to ban user ${targetUserId}`);
     }
   }
