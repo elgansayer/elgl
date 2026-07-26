@@ -52,6 +52,12 @@ services:
     image: livekit/livekit-server:latest
     restart: always
     command: --config /livekit/config.yaml
+    environment:
+      - LIVEKIT_TURN_ENABLED=true
+      - LIVEKIT_TURN_DOMAIN=${LIVEKIT_TURN_DOMAIN:-turn.example.com}
+      - LIVEKIT_TURN_TLS_PORT=5349
+      - LIVEKIT_TURN_UDP_PORT=3478
+      - LIVEKIT_RTC_STUN_SERVERS=stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302
     ports:
       - "7880:7880"
       - "7881:7881"
