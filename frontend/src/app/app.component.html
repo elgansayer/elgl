@@ -25,7 +25,14 @@
   <nav class="fixed bottom-0 inset-x-0 z-50 bg-surface-200 border-t border-surface-100 pb-safe">
     <div class="flex justify-around items-center h-[60px]">
       <a routerLink="/chat" routerLinkActive="text-primary" [routerLinkActiveOptions]="{exact: false}" class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors">
-        <span class="text-2xl leading-none">💬</span>
+        <div class="relative">
+          <span class="text-2xl leading-none">💬</span>
+          @if (unreadCounter.totalUnread() > 0) {
+            <span class="absolute -top-1 -end-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200">
+              {{ unreadCounter.totalUnread() > 99 ? '99+' : unreadCounter.totalUnread() }}
+            </span>
+          }
+        </div>
         <span class="text-[10px] font-bold">{{ 'nav.helloTalk' | t }}</span>
       </a>
       

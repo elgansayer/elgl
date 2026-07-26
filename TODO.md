@@ -322,9 +322,10 @@
 
 ## Phase 47: Unread Badge Logic
 - [x] Implement global unread counter service updating app badge and navigation tabs.
-- [ ] Integrate UnreadCounterService into navigation tabs UI to display unread badges.
-- [ ] Actually implement the UnreadCounterService integration in the frontend navigation tabs (the provided diff was for audio-room co-hosts).
-- [ ] The latest provided diff was still for audio-room co-hosts (`inviteCoHost`/`removeCoHost`), not the navigation tabs UI. Please provide the correct frontend changes.
+- [x] Integrate UnreadCounterService into navigation tabs UI to display unread badges.
+- [x] Actually implement the UnreadCounterService integration in the frontend navigation tabs (the provided diff was for audio-room co-hosts).
+- [x] The latest provided diff was still for audio-room co-hosts (`inviteCoHost`/`removeCoHost`), not the navigation tabs UI. Please provide the correct frontend changes.
+- [x] Update `frontend/src/app/app.component.html` to visually render the unread badges using `unreadCounter.totalUnread()` (Requires HTML file).
 
 ## Phase 48: E2E Testing (Cypress)
 - [ ] Setup Cypress inside `frontend/`.
