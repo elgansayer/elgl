@@ -73,5 +73,10 @@ export const routes: Routes = [
     path: 'privacy',
     loadComponent: () => import('./pages/legal/privacy.component').then(m => m.PrivacyComponent),
     title: 'Privacy Policy - HelloTalk',
+  },
+  {
+    path: 'help',
+    loadChildren: () => import('./help/help.module').then(m => m.HelpModule),
+    title: 'Help Centre - HelloTalk',
   }
 ];
