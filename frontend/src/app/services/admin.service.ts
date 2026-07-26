@@ -153,7 +153,7 @@ export class AdminService {
     isVip: boolean,
     vipTier?: string,
   ): Promise<AdminUserSummary> {
-    // This is a mutation, so HTTP failures (eg. a 403 from AdminGuard) must
+    // This is a mutation, so HTTP failures (e.g. a 403 from AdminGuard) must
     // propagate to the caller rather than being masked by a fake success.
     return firstValueFrom(
       this.http.patch<AdminUserSummary>(
