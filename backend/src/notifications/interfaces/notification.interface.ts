@@ -7,7 +7,9 @@ export interface InAppNotification {
     | 'like_profile'
     | 'like_moment'
     | 'comment_moment'
-    | 'profile_visit';
+    | 'reply_comment'
+    | 'profile_visit'
+    | 'mention_comment';
   entity_id?: string;
   message?: string;
   is_read: boolean;

@@ -13,6 +13,7 @@ export class MomentCommentEvent {
     public readonly commentPreview?: string,
     public readonly parentCommentId?: string,
     public readonly replyToUserId?: string,
+    public readonly mentionedUserIds?: string[],
   ) {}
 }
 

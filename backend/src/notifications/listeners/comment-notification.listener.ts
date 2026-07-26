@@ -51,6 +51,20 @@ export class CommentNotificationListener {
           preview,
         );
       }
+
+      if (event.mentionedUserIds && event.mentionedUserIds.length > 0) {
+        for (const mentionedUserId of event.mentionedUserIds) {
+          if (mentionedUserId === event.commenterId) continue;
+          
+          await this.notificationsService.createNotification(
+            mentionedUserId,
+            event.commenterId,
+            'mention_comment',
+            event.momentId,
+            preview,
+          );
+        }
+      }
     } catch (err) {
       console.error('Comment notification listener error:', err);
     }

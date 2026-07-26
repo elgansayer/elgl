@@ -149,7 +149,8 @@ export class NotificationsService {
       | 'like_moment'
       | 'comment_moment'
       | 'reply_comment'
-      | 'profile_visit',
+      | 'profile_visit'
+      | 'mention_comment',
     entityId?: string,
     message?: string,
   ): Promise<void> {
@@ -174,6 +175,7 @@ export class NotificationsService {
         comment_moment: 'New Comment',
         reply_comment: 'New Reply',
         profile_visit: 'Profile Visited',
+        mention_comment: 'Mentioned in Comment',
       };
       const bodyMap: Record<string, string> = {
         follow: 'Someone started following you',
@@ -182,6 +184,7 @@ export class NotificationsService {
         comment_moment: message || 'Someone commented on your moment',
         reply_comment: message || 'Someone replied to your comment',
         profile_visit: 'Someone viewed your profile',
+        mention_comment: message || 'Someone mentioned you in a comment',
       };
 
       await this.sendPushNotification(recipientId, {
@@ -227,7 +230,7 @@ export class NotificationsService {
       if (filterType === 'likes') {
         query = query.in('type', ['like_profile', 'like_moment']);
       } else if (filterType === 'comments') {
-        query = query.in('type', ['comment_moment', 'reply_comment']);
+        query = query.in('type', ['comment_moment', 'reply_comment', 'mention_comment']);
       } else if (filterType === 'follows') {
         query = query.eq('type', 'follow');
       }
@@ -362,7 +365,7 @@ export class NotificationsService {
         (n) => n.type === 'like_profile' || n.type === 'like_moment',
       );
     if (filterType === 'comments')
-      return allMocks.filter((n) => n.type === 'comment_moment');
+      return allMocks.filter((n) => n.type === 'comment_moment' || n.type === 'reply_comment' || n.type === 'mention_comment');
     if (filterType === 'follows')
       return allMocks.filter((n) => n.type === 'follow');
     return allMocks;
