@@ -4,11 +4,12 @@ import { LongPressContextMenuComponent } from '../components/long-press-context-
 import { ChatMessage } from '../services/chat.service';
 import { FavouriteService } from '../services/favourite.service';
 import { SafetyService } from '../services/safety.service';
+import { TranslatePipe } from '../services/translate.pipe';
 
 @Component({
   selector: 'app-chat-message-alt',
   standalone: true,
-  imports: [LongPressContextMenuComponent, DatePipe],
+  imports: [LongPressContextMenuComponent, DatePipe, TranslatePipe],
   template: `
     <div class="flex flex-col" [class.items-end]="isOwnMessage()" [class.items-start]="!isOwnMessage()">
       <app-long-press-context-menu 
@@ -27,7 +28,7 @@ import { SafetyService } from '../services/safety.service';
         >
           <p class="text-white text-sm">{{ message().text_content }}</p>
           @if (message().media_url) {
-            <img [src]="message().media_url" alt="Message media" class="mt-2 rounded max-w-full max-h-64 object-cover" />
+            <img [src]="message().media_url" [alt]="'chat.attachedImageAlt' | t" class="mt-2 rounded max-w-full max-h-64 object-cover" />
           }
           <span class="text-xs text-text-muted mt-1 block">
             {{ message().created_at | date:'short' }}
