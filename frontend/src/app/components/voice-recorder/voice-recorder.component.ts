@@ -4,6 +4,7 @@ import { Component, EventEmitter, Output, signal, inject } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 import { UserService } from '../../services/user.service';
+import { AudioCompressionService } from '../../services/audio-compression.service';
 
 @Component({
   selector: 'app-voice-recorder',
@@ -13,6 +14,7 @@ import { UserService } from '../../services/user.service';
 })
 export class VoiceRecorderComponent {
   private userService = inject(UserService);
+  private audioCompressionService = inject(AudioCompressionService);
 
   @Output() audioUploaded = new EventEmitter<string>();
   @Output() cancelled = new EventEmitter<void>();
@@ -71,18 +73,21 @@ export class VoiceRecorderComponent {
     this.isUploading.set(true);
 
     try {
-      const filename = `voice_${Date.now()}.webm`;
+      // Compress the audio blob before uploading
+      const compressedBlob = await this.audioCompressionService.compressAudio(this.recordedBlob, 'audio/wav');
+      
+      const filename = `voice_${Date.now()}.wav`;
       const presigned = await this.userService.getPresignedUploadUrl(
         filename,
-        'audio/webm',
+        'audio/wav',
         'chat-voice',
       );
 
       if (presigned.uploadUrl && presigned.uploadUrl !== 'http://mock-upload-url') {
         await fetch(presigned.uploadUrl, {
           method: 'PUT',
-          headers: { 'Content-Type': 'audio/webm' },
-          body: this.recordedBlob,
+          headers: { 'Content-Type': 'audio/wav' },
+          body: compressedBlob,
         });
       }
 
@@ -90,7 +95,7 @@ export class VoiceRecorderComponent {
     } catch (e) {
       console.error('Failed to upload voice note:', e);
       // Fallback: emit preview URL or mock object
-      this.audioUploaded.emit(this.audioPreviewUrl() || 'http://mock-voice-url/webm');
+      this.audioUploaded.emit(this.audioPreviewUrl() || 'http://mock-voice-url/wav');
     } finally {
       this.isUploading.set(false);
     }
