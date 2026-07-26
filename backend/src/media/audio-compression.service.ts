@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-var-requires */
 import { Injectable, Logger } from '@nestjs/common';
-import * as ffmpeg from 'fluent-ffmpeg';
+import ffmpeg from 'fluent-ffmpeg';
 
 @Injectable()
 export class AudioCompressionService {
@@ -13,7 +13,7 @@ export class AudioCompressionService {
         .audioBitrate('32k')
         .audioChannels(1)
         .format('ogg')
-        .on('start', (cmd) => this.logger.debug(`Started FFmpeg: ${cmd}`))
+        .on('start', (cmd: string) => this.logger.debug(`Started FFmpeg: ${cmd}`))
         .on('end', () => {
           this.logger.log(`Successfully compressed to OGG: ${outputPath}`);
           resolve();
@@ -34,7 +34,7 @@ export class AudioCompressionService {
         .audioBitrate('64k')
         .audioChannels(1)
         .format('mp4')
-        .on('start', (cmd) => this.logger.debug(`Started FFmpeg: ${cmd}`))
+        .on('start', (cmd: string) => this.logger.debug(`Started FFmpeg: ${cmd}`))
         .on('end', () => {
           this.logger.log(`Successfully compressed to M4A: ${outputPath}`);
           resolve();
