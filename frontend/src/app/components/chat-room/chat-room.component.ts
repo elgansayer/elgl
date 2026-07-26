@@ -65,6 +65,11 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
 
   // Transliteration state: message id -> romaji/pinyin string
   readonly transliterations = signal<Record<string, string>>({});
+  
+  // Translation state: message id -> translated string
+  readonly translations = signal<Record<string, string>>({});
+  // Toggle state: message id -> boolean
+  readonly showTranslation = signal<Record<string, boolean>>({});
 
   // Selected word token for LingQ definition modal
   readonly activeWordToken = signal<string | null>(null);
@@ -313,6 +318,34 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
       ...prev,
       [msg.id]: mockTransliteration
     }));
+  }
+
+  async toggleTranslation(msg: ChatMessage): Promise<void> {
+    if (!msg.text_content) return;
+
+    const currentShow = this.showTranslation()[msg.id];
+    if (currentShow) {
+      this.showTranslation.update(prev => ({ ...prev, [msg.id]: false }));
+      return;
+    }
+
+    if (this.translations()[msg.id]) {
+      this.showTranslation.update(prev => ({ ...prev, [msg.id]: true }));
+      return;
+    }
+
+    try {
+      const targetLang = this.i18n.currentLang().split('-')[0] || 'en';
+      const res = await this.chatService.translateText(msg.text_content, targetLang);
+      this.translations.update(prev => ({
+        ...prev,
+        [msg.id]: res.translated_text
+      }));
+      this.showTranslation.update(prev => ({ ...prev, [msg.id]: true }));
+    } catch (e) {
+      console.error('Failed to translate message:', e);
+      showToast(this.i18n.translate('moments.transError') || 'Translation failed');
+    }
   }
 
   onSearch(): void {

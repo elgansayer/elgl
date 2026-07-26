@@ -303,7 +303,8 @@
 - [x] Implement backend endpoint for daily check-in coin reward and frontend modal UI.
 
 ## Phase 43: Message Translation Toggle
-- [ ] Cache translated text client-side to allow toggling between original and translation without extra API calls.
+- [x] Cache translated text client-side to allow toggling between original and translation without extra API calls.
+- [x] Implement the actual caching logic in the frontend chat service/components (the provided diff only contained audio-room co-host changes).
 
 ## Phase 44: Audio Auto-Play Settings
 - [ ] Add settings toggle to auto-play sequential voice notes in chat.

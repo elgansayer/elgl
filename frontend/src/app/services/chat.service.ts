@@ -321,4 +321,14 @@ export class ChatService {
       this.http.get<GroupMember[]>(`${this.baseUrl}/groups/${roomId}/members`, { headers: this.getHeaders() })
     );
   }
+
+  async translateText(text: string, targetLanguage: string): Promise<{ translated_text: string }> {
+    return firstValueFrom(
+      this.http.post<{ translated_text: string }>(
+        `${environment.apiUrl}/nlp/translate`,
+        { text, target_language: targetLanguage },
+        { headers: this.getHeaders() }
+      )
+    );
+  }
 }
