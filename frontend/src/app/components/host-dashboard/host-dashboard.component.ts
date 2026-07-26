@@ -1,4 +1,4 @@
-import { Component, input, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, input, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AppCardComponent } from '../primitives/card/card.component';
 
@@ -43,8 +43,18 @@ export class HostDashboardComponent implements OnInit, OnDestroy {
   earnedCoins = input<number>(0);
   startTime = input.required<Date>();
 
-  uptime = signal<string>('00:00:00');
+  uptimeSeconds = signal<number>(0);
   private timerRef: ReturnType<typeof setInterval> | undefined;
+
+  uptime = computed(() => {
+    const totalSeconds = this.uptimeSeconds();
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const pad = (num: number) => num.toString().padStart(2, '0');
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  });
 
   ngOnInit(): void {
     this.updateUptime();
@@ -60,13 +70,7 @@ export class HostDashboardComponent implements OnInit, OnDestroy {
   private updateUptime(): void {
     const now = new Date().getTime();
     const start = this.startTime().getTime();
-    const diff = Math.max(0, now - start);
-
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-    const pad = (num: number) => num.toString().padStart(2, '0');
-    this.uptime.set(`${pad(hours)}:${pad(minutes)}:${pad(seconds)}`);
+    const diffSeconds = Math.max(0, Math.floor((now - start) / 1000));
+    this.uptimeSeconds.set(diffSeconds);
   }
 }
