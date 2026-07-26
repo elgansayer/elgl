@@ -1,7 +1,6 @@
 # TODO.md (Master HelloTalk Clone Architecture: Phases 1 to 79 + Phase C)
 
 ## URGENT
-- [ ] Fix QA test failure: `ReferenceError: describe is not defined`.
 - [x] Fix QA test failure: `ReferenceError: describe is not defined`.
 - [x] Fix QA test failure: `ReferenceError: describe is not defined`. (Root cause was not a Jest/Jasmine config or test globals issue: `qa-loop.sh` was running `npx playwright test` from `frontend/`, which has no `playwright.config.ts`, so Playwright fell back to its default glob and picked up the Angular Vitest unit `*.spec.ts` files under `frontend/src`. Those files use bare `describe`/`it` (Vitest globals) or `import { vi } from 'vitest'`, neither of which exist under the Playwright test runner, hence the `ReferenceError` and the "Vitest cannot be imported... using require()" errors. Fixed by pointing `qa-loop.sh` at the real Playwright suite in `e2e/` (its own `playwright.config.ts` + `tests/`); `ux-loop.sh` already targeted `e2e/` correctly. Verified no other script/CI invocation runs Playwright against `frontend/`.)
 
@@ -198,7 +197,7 @@
 - [x] Build Voiceroom Creation modal (Title, Language Pair, Topic).
 - [x] Implement frontend Angular UI for Voiceroom Creation modal.
 - [x] Implement Host Moderation controls (Mute speaker, kick off stage).
-- [ ] Build animated audio equalizer visualizer for active stage speakers.
+- [x] Build animated audio equalizer visualizer for active stage speakers.
 
 ## Phase 26: Group Chats
 - [ ] Build "Create Group" UI supporting up to 50 users.
@@ -472,7 +471,7 @@
 - [x] Photo and video sharing with an HD quality toggle.
 - [x] Instant video messages (short circular video notes).
 - [x] Voice messages with playback speed control (1x, 1.5x, 2x).
-- [x] Document and file sharing (PDFs, spreadsheets, etc.).
+- [x] Document and file sharing (pdfs, spreadsheets, etc.).
 - [x] Location sharing (live location and current location).
 - [x] Contact sharing.
 - [x] Doodle message sharing.
