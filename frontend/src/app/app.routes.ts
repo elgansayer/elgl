@@ -71,5 +71,15 @@ export const routes: Routes = [
   {
     path: 'preview/room/:id',
     loadComponent: () => import('./pages/voiceroom-preview/voiceroom-preview.component').then(m => m.VoiceroomPreviewComponent)
+  },
+  {
+    path: 'terms',
+    loadComponent: () => import('./pages/legal/terms.component').then(m => m.TermsComponent),
+    title: 'Terms of Service - HelloTalk',
+  },
+  {
+    path: 'privacy',
+    loadComponent: () => import('./pages/legal/privacy.component').then(m => m.PrivacyComponent),
+    title: 'Privacy Policy - HelloTalk',
   }
 ];
