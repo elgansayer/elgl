@@ -240,7 +240,8 @@
 - [x] Update backend MediaController/MediaService to call AudioCompressionService.compressToOgg or compressToM4a during voice note uploads.
 
 ## Phase 31: Legal & GDPR Compliance
-- [ ] Build dynamic Terms of Service and Privacy Policy document viewer.
+- [x] Build dynamic Terms of Service and Privacy Policy document viewer.
+- [ ] Create routes and pages for Terms of Service and Privacy Policy using the viewer component.
 - [ ] Implement "Download My Data" button triggering a NestJS JSON export worker.
 - [ ] Build Account Deletion workflow with 30-day grace period.
 
@@ -387,7 +388,6 @@
 
 ### Legal, Help & GDPR Compliance
 - [ ] Build "Help & About" page displaying App Version, build number, and open-source licences.
-- [ ] Build "Legal & Privacy Notices" viewer for Terms of Service and Privacy Policy.
 - [ ] Build "Personal Data Collection" GDPR hub with "Request My Data Archive" button and automated "Delete Account" workflow.
 
 ## Phase 66: Enhanced Profile & Matchmaking
@@ -628,7 +628,7 @@
 ### Help & About
 - [ ] Add Support Centre and FAQ viewer.
 - [ ] Implement App Version display and update checker.
-- [ ] Build Terms of Service and Privacy Policy document viewers.
+- [x] Build Terms of Service and Privacy Policy document viewers.
 
 ## Phase 83: HelloTalk Find Partners System
 
