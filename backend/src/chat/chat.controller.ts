@@ -120,4 +120,13 @@ export class ChatController {
     await this.chatService.removeGroupMember(user.id, roomId, memberId);
     return { success: true };
   }
+
+  @Get('groups/:roomId/members')
+  async getGroupMembers(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+  ): Promise<any[]> {
+    if (!user) return [];
+    return await this.chatService.getGroupMembers(roomId);
+  }
 }

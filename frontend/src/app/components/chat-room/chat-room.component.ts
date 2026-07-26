@@ -6,7 +6,7 @@ import { ActivatedRoute } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
-import { ChatService, ChatMessage, ChatRoom } from '../../services/chat.service';
+import { ChatService, ChatMessage, ChatRoom, GroupMember } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
@@ -51,7 +51,9 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   readonly showCorrectionForm = signal<boolean>(false);
   readonly showSearch = signal<boolean>(false);
   readonly showAdminPanel = signal<boolean>(false);
+  readonly showParticipantDrawer = signal<boolean>(false);
 
+  readonly participants = signal<GroupMember[]>([]);
   readonly blockedUserIds = signal<string[]>([]);
   readonly filteredMessages = computed(() => {
     const blocked = this.blockedUserIds();
@@ -303,10 +305,29 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     return message.id;
   }
 
+  async toggleParticipantDrawer(): Promise<void> {
+    this.showParticipantDrawer.update(v => !v);
+    if (this.showParticipantDrawer() && this.participants().length === 0) {
+      await this.loadParticipants();
+    }
+  }
+
+  async loadParticipants(): Promise<void> {
+    try {
+      const members = await this.chatService.getGroupMembers(this.roomId);
+      this.participants.set(members);
+    } catch (e) {
+      console.error('Failed to load participants:', e);
+    }
+  }
+
   handleHeaderAction(actionId: string): void {
     switch (actionId) {
       case 'view_profile':
         // Navigate to user profile
+        break;
+      case 'view_participants':
+        void this.toggleParticipantDrawer();
         break;
       case 'clear_chat':
         // Clear chat history
@@ -360,6 +381,9 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
       await this.chatService.addGroupMembers(this.roomId, [this.newMemberId.trim()]);
       this.newMemberId = '';
       showToast('Member added successfully');
+      if (this.showParticipantDrawer()) {
+        await this.loadParticipants();
+      }
     } catch (e) {
       console.error('Failed to add member:', e);
       showToast('Failed to add member');
@@ -372,6 +396,9 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
       await this.chatService.removeGroupMember(this.roomId, this.memberToRemoveId.trim());
       this.memberToRemoveId = '';
       showToast('Member removed successfully');
+      if (this.showParticipantDrawer()) {
+        await this.loadParticipants();
+      }
     } catch (e) {
       console.error('Failed to remove member:', e);
       showToast('Failed to remove member');

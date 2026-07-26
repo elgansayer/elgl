@@ -48,6 +48,15 @@ export interface ChatRoom {
   admin_id?: string;
 }
 
+export interface GroupMember {
+  user_id: string;
+  user?: {
+    id: string;
+    display_name?: string;
+    avatar_url?: string | null;
+  };
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -258,6 +267,12 @@ export class ChatService {
         `${this.baseUrl}/groups/${roomId}/members/${memberId}`,
         { headers: this.getHeaders() }
       )
+    );
+  }
+
+  async getGroupMembers(roomId: string): Promise<GroupMember[]> {
+    return firstValueFrom(
+      this.http.get<GroupMember[]>(`${this.baseUrl}/groups/${roomId}/members`, { headers: this.getHeaders() })
     );
   }
 }

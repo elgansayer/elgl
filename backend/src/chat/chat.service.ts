@@ -418,4 +418,22 @@ export class ChatService {
 
     if (error) throw new Error('Failed to remove member');
   }
+
+  async getGroupMembers(roomId: string): Promise<any[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('chat_room_members')
+      .select(`
+        user_id,
+        user:users!chat_room_members_user_id_fkey (
+          id,
+          display_name,
+          avatar_url
+        )
+      `)
+      .eq('room_id', roomId);
+
+    if (error) throw new Error('Failed to fetch group members');
+    return data || [];
+  }
 }
