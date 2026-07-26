@@ -27,7 +27,6 @@ import { StreakModule } from './streak/streak.module';
 import { StreakMiddleware } from './streak/streak.middleware';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CallsModule } from './calls/calls.module';
-import { StatsModule } from './stats/stats.module';
 import { validationSchema } from './config/validation.schema';
 
 @Module({
@@ -36,7 +35,7 @@ import { validationSchema } from './config/validation.schema';
       isGlobal: true,
       validationSchema,
     }),
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
@@ -73,14 +72,13 @@ import { validationSchema } from './config/validation.schema';
     StreakModule,
     NotificationsModule,
     CallsModule,
-    StatsModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
     {
       provide: APP_GUARD,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       useClass: ThrottlerGuard,
     },
   ],

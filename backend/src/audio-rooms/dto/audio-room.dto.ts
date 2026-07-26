@@ -9,6 +9,14 @@ export class CreateAudioRoomDto {
   @IsString()
   @IsNotEmpty()
   target_language!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  language_pair!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  topic_tag!: string;
 }
 
 export class JoinRoomDto {

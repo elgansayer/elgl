@@ -21,6 +21,7 @@ export interface UserProfile {
   privacy_hide_from_search: boolean;
   privacy_hide_gender: boolean;
   created_at: string;
+  scheduled_for_deletion_at?: string;
 }
 
 export interface ProfileVisitor {

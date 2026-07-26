@@ -186,8 +186,7 @@ export class NlpService {
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       trace.update({
-        level: 'ERROR',
-        statusMessage: msg || 'Unknown error',
+        metadata: { level: 'ERROR', statusMessage: msg || 'Unknown error' },
       });
       await this.langfuse.flushAsync();
       throw error;
@@ -308,8 +307,7 @@ export class NlpService {
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       trace.update({
-        level: 'ERROR',
-        statusMessage: msg || 'Unknown error',
+        metadata: { level: 'ERROR', statusMessage: msg || 'Unknown error' },
       });
       await this.langfuse.flushAsync();
       throw error;
