@@ -26,7 +26,8 @@ export class RecommendationsService {
       }
 
       for (const user of users) {
-        if (!user.target_languages || user.target_languages.length === 0)
+        const targetLanguages = user.target_languages as string[] | null;
+        if (!targetLanguages || targetLanguages.length === 0)
           continue;
 
         // Find users who speak the target language natively and are learning the user's native language
@@ -35,13 +36,13 @@ export class RecommendationsService {
           .select('id, is_serious_learner')
           .neq('id', user.id)
           .eq('privacy_hide_from_search', false)
-          .in('native_language', user.target_languages)
+          .in('native_language', targetLanguages)
           .contains('target_languages', [user.native_language])
           .order('is_serious_learner', { ascending: false })
           .limit(10);
 
         if (matches && matches.length > 0) {
-          const recommendedIds = matches.map((m) => m.id);
+          const recommendedIds = matches.map((m) => m.id as string);
 
           // Cache the top 10 recommendations in Redis for 24 hours
           await redis.set(
