@@ -288,6 +288,8 @@
 
 ## Phase 40: Moment Interactivity
 - [ ] Build "Liked By" modal listing all users who liked a Moment.
+- [ ] Create backend endpoint to fetch users who liked a specific moment.
+- [ ] Create Angular component for the Liked By modal.
 - [ ] Implement `@mention` notifications when tagged in a comment.
 
 ## Phase 41: Language Assessment Test
