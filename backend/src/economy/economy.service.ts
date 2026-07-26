@@ -12,7 +12,11 @@ import { firstValueFrom } from 'rxjs';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
-import { PurchaseCoinsDto, SendGiftDto, UnlockStickerPackDto } from './dto/economy.dto';
+import {
+  PurchaseCoinsDto,
+  SendGiftDto,
+  UnlockStickerPackDto,
+} from './dto/economy.dto';
 
 export interface VirtualGiftRow {
   id: string;
@@ -587,14 +591,18 @@ export class EconomyService {
     }
 
     // 4. Record ownership
-    const { error: insertError } = await supabase.from('user_sticker_packs').insert({
-      user_id: userId,
-      pack_id: pack.id,
-    });
+    const { error: insertError } = await supabase
+      .from('user_sticker_packs')
+      .insert({
+        user_id: userId,
+        pack_id: pack.id,
+      });
 
     if (insertError) {
       // Note: In a robust system, you'd want to rollback the coin deduction here
-      this.logger.error(`Failed to record sticker pack ownership for user ${userId}: ${insertError.message}`);
+      this.logger.error(
+        `Failed to record sticker pack ownership for user ${userId}: ${insertError.message}`,
+      );
     }
 
     return {

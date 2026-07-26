@@ -2,7 +2,11 @@ import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { PurchaseCoinsDto, SendGiftDto, UnlockStickerPackDto } from './dto/economy.dto';
+import {
+  PurchaseCoinsDto,
+  SendGiftDto,
+  UnlockStickerPackDto,
+} from './dto/economy.dto';
 import { EconomyService } from './economy.service';
 
 @Controller('economy')
