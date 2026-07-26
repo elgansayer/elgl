@@ -19,5 +19,8 @@
     "dataSection": "データとストレージ",
     "downloadDataDesc": "メッセージ、モーメント、フラッシュカードなど、個人データのコピーをダウンロードします。",
     "downloadDataBtn": "マイデータをダウンロード"
-  }
+  },
+  "help.centre.title": "ヘルプセンター",
+  "help.centre.searchPlaceholder": "FAQを検索…",
+  "help.centre.noResults": "該当する記事が見つかりません。"
 }

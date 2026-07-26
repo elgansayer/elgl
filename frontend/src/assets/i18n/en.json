@@ -539,5 +539,8 @@
   "group.removeBtn": "Remove",
   "group.creatingBtn": "Creating",
   "group.createBtn": "Create Group",
-  "group.successMsg": "Group created successfully!"
+  "group.successMsg": "Group created successfully!",
+  "help.centre.title": "Help Centre",
+  "help.centre.searchPlaceholder": "Search FAQ...",
+  "help.centre.noResults": "No matching articles found."
 }
