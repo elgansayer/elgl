@@ -5,6 +5,7 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { MediaService } from '../media/media.service';
 import { StreakResetCron } from './cron/streak-reset.cron';
+import { AccountDeletionCron } from './cron/account-deletion.cron';
 import { LastActiveInterceptor } from './interceptors/last-active.interceptor';
 import { SupabaseModule } from '../supabase/supabase.module';
 
@@ -17,6 +18,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     UsersService,
     MediaService,
     StreakResetCron,
+    AccountDeletionCron,
     {
       provide: APP_INTERCEPTOR,
       useClass: LastActiveInterceptor,

@@ -245,7 +245,8 @@
 - [x] Add Angular routes for `/terms` and `/privacy` and create the corresponding page components.
 - [x] Implement "Download My Data" button triggering a NestJS JSON export worker.
 - [x] Build the NestJS JSON export worker and wire it to the Angular frontend.
-- [ ] Build Account Deletion workflow with 30-day grace period.
+- [x] Build Account Deletion workflow with 30-day grace period.
+- [x] Implement backend cron job for 30-day grace period deletion.
 
 ## Phase 32: Custom Stickers & Emojis
 - [ ] Build Sticker Store UI.
