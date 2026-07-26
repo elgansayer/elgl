@@ -337,6 +337,8 @@
 - [x] Actually write the NestJS unit tests for `DiscoveryService` PostGIS queries (the previous diff was for audio-room co-hosts).
 - [x] The latest diff provided was STILL for audio-rooms co-hosts. Please actually write the tests for DiscoveryService in backend/src/discovery/discovery.service.spec.ts.
 - [ ] Write Angular unit tests for `VocabularyStore` signals.
+- [ ] The latest diff provided was for audio-rooms co-hosts, not VocabularyStore. Please actually write the Angular unit tests for VocabularyStore signals in frontend/src/app/services/vocabulary.store.spec.ts.
+- [ ] The diff provided was STILL for audio-rooms co-hosts. Please actually write the Angular unit tests for VocabularyStore signals in frontend/src/app/services/vocabulary.store.spec.ts.
 
 ## Phase 50: Admin Dashboard (Users)
 - [ ] Build Angular Admin Portal for user management.
