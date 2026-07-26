@@ -222,7 +222,7 @@
 - [x] Ensure full keyboard tab-navigation support for desktop viewports.
 
 ## Phase 29: Deep Linking & SEO
-- [ ] Configure Angular Router to handle deep links (`hellotalk://profile/:id`).
+- [x] Configure Angular Router to handle deep links (`hellotalk://profile/:id`).
 - [ ] Configure Angular Universal (SSR) for public Voiceroom preview pages.
 
 ## Phase 30: Media Pipeline Optimisation
