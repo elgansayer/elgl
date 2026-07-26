@@ -40,6 +40,11 @@ test.describe('Adversarial Chat & Video Stress Tests', () => {
   });
 
   test('should survive rapid video/audio toggling while receiving massive chat payloads', async ({ page }) => {
+    const pageErrors: Error[] = [];
+    page.on('pageerror', (error) => {
+      pageErrors.push(error);
+    });
+
     // 1. Rapidly toggle video and audio buttons to test for race conditions in LiveKit/WebRTC state
     const videoToggle = page.locator('button[aria-label="Toggle Video"], button:has-text("Video")').first();
     const audioToggle = page.locator('button[aria-label="Toggle Audio"], button:has-text("Audio")').first();
@@ -79,5 +84,8 @@ test.describe('Adversarial Chat & Video Stress Tests', () => {
     // Ensure no error dialogs or crash overlays are present
     const errorOverlay = page.locator('.error-overlay, .crash-screen');
     await expect(errorOverlay).toHaveCount(0);
+
+    // Ensure no unhandled exceptions were thrown on the page
+    expect(pageErrors).toEqual([]);
   });
 });
