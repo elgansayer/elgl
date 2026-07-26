@@ -31,7 +31,7 @@
     "centrifuge": "^5.7.0",
     "chart.js": "^4.4.1",
     "express": "^5.2.1",
-    "livekit-client": "^2.20.2",
+    "livekit-client": "^2.21.0",
     "ng2-charts": "^5.0.4",
     "ngx-image-cropper": "^9.1.6",
     "rxjs": "~7.8.0",
