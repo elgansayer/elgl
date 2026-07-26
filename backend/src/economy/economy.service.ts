@@ -143,7 +143,11 @@ export class EconomyService {
     return { coins_balance: row.coins_balance };
   }
 
-  async claimDailyCheckIn(userId: string): Promise<{ claimed: boolean; coins_rewarded: number; new_balance: number }> {
+  async claimDailyCheckIn(userId: string): Promise<{
+    claimed: boolean;
+    coins_rewarded: number;
+    new_balance: number;
+  }> {
     const redis = this.supabaseService.getRedisClient();
     const today = new Date().toISOString().slice(0, 10);
     const key = `daily_checkin:${userId}:${today}`;
@@ -166,13 +170,17 @@ export class EconomyService {
       .eq('id', userId);
 
     if (error) {
-      throw new InternalServerErrorException('Failed to update coin balance for daily check-in');
+      throw new InternalServerErrorException(
+        'Failed to update coin balance for daily check-in',
+      );
     }
 
     // Set key to expire in 24 hours
     await redis.set(key, '1', 'EX', 86400);
 
-    this.logger.log(`User ${userId} claimed daily check-in reward of ${reward} coins.`);
+    this.logger.log(
+      `User ${userId} claimed daily check-in reward of ${reward} coins.`,
+    );
 
     return { claimed: true, coins_rewarded: reward, new_balance: newBalance };
   }
