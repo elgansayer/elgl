@@ -1,6 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-require-imports */
 import { Injectable, Logger } from '@nestjs/common';
-const ffmpeg = require('fluent-ffmpeg');
+
+let ffmpeg: any;
+try {
+  ffmpeg = require('fluent-ffmpeg');
+} catch (e) {
+  // Fallback for test environments where fluent-ffmpeg might not be available
+  ffmpeg = null;
+}
 
 @Injectable()
 export class AudioCompressionService {
@@ -8,6 +15,9 @@ export class AudioCompressionService {
 
   compressToOgg(inputPath: string, outputPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
+      if (!ffmpeg) {
+        return reject(new Error('fluent-ffmpeg is not installed or available'));
+      }
       ffmpeg(inputPath)
         .audioCodec('libopus')
         .audioBitrate('32k')
@@ -31,6 +41,9 @@ export class AudioCompressionService {
 
   compressToM4a(inputPath: string, outputPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
+      if (!ffmpeg) {
+        return reject(new Error('fluent-ffmpeg is not installed or available'));
+      }
       ffmpeg(inputPath)
         .audioCodec('aac')
         .audioBitrate('64k')
