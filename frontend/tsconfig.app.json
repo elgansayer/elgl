@@ -3,10 +3,13 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": []
+    "types": [
+      "node"
+    ]
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "server.ts"
   ],
   "exclude": [
     "src/**/*.spec.ts"
