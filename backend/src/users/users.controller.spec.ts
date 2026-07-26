@@ -4,6 +4,8 @@ import { UsersService } from './users.service';
 import { MediaService } from '../media/media.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
+jest.mock('fluent-ffmpeg', () => ({}));
+
 describe('UsersController', () => {
   let controller: UsersController;
   let usersService: UsersService;
