@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { UserProfile } from '../users/interfaces/user-profile.interface';
@@ -7,10 +8,65 @@ import { MOCK_USERS } from '../mock-data';
 
 @Injectable()
 export class DiscoveryService {
+  private readonly logger = new Logger(DiscoveryService.name);
+
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
   ) {}
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async calculateDailyRecommendations() {
+    this.logger.log('Starting daily partner recommendations calculation...');
+    const supabase = this.supabaseService.getClient();
+    const redis = this.supabaseService.getRedisClient();
+
+    try {
+      // Fetch active users to generate recommendations for
+      // In a production app with millions of users, this would be batched/paginated
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('id, native_languages, target_languages')
+        .limit(1000);
+
+      if (error || !users) {
+        this.logger.error('Failed to fetch users for recommendations', error);
+        return;
+      }
+
+      for (const user of users) {
+        if (!user.native_languages?.length || !user.target_languages?.length) {
+          continue;
+        }
+
+        // Find users who speak this user's target language natively
+        // and are learning this user's native language (Language Exchange Match)
+        const { data: matches } = await supabase
+          .from('users')
+          .select('id')
+          .neq('id', user.id)
+          .eq('privacy_hide_from_search', false)
+          .contains('native_languages', [user.target_languages[0]])
+          .contains('target_languages', [user.native_languages[0]])
+          .order('study_streak_days', { ascending: false })
+          .limit(10);
+
+        if (matches && matches.length > 0) {
+          const matchIds = matches.map((m) => m.id);
+          // Cache recommendations in Redis for 24 hours (86400 seconds)
+          await redis.set(
+            `daily_recommendations:${user.id}`,
+            JSON.stringify(matchIds),
+            'EX',
+            86400,
+          );
+        }
+      }
+      this.logger.log('Finished daily partner recommendations calculation.');
+    } catch (err) {
+      this.logger.error('Error calculating daily recommendations', err);
+    }
+  }
 
   async searchPartners(
     currentUserId: string,

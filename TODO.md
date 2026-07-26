@@ -317,7 +317,8 @@
 - [x] Implement the actual frontend Angular component for the swipeable full-screen lightbox (the previous diff only contained audio-room co-host changes).
 
 ## Phase 46: Partner Recommendation Algorithm
-- [ ] Build NestJS background job calculating top 10 recommended language partners daily.
+- [x] Build NestJS background job calculating top 10 recommended language partners daily.
+- [x] Implement the actual background job (the provided diff was for audio-room co-hosts, not partner recommendations).
 
 ## Phase 47: Unread Badge Logic
 - [ ] Implement global unread counter service updating app badge and navigation tabs.
