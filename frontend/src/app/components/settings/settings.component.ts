@@ -30,7 +30,7 @@ export class SettingsComponent implements OnInit {
         this.privacyHideLocation = Boolean(profile.privacy_hide_location);
         this.privacyHideSearch = Boolean(profile.privacy_hide_from_search);
         this.privacyHideAge = Boolean(profile.privacy_hide_age);
-        this.privacyHideGender = Boolean((profile as any)['privacy_hide_gender']);
+        this.privacyHideGender = Boolean((profile as Record<string, unknown>)['privacy_hide_gender']);
       }
     } catch {
       this.errorMessage.set('Failed to load settings');
@@ -54,7 +54,7 @@ export class SettingsComponent implements OnInit {
         privacy_hide_from_search: this.privacyHideSearch,
         privacy_hide_age: this.privacyHideAge,
         privacy_hide_gender: this.privacyHideGender,
-      } as any);
+      } as Record<string, unknown>);
       this.successMessage.set('Settings saved successfully');
     } catch {
       this.errorMessage.set('Failed to save settings');

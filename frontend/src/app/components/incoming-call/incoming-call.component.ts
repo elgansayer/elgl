@@ -162,7 +162,7 @@ export class IncomingCallComponent implements OnDestroy {
 
   private playFallbackRingtone(): void {
     try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AudioContextClass) return;
 
       const audioContext = new AudioContextClass();
@@ -187,13 +187,13 @@ export class IncomingCallComponent implements OnDestroy {
       oscillator.start(now);
       oscillator.stop(now + 5);
 
-      this.fallbackAudioContext = audioContext as any;
+      this.fallbackAudioContext = audioContext;
     } catch {
       // Silently fail if fallback also doesn't work
     }
   }
 
-  private fallbackAudioContext: any = null;
+  private fallbackAudioContext: AudioContext | null = null;
 
   private stopRingtone(): void {
     if (this.ringtoneAudio) {
