@@ -57,7 +57,7 @@ export class ImageCompressionService {
         );
       };
 
-      img.onerror = (err) => {
+      img.onerror = () => {
         URL.revokeObjectURL(objectUrl);
         reject(new Error('Failed to load image for compression'));
       };
