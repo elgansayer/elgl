@@ -562,7 +562,11 @@ export class EconomyService {
   async unlockStickerPack(
     userId: string,
     dto: UnlockStickerPackDto,
-  ): Promise<{ success: boolean; coins_remaining: number; pack: StickerPackRow }> {
+  ): Promise<{
+    success: boolean;
+    coins_remaining: number;
+    pack: StickerPackRow;
+  }> {
     const supabase = this.supabaseService.getClient();
 
     // 1. Fetch the sticker pack details
