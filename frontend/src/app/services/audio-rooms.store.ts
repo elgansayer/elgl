@@ -251,6 +251,22 @@ export class AudioRoomsStore {
     }
   }
 
+  async inviteCoHost(targetUserId: string): Promise<void> {
+    const room = this.currentRoom();
+    if (!room) return;
+    try {
+      const updated = await firstValueFrom(
+        this.http.post<AudioRoomRecord>(`${this.baseUrl}/invite-co-host`, {
+          room_id: room.id,
+          target_user_id: targetUserId
+        }, { headers: this.getHeaders() })
+      );
+      this.currentRoom.set(updated);
+    } catch (e) {
+      console.error('Invite co-host error:', e);
+    }
+  }
+
   async muteSpeaker(targetUserId: string): Promise<void> {
     const room = this.currentRoom();
     if (!room) return;
