@@ -1,6 +1,7 @@
 # TODO.md (Master HelloTalk Clone Architecture: Phases 1 to 79 + Phase C)
 
 ## URGENT
+- [x] Fix QA test failure: `ReferenceError: describe is not defined`.
 - [x] Fix QA test failure: `Error: Process from config.webServer was not able to start. Exit code: 143`. Root cause: `e2e/playwright.config.ts` `webServer` runs `cd ../frontend && npm run start` (Angular dev server), which never reaches a successful compile because the frontend currently has real TypeScript build errors, so `ng serve` keeps failing/restarting until Playwright's 120s `webServer.timeout` elapses and it force-kills (SIGTERM, exit 143) the still-uncompiled process. Fixed both compile errors:
   1. `frontend/src/app/components/hobby-tags/hobby-tags.component.ts`: `userVocabulary` signal retyped from `unknown[]` to the service's real `VocabularyItem[]` interface (`word`, `translation`, `hobbyTagName`); template updated to only reference fields that actually exist on it, and the now-unused `getDifficultyColour` helper was removed.
   2. `frontend/src/app/components/virtual-gift-modal/virtual-gift-modal.component.ts`: added the missing `TranslatePipe` to the standalone component's `imports` array, resolving `NG8004: No pipe found with name 't'`.

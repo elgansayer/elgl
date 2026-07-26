@@ -1,3 +1,4 @@
+import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
@@ -8,7 +9,7 @@ import { environment } from '../../environments/environment';
 describe('VocabularyStore', () => {
   let store: VocabularyStore;
   let httpMock: HttpTestingController;
-  let authServiceSpy: jasmine.SpyObj<AuthService>;
+  let authServiceSpy: any;
 
   const mockFlashcard: Flashcard = {
     id: '1',
@@ -21,8 +22,9 @@ describe('VocabularyStore', () => {
   };
 
   beforeEach(() => {
-    const spy = jasmine.createSpyObj('AuthService', ['getAccessToken']);
-    spy.getAccessToken.and.returnValue('mock-token');
+    const spy = {
+      getAccessToken: vi.fn().mockReturnValue('mock-token')
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -35,7 +37,7 @@ describe('VocabularyStore', () => {
 
     store = TestBed.inject(VocabularyStore);
     httpMock = TestBed.inject(HttpTestingController);
-    authServiceSpy = TestBed.inject(AuthService) as jasmine.SpyObj<AuthService>;
+    authServiceSpy = TestBed.inject(AuthService);
   });
 
   afterEach(() => {
@@ -49,7 +51,7 @@ describe('VocabularyStore', () => {
   it('should load all flashcards and update signals', async () => {
     const promise = store.loadAllFlashcards();
     
-    expect(store.isLoading()).toBeTrue();
+    expect(store.isLoading()).toBe(true);
 
     const req = httpMock.expectOne(`${environment.apiUrl}/flashcards`);
     expect(req.request.method).toBe('GET');
@@ -58,7 +60,7 @@ describe('VocabularyStore', () => {
     req.flush([mockFlashcard]);
     await promise;
 
-    expect(store.isLoading()).toBeFalse();
+    expect(store.isLoading()).toBe(false);
     expect(store.allFlashcards().length).toBe(1);
     expect(store.allFlashcards()[0]).toEqual(mockFlashcard);
     expect(store.flashcardMap().get('hello')).toEqual(mockFlashcard);
