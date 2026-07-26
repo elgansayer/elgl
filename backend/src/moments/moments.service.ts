@@ -250,15 +250,16 @@ export class MomentsService {
     const supabase = this.supabaseService.getClient();
 
     // Check if the moment author has blocked the current user
-    const { data: momentData } = await supabase
+    const momentResponse = await supabase
       .from('moments')
       .select('user_id')
       .eq('id', momentId)
       .single();
 
+    const momentData = momentResponse.data as { user_id: string } | null;
+
     if (momentData) {
-      const md = momentData;
-      const momentAuthorId = md.user_id;
+      const momentAuthorId = momentData.user_id;
       const blockedIds =
         await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
       if (blockedIds.includes(userId)) {
@@ -346,15 +347,16 @@ export class MomentsService {
     const supabase = this.supabaseService.getClient();
 
     // Check if the moment author has blocked the current user
-    const { data: momentData } = await supabase
+    const momentResponse = await supabase
       .from('moments')
       .select('user_id')
       .eq('id', momentId)
       .single();
 
+    const momentData = momentResponse.data as { user_id: string } | null;
+
     if (momentData) {
-      const md = momentData;
-      const momentAuthorId = md.user_id;
+      const momentAuthorId = momentData.user_id;
       const blockedIds =
         await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
       if (blockedIds.includes(userId)) {
@@ -390,7 +392,8 @@ export class MomentsService {
       .single();
 
     const updatedData = result.data as
-      (MomentCountRow & { user_id?: string }) | null;
+      | (MomentCountRow & { user_id?: string })
+      | null;
 
     await supabase
       .from('moments')
@@ -520,22 +523,24 @@ export class MomentsService {
     }
 
     const supabase = this.supabaseService.getClient();
-    const { data: momentData } = await supabase
+    const momentResponse = await supabase
       .from('moments')
       .select('user_id, is_pinned')
       .eq('id', momentId)
       .single();
+      
+    const momentData = momentResponse.data as { user_id: string; is_pinned: boolean } | null;
+    
     if (!momentData) {
       throw new ForbiddenException('Moment not found.');
     }
-    const momentRow = momentData;
-    if (momentRow.user_id !== userId) {
+    if (momentData.user_id !== userId) {
       throw new ForbiddenException('You can only pin your own Moments.');
     }
 
     const response = await supabase
       .from('moments')
-      .update({ is_pinned: !momentRow.is_pinned })
+      .update({ is_pinned: !momentData.is_pinned })
       .eq('id', momentId)
       .select()
       .single();

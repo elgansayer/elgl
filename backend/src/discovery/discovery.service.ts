@@ -89,13 +89,13 @@ export class DiscoveryService {
     let searchLon = query.longitude;
 
     // Use mock location if user is VIP and has it set
+    const mockLocation = _currentUserProfile?.mock_location as { coordinates?: number[] } | undefined;
     if (
       _currentUserProfile?.is_vip &&
-      _currentUserProfile.mock_location &&
-      Array.isArray((_currentUserProfile.mock_location as any).coordinates)
+      mockLocation?.coordinates &&
+      Array.isArray(mockLocation.coordinates)
     ) {
-      const coords = (_currentUserProfile.mock_location as any)
-        .coordinates as number[];
+      const coords = mockLocation.coordinates;
       searchLon = coords[0];
       searchLat = coords[1];
     }
