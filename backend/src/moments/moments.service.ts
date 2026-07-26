@@ -257,7 +257,8 @@ export class MomentsService {
       .single();
 
     if (momentData) {
-      const momentAuthorId = momentData.user_id as string;
+      const md = momentData as { user_id: string };
+      const momentAuthorId = md.user_id;
       const blockedIds =
         await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
       if (blockedIds.includes(userId)) {
@@ -352,7 +353,8 @@ export class MomentsService {
       .single();
 
     if (momentData) {
-      const momentAuthorId = momentData.user_id as string;
+      const md = momentData as { user_id: string };
+      const momentAuthorId = md.user_id;
       const blockedIds =
         await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
       if (blockedIds.includes(userId)) {
