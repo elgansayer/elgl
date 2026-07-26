@@ -4,6 +4,7 @@ import { MediaService } from './media.service';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { SupabaseService } from '../supabase/supabase.service';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { AudioCompressionService } from './audio-compression.service';
 
 jest.mock('@aws-sdk/client-s3', () => ({
   S3Client: jest.fn(),
@@ -27,6 +28,13 @@ describe('MediaService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MediaService,
+        {
+          provide: AudioCompressionService,
+          useValue: {
+            compressToOgg: jest.fn(),
+            compressToM4a: jest.fn(),
+          },
+        },
         {
           provide: ConfigService,
           useValue: {
