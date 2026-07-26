@@ -1,12 +1,13 @@
 import { Component, input, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { AppCardComponent } from '../primitives/card/card.component';
 
 @Component({
   selector: 'app-host-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, AppCardComponent],
   template: `
-    <div class="bg-slate-800 text-white rounded-2xl p-4 shadow-lg flex flex-row items-center justify-between gap-4 border border-slate-700">
+    <app-card variant="elevated" padding="md" customClass="bg-slate-800 text-white flex flex-row items-center justify-between gap-4 border border-slate-700">
       
       <!-- Viewer Count -->
       <div class="flex flex-col items-start">
@@ -34,7 +35,7 @@ import { CommonModule } from '@angular/common';
         </div>
       </div>
 
-    </div>
+    </app-card>
   `
 })
 export class HostDashboardComponent implements OnInit, OnDestroy {
