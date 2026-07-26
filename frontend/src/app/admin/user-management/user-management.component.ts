@@ -1,6 +1,6 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AdminService } from '../../services/admin.service';
+import { AdminService, AdminUserSummary } from '../../services/admin.service';
 
 @Component({
   selector: 'app-user-management',
@@ -11,7 +11,7 @@ import { AdminService } from '../../services/admin.service';
 export class UserManagementComponent implements OnInit {
   private adminService = inject(AdminService);
   
-  users = signal<any[]>([]);
+  users = signal<AdminUserSummary[]>([]);
   isLoading = signal<boolean>(true);
 
   ngOnInit(): void {
@@ -30,7 +30,7 @@ export class UserManagementComponent implements OnInit {
     }
   }
 
-  async toggleVip(user: any): Promise<void> {
+  async toggleVip(user: AdminUserSummary): Promise<void> {
     const newVipStatus = !user.is_vip;
     const newTier = newVipStatus ? 'consumer_8_ukp_10_usd' : 'free';
     
