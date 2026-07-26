@@ -230,7 +230,7 @@
 
 ## Phase 30: Media Pipeline Optimisation
 - [x] Implement client-side image compression (max 1080p) before R2 upload.
-- [ ] Integrate ImageCompressionService into the R2 upload flow (e.g., in MediaService or component upload handlers).
+- [STUCK] Integrate ImageCompressionService into the R2 upload flow (e.g., in MediaService or component upload handlers).
 - [ ] Implement audio compression converting voice notes to lightweight `.m4a`/`.ogg`.
 
 ## Phase 31: Legal & GDPR Compliance
