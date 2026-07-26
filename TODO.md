@@ -1,6 +1,7 @@
 # TODO.md (Master HelloTalk Clone Architecture: Phases 1 to 79 + Phase C)
 
 ## URGENT
+- [ ] Fix QA test failure: `ReferenceError: describe is not defined`.
 - [x] Fix QA test failure: `ReferenceError: describe is not defined`. (Root cause was not a Jest/Jasmine config or test globals issue: `qa-loop.sh` was running `npx playwright test` from `frontend/`, which has no `playwright.config.ts`, so Playwright fell back to its default glob and picked up the Angular Vitest unit `*.spec.ts` files under `frontend/src`. Those files use bare `describe`/`it` (Vitest globals) or `import { vi } from 'vitest'`, neither of which exist under the Playwright test runner, hence the `ReferenceError` and the "Vitest cannot be imported... using require()" errors. Fixed by pointing `qa-loop.sh` at the real Playwright suite in `e2e/` (its own `playwright.config.ts` + `tests/`); `ux-loop.sh` already targeted `e2e/` correctly. Verified no other script/CI invocation runs Playwright against `frontend/`.)
 
 ## GLOBAL ARCHITECTURAL RULES
@@ -40,7 +41,7 @@
 
 ## Phase 3: Centrifugo Real-Time Chat Engine & Interactive Payloads
 - [x] Setup Centrifugo server configuration (`config.json`) and connect to Redis instance for pub/sub.
-- [x] Build NestJS `ChatController` endpoint (`POST /chat/token`) to mint Centrifugo connection JWTs with user sub claims.
+- [x] Build NestJS endpoint (`POST /chat/token`) to mint Centrifugo connection JWTs with user sub claims.
 - [x] Install `centrifuge-js` in Angular and build a resilient global `CentrifugeService` with reconnection and connection state signals.
 - [x] Create Supabase SQL migration (`003_chat_and_favourites.sql`) for `chat_messages` and `favourites` tables.
 - [x] Build NestJS endpoint `POST /chat/messages` to validate messages, persist to Supabase `chat_messages` table, and publish to Centrifugo via HTTP API (`/api/publish`).
@@ -667,4 +668,4 @@
 - [ ] Implement RSVP functionality allowing users to mark "Attending" or "Interested".
 - [ ] Build automated push notification reminders (e.g., "Your Spanish Learning Event starts in 15 minutes").
 - [ ] Integrate events with the "Language Parties" system, allowing scheduled audio rooms to automatically spin up at the designated time.
-- [ ] Implement a calendar view for users to track all their upcoming RSVP'd events.
+- [ ] Implement a calendar view for users to track all their upcoming RSVP'd events.````
