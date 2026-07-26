@@ -211,7 +211,8 @@
 ## Phase 27: Offline Support & PWA
 - [x] Configure Angular Service Worker (`@angular/pwa`) for asset caching.
   - [x] Run `ng add @angular/pwa` in the `frontend` directory to generate service worker configuration.
-- [ ] Implement IndexedDB message queuing for offline chat composition.
+- [x] Implement IndexedDB message queuing for offline chat composition.
+- [x] Write the IndexedDB wrapper service and integrate it with ChatService for offline queuing.
 - [ ] Build global "No Network Connection" banner component.
 
 ## Phase 28: Accessibility (a11y)

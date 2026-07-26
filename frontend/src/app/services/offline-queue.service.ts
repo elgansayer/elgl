@@ -5,13 +5,14 @@ import { ChatMessage } from './chat.service';
   providedIn: 'root'
 })
 export class OfflineQueueService {
-  private dbName = 'chat_offline_db';
-  private storeName = 'messages';
+  private readonly dbName = 'chat_offline_db';
+  private readonly storeName = 'messages';
   private db: IDBDatabase | null = null;
+  private initPromise: Promise<void> | null = null;
 
   constructor() {
-    if (typeof window !== 'undefined') {
-      this.initDB();
+    if (typeof window !== 'undefined' && window.indexedDB) {
+      this.initPromise = this.initDB();
     }
   }
 
@@ -23,8 +24,8 @@ export class OfflineQueueService {
         this.db = request.result;
         resolve();
       };
-      request.onupgradeneeded = (event: any) => {
-        const db = event.target.result;
+      request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
+        const db = (event.target as IDBOpenDBRequest).result;
         if (!db.objectStoreNames.contains(this.storeName)) {
           db.createObjectStore(this.storeName, { keyPath: 'id' });
         }
@@ -32,30 +33,42 @@ export class OfflineQueueService {
     });
   }
 
+  private async ensureDB(): Promise<void> {
+    if (this.initPromise) {
+      await this.initPromise;
+    }
+    if (!this.db) {
+      throw new Error('IndexedDB not initialized');
+    }
+  }
+
   async enqueueMessage(message: ChatMessage): Promise<void> {
-    if (!this.db) await this.initDB();
+    if (typeof window === 'undefined' || !window.indexedDB) return;
+    await this.ensureDB();
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(this.storeName, 'readwrite');
       const store = transaction.objectStore(this.storeName);
-      const request = store.add(message);
+      const request = store.put(message);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
   }
 
   async getQueuedMessages(): Promise<ChatMessage[]> {
-    if (!this.db) await this.initDB();
+    if (typeof window === 'undefined' || !window.indexedDB) return [];
+    await this.ensureDB();
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(this.storeName, 'readonly');
       const store = transaction.objectStore(this.storeName);
       const request = store.getAll();
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
     });
   }
 
   async removeMessage(id: string): Promise<void> {
-    if (!this.db) await this.initDB();
+    if (typeof window === 'undefined' || !window.indexedDB) return;
+    await this.ensureDB();
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(this.storeName, 'readwrite');
       const store = transaction.objectStore(this.storeName);
