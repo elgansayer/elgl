@@ -402,22 +402,21 @@ export class MomentsService {
       avatar_url: profile?.avatar_url ?? null,
     };
 
-    // Emit push notification event
-    const momentAuthorId = updatedData?.user_id;
-    if (momentAuthorId) {
-      const payload = dto.correction_payload as
-        | { original: string; corrected: string; explanation?: string }
-        | null
-        | undefined;
-      const preview = dto.text_content
-        ? dto.text_content.substring(0, 120)
-        : payload
-          ? `Correction: "${payload.original}" → "${payload.corrected}"`
-          : '';
+    const payload = dto.correction_payload as
+      | { original: string; corrected: string; explanation?: string }
+      | null
+      | undefined;
+    const preview = dto.text_content
+      ? dto.text_content.substring(0, 120)
+      : payload
+        ? `Correction: "${payload.original}" → "${payload.corrected}"`
+        : '';
 
+    // Emit push notification event to the moment author
+    const momentAuthorId = updatedData?.user_id;
+    if (momentAuthorId && momentAuthorId !== userId) {
       this.eventEmitter.emit(
         'moment.comment',
-
         new MomentCommentEvent(
           momentId,
           userId,
@@ -427,6 +426,42 @@ export class MomentsService {
           dto.reply_to_user_id,
         ),
       );
+    }
+
+    // Parse @mentions and emit notifications
+    if (dto.text_content) {
+      const mentionRegex = /@([a-zA-Z0-9_]+)/g;
+      const matches = [...dto.text_content.matchAll(mentionRegex)];
+      const mentionedNames = matches.map((m) => m[1]);
+
+      if (mentionedNames.length > 0) {
+        const { data: mentionedUsers } = await supabase
+          .from('users')
+          .select('id, display_name')
+          .in('display_name', mentionedNames);
+
+        if (mentionedUsers) {
+          for (const mentionedUser of mentionedUsers) {
+            // Don't notify if they are the author (already notified above) or the commenter themselves
+            if (
+              mentionedUser.id !== userId &&
+              mentionedUser.id !== momentAuthorId
+            ) {
+              this.eventEmitter.emit(
+                'moment.mention',
+                new MomentCommentEvent(
+                  momentId,
+                  userId,
+                  mentionedUser.id,
+                  preview,
+                  dto.parent_comment_id,
+                  dto.reply_to_user_id,
+                ),
+              );
+            }
+          }
+        }
+      }
     }
 
     return comment;

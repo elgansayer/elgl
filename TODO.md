@@ -290,7 +290,8 @@
 - [x] Build "Liked By" modal listing all users who liked a Moment.
 - [x] Create backend endpoint to fetch users who liked a specific moment.
 - [x] Create Angular component for the Liked By modal.
-- [ ] Implement `@mention` notifications when tagged in a comment.
+- [x] Implement `@mention` notifications when tagged in a comment.
+- [x] Actually implement the @mention logic in the comments service and frontend (the previous diff only contained audio-room co-host changes).
 
 ## Phase 41: Language Assessment Test
 - [ ] Build dynamic diagnostic quiz component for new sign-ups.
