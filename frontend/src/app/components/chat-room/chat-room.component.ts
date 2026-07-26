@@ -6,7 +6,7 @@ import { ActivatedRoute } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
-import { ChatService, ChatMessage } from '../../services/chat.service';
+import { ChatService, ChatMessage, ChatRoom } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
@@ -50,6 +50,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   readonly showVoiceModal = signal<boolean>(false);
   readonly showCorrectionForm = signal<boolean>(false);
   readonly showSearch = signal<boolean>(false);
+  readonly showAdminPanel = signal<boolean>(false);
 
   readonly blockedUserIds = signal<string[]>([]);
   readonly filteredMessages = computed(() => {
@@ -65,8 +66,14 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   readonly activeWordContext = signal<string>('');
 
   roomId = '';
+  roomDetails: ChatRoom | null = null;
   searchQuery = '';
   textInput = '';
+
+  // Admin fields
+  newGroupName = '';
+  newMemberId = '';
+  memberToRemoveId = '';
 
   // Correction fields
   originalText = '';
@@ -80,10 +87,25 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
       if (params['id']) {
         this.roomId = params['id'];
       }
+      await this.loadRoomDetails();
       await this.loadBlockedUsers();
       await this.loadMessages();
       await this.setupRealTime();
     });
+  }
+
+  async loadRoomDetails(): Promise<void> {
+    try {
+      const rooms = await this.chatService.getRooms();
+      this.roomDetails = rooms.find(r => r.id === this.roomId) || null;
+    } catch (e) {
+      console.error('Failed to load room details:', e);
+    }
+  }
+
+  get isAdmin(): boolean {
+    const currentUser = this.authService.currentUser();
+    return !!(currentUser && this.roomDetails && this.roomDetails.admin_id === currentUser.id);
   }
 
   async loadBlockedUsers(): Promise<void> {
@@ -314,5 +336,45 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
 
   openDoodlePreview(url: string): void {
     window.open(url, '_blank');
+  }
+
+  // Admin Actions
+  async renameGroup(): Promise<void> {
+    if (!this.newGroupName.trim()) return;
+    try {
+      await this.chatService.renameGroup(this.roomId, this.newGroupName.trim());
+      if (this.roomDetails) {
+        this.roomDetails.title = this.newGroupName.trim();
+      }
+      this.newGroupName = '';
+      showToast('Group renamed successfully');
+    } catch (e) {
+      console.error('Failed to rename group:', e);
+      showToast('Failed to rename group');
+    }
+  }
+
+  async addMember(): Promise<void> {
+    if (!this.newMemberId.trim()) return;
+    try {
+      await this.chatService.addGroupMembers(this.roomId, [this.newMemberId.trim()]);
+      this.newMemberId = '';
+      showToast('Member added successfully');
+    } catch (e) {
+      console.error('Failed to add member:', e);
+      showToast('Failed to add member');
+    }
+  }
+
+  async removeMember(): Promise<void> {
+    if (!this.memberToRemoveId.trim()) return;
+    try {
+      await this.chatService.removeGroupMember(this.roomId, this.memberToRemoveId.trim());
+      this.memberToRemoveId = '';
+      showToast('Member removed successfully');
+    } catch (e) {
+      console.error('Failed to remove member:', e);
+      showToast('Failed to remove member');
+    }
   }
 }

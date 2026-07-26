@@ -7,13 +7,18 @@
         💬
       </div>
       <div>
-        <h1 class="text-base font-black text-text-primary sm:text-lg">{{ roomId }}</h1>
+        <h1 class="text-base font-black text-text-primary sm:text-lg">{{ roomDetails?.title || roomId }}</h1>
         <p class="text-xs" [class]="centrifugeService.isConnected() ? 'text-xs text-emerald-600' : 'text-xs text-amber-600'">
           {{ centrifugeService.isConnected() ? ('chatRoom.liveStatus' | t) : ('chatRoom.connectingStatus' | t) }}
         </p>
       </div>
     </div>
     <div class="flex items-center gap-2">
+      @if (isAdmin) {
+        <button (click)="showAdminPanel.set(!showAdminPanel())" class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs">
+          Admin
+        </button>
+      }
       <input
         type="text"
         [(ngModel)]="searchQuery"
@@ -26,6 +31,24 @@
       </button>
     </div>
   </div>
+
+  @if (showAdminPanel()) {
+    <div class="mt-2 rounded-card border border-primary/30 bg-primary/10 ps-3 pe-3 pt-3 pb-3 space-y-2">
+      <h3 class="text-sm font-bold text-text-primary">Group Admin Settings</h3>
+      <div class="flex gap-2">
+        <input type="text" [(ngModel)]="newGroupName" placeholder="New Group Name" class="app-input flex-1 pt-2 pb-2 text-xs" />
+        <button (click)="renameGroup()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs">Rename</button>
+      </div>
+      <div class="flex gap-2">
+        <input type="text" [(ngModel)]="newMemberId" placeholder="User ID to Add" class="app-input flex-1 pt-2 pb-2 text-xs" />
+        <button (click)="addMember()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs">Add Member</button>
+      </div>
+      <div class="flex gap-2">
+        <input type="text" [(ngModel)]="memberToRemoveId" placeholder="User ID to Remove" class="app-input flex-1 pt-2 pb-2 text-xs" />
+        <button (click)="removeMember()" class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs text-red-500">Remove Member</button>
+      </div>
+    </div>
+  }
 
   <div
     class="mt-2.5 flex-1 overflow-y-auto rounded-card border border-surface-100 bg-surface-300 ps-2 pe-2 pt-2 pb-2 space-y-2"

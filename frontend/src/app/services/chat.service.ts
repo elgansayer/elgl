@@ -45,6 +45,7 @@ export interface ChatRoom {
   is_online: boolean;
   is_pinned: boolean;
   created_at: string;
+  admin_id?: string;
 }
 
 @Injectable({
@@ -105,7 +106,7 @@ export class ChatService {
       // Get room members to find the receiver
       const roomMembers = await firstValueFrom(
         this.http.get<{ user_id: string }[]>(`${this.baseUrl}/rooms/${payload.room_id}/members`, { headers: this.getHeaders() })
-      );
+      ).catch(() => []);
       if (roomMembers && roomMembers.length > 0) {
         const receiverId = roomMembers.find(m => m.user_id !== currentUser.id)?.user_id;
         if (receiverId) {
@@ -157,12 +158,6 @@ export class ChatService {
     if (currentUser?.id) {
       const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
       if (blockedIds.length > 0) {
-        // For each room, we need to know the other participant's ID.
-        // The backend returns rooms with a 'title' that may contain the other user's name,
-        // but we don't have the user ID directly. We'll rely on the backend to filter.
-        // However, we can still filter based on the room ID if we have a mapping.
-        // For now, we'll just return the rooms as-is and let the backend handle filtering.
-        // The backend already filters blocked users in the getRooms endpoint.
         return rooms;
       }
     }
@@ -232,6 +227,35 @@ export class ChatService {
       this.http.post<ChatRoom>(
         `${this.baseUrl}/groups`,
         { name, memberIds },
+        { headers: this.getHeaders() }
+      )
+    );
+  }
+
+  async renameGroup(roomId: string, name: string): Promise<void> {
+    await firstValueFrom(
+      this.http.patch(
+        `${this.baseUrl}/groups/${roomId}/rename`,
+        { name },
+        { headers: this.getHeaders() }
+      )
+    );
+  }
+
+  async addGroupMembers(roomId: string, memberIds: string[]): Promise<void> {
+    await firstValueFrom(
+      this.http.post(
+        `${this.baseUrl}/groups/${roomId}/members`,
+        { memberIds },
+        { headers: this.getHeaders() }
+      )
+    );
+  }
+
+  async removeGroupMember(roomId: string, memberId: string): Promise<void> {
+    await firstValueFrom(
+      this.http.delete(
+        `${this.baseUrl}/groups/${roomId}/members/${memberId}`,
         { headers: this.getHeaders() }
       )
     );

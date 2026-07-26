@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
@@ -34,7 +34,7 @@ export class ChatService {
 
     const response = await supabase
       .from('chat_rooms')
-      .select('id, title, subtitle, avatar, is_online, is_pinned, created_at')
+      .select('id, title, subtitle, avatar, is_online, is_pinned, created_at, admin_id')
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: true });
 
@@ -324,6 +324,7 @@ export class ChatService {
         title: name,
         is_online: true,
         is_pinned: false,
+        admin_id: creatorId,
       })
       .select()
       .single();
@@ -350,5 +351,57 @@ export class ChatService {
     }
 
     return room;
+  }
+
+  private async verifyAdmin(userId: string, roomId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { data: room } = await supabase
+      .from('chat_rooms')
+      .select('admin_id')
+      .eq('id', roomId)
+      .single();
+
+    if (!room || room.admin_id !== userId) {
+      throw new ForbiddenException('Only group admins can perform this action');
+    }
+  }
+
+  async renameGroup(userId: string, roomId: string, newName: string): Promise<void> {
+    await this.verifyAdmin(userId, roomId);
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('chat_rooms')
+      .update({ title: newName })
+      .eq('id', roomId);
+
+    if (error) throw new Error('Failed to rename group');
+  }
+
+  async addGroupMembers(userId: string, roomId: string, memberIds: string[]): Promise<void> {
+    await this.verifyAdmin(userId, roomId);
+    const supabase = this.supabaseService.getClient();
+    
+    const membersData = memberIds.map((id) => ({
+      room_id: roomId,
+      user_id: id,
+    }));
+
+    const { error } = await supabase
+      .from('chat_room_members')
+      .insert(membersData);
+
+    if (error) throw new Error('Failed to add members');
+  }
+
+  async removeGroupMember(userId: string, roomId: string, memberId: string): Promise<void> {
+    await this.verifyAdmin(userId, roomId);
+    const supabase = this.supabaseService.getClient();
+    
+    const { error } = await supabase
+      .from('chat_room_members')
+      .delete()
+      .match({ room_id: roomId, user_id: memberId });
+
+    if (error) throw new Error('Failed to remove member');
   }
 }

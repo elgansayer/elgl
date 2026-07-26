@@ -201,7 +201,7 @@
 
 ## Phase 26: Group Chats
 - [x] Build "Create Group" UI supporting up to 50 users.
-- [ ] Implement Group Admin privileges (Add/remove members, rename group).
+- [x] Implement Group Admin privileges (Add/remove members, rename group).
 - [ ] Build group participant drawer.
 
 ## Phase 27: Offline Support & PWA
