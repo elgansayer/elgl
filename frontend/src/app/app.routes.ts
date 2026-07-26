@@ -68,4 +68,8 @@ export const routes: Routes = [
     component: SubscriptionCancelComponent,
     title: 'Subscription Cancelled - HelloTalk',
   },
+  {
+    path: 'preview/room/:id',
+    loadComponent: () => import('./pages/voiceroom-preview/voiceroom-preview.component').then(m => m.VoiceroomPreviewComponent)
+  }
 ];
