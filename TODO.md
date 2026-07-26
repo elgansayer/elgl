@@ -328,8 +328,9 @@
 - [x] Update `frontend/src/app/app.component.html` to visually render the unread badges using `unreadCounter.totalUnread()` (Requires HTML file).
 
 ## Phase 48: E2E Testing (Cypress)
-- [ ] Setup Cypress inside `frontend/`.
-- [ ] Write E2E test flows for Authentication, Chat Messaging, and Moment Creation.
+- [x] Setup Cypress inside `frontend/`.
+- [x] Actually install and configure Cypress in the frontend directory (the previous diff was for audio-room co-hosts).
+- [x] Write E2E test flows for Authentication, Chat Messaging, and Moment Creation.
 
 ## Phase 49: Unit Testing (Jest)
 - [ ] Write NestJS unit tests for `DiscoveryService` PostGIS queries.
