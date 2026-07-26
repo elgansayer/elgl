@@ -1,7 +1,6 @@
 import {
   Injectable,
   ForbiddenException,
-  NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -25,11 +24,14 @@ export class GroupsService {
 
   async createGroup(creatorId: string, name: string) {
     const supabase = this.supabaseService.getClient();
-    const { data: group, error: groupError } = await supabase
+    const response = await supabase
       .from('chat_groups')
       .insert({ name })
       .select()
       .single();
+
+    const groupError = response.error;
+    const group = response.data as { id: string; name: string; created_at: string };
 
     if (groupError) throw groupError;
 
@@ -44,12 +46,15 @@ export class GroupsService {
     await this.checkIsAdmin(groupId, requesterId);
     const supabase = this.supabaseService.getClient();
 
-    const { data, error } = await supabase
+    const response = await supabase
       .from('chat_groups')
       .update({ name: newName })
       .eq('id', groupId)
       .select()
       .single();
+
+    const error = response.error;
+    const data = response.data as { id: string; name: string; created_at: string };
 
     if (error) throw error;
     return data;

@@ -22,13 +22,16 @@ export class GroupsController {
   constructor(private readonly groupsService: GroupsService) {}
 
   @Post()
-  createGroup(@Request() req: any, @Body() dto: CreateGroupDto) {
+  createGroup(
+    @Request() req: { user: { id: string } },
+    @Body() dto: CreateGroupDto,
+  ) {
     return this.groupsService.createGroup(req.user.id, dto.name);
   }
 
   @Put(':id/rename')
   renameGroup(
-    @Request() req: any,
+    @Request() req: { user: { id: string } },
     @Param('id') id: string,
     @Body() dto: RenameGroupDto,
   ) {
@@ -37,7 +40,7 @@ export class GroupsController {
 
   @Post(':id/members')
   addMember(
-    @Request() req: any,
+    @Request() req: { user: { id: string } },
     @Param('id') id: string,
     @Body() dto: GroupMemberDto,
   ) {
@@ -46,7 +49,7 @@ export class GroupsController {
 
   @Delete(':id/members/:userId')
   removeMember(
-    @Request() req: any,
+    @Request() req: { user: { id: string } },
     @Param('id') id: string,
     @Param('userId') userId: string,
   ) {
