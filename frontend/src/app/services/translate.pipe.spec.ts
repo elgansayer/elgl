@@ -12,9 +12,9 @@ describe('TranslatePipe', () => {
         {
           provide: I18nService,
           useValue: {
-            translate: (key: string, params?: any) => {
+            translate: (key: string, params?: Record<string, unknown>) => {
               if (key === 'app.title') return 'HelloTalk';
-              if (key === 'common.coinsBalance') return `${params.coins} Coins`;
+              if (key === 'common.coinsBalance' && params) return `${params['coins']} Coins`;
               return key;
             },
           },
