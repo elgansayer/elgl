@@ -2,7 +2,7 @@ import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { PurchaseCoinsDto, SendGiftDto } from './dto/economy.dto';
+import { PurchaseCoinsDto, SendGiftDto, UnlockStickerPackDto } from './dto/economy.dto';
 import { EconomyService } from './economy.service';
 
 @Controller('economy')
@@ -39,5 +39,14 @@ export class EconomyController {
   async sendGift(@CurrentUser() user: User | null, @Body() dto: SendGiftDto) {
     if (!user) return null;
     return await this.economyService.sendGift(user.id, dto);
+  }
+
+  @Post('unlock-sticker-pack')
+  async unlockStickerPack(
+    @CurrentUser() user: User | null,
+    @Body() dto: UnlockStickerPackDto,
+  ) {
+    if (!user) return null;
+    return await this.economyService.unlockStickerPack(user.id, dto);
   }
 }

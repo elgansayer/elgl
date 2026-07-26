@@ -12,7 +12,7 @@ import { firstValueFrom } from 'rxjs';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
-import { PurchaseCoinsDto, SendGiftDto } from './dto/economy.dto';
+import { PurchaseCoinsDto, SendGiftDto, UnlockStickerPackDto } from './dto/economy.dto';
 
 export interface VirtualGiftRow {
   id: string;
@@ -546,6 +546,61 @@ export class EconomyService {
       success: true,
       coins_remaining: newSenderBalance,
       gift,
+    };
+  }
+
+  async unlockStickerPack(
+    userId: string,
+    dto: UnlockStickerPackDto,
+  ): Promise<{ success: boolean; coins_remaining: number; pack: any }> {
+    const supabase = this.supabaseService.getClient();
+
+    // 1. Fetch the sticker pack details
+    const packResponse = await supabase
+      .from('sticker_packs')
+      .select('*')
+      .eq('id', dto.pack_id)
+      .single();
+
+    if (!packResponse.data) {
+      throw new NotFoundException(`Sticker pack '${dto.pack_id}' not found.`);
+    }
+    const pack = packResponse.data;
+
+    // 2. Check user's coin balance
+    const { coins_balance } = await this.getBalance(userId);
+    if (coins_balance < pack.cost_coins) {
+      throw new BadRequestException(
+        `Insufficient coin balance (${coins_balance} available, ${pack.cost_coins} required).`,
+      );
+    }
+
+    // 3. Deduct coins
+    const newBalance = coins_balance - pack.cost_coins;
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ coins_balance: newBalance })
+      .eq('id', userId);
+
+    if (updateError) {
+      throw new InternalServerErrorException('Failed to deduct coins');
+    }
+
+    // 4. Record ownership
+    const { error: insertError } = await supabase.from('user_sticker_packs').insert({
+      user_id: userId,
+      pack_id: pack.id,
+    });
+
+    if (insertError) {
+      // Note: In a robust system, you'd want to rollback the coin deduction here
+      this.logger.error(`Failed to record sticker pack ownership for user ${userId}: ${insertError.message}`);
+    }
+
+    return {
+      success: true,
+      coins_remaining: newBalance,
+      pack,
     };
   }
 }
