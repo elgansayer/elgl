@@ -29,6 +29,7 @@ export const routes: Routes = [
   { path: 'favourites', component: FavouritesComponent },
   { path: 'vocabulary', component: VocabularyDashboardComponent },
   { path: 'profile', component: ProfileComponent },
+  { path: 'profile/:id', component: UserDetailComponent },
   { path: 'profile/user/:id', component: UserDetailComponent },
   { path: 'visitors', component: VisitorLogsComponent },
   { path: 'profile/visitors', component: ProfileVisitorsComponent },
