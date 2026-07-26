@@ -1,0 +1,54 @@
+<div class="p-6 max-w-7xl mx-auto">
+  <h1 class="text-2xl font-bold mb-6 text-start">User Management</h1>
+
+  @if (isLoading()) {
+    <div class="text-start text-gray-500">Loading users...</div>
+  } @else {
+    <div class="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-900">
+          <tr>
+            <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+            <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider">Native Lang</th>
+            <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider">Coins</th>
+            <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider">Streak</th>
+            <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider">VIP Status</th>
+            <th scope="col" class="px-6 py-3 text-end text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          @for (user of users(); track user.id) {
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap text-start">
+                <div class="flex items-center">
+                  <div class="flex-shrink-0 h-10 w-10">
+                    <img class="h-10 w-10 rounded-full object-cover" [src]="user.avatar_url || 'assets/default-avatar.png'" alt="">
+                  </div>
+                  <div class="ms-4">
+                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ user.display_name || 'Unknown' }}</div>
+                    <div class="text-sm text-gray-500">{{ user.id }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-start text-sm text-gray-500">{{ user.native_language }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-start text-sm text-gray-500">{{ user.coins_balance }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-start text-sm text-gray-500">{{ user.study_streak_days }} days</td>
+              <td class="px-6 py-4 whitespace-nowrap text-start">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
+                      [class.bg-green-100]="user.is_vip" [class.text-green-800]="user.is_vip"
+                      [class.bg-gray-100]="!user.is_vip" [class.text-gray-800]="!user.is_vip">
+                  {{ user.is_vip ? user.vip_tier : 'Free' }}
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
+                <button (click)="toggleVip(user)" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
+                  Toggle VIP
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

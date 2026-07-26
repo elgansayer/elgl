@@ -188,3 +188,36 @@ export class AdminService {
     );
   }
 }
+import { Injectable, inject } from '@angular/core';
+import { SupabaseService } from './supabase.service';
+import { from, Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AdminService {
+  private supabase = inject(SupabaseService).getClient();
+
+  getUsers(): Observable<any[]> {
+    return from(
+      this.supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false })
+    ).pipe(
+      map(response => response.data || [])
+    );
+  }
+
+  updateVipStatus(userId: string, isVip: boolean, tier: string): Observable<void> {
+    return from(
+      this.supabase
+        .from('users')
+        .update({ is_vip: isVip, vip_tier: tier })
+        .eq('id', userId)
+    ).pipe(
+      map(() => void 0)
+    );
+  }
+}
