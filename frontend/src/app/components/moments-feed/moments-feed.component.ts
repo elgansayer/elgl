@@ -14,6 +14,7 @@ import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.component';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { CorrectionModalComponent } from '../correction-modal/correction-modal.component';
+import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.component';
 
 @Component({
   selector: 'app-moments-feed',
@@ -28,6 +29,7 @@ import { CorrectionModalComponent } from '../correction-modal/correction-modal.c
     VoiceRecorderComponent,
     ScrollablePillsComponent,
     CorrectionModalComponent,
+    LikedByModalComponent,
   ],
   templateUrl: './moments-feed.component.html',
   styleUrls: ['./moments-feed.component.scss']
@@ -46,6 +48,7 @@ export class MomentsFeedComponent implements OnInit {
   readonly expandedMomentIds = signal<Set<string>>(new Set());
   readonly activeCorrectionMomentId = signal<string | null>(null);
   readonly activeCorrectionOriginalText = signal<string>('');
+  readonly activeLikedByMomentId = signal<string | null>(null);
 
   readonly filterPills = computed(() => {
     this.i18n.translations();
@@ -296,5 +299,13 @@ export class MomentsFeedComponent implements OnInit {
       console.error('Failed to copy moment text:', error);
       showToast(this.i18n.translate('moments.copyErrorAlert'));
     }
+  }
+
+  openLikedBy(moment: MomentRecord): void {
+    this.activeLikedByMomentId.set(moment.id);
+  }
+
+  closeLikedBy(): void {
+    this.activeLikedByMomentId.set(null);
   }
 }

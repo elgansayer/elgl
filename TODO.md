@@ -287,9 +287,9 @@
 - [x] Fix race condition where the `co_host_removed`/`co_host_invited` Centrifugo events published in `inviteCoHost` can arrive out of order (both are fire-and-forget, unawaited HTTP calls), and the frontend's `co_host_removed` handler unconditionally nulls `co_host_id` without checking it still matches the removed user, which can wipe out a just-assigned new co-host.
 
 ## Phase 40: Moment Interactivity
-- [ ] Build "Liked By" modal listing all users who liked a Moment.
-- [ ] Create backend endpoint to fetch users who liked a specific moment.
-- [ ] Create Angular component for the Liked By modal.
+- [x] Build "Liked By" modal listing all users who liked a Moment.
+- [x] Create backend endpoint to fetch users who liked a specific moment.
+- [x] Create Angular component for the Liked By modal.
 - [ ] Implement `@mention` notifications when tagged in a comment.
 
 ## Phase 41: Language Assessment Test
@@ -457,7 +457,7 @@
 - [ ] Implement LiveKit EgressClient to generate and save a full transcript of completed audio room sessions for participants to review.
 - [ ] Add AI-generated 'Session Summary' to the archived audio room recording, listing key topics and vocabulary discussed.
 
-## Phase 75: Advanced Voiceroom Interactivity
+## Phase 75: Advanced Voiceroom Inter interactivity
 - [ ] Implement real-time translation for the text chat overlay inside Voicerooms.
 - [ ] Build a "Quick Poll" feature for Voiceroom hosts to create multiple-choice questions for the audience.
 - [ ] Add a "Soundboard" feature for hosts to play pre-recorded audio clips (e.g., applause, jingles).
