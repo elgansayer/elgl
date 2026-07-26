@@ -519,5 +519,15 @@
   "settings.saveBtn": "Save settings",
   "hobby.add": "+ Add Hobby",
   "profile.maxLanguagesError": "Max 3 target languages allowed for VIP, 1 for free users.",
-  "profile.settingsLink": "Settings"
+  "profile.settingsLink": "Settings",
+  "group.createTitle": "Create Group Chat",
+  "group.nameLabel": "Group Name",
+  "group.namePlaceholder": "Enter group name...",
+  "group.addMembers": "Add Members",
+  "group.userIdPlaceholder": "Enter User ID...",
+  "group.addBtn": "Add",
+  "group.removeBtn": "Remove",
+  "group.creatingBtn": "Creating",
+  "group.createBtn": "Create Group",
+  "group.successMsg": "Group created successfully!"
 }

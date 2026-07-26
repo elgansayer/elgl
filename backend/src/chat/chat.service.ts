@@ -305,4 +305,48 @@ export class ChatService {
     }
     return response.data as FavouriteRecord[];
   }
+
+  async createGroup(
+    creatorId: string,
+    name: string,
+    memberIds: string[],
+  ): Promise<ChatRoomRecord> {
+    if (memberIds.length > 49) {
+      throw new Error('Group cannot exceed 50 members');
+    }
+
+    const supabase = this.supabaseService.getClient();
+
+    // Insert room
+    const { data: room, error: roomError } = await supabase
+      .from('chat_rooms')
+      .insert({
+        title: name,
+        is_online: true,
+        is_pinned: false,
+      })
+      .select()
+      .single();
+
+    if (roomError || !room) {
+      throw new Error('Failed to create group');
+    }
+
+    // Insert members
+    const allMembers = [...new Set([creatorId, ...memberIds])];
+    const membersData = allMembers.map((id) => ({
+      room_id: room.id,
+      user_id: id,
+    }));
+
+    const { error: membersError } = await supabase
+      .from('chat_room_members')
+      .insert(membersData);
+
+    if (membersError) {
+      throw new Error('Failed to add members to group');
+    }
+
+    return room as ChatRoomRecord;
+  }
 }

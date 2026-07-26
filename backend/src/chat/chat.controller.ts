@@ -76,4 +76,13 @@ export class ChatController {
     if (!user) return [];
     return await this.chatService.getFavourites(user.id);
   }
+
+  @Post('groups')
+  async createGroup(
+    @CurrentUser() user: User | null,
+    @Body() dto: { name: string; memberIds: string[] },
+  ): Promise<ChatRoomRecord | null> {
+    if (!user) return null;
+    return await this.chatService.createGroup(user.id, dto.name, dto.memberIds);
+  }
 }

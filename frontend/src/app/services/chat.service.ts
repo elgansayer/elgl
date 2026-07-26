@@ -226,4 +226,14 @@ export class ChatService {
       return false;
     }
   }
+
+  async createGroup(name: string, memberIds: string[]): Promise<ChatRoom> {
+    return firstValueFrom(
+      this.http.post<ChatRoom>(
+        `${this.baseUrl}/groups`,
+        { name, memberIds },
+        { headers: this.getHeaders() }
+      )
+    );
+  }
 }

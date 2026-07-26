@@ -200,7 +200,7 @@
 - [x] Build animated audio equalizer visualizer for active stage speakers.
 
 ## Phase 26: Group Chats
-- [ ] Build "Create Group" UI supporting up to 50 users.
+- [x] Build "Create Group" UI supporting up to 50 users.
 - [ ] Implement Group Admin privileges (Add/remove members, rename group).
 - [ ] Build group participant drawer.
 
