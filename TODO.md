@@ -350,7 +350,8 @@
 
 ## Phase 51: Admin Dashboard (Moderation)
 - [x] Build Moderation Queue UI to review flagged Moments and profiles.
-- [ ] Implement 1-click ban and warning buttons.
+- [x] Implement 1‑click ban and warning buttons.
+- [x] Restore backend `banUser` and `warnUser` endpoints (removed in the latest diff) so the admin-actions component can actually call them.
 
 ## Phase 52: Help Centre
 - [ ] Build in-app Help Centre fetching dynamic FAQ articles from backend.
