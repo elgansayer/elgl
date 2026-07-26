@@ -44,7 +44,12 @@ Thumbs.db
 
 .aider*
 claude.log
+current_claude.log
+current_aider.log
 STUCK_LOG.md
+e2e/ux-snapshots/
+e2e/test-results/
+e2e/playwright-report/
 Let's*
 I'll*
 Now*
