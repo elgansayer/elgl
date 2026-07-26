@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, TransferState, makeStateKey } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
@@ -39,6 +39,7 @@ export class VoiceroomPreviewComponent implements OnInit {
   private meta = inject(Meta);
   private title = inject(Title);
   private http = inject(HttpClient);
+  private transferState = inject(TransferState); // Inject TransferState
 
   roomId = '';
   roomName = 'Loading Room...';
@@ -48,19 +49,37 @@ export class VoiceroomPreviewComponent implements OnInit {
   ngOnInit() {
     this.roomId = this.route.snapshot.paramMap.get('id') || '';
     if (this.roomId) {
+      const ROOM_KEY = makeStateKey<RoomPreview>(`room-${this.roomId}`);
+
+      // Check if data was already fetched by the server
+      if (this.transferState.hasKey(ROOM_KEY)) {
+        const room = this.transferState.get(ROOM_KEY, null);
+        if (room) {
+          this.applyRoomData(room);
+          return;
+        }
+      }
+
+      // Otherwise, fetch it and store it in TransferState for the client
       this.http.get<RoomPreview>(`${environment.apiUrl}/audio-rooms/${this.roomId}`).subscribe({
         next: (room) => {
-          this.roomName = room.room_name;
-          this.languagePair = room.language_pair;
-          this.topicTag = room.topic_tag;
-
-          this.title.setTitle(`${this.roomName} - Live Audio Room`);
-          this.meta.updateTag({ property: 'og:title', content: `${this.roomName} - Live Audio Room` });
-          this.meta.updateTag({ property: 'og:description', content: `Practice ${this.languagePair} in this live audio room about ${this.topicTag}.` });
-          this.meta.updateTag({ property: 'og:type', content: 'website' });
+          this.transferState.set(ROOM_KEY, room);
+          this.applyRoomData(room);
         },
         error: (err) => console.error('Failed to load room preview', err)
       });
     }
+  }
+
+  // Extract the data application and meta tag logic into a helper method
+  private applyRoomData(room: RoomPreview) {
+    this.roomName = room.room_name;
+    this.languagePair = room.language_pair;
+    this.topicTag = room.topic_tag;
+
+    this.title.setTitle(`${this.roomName} - Live Audio Room`);
+    this.meta.updateTag({ property: 'og:title', content: `${this.roomName} - Live Audio Room` });
+    this.meta.updateTag({ property: 'og:description', content: `Practice ${this.languagePair} in this live audio room about ${this.topicTag}.` });
+    this.meta.updateTag({ property: 'og:type', content: 'website' });
   }
 }
