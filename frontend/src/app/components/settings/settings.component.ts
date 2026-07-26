@@ -35,6 +35,7 @@ export class SettingsComponent implements OnInit {
   privacyHideSearch = false;
   privacyHideAge = false;
   privacyHideGender = false;
+  autoPlayVoiceNotes = false;
 
   async ngOnInit(): Promise<void> {
     try {
@@ -46,6 +47,7 @@ export class SettingsComponent implements OnInit {
         this.privacyHideSearch = Boolean(profile.privacy_hide_from_search);
         this.privacyHideAge = Boolean(profile.privacy_hide_age);
         this.privacyHideGender = Boolean((profile as unknown as Record<string, unknown>)['privacy_hide_gender']);
+        this.autoPlayVoiceNotes = Boolean((profile as unknown as Record<string, unknown>)['auto_play_voice_notes']);
       }
     } catch {
       this.errorMessage.set('Failed to load settings');
@@ -75,6 +77,7 @@ export class SettingsComponent implements OnInit {
         privacy_hide_from_search: this.privacyHideSearch,
         privacy_hide_age: this.privacyHideAge,
         privacy_hide_gender: this.privacyHideGender,
+        auto_play_voice_notes: this.autoPlayVoiceNotes,
         primary_accent_color: this.primaryAccentColor(),
       } as unknown as Record<string, unknown>);
       this.successMessage.set('Settings saved successfully');
