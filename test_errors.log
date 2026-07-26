@@ -25,49 +25,49 @@ RTL logical class check passed.
 > backend@0.0.1 test
 > NODE_OPTIONS='--experimental-vm-modules' jest
 
-(node:587844) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(node:594190) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
 PASS src/nlp/nlp.controller.spec.ts
 PASS src/audio-rooms/audio-rooms.controller.spec.ts
+PASS src/economy/economy.controller.spec.ts
 PASS src/media/media.controller.spec.ts
 PASS src/monetisation/monetisation.controller.spec.ts
-PASS src/profile-visits/profile-visits.controller.spec.ts
-PASS src/admin/admin.controller.spec.ts
-PASS src/chat/chat.controller.spec.ts
+PASS src/safety/safety.service.spec.ts
 PASS src/moments/moments.service.spec.ts
+PASS src/economy/economy.service.spec.ts
+PASS src/flashcards/flashcards.controller.spec.ts
+PASS src/chat/chat.controller.spec.ts
+PASS src/supabase/supabase.service.spec.ts
+PASS src/safety/safety.controller.spec.ts
 PASS src/audio-rooms/audio-rooms.service.spec.ts
-PASS src/users/users.controller.spec.ts
+PASS src/admin/admin.controller.spec.ts
+PASS src/users/users.service.spec.ts
+PASS src/nlp/nlp.service.spec.ts
 PASS src/moments/moments.controller.spec.ts
+PASS src/users/users.controller.spec.ts
+PASS src/profile-visits/profile-visits.service.spec.ts
+PASS src/notifications/notifications.controller.spec.ts
 PASS src/discovery/discovery.controller.spec.ts
 PASS src/monetisation/monetisation.service.spec.ts
-PASS src/economy/economy.controller.spec.ts
-PASS src/supabase/supabase.service.spec.ts
-PASS src/flashcards/flashcards.controller.spec.ts
-PASS src/auth/supabase-auth.guard.spec.ts
 PASS src/chat/chat.service.spec.ts
-PASS src/users/users.service.spec.ts
-PASS src/profile-visits/profile-visits.service.spec.ts
-PASS src/economy/economy.service.spec.ts
-PASS src/flashcards/flashcards.service.spec.ts
-PASS src/discovery/discovery.service.spec.ts
-PASS src/safety/safety.service.spec.ts
-PASS src/admin/admin.service.spec.ts
-PASS src/nlp/nlp.service.spec.ts
 PASS src/streak/streak.service.spec.ts
-PASS src/safety/safety.controller.spec.ts
 PASS src/notifications/notifications.service.spec.ts
-PASS src/notifications/notifications.controller.spec.ts
-PASS src/moments/timeline.worker.spec.ts
+PASS src/flashcards/flashcards.service.spec.ts
 PASS src/media/media.service.spec.ts
-PASS src/admin/guards/admin.guard.spec.ts
+PASS src/profile-visits/profile-visits.controller.spec.ts
+PASS src/discovery/discovery.service.spec.ts
+PASS src/moments/timeline.worker.spec.ts
+PASS src/admin/admin.service.spec.ts
+PASS src/auth/supabase-auth.guard.spec.ts
 PASS src/chat/centrifugo.service.spec.ts
-PASS src/app.controller.spec.ts
+PASS src/admin/guards/admin.guard.spec.ts
 PASS src/app.service.spec.ts
+PASS src/app.controller.spec.ts
 
 Test Suites: 36 passed, 36 total
 Tests:       347 passed, 347 total
 Snapshots:   0 total
-Time:        30.059 s
+Time:        28.144 s, estimated 29 s
 Ran all test suites.
 
 > frontend@0.0.0 test
@@ -75,47 +75,45 @@ Ran all test suites.
 
 ❯ Building...
 ✔ Building...
-Application bundle generation complete. [16.610 seconds] - 2026-07-26T22:20:22.381Z
+Application bundle generation complete. [16.265 seconds] - 2026-07-26T22:41:00.270Z
 
 
 [1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90m/root/hellotalk/frontend[39m
 
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts [2m([22m[2m16 tests[22m[2m | [22m[33m1 skipped[39m[2m)[22m[33m 428[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/voip-call/voip-call.component.spec.ts [2m([22m[2m15 tests[22m[2m | [22m[33m3 skipped[39m[2m)[22m[32m 178[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/video-room/video-room.component.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 92[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/settings/settings.component.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 114[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/textarea/textarea.component.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 56[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 107[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/language-picker/language-picker.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 95[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/correction-modal/correction-modal.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 84[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts [2m([22m[2m16 tests[22m[2m | [22m[33m1 skipped[39m[2m)[22m[33m 406[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/voip-call/voip-call.component.spec.ts [2m([22m[2m15 tests[22m[2m | [22m[33m3 skipped[39m[2m)[22m[32m 221[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/settings/settings.component.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 112[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 88[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/services/admin.service.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/language-picker/language-picker.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 98[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/video-room/video-room.component.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 98[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/correction-modal/correction-modal.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 94[2mms[22m[39m
 [90mstderr[2m | src/app/components/chat-list/chat-list.component.spec.ts[2m > [22m[2mChatListComponent[2m > [22m[2mshould create
-[22m[39mGoTrueClient@sb-mock-auth-token:1 (2.110.8) 2026-07-26T22:20:28.571Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
+[22m[39mGoTrueClient@sb-mock-auth-token:1 (2.110.8) 2026-07-26T22:41:06.410Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
 
 [90mstderr[2m | src/app/components/chat-list/chat-list.component.spec.ts[2m > [22m[2mChatListComponent[2m > [22m[2mnotImplemented should show toast
-[22m[39mGoTrueClient@sb-mock-auth-token:2 (2.110.8) 2026-07-26T22:20:28.614Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
+[22m[39mGoTrueClient@sb-mock-auth-token:2 (2.110.8) 2026-07-26T22:41:06.453Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
 
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/chat-list/chat-list.component.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 69[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/services/admin.service.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 29[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/input/input.component.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 40[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/notifications-inbox/notifications-inbox.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 47[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/chip/chip.component.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 58[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/app.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 45[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/chat-list/chat-list.component.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 72[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/empty-state/empty-state.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 46[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/chip/chip.component.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/textarea/textarea.component.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/button-primary/button-primary.component.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/notifications-inbox/notifications-inbox.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 49[2mms[22m[39m
 Not implemented: HTMLMediaElement's play() method
 Not implemented: HTMLMediaElement's pause() method
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/incoming-call/incoming-call.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 46[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/empty-state/empty-state.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 61[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/button-primary/button-primary.component.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 48[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/button-secondary/button-secondary.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 30[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/services/vocabulary.store.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 38[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/language-selector/language-selector.component.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 36[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/pill/pill.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 30[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/card/card.component.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 19[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/services/i18n.service.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/incoming-call/incoming-call.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 78[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/app.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/input/input.component.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/services/vocabulary.store.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/language-selector/language-selector.component.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/pill/pill.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/button-secondary/button-secondary.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 33[2mms[22m[39m
 [90mstderr[2m | src/app/components/discovery/discovery.component.spec.ts[2m > [22m[2mDiscoveryComponent[2m > [22m[2mshould create
-[22m[39mGoTrueClient@sb-mock-auth-token:3 (2.110.8) 2026-07-26T22:20:29.779Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
+[22m[39mGoTrueClient@sb-mock-auth-token:3 (2.110.8) 2026-07-26T22:41:07.567Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
 
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/discovery/discovery.component.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 27[2mms[22m[39m
-[90mstderr[2m | src/app/components/user-detail/user-detail.component.spec.ts
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/discovery/discovery.component.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 24[2mms[22m[39m
+[90mstderr[2m | src/app/services/i18n.service.spec.ts
 [22m[39mCould not load blocked user IDs HttpErrorResponse {
   headers: HttpHeaders {
     headers: Map(0) {},
@@ -144,17 +142,19 @@ Not implemented: HTMLMediaElement's pause() method
   }
 }
 
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/services/i18n.service.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/card/card.component.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 42[2mms[22m[39m
 [90mstderr[2m | src/app/components/user-detail/user-detail.component.spec.ts[2m > [22m[2mUserDetailComponent[2m > [22m[2mshould create
-[22m[39mGoTrueClient@sb-mock-auth-token:4 (2.110.8) 2026-07-26T22:20:29.862Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
+[22m[39mGoTrueClient@sb-mock-auth-token:4 (2.110.8) 2026-07-26T22:41:07.825Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
 
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/user-detail/user-detail.component.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 18[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/services/translate.pipe.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/message-reaction-bar/message-reaction-bar.component.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 8[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/toast/toast.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/user-detail/user-detail.component.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/services/translate.pipe.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/message-reaction-bar/message-reaction-bar.component.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/toast/toast.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 7[2mms[22m[39m
  [32m✓[39m [30m[43m frontend [49m[39m src/app/services/media-upload.service.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 1[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m29 passed[39m[22m[90m (29)[39m
 [2m      Tests [22m [1m[32m124 passed[39m[22m[2m | [22m[33m4 skipped[39m[90m (128)[39m
-[2m   Start at [22m 22:20:23
-[2m   Duration [22m 6.94s[2m (transform 1.45s, setup 712ms, import 2.00s, tests 1.84s, environment 1.84s)[22m
+[2m   Start at [22m 22:41:00
+[2m   Duration [22m 7.06s[2m (transform 1.40s, setup 708ms, import 2.01s, tests 1.91s, environment 1.76s)[22m
 
