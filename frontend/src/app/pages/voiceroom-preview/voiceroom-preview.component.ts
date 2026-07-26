@@ -5,6 +5,12 @@ import { Meta, Title } from '@angular/platform-browser';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
+interface RoomPreview {
+  room_name: string;
+  language_pair: string;
+  topic_tag: string;
+}
+
 @Component({
   selector: 'app-voiceroom-preview',
   standalone: true,
@@ -42,7 +48,7 @@ export class VoiceroomPreviewComponent implements OnInit {
   ngOnInit() {
     this.roomId = this.route.snapshot.paramMap.get('id') || '';
     if (this.roomId) {
-      this.http.get<any>(`${environment.apiUrl}/audio-rooms/${this.roomId}`).subscribe({
+      this.http.get<RoomPreview>(`${environment.apiUrl}/audio-rooms/${this.roomId}`).subscribe({
         next: (room) => {
           this.roomName = room.room_name;
           this.languagePair = room.language_pair;
