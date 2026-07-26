@@ -85,8 +85,14 @@ export class DiscoveryService {
     const blockedIds =
       await this.safetyService.getBlockedAndBlockerIds(currentUserId);
 
-    const searchLat = query.latitude;
-    const searchLon = query.longitude;
+    let searchLat = query.latitude;
+    let searchLon = query.longitude;
+
+    // Use mock location if user is VIP and has it set
+    if (_currentUserProfile?.is_vip && _currentUserProfile.mock_location?.coordinates) {
+      searchLon = _currentUserProfile.mock_location.coordinates[0];
+      searchLat = _currentUserProfile.mock_location.coordinates[1];
+    }
 
     let queryBuilder = supabase
       .from('users')
