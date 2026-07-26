@@ -76,7 +76,7 @@ run_aider_with_fallback() {
     # It is the most reliable and cost-effective option for this project.
     # Claude Opus and Gemini are kept as fallbacks in case DeepSeek is unavailable.
     local MODELS=(
-        "deepseek/deepseek-chat deepseek/deepseek-chat DeepSeek-Chat"
+        "deepseek/deepseek-v4-pro deepseek/deepseek-v4-pro DeepSeek-V4-Pro"
         "openai/claude-opus-4.7 openai/claude-sonnet-4.5 Claude-Opus-4.7"
         "openai/claude-opus-5 openai/claude-sonnet-4.5 Claude-Opus-5"
         "gemini/gemini-3.1-pro-preview gemini/gemini-3.1-pro-preview Gemini-3-Pro"
