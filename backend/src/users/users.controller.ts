@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Delete,
   UseGuards,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -26,6 +27,22 @@ export class UsersController {
     private readonly usersService: UsersService,
     private readonly mediaService: MediaService,
   ) {}
+
+  @Delete('me')
+  async deleteMyAccount(
+    @CurrentUser() user: User | null,
+  ): Promise<{ message: string; scheduled_for_deletion_at: string }> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.scheduleDeletion(user.id);
+  }
+
+  @Post('me/restore')
+  async restoreMyAccount(
+    @CurrentUser() user: User | null,
+  ): Promise<{ message: string }> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.cancelDeletion(user.id);
+  }
 
   @Get('me/export')
   async exportMyData(
