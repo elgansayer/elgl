@@ -53,6 +53,11 @@ export class MomentsController {
     return await this.momentsService.likeMoment(user.id, id);
   }
 
+  @Get(':id/likes')
+  async getMomentLikes(@Param('id') id: string): Promise<any[]> {
+    return await this.momentsService.getMomentLikes(id);
+  }
+
   @Post(':id/comments')
   async addComment(
     @CurrentUser() user: User | null,

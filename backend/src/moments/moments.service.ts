@@ -308,6 +308,32 @@ export class MomentsService {
     }
   }
 
+  async getMomentLikes(momentId: string): Promise<any[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('moment_likes')
+      .select(`
+        user_id,
+        created_at,
+        users (
+          id,
+          display_name,
+          avatar_url,
+          native_language,
+          target_languages
+        )
+      `)
+      .eq('moment_id', momentId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch likes: ${error.message}`);
+    }
+
+    // Extract the joined user profiles
+    return data.map((row: any) => row.users).filter(Boolean);
+  }
+
   async addComment(
     userId: string,
     momentId: string,
