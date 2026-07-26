@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
@@ -31,7 +28,11 @@ export class GroupsService {
       .single();
 
     const groupError = response.error;
-    const group = response.data as { id: string; name: string; created_at: string };
+    const group = response.data as {
+      id: string;
+      name: string;
+      created_at: string;
+    };
 
     if (groupError) throw groupError;
 
@@ -54,7 +55,11 @@ export class GroupsService {
       .single();
 
     const error = response.error;
-    const data = response.data as { id: string; name: string; created_at: string };
+    const data = response.data as {
+      id: string;
+      name: string;
+      created_at: string;
+    };
 
     if (error) throw error;
     return data;
