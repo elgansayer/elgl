@@ -1,0 +1,13 @@
+<main class="help-centre p-4 max-w-3xl mx-auto">
+  <h1 class="text-2xl font-bold mb-4">Help Centre</h1>
+  <div *ngIf="loading()" class="text-slate-400">Loading FAQs…</div>
+  <div *ngIf="error()" class="text-red-400">{{ error() }}</div>
+  <div *ngIf="faqs().length > 0 && !loading()">
+    <div *ngFor="let faq of faqs(); trackBy: trackById" class="border-b border-slate-800 py-4">
+      <h2 class="text-lg font-semibold">{{ faq.question }}</h2>
+      <p class="mt-2 text-slate-300">{{ faq.answer }}</p>
+      <span class="inline-block mt-2 text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded-full" *ngIf="faq.category">{{ faq.category }}</span>
+    </div>
+  </div>
+  <div *ngIf="faqs().length === 0 && !loading()" class="text-slate-500">No articles found.</div>
+</main>

@@ -32,6 +32,7 @@ import { QuizModule } from './quiz/quiz.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { RecommendationsModule } from './recommendations/recommendations.module';
 import { AdminModule } from './admin/admin.module';
+import { HelpModule } from './help/help.module';
 import { validationSchema } from './config/validation.schema';
 
 @Module({
@@ -82,6 +83,7 @@ import { validationSchema } from './config/validation.schema';
     QuizModule,
     RecommendationsModule,
     AdminModule,
+    HelpModule,
   ],
   controllers: [AppController],
   providers: [

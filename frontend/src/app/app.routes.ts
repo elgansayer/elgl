@@ -76,7 +76,7 @@ export const routes: Routes = [
   },
   {
     path: 'help',
-    loadChildren: () => import('./help/help.module').then(m => m.HelpModule),
+    loadComponent: () => import('./pages/help-centre/help-centre.component').then(m => m.HelpCentreComponent),
     title: 'Help Centre - HelloTalk',
   }
 ];
