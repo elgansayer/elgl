@@ -276,7 +276,8 @@
 
 ## Phase 38: Live Stream Viewer Mechanics
 - [x] Build scrolling live chat comment overlay over host video stream.
-- [ ] Implement full-screen SVG gift animations when viewers tip the host.
+- [x] Implement full-screen SVG gift animations when viewers tip the host.
+- [ ] Integrate ngx-lottie or similar to render actual SVG animations for gifts.
 
 ## Phase 39: Live Stream Host Mechanics
 - [ ] Build Host Dashboard showing live viewer count, earned coins, and stream uptime.
