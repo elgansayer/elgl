@@ -30,7 +30,6 @@ export const routes: Routes = [
   { path: 'vocabulary', component: VocabularyDashboardComponent },
   { path: 'profile', component: ProfileComponent },
   { path: 'profile/:id', component: UserDetailComponent },
-  { path: 'profile/user/:id', component: UserDetailComponent },
   { path: 'visitors', component: VisitorLogsComponent },
   { path: 'profile/visitors', component: ProfileVisitorsComponent },
   { path: 'settings', loadComponent: () => import('./components/settings/settings.component').then(m => m.SettingsComponent) },
