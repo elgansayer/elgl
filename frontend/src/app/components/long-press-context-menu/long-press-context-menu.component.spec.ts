@@ -6,9 +6,9 @@ import { LongPressContextMenuComponent } from './long-press-context-menu.compone
 import { of } from 'rxjs';
 import { SafetyService } from '../../services/safety.service';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 (globalThis as any).Touch = class Touch {} as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 (globalThis as any).TouchEvent = class TouchEvent extends Event {} as any;
 
 describe('LongPressContextMenuComponent', () => {
@@ -44,7 +44,7 @@ describe('LongPressContextMenuComponent', () => {
 
   it('should emit copy event when copy option is clicked', () => {
     vi.spyOn(component.copyMessage, 'emit');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (component as any).onOptionClick('copy');
     expect(component.copyMessage.emit).toHaveBeenCalledWith({
       messageId: 'test-message-id',
@@ -54,7 +54,7 @@ describe('LongPressContextMenuComponent', () => {
 
   it('should emit favourite event when favourite option is clicked', () => {
     vi.spyOn(component.favourite, 'emit');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (component as any).onOptionClick('favourite');
     expect(component.favourite.emit).toHaveBeenCalledWith({
       messageId: 'test-message-id',
@@ -66,7 +66,7 @@ describe('LongPressContextMenuComponent', () => {
   it('should emit report event when report option is clicked', () => {
     vi.spyOn(component.report, 'emit');
     // Clicking report opens the modal but does not emit directly
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (component as any).onOptionClick('report');
     // After the modal submits, the event is emitted
     component.onReportSubmitted();
@@ -79,11 +79,11 @@ describe('LongPressContextMenuComponent', () => {
   });
 
   it('should close menu after option click', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     vi.spyOn(component as any, 'close');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (component as any).onOptionClick('copy');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     expect((component as any).close).toHaveBeenCalled();
   });
 
@@ -144,7 +144,7 @@ describe('LongPressContextMenuComponent', () => {
       preventDefault: vi.fn()
     } as unknown as TouchEvent;
     component.onTouchStart(touchEvent);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     expect((component as any).longPressTimer).not.toBeNull();
     vi.advanceTimersByTime(component.longPressDuration());
     expect(component.showMenu()).toBe(true);
@@ -159,7 +159,7 @@ describe('LongPressContextMenuComponent', () => {
     } as unknown as TouchEvent;
     component.onTouchStart(touchEvent);
     component.onTouchMove();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     expect((component as any).longPressTimer).toBeNull();
   });
 
@@ -171,7 +171,7 @@ describe('LongPressContextMenuComponent', () => {
     } as unknown as TouchEvent;
     component.onTouchStart(touchEvent);
     component.onTouchEnd();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     expect((component as any).longPressTimer).toBeNull();
   });
 
