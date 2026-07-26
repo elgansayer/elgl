@@ -87,13 +87,16 @@ export class MediaService implements OnModuleInit {
     file: Express.Multer.File,
   ): Promise<{ url: string }> {
     const tempDir = os.tmpdir();
-    const inputPath = path.join(tempDir, `${Date.now()}-input-${file.originalname}`);
+    const inputPath = path.join(
+      tempDir,
+      `${Date.now()}-input-${file.originalname}`,
+    );
     const outputPath = path.join(tempDir, `${Date.now()}-output.ogg`);
 
     try {
       // 1. Save uploaded buffer to temp file
       await fs.writeFile(inputPath, file.buffer);
-      
+
       // 2. Compress to OGG
       await this.audioCompressionService.compressToOgg(inputPath, outputPath);
 
