@@ -1,16 +1,16 @@
 import { Component, input, computed } from '@angular/core';
-import { NgClass } from '@angular/common';
 
 @Component({
   selector: 'app-audio-equalizer',
   standalone: true,
-  imports: [NgClass],
+  imports: [],
   template: `
     <div class="flex items-end justify-center gap-0.5 h-4" [class.opacity-30]="!isActive()">
       @for (bar of bars(); track $index) {
         <div
           class="w-1 bg-current rounded-t-sm transition-all duration-200"
-          [ngClass]="isActive() ? 'animate-eq' : 'h-1'"
+          [class.animate-eq]="isActive()"
+          [class.h-1]="!isActive()"
           [style.animation-delay]="bar.delay"
           [style.height]="isActive() ? '100%' : '4px'"
         ></div>
