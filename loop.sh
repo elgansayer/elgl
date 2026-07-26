@@ -215,7 +215,7 @@ while true; do
     echo "STAGE 2: EXECUTOR (The Waterfall)"
     echo "========================================"
     echo "Executing: $CURRENT_TASK"
-    run_task_with_fallback "Execute task: '$CURRENT_TASK'. Write the code. Read SPEC.md for context." "--architect --read SPEC.md"
+    run_task_with_fallback "Execute task: '$CURRENT_TASK'. Write the code. Read SPEC.md for context." "--read SPEC.md"
     EXECUTOR_EXIT=$?
 
     # Exit 2 means no model was callable at all. That is an infrastructure fault, and
