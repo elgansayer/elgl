@@ -11,6 +11,7 @@ import { ToastComponent } from './components/primitives/toast/toast.component';
 import { ReportUserModalComponent } from './components/report-user-modal/report-user-modal.component';
 import { ReportUserModalService } from './components/report-user-modal/report-user-modal.service';
 import { DailyLoginModalComponent } from './components/daily-login-modal/daily-login-modal.component';
+import { UnreadCounterService } from './services/unread-counter.service';
 
 @Component({
   selector: 'app-root',
@@ -35,6 +36,7 @@ export class AppComponent implements OnInit {
   fcmService = inject(FcmService);
   private safetyService = inject(SafetyService);
   reportModalService = inject(ReportUserModalService);
+  unreadCounter = inject(UnreadCounterService);
 
   // Incoming call state
   readonly incomingCallData = signal<IncomingCallData | null>(null);

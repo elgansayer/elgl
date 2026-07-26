@@ -69,5 +69,7 @@
   <app-report-user-modal #reportModal />
 
   <!-- Daily Login Reward Modal -->
-  <app-daily-login-modal />
+  @if (showDailyRewardModal()) {
+    <app-daily-login-modal [coins]="dailyRewardCoins()" (closed)="showDailyRewardModal.set(false)" />
+  }
 </div>

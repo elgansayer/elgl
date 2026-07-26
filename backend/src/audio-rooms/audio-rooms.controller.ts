@@ -8,8 +8,10 @@ import {
   ArchiveRoomDto,
   CreateAudioRoomDto,
   DemoteSpeakerDto,
+  InviteCoHostDto,
   JoinRoomDto,
   RaiseHandDto,
+  RemoveCoHostDto,
   SendCaptionDto,
 } from './dto/audio-room.dto';
 import {
@@ -85,6 +87,24 @@ export class AudioRoomsController {
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
     return await this.audioRoomsService.demoteSpeaker(user.id, dto);
+  }
+
+  @Post('invite-co-host')
+  async inviteCoHost(
+    @CurrentUser() user: User | null,
+    @Body() dto: InviteCoHostDto,
+  ): Promise<AudioRoomRecord | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.inviteCoHost(user.id, dto);
+  }
+
+  @Post('remove-co-host')
+  async removeCoHost(
+    @CurrentUser() user: User | null,
+    @Body() dto: RemoveCoHostDto,
+  ): Promise<AudioRoomRecord | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.removeCoHost(user.id, dto);
   }
 
   @Post('captions')

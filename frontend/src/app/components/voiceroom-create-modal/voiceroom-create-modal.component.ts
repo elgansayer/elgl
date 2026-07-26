@@ -6,6 +6,7 @@ export interface VoiceroomCreatePayload {
   title: string;
   languagePair: string;
   topicTag: string;
+  isVideoStream: boolean;
 }
 
 @Component({
@@ -78,6 +79,17 @@ export interface VoiceroomCreatePayload {
                 <option value="Business English">{{ 'audioRoom.topic.BusinessEnglish' | t }}</option>
               </select>
             </div>
+
+            <!-- Video Stream Toggle -->
+            <label for="isVideoStream" class="flex items-center gap-3 text-sm font-medium text-slate-300">
+              <input
+                id="isVideoStream"
+                type="checkbox"
+                [(ngModel)]="isVideoStream"
+                class="h-4 w-4 rounded border-slate-700 bg-slate-900 text-purple-600 focus:ring-purple-500"
+              />
+              {{ 'audioRoom.videoStreamLabel' | t }}
+            </label>
           </div>
 
           <!-- Footer -->
@@ -106,6 +118,7 @@ export class VoiceroomCreateModalComponent {
   title = signal<string>('');
   languagePair = signal<string>('en-es');
   topicTag = signal<string>('Free Talk');
+  isVideoStream = signal<boolean>(false);
 
   isValid(): boolean {
     return this.title().trim().length > 0 && this.languagePair().length > 0 && this.topicTag().length > 0;
@@ -122,9 +135,10 @@ export class VoiceroomCreateModalComponent {
     this.created.emit({
       title: this.title().trim(),
       languagePair: this.languagePair(),
-      topicTag: this.topicTag()
+      topicTag: this.topicTag(),
+      isVideoStream: this.isVideoStream()
     });
-    
+
     this.closeModal();
   }
 
@@ -132,5 +146,6 @@ export class VoiceroomCreateModalComponent {
     this.title.set('');
     this.languagePair.set('en-es');
     this.topicTag.set('Free Talk');
+    this.isVideoStream.set(false);
   }
 }

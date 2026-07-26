@@ -30,7 +30,7 @@
                   </div>
                 </div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-start text-sm text-gray-500">{{ user.native_language }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-start text-sm text-gray-500">{{ user.native_languages.join(', ') }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-start text-sm text-gray-500">{{ user.coins_balance }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-start text-sm text-gray-500">{{ user.study_streak_days }} days</td>
               <td class="px-6 py-4 whitespace-nowrap text-start">

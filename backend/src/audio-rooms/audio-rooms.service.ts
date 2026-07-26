@@ -15,8 +15,10 @@ import {
   ArchiveRoomDto,
   CreateAudioRoomDto,
   DemoteSpeakerDto,
+  InviteCoHostDto,
   JoinRoomDto,
   RaiseHandDto,
+  RemoveCoHostDto,
   SendCaptionDto,
 } from './dto/audio-room.dto';
 import {
@@ -33,6 +35,8 @@ interface AudioRoomRow {
   language_pair: string;
   topic_tag: string;
   host_id: string;
+  co_host_id?: string | null;
+  is_video_stream: boolean;
   is_active: boolean;
   speakers: string[];
   raised_hands: string[];
@@ -124,6 +128,8 @@ export class AudioRoomsService implements OnModuleInit {
         language_pair: dto.language_pair,
         topic_tag: dto.topic_tag,
         host_id: hostId,
+        is_video_stream: dto.is_video_stream ?? false,
+        co_host_id: null,
         is_active: true,
         speakers: [hostId],
         raised_hands: [],
@@ -396,6 +402,111 @@ export class AudioRoomsService implements OnModuleInit {
       target_user_id: dto.target_user_id,
       room_id: room.id,
     });
+
+    return this.getRoom(room.id);
+  }
+
+  async inviteCoHost(
+    hostId: string,
+    dto: InviteCoHostDto,
+  ): Promise<AudioRoomRecord> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', dto.room_id)
+      .single();
+    if (!response.data) throw new NotFoundException('Room not found');
+    const room = response.data as AudioRoomRow;
+
+    if (room.host_id !== hostId) {
+      throw new ForbiddenException('Only the host can invite a co-host.');
+    }
+
+    if (room.host_id === dto.target_user_id) {
+      throw new ForbiddenException('The host cannot co-host their own room.');
+    }
+
+    const previousCoHostId =
+      room.co_host_id && room.co_host_id !== dto.target_user_id
+        ? room.co_host_id
+        : null;
+
+    const speakersWithoutPreviousCoHost = previousCoHostId
+      ? room.speakers.filter((id) => id !== previousCoHostId)
+      : room.speakers;
+    const updatedSpeakers = speakersWithoutPreviousCoHost.includes(
+      dto.target_user_id,
+    )
+      ? speakersWithoutPreviousCoHost
+      : [...speakersWithoutPreviousCoHost, dto.target_user_id];
+    const updatedHands = room.raised_hands.filter(
+      (id) => id !== dto.target_user_id,
+    );
+
+    await supabase
+      .from('audio_rooms')
+      .update({
+        co_host_id: dto.target_user_id,
+        speakers: updatedSpeakers,
+        raised_hands: updatedHands,
+      })
+      .eq('id', room.id);
+
+    if (previousCoHostId) {
+      // Awaited so the outgoing co-host's removal is guaranteed to arrive before the
+      // incoming co-host's invite, preventing the invite from being clobbered by a
+      // late-arriving removal for a different user.
+      await this.centrifugoService.publish(`room_${room.id}`, {
+        type: 'co_host_removed',
+        target_user_id: previousCoHostId,
+        room_id: room.id,
+      });
+    }
+
+    // Notify the invited user via Centrifugo to publish camera/mic and join the split-screen layout
+    await this.centrifugoService.publish(`room_${room.id}`, {
+      type: 'co_host_invited',
+      target_user_id: dto.target_user_id,
+      room_id: room.id,
+    });
+
+    return this.getRoom(room.id);
+  }
+
+  async removeCoHost(
+    hostId: string,
+    dto: RemoveCoHostDto,
+  ): Promise<AudioRoomRecord> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', dto.room_id)
+      .single();
+    if (!response.data) throw new NotFoundException('Room not found');
+    const room = response.data as AudioRoomRow;
+
+    if (room.host_id !== hostId) {
+      throw new ForbiddenException('Only the host can remove the co-host.');
+    }
+
+    const removedUserId = room.co_host_id;
+    const updatedSpeakers = room.speakers.filter((id) => id !== removedUserId);
+
+    await supabase
+      .from('audio_rooms')
+      .update({ co_host_id: null, speakers: updatedSpeakers })
+      .eq('id', room.id);
+
+    if (removedUserId) {
+      // Notify the removed co-host via Centrifugo to unpublish camera and leave the split-screen layout
+      void this.centrifugoService.publish(`room_${room.id}`, {
+        type: 'co_host_removed',
+        target_user_id: removedUserId,
+        room_id: room.id,
+      });
+    }
 
     return this.getRoom(room.id);
   }

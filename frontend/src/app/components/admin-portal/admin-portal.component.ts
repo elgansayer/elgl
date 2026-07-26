@@ -1,0 +1,116 @@
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
+import {
+  AdminService,
+  AdminUserSummary,
+  LoginHistoryEntry,
+} from '../../services/admin.service';
+import { AppCardComponent } from '../primitives/card/card.component';
+import { AppPillComponent } from '../primitives/pill/pill.component';
+
+@Component({
+  selector: 'app-admin-portal',
+  imports: [CommonModule, TranslatePipe, AppCardComponent, AppPillComponent],
+  templateUrl: './admin-portal.component.html',
+  styleUrls: ['./admin-portal.component.scss'],
+})
+export class AdminPortalComponent implements OnInit {
+  private readonly adminService = inject(AdminService);
+  private readonly i18n = inject(I18nService);
+
+  readonly searchTerm = signal<string>('');
+  readonly page = signal<number>(1);
+  readonly pageSize = 20;
+  readonly users = signal<AdminUserSummary[]>([]);
+  readonly total = signal<number>(0);
+  readonly isLoading = signal<boolean>(true);
+  readonly errorMessage = signal<string>('');
+  readonly vipUpdatingId = signal<string | null>(null);
+  readonly loginHistoryByUser = signal<Record<string, LoginHistoryEntry[]>>(
+    {},
+  );
+  readonly loginHistoryLoadingId = signal<string | null>(null);
+
+  readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.total() / this.pageSize)),
+  );
+
+  async ngOnInit(): Promise<void> {
+    await this.loadUsers();
+  }
+
+  async loadUsers(): Promise<void> {
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+    try {
+      const result = await this.adminService.listUsers(
+        this.searchTerm().trim(),
+        this.page(),
+        this.pageSize,
+      );
+      this.users.set(result.users);
+      this.total.set(result.total);
+    } catch {
+      this.errorMessage.set(this.i18n.translate('admin.loadError'));
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  onSearchInput(value: string): void {
+    this.searchTerm.set(value);
+  }
+
+  async runSearch(): Promise<void> {
+    this.page.set(1);
+    await this.loadUsers();
+  }
+
+  async goToPage(delta: number): Promise<void> {
+    const nextPage = this.page() + delta;
+    if (nextPage < 1 || nextPage > this.totalPages()) return;
+    this.page.set(nextPage);
+    await this.loadUsers();
+  }
+
+  async toggleVip(user: AdminUserSummary): Promise<void> {
+    this.vipUpdatingId.set(user.id);
+    try {
+      const updated = await this.adminService.setVipStatus(
+        user.id,
+        !user.is_vip,
+      );
+      this.users.update((list) =>
+        list.map((u) => (u.id === user.id ? updated : u)),
+      );
+    } catch {
+      this.errorMessage.set(this.i18n.translate('admin.vipUpdateError'));
+    } finally {
+      this.vipUpdatingId.set(null);
+    }
+  }
+
+  async onLoginHistoryToggle(user: AdminUserSummary, isOpen: boolean): Promise<void> {
+    if (!isOpen || this.loginHistoryByUser()[user.id]) return;
+    this.loginHistoryLoadingId.set(user.id);
+    try {
+      const history = await this.adminService.getLoginHistory(user.id);
+      this.loginHistoryByUser.update((map) => ({
+        ...map,
+        [user.id]: history,
+      }));
+    } finally {
+      this.loginHistoryLoadingId.set(null);
+    }
+  }
+
+  loginHistoryFor(userId: string): LoginHistoryEntry[] {
+    return this.loginHistoryByUser()[userId] ?? [];
+  }
+
+  displayNameFor(user: AdminUserSummary): string {
+    return user.display_name || this.i18n.translate('common.unknownUser');
+  }
+}

@@ -20,6 +20,7 @@ export interface UserProfile {
   privacy_hide_location: boolean;
   privacy_hide_from_search: boolean;
   privacy_hide_gender: boolean;
+  is_admin?: boolean;
   created_at: string;
 }
 

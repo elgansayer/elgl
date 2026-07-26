@@ -11,7 +11,7 @@ import { CommonModule } from '@angular/common';
   template: `
     <div class="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center touch-none animate-fadeIn">
       <!-- Header / Controls -->
-      <div class="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/60 to-transparent">
+      <div class="absolute top-0 start-0 end-0 p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/60 to-transparent">
         <span class="text-white font-medium text-sm tracking-widest">
           {{ currentIndex + 1 }} / {{ images.length }}
         </span>
@@ -30,7 +30,7 @@ import { CommonModule } from '@angular/common';
       @if (images.length > 1) {
         <button 
           (click)="prev($event)" 
-          class="absolute left-4 top-1/2 -translate-y-1/2 p-3 text-white/50 hover:text-white bg-black/20 hover:bg-black/60 rounded-full transition-all z-10 hidden md:block"
+          class="absolute start-4 top-1/2 -translate-y-1/2 p-3 text-white/50 hover:text-white bg-black/20 hover:bg-black/60 rounded-full transition-all z-10 hidden md:block"
           [class.opacity-0]="currentIndex === 0"
           [disabled]="currentIndex === 0"
           aria-label="Previous image"
@@ -58,7 +58,7 @@ import { CommonModule } from '@angular/common';
       @if (images.length > 1) {
         <button 
           (click)="next($event)" 
-          class="absolute right-4 top-1/2 -translate-y-1/2 p-3 text-white/50 hover:text-white bg-black/20 hover:bg-black/60 rounded-full transition-all z-10 hidden md:block"
+          class="absolute end-4 top-1/2 -translate-y-1/2 p-3 text-white/50 hover:text-white bg-black/20 hover:bg-black/60 rounded-full transition-all z-10 hidden md:block"
           [class.opacity-0]="currentIndex === images.length - 1"
           [disabled]="currentIndex === images.length - 1"
           aria-label="Next image"

@@ -153,23 +153,14 @@ export class AdminService {
     isVip: boolean,
     vipTier?: string,
   ): Promise<AdminUserSummary> {
+    // This is a mutation, so HTTP failures (eg. a 403 from AdminGuard) must
+    // propagate to the caller rather than being masked by a fake success.
     return firstValueFrom(
-      this.http
-        .patch<AdminUserSummary>(
-          `${this.baseUrl}/users/${userId}/vip`,
-          { is_vip: isVip, vip_tier: vipTier },
-          { headers: this.getHeaders() },
-        )
-        .pipe(
-          catchError(() => {
-            const mockUser = MOCK_ADMIN_USERS.find((u) => u.id === userId);
-            return of({
-              ...(mockUser ?? MOCK_ADMIN_USERS[0]),
-              is_vip: isVip,
-              vip_tier: vipTier ?? (isVip ? 'consumer_8_ukp_10_usd' : 'free'),
-            });
-          }),
-        ),
+      this.http.patch<AdminUserSummary>(
+        `${this.baseUrl}/users/${userId}/vip`,
+        { is_vip: isVip, vip_tier: vipTier },
+        { headers: this.getHeaders() },
+      ),
     );
   }
 

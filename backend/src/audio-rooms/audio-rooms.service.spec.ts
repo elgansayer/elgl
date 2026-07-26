@@ -551,6 +551,193 @@ describe('AudioRoomsService', () => {
     });
   });
 
+  describe('inviteCoHost', () => {
+    it('should throw ForbiddenException if user is not host', async () => {
+      const roomRow: any = { id: 'room-1', host_id: 'host-1' };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await expect(
+        service.inviteCoHost('other-user', {
+          room_id: 'room-1',
+          target_user_id: 'user-2',
+        }),
+      ).rejects.toThrow(
+        new ForbiddenException('Only the host can invite a co-host.'),
+      );
+    });
+
+    it('should throw ForbiddenException if host invites themselves', async () => {
+      const roomRow: any = { id: 'room-1', host_id: 'host-1' };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await expect(
+        service.inviteCoHost('host-1', {
+          room_id: 'room-1',
+          target_user_id: 'host-1',
+        }),
+      ).rejects.toThrow(
+        new ForbiddenException('The host cannot co-host their own room.'),
+      );
+    });
+
+    it('should set co_host_id, add to speakers, clear raised hand, and publish event', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        speakers: ['host-1'],
+        raised_hands: ['user-2'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      const result = await service.inviteCoHost('host-1', {
+        room_id: 'room-1',
+        target_user_id: 'user-2',
+      });
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        co_host_id: 'user-2',
+        speakers: ['host-1', 'user-2'],
+        raised_hands: [],
+      });
+      expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+        type: 'co_host_invited',
+        target_user_id: 'user-2',
+        room_id: 'room-1',
+      });
+      expect(result.id).toBe('room-1');
+    });
+
+    it('should demote and notify the existing co-host before assigning a new one', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        co_host_id: 'user-2',
+        speakers: ['host-1', 'user-2'],
+        raised_hands: [],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      const result = await service.inviteCoHost('host-1', {
+        room_id: 'room-1',
+        target_user_id: 'user-3',
+      });
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        co_host_id: 'user-3',
+        speakers: ['host-1', 'user-3'],
+        raised_hands: [],
+      });
+      expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+        type: 'co_host_removed',
+        target_user_id: 'user-2',
+        room_id: 'room-1',
+      });
+      expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+        type: 'co_host_invited',
+        target_user_id: 'user-3',
+        room_id: 'room-1',
+      });
+      expect(result.id).toBe('room-1');
+    });
+
+    it('should not publish a demotion event when re-inviting the same co-host', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        co_host_id: 'user-2',
+        speakers: ['host-1', 'user-2'],
+        raised_hands: [],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await service.inviteCoHost('host-1', {
+        room_id: 'room-1',
+        target_user_id: 'user-2',
+      });
+
+      expect(centrifugoService.publish).not.toHaveBeenCalledWith(
+        'room_room-1',
+        expect.objectContaining({ type: 'co_host_removed' }),
+      );
+    });
+  });
+
+  describe('removeCoHost', () => {
+    it('should throw ForbiddenException if user is not host', async () => {
+      const roomRow: any = { id: 'room-1', host_id: 'host-1' };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await expect(
+        service.removeCoHost('other-user', { room_id: 'room-1' }),
+      ).rejects.toThrow(
+        new ForbiddenException('Only the host can remove the co-host.'),
+      );
+    });
+
+    it('should clear co_host_id, remove from speakers, and publish event', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        co_host_id: 'user-2',
+        speakers: ['host-1', 'user-2'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      const result = await service.removeCoHost('host-1', {
+        room_id: 'room-1',
+      });
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        co_host_id: null,
+        speakers: ['host-1'],
+      });
+      expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+        type: 'co_host_removed',
+        target_user_id: 'user-2',
+        room_id: 'room-1',
+      });
+      expect(result.id).toBe('room-1');
+    });
+
+    it('should not publish event when there is no co-host to remove', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        co_host_id: null,
+        speakers: ['host-1'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await service.removeCoHost('host-1', { room_id: 'room-1' });
+
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
+    });
+  });
+
   describe('sendCaption', () => {
     it('should save caption and broadcast via Centrifugo', async () => {
       const dto: any = { room_id: 'room-1', text_content: 'Welcome everyone' };

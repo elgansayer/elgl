@@ -33,6 +33,10 @@
 
       <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div class="lg:col-span-2 space-y-4">
+          @if (room.is_video_stream) {
+            <app-video-room></app-video-room>
+          }
+
           <section class="app-card app-padded">
             <div class="mb-3 flex items-center justify-between">
               <h3 class="text-sm font-black text-text-primary">{{ 'audioRoom.speakerStage' | t }}</h3>

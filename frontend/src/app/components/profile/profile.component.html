@@ -71,6 +71,9 @@
         <a routerLink="/vocabulary" class="app-pill text-center">{{ 'profile.navVocab' | t }}</a>
         <a routerLink="/audio-rooms" class="app-pill text-center">{{ 'profile.navRooms' | t }}</a>
         <a routerLink="/developer" class="app-pill text-center">{{ 'profile.navDev' | t }}</a>
+        @if (profile()?.is_admin) {
+          <a routerLink="/admin" class="app-pill text-center">{{ 'admin.navLink' | t }}</a>
+        }
         <a routerLink="/settings" class="app-pill text-center col-span-2 sm:col-span-4 bg-surface-200 border-surface-300">⚙️ {{ 'profile.settingsLink' | t }}</a>
       </div>
 

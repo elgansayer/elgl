@@ -21,6 +21,8 @@ describe('AudioRoomsController', () => {
             raiseHand: jest.fn(),
             approveSpeaker: jest.fn(),
             demoteSpeaker: jest.fn(),
+            inviteCoHost: jest.fn(),
+            removeCoHost: jest.fn(),
             sendCaption: jest.fn(),
             archiveRoom: jest.fn(),
           },
@@ -168,6 +170,54 @@ describe('AudioRoomsController', () => {
         dto,
       );
       expect(audioRoomsService.demoteSpeaker).toHaveBeenCalledWith(
+        'user-1',
+        dto,
+      );
+      expect(result).toEqual(room);
+    });
+  });
+
+  describe('inviteCoHost', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.inviteCoHost(null, {} as any);
+      expect(result).toBeNull();
+      expect(audioRoomsService.inviteCoHost).not.toHaveBeenCalled();
+    });
+
+    it('should call service inviteCoHost when user is provided', async () => {
+      const dto: any = { room_id: 'room-1', target_user_id: 'user-2' };
+      const room: any = { id: 'room-1', co_host_id: 'user-2' };
+      (audioRoomsService.inviteCoHost as jest.Mock).mockResolvedValue(room);
+
+      const result = await controller.inviteCoHost(
+        { id: 'user-1' } as any,
+        dto,
+      );
+      expect(audioRoomsService.inviteCoHost).toHaveBeenCalledWith(
+        'user-1',
+        dto,
+      );
+      expect(result).toEqual(room);
+    });
+  });
+
+  describe('removeCoHost', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.removeCoHost(null, {} as any);
+      expect(result).toBeNull();
+      expect(audioRoomsService.removeCoHost).not.toHaveBeenCalled();
+    });
+
+    it('should call service removeCoHost when user is provided', async () => {
+      const dto: any = { room_id: 'room-1' };
+      const room: any = { id: 'room-1', co_host_id: null };
+      (audioRoomsService.removeCoHost as jest.Mock).mockResolvedValue(room);
+
+      const result = await controller.removeCoHost(
+        { id: 'user-1' } as any,
+        dto,
+      );
+      expect(audioRoomsService.removeCoHost).toHaveBeenCalledWith(
         'user-1',
         dto,
       );

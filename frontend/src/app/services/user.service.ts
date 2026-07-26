@@ -27,6 +27,7 @@ export interface UserProfile {
   gender?: string;
   privacy_hide_gender: boolean;
   distance_metres?: number;
+  is_admin?: boolean;
   created_at: string;
   is_followed_by_me?: boolean;
   is_liked_by_me?: boolean;

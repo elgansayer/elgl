@@ -1,0 +1,109 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
+import { vi, Mocked } from 'vitest';
+import { VideoRoomComponent } from './video-room.component';
+import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
+import { AuthService } from '../../services/auth.service';
+
+describe('VideoRoomComponent', () => {
+  let component: VideoRoomComponent;
+  let fixture: ComponentFixture<VideoRoomComponent>;
+  let mockStore: Mocked<Partial<AudioRoomsStore>>;
+  let mockAuthService: Mocked<Partial<AuthService>>;
+  let currentRoomSignal: ReturnType<typeof signal<AudioRoomRecord | null>>;
+
+  const baseRoom: AudioRoomRecord = {
+    id: 'room-1',
+    room_name: 'room-1',
+    title: 'Test Room',
+    target_language: 'es',
+    host_id: 'host-1',
+    co_host_id: null,
+    is_video_stream: true,
+    is_active: true,
+    speakers: ['host-1', 'speaker-2'],
+    raised_hands: [],
+    listeners_count: 3,
+    created_at: new Date().toISOString(),
+  };
+
+  async function setup(room: AudioRoomRecord | null, currentUserId: string): Promise<void> {
+    currentRoomSignal = signal(room);
+
+    mockStore = {
+      currentRoom: currentRoomSignal,
+      hostVideoTrack: signal(null),
+      coHostVideoTrack: signal(null),
+      inviteCoHost: vi.fn().mockResolvedValue(undefined),
+      removeCoHost: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Mocked<Partial<AudioRoomsStore>>;
+
+    mockAuthService = {
+      currentUser: signal({ id: currentUserId } as never),
+    } as unknown as Mocked<Partial<AuthService>>;
+
+    await TestBed.configureTestingModule({
+      imports: [VideoRoomComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AudioRoomsStore, useValue: mockStore },
+        { provide: AuthService, useValue: mockAuthService },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(VideoRoomComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  }
+
+  it('should render nothing when there is no current room', async () => {
+    await setup(null, 'host-1');
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent?.trim()).toBe('');
+  });
+
+  it('should show the invite co-host button for the host when eligible speakers exist', async () => {
+    await setup(baseRoom, 'host-1');
+    expect(component.isHost()).toBe(true);
+    expect(component.eligibleSpeakers()).toEqual(['speaker-2']);
+
+    const button = (fixture.nativeElement as HTMLElement).querySelector('button');
+    expect(button?.textContent).toContain('Invite co-host');
+  });
+
+  it('should not show the invite co-host button to a non-host', async () => {
+    await setup(baseRoom, 'speaker-2');
+    expect(component.isHost()).toBe(false);
+
+    const button = (fixture.nativeElement as HTMLElement).querySelector('button');
+    expect(button).toBeNull();
+  });
+
+  it('should invite the selected speaker as co-host and hide the picker', async () => {
+    await setup(baseRoom, 'host-1');
+    component.showInvitePicker.set(true);
+
+    component.selectCoHost('speaker-2');
+
+    expect(mockStore.inviteCoHost).toHaveBeenCalledWith('speaker-2');
+    expect(component.showInvitePicker()).toBe(false);
+  });
+
+  it('should render the split-screen co-host tile once a co-host is present', async () => {
+    await setup({ ...baseRoom, co_host_id: 'speaker-2' }, 'host-1');
+
+    expect(component.hasCoHost()).toBe(true);
+    expect(component.gridClass()).toContain('md:grid-cols-2');
+  });
+
+  it('should call removeCoHost when the host removes the co-host', async () => {
+    await setup({ ...baseRoom, co_host_id: 'speaker-2' }, 'host-1');
+
+    component.removeCoHost();
+
+    expect(mockStore.removeCoHost).toHaveBeenCalled();
+  });
+});

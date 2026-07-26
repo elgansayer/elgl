@@ -3,7 +3,11 @@ export interface AudioRoomRecord {
   room_name: string;
   title: string;
   target_language: string;
+  language_pair?: string;
+  topic_tag?: string;
   host_id: string;
+  co_host_id?: string | null;
+  is_video_stream: boolean;
   is_active: boolean;
   speakers: string[];
   raised_hands: string[];

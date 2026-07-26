@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateAudioRoomDto {
   @IsString()
@@ -9,6 +15,18 @@ export class CreateAudioRoomDto {
   @IsString()
   @IsNotEmpty()
   target_language!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  language_pair!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  topic_tag!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  is_video_stream?: boolean;
 }
 
 export class JoinRoomDto {
@@ -62,4 +80,20 @@ export class ArchiveRoomDto {
   @IsOptional()
   @IsString()
   recording_url?: string;
+}
+
+export class InviteCoHostDto {
+  @IsString()
+  @IsNotEmpty()
+  room_id!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  target_user_id!: string;
+}
+
+export class RemoveCoHostDto {
+  @IsString()
+  @IsNotEmpty()
+  room_id!: string;
 }

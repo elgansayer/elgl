@@ -18,6 +18,7 @@ export const routes: Routes = [
   { path: 'profile/visitors', loadComponent: () => import('./components/profile-visitors/profile-visitors.component').then(m => m.ProfileVisitorsComponent) },
   { path: 'settings', loadComponent: () => import('./components/settings/settings.component').then(m => m.SettingsComponent) },
   { path: 'developer', loadComponent: () => import('./components/developer-dashboard/developer-dashboard.component').then(m => m.DeveloperDashboardComponent) },
+  { path: 'admin', loadComponent: () => import('./components/admin-portal/admin-portal.component').then(m => m.AdminPortalComponent), title: 'Admin Portal - HelloTalk' },
   { path: 'video-call', loadComponent: () => import('./components/video-call/video-call.component').then(m => m.VideoCallComponent) },
   {
     path: 'stats',

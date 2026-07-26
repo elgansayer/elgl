@@ -30,11 +30,14 @@ export class ReportUserModalComponent implements OnInit {
   @Output() modalClosed = new EventEmitter<void>();
   @Output() reported = new EventEmitter<void>();
 
+  readonly isOpen = signal(false);
+
   open(userId: string): void {
     this.reportUserId = userId;
     this.selectedCategory.set(null);
     this.description.set('');
     this.errorMessage.set(null);
+    this.isOpen.set(true);
   }
 
   // Loading / error states for categories
@@ -92,6 +95,7 @@ export class ReportUserModalComponent implements OnInit {
   }
 
   cancel(): void {
+    this.isOpen.set(false);
     this.modalClosed.emit();
   }
 
@@ -126,6 +130,7 @@ export class ReportUserModalComponent implements OnInit {
           );
       }
 
+      this.isOpen.set(false);
       this.modalClosed.emit();
     } catch (err: unknown) {
       const errorObj = err as { error?: { message?: string } };

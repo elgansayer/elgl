@@ -259,7 +259,7 @@ export class MomentsService {
     const momentData = momentResponse.data;
 
     if (momentData) {
-      const momentAuthorId = momentData.user_id;
+      const momentAuthorId = momentData.user_id as string;
       const blockedIds =
         await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
       if (blockedIds.includes(userId)) {
@@ -356,7 +356,7 @@ export class MomentsService {
     const momentData = momentResponse.data;
 
     if (momentData) {
-      const momentAuthorId = momentData.user_id;
+      const momentAuthorId = momentData.user_id as string;
       const blockedIds =
         await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
       if (blockedIds.includes(userId)) {
@@ -439,10 +439,11 @@ export class MomentsService {
       const mentionedNames = matches.map((m) => m[1]);
 
       if (mentionedNames.length > 0) {
-        const { data: mentionedUsers } = await supabase
+        const { data } = await supabase
           .from('users')
           .select('id, display_name')
           .in('display_name', mentionedNames);
+        const mentionedUsers = data as UserProfileRow[] | null;
 
         if (mentionedUsers) {
           for (const mentionedUser of mentionedUsers) {

@@ -6,6 +6,7 @@ import { I18nService } from '../../services/i18n.service';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
 import { RoomChatComponent } from '../room-chat/room-chat.component';
+import { VideoRoomComponent } from '../video-room/video-room.component';
 import { AudioEqualizerComponent } from '../primitives/audio-equalizer/audio-equalizer.component';
 import { VirtualGiftModalComponent } from '../virtual-gift-modal/virtual-gift-modal.component';
 import { TrustSafetyModalComponent } from '../trust-safety-modal/trust-safety-modal.component';
@@ -19,6 +20,7 @@ import {
   imports: [
     TranslatePipe,
     RoomChatComponent,
+    VideoRoomComponent,
     VirtualGiftModalComponent,
     TrustSafetyModalComponent,
     VoiceroomCreateModalComponent,
@@ -42,7 +44,7 @@ export class AudioRoomComponent implements OnInit {
 
   async createRoom(payload: VoiceroomCreatePayload): Promise<void> {
     try {
-      const room = await this.store.createRoom(payload.title, payload.languagePair, payload.topicTag);
+      const room = await this.store.createRoom(payload.title, payload.languagePair, payload.topicTag, payload.isVideoStream);
       this.showCreateModal.set(false);
       await this.store.joinRoom(room);
     } catch (e) {
@@ -78,10 +80,6 @@ export class AudioRoomComponent implements OnInit {
   async kick(targetUserId: string): Promise<void> {
     // Kicking off stage is functionally demoting them back to a listener
     await this.store.demoteSpeaker(targetUserId);
-  }
-
-  async inviteCoHost(targetUserId: string): Promise<void> {
-    await this.store.inviteCoHost(targetUserId);
   }
 
   async archive(): Promise<void> {

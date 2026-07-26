@@ -15,7 +15,7 @@ import { CommonModule } from '@angular/common';
       
       <!-- Close Button -->
       <button (click)="closed.emit()" 
-              class="absolute top-4 right-4 z-[110] p-2 text-white/70 hover:text-white bg-black/50 rounded-full transition-colors">
+              class="absolute top-4 end-4 z-[110] p-2 text-white/70 hover:text-white bg-black/50 rounded-full transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
@@ -39,7 +39,7 @@ import { CommonModule } from '@angular/common';
       @if (images().length > 1) {
         <button (click)="prev($event)" 
                 [class.invisible]="currentIndex() === 0"
-                class="absolute left-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white bg-black/50 rounded-full hidden md:block transition-colors z-[110]">
+                class="absolute start-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white bg-black/50 rounded-full hidden md:block transition-colors z-[110]">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
           </svg>
@@ -47,14 +47,14 @@ import { CommonModule } from '@angular/common';
         
         <button (click)="next($event)" 
                 [class.invisible]="currentIndex() === images().length - 1"
-                class="absolute right-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white bg-black/50 rounded-full hidden md:block transition-colors z-[110]">
+                class="absolute end-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white bg-black/50 rounded-full hidden md:block transition-colors z-[110]">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
             <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
           </svg>
         </button>
 
         <!-- Indicators -->
-        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-[110]">
+        <div class="absolute bottom-6 start-1/2 -translate-x-1/2 flex gap-2 z-[110]">
           @for (img of images(); track img; let i = $index) {
             <button (click)="goTo(i, $event)"
                     [class.bg-white]="i === currentIndex()"
