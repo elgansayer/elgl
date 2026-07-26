@@ -80,6 +80,10 @@ export class AudioRoomComponent implements OnInit {
     await this.store.demoteSpeaker(targetUserId);
   }
 
+  async inviteCoHost(targetUserId: string): Promise<void> {
+    await this.store.inviteCoHost(targetUserId);
+  }
+
   async archive(): Promise<void> {
     if (!confirm(this.i18n.translate('audioRoom.archiveConfirm'))) return;
     await this.store.archiveRoom();
