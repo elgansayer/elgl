@@ -25,6 +25,7 @@ import { StreakModule } from './streak/streak.module';
 import { StreakMiddleware } from './streak/streak.middleware';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CallsModule } from './calls/calls.module';
+import { StatsModule } from './stats/stats.module';
 import { validationSchema } from './config/validation.schema';
 
 @Module({
@@ -64,6 +65,7 @@ import { validationSchema } from './config/validation.schema';
     StreakModule,
     NotificationsModule,
     CallsModule,
+    StatsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
