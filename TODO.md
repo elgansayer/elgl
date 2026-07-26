@@ -260,7 +260,8 @@
 
 ## Phase 34: UI Theming
 - [STUCK] Build Theme Selector (Dark, Light, System Default).
-- [ ] Allow VIP users to select custom primary accent colours.
+- [x] Allow VIP users to select custom primary accent colours.
+- [x] Build UI for VIP users to select custom primary accent colours in settings.
 
 ## Phase 35: App Performance
 - [ ] Implement Angular Lazy Loading for non-critical feature modules.
