@@ -21,6 +21,7 @@ while true; do
     echo "========================================"
     
     > qa_aider.log
+    > qa_errors.log
     QA_TASK="Write a new aggressive Playwright E2E test in e2e/tests/adversarial/ that tries to break the UI or find a bug in the chat/video systems. Run it."
 
     # Claude Pro (Claude Code CLI, subscription) is tried first: free beyond the flat
