@@ -18,26 +18,27 @@ export class UserManagementComponent implements OnInit {
     this.loadUsers();
   }
 
-  loadUsers(): void {
+  async loadUsers(): Promise<void> {
     this.isLoading.set(true);
-    this.adminService.getUsers().subscribe({
-      next: (data) => {
-        this.users.set(data);
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        console.error('Failed to load users', err);
-        this.isLoading.set(false);
-      }
-    });
+    try {
+      const data = await this.adminService.listUsers('', 1, 50);
+      this.users.set(data.users);
+    } catch (err) {
+      console.error('Failed to load users', err);
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
-  toggleVip(user: any): void {
+  async toggleVip(user: any): Promise<void> {
     const newVipStatus = !user.is_vip;
     const newTier = newVipStatus ? 'consumer_8_ukp_10_usd' : 'free';
     
-    this.adminService.updateVipStatus(user.id, newVipStatus, newTier).subscribe(() => {
-      this.loadUsers(); // Reload to reflect changes
-    });
+    try {
+      await this.adminService.setVipStatus(user.id, newVipStatus, newTier);
+      await this.loadUsers(); // Reload to reflect changes
+    } catch (err) {
+      console.error('Failed to update VIP status', err);
+    }
   }
 }
