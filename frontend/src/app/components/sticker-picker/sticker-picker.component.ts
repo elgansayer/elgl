@@ -11,6 +11,9 @@ import { CommonModule } from '@angular/common';
       <div 
         class="fixed inset-0 z-40 bg-black/20 transition-opacity"
         (click)="closePicker.emit()"
+        (keydown.enter)="closePicker.emit()"
+        tabindex="0"
+        role="button"
       ></div>
     }
 
@@ -22,7 +25,7 @@ import { CommonModule } from '@angular/common';
       style="max-height: 50vh;"
     >
       <!-- Handle -->
-      <div class="flex justify-center pt-3 pb-2 cursor-pointer" (click)="closePicker.emit()">
+      <div class="flex justify-center pt-3 pb-2 cursor-pointer" (click)="closePicker.emit()" (keydown.enter)="closePicker.emit()" tabindex="0" role="button">
         <div class="w-12 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full"></div>
       </div>
 
