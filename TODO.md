@@ -264,7 +264,7 @@
 - [x] Build UI for VIP users to select custom primary accent colours in settings.
 
 ## Phase 35: App Performance
-- [ ] Implement Angular Lazy Loading for non-critical feature modules.
+- [x] Implement Angular Lazy Loading for non-critical feature modules.
 - [ ] Audit Web Vitals and optimize images using `loading="lazy"`.
 
 ## Phase 36: Backend Rate Limiting
