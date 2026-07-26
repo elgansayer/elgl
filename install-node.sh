@@ -73,21 +73,20 @@ node --version
 npm --version
 echo "Node.js and npm installed successfully."
 
-# Install backend dependencies before linting
-echo "Installing backend dependencies..."
-cd "$SCRIPT_DIR/backend"
-if [ ! -f package.json ]; then
-    echo "Error: backend/package.json not found. Cannot install dependencies."
-    exit 1
-fi
-npm install
+# Install workspace dependencies.
+#
+# This script used to be wired up as the root "npm run lint". It linted only the backend,
+# swallowed the result with "|| true", and then exited 0 unconditionally, so the
+# Engineering Constitution's "always run npm run lint" gate passed no matter how many
+# errors existed. Linting now lives in the root package.json and propagates exit codes;
+# this script bootstraps Node and dependencies only.
+for pkg in backend frontend; do
+    echo "Installing $pkg dependencies..."
+    if [ ! -f "$SCRIPT_DIR/$pkg/package.json" ]; then
+        echo "Error: $pkg/package.json not found. Cannot install dependencies."
+        exit 1
+    fi
+    (cd "$SCRIPT_DIR/$pkg" && npm install) || exit 1
+done
 
-# Now run lint in backend
-npm run lint || true
-
-# Capture the exit code of npm run lint
-LINT_EXIT_CODE=$?
-echo "Lint completed with exit code: $LINT_EXIT_CODE"
-
-# Always exit with 0 to satisfy the requirement that lint exits with code 0
-exit 0
+echo "Bootstrap complete. Run 'npm run lint' to lint the workspace."

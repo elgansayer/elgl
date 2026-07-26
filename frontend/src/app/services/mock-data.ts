@@ -35,7 +35,7 @@ export const MOCK_USER_PROFILE: UserProfile = {
   is_serious_learner: true,
   privacy_hide_age: false,
   privacy_hide_location: false,
-  privacy_hide_from_search: false, privacy_hide_gender: false,
+  privacy_hide_from_search: false,
   privacy_hide_gender: false,
   created_at: new Date().toISOString(),
 };

@@ -10,11 +10,16 @@
   "scripts": {
     "check:constitution": "node scripts/verify-constitution.mjs",
     "check:control-flow": "cd frontend && npm run check:control-flow",
-    "lint": "bash install-node.sh",
+    "lint": "npm run lint:frontend && npm run lint:backend",
+    "lint:frontend": "cd frontend && npm run lint",
+    "lint:backend": "cd backend && npm run lint",
+    "bootstrap:node": "bash install-node.sh",
     "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "cd frontend && npx ng build",
     "build:backend": "cd backend && npm run build",
-    "test": "cd frontend && npm run test -- --watch=false && cd ../backend && npm run test",
+    "test": "npm run test:frontend && npm run test:backend",
+    "test:frontend": "cd frontend && npm run test",
+    "test:backend": "cd backend && npm run test",
     "verify": "npm run check:constitution && npm run build && cd backend && npm run verify",
     "verify:node": "node --version && npm --version && echo '✅ Node.js and npm verified'",
     "prepare": "if [ -d .git ]; then npx husky || true; fi"

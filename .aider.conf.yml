@@ -14,4 +14,4 @@ auto-lint: true
 lint-cmd:
   - "cd frontend && npm run lint"
   - "cd backend && npm run lint"
-test-cmd: "cd backend && npm test && cd ../frontend && npm test -- --watch=false"
+test-cmd: "cd backend && npm test && cd ../frontend && npm test"
