@@ -281,8 +281,10 @@
 - [x] Create GiftAnimationComponent and integrate it into chat/feed for gift payloads.
 
 ## Phase 39: Live Stream Host Mechanics
-- [ ] Build Host Dashboard showing live viewer count, earned coins, and stream uptime.
-- [ ] Implement "Invite Co-Host" split-screen video layout.
+- [STUCK] Build Host Dashboard showing live viewer count, earned coins, and stream uptime.
+- [x] Implement "Invite Co-Host" split-screen video layout.
+- [x] Fix `inviteCoHost` to demote/notify the existing co-host (and stop their publish) before assigning a new one, instead of silently overwriting `co_host_id`.
+- [x] Fix race condition where the `co_host_removed`/`co_host_invited` Centrifugo events published in `inviteCoHost` can arrive out of order (both are fire-and-forget, unawaited HTTP calls), and the frontend's `co_host_removed` handler unconditionally nulls `co_host_id` without checking it still matches the removed user, which can wipe out a just-assigned new co-host.
 
 ## Phase 40: Moment Interactivity
 - [ ] Build "Liked By" modal listing all users who liked a Moment.
