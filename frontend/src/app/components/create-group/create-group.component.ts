@@ -19,8 +19,9 @@ import { UserService, UserProfile } from '../../services/user.service';
       <div class="flex-1 overflow-y-auto p-4 space-y-4">
         <!-- Group Name -->
         <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Group Name</label>
+          <label for="groupName" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Group Name</label>
           <input 
+            id="groupName"
             type="text" 
             [(ngModel)]="groupName"
             placeholder="Enter group name..."
@@ -59,6 +60,8 @@ import { UserService, UserProfile } from '../../services/user.service';
           @for (user of searchResults(); track user.id) {
             <div 
               (click)="toggleUser(user)"
+              (keydown.enter)="toggleUser(user)"
+              tabindex="0"
               class="flex items-center justify-between p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
             >
               <div class="flex items-center gap-3">
