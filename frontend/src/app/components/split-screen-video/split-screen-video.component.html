@@ -1,4 +1,4 @@
-<div class="flex w-full h-full gap-2" [ngClass]="{'flex-col md:flex-row': hasCoHost()}">
+<div class="flex w-full h-full gap-2" [class.flex-col]="hasCoHost()" [class.md:flex-row]="hasCoHost()">
   <!-- Host Video -->
   <div class="relative flex-1 bg-black rounded-xl overflow-hidden shadow-lg">
     <video [src]="hostVideoUrl()" autoplay playsinline muted class="w-full h-full object-cover"></video>

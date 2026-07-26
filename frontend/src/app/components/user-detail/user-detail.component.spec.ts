@@ -18,13 +18,12 @@ describe('UserDetailComponent', () => {
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
-        {
-          provide: SafetyService,
-          useValue: {
-            getBlockedUserIds: vi.fn().mockReturnValue(of([])),
-          },
-        },
       ],
+    })
+    .overrideProvider(SafetyService, {
+      useValue: {
+        getBlockedUserIds: vi.fn().mockReturnValue(of([])),
+      },
     })
     .compileComponents();
     
