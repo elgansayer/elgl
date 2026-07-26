@@ -112,7 +112,8 @@ export class AudioRoomsService implements OnModuleInit {
       }
     }
 
-    const targetLanguage = dto.language_pair.split('-')[1] ?? dto.language_pair;
+    const languagePair = String(dto.language_pair);
+    const targetLanguage = languagePair.split('-')[1] ?? languagePair;
 
     const response = await supabase
       .from('audio_rooms')
