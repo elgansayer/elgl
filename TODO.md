@@ -272,7 +272,7 @@
 - [x] Implement WebSocket connection rate limiting in Centrifugo.
 
 ## Phase 37: WebRTC Fallback Infrastructure
-- [ ] Configure STUN/TURN server credentials in LiveKit for strict corporate NAT networks.
+- [x] Configure STUN/TURN server credentials in LiveKit for strict corporate NAT networks.
 
 ## Phase 38: Live Stream Viewer Mechanics
 - [ ] Build scrolling live chat comment overlay over host video stream.
