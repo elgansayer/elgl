@@ -232,7 +232,8 @@
 - [x] Implement client-side image compression (max 1080p) before R2 upload.
 - [STUCK] Integrate ImageCompressionService into the R2 upload flow (e.g., in MediaService or component upload handlers).
 - [x] Implement audio compression converting voice notes to lightweight `.m4a`/`.ogg`.
-- [ ] Build AudioCompressionService to handle client-side audio transcoding.
+- [x] Build AudioCompressionService to handle client-side audio transcoding.
+- [x] Implement actual client-side transcoding in AudioCompressionService using ffmpeg.wasm or Web Audio API.
 - [ ] Integrate AudioCompressionService into VoiceRecorderComponent.
 - [ ] Integrate server-side AudioCompressionService into the media upload flow for voice notes.
 
