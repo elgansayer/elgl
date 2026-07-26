@@ -259,7 +259,7 @@
 - [x] Implement backend endpoints for user statistics.
 
 ## Phase 34: UI Theming
-- [ ] Build Theme Selector (Dark, Light, System Default).
+- [STUCK] Build Theme Selector (Dark, Light, System Default).
 - [ ] Allow VIP users to select custom primary accent colours.
 
 ## Phase 35: App Performance
