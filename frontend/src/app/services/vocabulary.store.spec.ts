@@ -9,7 +9,6 @@ import { environment } from '../../environments/environment';
 describe('VocabularyStore', () => {
   let store: VocabularyStore;
   let httpMock: HttpTestingController;
-  let authServiceSpy: any;
 
   const mockFlashcard: Flashcard = {
     id: '1',
@@ -37,7 +36,6 @@ describe('VocabularyStore', () => {
 
     store = TestBed.inject(VocabularyStore);
     httpMock = TestBed.inject(HttpTestingController);
-    authServiceSpy = TestBed.inject(AuthService);
   });
 
   afterEach(() => {
