@@ -208,7 +208,8 @@
 - [x] Implement group participant drawer UI component.
 
 ## Phase 27: Offline Support & PWA
-- [ ] Configure Angular Service Worker (`@angular/pwa`) for asset caching.
+- [x] Configure Angular Service Worker (`@angular/pwa`) for asset caching.
+  - [x] Run `ng add @angular/pwa` in the `frontend` directory to generate service worker configuration.
 - [ ] Implement IndexedDB message queuing for offline chat composition.
 - [ ] Build global "No Network Connection" banner component.
 
