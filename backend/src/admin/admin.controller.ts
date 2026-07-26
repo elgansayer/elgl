@@ -9,6 +9,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { AdminGuard } from './guards/admin.guard';
 import { AdminService } from './admin.service';
@@ -19,6 +20,10 @@ import {
   AdminUserSummary,
   LoginHistoryEntry,
 } from './interfaces/admin-user.interface';
+
+interface AuthRequest extends Request {
+  user: { sub: string };
+}
 
 @Controller('admin')
 @UseGuards(SupabaseAuthGuard, AdminGuard)
@@ -48,10 +53,9 @@ export class AdminController {
   @Post('users/:id/ban')
   async banUser(
     @Param('id') id: string,
-    @Req() req: any,
+    @Req() req: AuthRequest,
   ): Promise<{ message: string }> {
-    // The SupabaseAuthGuard attaches the user's claims to req.user
-    const adminUserId = req.user?.sub as string;
+    const adminUserId = req.user.sub;
     await this.adminService.banUser(id, adminUserId);
     return { message: 'User banned' };
   }
@@ -59,9 +63,9 @@ export class AdminController {
   @Post('users/:id/warn')
   async warnUser(
     @Param('id') id: string,
-    @Req() req: any,
+    @Req() req: AuthRequest,
   ): Promise<{ message: string }> {
-    const adminUserId = req.user?.sub as string;
+    const adminUserId = req.user.sub;
     await this.adminService.warnUser(id, adminUserId);
     return { message: 'User warned' };
   }
