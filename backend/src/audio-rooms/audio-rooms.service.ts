@@ -30,6 +30,8 @@ interface AudioRoomRow {
   room_name: string;
   title: string;
   target_language: string;
+  language_pair: string;
+  topic_tag: string;
   host_id: string;
   is_active: boolean;
   speakers: string[];
@@ -110,12 +112,16 @@ export class AudioRoomsService implements OnModuleInit {
       }
     }
 
+    const targetLanguage = dto.language_pair.split('-')[1] ?? dto.language_pair;
+
     const response = await supabase
       .from('audio_rooms')
       .insert({
         room_name: roomName,
         title: dto.title,
-        target_language: dto.target_language,
+        target_language: targetLanguage,
+        language_pair: dto.language_pair,
+        topic_tag: dto.topic_tag,
         host_id: hostId,
         is_active: true,
         speakers: [hostId],

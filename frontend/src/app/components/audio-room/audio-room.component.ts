@@ -1,7 +1,6 @@
 import { showToast } from '../../services/toast.service';
 import { Component, inject, signal, OnInit } from '@angular/core';
 
-import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
@@ -9,15 +8,19 @@ import { AuthService } from '../../services/auth.service';
 import { RoomChatComponent } from '../room-chat/room-chat.component';
 import { VirtualGiftModalComponent } from '../virtual-gift-modal/virtual-gift-modal.component';
 import { TrustSafetyModalComponent } from '../trust-safety-modal/trust-safety-modal.component';
+import {
+  VoiceroomCreateModalComponent,
+  VoiceroomCreatePayload,
+} from '../voiceroom-create-modal/voiceroom-create-modal.component';
 
 @Component({
   selector: 'app-audio-room',
   imports: [
-    FormsModule,
     TranslatePipe,
     RoomChatComponent,
     VirtualGiftModalComponent,
     TrustSafetyModalComponent,
+    VoiceroomCreateModalComponent,
   ],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],
@@ -30,19 +33,15 @@ export class AudioRoomComponent implements OnInit {
   readonly showCreateModal = signal<boolean>(false);
   readonly showGiftModal = signal<boolean>(false);
   readonly showSafetyModal = signal<boolean>(false);
-  newTitle = '';
-  newTargetLanguage = 'en';
 
   async ngOnInit(): Promise<void> {
     await this.store.loadActiveRooms();
   }
 
-  async createRoom(): Promise<void> {
-    if (!this.newTitle.trim()) return;
+  async createRoom(payload: VoiceroomCreatePayload): Promise<void> {
     try {
-      const room = await this.store.createRoom(this.newTitle.trim(), this.newTargetLanguage);
+      const room = await this.store.createRoom(payload.title, payload.languagePair, payload.topicTag);
       this.showCreateModal.set(false);
-      this.newTitle = '';
       await this.store.joinRoom(room);
     } catch (e) {
       console.error('Error creating live room:', e);
