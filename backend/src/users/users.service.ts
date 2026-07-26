@@ -337,7 +337,9 @@ export class UsersService {
     const supabase = this.supabaseService.getClient();
     const response = await supabase
       .from('users')
-      .select('coins_balance, study_streak_days, correction_ratio, is_serious_learner')
+      .select(
+        'coins_balance, study_streak_days, correction_ratio, is_serious_learner',
+      )
       .eq('id', userId)
       .single();
 
@@ -345,6 +347,6 @@ export class UsersService {
       throw new NotFoundException(`User stats not found for user ${userId}`);
     }
 
-    return response.data as Partial<UserProfile>;
+    return response.data;
   }
 }
