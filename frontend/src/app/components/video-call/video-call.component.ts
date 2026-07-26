@@ -14,7 +14,6 @@ import {
 import {
   Room,
   RoomEvent,
-  RemoteParticipant,
   RemoteTrack,
   VideoTrack,
   LocalVideoTrack,

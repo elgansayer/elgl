@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
 import { ToastService } from '../components/primitives/toast/toast.service';
 
@@ -15,10 +15,8 @@ export class RestorePurchasesService {
   readonly isRestoring = signal<boolean>(false);
   readonly lastRestoreResult = signal<RestoreResult | null>(null);
 
-  constructor(
-    private supabaseService: SupabaseService,
-    private toastService: ToastService
-  ) {}
+  private supabaseService = inject(SupabaseService);
+  private toastService = inject(ToastService);
 
   async restorePurchases(): Promise<RestoreResult> {
     this.isRestoring.set(true);
@@ -94,7 +92,7 @@ export class RestorePurchasesService {
       }
 
       return result;
-    } catch (error) {
+    } catch {
       const result: RestoreResult = {
         success: false,
         restoredPlans: [],

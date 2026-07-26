@@ -405,14 +405,12 @@ export class CoverPhotoUploaderComponent {
     event.stopPropagation();
     this.activeHandle = handle;
     this.dragStartX = event.clientX;
-    this.dragStartY = event.clientY;
     this.dragStartCropBox = { ...this.cropBox() };
 
     const onMouseMove = (e: MouseEvent) => {
       if (!this.activeHandle) return;
       const dx = e.clientX - this.dragStartX;
-      const dy = e.clientY - this.dragStartY;
-      this.resizeCropBox(dx, dy);
+      this.resizeCropBox(dx);
     };
 
     const onMouseUp = () => {
@@ -431,15 +429,13 @@ export class CoverPhotoUploaderComponent {
     const touch = event.touches[0];
     this.activeHandle = handle;
     this.dragStartX = touch.clientX;
-    this.dragStartY = touch.clientY;
     this.dragStartCropBox = { ...this.cropBox() };
 
     const onTouchMove = (e: TouchEvent) => {
       if (!this.activeHandle) return;
       const t = e.touches[0];
       const dx = t.clientX - this.dragStartX;
-      const dy = t.clientY - this.dragStartY;
-      this.resizeCropBox(dx, dy);
+      this.resizeCropBox(dx);
     };
 
     const onTouchEnd = () => {
@@ -452,7 +448,7 @@ export class CoverPhotoUploaderComponent {
     document.addEventListener('touchend', onTouchEnd);
   }
 
-  private resizeCropBox(dx: number, dy: number): void {
+  private resizeCropBox(dx: number): void {
     const imgW = this.imageWidth();
     const imgH = this.imageHeight();
     const box = this.dragStartCropBox;

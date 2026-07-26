@@ -165,7 +165,7 @@ export class VideoCallService {
 
     const videoPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
     if (videoPublication?.track && 'restartTrack' in videoPublication.track) {
-      await (videoPublication.track as any).restartTrack();
+      await (videoPublication.track as unknown as { restartTrack: () => Promise<void> }).restartTrack();
     }
   }
 

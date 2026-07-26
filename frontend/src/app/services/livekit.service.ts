@@ -54,7 +54,7 @@ export class LivekitService {
     return room;
   }
 
-  async publishTracks(_isVideoCall: boolean): Promise<{ audioTrack: LocalTrack | null, videoTrack: LocalTrack | null }> {
+  async publishTracks(): Promise<{ audioTrack: LocalTrack | null, videoTrack: LocalTrack | null }> {
     return { audioTrack: null, videoTrack: null };
   }
 
