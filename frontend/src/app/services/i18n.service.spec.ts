@@ -1,12 +1,19 @@
 import { TestBed } from '@angular/core/testing';
 import { I18nService } from './i18n.service';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 describe('I18nService', () => {
   let service: I18nService;
 
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting()
+      ]
+    });
     service = TestBed.inject(I18nService);
   });
 

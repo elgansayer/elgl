@@ -13,12 +13,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
       (click)="cancelCrop.emit()"
       (keydown.enter)="cancelCrop.emit()"
       tabindex="0"
+      role="button"
     >
       <div
         class="bg-gray-900 rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl"
         (click)="$event.stopPropagation()"
         (keydown.enter)="$event.stopPropagation()"
         tabindex="0"
+        role="button"
       >
         <h3 class="text-lg font-semibold text-white mb-4">Crop Cover Photo</h3>
 

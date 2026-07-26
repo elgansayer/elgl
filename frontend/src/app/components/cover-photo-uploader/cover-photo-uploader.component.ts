@@ -45,6 +45,7 @@ interface CropBox {
             (click)="fileInput.click()"
             (keydown.enter)="fileInput.click()"
             tabindex="0"
+            role="button"
           >
             <div class="text-center text-white">
               <svg

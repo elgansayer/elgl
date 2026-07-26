@@ -1,0 +1,39 @@
+<div class="relative w-full h-full bg-slate-900 rounded-xl overflow-hidden flex flex-col md:flex-row">
+  
+  <!-- Host Video -->
+  <div 
+    class="relative flex-1 h-full transition-all duration-300"
+    [class.border-e]="isSplitScreen()"
+    [class.border-slate-700]="isSplitScreen()">
+    @if (hostStreamUrl()) {
+      <video [src]="hostStreamUrl()" autoplay playsinline muted class="w-full h-full object-cover"></video>
+      <div class="absolute bottom-4 start-4 bg-black/50 px-3 py-1 rounded-full text-white text-sm font-bold backdrop-blur-sm">
+        Host
+      </div>
+    } @else {
+      <div class="w-full h-full flex items-center justify-center text-slate-500">
+        Waiting for host...
+      </div>
+    }
+  </div>
+
+  <!-- Co-Host Video or Invite Placeholder -->
+  @if (isSplitScreen()) {
+    <div class="relative flex-1 h-full transition-all duration-300">
+      <video [src]="coHostStreamUrl()" autoplay playsinline class="w-full h-full object-cover"></video>
+      <div class="absolute bottom-4 start-4 bg-black/50 px-3 py-1 rounded-full text-white text-sm font-bold backdrop-blur-sm">
+        Co-Host
+      </div>
+    </div>
+  } @else if (isCurrentUserHost()) {
+    <!-- Invite Co-Host Overlay (Only visible to the host when no co-host is present) -->
+    <div class="absolute top-4 end-4 z-10">
+      <app-button-secondary size="sm" (clicked)="onInviteCoHost()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 me-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+        </svg>
+        Invite Co-Host
+      </app-button-secondary>
+    </div>
+  }
+</div>

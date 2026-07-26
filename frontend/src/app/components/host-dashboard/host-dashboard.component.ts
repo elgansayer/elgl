@@ -1,12 +1,13 @@
-import { Component, input, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, input, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { AppCardComponent } from '../primitives/card/card.component';
 
 @Component({
   selector: 'app-host-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, AppCardComponent],
   template: `
-    <div class="bg-slate-800 text-white rounded-2xl p-4 shadow-lg flex flex-row items-center justify-between gap-4 border border-slate-700">
+    <app-card variant="elevated" padding="md" customClass="bg-slate-800 text-white flex flex-row items-center justify-between gap-4 border border-slate-700">
       
       <!-- Viewer Count -->
       <div class="flex flex-col items-start">
@@ -34,7 +35,7 @@ import { CommonModule } from '@angular/common';
         </div>
       </div>
 
-    </div>
+    </app-card>
   `
 })
 export class HostDashboardComponent implements OnInit, OnDestroy {
@@ -42,8 +43,18 @@ export class HostDashboardComponent implements OnInit, OnDestroy {
   earnedCoins = input<number>(0);
   startTime = input.required<Date>();
 
-  uptime = signal<string>('00:00:00');
+  uptimeSeconds = signal<number>(0);
   private timerRef: ReturnType<typeof setInterval> | undefined;
+
+  uptime = computed(() => {
+    const totalSeconds = this.uptimeSeconds();
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const pad = (num: number) => num.toString().padStart(2, '0');
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  });
 
   ngOnInit(): void {
     this.updateUptime();
@@ -59,13 +70,7 @@ export class HostDashboardComponent implements OnInit, OnDestroy {
   private updateUptime(): void {
     const now = new Date().getTime();
     const start = this.startTime().getTime();
-    const diff = Math.max(0, now - start);
-
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-    const pad = (num: number) => num.toString().padStart(2, '0');
-    this.uptime.set(`${pad(hours)}:${pad(minutes)}:${pad(seconds)}`);
+    const diffSeconds = Math.max(0, Math.floor((now - start) / 1000));
+    this.uptimeSeconds.set(diffSeconds);
   }
 }
