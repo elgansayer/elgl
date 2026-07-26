@@ -1,18 +1,17 @@
-import { Component, input, output, signal } from '@angular/core';
+import { Component, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
 
-export interface CreateAudioRoomPayload {
+export interface VoiceroomCreatePayload {
   title: string;
-  language_pair: string;
-  topic_tag: string;
+  languagePair: string;
+  topicTag: string;
 }
 
 @Component({
-  selector: 'app-audio-room-create-modal',
+  selector: 'app-voiceroom-create-modal',
   imports: [FormsModule, TranslatePipe],
   template: `
-    @if (isOpen()) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
         <div class="w-full max-w-md bg-[#121212] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
           
@@ -98,13 +97,11 @@ export interface CreateAudioRoomPayload {
 
         </div>
       </div>
-    }
   `
 })
-export class AudioRoomCreateModalComponent {
-  readonly isOpen = input<boolean>(false);
+export class VoiceroomCreateModalComponent {
   readonly closed = output<void>();
-  readonly created = output<CreateAudioRoomPayload>();
+  readonly created = output<VoiceroomCreatePayload>();
 
   title = signal<string>('');
   languagePair = signal<string>('en-es');
@@ -124,8 +121,8 @@ export class AudioRoomCreateModalComponent {
     
     this.created.emit({
       title: this.title().trim(),
-      language_pair: this.languagePair(),
-      topic_tag: this.topicTag()
+      languagePair: this.languagePair(),
+      topicTag: this.topicTag()
     });
     
     this.closeModal();

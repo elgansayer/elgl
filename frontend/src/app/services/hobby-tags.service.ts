@@ -23,9 +23,13 @@ export interface UserHobbyTag {
 }
 
 export interface VocabularyItem {
+  id: string;
   word: string;
   translation: string;
   hobbyTagName: string;
+  difficulty: string;
+  context_sentence?: string;
+  hobby_tag?: { icon: string; name: string };
 }
 
 @Injectable({

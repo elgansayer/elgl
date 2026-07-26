@@ -2,7 +2,7 @@ import { Component, OnInit, computed, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
-import { HobbyTagsService, HobbyTag, UserHobbyTag } from '../../services/hobby-tags.service';
+import { HobbyTagsService, HobbyTag, UserHobbyTag, VocabularyItem } from '../../services/hobby-tags.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppPillComponent } from '../primitives/pill/pill.component';
 
@@ -166,7 +166,7 @@ export class HobbyTagsComponent implements OnInit {
 
   readonly allTags = signal<HobbyTag[]>([]);
   readonly userTags = signal<UserHobbyTag[]>([]);
-  readonly userVocabulary = signal<unknown[]>([]);
+  readonly userVocabulary = signal<VocabularyItem[]>([]);
 
   readonly proficiencyLevels = ['beginner', 'intermediate', 'advanced', 'native'];
 

@@ -29,7 +29,7 @@ import { Subject, takeUntil } from 'rxjs';
         [messageType]="message.message_type"
         [senderId]="message.sender_id"
         [roomId]="message.room_id"
-        (copy)="onCopy($event)"
+        (copyMessage)="onCopy($event)"
         (favourite)="onFavourite($event)"
         (report)="onReport($event)"
       >

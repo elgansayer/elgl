@@ -74,7 +74,7 @@ export class VoiceRecorderComponent {
 
     try {
       // Compress the audio blob before uploading
-      const compressedBlob = await this.audioCompressionService.compressAudio(this.recordedBlob, 'audio/wav');
+      const compressedBlob = await this.audioCompressionService.compressAudio(this.recordedBlob);
       
       const filename = `voice_${Date.now()}.wav`;
       const presigned = await this.userService.getPresignedUploadUrl(

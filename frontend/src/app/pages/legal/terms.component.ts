@@ -1,10 +1,11 @@
 import { Component } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { DocumentViewerComponent } from '../../components/document-viewer/document-viewer.component';
 
 @Component({
   selector: 'app-terms',
   standalone: true,
-  imports: [DocumentViewerComponent],
+  imports: [DocumentViewerComponent, DatePipe],
   template: `
     <app-document-viewer title="Terms of Service">
       <p class="mb-4">Last updated: {{ currentDate | date }}</p>

@@ -11,11 +11,12 @@ import {
 } from '@angular/core';
 
 import { ReportUserModalComponent } from '../report-user-modal/report-user-modal.component';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-long-press-context-menu',
   standalone: true,
-  imports: [ReportUserModalComponent],
+  imports: [ReportUserModalComponent, TranslatePipe],
   template: `
     @if (showMenu()) {
       <div
@@ -33,7 +34,7 @@ import { ReportUserModalComponent } from '../report-user-modal/report-user-modal
               (click)="onOptionClick('copy')"
               [disabled]="disabled()"
             >
-              Copy
+              {{ 'context_menu.copy' | t }}
             </button>
           </li>
           <li>
@@ -43,7 +44,7 @@ import { ReportUserModalComponent } from '../report-user-modal/report-user-modal
               (click)="onOptionClick('favourite')"
               [disabled]="disabled()"
             >
-              Favourite
+              {{ 'context_menu.favourite' | t }}
             </button>
           </li>
           <li>
@@ -53,7 +54,17 @@ import { ReportUserModalComponent } from '../report-user-modal/report-user-modal
               (click)="onOptionClick('report')"
               [disabled]="disabled()"
             >
-              Report
+              {{ 'context_menu.report' | t }}
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              role="menuitem"
+              (click)="onOptionClick('block')"
+              [disabled]="disabled()"
+            >
+              {{ (isBlocked() ? 'context_menu.unblock' : 'context_menu.block') | t }}
             </button>
           </li>
         </ul>
@@ -120,6 +131,7 @@ export class LongPressContextMenuComponent {
   readonly roomId = input<string>('');
   readonly disabled = input<boolean>(false);
   readonly longPressDuration = input<number>(600);
+  readonly isBlocked = input<boolean>(false);
 
   showMenu = model(false);
   position = signal({ x: 0, y: 0 });
@@ -138,6 +150,7 @@ export class LongPressContextMenuComponent {
     senderId: string;
     roomId: string;
   }>();
+  @Output() block = new EventEmitter<{ senderId: string; blocked: boolean }>();
 
   longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -160,6 +173,9 @@ export class LongPressContextMenuComponent {
       this.close(); // hide context menu
       this.showReportModal.set(true); // open report modal
       return;
+    } else if (option === 'block') {
+      this.block.emit({ senderId: this.senderId(), blocked: !this.isBlocked() });
+      this.close();
     }
   }
 

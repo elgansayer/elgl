@@ -6,6 +6,7 @@ import { I18nService } from '../../services/i18n.service';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
 import { RoomChatComponent } from '../room-chat/room-chat.component';
+import { AudioEqualizerComponent } from '../primitives/audio-equalizer/audio-equalizer.component';
 import { VirtualGiftModalComponent } from '../virtual-gift-modal/virtual-gift-modal.component';
 import { TrustSafetyModalComponent } from '../trust-safety-modal/trust-safety-modal.component';
 import {
@@ -21,6 +22,7 @@ import {
     VirtualGiftModalComponent,
     TrustSafetyModalComponent,
     VoiceroomCreateModalComponent,
+    AudioEqualizerComponent,
   ],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],
@@ -70,7 +72,6 @@ export class AudioRoomComponent implements OnInit {
   }
 
   async mute(targetUserId: string): Promise<void> {
-    // Ensure you add muteSpeaker(targetUserId: string) to your AudioRoomsStore
     await this.store.muteSpeaker(targetUserId);
   }
 

@@ -12,6 +12,8 @@ export interface AudioRoomRecord {
   room_name: string;
   title: string;
   target_language: string;
+  language_pair?: string;
+  topic_tag?: string;
   host_id: string;
   is_active: boolean;
   speakers: string[];
@@ -85,9 +87,14 @@ export class AudioRoomsStore {
     }
   }
 
-  async createRoom(title: string, target_language: string): Promise<AudioRoomRecord> {
+  async createRoom(title: string, languagePair: string, topicTag: string): Promise<AudioRoomRecord> {
     const created = await firstValueFrom(
-      this.http.post<AudioRoomRecord>(`${this.baseUrl}/create`, { title, target_language }, { headers: this.getHeaders() })
+      this.http.post<AudioRoomRecord>(`${this.baseUrl}/create`, {
+        title,
+        target_language: languagePair,
+        language_pair: languagePair,
+        topic_tag: topicTag,
+      }, { headers: this.getHeaders() })
     );
     this.activeRooms.update(list => [created, ...list]);
     return created;
@@ -241,6 +248,22 @@ export class AudioRoomsStore {
       this.currentRoom.set(updated);
     } catch (e) {
       console.error('Demote speaker error:', e);
+    }
+  }
+
+  async muteSpeaker(targetUserId: string): Promise<void> {
+    const room = this.currentRoom();
+    if (!room) return;
+    try {
+      const updated = await firstValueFrom(
+        this.http.post<AudioRoomRecord>(`${this.baseUrl}/mute-speaker`, {
+          room_id: room.id,
+          target_user_id: targetUserId
+        }, { headers: this.getHeaders() })
+      );
+      this.currentRoom.set(updated);
+    } catch (e) {
+      console.error('Mute speaker error:', e);
     }
   }
 
