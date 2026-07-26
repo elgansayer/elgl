@@ -35,19 +35,35 @@ test.describe('Adversarial Chat and Video Tests', () => {
       await chatInput.fill(massiveString);
       await sendButton.click();
       
-      // 3. Send rapid-fire empty or special character messages
-      const specialChars = ['\0', '\n\n\n', '<script>alert(1)</script>', '👍🏽', 'జ్ఞ‌ా'];
+      // 3. Send rapid-fire empty or special character messages (Zalgo, RTL overrides, XSS)
+      const specialChars = [
+        '\0', 
+        '\n\n\n', 
+        '<script>alert(1)</script>', 
+        '👍🏽', 
+        'జ్ఞ‌ా',
+        'Z͑ͫ̓ͪ̂ͫ̽͏̴̙̤̞͉͚̯̞̠͍A̴̵̜̰͔ͫ͗͢Lͨͧͽ̵̟̜͍͔̯ͯ̃ͯͪ͊ͧ͟͞G̦̝̑ͨ͊̋ͯͦ͂͆̀͢Ǫ̵̹̻̝̳͂̌̌͘!̵̡̠̰͕̿̋ͥͥ̂ͣ̐́́͞',
+        '\u202E‮this is right to left text',
+        '{"type": "fake_json_payload"}'
+      ];
+      
       for (const chars of specialChars) {
         await chatInput.fill(chars);
         await sendButton.click();
       }
     }
 
-    // 4. Simulate network instability (offline/online toggling)
+    // 4. Simulate network instability (offline/online toggling) while sending
     await page.context().setOffline(true);
     if (await chatInput.isVisible()) {
       await chatInput.fill('Message sent while offline');
       await sendButton.click();
+    }
+    
+    // Rapidly toggle network state
+    for (let i = 0; i < 5; i++) {
+      await page.context().setOffline(false);
+      await page.context().setOffline(true);
     }
     await page.context().setOffline(false);
 
@@ -56,7 +72,7 @@ test.describe('Adversarial Chat and Video Tests', () => {
     await expect(body).toBeVisible();
     
     // Ensure no generic error overlays are present
-    const errorOverlay = page.locator('.error-overlay, .crash-screen');
+    const errorOverlay = page.locator('.error-overlay, .crash-screen, .error-boundary');
     await expect(errorOverlay).toHaveCount(0);
   });
 });
