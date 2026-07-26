@@ -67,7 +67,7 @@ import { Subject, takeUntil } from 'rxjs';
             }
 
             @if (message.message_type === 'doodle' && message.media_url) {
-              <img [src]="message.media_url" class="max-w-full rounded" alt="Doodle">
+              <img [src]="message.media_url" class="max-w-full rounded" alt="Doodle" loading="lazy">
             }
 
             <p class="text-xs mt-1 opacity-60 text-end">{{ message.created_at | date:'shortTime' }}</p>
