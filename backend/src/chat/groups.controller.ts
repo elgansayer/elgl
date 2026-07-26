@@ -1,6 +1,19 @@
-import { Controller, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { GroupsService } from './groups.service';
-import { CreateGroupDto, RenameGroupDto, GroupMemberDto } from './dto/group.dto';
+import {
+  CreateGroupDto,
+  RenameGroupDto,
+  GroupMemberDto,
+} from './dto/group.dto';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 
 @UseGuards(SupabaseAuthGuard)
@@ -14,17 +27,29 @@ export class GroupsController {
   }
 
   @Put(':id/rename')
-  renameGroup(@Request() req: any, @Param('id') id: string, @Body() dto: RenameGroupDto) {
+  renameGroup(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() dto: RenameGroupDto,
+  ) {
     return this.groupsService.renameGroup(req.user.id, id, dto.name);
   }
 
   @Post(':id/members')
-  addMember(@Request() req: any, @Param('id') id: string, @Body() dto: GroupMemberDto) {
+  addMember(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() dto: GroupMemberDto,
+  ) {
     return this.groupsService.addMember(req.user.id, id, dto.user_id);
   }
 
   @Delete(':id/members/:userId')
-  removeMember(@Request() req: any, @Param('id') id: string, @Param('userId') userId: string) {
+  removeMember(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+  ) {
     return this.groupsService.removeMember(req.user.id, id, userId);
   }
 }
