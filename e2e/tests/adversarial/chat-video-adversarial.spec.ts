@@ -43,7 +43,15 @@ test.describe('Adversarial Chat and Video Tests', () => {
       }
     }
 
-    // 4. Verify the page hasn't crashed (basic check)
+    // 4. Simulate network instability (offline/online toggling)
+    await page.context().setOffline(true);
+    if (await chatInput.isVisible()) {
+      await chatInput.fill('Message sent while offline');
+      await sendButton.click();
+    }
+    await page.context().setOffline(false);
+
+    // 5. Verify the page hasn't crashed (basic check)
     const body = page.locator('body');
     await expect(body).toBeVisible();
     
