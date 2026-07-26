@@ -349,7 +349,7 @@
 - [STUCK] Admin portal: `AdminService.setVipStatus`/`listUsers`/`getLoginHistory` (frontend/src/app/services/admin.service.ts) silently `catchError` into mock data on any HTTP failure, including a real 403 from the backend `AdminGuard`. Because the `/admin` route has no client-side guard, a non-admin who browses to it sees a fully populated fake user list, and clicking Grant/Revoke VIP appears to succeed even though no backend mutation happened. Surface real errors for admin actions instead of faking success (the mock fallback is fine for read-only browsing/demo mode, but not for a PATCH that changes VIP status).
 
 ## Phase 51: Admin Dashboard (Moderation)
-- [ ] Build Moderation Queue UI to review flagged Moments and profiles.
+- [x] Build Moderation Queue UI to review flagged Moments and profiles.
 - [ ] Implement 1-click ban and warning buttons.
 
 ## Phase 52: Help Centre
