@@ -43,7 +43,7 @@ export class HostDashboardComponent implements OnInit, OnDestroy {
   startTime = input.required<Date>();
 
   uptime = signal<string>('00:00:00');
-  private timerRef: any;
+  private timerRef: ReturnType<typeof setInterval> | undefined;
 
   ngOnInit(): void {
     this.updateUptime();

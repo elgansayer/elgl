@@ -12,6 +12,7 @@ export interface VirtualGift {
   icon: string;
   cost_coins: number;
   animation_type: string;
+  animationUrl?: string;
 }
 
 export interface DeveloperAnalytics {

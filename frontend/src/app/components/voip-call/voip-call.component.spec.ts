@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { VoipCallComponent } from './voip-call.component';
