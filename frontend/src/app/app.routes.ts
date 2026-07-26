@@ -36,6 +36,13 @@ export const routes: Routes = [
   { path: 'developer', component: DeveloperDashboardComponent },
   { path: 'video-call', component: VideoCallComponent },
   {
+    path: 'stats',
+    loadComponent: () =>
+      import('./components/my-stats/my-stats.component').then(
+        (m) => m.MyStatsComponent
+      ),
+  },
+  {
     path: 'hobby-tags',
     loadComponent: () =>
       import('./components/hobby-tags/hobby-tags.component').then(
