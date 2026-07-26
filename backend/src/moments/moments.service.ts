@@ -256,10 +256,10 @@ export class MomentsService {
       .eq('id', momentId)
       .single();
 
-    const momentData = momentResponse.data;
+    const momentData = momentResponse.data as { user_id: string } | null;
 
     if (momentData) {
-      const momentAuthorId = momentData.user_id;
+      const momentAuthorId: string = momentData.user_id;
       const blockedIds =
         await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
       if (blockedIds.includes(userId)) {
@@ -353,10 +353,10 @@ export class MomentsService {
       .eq('id', momentId)
       .single();
 
-    const momentData = momentResponse.data;
+    const momentData = momentResponse.data as { user_id: string } | null;
 
     if (momentData) {
-      const momentAuthorId = momentData.user_id;
+      const momentAuthorId: string = momentData.user_id;
       const blockedIds =
         await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
       if (blockedIds.includes(userId)) {
@@ -528,7 +528,7 @@ export class MomentsService {
       .eq('id', momentId)
       .single();
 
-    const momentData = momentResponse.data;
+    const momentData = momentResponse.data as { user_id: string; is_pinned: boolean } | null;
 
     if (!momentData) {
       throw new ForbiddenException('Moment not found.');
