@@ -224,6 +224,9 @@
 ## Phase 29: Deep Linking & SEO
 - [x] Configure Angular Router to handle deep links (`hellotalk://profile/:id`).
 - [ ] Configure Angular Universal (SSR) for public Voiceroom preview pages.
+  - [ ] Run `ng add @angular/ssr` in the `frontend` directory to generate server files.
+  - [ ] Update `server.ts` to handle `/voiceroom-preview/:id` routes.
+  - [ ] The previous commit only fixed a linting error in the component; the actual SSR scaffolding (`ng add @angular/ssr`) still needs to be executed.
 
 ## Phase 30: Media Pipeline Optimisation
 - [ ] Implement client-side image compression (max 1080p) before R2 upload.
