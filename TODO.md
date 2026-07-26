@@ -313,7 +313,8 @@
   - [x] Update ChatRoomComponent to listen for audio 'ended' events and play the next voice note if enabled.
 
 ## Phase 45: Image Gallery Viewer
-- [ ] Build swipeable full-screen lightbox for Moments with multiple images.
+- [x] Build swipeable full-screen lightbox for Moments with multiple images.
+- [x] Implement the actual frontend Angular component for the swipeable full-screen lightbox (the previous diff only contained audio-room co-host changes).
 
 ## Phase 46: Partner Recommendation Algorithm
 - [ ] Build NestJS background job calculating top 10 recommended language partners daily.
