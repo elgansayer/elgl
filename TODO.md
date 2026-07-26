@@ -1,7 +1,7 @@
 # TODO.md (Master HelloTalk Clone Architecture: Phases 1 to 79 + Phase C)
 
 ## URGENT
-- [ ] Fix QA test failure: `ReferenceError: describe is not defined`.
+- [x] Fix QA test failure: `ReferenceError: describe is not defined`.
 - [x] Fix QA test failure: `ReferenceError: describe is not defined`. (Root cause was not a Jest/Jasmine config or test globals issue: `qa-loop.sh` was running `npx playwright test` from `frontend/`, which has no `playwright.config.ts`, so Playwright fell back to its default glob and picked up the Angular Vitest unit `*.spec.ts` files under `frontend/src`. Those files use bare `describe`/`it` (Vitest globals) or `import { vi } from 'vitest'`, neither of which exist under the Playwright test runner, hence the `ReferenceError` and the "Vitest cannot be imported... using require()" errors. Fixed by pointing `qa-loop.sh` at the real Playwright suite in `e2e/` (its own `playwright.config.ts` + `tests/`); `ux-loop.sh` already targeted `e2e/` correctly. Verified no other script/CI invocation runs Playwright against `frontend/`.)
 
 ## GLOBAL ARCHITECTURAL RULES
@@ -79,7 +79,7 @@
 - [x] Build NestJS endpoint (`POST /audio-rooms/create`) to initialize LiveKit room and store metadata in `audio_rooms` table.
 - [x] Build NestJS access token generation endpoint (`POST /audio-rooms/token`) granting default `roomJoin: true`, `canPublish: false` for listeners.
 - [x] Install `@livekit/components-angular` or native `livekit-client` in Angular frontend.
-- [x] Build Angular Audio/Video Room UI (`AudioRoomComponent`) displaying Host, Speaker Stage Grid, and Listener Audience Grid.
+- [x] Build Angular Audio Room UI (`AudioRoomComponent`) displaying Host, Speaker Stage Grid, and Listener Audience Grid.
 - [x] Implement Stage Management API & UI:
     - Listener clicks "Raise Hand" (`POST /audio-rooms/raise-hand`).
     - Host approves request (`POST /audio-rooms/approve-speaker`).
@@ -668,4 +668,4 @@
 - [ ] Implement RSVP functionality allowing users to mark "Attending" or "Interested".
 - [ ] Build automated push notification reminders (e.g., "Your Spanish Learning Event starts in 15 minutes").
 - [ ] Integrate events with the "Language Parties" system, allowing scheduled audio rooms to automatically spin up at the designated time.
-- [ ] Implement a calendar view for users to track all their upcoming RSVP'd events.````
+- [ ] Implement a calendar view for users to track all their upcoming RSVP'd events.
