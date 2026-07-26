@@ -48,7 +48,7 @@ export class ModerationService {
     );
   }
 
-  approveItem(itemId: string, type: string): Observable<any> {
+  approveItem(itemId: string, type: string): Observable<unknown> {
     return this.http.post(`${this.baseUrl}/approve`, { itemId, type }, {
       headers: this.getHeaders(),
     }).pipe(
@@ -56,7 +56,7 @@ export class ModerationService {
     );
   }
 
-  rejectItem(itemId: string, type: string, reason?: string): Observable<any> {
+  rejectItem(itemId: string, type: string, reason?: string): Observable<unknown> {
     return this.http.post(`${this.baseUrl}/reject`, { itemId, type, reason }, {
       headers: this.getHeaders(),
     }).pipe(
