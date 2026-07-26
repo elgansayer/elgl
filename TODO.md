@@ -93,7 +93,7 @@
 
 ## Phase 7: VIP Monetisation, Virtual Economy & Trust/Safety
 - [x] Build NestJS `MonetisationController` handling Stripe & App Store webhooks (`POST /webhooks/stripe`) to toggle `user.is_vip` and `vip_tier`.
-- [x] Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent): unlimited AI, 3 target languages, location spoofing, incognito profile views.
+- [x] Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 annual equivalent): unlimited AI, 3 target languages, location spoofing, incognito profile views.
 - [STUCK] Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`) adding balance to `users.coins_balance`. (Requires receipt validation to prevent infinite coin exploit).
 - [x] Build Virtual Gift catalog & sending endpoint (`POST /economy/send-gift`), deducting coins and publishing animated Centrifugo broadcast events.
 - [x] Build Audio Room tipping mechanism allowing listeners to gift coins directly to hosts on stage.
@@ -243,7 +243,8 @@
 - [x] Build dynamic Terms of Service and Privacy Policy document viewer.
 - [x] Create routes and pages for Terms of Service and Privacy Policy using the viewer component.
 - [x] Add Angular routes for `/terms` and `/privacy` and create the corresponding page components.
-- [ ] Implement "Download My Data" button triggering a NestJS JSON export worker.
+- [x] Implement "Download My Data" button triggering a NestJS JSON export worker.
+- [x] Build the NestJS JSON export worker and wire it to the Angular frontend.
 - [ ] Build Account Deletion workflow with 30-day grace period.
 
 ## Phase 32: Custom Stickers & Emojis

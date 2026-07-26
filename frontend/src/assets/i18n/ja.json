@@ -14,5 +14,10 @@
       "FreeTalk": "フリートーク",
       "BusinessEnglish": "ビジネス英語"
     }
+  },
+  "settings": {
+    "dataSection": "データとストレージ",
+    "downloadDataDesc": "メッセージ、モーメント、フラッシュカードなど、個人データのコピーをダウンロードします。",
+    "downloadDataBtn": "マイデータをダウンロード"
   }
 }

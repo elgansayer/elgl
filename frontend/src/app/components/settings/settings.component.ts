@@ -15,6 +15,7 @@ export class SettingsComponent implements OnInit {
   private location = inject(Location);
 
   readonly isLoading = signal(true);
+  readonly isDownloading = signal(false);
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
 
@@ -60,6 +61,21 @@ export class SettingsComponent implements OnInit {
       this.errorMessage.set('Failed to save settings');
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  async downloadData(): Promise<void> {
+    this.errorMessage.set('');
+    this.successMessage.set('');
+    this.isDownloading.set(true);
+
+    try {
+      await this.userService.downloadMyData();
+      this.successMessage.set('Data export downloaded successfully');
+    } catch {
+      this.errorMessage.set('Failed to download data export');
+    } finally {
+      this.isDownloading.set(false);
     }
   }
 }

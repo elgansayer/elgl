@@ -48,6 +48,16 @@
         </div>
       </section>
 
+      <section class="space-y-4 pt-2">
+        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">{{ 'settings.dataSection' | t }}</h2>
+        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4 space-y-4">
+          <p class="text-sm text-text-secondary">{{ 'settings.downloadDataDesc' | t }}</p>
+          <button (click)="downloadData()" [disabled]="isDownloading()" class="w-full bg-surface-200 hover:bg-surface-300 text-text-primary border border-surface-300 py-3 rounded-xl font-bold shadow-sm transition-all active:scale-95 disabled:opacity-50">
+            {{ isDownloading() ? ('common.loading' | t) : ('settings.downloadDataBtn' | t) }}
+          </button>
+        </div>
+      </section>
+
       <div class="pt-6">
         <button (click)="saveSettings()" class="w-full app-button-primary py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95">
           {{ 'settings.saveBtn' | t }}
