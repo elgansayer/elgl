@@ -307,7 +307,10 @@
 - [x] Implement the actual caching logic in the frontend chat service/components (the provided diff only contained audio-room co-host changes).
 
 ## Phase 44: Audio Auto-Play Settings
-- [ ] Add settings toggle to auto-play sequential voice notes in chat.
+- [x] Add settings toggle to auto-play sequential voice notes in chat.
+  - [x] Create SettingsService to persist auto-play preference.
+  - [x] Add UI toggle in SettingsComponent.
+  - [x] Update ChatRoomComponent to listen for audio 'ended' events and play the next voice note if enabled.
 
 ## Phase 45: Image Gallery Viewer
 - [ ] Build swipeable full-screen lightbox for Moments with multiple images.

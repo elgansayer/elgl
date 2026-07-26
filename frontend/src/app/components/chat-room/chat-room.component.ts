@@ -8,6 +8,7 @@ import { I18nService } from '../../services/i18n.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
 import { ChatService, ChatMessage, ChatRoom, GroupMember } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
+import { UserService } from '../../services/user.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { DoodlePadComponent } from '../doodle-pad/doodle-pad.component';
@@ -41,6 +42,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   readonly centrifugeService = inject(CentrifugeService);
   private chatService = inject(ChatService);
   readonly authService = inject(AuthService);
+  private userService = inject(UserService);
   readonly vocabStore = inject(VocabularyStore);
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
@@ -453,6 +455,30 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     } catch (e) {
       console.error('Failed to remove member:', e);
       showToast('Failed to remove member');
+    }
+  }
+
+  async playNextVoiceNote(currentMessageId: string): Promise<void> {
+    try {
+      const profile = await this.userService.getMyProfile();
+      if (!profile || !(profile as any).auto_play_voice_notes) return;
+
+      const msgs = this.messages();
+      const currentIndex = msgs.findIndex(m => m.id === currentMessageId);
+      if (currentIndex === -1) return;
+
+      for (let i = currentIndex + 1; i < msgs.length; i++) {
+        const nextMsg = msgs[i];
+        if (nextMsg.message_type === 'voice' && nextMsg.media_url) {
+          const audioElement = document.getElementById(`audio-${nextMsg.id}`) as HTMLAudioElement;
+          if (audioElement) {
+            audioElement.play().catch(e => console.error('Auto-play failed:', e));
+          }
+          break;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to auto-play next voice note:', e);
     }
   }
 }
