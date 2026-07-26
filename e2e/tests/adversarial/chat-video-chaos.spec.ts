@@ -30,10 +30,12 @@ test.describe('Adversarial Chat & Video Chaos', () => {
 
     if (await chatInput.isVisible()) {
       const massiveString = 'ZALGO '.repeat(500) + ' 👾 '.repeat(100);
+      const xssString = '<script>alert("XSS")</script><img src="x" onerror="alert(1)">';
       
       // Fire 20 massive messages in rapid succession
       for (let i = 0; i < 20; i++) {
-        await chatInput.fill(`Spam ${i}: ${massiveString}`);
+        const payload = i % 2 === 0 ? massiveString : xssString;
+        await chatInput.fill(`Spam ${i}: ${payload}`);
         await page.keyboard.press('Enter');
         // Minimal wait to simulate aggressive typing/pasting
         await page.waitForTimeout(10);
