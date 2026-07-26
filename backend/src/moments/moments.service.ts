@@ -257,7 +257,7 @@ export class MomentsService {
       .single();
 
     if (momentData) {
-      const md = momentData;
+      const md = momentData as { user_id: string };
       const momentAuthorId = md.user_id;
       const blockedIds =
         await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
@@ -353,7 +353,7 @@ export class MomentsService {
       .single();
 
     if (momentData) {
-      const md = momentData;
+      const md = momentData as { user_id: string };
       const momentAuthorId = md.user_id;
       const blockedIds =
         await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
@@ -528,7 +528,7 @@ export class MomentsService {
     if (!momentData) {
       throw new ForbiddenException('Moment not found.');
     }
-    const momentRow = momentData;
+    const momentRow = momentData as { user_id: string; is_pinned: boolean };
     if (momentRow.user_id !== userId) {
       throw new ForbiddenException('You can only pin your own Moments.');
     }
