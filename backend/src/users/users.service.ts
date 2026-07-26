@@ -3,6 +3,7 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -330,5 +331,20 @@ export class UsersService {
       favourites: favouritesRes.data as unknown,
       exported_at: new Date().toISOString(),
     };
+  }
+
+  async getUserStats(userId: string): Promise<Partial<UserProfile>> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('users')
+      .select('coins_balance, study_streak_days, correction_ratio, is_serious_learner')
+      .eq('id', userId)
+      .single();
+
+    if (response.error || !response.data) {
+      throw new NotFoundException(`User stats not found for user ${userId}`);
+    }
+
+    return response.data as Partial<UserProfile>;
   }
 }

@@ -115,4 +115,9 @@ export class UsersController {
   async getUserProfile(@Param('id') id: string): Promise<UserProfile> {
     return this.usersService.getProfile(id);
   }
+
+  @Get(':id/stats')
+  async getUserStats(@Param('id') id: string): Promise<Partial<UserProfile>> {
+    return this.usersService.getUserStats(id);
+  }
 }
