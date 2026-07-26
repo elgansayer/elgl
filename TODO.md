@@ -265,7 +265,7 @@
 
 ## Phase 35: App Performance
 - [x] Implement Angular Lazy Loading for non-critical feature modules.
-- [ ] Audit Web Vitals and optimize images using `loading="lazy"`.
+- [x] Audit Web Vitals and optimize images using `loading="lazy"`.
 
 ## Phase 36: Backend Rate Limiting
 - [ ] Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints.
