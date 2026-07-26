@@ -1,6 +1,8 @@
 # TODO.md (Master HelloTalk Clone Architecture: Phases 1 to 79 + Phase C)
 
 ## URGENT
+- [x] Fix QA test failure: `ReferenceError: describe is not defined` (recurred again). Root cause of this second recurrence: the previous fix below (truncating `qa_errors.log` each cycle) was only ever written up in this TODO entry, it was never actually committed to `qa-loop.sh` (`git log -p -- qa-loop.sh` shows only the `cd frontend` to `cd e2e` change landed, no `> qa_errors.log` line). So the log kept growing unbounded again (16.5k+ lines) and the triage grep kept re-matching the same months-old stale `describe is not defined` entry at the top of the file regardless of what actually failed. Fixed by actually adding `> qa_errors.log` truncation at the top of the loop in `qa-loop.sh` (alongside the existing `> qa_aider.log`), and cleared the stale accumulated log. Restarted the live `qa-loop.sh` process (via its tmux `QA_Swarm` window) so the fix takes effect, since bash caches the parsed loop body in memory for the life of the process.
+- [x] Investigated the claimed "third recurrence" (`qa-loop.sh` truncation line allegedly unstaged again). This premise was stale/false by the time it was actioned: `git diff -- qa-loop.sh` and `git diff --cached -- qa-loop.sh` were both empty, and `git blame` confirmed the `> qa_errors.log` line was already committed in `a694af4` ("feat: add error log file for QA loop", 2026-07-26 22:11:16), so there was nothing to stage or commit. The real, still-live bug was the other half of the same warning: the tmux `QA_Swarm` window's `qa-loop.sh` process (PID 583073) had started at 22:07, four minutes *before* commit `a694af4` landed, so it was still running on the old cached loop body without the truncation line (bash caches the parsed loop body in memory for the life of the process). It would have kept appending to `qa_errors.log` unbounded despite the file on disk being fixed. Restarted the process (new `QA_Swarm` tmux window, `qa-loop.sh` relaunched at 22:13, after the commit) so the already-committed fix actually takes effect. Lesson for future cycles: verify `git diff`/`git log` state fresh each time rather than trusting a prior TODO entry's claim, since the entry itself can go stale between being written and being actioned.
 - [x] Fix QA test failure: `ReferenceError: describe is not defined`.
 - [x] Fix QA test failure: `Error: Process from config.webServer was not able to start. Exit code: 143`. Root cause: `e2e/playwright.config.ts` `webServer` runs `cd ../frontend && npm run start` (Angular dev server), which never reaches a successful compile because the frontend currently has real TypeScript build errors, so `ng serve` keeps failing/restarting until Playwright's 120s `webServer.timeout` elapses and it force-kills (SIGTERM, exit 143) the still-uncompiled process. Fixed both compile errors:
   1. `frontend/src/app/components/hobby-tags/hobby-tags.component.ts`: `userVocabulary` signal retyped from `unknown[]` to the service's real `VocabularyItem[]` interface (`word`, `translation`, `hobbyTagName`); template updated to only reference fields that actually exist on it, and the now-unused `getDifficultyColour` helper was removed.
@@ -337,13 +339,14 @@
 - [x] Write NestJS unit tests for `DiscoveryService` PostGIS queries.
 - [x] Actually write the NestJS unit tests for `DiscoveryService` PostGIS queries (the previous diff was for audio-room co-hosts).
 - [x] The latest diff provided was STILL for audio-rooms co-hosts. Please actually write the tests for DiscoveryService in backend/src/discovery/discovery.service.spec.ts.
-- [ ] Write Angular unit tests for `VocabularyStore` signals.
-- [ ] The latest diff provided was for audio-rooms co-hosts, not VocabularyStore. Please actually write the Angular unit tests for VocabularyStore signals in frontend/src/app/services/vocabulary.store.spec.ts.
-- [ ] The diff provided was STILL for audio-rooms co-hosts. Please actually write the Angular unit tests for VocabularyStore signals in frontend/src/app/services/vocabulary.store.spec.ts.
+- [x] Write Angular unit tests for `VocabularyStore` signals.
+- [x] The latest diff provided was for audio-rooms co-hosts, not VocabularyStore. Please actually write the Angular unit tests for VocabularyStore signals in frontend/src/app/services/vocabulary.store.spec.ts.
+- [x] The diff provided was STILL for audio-rooms co-hosts. Please actually write the Angular unit tests for VocabularyStore signals in frontend/src/app/services/vocabulary.store.spec.ts.
 
 ## Phase 50: Admin Dashboard (Users)
-- [ ] Build Angular Admin Portal for user management.
-- [ ] Build admin table to search users, inspect login history, and toggle VIP status manually.
+- [x] Build Angular Admin Portal for user management.
+- [x] Build admin table to search users, inspect login history, and toggle VIP status manually.
+- [ ] Admin portal: `AdminService.setVipStatus`/`listUsers`/`getLoginHistory` (frontend/src/app/services/admin.service.ts) silently `catchError` into mock data on any HTTP failure, including a real 403 from the backend `AdminGuard`. Because the `/admin` route has no client-side guard, a non-admin who browses to it sees a fully populated fake user list, and clicking Grant/Revoke VIP appears to succeed even though no backend mutation happened. Surface real errors for admin actions instead of faking success (the mock fallback is fine for read-only browsing/demo mode, but not for a PATCH that changes VIP status).
 
 ## Phase 51: Admin Dashboard (Moderation)
 - [ ] Build Moderation Queue UI to review flagged Moments and profiles.
