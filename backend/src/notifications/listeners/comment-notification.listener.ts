@@ -13,8 +13,6 @@ export class CommentNotificationListener {
 
   @OnEvent('moment.comment')
   async handleMomentComment(event: MomentCommentEvent): Promise<void> {
-    if (event.commenterId === event.momentAuthorId) return;
-
     try {
       const supabase = this.supabaseService.getClient();
       const { data: commenter } = await supabase
