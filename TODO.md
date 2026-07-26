@@ -269,7 +269,7 @@
 
 ## Phase 36: Backend Rate Limiting
 - [STUCK] Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints.
-- [ ] Implement WebSocket connection rate limiting in Centrifugo.
+- [x] Implement WebSocket connection rate limiting in Centrifugo.
 
 ## Phase 37: WebRTC Fallback Infrastructure
 - [ ] Configure STUN/TURN server credentials in LiveKit for strict corporate NAT networks.
