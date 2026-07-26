@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ChatListComponent } from './chat-list.component';
 import { ChatService } from '../../services/chat.service';
@@ -8,20 +8,20 @@ import { provideRouter } from '@angular/router';
 describe('ChatListComponent', () => {
   let component: ChatListComponent;
   let fixture: ComponentFixture<ChatListComponent>;
-  let mockChatService: unknown;
+  let mockChatService: { getRooms: ReturnType<typeof vi.fn>; getRecentChats: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     mockChatService = {
-      getRecentChats: () => Promise.resolve([]),
-      getRooms: () => Promise.resolve([]),
+      getRooms: vi.fn().mockResolvedValue([]),
+      getRecentChats: vi.fn().mockResolvedValue([]),
     };
 
     await TestBed.configureTestingModule({
       imports: [ChatListComponent],
       providers: [
         { provide: ChatService, useValue: mockChatService },
-        provideRouter([])
-      ]
+        provideRouter([]),
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ChatListComponent);

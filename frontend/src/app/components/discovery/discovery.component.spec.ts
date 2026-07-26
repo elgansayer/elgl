@@ -7,19 +7,19 @@ import { provideRouter } from '@angular/router';
 describe('DiscoveryComponent', () => {
   let component: DiscoveryComponent;
   let fixture: ComponentFixture<DiscoveryComponent>;
-  let mockDiscoveryService: unknown;
+  let mockDiscoveryService: { findPartners: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     mockDiscoveryService = {
-      findPartners: vi.fn().mockResolvedValue([])
+      findPartners: vi.fn().mockResolvedValue([]),
     };
 
     await TestBed.configureTestingModule({
       imports: [DiscoveryComponent],
       providers: [
         provideRouter([]),
-        { provide: DiscoveryService, useValue: mockDiscoveryService }
-      ]
+        { provide: DiscoveryService, useValue: mockDiscoveryService },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(DiscoveryComponent);
