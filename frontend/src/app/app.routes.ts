@@ -1,40 +1,24 @@
 import { Routes } from '@angular/router';
 import { DiscoveryComponent } from './components/discovery/discovery.component';
-import { ProfileComponent } from './components/profile/profile.component';
-import { VisitorLogsComponent } from './components/visitor-logs/visitor-logs.component';
-import { ChatRoomComponent } from './components/chat-room/chat-room.component';
-import { ChatListComponent } from './components/chat-list/chat-list.component';
-import { FavouritesComponent } from './components/favourites/favourites.component';
-import { VocabularyDashboardComponent } from './components/vocabulary-dashboard/vocabulary-dashboard.component';
-import { MomentsFeedComponent } from './components/moments-feed/moments-feed.component';
-import { AudioRoomComponent } from './components/audio-room/audio-room.component';
-import { DeveloperDashboardComponent } from './components/developer-dashboard/developer-dashboard.component';
-import { ProfileVisitorsComponent } from './components/profile-visitors/profile-visitors.component';
-import { VideoCallComponent } from './components/video-call/video-call.component';
-import { UserDetailComponent } from './components/user-detail/user-detail.component';
-import { SubscriptionSuccessComponent } from './components/subscription-success/subscription-success.component';
-import { SubscriptionCancelComponent } from './components/subscription-cancel/subscription-cancel.component';
-
-import { NotificationsInboxComponent } from './components/notifications-inbox/notifications-inbox.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'discovery', pathMatch: 'full' },
   { path: 'discovery', component: DiscoveryComponent },
-  { path: 'moments', component: MomentsFeedComponent },
-  { path: 'notifications', component: NotificationsInboxComponent },
-  { path: 'audio-rooms', component: AudioRoomComponent },
-  { path: 'chat', component: ChatListComponent },
-  { path: 'chat/:id', component: ChatRoomComponent },
+  { path: 'moments', loadComponent: () => import('./components/moments-feed/moments-feed.component').then(m => m.MomentsFeedComponent) },
+  { path: 'notifications', loadComponent: () => import('./components/notifications-inbox/notifications-inbox.component').then(m => m.NotificationsInboxComponent) },
+  { path: 'audio-rooms', loadComponent: () => import('./components/audio-room/audio-room.component').then(m => m.AudioRoomComponent) },
+  { path: 'chat', loadComponent: () => import('./components/chat-list/chat-list.component').then(m => m.ChatListComponent) },
+  { path: 'chat/:id', loadComponent: () => import('./components/chat-room/chat-room.component').then(m => m.ChatRoomComponent) },
   { path: 'leaderboard', loadComponent: () => import('./components/leaderboard/leaderboard.component').then(m => m.LeaderboardComponent) },
-  { path: 'favourites', component: FavouritesComponent },
-  { path: 'vocabulary', component: VocabularyDashboardComponent },
-  { path: 'profile', component: ProfileComponent },
-  { path: 'profile/:id', component: UserDetailComponent },
-  { path: 'visitors', component: VisitorLogsComponent },
-  { path: 'profile/visitors', component: ProfileVisitorsComponent },
+  { path: 'favourites', loadComponent: () => import('./components/favourites/favourites.component').then(m => m.FavouritesComponent) },
+  { path: 'vocabulary', loadComponent: () => import('./components/vocabulary-dashboard/vocabulary-dashboard.component').then(m => m.VocabularyDashboardComponent) },
+  { path: 'profile', loadComponent: () => import('./components/profile/profile.component').then(m => m.ProfileComponent) },
+  { path: 'profile/:id', loadComponent: () => import('./components/user-detail/user-detail.component').then(m => m.UserDetailComponent) },
+  { path: 'visitors', loadComponent: () => import('./components/visitor-logs/visitor-logs.component').then(m => m.VisitorLogsComponent) },
+  { path: 'profile/visitors', loadComponent: () => import('./components/profile-visitors/profile-visitors.component').then(m => m.ProfileVisitorsComponent) },
   { path: 'settings', loadComponent: () => import('./components/settings/settings.component').then(m => m.SettingsComponent) },
-  { path: 'developer', component: DeveloperDashboardComponent },
-  { path: 'video-call', component: VideoCallComponent },
+  { path: 'developer', loadComponent: () => import('./components/developer-dashboard/developer-dashboard.component').then(m => m.DeveloperDashboardComponent) },
+  { path: 'video-call', loadComponent: () => import('./components/video-call/video-call.component').then(m => m.VideoCallComponent) },
   {
     path: 'stats',
     loadComponent: () =>
@@ -67,12 +51,12 @@ export const routes: Routes = [
   },
   {
     path: 'subscription/success',
-    component: SubscriptionSuccessComponent,
+    loadComponent: () => import('./components/subscription-success/subscription-success.component').then(m => m.SubscriptionSuccessComponent),
     title: 'Subscription Successful - HelloTalk',
   },
   {
     path: 'subscription/cancel',
-    component: SubscriptionCancelComponent,
+    loadComponent: () => import('./components/subscription-cancel/subscription-cancel.component').then(m => m.SubscriptionCancelComponent),
     title: 'Subscription Cancelled - HelloTalk',
   },
   {

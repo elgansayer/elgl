@@ -259,23 +259,26 @@
 - [x] Implement backend endpoints for user statistics.
 
 ## Phase 34: UI Theming
-- [ ] Build Theme Selector (Dark, Light, System Default).
-- [ ] Allow VIP users to select custom primary accent colours.
+- [STUCK] Build Theme Selector (Dark, Light, System Default).
+- [x] Allow VIP users to select custom primary accent colours.
+- [x] Build UI for VIP users to select custom primary accent colours in settings.
 
 ## Phase 35: App Performance
-- [ ] Implement Angular Lazy Loading for non-critical feature modules.
-- [ ] Audit Web Vitals and optimize images using `loading="lazy"`.
+- [x] Implement Angular Lazy Loading for non-critical feature modules.
+- [x] Audit Web Vitals and optimize images using `loading="lazy"`.
 
 ## Phase 36: Backend Rate Limiting
-- [ ] Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints.
-- [ ] Implement WebSocket connection rate limiting in Centrifugo.
+- [STUCK] Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints.
+- [x] Implement WebSocket connection rate limiting in Centrifugo.
 
 ## Phase 37: WebRTC Fallback Infrastructure
-- [ ] Configure STUN/TURN server credentials in LiveKit for strict corporate NAT networks.
+- [x] Configure STUN/TURN server credentials in LiveKit for strict corporate NAT networks.
 
 ## Phase 38: Live Stream Viewer Mechanics
-- [ ] Build scrolling live chat comment overlay over host video stream.
-- [ ] Implement full-screen SVG gift animations when viewers tip the host.
+- [x] Build scrolling live chat comment overlay over host video stream.
+- [x] Implement full-screen SVG gift animations when viewers tip the host.
+- [x] Integrate ngx-lottie or similar to render actual SVG animations for gifts.
+- [x] Create GiftAnimationComponent and integrate it into chat/feed for gift payloads.
 
 ## Phase 39: Live Stream Host Mechanics
 - [ ] Build Host Dashboard showing live viewer count, earned coins, and stream uptime.

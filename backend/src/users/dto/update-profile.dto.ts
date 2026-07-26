@@ -6,6 +6,7 @@ import {
   IsString,
   MaxLength,
   ValidateNested,
+  Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -49,6 +50,13 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   cover_photo_url?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^#[0-9A-Fa-f]{6}$/, {
+    message: 'primary_accent_color must be a valid hex color code',
+  })
+  primary_accent_color?: string;
 
   @IsOptional()
   @ValidateNested()

@@ -514,6 +514,10 @@
     }
   },
   "settings.title": "Settings & Privacy",
+  "settings.appearanceSection": "Appearance",
+  "settings.accentColor": "Primary Accent Colour",
+  "settings.accentColorDesc": "Personalise your app experience.",
+  "settings.vipRequired": "VIP Only",
   "settings.privacySection": "Privacy settings",
   "settings.hideLocation": "Hide location in discovery",
   "settings.hideSearch": "Hide profile from search",

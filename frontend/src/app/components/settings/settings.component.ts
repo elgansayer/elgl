@@ -19,6 +19,18 @@ export class SettingsComponent implements OnInit {
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
 
+  readonly isVip = signal(false);
+  readonly primaryAccentColor = signal<string | null>(null);
+
+  readonly availableColors = [
+    '#4f46e5', // Indigo (default)
+    '#e11d48', // Rose
+    '#16a34a', // Green
+    '#d97706', // Amber
+    '#9333ea', // Purple
+    '#0891b2', // Cyan
+  ];
+
   privacyHideLocation = false;
   privacyHideSearch = false;
   privacyHideAge = false;
@@ -28,6 +40,8 @@ export class SettingsComponent implements OnInit {
     try {
       const profile = await this.userService.getMyProfile();
       if (profile) {
+        this.isVip.set(Boolean(profile.is_vip));
+        this.primaryAccentColor.set(profile.primary_accent_color || '#4f46e5');
         this.privacyHideLocation = Boolean(profile.privacy_hide_location);
         this.privacyHideSearch = Boolean(profile.privacy_hide_from_search);
         this.privacyHideAge = Boolean(profile.privacy_hide_age);
@@ -44,6 +58,12 @@ export class SettingsComponent implements OnInit {
     this.location.back();
   }
 
+  setAccentColor(color: string): void {
+    if (this.isVip()) {
+      this.primaryAccentColor.set(color);
+    }
+  }
+
   async saveSettings(): Promise<void> {
     this.errorMessage.set('');
     this.successMessage.set('');
@@ -55,6 +75,7 @@ export class SettingsComponent implements OnInit {
         privacy_hide_from_search: this.privacyHideSearch,
         privacy_hide_age: this.privacyHideAge,
         privacy_hide_gender: this.privacyHideGender,
+        primary_accent_color: this.primaryAccentColor(),
       } as unknown as Record<string, unknown>);
       this.successMessage.set('Settings saved successfully');
     } catch {

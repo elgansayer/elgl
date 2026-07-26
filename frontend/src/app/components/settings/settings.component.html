@@ -23,6 +23,38 @@
       }
 
       <section class="space-y-4">
+        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">{{ 'settings.appearanceSection' | t }}</h2>
+        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4 space-y-4">
+          <div class="flex justify-between items-center">
+            <div>
+              <span class="text-sm font-medium text-text-primary block">{{ 'settings.accentColor' | t }}</span>
+              <span class="text-xs text-text-secondary">{{ 'settings.accentColorDesc' | t }}</span>
+            </div>
+            @if (!isVip()) {
+              <span class="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded-md">{{ 'settings.vipRequired' | t }}</span>
+            }
+          </div>
+          <div class="flex gap-3 flex-wrap">
+            @for (color of availableColors; track color) {
+              <button
+                type="button"
+                (click)="setAccentColor(color)"
+                [disabled]="!isVip()"
+                [style.backgroundColor]="color"
+                class="w-10 h-10 rounded-full border-2 transition-transform"
+                [class.border-white]="primaryAccentColor() === color"
+                [class.border-transparent]="primaryAccentColor() !== color"
+                [class.scale-110]="primaryAccentColor() === color"
+                [class.opacity-50]="!isVip()"
+                [class.cursor-not-allowed]="!isVip()"
+                aria-label="Select color"
+              ></button>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="space-y-4">
         <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">{{ 'settings.privacySection' | t }}</h2>
         
         <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm">
