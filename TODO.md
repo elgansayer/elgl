@@ -249,7 +249,7 @@
 - [x] Implement backend cron job for 30-day grace period deletion.
 
 ## Phase 32: Custom Stickers & Emojis
-- [ ] Build Sticker Store UI.
+- [x] Build Sticker Store UI.
 - [ ] Allow spending virtual coins to unlock animated sticker packs.
 - [ ] Build custom sticker picker drawer inside chat window.
 
