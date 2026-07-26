@@ -27,8 +27,7 @@ export class RecommendationsService {
 
       for (const user of users) {
         const targetLanguages = user.target_languages as string[] | null;
-        if (!targetLanguages || targetLanguages.length === 0)
-          continue;
+        if (!targetLanguages || targetLanguages.length === 0) continue;
 
         // Find users who speak the target language natively and are learning the user's native language
         const { data: matches } = await supabase
