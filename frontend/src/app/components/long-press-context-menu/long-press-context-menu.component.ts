@@ -6,8 +6,8 @@ import {
   input,
   model,
   signal,
-  HostListener,
   ElementRef,
+  inject,
 } from '@angular/core';
 
 import { ReportUserModalComponent } from '../report-user-modal/report-user-modal.component';
@@ -22,6 +22,8 @@ import { ReportUserModalComponent } from '../report-user-modal/report-user-modal
         class="context-menu-popup"
         (click)="$event.stopPropagation()"
         (contextmenu)="$event.preventDefault()"
+        (keydown.enter)="$event.stopPropagation()"
+        tabindex="0"
       >
         <ul class="menu-items">
           <li>
@@ -61,7 +63,7 @@ import { ReportUserModalComponent } from '../report-user-modal/report-user-modal
       <app-report-user-modal
         [reportUserId]="senderId()"
         [contextUrl]="buildContextUrl()"
-        (close)="showReportModal.set(false)"
+        (closeModal)="showReportModal.set(false)"
         (reported)="onReportSubmitted()"
       ></app-report-user-modal>
     }
@@ -103,6 +105,12 @@ import { ReportUserModalComponent } from '../report-user-modal/report-user-modal
       }
     `,
   ],
+  host: {
+    '(document:click)': 'onDocumentClick($event)',
+    '(document:keydown.escape)': 'onEscape()',
+    '(window:resize)': 'onResize()',
+    '(window:scroll)': 'onScroll()',
+  }
 })
 export class LongPressContextMenuComponent {
   readonly messageId = input<string>('');
@@ -118,7 +126,7 @@ export class LongPressContextMenuComponent {
 
   @Input() messageAuthorId?: string;
 
-  @Output() copy = new EventEmitter<{ messageId: string; content: string }>();
+  @Output() copyMessage = new EventEmitter<{ messageId: string; content: string }>();
   @Output() favourite = new EventEmitter<{
     messageId: string;
     content: string;
@@ -135,11 +143,11 @@ export class LongPressContextMenuComponent {
 
   showReportModal = signal(false);
 
-  constructor(private elementRef: ElementRef) {}
+  private elementRef = inject(ElementRef);
 
   onOptionClick(option: string): void {
     if (option === 'copy') {
-      this.copy.emit({ messageId: this.messageId(), content: this.messageContent() });
+      this.copyMessage.emit({ messageId: this.messageId(), content: this.messageContent() });
       this.close();
     } else if (option === 'favourite') {
       this.favourite.emit({
@@ -197,7 +205,6 @@ export class LongPressContextMenuComponent {
     });
   }
 
-  @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     const clickedInside = this.elementRef.nativeElement?.contains(event.target);
     if (!clickedInside) {
@@ -205,17 +212,14 @@ export class LongPressContextMenuComponent {
     }
   }
 
-  @HostListener('document:keydown.escape')
   onEscape(): void {
     this.close();
   }
 
-  @HostListener('window:resize')
   onResize(): void {
     this.close();
   }
 
-  @HostListener('window:scroll')
   onScroll(): void {
     this.close();
   }

@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, signal, computed, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal, OnInit } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';

@@ -1,7 +1,6 @@
 import { Component, inject, signal, effect, OnDestroy, output } from '@angular/core';
 
 import { I18nService } from '../../services/i18n.service';
-import { TranslatePipe } from '../../services/translate.pipe';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { CentrifugoService } from '../../services/centrifugo.service';
@@ -163,7 +162,7 @@ export class IncomingCallComponent implements OnDestroy {
 
   private playFallbackRingtone(): void {
     try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioContext = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AudioContext) return;
 
       const audioContext = new AudioContext();

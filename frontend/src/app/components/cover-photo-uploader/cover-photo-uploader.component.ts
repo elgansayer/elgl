@@ -1,13 +1,9 @@
 import {
   Component,
   signal,
-  computed,
   output,
   input,
   inject,
-  ElementRef,
-  ViewChild,
-  AfterViewInit,
 } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -47,6 +43,8 @@ interface CropBox {
           <div
             class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
             (click)="fileInput.click()"
+            (keydown.enter)="fileInput.click()"
+            tabindex="0"
           >
             <div class="text-center text-white">
               <svg
@@ -76,6 +74,7 @@ interface CropBox {
           <div class="relative overflow-hidden rounded-xl" #imageContainer>
             <img
               [src]="imageSource()"
+              alt="Image to crop"
               (load)="onImageLoad($event)"
               class="w-full select-none"
               draggable="false"
@@ -183,7 +182,7 @@ interface CropBox {
           @if (croppedPreviewUrl()) {
             <div class="mt-4">
               <p class="text-sm text-text-muted mb-2">Preview:</p>
-              <img [src]="croppedPreviewUrl()" class="w-full rounded-lg" />
+              <img [src]="croppedPreviewUrl()" alt="Cropped preview" class="w-full rounded-lg" />
             </div>
           }
         </div>

@@ -1468,7 +1468,7 @@ const EMOJI_CATEGORIES = [
   ],
 })
 export class EmojiPickerComponent {
-  onEmojiSelect = output<string>();
+  emojiSelect = output<string>();
 
   categories = EMOJI_CATEGORIES;
   selectedCategory = signal('Smileys');
@@ -1483,6 +1483,6 @@ export class EmojiPickerComponent {
   };
 
   selectEmoji(emoji: string): void {
-    this.onEmojiSelect.emit(emoji);
+    this.emojiSelect.emit(emoji);
   }
 }

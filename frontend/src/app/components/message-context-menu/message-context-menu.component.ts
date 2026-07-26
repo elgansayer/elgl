@@ -1,4 +1,4 @@
-import { Component, input, output, HostListener, ElementRef } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 
 import { ChatMessage } from '../../services/chat.service';
 
@@ -7,12 +7,14 @@ import { ChatMessage } from '../../services/chat.service';
   standalone: true,
   imports: [],
   template: `
-    <div class="fixed inset-0 z-50" (click)="close()" (touchstart)="close()">
+    <div class="fixed inset-0 z-50" (click)="close()" (touchstart)="close()" (keydown.enter)="close()" tabindex="0">
       <div class="absolute" [style.top.px]="y()" [style.left.px]="x()">
         <div
           class="bg-surface-200 border border-gray-600 rounded-lg shadow-xl py-1 min-w-[160px]"
           (click)="$event.stopPropagation()"
           (touchstart)="$event.stopPropagation()"
+          (keydown.enter)="$event.stopPropagation()"
+          tabindex="0"
         >
           <button
             (click)="onCopy()"
@@ -66,18 +68,18 @@ export class MessageContextMenuComponent {
   x = input.required<number>();
   y = input.required<number>();
 
-  copy = output<ChatMessage>();
+  copyMessage = output<ChatMessage>();
   favourite = output<ChatMessage>();
   report = output<ChatMessage>();
 
   close() {
     // Emit undefined to signal close
-    this.copy.emit(undefined as unknown as ChatMessage);
+    this.copyMessage.emit(undefined as unknown as ChatMessage);
   }
 
   onCopy() {
     navigator.clipboard.writeText(this.message().text_content || '');
-    this.copy.emit(this.message());
+    this.copyMessage.emit(this.message());
   }
 
   onFavourite() {

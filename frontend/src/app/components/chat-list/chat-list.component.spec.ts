@@ -8,7 +8,7 @@ import { provideRouter } from '@angular/router';
 describe('ChatListComponent', () => {
   let component: ChatListComponent;
   let fixture: ComponentFixture<ChatListComponent>;
-  let mockChatService: any;
+  let mockChatService: unknown;
 
   beforeEach(async () => {
     mockChatService = {

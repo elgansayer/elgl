@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
@@ -166,7 +166,7 @@ export class HobbyTagsComponent implements OnInit {
 
   readonly allTags = signal<HobbyTag[]>([]);
   readonly userTags = signal<UserHobbyTag[]>([]);
-  readonly userVocabulary = signal<any[]>([]); // Using any for simplicity as VocabularyItem isn't exported from the component
+  readonly userVocabulary = signal<unknown[]>([]);
 
   readonly proficiencyLevels = ['beginner', 'intermediate', 'advanced', 'native'];
 
@@ -179,7 +179,7 @@ export class HobbyTagsComponent implements OnInit {
     );
   });
 
-  constructor(public hobbyTagsService: HobbyTagsService) {}
+  public hobbyTagsService = inject(HobbyTagsService);
 
   ngOnInit(): void {
     this.fetchAllTags();

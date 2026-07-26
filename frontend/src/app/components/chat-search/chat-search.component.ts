@@ -45,7 +45,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           </div>
         }
         @for (msg of results(); track msg.id) {
-          <button (click)="onMessageSelect.emit(msg)"
+          <button (click)="messageSelect.emit(msg)"
                   class="w-full text-start px-3 py-2 hover:bg-surface-100 transition-colors border-b border-surface-100 last:border-b-0">
             <div class="ms-3 min-w-0 flex-1">
               <p class="text-sm font-bold text-text-primary truncate">
@@ -71,7 +71,7 @@ export class ChatSearchComponent {
   private chatService = inject(ChatService);
 
   roomId = input.required<string>();
-  onMessageSelect = output<ChatMessage>();
+  messageSelect = output<ChatMessage>();
 
   query = signal('');
   selectedType = signal('All');

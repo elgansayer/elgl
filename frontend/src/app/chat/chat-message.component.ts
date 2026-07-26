@@ -18,7 +18,7 @@ import { SafetyService } from '../services/safety.service';
         [senderId]="message().sender_id"
         [roomId]="channelId()"
         (favourite)="onFavouriteAdded($event.messageId)"
-        (report)="onReportSubmitted($event.messageId)"
+        (report)="onReportSubmitted()"
       >
         <div 
           class="message-bubble p-3 rounded-lg cursor-pointer select-none"
@@ -27,7 +27,7 @@ import { SafetyService } from '../services/safety.service';
         >
           <p class="text-white text-sm">{{ message().text_content }}</p>
           @if (message().media_url) {
-            <img [src]="message().media_url" class="mt-2 rounded max-w-full max-h-64 object-cover" />
+            <img [src]="message().media_url" alt="Message media" class="mt-2 rounded max-w-full max-h-64 object-cover" />
           }
           <span class="text-xs text-text-muted mt-1 block">
             {{ message().created_at | date:'short' }}
@@ -61,7 +61,7 @@ export class ChatMessageComponent {
     });
   }
 
-  onReportSubmitted(messageId: string): void {
+  onReportSubmitted(): void {
     const msg = this.message();
     this.safetyService.reportUser({
       reported_id: msg.sender_id,

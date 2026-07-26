@@ -11,10 +11,10 @@ import { vi } from 'vitest';
 describe('IncomingCallComponent', () => {
   let component: IncomingCallComponent;
   let fixture: ComponentFixture<IncomingCallComponent>;
-  let mockCentrifugoService: any;
-  let mockAuthService: any;
-  let mockLivekitService: any;
-  let mockSafetyService: any;
+  let mockCentrifugoService: unknown;
+  let mockAuthService: unknown;
+  let mockLivekitService: unknown;
+  let mockSafetyService: unknown;
 
   beforeEach(async () => {
     mockCentrifugoService = {
@@ -63,7 +63,7 @@ describe('IncomingCallComponent', () => {
       isVideo: false,
     };
 
-    const subscribeCallback = mockCentrifugoService.subscribe.mock.calls[0]?.[1];
+    const subscribeCallback = (mockCentrifugoService as any).subscribe.mock.calls[0]?.[1];
     if (subscribeCallback) {
       subscribeCallback({ type: 'incoming_call', callInfo });
     }
@@ -87,13 +87,13 @@ describe('IncomingCallComponent', () => {
 
     await component.acceptCall();
 
-    expect(mockLivekitService.joinRoom).toHaveBeenCalledWith(
+    expect((mockLivekitService as any).joinRoom).toHaveBeenCalledWith(
       'room-789',
       'test-user-123',
       false,
       undefined,
     );
-    expect(mockCentrifugoService.publish).toHaveBeenCalledWith('user_caller-456', {
+    expect((mockCentrifugoService as any).publish).toHaveBeenCalledWith('user_caller-456', {
       type: 'call_accepted',
       data: {
         userId: 'test-user-123',
@@ -121,7 +121,7 @@ describe('IncomingCallComponent', () => {
 
     expect(component.showCallModal()).toBe(false);
     expect(emitSpy).toHaveBeenCalledWith(callInfo);
-    expect(mockCentrifugoService.publish).toHaveBeenCalledWith('user_caller-456', {
+    expect((mockCentrifugoService as any).publish).toHaveBeenCalledWith('user_caller-456', {
       type: 'call_rejected',
       data: {
         userId: 'test-user-123',

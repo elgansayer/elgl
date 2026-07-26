@@ -202,7 +202,7 @@ export class IncomingCallModalComponent implements OnDestroy {
 
   private playFallbackBeep(): void {
     try {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
       this.oscillator = this.audioContext.createOscillator();
       this.gainNode = this.audioContext.createGain();
 

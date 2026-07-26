@@ -1,4 +1,4 @@
-import { showToast, notImplementedToast } from '../../services/toast.service';
+import { notImplementedToast } from '../../services/toast.service';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

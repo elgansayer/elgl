@@ -1,7 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { EconomyStore } from '../../services/economy.store';
 import { AuthService } from '../../services/auth.service';
 import { DiscoveryService, SearchFilterParams } from '../../services/discovery.service';

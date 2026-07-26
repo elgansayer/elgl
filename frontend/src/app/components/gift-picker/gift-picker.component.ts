@@ -82,7 +82,7 @@ const AVAILABLE_GIFTS: GiftItem[] = [
   ],
 })
 export class GiftPickerComponent {
-  onGiftSelect = output<string>();
+  giftSelect = output<string>();
 
   gifts = AVAILABLE_GIFTS;
   selectedCategory = signal('All');
@@ -96,6 +96,6 @@ export class GiftPickerComponent {
   };
 
   selectGift(gift: GiftItem): void {
-    this.onGiftSelect.emit(gift.id);
+    this.giftSelect.emit(gift.id);
   }
 }

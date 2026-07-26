@@ -5,8 +5,8 @@ import { LongPressContextMenuComponent } from './long-press-context-menu.compone
 import { of } from 'rxjs';
 import { SafetyService } from '../../services/safety.service';
 
-(globalThis as any).Touch = class Touch {};
-(globalThis as any).TouchEvent = class TouchEvent extends Event {};
+(globalThis as unknown as { Touch: typeof Touch }).Touch = class Touch {} as any;
+(globalThis as unknown as { TouchEvent: typeof TouchEvent }).TouchEvent = class TouchEvent extends Event {} as any;
 
 describe('LongPressContextMenuComponent', () => {
   let component: LongPressContextMenuComponent;
@@ -40,9 +40,9 @@ describe('LongPressContextMenuComponent', () => {
   });
 
   it('should emit copy event when copy option is clicked', () => {
-    vi.spyOn(component.copy, 'emit');
+    vi.spyOn(component.copyMessage, 'emit');
     component['onOptionClick']('copy');
-    expect(component.copy.emit).toHaveBeenCalledWith({
+    expect(component.copyMessage.emit).toHaveBeenCalledWith({
       messageId: 'test-message-id',
       content: 'Hello world',
     });
@@ -133,7 +133,7 @@ describe('LongPressContextMenuComponent', () => {
       type: 'touchstart',
       touches: [{ clientX: 0, clientY: 0 }],
       preventDefault: vi.fn()
-    } as any;
+    } as unknown as TouchEvent;
     component.onTouchStart(touchEvent);
     expect((component as any).longPressTimer).not.toBeNull();
     vi.advanceTimersByTime(component.longPressDuration());
@@ -146,7 +146,7 @@ describe('LongPressContextMenuComponent', () => {
       type: 'touchstart',
       touches: [{ clientX: 0, clientY: 0 }],
       preventDefault: vi.fn()
-    } as any;
+    } as unknown as TouchEvent;
     component.onTouchStart(touchEvent);
     component.onTouchMove();
     expect((component as any).longPressTimer).toBeNull();
@@ -157,7 +157,7 @@ describe('LongPressContextMenuComponent', () => {
       type: 'touchstart',
       touches: [{ clientX: 0, clientY: 0 }],
       preventDefault: vi.fn()
-    } as any;
+    } as unknown as TouchEvent;
     component.onTouchStart(touchEvent);
     component.onTouchEnd();
     expect((component as any).longPressTimer).toBeNull();

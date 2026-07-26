@@ -26,7 +26,7 @@ export class ReportUserModalComponent {
   @Input() reportedUserName?: string;
   @Input() contextUrl?: string;
 
-  @Output() close = new EventEmitter<void>();
+  @Output() closeModal = new EventEmitter<void>();
   @Output() reportSuccess = new EventEmitter<void>();
 
   categories = REPORT_CATEGORIES;
@@ -63,9 +63,9 @@ export class ReportUserModalComponent {
         this.submitting = false;
         this.reset();
         this.reportSuccess.emit();
-        this.close.emit();
+        this.closeModal.emit();
       },
-      error: (err) => {
+      error: () => {
         this.submitting = false;
         this.errorMessage = 'Failed to submit report. Please try again.';
       },
@@ -74,6 +74,6 @@ export class ReportUserModalComponent {
 
   cancel() {
     this.reset();
-    this.close.emit();
+    this.closeModal.emit();
   }
 }

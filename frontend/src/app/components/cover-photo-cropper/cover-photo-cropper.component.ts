@@ -10,11 +10,15 @@ import { TranslatePipe } from '../../services/translate.pipe';
   template: `
     <div
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
-      (click)="cancel.emit()"
+      (click)="cancelCrop.emit()"
+      (keydown.enter)="cancelCrop.emit()"
+      tabindex="0"
     >
       <div
         class="bg-gray-900 rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl"
         (click)="$event.stopPropagation()"
+        (keydown.enter)="$event.stopPropagation()"
+        tabindex="0"
       >
         <h3 class="text-lg font-semibold text-white mb-4">Crop Cover Photo</h3>
 
@@ -33,7 +37,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
         <div class="flex justify-end gap-3">
           <button
-            (click)="cancel.emit()"
+            (click)="cancelCrop.emit()"
             class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-white bg-surface-200 hover:bg-surface-100 rounded-lg transition-colors"
           >
             {{ 'common.cancel' | t }}
@@ -53,13 +57,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
 export class CoverPhotoCropperComponent {
   readonly imageFile = input.required<File>();
   readonly saveCover = output<Blob>();
-  readonly cancel = output<void>();
+  readonly cancelCrop = output<void>();
 
   readonly croppedBlob = signal<Blob | null>(null);
 
-  onImageCropped(event: any) {
-    if (event.blob) {
-      this.croppedBlob.set(event.blob);
+  onImageCropped(event: unknown) {
+    const e = event as { blob?: Blob };
+    if (e.blob) {
+      this.croppedBlob.set(e.blob);
     }
   }
 
