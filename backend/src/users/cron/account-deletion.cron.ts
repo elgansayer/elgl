@@ -12,7 +12,7 @@ export class AccountDeletionCron {
   async handleAccountDeletions() {
     this.logger.log('Running account deletion cron job...');
     const supabase = this.supabaseService.getClient();
-    
+
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -38,8 +38,10 @@ export class AccountDeletionCron {
 
       for (const user of usersToDelete) {
         // Delete from auth.users (this cascades to the public.users table if foreign keys are set up correctly)
-        const { error: deleteError } = await supabase.auth.admin.deleteUser(user.id);
-        
+        const { error: deleteError } = await supabase.auth.admin.deleteUser(
+          user.id,
+        );
+
         if (deleteError) {
           this.logger.error(`Failed to delete user ${user.id}`, deleteError);
         } else {
