@@ -138,7 +138,9 @@ describe('DiscoveryService', () => {
     });
 
     it('should use mock_location if user is VIP and mock_location is set', async () => {
-      const nearbyPartners = [{ id: 'nearby-vip', display_name: 'Nearby VIP User' }];
+      const nearbyPartners = [
+        { id: 'nearby-vip', display_name: 'Nearby VIP User' },
+      ];
       mockSupabaseClient.rpc.mockResolvedValue({
         data: nearbyPartners,
         error: null,
@@ -172,7 +174,9 @@ describe('DiscoveryService', () => {
     });
 
     it('should apply serious learner filter to rpc call', async () => {
-      const nearbyPartners = [{ id: 'nearby-serious', display_name: 'Nearby Serious User' }];
+      const nearbyPartners = [
+        { id: 'nearby-serious', display_name: 'Nearby Serious User' },
+      ];
       mockSupabaseClient.rpc.mockResolvedValue({
         data: nearbyPartners,
         error: null,
