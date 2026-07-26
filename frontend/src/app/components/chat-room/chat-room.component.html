@@ -251,7 +251,7 @@
     </div>
 
     @if (showStickerDrawer()) {
-      <div class="absolute bottom-full left-0 right-0 mb-2 z-40 shadow-xl rounded-t-2xl overflow-hidden border border-surface-100">
+      <div class="absolute bottom-full start-0 end-0 mb-2 z-40 shadow-xl rounded-t-2xl overflow-hidden border border-surface-100">
         <app-sticker-picker
           (selectSticker)="sendSticker($event)"
           (close)="showStickerDrawer.set(false)"

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { StreakService } from './streak.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { Logger } from '@nestjs/common';
 
 // Helper to create a mock query chain that mimics the Supabase PostgREST
 // fluent API so the service doesn't throw when it calls methods like `.order`.
@@ -58,6 +59,8 @@ describe('StreakService', () => {
   let supabaseMock: any;
 
   beforeEach(async () => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    
     supabaseMock = {
       from: jest.fn(() => createQueryChain()),
     };
@@ -75,6 +78,10 @@ describe('StreakService', () => {
     }).compile();
 
     service = module.get<StreakService>(StreakService);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('should be defined', () => {

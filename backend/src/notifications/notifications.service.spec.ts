@@ -9,6 +9,8 @@ describe('NotificationsService', () => {
   let mockQueryBuilder: any;
 
   beforeEach(async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    
     mockQueryBuilder = {
       select: jest.fn().mockReturnThis(),
       insert: jest.fn().mockResolvedValue({ error: null }),
@@ -47,6 +49,10 @@ describe('NotificationsService', () => {
     }).compile();
 
     service = module.get<NotificationsService>(NotificationsService);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('should be defined', () => {

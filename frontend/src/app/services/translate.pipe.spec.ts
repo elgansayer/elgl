@@ -7,7 +7,19 @@ describe('TranslatePipe', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [TranslatePipe, I18nService],
+      providers: [
+        TranslatePipe,
+        {
+          provide: I18nService,
+          useValue: {
+            translate: jest.fn((key, params) => {
+              if (key === 'app.title') return 'HelloTalk';
+              if (key === 'common.coinsBalance') return `${params.coins} Coins`;
+              return key;
+            }),
+          },
+        },
+      ],
     });
     pipe = TestBed.inject(TranslatePipe);
   });

@@ -12,6 +12,18 @@ jest.mock('node-nlp', () => ({
   })),
 }));
 
+jest.mock('langfuse', () => ({
+  Langfuse: jest.fn().mockImplementation(() => ({
+    trace: jest.fn().mockReturnValue({
+      span: jest.fn().mockReturnValue({
+        end: jest.fn(),
+      }),
+      update: jest.fn(),
+    }),
+    flushAsync: jest.fn(),
+  })),
+}));
+
 describe('NlpService', () => {
   let service: NlpService;
   let mockRedisClient: any;

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SafetyService } from './safety.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { Logger } from '@nestjs/common';
 
 describe('SafetyService', () => {
   let service: SafetyService;
@@ -8,6 +9,8 @@ describe('SafetyService', () => {
   let mockQueryBuilder: any;
 
   beforeEach(async () => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    
     mockQueryBuilder = {
       insert: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
@@ -38,7 +41,7 @@ describe('SafetyService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    jest.restoreAllMocks();
   });
 
   it('should be defined', () => {
