@@ -9,7 +9,7 @@ import { CommonModule } from '@angular/common';
     <div class="sticker-drawer bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 p-4 h-64 overflow-y-auto">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Stickers</h3>
-        <button (click)="close.emit()" class="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+        <button (click)="closePicker.emit()" class="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
           ✕
         </button>
       </div>
@@ -33,7 +33,7 @@ import { CommonModule } from '@angular/common';
 })
 export class StickerPickerComponent {
   readonly selectSticker = output<string>();
-  readonly close = output<void>();
+  readonly closePicker = output<void>();
 
   // Mock stickers - replace with actual R2 URLs or asset paths
   readonly stickers = signal([
