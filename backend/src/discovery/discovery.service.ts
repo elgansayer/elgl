@@ -94,7 +94,8 @@ export class DiscoveryService {
       _currentUserProfile.mock_location &&
       Array.isArray((_currentUserProfile.mock_location as any).coordinates)
     ) {
-      const coords = (_currentUserProfile.mock_location as any).coordinates as number[];
+      const coords = (_currentUserProfile.mock_location as any)
+        .coordinates as number[];
       searchLon = coords[0];
       searchLat = coords[1];
     }
