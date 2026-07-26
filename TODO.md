@@ -1,9 +1,6 @@
 # TODO.md (Master HelloTalk Clone Architecture: Phases 1 to 79 + Phase C)
 
 ## URGENT
-- [ ] Fix QA test failure: ReferenceError: describe is not defined.
-- [x] Fix QA test failure: ReferenceError: describe is not defined.
-- [x] Fix QA test failure: `ReferenceError: describe is not defined`.
 - [x] Fix QA test failure: `ReferenceError: describe is not defined`. (Root cause was not a Jest/Jasmine config or test globals issue: `qa-loop.sh` was running `npx playwright test` from `frontend/`, which has no `playwright.config.ts`, so Playwright fell back to its default glob and picked up the Angular Vitest unit `*.spec.ts` files under `frontend/src`. Those files use bare `describe`/`it` (Vitest globals) or `import { vi } from 'vitest'`, neither of which exist under the Playwright test runner, hence the `ReferenceError` and the "Vitest cannot be imported... using require()" errors. Fixed by pointing `qa-loop.sh` at the real Playwright suite in `e2e/` (its own `playwright.config.ts` + `tests/`); `ux-loop.sh` already targeted `e2e/` correctly. Verified no other script/CI invocation runs Playwright against `frontend/`.)
 
 ## GLOBAL ARCHITECTURAL RULES
@@ -84,8 +81,8 @@
 - [x] Build Angular Audio Room UI (`AudioRoomComponent`) displaying Host, Speaker Stage Grid, and Listener Audience Grid.
 - [x] Implement Stage Management API & UI:
     - Listener clicks "Raise Hand" (`POST /audio-rooms/raise-hand`).
-    - Host approves request (`POST /audio-rooms/approve-speaker`).
-    - NestJS issues refreshed LiveKit JWT with `canPublish: true`.
+    - Host receives notification and calls `POST /audio-rooms/approve-speaker`.
+    - NestJS calls `AccessToken` API to issue refreshed JWT with `canPublish: true`.
 - [x] Build synchronised text chat overlay (`RoomChatComponent`) inside live rooms powered by Centrifugo (`room_{id}` channel).
 - [x] Implement real-time AI speech-to-text subtitles broadcasting closed captions into live rooms.
 - [x] Build stream recording & replay archive storage (`POST /audio-rooms/archive`) saving LiveKit composite recordings to Cloudflare R2.
