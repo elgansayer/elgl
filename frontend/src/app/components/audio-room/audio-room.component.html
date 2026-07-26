@@ -7,7 +7,7 @@
           <h2 class="app-section-title">{{ room.title }}</h2>
           <p class="app-muted">
             {{ 'audioRoom.hostLabel' | t }}: {{ room.host?.display_name || ('audioRoom.hostFallback' | t) }} · {{ 'audioRoom.listenersCount' | t: { count: room.listeners_count } }} ·
-            {{ room.target_language }}
+            {{ room.language_pair }} · {{ room.topic_tag }}
           </p>
         </div>
         <div class="flex flex-wrap gap-2">
@@ -132,9 +132,12 @@
         <article class="app-card app-padded space-y-3">
           <div class="flex items-center justify-between">
             <span class="app-chip bg-red-500/20 text-red-400">{{ 'audioRoom.liveTag' | t }}</span>
-            <span class="app-chip text-primary">{{ room.target_language }}</span>
+            <span class="app-chip text-primary">{{ room.language_pair }}</span>
           </div>
           <h3 class="text-base font-black text-text-primary">{{ room.title }}</h3>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="app-chip">{{ room.topic_tag }}</span>
+          </div>
           <p class="text-xs text-text-secondary">{{ 'audioRoom.hostLabel' | t }}: <span class="font-semibold text-text-primary">{{ room.host?.display_name || ('audioRoom.hostFallback' | t) }}</span></p>
           <div class="flex items-center justify-between border-t border-surface-100 pt-3">
             <span class="app-muted">{{ 'audioRoom.listenersCount' | t: { count: room.listeners_count } }}</span>
@@ -146,34 +149,9 @@
   }
 
   @if (showCreateModal()) {
-    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <div class="app-card p-6 max-w-md w-full shadow-lift space-y-4">
-        <h3 class="app-section-title">{{ 'audioRoom.modalTitle' | t }}</h3>
-        <p class="app-muted">{{ 'audioRoom.modalSubtitle' | t }}</p>
-
-        <div class="space-y-3">
-          <div>
-            <label class="app-muted font-bold block mb-1">{{ 'audioRoom.roomTitleLabel' | t }}</label>
-            <input type="text" [(ngModel)]="newTitle" [placeholder]="'audioRoom.roomTitlePlaceholder' | t" class="app-input" />
-          </div>
-          <div>
-            <label class="app-muted font-bold block mb-1">{{ 'audioRoom.targetLangLabel' | t }}</label>
-            <select [(ngModel)]="newTargetLanguage" class="app-input font-bold">
-              <option value="en">{{ 'lang.en' | t }}</option>
-              <option value="es">{{ 'lang.es' | t }}</option>
-              <option value="fr">{{ 'lang.fr' | t }}</option>
-              <option value="ja">{{ 'lang.ja' | t }}</option>
-              <option value="de">{{ 'lang.de' | t }}</option>
-              <option value="ar">{{ 'lang.ar' | t }}</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="flex justify-end gap-2 pt-2">
-          <button (click)="showCreateModal.set(false)" class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs">{{ 'audioRoom.cancelBtn' | t }}</button>
-          <button (click)="createRoom()" class="app-button-primary ps-5 pe-5 pt-2 pb-2 text-xs">{{ 'audioRoom.launchStageBtn' | t }}</button>
-        </div>
-      </div>
-    </div>
+    <app-voiceroom-create-modal
+      (closed)="showCreateModal.set(false)"
+      (created)="createRoom($event)"
+    ></app-voiceroom-create-modal>
   }
 </div>
