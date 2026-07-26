@@ -16,6 +16,7 @@ import { I18nService } from '../../services/i18n.service';
       (click)="onBackdropClick($event)"
       (keydown.enter)="onBackdropClick($event)"
       tabindex="0"
+      role="button"
     >
       <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-md mx-4">
         <h2 class="text-xl font-bold text-white mb-4">

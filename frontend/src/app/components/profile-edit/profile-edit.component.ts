@@ -14,7 +14,7 @@ import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-c
 
       <!-- Cover Photo Section -->
       <div class="mb-8">
-        <label class="block text-sm font-medium text-text-secondary mb-2">Cover Photo</label>
+        <span class="block text-sm font-medium text-text-secondary mb-2">Cover Photo</span>
         <div class="relative h-48 bg-surface-200 rounded-xl overflow-hidden">
           @if (coverPhotoPreview()) {
             <img

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { VoipCallComponent } from './voip-call.component';
@@ -5,7 +6,7 @@ import { ComponentRef } from '@angular/core';
 import { LivekitService } from '../../services/livekit.service';
 import { AuthService } from '../../services/auth.service';
 import { ChatService } from '../../services/chat.service';
-import { LocalTrack, RemoteTrack, Room, Track } from 'livekit-client';
+import { LocalTrack, Room, Track } from 'livekit-client';
 
 (globalThis as unknown as { MediaStreamTrack: typeof MediaStreamTrack }).MediaStreamTrack = class MediaStreamTrack {
   stop() {}

@@ -241,7 +241,7 @@ export class VoipCallComponent implements OnDestroy {
       this.localVideoTrack = tracks.videoTrack;
 
       // Subscribe to remote tracks
-      this.livekitService.onTrackSubscribed = (track: RemoteTrack, _publication: unknown) => {
+      this.livekitService.onTrackSubscribed = (track: RemoteTrack) => {
         if (track.kind === Track.Kind.Audio) {
           this.remoteAudioTrack = track;
         } else if (track.kind === Track.Kind.Video) {

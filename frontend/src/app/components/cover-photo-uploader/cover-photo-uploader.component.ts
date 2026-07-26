@@ -456,10 +456,10 @@ export class CoverPhotoUploaderComponent {
     const imgW = this.imageWidth();
     const imgH = this.imageHeight();
     const box = this.dragStartCropBox;
-    let newX = box.x;
-    let newW = box.width;
-    let newH = box.height;
-    let newY = box.y;
+    let newX: number;
+    let newW: number;
+    let newH: number;
+    let newY: number;
 
     const aspectRatio = 3;
 
@@ -471,6 +471,7 @@ export class CoverPhotoUploaderComponent {
         newY = box.y + (box.height - newH);
         break;
       case 'ne':
+        newX = box.x;
         newW = Math.max(100, box.width + dx);
         newH = newW / aspectRatio;
         newY = box.y + (box.height - newH);
@@ -479,12 +480,19 @@ export class CoverPhotoUploaderComponent {
         newW = Math.max(100, box.width - dx);
         newH = newW / aspectRatio;
         newX = box.x + (box.width - newW);
+        newY = box.y;
         break;
       case 'se':
+        newX = box.x;
         newW = Math.max(100, box.width + dx);
         newH = newW / aspectRatio;
+        newY = box.y;
         break;
       default:
+        newX = box.x;
+        newW = box.width;
+        newH = box.height;
+        newY = box.y;
         break;
     }
 

@@ -20,6 +20,7 @@ import { ChatMessageComponent } from '../../components/chat-message/chat-message
               (click)="selectRoom(room)"
               (keydown.enter)="selectRoom(room)"
               tabindex="0"
+              role="button"
               class="cursor-pointer p-3 rounded-lg hover:bg-surface-300 :bg-surface-200 transition-colors"
               [class.bg-blue-500/10]="selectedRoom()?.id === room.id"
             >
