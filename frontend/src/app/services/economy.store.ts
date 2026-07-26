@@ -90,6 +90,25 @@ export class EconomyStore {
     }
   }
 
+  async claimDailyCheckIn(): Promise<{ claimed: boolean; coins_rewarded: number; new_balance: number } | null> {
+    try {
+      const res = await firstValueFrom(
+        this.http.post<{ claimed: boolean; coins_rewarded: number; new_balance: number }>(
+          `${this.baseUrl}/daily-check-in`,
+          {},
+          { headers: this.getHeaders() }
+        )
+      );
+      if (res.claimed) {
+        this.coinsBalance.set(res.new_balance);
+      }
+      return res;
+    } catch (e) {
+      console.error('Daily check-in error:', e);
+      return null;
+    }
+  }
+
   async purchaseCoins(packageId: string, amount: number): Promise<void> {
     try {
       const res = await firstValueFrom(

@@ -39,6 +39,10 @@ export class AppComponent implements OnInit {
   // Incoming call state
   readonly incomingCallData = signal<IncomingCallData | null>(null);
 
+  // Daily reward state
+  readonly dailyRewardCoins = signal<number>(0);
+  readonly showDailyRewardModal = signal<boolean>(false);
+
   readonly reportModal = viewChild.required<ReportUserModalComponent>('reportModal');
 
   constructor() {
@@ -55,6 +59,13 @@ export class AppComponent implements OnInit {
     if (user) {
       // Load the blocked user list once the user is available
       await this.safetyService.loadBlockedUsers();
+
+      // Check for daily login reward
+      const checkIn = await this.economyStore.claimDailyCheckIn();
+      if (checkIn?.claimed) {
+        this.dailyRewardCoins.set(checkIn.coins_rewarded);
+        this.showDailyRewardModal.set(true);
+      }
 
       await this.centrifugeService.connect();
       this.centrifugeService.subscribe(`user_${user.id}`, (data: unknown) => {

@@ -30,6 +30,12 @@ export class EconomyController {
     return await this.economyService.getBalance(user.id);
   }
 
+  @Post('daily-check-in')
+  async claimDailyCheckIn(@CurrentUser() user: User | null) {
+    if (!user) return null;
+    return await this.economyService.claimDailyCheckIn(user.id);
+  }
+
   @Post('purchase-coins')
   async purchaseCoins(
     @CurrentUser() user: User | null,

@@ -299,7 +299,8 @@
 - [x] Fetch multiple-choice assessment questions from backend database.
 
 ## Phase 42: Daily Check-in Rewards
-- [ ] Build daily login modal granting 5 to 10 free virtual coins upon first daily login.
+- [x] Build daily login modal granting 5 to 10 free virtual coins upon first daily login.
+- [x] Implement backend endpoint for daily check-in coin reward and frontend modal UI.
 
 ## Phase 43: Message Translation Toggle
 - [ ] Cache translated text client-side to allow toggling between original and translation without extra API calls.
