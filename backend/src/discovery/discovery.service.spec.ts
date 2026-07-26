@@ -137,6 +137,69 @@ describe('DiscoveryService', () => {
       expect(result).toEqual(nearbyPartners);
     });
 
+    it('should use mock_location if user is VIP and mock_location is set', async () => {
+      const nearbyPartners = [{ id: 'nearby-vip', display_name: 'Nearby VIP User' }];
+      mockSupabaseClient.rpc.mockResolvedValue({
+        data: nearbyPartners,
+        error: null,
+      });
+
+      const mockUser = {
+        id: 'user-1',
+        is_vip: true,
+        mock_location: { coordinates: [-74.006, 40.7128] }, // GeoJSON Point [lon, lat]
+      };
+
+      const result = await service.searchPartners('user-1', mockUser, {
+        latitude: 51.5074, // London (should be overridden by mock_location)
+        longitude: -0.1278,
+        radius_metres: 10000,
+      });
+
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        {
+          search_lat: 40.7128,
+          search_lon: -74.006,
+          radius_m: 10000,
+          exclude_user_id: 'user-1',
+          filter_native: null,
+          filter_target: null,
+          serious_only: false,
+        },
+      );
+      expect(result).toEqual(nearbyPartners);
+    });
+
+    it('should apply serious learner filter to rpc call', async () => {
+      const nearbyPartners = [{ id: 'nearby-serious', display_name: 'Nearby Serious User' }];
+      mockSupabaseClient.rpc.mockResolvedValue({
+        data: nearbyPartners,
+        error: null,
+      });
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 51.5074,
+        longitude: -0.1278,
+        radius_metres: 5000,
+        serious_learner_only: true,
+      });
+
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        {
+          search_lat: 51.5074,
+          search_lon: -0.1278,
+          radius_m: 5000,
+          exclude_user_id: 'user-1',
+          filter_native: null,
+          filter_target: null,
+          serious_only: true,
+        },
+      );
+      expect(result).toEqual(nearbyPartners);
+    });
+
     it('should fall back to standard query when rpc returns error', async () => {
       const fallbackPartners = [{ id: 'fallback-1' }];
       mockSupabaseClient.rpc.mockResolvedValue({
