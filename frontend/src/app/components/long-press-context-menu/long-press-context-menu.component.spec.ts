@@ -179,7 +179,7 @@ describe('LongPressContextMenuComponent', () => {
     fixture.componentRef.setInput('showMenu', true);
     fixture.detectChanges();
     const buttons = fixture.debugElement.queryAll(By.css('button[role="menuitem"]'));
-    expect(buttons.length).toBe(3);
+    expect(buttons.length).toBe(4);
     expect(buttons[0].nativeElement.textContent).toContain('Copy');
     expect(buttons[1].nativeElement.textContent).toContain('Favourite');
     expect(buttons[2].nativeElement.textContent).toContain('Report');
