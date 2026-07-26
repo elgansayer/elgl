@@ -10,7 +10,7 @@
     <app-scrollable-pills 
       [pills]="filterPills()" 
       [selected]="selectedFilter()" 
-      (select)="onFilterSelect($event)">
+      (select)="onFilterSelect($any($event))">
     </app-scrollable-pills>
 
     <!-- Language Selection Pills -->

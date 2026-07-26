@@ -59,7 +59,7 @@
       <app-scrollable-pills 
         [pills]="filterPills()" 
         [selected]="selectedFilter()" 
-        (select)="onFilterSelect($event)"
+        (select)="onFilterSelect($any($event))"
         class="flex-1">
       </app-scrollable-pills>
     </div>

@@ -162,10 +162,10 @@ export class IncomingCallComponent implements OnDestroy {
 
   private playFallbackRingtone(): void {
     try {
-      const AudioContext = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (!AudioContext) return;
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
 
-      const audioContext = new AudioContext();
+      const audioContext = new AudioContextClass();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
 

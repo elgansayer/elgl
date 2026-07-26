@@ -125,12 +125,14 @@ describe('AudioRoomsService', () => {
       const dto: any = {
         title: 'English Chat #1!',
         target_language: 'EN',
+        language_pair: 'FR-EN',
       };
       const roomRow: any = {
         id: 'room-id-1',
         room_name: 'room-english-chat-1-123456789',
         title: dto.title,
         target_language: dto.target_language,
+        language_pair: dto.language_pair,
         host_id: 'host-1',
         is_active: true,
         speakers: ['host-1'],
@@ -151,6 +153,7 @@ describe('AudioRoomsService', () => {
         expect.objectContaining({
           title: dto.title,
           target_language: dto.target_language,
+          language_pair: dto.language_pair,
           host_id: 'host-1',
           is_active: true,
           speakers: ['host-1'],
@@ -174,7 +177,7 @@ describe('AudioRoomsService', () => {
         .spyOn((service as any).logger, 'warn')
         .mockImplementation(() => {});
 
-      const dto: any = { title: 'French Room', target_language: 'FR' };
+      const dto: any = { title: 'French Room', target_language: 'FR', language_pair: 'EN-FR' };
       const roomRow: any = {
         id: 'room-id-2',
         room_name: 'room-french-room-123',
@@ -197,7 +200,7 @@ describe('AudioRoomsService', () => {
     });
 
     it('should throw Error when database insert fails', async () => {
-      const dto: any = { title: 'Bad Room', target_language: 'EN' };
+      const dto: any = { title: 'Bad Room', target_language: 'EN', language_pair: 'FR-EN' };
       mockQueryBuilder.single.mockResolvedValue({
         data: null,
         error: { message: 'Insert constraint error' },

@@ -236,7 +236,7 @@ export class VoipCallComponent implements OnDestroy {
       );
 
       // Publish local tracks
-      const tracks = await this.livekitService.publishTracks(this.isVideoCall());
+      const tracks = await this.livekitService.publishTracks();
       this.localAudioTrack = tracks.audioTrack;
       this.localVideoTrack = tracks.videoTrack;
 
