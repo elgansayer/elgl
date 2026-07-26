@@ -13,8 +13,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
       <h2 class="text-xl font-bold mb-4">{{ 'group.createTitle' | t }}</h2>
       
       <div class="mb-4">
-        <label class="block text-sm font-medium mb-1">{{ 'group.nameLabel' | t }}</label>
+        <label for="groupNameInput" class="block text-sm font-medium mb-1">{{ 'group.nameLabel' | t }}</label>
         <input 
+          id="groupNameInput"
           type="text" 
           [(ngModel)]="groupName" 
           class="w-full p-2 rounded bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500"
@@ -23,9 +24,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
       </div>
 
       <div class="mb-4">
-        <label class="block text-sm font-medium mb-1">{{ 'group.addMembers' | t }} ({{ selectedMembers().length }}/49)</label>
+        <label for="newMemberIdInput" class="block text-sm font-medium mb-1">{{ 'group.addMembers' | t }} ({{ selectedMembers().length }}/49)</label>
         <div class="flex gap-2 mb-2">
           <input 
+            id="newMemberIdInput"
             type="text" 
             [(ngModel)]="newMemberId" 
             class="flex-1 p-2 rounded bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500"
@@ -107,8 +109,8 @@ export class CreateGroupComponent {
       this.success.set(true);
       this.groupName = '';
       this.selectedMembers.set([]);
-    } catch (err: any) {
-      this.error.set(err.message || 'Failed to create group');
+    } catch (err) {
+      this.error.set(err instanceof Error ? err.message : 'Failed to create group');
     } finally {
       this.isCreating.set(false);
     }

@@ -318,7 +318,7 @@ export class ChatService {
     const supabase = this.supabaseService.getClient();
 
     // Insert room
-    const { data: room, error: roomError } = await supabase
+    const response = await supabase
       .from('chat_rooms')
       .insert({
         title: name,
@@ -328,9 +328,11 @@ export class ChatService {
       .select()
       .single();
 
-    if (roomError || !room) {
+    if (response.error || !response.data) {
       throw new Error('Failed to create group');
     }
+
+    const room = response.data as ChatRoomRecord;
 
     // Insert members
     const allMembers = [...new Set([creatorId, ...memberIds])];
@@ -347,6 +349,6 @@ export class ChatService {
       throw new Error('Failed to add members to group');
     }
 
-    return room as ChatRoomRecord;
+    return room;
   }
 }
