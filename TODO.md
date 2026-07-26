@@ -236,7 +236,8 @@
 - [x] Implement actual client-side transcoding in AudioCompressionService using ffmpeg.wasm or Web Audio API.
 - [x] Integrate AudioCompressionService into VoiceRecorderComponent.
   - [x] Update VoiceRecorderComponent to call compressAudio before uploading.
-- [ ] Integrate server-side AudioCompressionService into the media upload flow for voice notes.
+- [x] Integrate server-side AudioCompressionService into the media upload flow for voice notes.
+- [x] Update backend MediaController/MediaService to call AudioCompressionService.compressToOgg or compressToM4a during voice note uploads.
 
 ## Phase 31: Legal & GDPR Compliance
 - [ ] Build dynamic Terms of Service and Privacy Policy document viewer.
