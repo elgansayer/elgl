@@ -55,7 +55,7 @@ export class CommentNotificationListener {
       if (event.mentionedUserIds && event.mentionedUserIds.length > 0) {
         for (const mentionedUserId of event.mentionedUserIds) {
           if (mentionedUserId === event.commenterId) continue;
-          
+
           await this.notificationsService.createNotification(
             mentionedUserId,
             event.commenterId,
