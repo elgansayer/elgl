@@ -262,7 +262,9 @@ export class UsersService {
     return response.data as UserProfile;
   }
 
-  async scheduleDeletion(userId: string): Promise<{ message: string; scheduled_for_deletion_at: string }> {
+  async scheduleDeletion(
+    userId: string,
+  ): Promise<{ message: string; scheduled_for_deletion_at: string }> {
     const supabase = this.supabaseService.getClient();
     const deletionDate = new Date();
     deletionDate.setDate(deletionDate.getDate() + 30); // 30-day grace period
@@ -273,12 +275,14 @@ export class UsersService {
       .eq('id', userId);
 
     if (error) {
-      throw new InternalServerErrorException(`Failed to schedule account deletion: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to schedule account deletion: ${error.message}`,
+      );
     }
 
-    return { 
+    return {
       message: 'Account scheduled for deletion in 30 days.',
-      scheduled_for_deletion_at: deletionDate.toISOString()
+      scheduled_for_deletion_at: deletionDate.toISOString(),
     };
   }
 
@@ -290,7 +294,9 @@ export class UsersService {
       .eq('id', userId);
 
     if (error) {
-      throw new InternalServerErrorException(`Failed to cancel account deletion: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to cancel account deletion: ${error.message}`,
+      );
     }
 
     return { message: 'Account deletion cancelled successfully.' };
