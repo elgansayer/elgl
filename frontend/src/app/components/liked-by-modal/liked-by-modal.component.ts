@@ -3,16 +3,24 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { TranslatePipe } from '../../services/translate.pipe';
 
+interface LikedUser {
+  id: string;
+  avatar_url?: string;
+  display_name: string;
+  native_language: string;
+  target_languages?: string[];
+}
+
 @Component({
   selector: 'app-liked-by-modal',
   standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" (click)="close.emit()">
-      <div class="bg-[#121212] border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl" (click)="$event.stopPropagation()">
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" (click)="closeModal.emit()" (keydown.enter)="closeModal.emit()" tabindex="0">
+      <div class="bg-[#121212] border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" tabindex="0">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-xl font-bold text-slate-100">{{ 'moments.likedBy' | t }}</h2>
-          <button class="text-slate-400 hover:text-white transition-colors" (click)="close.emit()">✕</button>
+          <button class="text-slate-400 hover:text-white transition-colors" (click)="closeModal.emit()">✕</button>
         </div>
         
         @if (isLoading()) {
@@ -43,15 +51,15 @@ import { TranslatePipe } from '../../services/translate.pipe';
 })
 export class LikedByModalComponent implements OnInit {
   momentId = input.required<string>();
-  close = output<void>();
+  closeModal = output<void>();
   
   private http = inject(HttpClient);
   
-  users = signal<any[]>([]);
+  users = signal<LikedUser[]>([]);
   isLoading = signal(true);
 
   ngOnInit() {
-    this.http.get<any[]>(`/api/moments/${this.momentId()}/likes`)
+    this.http.get<LikedUser[]>(`/api/moments/${this.momentId()}/likes`)
       .subscribe({
         next: (data) => {
           this.users.set(data);
