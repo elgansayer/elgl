@@ -312,7 +312,8 @@ export class MomentsService {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('moment_likes')
-      .select(`
+      .select(
+        `
         user_id,
         created_at,
         users (
@@ -322,7 +323,8 @@ export class MomentsService {
           native_language,
           target_languages
         )
-      `)
+      `,
+      )
       .eq('moment_id', momentId)
       .order('created_at', { ascending: false });
 
