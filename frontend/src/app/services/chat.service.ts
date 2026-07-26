@@ -16,7 +16,7 @@ export interface ChatMessage {
   id: string;
   room_id: string;
   sender_id: string;
-  message_type: 'text' | 'voice' | 'correction' | 'doodle';
+  message_type: 'text' | 'voice' | 'correction' | 'doodle' | 'sticker';
   text_content?: string;
   media_url?: string;
   correction_payload?: CorrectionPayload;
@@ -112,7 +112,7 @@ export class ChatService {
 
   async sendMessage(payload: {
     room_id: string;
-    message_type: 'text' | 'voice' | 'correction' | 'doodle';
+    message_type: 'text' | 'voice' | 'correction' | 'doodle' | 'sticker';
     text_content?: string;
     media_url?: string;
     correction_payload?: CorrectionPayload;

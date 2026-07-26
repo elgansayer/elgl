@@ -12,7 +12,7 @@ export class SendMessageDto {
   room_id!: string;
 
   @IsString()
-  @IsIn(['text', 'voice', 'correction', 'doodle'])
+  @IsIn(['text', 'voice', 'correction', 'doodle', 'sticker'])
   message_type!: string;
 
   @IsOptional()
