@@ -146,6 +146,7 @@
   "audioRoom.speakerStage": "🎙️ Speaker stage",
   "audioRoom.speakerCount": "{{count}} speaker(s)",
   "audioRoom.speakerPrefix": "Speaker {{id}}",
+  "audioRoom.muteBtn": "Mute",
   "audioRoom.demoteBtn": "Demote",
   "audioRoom.raisedHandsTitle": "✋ Raised hands",
   "audioRoom.learnerAccess": "Learner {{id}}... wants stage access",

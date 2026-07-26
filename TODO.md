@@ -196,7 +196,7 @@
 ## Phase 25: Voiceroom Management
 - [x] Build Voiceroom Creation modal (Title, Language Pair, Topic).
 - [x] Implement frontend Angular UI for Voiceroom Creation modal.
-- [ ] Implement Host Moderation controls (Mute speaker, kick off stage).
+- [x] Implement Host Moderation controls (Mute speaker, kick off stage).
 - [ ] Build animated audio equalizer visualizer for active stage speakers.
 
 ## Phase 26: Group Chats

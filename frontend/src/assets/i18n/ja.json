@@ -4,6 +4,8 @@
     "archiveConfirm": "このルームをアーカイブしてもよろしいですか？",
     "languagePairLabel": "言語ペア",
     "topicLabel": "トピック",
+    "muteBtn": "ミュート",
+    "demoteBtn": "降格",
     "topic": {
       "Pronunciation": "発音",
       "Beginners": "初心者",
