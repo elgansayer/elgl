@@ -268,7 +268,7 @@
 - [x] Audit Web Vitals and optimize images using `loading="lazy"`.
 
 ## Phase 36: Backend Rate Limiting
-- [ ] Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints.
+- [STUCK] Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints.
 - [ ] Implement WebSocket connection rate limiting in Centrifugo.
 
 ## Phase 37: WebRTC Fallback Infrastructure
