@@ -10,6 +10,7 @@ import { IncomingCallModalComponent, IncomingCallData } from './components/incom
 import { ToastComponent } from './components/primitives/toast/toast.component';
 import { ReportUserModalComponent } from './components/report-user-modal/report-user-modal.component';
 import { ReportUserModalService } from './components/report-user-modal/report-user-modal.service';
+import { DailyLoginModalComponent } from './components/daily-login-modal/daily-login-modal.component';
 
 @Component({
   selector: 'app-root',
@@ -20,7 +21,8 @@ import { ReportUserModalService } from './components/report-user-modal/report-us
     TranslatePipe, 
     IncomingCallModalComponent,
     ToastComponent,
-    ReportUserModalComponent
+    ReportUserModalComponent,
+    DailyLoginModalComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
