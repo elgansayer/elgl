@@ -275,7 +275,7 @@
 - [x] Configure STUN/TURN server credentials in LiveKit for strict corporate NAT networks.
 
 ## Phase 38: Live Stream Viewer Mechanics
-- [ ] Build scrolling live chat comment overlay over host video stream.
+- [x] Build scrolling live chat comment overlay over host video stream.
 - [ ] Implement full-screen SVG gift animations when viewers tip the host.
 
 ## Phase 39: Live Stream Host Mechanics
