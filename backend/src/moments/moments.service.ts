@@ -432,7 +432,7 @@ export class MomentsService {
     if (dto.text_content) {
       const mentionRegex = /@([a-zA-Z0-9_]+)/g;
       const matches = [...dto.text_content.matchAll(mentionRegex)];
-      const mentionedNames = matches.map((m) => m[1] as string);
+      const mentionedNames = matches.map((m) => m[1]);
 
       if (mentionedNames.length > 0) {
         const { data: mentionedUsers } = await supabase
