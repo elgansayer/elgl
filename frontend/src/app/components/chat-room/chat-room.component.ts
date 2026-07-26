@@ -15,6 +15,7 @@ import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.compone
 import { TokenisedTextComponent } from '../tokenised-text/tokenised-text.component';
 import { WordDefinitionModalComponent } from '../word-definition-modal/word-definition-modal.component';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
+import { StickerPickerComponent } from '../sticker-picker/sticker-picker.component';
 import { SafetyService } from '../../services/safety.service';
 import { firstValueFrom } from 'rxjs';
 
@@ -29,7 +30,8 @@ import { firstValueFrom } from 'rxjs';
     VoiceRecorderComponent,
     TokenisedTextComponent,
     WordDefinitionModalComponent,
-    LongPressContextMenuComponent
+    LongPressContextMenuComponent,
+    StickerPickerComponent
   ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss']
@@ -49,6 +51,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   readonly showDoodleModal = signal<boolean>(false);
   readonly showVoiceModal = signal<boolean>(false);
   readonly showCorrectionForm = signal<boolean>(false);
+  readonly showStickerDrawer = signal<boolean>(false);
   readonly showSearch = signal<boolean>(false);
   readonly showAdminPanel = signal<boolean>(false);
   readonly showParticipantDrawer = signal<boolean>(false);
@@ -225,6 +228,21 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
       this.messages.update(list => list.some(m => m.id === sent.id) ? list : [...list, sent]);
     } catch (e) {
       console.error('Failed to send voice note:', e);
+    }
+  }
+
+  async sendSticker(stickerUrl: string): Promise<void> {
+    this.showStickerDrawer.set(false);
+    try {
+      const sent = await this.chatService.sendMessage({
+        room_id: this.roomId,
+        message_type: 'sticker',
+        media_url: stickerUrl,
+        text_content: this.i18n.translate('chatRoom.stickerCaption') || 'Sticker'
+      });
+      this.messages.update(list => list.some(m => m.id === sent.id) ? list : [...list, sent]);
+    } catch (e) {
+      console.error('Failed to send sticker:', e);
     }
   }
 

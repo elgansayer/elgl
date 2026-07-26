@@ -200,6 +200,8 @@
   "chatRoom.correctBtn": "Correct",
   "chatRoom.doodleBtn": "Doodle",
   "chatRoom.voiceBtn": "Voice",
+  "chatRoom.stickerBtn": "Sticker",
+  "chatRoom.stickerCaption": "Sent a sticker",
   "chatRoom.typePlaceholder": "Type your message",
   "chatRoom.sendBtn": "Send",
   "chatRoom.bookmarkSuccess": "Message bookmarked to Favourites!",
