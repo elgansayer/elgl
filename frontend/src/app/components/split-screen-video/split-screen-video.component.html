@@ -1,0 +1,19 @@
+<div class="flex w-full h-full gap-2" [ngClass]="{'flex-col md:flex-row': hasCoHost()}">
+  <!-- Host Video -->
+  <div class="relative flex-1 bg-black rounded-xl overflow-hidden shadow-lg">
+    <video [src]="hostVideoUrl()" autoplay playsinline muted class="w-full h-full object-cover"></video>
+    <div class="absolute bottom-4 start-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md">
+      {{ hostName() }} (Host)
+    </div>
+  </div>
+
+  <!-- Co-Host Video -->
+  @if (hasCoHost()) {
+    <div class="relative flex-1 bg-black rounded-xl overflow-hidden shadow-lg">
+      <video [src]="coHostVideoUrl()" autoplay playsinline class="w-full h-full object-cover"></video>
+      <div class="absolute bottom-4 start-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md">
+        {{ coHostName() }} (Co-Host)
+      </div>
+    </div>
+  }
+</div>
