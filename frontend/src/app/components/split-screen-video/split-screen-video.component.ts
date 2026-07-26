@@ -1,4 +1,4 @@
-import { Component, input, computed } from '@angular/core';
+import { Component, input, computed, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -14,4 +14,10 @@ export class SplitScreenVideoComponent {
   readonly coHostName = input<string>('Co-Host');
 
   readonly hasCoHost = computed(() => !!this.coHostVideoUrl());
+
+  readonly invite = output<void>();
+
+  onInviteClick(): void {
+    this.invite.emit();
+  }
 }
