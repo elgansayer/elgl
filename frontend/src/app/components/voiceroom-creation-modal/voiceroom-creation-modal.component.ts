@@ -1,11 +1,12 @@
-import { Component, EventEmitter, Output, signal } from '@angular/core';
+import { Component, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
 @Component({
   selector: 'app-voiceroom-creation-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AppButtonSecondaryComponent],
   template: `
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md p-6 m-4">
@@ -64,13 +65,9 @@ import { FormsModule } from '@angular/forms';
           </div>
 
           <div class="pt-4 flex justify-end gap-3">
-            <button 
-              type="button" 
-              (click)="closed.emit()"
-              class="px-4 py-2 rounded-lg font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-            >
+            <app-button-secondary (clicked)="closed.emit()">
               Cancel
-            </button>
+            </app-button-secondary>
             <button 
               type="submit"
               [disabled]="!roomName() || !languagePair()"
@@ -85,8 +82,8 @@ import { FormsModule } from '@angular/forms';
   `
 })
 export class VoiceroomCreationModalComponent {
-  @Output() closed = new EventEmitter<void>();
-  @Output() create = new EventEmitter<{ roomName: string; languagePair: string; topicTag: string }>();
+  readonly closed = output<void>();
+  readonly create = output<{ roomName: string; languagePair: string; topicTag: string }>();
 
   roomName = signal('');
   languagePair = signal('');
