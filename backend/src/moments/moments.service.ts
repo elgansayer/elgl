@@ -333,6 +333,7 @@ export class MomentsService {
     }
 
     // Extract the joined user profiles
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
     return data.map((row: any) => row.users).filter(Boolean);
   }
 
