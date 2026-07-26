@@ -26,6 +26,12 @@ export interface VirtualGiftRow {
   animation_type: string;
 }
 
+export interface StickerPackRow {
+  id: string;
+  name: string;
+  cost_coins: number;
+}
+
 export interface UserCoinRow {
   id: string;
   coins_balance: number;
@@ -556,7 +562,7 @@ export class EconomyService {
   async unlockStickerPack(
     userId: string,
     dto: UnlockStickerPackDto,
-  ): Promise<{ success: boolean; coins_remaining: number; pack: any }> {
+  ): Promise<{ success: boolean; coins_remaining: number; pack: StickerPackRow }> {
     const supabase = this.supabaseService.getClient();
 
     // 1. Fetch the sticker pack details
@@ -569,7 +575,7 @@ export class EconomyService {
     if (!packResponse.data) {
       throw new NotFoundException(`Sticker pack '${dto.pack_id}' not found.`);
     }
-    const pack = packResponse.data;
+    const pack = packResponse.data as StickerPackRow;
 
     // 2. Check user's coin balance
     const { coins_balance } = await this.getBalance(userId);
