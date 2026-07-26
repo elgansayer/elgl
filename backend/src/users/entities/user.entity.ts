@@ -31,6 +31,9 @@ export class User {
   @Column({ type: 'text', nullable: true })
   audio_intro_url!: string | null;
 
+  @Column({ type: 'varchar', length: 7, nullable: true })
+  primary_accent_color!: string | null;
+
   @Column({
     type: 'geography',
     spatialFeatureType: 'Point',
