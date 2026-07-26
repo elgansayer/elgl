@@ -26,7 +26,8 @@ export class RecommendationsService {
       }
 
       for (const user of users) {
-        if (!user.target_languages || user.target_languages.length === 0) continue;
+        if (!user.target_languages || user.target_languages.length === 0)
+          continue;
 
         // Find users who speak the target language natively and are learning the user's native language
         const { data: matches } = await supabase
@@ -41,7 +42,7 @@ export class RecommendationsService {
 
         if (matches && matches.length > 0) {
           const recommendedIds = matches.map((m) => m.id);
-          
+
           // Cache the top 10 recommendations in Redis for 24 hours
           await redis.set(
             `recommendations:${user.id}`,
@@ -52,7 +53,9 @@ export class RecommendationsService {
         }
       }
 
-      this.logger.log('Successfully calculated and cached daily recommendations.');
+      this.logger.log(
+        'Successfully calculated and cached daily recommendations.',
+      );
     } catch (error) {
       this.logger.error('Error calculating recommendations', error);
     }
