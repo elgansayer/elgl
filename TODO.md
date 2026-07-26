@@ -241,7 +241,8 @@
 
 ## Phase 31: Legal & GDPR Compliance
 - [x] Build dynamic Terms of Service and Privacy Policy document viewer.
-- [ ] Create routes and pages for Terms of Service and Privacy Policy using the viewer component.
+- [x] Create routes and pages for Terms of Service and Privacy Policy using the viewer component.
+- [x] Add Angular routes for `/terms` and `/privacy` and create the corresponding page components.
 - [ ] Implement "Download My Data" button triggering a NestJS JSON export worker.
 - [ ] Build Account Deletion workflow with 30-day grace period.
 
