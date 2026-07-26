@@ -28,7 +28,7 @@ export class UsersController {
   ) {}
 
   @Get('me/export')
-  async exportMyData(@CurrentUser() user: User | null): Promise<any> {
+  async exportMyData(@CurrentUser() user: User | null): Promise<Record<string, unknown>> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.exportUserData(user.id);
   }

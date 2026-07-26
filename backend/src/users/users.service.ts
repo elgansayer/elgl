@@ -261,16 +261,16 @@ export class UsersService {
     return response.data as UserProfile;
   }
 
-  async exportUserData(userId: string): Promise<any> {
+  async exportUserData(userId: string): Promise<Record<string, unknown>> {
     const supabase = this.supabaseService.getClient();
 
     const [
-      { data: profile },
-      { data: moments },
-      { data: comments },
-      { data: messages },
-      { data: flashcards },
-      { data: favourites },
+      profileRes,
+      momentsRes,
+      commentsRes,
+      messagesRes,
+      flashcardsRes,
+      favouritesRes,
     ] = await Promise.all([
       supabase.from('users').select('*').eq('id', userId).single(),
       supabase.from('moments').select('*').eq('author_id', userId),
@@ -281,12 +281,12 @@ export class UsersService {
     ]);
 
     return {
-      profile,
-      moments,
-      comments,
-      messages,
-      flashcards,
-      favourites,
+      profile: profileRes.data as unknown,
+      moments: momentsRes.data as unknown,
+      comments: commentsRes.data as unknown,
+      messages: messagesRes.data as unknown,
+      flashcards: flashcardsRes.data as unknown,
+      favourites: favouritesRes.data as unknown,
       exported_at: new Date().toISOString(),
     };
   }
