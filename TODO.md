@@ -229,7 +229,8 @@
   - [x] The previous commit only fixed a linting error in the component; the actual SSR scaffolding (`ng add @angular/ssr`) still needs to be executed.
 
 ## Phase 30: Media Pipeline Optimisation
-- [ ] Implement client-side image compression (max 1080p) before R2 upload.
+- [x] Implement client-side image compression (max 1080p) before R2 upload.
+- [ ] Integrate ImageCompressionService into the R2 upload flow (e.g., in MediaService or component upload handlers).
 - [ ] Implement audio compression converting voice notes to lightweight `.m4a`/`.ogg`.
 
 ## Phase 31: Legal & GDPR Compliance
