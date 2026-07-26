@@ -1,4 +1,4 @@
-import { Component, EventEmitter, HostListener, Input, Output } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, Output, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -68,7 +68,7 @@ import { CommonModule } from '@angular/common';
     </div>
   `
 })
-export class ImageLightboxComponent {
+export class ImageLightboxComponent implements OnInit, OnDestroy {
   @Input({ required: true }) images: string[] = [];
   @Input() initialIndex = 0;
   @Output() closed = new EventEmitter<void>();
