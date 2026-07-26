@@ -10,10 +10,9 @@ export class AudioCompressionService {
    * Downsamples the audio to 16kHz Mono to significantly reduce file size for voice notes.
    * 
    * @param audioBlob The original audio recording blob.
-   * @param _targetFormat The desired MIME type.
    * @returns A promise resolving to the compressed audio Blob.
    */
-  async compressAudio(audioBlob: Blob, _targetFormat?: string): Promise<Blob> {
+  async compressAudio(audioBlob: Blob): Promise<Blob> {
     console.log(`[AudioCompressionService] Compressing audio blob of size: ${audioBlob.size} bytes`);
     
     try {

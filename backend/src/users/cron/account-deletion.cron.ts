@@ -39,7 +39,7 @@ export class AccountDeletionCron {
       for (const user of usersToDelete) {
         // Delete from auth.users (this cascades to the public.users table if foreign keys are set up correctly)
         const { error: deleteError } = await supabase.auth.admin.deleteUser(
-          user.id,
+          String(user.id),
         );
 
         if (deleteError) {
