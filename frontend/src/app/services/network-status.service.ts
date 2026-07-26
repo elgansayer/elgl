@@ -1,10 +1,12 @@
-import { Service, signal } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 
 /**
  * Tracks browser connectivity via the `online`/`offline` window events so that
  * global UI (e.g. the offline banner) can react to connectivity changes.
  */
-@Service()
+@Injectable({
+  providedIn: 'root'
+})
 export class NetworkStatusService {
   private readonly onlineSignal = signal<boolean>(
     typeof navigator === 'undefined' ? true : navigator.onLine,
