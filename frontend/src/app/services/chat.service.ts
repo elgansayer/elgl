@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { SafetyService } from './safety.service';
+import { OfflineQueueService } from './offline-queue.service';
 
 export interface CorrectionPayload {
   original: string;
@@ -64,11 +65,18 @@ export class ChatService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private safetyService = inject(SafetyService);
+  private offlineQueue = inject(OfflineQueueService);
   private baseUrl = `${environment.apiUrl}/chat`;
 
   // Blocked user list is loaded on demand, never in the constructor,
   // to avoid premature HTTP calls that break test environments.
   private readonly blockedUsers = signal<Set<string>>(new Set());
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => this.syncOfflineMessages());
+    }
+  }
 
   readonly isUserBlocked = computed(() => {
     const blocked = this.blockedUsers();
@@ -127,9 +135,47 @@ export class ChatService {
       }
     }
 
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      const queuedMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        room_id: payload.room_id,
+        sender_id: currentUser?.id || '',
+        message_type: payload.message_type,
+        text_content: payload.text_content,
+        media_url: payload.media_url,
+        correction_payload: payload.correction_payload,
+        is_read: false,
+        created_at: new Date().toISOString()
+      };
+      await this.offlineQueue.enqueueMessage(queuedMsg);
+      return queuedMsg;
+    }
+
     return firstValueFrom(
       this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, { headers: this.getHeaders() })
     );
+  }
+
+  private async syncOfflineMessages(): Promise<void> {
+    try {
+      const messages = await this.offlineQueue.getQueuedMessages();
+      for (const msg of messages) {
+        const payload = {
+          room_id: msg.room_id,
+          message_type: msg.message_type,
+          text_content: msg.text_content,
+          media_url: msg.media_url,
+          correction_payload: msg.correction_payload
+        };
+        
+        await firstValueFrom(
+          this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, { headers: this.getHeaders() })
+        );
+        await this.offlineQueue.removeMessage(msg.id);
+      }
+    } catch (error) {
+      console.error('Failed to sync offline messages:', error);
+    }
   }
 
   async getMessages(roomId: string, search?: string): Promise<ChatMessage[]> {
