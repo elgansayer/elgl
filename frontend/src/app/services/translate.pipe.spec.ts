@@ -12,11 +12,11 @@ describe('TranslatePipe', () => {
         {
           provide: I18nService,
           useValue: {
-            translate: jest.fn((key, params) => {
+            translate: (key: string, params?: any) => {
               if (key === 'app.title') return 'HelloTalk';
               if (key === 'common.coinsBalance') return `${params.coins} Coins`;
               return key;
-            }),
+            },
           },
         },
       ],
