@@ -321,7 +321,8 @@
 - [x] Implement the actual background job (the provided diff was for audio-room co-hosts, not partner recommendations).
 
 ## Phase 47: Unread Badge Logic
-- [ ] Implement global unread counter service updating app badge and navigation tabs.
+- [x] Implement global unread counter service updating app badge and navigation tabs.
+- [ ] Integrate UnreadCounterService into navigation tabs UI to display unread badges.
 
 ## Phase 48: E2E Testing (Cypress)
 - [ ] Setup Cypress inside `frontend/`.
