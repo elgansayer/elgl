@@ -54,7 +54,7 @@ export class SettingsComponent implements OnInit {
         privacy_hide_from_search: this.privacyHideSearch,
         privacy_hide_age: this.privacyHideAge,
         privacy_hide_gender: this.privacyHideGender,
-      } as Record<string, unknown>);
+      } as any);
       this.successMessage.set('Settings saved successfully');
     } catch {
       this.errorMessage.set('Failed to save settings');

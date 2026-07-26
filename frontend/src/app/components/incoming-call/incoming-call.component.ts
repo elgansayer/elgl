@@ -187,13 +187,13 @@ export class IncomingCallComponent implements OnDestroy {
       oscillator.start(now);
       oscillator.stop(now + 5);
 
-      this.fallbackAudioContext = audioContext;
+      this.fallbackAudioContext = audioContext as any;
     } catch {
       // Silently fail if fallback also doesn't work
     }
   }
 
-  private fallbackAudioContext: AudioContext | null = null;
+  private fallbackAudioContext: any = null;
 
   private stopRingtone(): void {
     if (this.ringtoneAudio) {
