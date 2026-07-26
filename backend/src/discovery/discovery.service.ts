@@ -34,7 +34,13 @@ export class DiscoveryService {
         return;
       }
 
-      for (const user of users) {
+      const typedUsers = users as Array<{
+        id: string;
+        native_languages: string[];
+        target_languages: string[];
+      }>;
+
+      for (const user of typedUsers) {
         if (!user.native_languages?.length || !user.target_languages?.length) {
           continue;
         }
@@ -52,7 +58,7 @@ export class DiscoveryService {
           .limit(10);
 
         if (matches && matches.length > 0) {
-          const matchIds = matches.map((m) => m.id);
+          const matchIds = (matches as Array<{ id: string }>).map((m) => m.id);
           // Cache recommendations in Redis for 24 hours (86400 seconds)
           await redis.set(
             `daily_recommendations:${user.id}`,
