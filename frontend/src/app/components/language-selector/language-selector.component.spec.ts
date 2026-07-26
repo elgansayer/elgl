@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { LanguageSelectorComponent } from './language-selector.component';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 describe('LanguageSelectorComponent', () => {
   let component: LanguageSelectorComponent;
@@ -11,7 +13,11 @@ describe('LanguageSelectorComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [LanguageSelectorComponent, TranslatePipe],
-      providers: [I18nService],
+      providers: [
+        I18nService,
+        provideHttpClient(),
+        provideHttpClientTesting()
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LanguageSelectorComponent);
