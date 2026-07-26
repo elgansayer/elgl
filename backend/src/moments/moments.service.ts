@@ -256,7 +256,7 @@ export class MomentsService {
       .eq('id', momentId)
       .single();
 
-    const momentData = momentResponse.data as { user_id: string } | null;
+    const momentData = momentResponse.data;
 
     if (momentData) {
       const momentAuthorId = momentData.user_id;
@@ -353,7 +353,7 @@ export class MomentsService {
       .eq('id', momentId)
       .single();
 
-    const momentData = momentResponse.data as { user_id: string } | null;
+    const momentData = momentResponse.data;
 
     if (momentData) {
       const momentAuthorId = momentData.user_id;
@@ -392,8 +392,7 @@ export class MomentsService {
       .single();
 
     const updatedData = result.data as
-      | (MomentCountRow & { user_id?: string })
-      | null;
+      (MomentCountRow & { user_id?: string }) | null;
 
     await supabase
       .from('moments')
@@ -528,9 +527,9 @@ export class MomentsService {
       .select('user_id, is_pinned')
       .eq('id', momentId)
       .single();
-      
-    const momentData = momentResponse.data as { user_id: string; is_pinned: boolean } | null;
-    
+
+    const momentData = momentResponse.data;
+
     if (!momentData) {
       throw new ForbiddenException('Moment not found.');
     }
