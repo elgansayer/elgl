@@ -27,6 +27,14 @@ export class UsersController {
     private readonly mediaService: MediaService,
   ) {}
 
+  @Get('me/export')
+  async exportMyData(
+    @CurrentUser() user: User | null,
+  ): Promise<any> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.exportUserData(user.id);
+  }
+
   @Get('me')
   async getMyProfile(
     @CurrentUser() user: User | null,

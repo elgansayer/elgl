@@ -260,4 +260,34 @@ export class UsersService {
 
     return response.data as UserProfile;
   }
+
+  async exportUserData(userId: string): Promise<any> {
+    const supabase = this.supabaseService.getClient();
+    
+    const [
+      { data: profile },
+      { data: moments },
+      { data: comments },
+      { data: messages },
+      { data: flashcards },
+      { data: favourites }
+    ] = await Promise.all([
+      supabase.from('users').select('*').eq('id', userId).single(),
+      supabase.from('moments').select('*').eq('author_id', userId),
+      supabase.from('moment_comments').select('*').eq('author_id', userId),
+      supabase.from('chat_messages').select('*').eq('sender_id', userId),
+      supabase.from('flashcards').select('*').eq('user_id', userId),
+      supabase.from('favourites').select('*').eq('user_id', userId),
+    ]);
+
+    return {
+      profile,
+      moments,
+      comments,
+      messages,
+      flashcards,
+      favourites,
+      exported_at: new Date().toISOString()
+    };
+  }
 }

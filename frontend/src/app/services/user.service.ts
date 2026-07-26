@@ -199,4 +199,20 @@ export class UserService {
 
     return mediaUrl;
   }
+
+  async downloadMyData(): Promise<void> {
+    const data = await firstValueFrom(
+      this.http.get(`${this.baseUrl}/me/export`, { headers: this.getHeaders() })
+    );
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'my_data_export.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }
 }
