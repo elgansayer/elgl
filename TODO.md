@@ -194,7 +194,8 @@
 - [STUCK] Add "Voice Room Active" filter to find users currently hosting streams.
 
 ## Phase 25: Voiceroom Management
-- [ ] Build Voiceroom Creation modal (Title, Language Pair, Topic).
+- [x] Build Voiceroom Creation modal (Title, Language Pair, Topic).
+- [x] Implement frontend Angular UI for Voiceroom Creation modal.
 - [ ] Implement Host Moderation controls (Mute speaker, kick off stage).
 - [ ] Build animated audio equalizer visualizer for active stage speakers.
 

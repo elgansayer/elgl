@@ -1,6 +1,16 @@
 {
   "audioRoom": {
     "launchError": "オーディオルームの起動に失敗しました。",
-    "archiveConfirm": "このルームをアーカイブしてもよろしいですか？"
+    "archiveConfirm": "このルームをアーカイブしてもよろしいですか？",
+    "languagePairLabel": "言語ペア",
+    "topicLabel": "トピック",
+    "topic": {
+      "Pronunciation": "発音",
+      "Beginners": "初心者",
+      "CulturalExchange": "文化交流",
+      "GrammarHelp": "文法ヘルプ",
+      "FreeTalk": "フリートーク",
+      "BusinessEnglish": "ビジネス英語"
+    }
   }
 }
