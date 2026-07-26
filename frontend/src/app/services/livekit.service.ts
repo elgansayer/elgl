@@ -9,7 +9,7 @@ import { Room, LocalTrack, RemoteTrack, RoomOptions, ExternalE2EEKeyProvider } f
 })
 export class LivekitService {
   private http = inject(HttpClient);
-  onTrackSubscribed?: (track: RemoteTrack, publication: any) => void;
+  onTrackSubscribed?: (track: RemoteTrack, publication: unknown) => void;
 
   /**
    * Get a LiveKit access token from the backend.
@@ -34,7 +34,7 @@ export class LivekitService {
     return environment.liveKitUrl;
   }
 
-  async joinRoom(roomName: string, userId: string, isVideoCall: boolean, e2eeKey?: string): Promise<Room> {
+  async joinRoom(roomName: string, userId: string, _isVideoCall: boolean, e2eeKey?: string): Promise<Room> {
     let roomOptions: RoomOptions = {};
     
     if (e2eeKey) {
@@ -54,7 +54,7 @@ export class LivekitService {
     return room;
   }
 
-  async publishTracks(isVideoCall: boolean): Promise<{ audioTrack: LocalTrack | null, videoTrack: LocalTrack | null }> {
+  async publishTracks(_isVideoCall: boolean): Promise<{ audioTrack: LocalTrack | null, videoTrack: LocalTrack | null }> {
     return { audioTrack: null, videoTrack: null };
   }
 

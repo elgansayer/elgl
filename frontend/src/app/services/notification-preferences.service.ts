@@ -60,7 +60,7 @@ export class NotificationPreferencesService {
     enabled: boolean,
     currentPrefs: NotificationPreferences,
   ): Observable<NotificationPreferences> {
-    const update: any = {
+    const update: Record<string, unknown> = {
       [category]: {
         ...currentPrefs[category],
         [channel]: enabled,
@@ -74,9 +74,9 @@ export class NotificationPreferencesService {
     start?: string,
     end?: string,
   ): Observable<NotificationPreferences> {
-    const update: any = { do_not_disturb: enabled };
-    if (start !== undefined) update.quiet_hours_start = start;
-    if (end !== undefined) update.quiet_hours_end = end;
+    const update: Record<string, unknown> = { do_not_disturb: enabled };
+    if (start !== undefined) update['quiet_hours_start'] = start;
+    if (end !== undefined) update['quiet_hours_end'] = end;
     return this.updatePreferences(update);
   }
 }

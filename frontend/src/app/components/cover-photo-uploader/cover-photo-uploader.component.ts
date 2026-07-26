@@ -466,7 +466,6 @@ export class CoverPhotoUploaderComponent {
     switch (this.activeHandle) {
       case 'nw':
         newX = Math.max(0, box.x + dx);
-        newY = Math.max(0, box.y + dy);
         newW = box.width + (box.x - newX);
         newH = newW / aspectRatio;
         newY = box.y + (box.height - newH);

@@ -30,7 +30,6 @@ describe('LanguagePickerComponent', () => {
 
   it('should filter languages', () => {
     component.searchQuery.set('espanol');
-    const filtered = component.filteredLanguages();
     // 'es' should be the only one or one of a few (like es, eo etc if they match)
     // Actually espanol is not native name for 'es', Español is.
     // Let's test with 'spani' for Spanish

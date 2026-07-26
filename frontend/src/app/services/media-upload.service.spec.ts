@@ -1,6 +1,3 @@
-import { TestBed } from '@angular/core/testing';
-import { MediaUploadService } from './media-upload.service';
-
 describe('MediaUploadService', () => {
   it('should exist', () => {
     // Placeholder test so the spec file compiles without failing due to

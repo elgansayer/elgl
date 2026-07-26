@@ -60,15 +60,17 @@ import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-c
       <!-- Other profile fields -->
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-text-secondary mb-1">Display Name</label>
+          <label for="displayNameInput" class="block text-sm font-medium text-text-secondary mb-1">Display Name</label>
           <input
+            id="displayNameInput"
             [(ngModel)]="displayName"
             class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-text-secondary mb-1">Gender</label>
+          <label for="genderSelect" class="block text-sm font-medium text-text-secondary mb-1">Gender</label>
           <select
+            id="genderSelect"
             [(ngModel)]="gender"
             class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           >

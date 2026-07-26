@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
 
 import { AuthService } from '../../services/auth.service';
 
@@ -30,10 +30,6 @@ import { AuthService } from '../../services/auth.service';
     `,
   ],
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent {
   readonly authService = inject(AuthService);
-
-  ngOnInit(): void {
-    // Future: load feed, notifications, etc.
-  }
 }

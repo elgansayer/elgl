@@ -6,6 +6,7 @@ import {
   Output,
   signal,
   computed,
+  inject,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
@@ -25,7 +26,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 export class ReportUserModalComponent implements OnInit {
   @Input({ required: false }) reportUserId: string = '';
   @Input() contextUrl?: string;
-  @Output() close = new EventEmitter<void>();
+  @Output() closed = new EventEmitter<void>();
   @Output() reported = new EventEmitter<void>();
 
   open(userId: string): void {
@@ -56,10 +57,8 @@ export class ReportUserModalComponent implements OnInit {
   // Derived list of categories to show
   categoriesToShow = computed(() => this.categories());
 
-  constructor(
-    private safetyService: SafetyService,
-    private toastService: ToastService,
-  ) {}
+  private safetyService = inject(SafetyService);
+  private toastService = inject(ToastService);
 
   ngOnInit(): void {
     this.loadCategories();
@@ -92,7 +91,7 @@ export class ReportUserModalComponent implements OnInit {
   }
 
   cancel(): void {
-    this.close.emit();
+    this.closed.emit();
   }
 
   async submitReport(): Promise<void> {
@@ -126,10 +125,11 @@ export class ReportUserModalComponent implements OnInit {
           );
       }
 
-      this.close.emit();
-    } catch (err: any) {
+      this.closed.emit();
+    } catch (err: unknown) {
+      const errorObj = err as { error?: { message?: string } };
       this.errorMessage.set(
-        err?.error?.message || 'Failed to submit report. Please try again.',
+        errorObj?.error?.message || 'Failed to submit report. Please try again.',
       );
       this.isSubmitting.set(false);
     }

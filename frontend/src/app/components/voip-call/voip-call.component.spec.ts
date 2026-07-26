@@ -7,9 +7,9 @@ import { AuthService } from '../../services/auth.service';
 import { ChatService } from '../../services/chat.service';
 import { LocalTrack, RemoteTrack, Room, Track } from 'livekit-client';
 
-(globalThis as any).MediaStreamTrack = class MediaStreamTrack {
+(globalThis as unknown as { MediaStreamTrack: typeof MediaStreamTrack }).MediaStreamTrack = class MediaStreamTrack {
   stop() {}
-};
+} as unknown as typeof MediaStreamTrack;
 
 describe('VoipCallComponent', () => {
   let component: VoipCallComponent;
@@ -20,8 +20,6 @@ describe('VoipCallComponent', () => {
   let mockChatService: Mocked<ChatService>;
   let mockLocalAudioTrack: Mocked<LocalTrack>;
   let mockLocalVideoTrack: Mocked<LocalTrack>;
-  let mockRemoteAudioTrack: Mocked<RemoteTrack>;
-  let mockRemoteVideoTrack: Mocked<RemoteTrack>;
   let mockRoom: Mocked<Room>;
 
   beforeEach(async () => {
@@ -46,20 +44,6 @@ describe('VoipCallComponent', () => {
       source: Track.Source.Camera,
       mediaStreamTrack: new MediaStreamTrack(),
     } as unknown as Mocked<LocalTrack>;
-
-    mockRemoteAudioTrack = {
-      kind: Track.Kind.Audio,
-      sid: 'remote-audio-1',
-      source: Track.Source.Microphone,
-      mediaStreamTrack: new MediaStreamTrack(),
-    } as unknown as Mocked<RemoteTrack>;
-
-    mockRemoteVideoTrack = {
-      kind: Track.Kind.Video,
-      sid: 'remote-video-1',
-      source: Track.Source.Camera,
-      mediaStreamTrack: new MediaStreamTrack(),
-    } as unknown as Mocked<RemoteTrack>;
 
     mockRoom = {
       name: 'test-room',
@@ -131,13 +115,13 @@ describe('VoipCallComponent', () => {
   });
 
   it.skip('should mute/unmute the local audio track via LiveKit SDK', () => {
-    (component as any).localAudioTrack = mockLocalAudioTrack;
+    (component as unknown as { localAudioTrack: LocalTrack }).localAudioTrack = mockLocalAudioTrack;
 
-    expect((mockLocalAudioTrack as any).mute).toHaveBeenCalled();
+    expect((mockLocalAudioTrack as unknown as { mute: () => void }).mute).toHaveBeenCalled();
 
     component.toggleMute();
     expect(component.isMuted()).toBe(false);
-    expect((mockLocalAudioTrack as any).unmute).toHaveBeenCalled();
+    expect((mockLocalAudioTrack as unknown as { unmute: () => void }).unmute).toHaveBeenCalled();
   });
 
   it('should emit muteToggled event with correct value', () => {
@@ -158,7 +142,7 @@ describe('VoipCallComponent', () => {
   });
 
   it.skip('should stop local audio track on destroy', () => {
-    (component as any).localAudioTrack = mockLocalAudioTrack;
+    (component as unknown as { localAudioTrack: LocalTrack }).localAudioTrack = mockLocalAudioTrack;
     const stopSpy = vi.spyOn(mockLocalAudioTrack, 'stop');
 
     component.ngOnDestroy();
@@ -166,7 +150,7 @@ describe('VoipCallComponent', () => {
   });
 
   it('should clean up resources on destroy', () => {
-    const cleanupSpy = vi.spyOn(component as any, 'cleanup');
+    const cleanupSpy = vi.spyOn(component as unknown as { cleanup: () => void }, 'cleanup');
 
     component.ngOnDestroy();
     expect(cleanupSpy).toHaveBeenCalled();

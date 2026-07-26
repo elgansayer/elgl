@@ -14,16 +14,19 @@ import { I18nService } from '../../services/i18n.service';
     <div
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
       (click)="onBackdropClick($event)"
+      (keydown.enter)="onBackdropClick($event)"
+      tabindex="0"
     >
       <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-md mx-4">
         <h2 class="text-xl font-bold text-white mb-4">
           {{ modalTitle }}
         </h2>
 
-        <label class="block text-sm text-slate-400 mb-1">
+        <label for="reasonSelect" class="block text-sm text-slate-400 mb-1">
           {{ reasonLabel }}
         </label>
         <select
+          id="reasonSelect"
           [(ngModel)]="selectedReason"
           class="w-full p-2 rounded bg-slate-700 text-white border border-slate-600 mb-4"
         >
@@ -47,10 +50,11 @@ import { I18nService } from '../../services/i18n.service';
           </option>
         </select>
 
-        <label class="block text-sm text-slate-400 mb-1">
+        <label for="descriptionTextarea" class="block text-sm text-slate-400 mb-1">
           {{ descriptionOptionalLabel }}
         </label>
         <textarea
+          id="descriptionTextarea"
           [(ngModel)]="description"
           rows="3"
           class="w-full p-2 rounded bg-slate-700 text-white border border-slate-600 mb-6"
@@ -124,7 +128,7 @@ export class ReportModalComponent implements OnInit {
     this.closed.emit();
   }
 
-  onBackdropClick(event: MouseEvent): void {
+  onBackdropClick(event: Event): void {
     if ((event.target as HTMLElement).classList.contains('fixed')) {
       this.onCancel();
     }

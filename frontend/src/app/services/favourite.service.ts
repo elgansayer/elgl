@@ -15,15 +15,15 @@ export class FavouriteService {
   private http = inject(HttpClient);
   private apiUrl = environment.apiUrl;
 
-  addFavourite(dto: AddFavouriteDto): Observable<any> {
+  addFavourite(dto: AddFavouriteDto): Observable<unknown> {
     return this.http.post(`${this.apiUrl}/favourites`, dto);
   }
 
-  removeFavourite(favouriteId: string): Observable<any> {
+  removeFavourite(favouriteId: string): Observable<unknown> {
     return this.http.delete(`${this.apiUrl}/favourites/${favouriteId}`);
   }
 
-  getFavourites(userId: string): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/favourites/user/${userId}`);
+  getFavourites(userId: string): Observable<unknown[]> {
+    return this.http.get<unknown[]>(`${this.apiUrl}/favourites/user/${userId}`);
   }
 }

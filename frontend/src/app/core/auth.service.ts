@@ -14,10 +14,10 @@ export class AuthService {
    * Authenticate the user and immediately populate the blocked‑user cache
    * so that the UI (context menu, message filtering) reflects real data.
    */
-  async signIn(email: string, password: string): Promise<any> {
+  async signIn(email: string, password: string): Promise<unknown> {
     // --- Authentication call (e.g. Supabase) ---
     const response = await lastValueFrom(
-      this.http.post<any>(`${this.apiUrl}/auth/login`, { email, password }),
+      this.http.post<unknown>(`${this.apiUrl}/auth/login`, { email, password }),
     );
     // --- Load blocked user IDs after successful auth ---
     await this.safetyService.loadBlockedUsers();

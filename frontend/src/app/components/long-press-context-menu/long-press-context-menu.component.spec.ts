@@ -5,8 +5,8 @@ import { LongPressContextMenuComponent } from './long-press-context-menu.compone
 import { of } from 'rxjs';
 import { SafetyService } from '../../services/safety.service';
 
-(globalThis as unknown as { Touch: typeof Touch }).Touch = class Touch {} as any;
-(globalThis as unknown as { TouchEvent: typeof TouchEvent }).TouchEvent = class TouchEvent extends Event {} as any;
+(globalThis as unknown as { Touch: typeof Touch }).Touch = class Touch {} as unknown as typeof Touch;
+(globalThis as unknown as { TouchEvent: typeof TouchEvent }).TouchEvent = class TouchEvent extends Event {} as unknown as typeof TouchEvent;
 
 describe('LongPressContextMenuComponent', () => {
   let component: LongPressContextMenuComponent;
@@ -73,9 +73,9 @@ describe('LongPressContextMenuComponent', () => {
   });
 
   it('should close menu after option click', () => {
-    vi.spyOn(component as any, 'close');
+    vi.spyOn(component as unknown as { close: () => void }, 'close');
     component['onOptionClick']('copy');
-    expect((component as any).close).toHaveBeenCalled();
+    expect((component as unknown as { close: () => void }).close).toHaveBeenCalled();
   });
 
   it('should open menu on right click', () => {
@@ -135,7 +135,7 @@ describe('LongPressContextMenuComponent', () => {
       preventDefault: vi.fn()
     } as unknown as TouchEvent;
     component.onTouchStart(touchEvent);
-    expect((component as any).longPressTimer).not.toBeNull();
+    expect((component as unknown as { longPressTimer: unknown }).longPressTimer).not.toBeNull();
     vi.advanceTimersByTime(component.longPressDuration());
     expect(component.showMenu()).toBe(true);
     vi.useRealTimers();
@@ -149,7 +149,7 @@ describe('LongPressContextMenuComponent', () => {
     } as unknown as TouchEvent;
     component.onTouchStart(touchEvent);
     component.onTouchMove();
-    expect((component as any).longPressTimer).toBeNull();
+    expect((component as unknown as { longPressTimer: unknown }).longPressTimer).toBeNull();
   });
 
   it('should cancel long press on touch end', () => {
@@ -160,7 +160,7 @@ describe('LongPressContextMenuComponent', () => {
     } as unknown as TouchEvent;
     component.onTouchStart(touchEvent);
     component.onTouchEnd();
-    expect((component as any).longPressTimer).toBeNull();
+    expect((component as unknown as { longPressTimer: unknown }).longPressTimer).toBeNull();
   });
 
   it('should render menu options', () => {

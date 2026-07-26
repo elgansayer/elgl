@@ -127,15 +127,15 @@ export class FeedService {
     );
   }
 
-  async getComments(momentId: string): Promise<any[]> {
+  async getComments(momentId: string): Promise<unknown[]> {
     return firstValueFrom(
-      this.http.get<any[]>(`${this.baseUrl}/${momentId}/comments`, {
+      this.http.get<unknown[]>(`${this.baseUrl}/${momentId}/comments`, {
         headers: this.getHeaders()
       })
     );
   }
 
-  async addComment(momentId: string, content: string): Promise<any> {
+  async addComment(momentId: string, content: string): Promise<unknown> {
     return firstValueFrom(
       this.http.post(`${this.baseUrl}/${momentId}/comments`, { content }, {
         headers: this.getHeaders()

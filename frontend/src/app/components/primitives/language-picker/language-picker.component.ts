@@ -264,12 +264,12 @@ export class LanguagePickerComponent {
           name = enNames.of(code) || code;
           const nativeDisplay = new Intl.DisplayNames([code], { type: 'language' });
           nativeName = nativeDisplay.of(code) || name;
-        } catch (e) {
+        } catch {
           // fallback
         }
         return { code, name, nativeName, flag: getLanguageFlag(code) };
       }).sort((a, b) => a.name.localeCompare(b.name));
-    } catch (e) {
+    } catch {
       return ALL_LANGUAGE_CODES.map((code) => ({
         code,
         name: code,

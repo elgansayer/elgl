@@ -18,7 +18,6 @@ import {
   RemoteTrack,
   RemoteTrackPublication,
   VideoTrack,
-  AudioTrack,
   LocalVideoTrack,
   LocalAudioTrack,
   createLocalVideoTrack,
@@ -26,7 +25,6 @@ import {
   Track,
 } from 'livekit-client';
 import { LivekitService } from '../../services/livekit.service';
-import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { AppGradientButtonComponent } from '../primitives/gradient-button/gradient-button.component';
 
@@ -304,8 +302,6 @@ export class VideoCallComponent implements OnInit, OnDestroy {
 
   private onTrackSubscribed(
     track: RemoteTrack,
-    publication: RemoteTrackPublication,
-    participant: RemoteParticipant,
   ): void {
     if (track.kind === Track.Kind.Video) {
       this.remoteVideoTrack.set(track as unknown as VideoTrack);
@@ -314,15 +310,13 @@ export class VideoCallComponent implements OnInit, OnDestroy {
 
   private onTrackUnsubscribed(
     track: RemoteTrack,
-    publication: RemoteTrackPublication,
-    participant: RemoteParticipant,
   ): void {
     if (track.kind === Track.Kind.Video) {
       this.remoteVideoTrack.set(null);
     }
   }
 
-  private onParticipantDisconnected(participant: RemoteParticipant): void {
+  private onParticipantDisconnected(_participant: RemoteParticipant): void {
     this.endCall();
   }
 

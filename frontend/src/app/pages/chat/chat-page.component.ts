@@ -18,6 +18,8 @@ import { ChatMessageComponent } from '../../components/chat-message/chat-message
           @for (room of rooms(); track room) {
             <div
               (click)="selectRoom(room)"
+              (keydown.enter)="selectRoom(room)"
+              tabindex="0"
               class="cursor-pointer p-3 rounded-lg hover:bg-surface-300 :bg-surface-200 transition-colors"
               [class.bg-blue-500/10]="selectedRoom()?.id === room.id"
             >
