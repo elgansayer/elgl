@@ -53,7 +53,9 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^#[0-9A-Fa-f]{6}$/, { message: 'primary_accent_color must be a valid hex color code' })
+  @Matches(/^#[0-9A-Fa-f]{6}$/, {
+    message: 'primary_accent_color must be a valid hex color code',
+  })
   primary_accent_color?: string;
 
   @IsOptional()
