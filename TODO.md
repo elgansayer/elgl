@@ -1,11 +1,11 @@
 # TODO.md (Master HelloTalk Clone Architecture: Phases 1 to 79 + Phase C)
 
 ## URGENT
-- [ ] Fix QA test failure: ReferenceError: describe is not defined.
-- [x] Fix QA test failure: `ReferenceError: describe is not defined` in test suites.
-- [x] Fix QA test failure: `ReferenceError: describe is not defined`.
-- [x] Fix QA test failure: `ReferenceError: describe is not defined`. (Root cause was not a Jest/Jasmine config or test globals issue: `qa-loop.sh` was running `npx playwright test` from `frontend/`, which has no `playwright.config.ts`, so Playwright fell back to its default glob and picked up the Angular Vitest unit `*.spec.ts` files under `frontend/src`. Those files use bare `describe`/`it` (Vitest globals) or `import { vi } from 'vitest'`, neither of which exist under the Playwright test runner, hence the `ReferenceError` and the "Vitest cannot be imported... using require()" errors. Fixed by pointing `qa-loop.sh` at the real Playwright suite in `e2e/` (its own `playwright.config.ts` + `tests/`); `ux-loop.sh` already targeted `e2e/` correctly. Verified no other script/CI invocation runs Playwright against `frontend/`.)
-- [STUCK] Identify and fix the specific test file causing 'ReferenceError: describe is not defined' (need the failing test file path added to the chat).
+- [x] Fix QA test failure: `Error: Process from config.webServer was not able to start. Exit code: 143`. Root cause: `e2e/playwright.config.ts` `webServer` runs `cd ../frontend && npm run start` (Angular dev server), which never reaches a successful compile because the frontend currently has real TypeScript build errors, so `ng serve` keeps failing/restarting until Playwright's 120s `webServer.timeout` elapses and it force-kills (SIGTERM, exit 143) the still-uncompiled process. Fixed both compile errors:
+  1. `frontend/src/app/components/hobby-tags/hobby-tags.component.ts`: `userVocabulary` signal retyped from `unknown[]` to the service's real `VocabularyItem[]` interface (`word`, `translation`, `hobbyTagName`); template updated to only reference fields that actually exist on it, and the now-unused `getDifficultyColour` helper was removed.
+  2. `frontend/src/app/components/virtual-gift-modal/virtual-gift-modal.component.ts`: added the missing `TranslatePipe` to the standalone component's `imports` array, resolving `NG8004: No pipe found with name 't'`.
+  Verified: `cd frontend && npm run build` completes with no errors, and `ng serve` reaches "Application bundle generation complete" well inside Playwright's 120s `webServer.timeout`.
+- [x] Fix QA test failure: `ReferenceError: describe is not defined` (recurred again during latest QA run). Root cause of the *recurrence* was not the original bug reappearing: `qa-loop.sh` already correctly runs `(cd e2e && npx playwright test)`, verified clean (`npx playwright test --list` finds 100 tests across 14 files, no describe/vitest errors). The real bug was in `qa-loop.sh`'s triage step: `qa_errors.log` was opened with `>>` and never truncated between cycles, so it grew to 31MB+. The triage line `grep -E -A 5 "Error:|failed" qa_errors.log | head -n 1` always matched the *first* error in the file, i.e. the original stale `ReferenceError: describe is not defined` recorded before the `e2e/` fix landed, so every later QA cycle (even ones failing for unrelated reasons, e.g. transient EMFILE watcher errors) got misdiagnosed as this same long-fixed bug and re-added to `TODO.md`. Fixed by truncating `qa_errors.log` at the top of each loop iteration (same as `qa_aider.log` already was), and manually cleared the stale accumulated log. Note: the live `qa-loop.sh` process must be restarted to pick up this fix, since bash caches the parsed loop body in memory for the life of the process.
 
 ## GLOBAL ARCHITECTURAL RULES
 * **RULE 1:** ABSOLUTELY NO HARD-CODED DATA. All content, user profiles, and UI copy must be fetched dynamically or piped through `@ngx-translate`.
@@ -213,11 +213,12 @@
   - [x] Run `ng add @angular/pwa` in the `frontend` directory to generate service worker configuration.
 - [x] Implement IndexedDB message queuing for offline chat composition.
 - [x] Write the IndexedDB wrapper service and integrate it with ChatService for offline queuing.
-- [ ] Build global "No Network Connection" banner component.
+- [x] Build global "No Network Connection" banner component.
 
 ## Phase 28: Accessibility (a11y)
-- [ ] Audit and add `aria-label` attributes to all icon buttons and interactive tags.
-- [ ] Implement Dynamic Font Size slider adjusting base `rem` CSS rules.
+- [x] Audit and add `aria-label` attributes to all icon buttons and interactive tags. (`moments-feed.component.html`'s 3 `<img>` tags now have `alt` text via `moments.avatarPreviewAlt` / `moments.mediaThumbnailAlt` / `moments.momentImageAlt`, and `hobby-tags.component.ts`'s `hobby.removeTag` aria-label now falls back to `hobby.unknownTagName` when `hobby_tag` is unpopulated. Verified: `npx eslint` on both files is clean and `ng build` compiles with no errors.)
+- [x] Fix remaining `@angular-eslint/template/alt-text` error found during the above audit: `user-detail.component.html:22`'s cover photo `<img [src]="profile()?.cover_photo_url" />` has no `alt` attribute. (Added `[alt]` bound to new `userProfile.coverPhotoAlt` translate key, parameterised with the profile's display name. Verified: `npx eslint` on the file is clean and `tsc --noEmit` shows no errors.)
+- [x] Implement Dynamic Font Size slider adjusting base `rem` CSS rules. (Added `FontScaleService` (`frontend/src/app/services/font-scale.service.ts`), which persists a 80-150% scale to `localStorage` and sets `document.documentElement.style.fontSize` so every Tailwind `rem` utility across the app scales together. Wired a slider into `SettingsComponent` under a new "Accessibility" section, and injected the service in `AppComponent` so the persisted scale applies on boot. Verified: `npm run lint` and `npx tsc --noEmit -p tsconfig.app.json` are clean, and `ng test --no-watch` passes 115/119 (28/28 spec files, 4 pre-existing skips) including the new `font-scale.service.spec.ts`. Follow-up review found `font-scale.service.ts` and `font-scale.service.spec.ts` were left untracked by git (`??`), so they were invisible to `git diff HEAD` and would have been silently dropped from the next commit even though `SettingsComponent`/`AppComponent` already depend on them; `git add`ed both to fix.)
 - [ ] Ensure full keyboard tab-navigation support for desktop viewports.
 
 ## Phase 29: Deep Linking & SEO
