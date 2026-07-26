@@ -91,10 +91,12 @@ export class DiscoveryService {
     // Use mock location if user is VIP and has it set
     if (
       _currentUserProfile?.is_vip &&
-      _currentUserProfile.mock_location?.coordinates
+      _currentUserProfile.mock_location &&
+      Array.isArray((_currentUserProfile.mock_location as any).coordinates)
     ) {
-      searchLon = _currentUserProfile.mock_location.coordinates[0];
-      searchLat = _currentUserProfile.mock_location.coordinates[1];
+      const coords = (_currentUserProfile.mock_location as any).coordinates as number[];
+      searchLon = coords[0];
+      searchLat = coords[1];
     }
 
     let queryBuilder = supabase
