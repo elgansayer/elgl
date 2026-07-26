@@ -388,7 +388,8 @@ export class MomentsService {
       .single();
 
     const updatedData = result.data as
-      (MomentCountRow & { user_id?: string }) | null;
+      | (MomentCountRow & { user_id?: string })
+      | null;
 
     await supabase
       .from('moments')
@@ -420,7 +421,7 @@ export class MomentsService {
         new MomentCommentEvent(
           momentId,
           userId,
-          momentAuthorId,
+          momentAuthorId as string,
           preview,
           dto.parent_comment_id,
           dto.reply_to_user_id,

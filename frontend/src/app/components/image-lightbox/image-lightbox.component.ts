@@ -1,10 +1,13 @@
-import { Component, EventEmitter, HostListener, Input, Output, OnInit, OnDestroy } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-image-lightbox',
   standalone: true,
   imports: [CommonModule],
+  host: {
+    '(window:keydown)': 'handleKeyDown($event)'
+  },
   template: `
     <div class="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center touch-none animate-fadeIn">
       <!-- Header / Controls -->
@@ -86,7 +89,6 @@ export class ImageLightboxComponent implements OnInit, OnDestroy {
     document.body.style.overflow = '';
   }
 
-  @HostListener('window:keydown', ['$event'])
   handleKeyDown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
       this.close();
