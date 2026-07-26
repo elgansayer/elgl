@@ -204,7 +204,8 @@
 ## Phase 26: Group Chats
 - [x] Build "Create Group" UI supporting up to 50 users.
 - [x] Implement Group Admin privileges (Add/remove members, rename group).
-- [ ] Build group participant drawer.
+- [x] Build group participant drawer.
+- [x] Implement group participant drawer UI component.
 
 ## Phase 27: Offline Support & PWA
 - [ ] Configure Angular Service Worker (`@angular/pwa`) for asset caching.
