@@ -34,7 +34,9 @@ export class ChatService {
 
     const response = await supabase
       .from('chat_rooms')
-      .select('id, title, subtitle, avatar, is_online, is_pinned, created_at, admin_id')
+      .select(
+        'id, title, subtitle, avatar, is_online, is_pinned, created_at, admin_id',
+      )
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: true });
 
@@ -366,7 +368,11 @@ export class ChatService {
     }
   }
 
-  async renameGroup(userId: string, roomId: string, newName: string): Promise<void> {
+  async renameGroup(
+    userId: string,
+    roomId: string,
+    newName: string,
+  ): Promise<void> {
     await this.verifyAdmin(userId, roomId);
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase
@@ -377,10 +383,14 @@ export class ChatService {
     if (error) throw new Error('Failed to rename group');
   }
 
-  async addGroupMembers(userId: string, roomId: string, memberIds: string[]): Promise<void> {
+  async addGroupMembers(
+    userId: string,
+    roomId: string,
+    memberIds: string[],
+  ): Promise<void> {
     await this.verifyAdmin(userId, roomId);
     const supabase = this.supabaseService.getClient();
-    
+
     const membersData = memberIds.map((id) => ({
       room_id: roomId,
       user_id: id,
@@ -393,10 +403,14 @@ export class ChatService {
     if (error) throw new Error('Failed to add members');
   }
 
-  async removeGroupMember(userId: string, roomId: string, memberId: string): Promise<void> {
+  async removeGroupMember(
+    userId: string,
+    roomId: string,
+    memberId: string,
+  ): Promise<void> {
     await this.verifyAdmin(userId, roomId);
     const supabase = this.supabaseService.getClient();
-    
+
     const { error } = await supabase
       .from('chat_room_members')
       .delete()
