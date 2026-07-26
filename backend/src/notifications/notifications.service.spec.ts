@@ -10,7 +10,7 @@ describe('NotificationsService', () => {
 
   beforeEach(async () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
-    
+
     mockQueryBuilder = {
       select: jest.fn().mockReturnThis(),
       insert: jest.fn().mockResolvedValue({ error: null }),

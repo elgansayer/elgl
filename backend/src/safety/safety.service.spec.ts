@@ -10,7 +10,7 @@ describe('SafetyService', () => {
 
   beforeEach(async () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
-    
+
     mockQueryBuilder = {
       insert: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),

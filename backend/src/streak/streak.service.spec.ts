@@ -60,7 +60,7 @@ describe('StreakService', () => {
 
   beforeEach(async () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
-    
+
     supabaseMock = {
       from: jest.fn(() => createQueryChain()),
     };
