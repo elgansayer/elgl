@@ -35,6 +35,7 @@ import { validationSchema } from './config/validation.schema';
       isGlobal: true,
       validationSchema,
     }),
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
