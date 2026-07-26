@@ -9,6 +9,13 @@ interface LiveMessage {
   timestamp: number;
 }
 
+interface CentrifugoMessageData {
+  type?: string;
+  id?: string;
+  senderName?: string;
+  content: string;
+}
+
 @Component({
   selector: 'app-live-chat-overlay',
   standalone: true,
@@ -66,7 +73,7 @@ export class LiveChatOverlayComponent implements OnInit, OnDestroy {
       const latestEvent = events[events.length - 1];
       
       if (latestEvent && latestEvent.channel === this.channelName) {
-        const data = latestEvent.data as any;
+        const data = latestEvent.data as CentrifugoMessageData;
         
         // Handle text payloads as defined in SPEC.md
         if (data.type === 'text') {
