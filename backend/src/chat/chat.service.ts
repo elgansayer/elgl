@@ -423,14 +423,16 @@ export class ChatService {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('chat_room_members')
-      .select(`
+      .select(
+        `
         user_id,
         user:users!chat_room_members_user_id_fkey (
           id,
           display_name,
           avatar_url
         )
-      `)
+      `,
+      )
       .eq('room_id', roomId);
 
     if (error) throw new Error('Failed to fetch group members');
