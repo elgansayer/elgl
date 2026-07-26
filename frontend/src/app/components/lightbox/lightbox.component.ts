@@ -1,17 +1,20 @@
-import { Component, input, output, signal, HostListener, OnInit } from '@angular/core';
+import { Component, input, output, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-lightbox',
   standalone: true,
   imports: [CommonModule],
+  host: {
+    '(window:keydown)': 'handleKeyDown($event)'
+  },
   template: `
     <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-sm"
          (touchstart)="onTouchStart($event)"
          (touchend)="onTouchEnd($event)">
       
       <!-- Close Button -->
-      <button (click)="close.emit()" 
+      <button (click)="closed.emit()" 
               class="absolute top-4 right-4 z-[110] p-2 text-white/70 hover:text-white bg-black/50 rounded-full transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -56,7 +59,9 @@ import { CommonModule } from '@angular/common';
             <button (click)="goTo(i, $event)"
                     [class.bg-white]="i === currentIndex()"
                     [class.bg-white/30]="i !== currentIndex()"
-                    class="w-2 h-2 rounded-full transition-colors duration-200"></button>
+                    class="w-2 h-2 rounded-full transition-colors duration-200">
+              <span class="sr-only">Image {{ i + 1 }}</span>
+            </button>
           }
         </div>
       }
@@ -66,7 +71,7 @@ import { CommonModule } from '@angular/common';
 export class LightboxComponent implements OnInit {
   images = input.required<string[]>();
   initialIndex = input<number>(0);
-  close = output<void>();
+  closed = output<void>();
 
   currentIndex = signal<number>(0);
 
@@ -77,9 +82,8 @@ export class LightboxComponent implements OnInit {
     this.currentIndex.set(this.initialIndex());
   }
 
-  @HostListener('window:keydown', ['$event'])
   handleKeyDown(event: KeyboardEvent) {
-    if (event.key === 'Escape') this.close.emit();
+    if (event.key === 'Escape') this.closed.emit();
     if (event.key === 'ArrowRight') this.next();
     if (event.key === 'ArrowLeft') this.prev();
   }

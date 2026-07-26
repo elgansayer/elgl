@@ -422,8 +422,8 @@ export class MomentsService {
           userId,
           momentAuthorId,
           preview,
-          dto.parent_comment_id,
-          dto.reply_to_user_id,
+          dto.parent_comment_id as string | undefined,
+          dto.reply_to_user_id as string | undefined,
         ),
       );
     }
@@ -454,8 +454,8 @@ export class MomentsService {
                   userId,
                   mentionedUser.id,
                   preview,
-                  dto.parent_comment_id,
-                  dto.reply_to_user_id,
+                  dto.parent_comment_id as string | undefined,
+                  dto.reply_to_user_id as string | undefined,
                 ),
               );
             }
