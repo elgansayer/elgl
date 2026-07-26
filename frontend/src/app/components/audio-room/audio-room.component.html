@@ -42,6 +42,7 @@
               @for (speakerId of room.speakers; track speakerId) {
                 <div class="rounded-card border border-purple-500/30 bg-purple-500/10 p-3 text-center">
                   <div class="mx-auto h-12 w-12 rounded-full bg-purple-600 text-white flex items-center justify-center">🎙️</div>
+                  <app-audio-equalizer [isActive]="true" customClass="mt-2"></app-audio-equalizer>
                   <p class="mt-2 truncate text-xs font-bold text-text-primary">
                     {{ speakerId === room.host_id ? (room.host?.display_name + ' (' + ('audioRoom.hostLabel' | t) + ')') : ('audioRoom.speakerPrefix' | t: { id: speakerId.slice(0, 6) }) }}
                   </p>
