@@ -1,3 +1,4 @@
+@if (isOpen()) {
 <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" (click)="cancel()">
   <div class="w-full sm:max-w-md mx-auto bg-[#121212] rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-800 max-h-[90vh] flex flex-col" (click)="$event.stopPropagation()">
     
@@ -114,3 +115,4 @@
     </div>
   </div>
 </div>
+}
