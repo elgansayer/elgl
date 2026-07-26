@@ -21,13 +21,13 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 
         <form (ngSubmit)="onSubmit()" class="space-y-4">
           <div>
-            <label for="voiceroomNameInput" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 text-start">Room Name</label>
+            <label for="voiceroomTitleInput" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 text-start">Title</label>
             <input
-              id="voiceroomNameInput"
+              id="voiceroomTitleInput"
               type="text"
-              [ngModel]="roomName()"
-              (ngModelChange)="roomName.set($event)"
-              name="roomName"
+              [ngModel]="title()"
+              (ngModelChange)="title.set($event)"
+              name="title"
               required
               class="w-full ps-4 pe-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-start"
               placeholder="e.g. English Practice"
@@ -70,7 +70,7 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
             </app-button-secondary>
             <button 
               type="submit"
-              [disabled]="!roomName() || !languagePair()"
+              [disabled]="!title() || !languagePair()"
               class="ps-4 pe-4 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Create Room
@@ -83,16 +83,16 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 })
 export class VoiceroomCreationModalComponent {
   readonly closed = output<void>();
-  readonly create = output<{ roomName: string; languagePair: string; topicTag: string }>();
+  readonly create = output<{ title: string; languagePair: string; topicTag: string }>();
 
-  roomName = signal('');
+  title = signal('');
   languagePair = signal('');
   topicTag = signal('General Chat');
 
   onSubmit() {
-    if (this.roomName() && this.languagePair()) {
+    if (this.title() && this.languagePair()) {
       this.create.emit({
-        roomName: this.roomName(),
+        title: this.title(),
         languagePair: this.languagePair(),
         topicTag: this.topicTag()
       });
