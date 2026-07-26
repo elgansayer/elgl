@@ -38,6 +38,7 @@ export interface IncomingCallInfo {
                   [src]="callInfo()?.callerAvatar"
                   alt="Caller avatar"
                   class="w-full h-full object-cover"
+                  loading="lazy"
                 />
               } @else {
                 <span class="text-4xl">👤</span>
