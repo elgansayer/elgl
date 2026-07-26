@@ -62,7 +62,7 @@ import {
               >
                 <!-- Popular Badge -->
                 @if (plan.is_popular) {
-                  <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <div class="absolute -top-3 inset-x-0 flex justify-center">
                     <app-pill label="Most Popular" colour="primary" size="sm" />
                   </div>
                 }

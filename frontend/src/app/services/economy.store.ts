@@ -1,4 +1,4 @@
-import { showToast, notImplementedToast } from './toast.service';
+import { showToast } from './toast.service';
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';

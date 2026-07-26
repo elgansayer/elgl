@@ -13,6 +13,8 @@ export AIDER_RETRIES=0
 
 # shellcheck source=scripts/preflight-models.sh
 source "$(dirname "$0")/scripts/preflight-models.sh"
+# shellcheck source=scripts/claude-pro.sh
+source "$(dirname "$0")/scripts/claude-pro.sh"
 
 echo "Starting 24/7 autonomous 5-stage pipeline with global fallbacks..."
 
@@ -163,6 +165,22 @@ run_aider_with_fallback() {
     return 1
 }
 
+# Entry point every pipeline stage should call. Tries the Claude Pro subscription first
+# (via Claude Code CLI, run_claude_code in scripts/claude-pro.sh) since it is the strongest
+# model and costs nothing extra to attempt; only when that tier fails (usage cap hit, CLI
+# missing, or an error) does it bail to the Aider waterfall on Copilot/Gemini/DeepSeek.
+run_task_with_fallback() {
+    local MESSAGE="$1"
+    local FILES_AND_ARGS="$2"
+
+    run_claude_code "$MESSAGE"
+    if [ $? -eq 0 ]; then
+        return 0
+    fi
+
+    run_aider_with_fallback "$MESSAGE" "$FILES_AND_ARGS"
+}
+
 while true; do
     echo "========================================"
     echo "STAGE 1: PRE-MANAGEMENT (Planning)"
@@ -203,7 +221,7 @@ while true; do
     echo "STAGE 2: EXECUTOR (The Waterfall)"
     echo "========================================"
     echo "Executing: $CURRENT_TASK"
-    run_aider_with_fallback "Execute task: '$CURRENT_TASK'. Write the code." "--architect --read SPEC.md"
+    run_task_with_fallback "Execute task: '$CURRENT_TASK'. Write the code. Read SPEC.md for context." "--architect --read SPEC.md"
     EXECUTOR_EXIT=$?
 
     # Exit 2 means no model was callable at all. That is an infrastructure fault, and
@@ -253,7 +271,7 @@ while true; do
         BROKEN_FILES=$(grep -oE "(frontend|backend)/[A-Za-z0-9_./-]+\.(ts|html|scss)" test_errors.log \
             | sort -u | head -n 25 | tr '\n' ' ')
         echo "Files in scope: $BROKEN_FILES"
-        run_aider_with_fallback "The automated lint and test suite failed. The full output is in test_errors.log, which has been added read-only. Fix the codebase so lint and tests pass. Do not invent new features, only fix the errors in that log." "--read test_errors.log $BROKEN_FILES"
+        run_task_with_fallback "The automated lint and test suite failed. The full output is in test_errors.log. Fix the codebase so lint and tests pass. Do not invent new features, only fix the errors in that log. Files likely in scope: $BROKEN_FILES" "--read test_errors.log $BROKEN_FILES"
     else
         echo "All tests and linting passed!"
     fi
@@ -266,10 +284,10 @@ while true; do
     
     if [ -z "$GIT_DIFF" ]; then
         echo "No changes detected."
-        run_aider_with_fallback "No changes were made for the task: '$CURRENT_TASK'. Investigate why and update TODO.md if there is a blocker." "TODO.md"
+        run_task_with_fallback "No changes were made for the task: '$CURRENT_TASK'. Investigate why and update TODO.md if there is a blocker." "TODO.md"
     else
         echo "Changes detected. Passing diff to AI for TODO.md updates."
-        run_aider_with_fallback "Review this git diff for task '$CURRENT_TASK': $GIT_DIFF. If the task is fully complete, change [ ] to [x] in TODO.md. If incomplete, add a new [ ] task below it." "TODO.md"
+        run_task_with_fallback "Review this git diff for task '$CURRENT_TASK': $GIT_DIFF. If the task is fully complete, change [ ] to [x] in TODO.md. If incomplete, add a new [ ] task below it." "TODO.md"
     fi
 
     echo "========================================"

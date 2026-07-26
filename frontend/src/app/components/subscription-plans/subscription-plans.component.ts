@@ -63,7 +63,7 @@ import { environment } from '../../../environments/environment';
           @for (plan of plans(); track plan.id) {
             <div [class]="getPlanCardClass(plan)">
               @if (plan.badge_text) {
-                <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+                <div class="absolute -top-3 inset-x-0 flex justify-center">
                   <span
                     class="bg-gradient-to-r from-purple-600 to-pink-500 text-white text-xs font-bold px-4 py-1 rounded-full shadow-lg"
                   >

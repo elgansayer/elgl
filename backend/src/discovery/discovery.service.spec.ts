@@ -87,12 +87,15 @@ describe('DiscoveryService', () => {
       });
 
       const result = await service.searchPartners('user-1', null, {
-        native_language: 'ES',
+        native_languages: 'ES',
         target_language: 'EN',
         serious_learner_only: true,
       });
 
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('native_language', 'ES');
+      expect(mockQueryBuilder.contains).toHaveBeenCalledWith(
+        'native_languages',
+        ['ES'],
+      );
       expect(mockQueryBuilder.contains).toHaveBeenCalledWith(
         'target_languages',
         ['EN'],
@@ -116,7 +119,7 @@ describe('DiscoveryService', () => {
         latitude: 51.5074,
         longitude: -0.1278,
         radius_metres: 10000,
-        native_language: 'FR',
+        native_languages: 'FR',
       });
 
       expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(

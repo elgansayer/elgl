@@ -87,7 +87,12 @@ describe('IncomingCallComponent', () => {
 
     await component.acceptCall();
 
-    expect(mockLivekitService.joinRoom).toHaveBeenCalledWith('room-789', 'test-user-123', false);
+    expect(mockLivekitService.joinRoom).toHaveBeenCalledWith(
+      'room-789',
+      'test-user-123',
+      false,
+      undefined,
+    );
     expect(mockCentrifugoService.publish).toHaveBeenCalledWith('user_caller-456', {
       type: 'call_accepted',
       data: {

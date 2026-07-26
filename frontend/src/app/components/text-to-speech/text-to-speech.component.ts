@@ -1,4 +1,4 @@
-import { showToast, notImplementedToast } from '../../services/toast.service';
+import { showToast } from '../../services/toast.service';
 import { Component, Input, signal } from '@angular/core';
 
 @Component({

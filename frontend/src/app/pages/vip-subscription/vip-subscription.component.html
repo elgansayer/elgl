@@ -116,7 +116,7 @@
           >
             <!-- Popular Badge -->
             @if (plan.is_popular) {
-              <div class="absolute -top-4 left-1/2 -translate-x-1/2">
+              <div class="absolute -top-4 inset-x-0 flex justify-center">
                 <span class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-1.5 rounded-full text-sm font-semibold shadow-lg">
                   Most Popular
                 </span>
@@ -125,7 +125,7 @@
 
             <!-- Badge Text -->
             @if (plan.badge_text && !plan.is_popular) {
-              <div class="absolute -top-4 left-1/2 -translate-x-1/2">
+              <div class="absolute -top-4 inset-x-0 flex justify-center">
                 <span class="bg-gray-800 dark:bg-gray-600 text-white px-6 py-1.5 rounded-full text-sm font-semibold shadow-lg">
                   {{ plan.badge_text }}
                 </span>

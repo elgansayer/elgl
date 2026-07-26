@@ -1,4 +1,4 @@
-import { showToast, notImplementedToast } from '../../services/toast.service';
+import { showToast } from '../../services/toast.service';
 import { Component, EventEmitter, Output, signal, inject } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
