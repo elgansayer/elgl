@@ -4,7 +4,9 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -41,5 +43,26 @@ export class AdminController {
   @Get('users/:id/login-history')
   async getLoginHistory(@Param('id') id: string): Promise<LoginHistoryEntry[]> {
     return this.adminService.getLoginHistory(id);
+  }
+
+  @Post('users/:id/ban')
+  async banUser(
+    @Param('id') id: string,
+    @Req() req: any,
+  ): Promise<{ message: string }> {
+    // The SupabaseAuthGuard attaches the user's claims to req.user
+    const adminUserId = req.user?.sub as string;
+    await this.adminService.banUser(id, adminUserId);
+    return { message: 'User banned' };
+  }
+
+  @Post('users/:id/warn')
+  async warnUser(
+    @Param('id') id: string,
+    @Req() req: any,
+  ): Promise<{ message: string }> {
+    const adminUserId = req.user?.sub as string;
+    await this.adminService.warnUser(id, adminUserId);
+    return { message: 'User warned' };
   }
 }

@@ -95,4 +95,35 @@ export class AdminService {
 
     return data ?? [];
   }
+
+  async banUser(targetUserId: string, adminUserId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase.from('blocks').insert({
+      blocker_id: adminUserId,
+      blocked_id: targetUserId,
+    });
+    if (error) {
+      this.logger.error(
+        `Failed to ban user ${targetUserId}: ${error.message}`,
+      );
+      throw new NotFoundException(`Unable to ban user ${targetUserId}`);
+    }
+  }
+
+  async warnUser(targetUserId: string, adminUserId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase.from('reports').insert({
+      reporter_id: adminUserId,
+      reported_user_id: targetUserId,
+      reason_category: 'admin_warning',
+      description: 'Admin warning',
+      status: 'open',
+    });
+    if (error) {
+      this.logger.error(
+        `Failed to warn user ${targetUserId}: ${error.message}`,
+      );
+      throw new NotFoundException(`Unable to warn user ${targetUserId}`);
+    }
+  }
 }

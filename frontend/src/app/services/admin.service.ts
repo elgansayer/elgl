@@ -178,4 +178,24 @@ export class AdminService {
         ),
     );
   }
+
+  async banUser(userId: string): Promise<{ message: string }> {
+    return firstValueFrom(
+      this.http.post<{ message: string }>(
+        `${this.baseUrl}/users/${userId}/ban`,
+        {},
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
+  async warnUser(userId: string): Promise<{ message: string }> {
+    return firstValueFrom(
+      this.http.post<{ message: string }>(
+        `${this.baseUrl}/users/${userId}/warn`,
+        {},
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
 }
