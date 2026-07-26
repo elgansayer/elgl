@@ -250,7 +250,7 @@
 
 ## Phase 32: Custom Stickers & Emojis
 - [x] Build Sticker Store UI.
-- [ ] Allow spending virtual coins to unlock animated sticker packs.
+- [x] Allow spending virtual coins to unlock animated sticker packs.
 - [ ] Build custom sticker picker drawer inside chat window.
 
 ## Phase 33: User Analytics Dashboard
