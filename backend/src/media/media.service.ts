@@ -3,8 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import * as crypto from 'crypto';
+import * as fs from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 import { PresignedUrlDto } from './dto/presigned-url.dto';
 import { SupabaseService } from '../supabase/supabase.service';
+import { AudioCompressionService } from './audio-compression.service';
 
 @Injectable()
 export class MediaService implements OnModuleInit {
@@ -15,6 +19,7 @@ export class MediaService implements OnModuleInit {
   constructor(
     private readonly configService: ConfigService,
     private readonly supabaseService: SupabaseService,
+    private readonly audioCompressionService: AudioCompressionService,
   ) {}
 
   onModuleInit() {
@@ -75,6 +80,43 @@ export class MediaService implements OnModuleInit {
 
     const coverDto = { ...dto, folder: 'covers' };
     return this.generatePresignedUrl(userId, coverDto);
+  }
+
+  async uploadAndCompressVoiceNote(
+    userId: string,
+    file: Express.Multer.File,
+  ): Promise<{ url: string }> {
+    const tempDir = os.tmpdir();
+    const inputPath = path.join(tempDir, `${Date.now()}-input-${file.originalname}`);
+    const outputPath = path.join(tempDir, `${Date.now()}-output.ogg`);
+
+    try {
+      // 1. Save uploaded buffer to temp file
+      await fs.writeFile(inputPath, file.buffer);
+      
+      // 2. Compress to OGG
+      await this.audioCompressionService.compressToOgg(inputPath, outputPath);
+
+      // 3. Read compressed file and upload to R2
+      const compressedBuffer = await fs.readFile(outputPath);
+      const uniqueHash = crypto.randomBytes(8).toString('hex');
+      const objectKey = `voice-notes/${userId}/${Date.now()}-${uniqueHash}.ogg`;
+
+      const command = new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: objectKey,
+        Body: compressedBuffer,
+        ContentType: 'audio/ogg',
+      });
+
+      await this.s3Client.send(command);
+
+      return { url: `${this.publicDomain}/${objectKey}` };
+    } finally {
+      // 4. Clean up temp files
+      await fs.unlink(inputPath).catch(() => {});
+      await fs.unlink(outputPath).catch(() => {});
+    }
   }
 
   async confirmCoverUpload(
