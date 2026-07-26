@@ -10,8 +10,8 @@ source "$(dirname "$0")/scripts/preflight-models.sh"
 # shellcheck source=scripts/claude-pro.sh
 source "$(dirname "$0")/scripts/claude-pro.sh"
 
-QA_MODEL="${QA_MODEL:-gemini/gemini-3.1-pro-preview}"
-QA_TRIAGE_MODEL="${QA_TRIAGE_MODEL:-gemini/gemini-3.5-flash}"
+QA_MODEL="${QA_MODEL:-deepseek/deepseek-chat}"
+QA_TRIAGE_MODEL="${QA_TRIAGE_MODEL:-deepseek/deepseek-chat}"
 
 echo "Starting 24/7 Adversarial QA Swarm..."
 

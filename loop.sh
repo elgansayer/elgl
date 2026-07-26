@@ -72,20 +72,14 @@ run_aider_with_fallback() {
     local MESSAGE="$1"
     local FILES_AND_ARGS="$2"
 
-    # The GPT tier was removed rather than repointed. Every capable GPT on the Copilot
-    # proxy is unreachable to Aider for one of two reasons, both verified by probing
-    # /chat/completions directly:
-    #   gpt-5.5, gpt-5.6-*, gpt-4.1  -> served only over /responses
-    #                                   ("unsupported_api_for_model")
-    #   gpt-5.4                      -> not on the allow-list for the
-    #                                   "copilot-language-server" integrator Aider uses
-    # That left gpt-5-mini as the only usable GPT, which is too weak to be an architect.
-    # claude-opus-5 is reachable and strong, so it takes the second slot instead.
+    # DeepSeek is the primary model because the user has a DeepSeek API key configured.
+    # It is the most reliable and cost-effective option for this project.
+    # Claude Opus and Gemini are kept as fallbacks in case DeepSeek is unavailable.
     local MODELS=(
+        "deepseek/deepseek-chat deepseek/deepseek-chat DeepSeek-Chat"
         "openai/claude-opus-4.7 openai/claude-sonnet-4.5 Claude-Opus-4.7"
         "openai/claude-opus-5 openai/claude-sonnet-4.5 Claude-Opus-5"
         "gemini/gemini-3.1-pro-preview gemini/gemini-3.1-pro-preview Gemini-3-Pro"
-        "deepseek/deepseek-v4-pro deepseek/deepseek-v4-pro DeepSeek"
         "gemini/gemini-3.5-flash gemini/gemini-3.5-flash Gemini-Flash"
     )
 
