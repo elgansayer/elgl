@@ -21,7 +21,7 @@ import { CommonModule } from '@angular/common';
       </div>
 
       <!-- Dynamic Video Grid -->
-      <div class="flex-1 grid gap-4 transition-all duration-300" [ngClass]="gridClass()">
+      <div class="flex-1 grid gap-4 transition-all duration-300" [class]="gridClass()">
         
         <!-- Host Video Stream -->
         <div class="relative bg-black rounded-xl overflow-hidden border-2 border-slate-700 flex items-center justify-center shadow-lg">
