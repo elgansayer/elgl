@@ -177,7 +177,11 @@ describe('AudioRoomsService', () => {
         .spyOn((service as any).logger, 'warn')
         .mockImplementation(() => {});
 
-      const dto: any = { title: 'French Room', target_language: 'FR', language_pair: 'EN-FR' };
+      const dto: any = {
+        title: 'French Room',
+        target_language: 'FR',
+        language_pair: 'EN-FR',
+      };
       const roomRow: any = {
         id: 'room-id-2',
         room_name: 'room-french-room-123',
@@ -200,7 +204,11 @@ describe('AudioRoomsService', () => {
     });
 
     it('should throw Error when database insert fails', async () => {
-      const dto: any = { title: 'Bad Room', target_language: 'EN', language_pair: 'FR-EN' };
+      const dto: any = {
+        title: 'Bad Room',
+        target_language: 'EN',
+        language_pair: 'FR-EN',
+      };
       mockQueryBuilder.single.mockResolvedValue({
         data: null,
         error: { message: 'Insert constraint error' },
