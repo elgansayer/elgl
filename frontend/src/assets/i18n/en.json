@@ -206,6 +206,7 @@
   "chatList.pinnedSection": "Pinned chats",
   "chatList.allSection": "All chats",
   "chat.incomingCallTitle": "Incoming Call",
+  "chat.attachedImageAlt": "Attached image",
   "chatList.noMessages": "No messages yet. Start a chat.",
   "chatList.textMessage": "Text message",
   "chatList.sentCorrection": "Sent a correction",
