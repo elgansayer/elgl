@@ -332,6 +332,33 @@ export class AudioRoomsService implements OnModuleInit {
     return this.getRoom(room.id);
   }
 
+  async muteSpeaker(
+    hostId: string,
+    dto: DemoteSpeakerDto,
+  ): Promise<AudioRoomRecord> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', dto.room_id)
+      .single();
+    if (!response.data) throw new NotFoundException('Room not found');
+    const room = response.data as AudioRoomRow;
+
+    if (room.host_id !== hostId) {
+      throw new ForbiddenException('Only the host can mute a speaker.');
+    }
+
+    // Notify user via Centrifugo to mute their microphone locally
+    void this.centrifugoService.publish(`room_${room.id}`, {
+      type: 'force_mute',
+      target_user_id: dto.target_user_id,
+      room_id: room.id,
+    });
+
+    return this.getRoom(room.id);
+  }
+
   async demoteSpeaker(
     hostId: string,
     dto: DemoteSpeakerDto,
