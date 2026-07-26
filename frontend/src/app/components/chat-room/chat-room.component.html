@@ -121,6 +121,9 @@
                 class="max-h-32 w-auto object-contain drop-shadow-md"
               />
             }
+            @if (msg.message_type === 'gift' && msg.media_url) {
+              <app-gift-animation [animationUrl]="msg.media_url"></app-gift-animation>
+            }
             @if (msg.message_type === 'voice' && msg.media_url) {
               <audio [src]="msg.media_url" controls class="w-full min-w-52"></audio>
             }
