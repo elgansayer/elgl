@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class QuizService {
-  getQuestions(language: string) {
+  getQuestions(_language: string) {
     // Mock data for the diagnostic quiz fetched from database in a real scenario
     return [
       {
