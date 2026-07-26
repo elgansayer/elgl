@@ -263,14 +263,14 @@ export class UsersService {
 
   async exportUserData(userId: string): Promise<any> {
     const supabase = this.supabaseService.getClient();
-    
+
     const [
       { data: profile },
       { data: moments },
       { data: comments },
       { data: messages },
       { data: flashcards },
-      { data: favourites }
+      { data: favourites },
     ] = await Promise.all([
       supabase.from('users').select('*').eq('id', userId).single(),
       supabase.from('moments').select('*').eq('author_id', userId),
@@ -287,7 +287,7 @@ export class UsersService {
       messages,
       flashcards,
       favourites,
-      exported_at: new Date().toISOString()
+      exported_at: new Date().toISOString(),
     };
   }
 }
