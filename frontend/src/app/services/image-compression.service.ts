@@ -8,7 +8,7 @@ export class ImageCompressionService {
    * Compresses an image file to a maximum of 1080p (1920x1080) resolution.
    * Preserves aspect ratio and converts to JPEG.
    */
-  async compressImage(file: File, maxWidth = 1920, maxHeight = 1080, quality = 0.8): Promise<File> {
+  async compressImage(file: File, maxWidth = 1920, maxHeight = 1080, quality = 0.85): Promise<File> {
     // Skip compression if it's not an image (e.g., video or audio)
     if (!file.type.startsWith('image/')) {
       return file;
@@ -59,7 +59,7 @@ export class ImageCompressionService {
 
       img.onerror = (err) => {
         URL.revokeObjectURL(objectUrl);
-        reject(err);
+        reject(new Error('Failed to load image for compression'));
       };
 
       img.src = objectUrl;
