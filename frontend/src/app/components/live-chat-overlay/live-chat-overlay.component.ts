@@ -82,8 +82,8 @@ export class LiveChatOverlayComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    // SPEC.md: Audio Room Chat Overlay uses channel \`room_{audio_room_id}\`
-    this.channelName = \`room_\${this.roomId()}\`;
+    // SPEC.md: Audio Room Chat Overlay uses channel `room_{audio_room_id}`
+    this.channelName = `room_${this.roomId()}`;
     
     // Ensure we are subscribed to the room's chat channel
     // (Assuming the parent component might have already subscribed, but safe to call if idempotent)
