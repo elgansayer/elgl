@@ -4,7 +4,7 @@ import { Injectable, Logger } from '@nestjs/common';
 let ffmpeg: any;
 try {
   ffmpeg = require('fluent-ffmpeg');
-} catch (_e) {
+} catch {
   // Fallback for test environments where fluent-ffmpeg might not be available
   ffmpeg = null;
 }
