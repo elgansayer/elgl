@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import { Injectable, Logger } from '@nestjs/common';
 import * as ffmpeg from 'fluent-ffmpeg';
 
@@ -17,9 +18,10 @@ export class AudioCompressionService {
           this.logger.log(`Successfully compressed to OGG: ${outputPath}`);
           resolve();
         })
-        .on('error', (err) => {
-          this.logger.error(`FFmpeg Error: ${err.message}`);
-          reject(err);
+        .on('error', (err: any) => {
+          const error = err instanceof Error ? err : new Error(String(err));
+          this.logger.error(`FFmpeg Error: ${error.message}`);
+          reject(error);
         })
         .save(outputPath);
     });
@@ -37,9 +39,10 @@ export class AudioCompressionService {
           this.logger.log(`Successfully compressed to M4A: ${outputPath}`);
           resolve();
         })
-        .on('error', (err) => {
-          this.logger.error(`FFmpeg Error: ${err.message}`);
-          reject(err);
+        .on('error', (err: any) => {
+          const error = err instanceof Error ? err : new Error(String(err));
+          this.logger.error(`FFmpeg Error: ${error.message}`);
+          reject(error);
         })
         .save(outputPath);
     });
