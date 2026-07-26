@@ -26,7 +26,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
 export class ReportUserModalComponent implements OnInit {
   @Input({ required: false }) reportUserId: string = '';
   @Input() contextUrl?: string;
-  @Output() closed = new EventEmitter<void>();
+  // Renamed to avoid 'closed' being treated as a native DOM event name
+  @Output() modalClosed = new EventEmitter<void>();
   @Output() reported = new EventEmitter<void>();
 
   open(userId: string): void {
@@ -91,7 +92,7 @@ export class ReportUserModalComponent implements OnInit {
   }
 
   cancel(): void {
-    this.closed.emit();
+    this.modalClosed.emit();
   }
 
   async submitReport(): Promise<void> {
@@ -125,7 +126,7 @@ export class ReportUserModalComponent implements OnInit {
           );
       }
 
-      this.closed.emit();
+      this.modalClosed.emit();
     } catch (err: unknown) {
       const errorObj = err as { error?: { message?: string } };
       this.errorMessage.set(

@@ -5,8 +5,10 @@ import { LongPressContextMenuComponent } from './long-press-context-menu.compone
 import { of } from 'rxjs';
 import { SafetyService } from '../../services/safety.service';
 
-(globalThis as unknown as { Touch: typeof Touch }).Touch = class Touch {} as unknown as typeof Touch;
-(globalThis as unknown as { TouchEvent: typeof TouchEvent }).TouchEvent = class TouchEvent extends Event {} as unknown as typeof TouchEvent;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).Touch = class Touch {} as any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).TouchEvent = class TouchEvent extends Event {} as any;
 
 describe('LongPressContextMenuComponent', () => {
   let component: LongPressContextMenuComponent;
@@ -41,7 +43,8 @@ describe('LongPressContextMenuComponent', () => {
 
   it('should emit copy event when copy option is clicked', () => {
     vi.spyOn(component.copyMessage, 'emit');
-    component['onOptionClick']('copy');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (component as any).onOptionClick('copy');
     expect(component.copyMessage.emit).toHaveBeenCalledWith({
       messageId: 'test-message-id',
       content: 'Hello world',
@@ -50,7 +53,8 @@ describe('LongPressContextMenuComponent', () => {
 
   it('should emit favourite event when favourite option is clicked', () => {
     vi.spyOn(component.favourite, 'emit');
-    component['onOptionClick']('favourite');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (component as any).onOptionClick('favourite');
     expect(component.favourite.emit).toHaveBeenCalledWith({
       messageId: 'test-message-id',
       content: 'Hello world',
@@ -61,7 +65,8 @@ describe('LongPressContextMenuComponent', () => {
   it('should emit report event when report option is clicked', () => {
     vi.spyOn(component.report, 'emit');
     // Clicking report opens the modal but does not emit directly
-    component['onOptionClick']('report');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (component as any).onOptionClick('report');
     // After the modal submits, the event is emitted
     component.onReportSubmitted();
     expect(component.report.emit).toHaveBeenCalledWith({
@@ -73,9 +78,12 @@ describe('LongPressContextMenuComponent', () => {
   });
 
   it('should close menu after option click', () => {
-    vi.spyOn(component as unknown as { close: () => void }, 'close');
-    component['onOptionClick']('copy');
-    expect((component as unknown as { close: () => void }).close).toHaveBeenCalled();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.spyOn(component as any, 'close');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (component as any).onOptionClick('copy');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((component as any).close).toHaveBeenCalled();
   });
 
   it('should open menu on right click', () => {
@@ -135,7 +143,8 @@ describe('LongPressContextMenuComponent', () => {
       preventDefault: vi.fn()
     } as unknown as TouchEvent;
     component.onTouchStart(touchEvent);
-    expect((component as unknown as { longPressTimer: unknown }).longPressTimer).not.toBeNull();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((component as any).longPressTimer).not.toBeNull();
     vi.advanceTimersByTime(component.longPressDuration());
     expect(component.showMenu()).toBe(true);
     vi.useRealTimers();
@@ -149,7 +158,8 @@ describe('LongPressContextMenuComponent', () => {
     } as unknown as TouchEvent;
     component.onTouchStart(touchEvent);
     component.onTouchMove();
-    expect((component as unknown as { longPressTimer: unknown }).longPressTimer).toBeNull();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((component as any).longPressTimer).toBeNull();
   });
 
   it('should cancel long press on touch end', () => {
@@ -160,7 +170,8 @@ describe('LongPressContextMenuComponent', () => {
     } as unknown as TouchEvent;
     component.onTouchStart(touchEvent);
     component.onTouchEnd();
-    expect((component as unknown as { longPressTimer: unknown }).longPressTimer).toBeNull();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((component as any).longPressTimer).toBeNull();
   });
 
   it('should render menu options', () => {

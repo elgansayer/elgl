@@ -302,6 +302,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
 
   private onTrackSubscribed(
     track: RemoteTrack,
+    _publication: RemoteTrackPublication,
   ): void {
     if (track.kind === Track.Kind.Video) {
       this.remoteVideoTrack.set(track as unknown as VideoTrack);
@@ -310,6 +311,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
 
   private onTrackUnsubscribed(
     track: RemoteTrack,
+    _publication: RemoteTrackPublication,
   ): void {
     if (track.kind === Track.Kind.Video) {
       this.remoteVideoTrack.set(null);

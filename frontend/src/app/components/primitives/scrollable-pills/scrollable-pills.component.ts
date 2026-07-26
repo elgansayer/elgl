@@ -7,7 +7,7 @@ import { Component, input, output } from '@angular/core';
     <div class="flex overflow-x-auto hide-scrollbar gap-2 px-4 py-2 bg-surface-500">
       @for (pill of pills(); track pill.id) {
         <button
-          (click)="pillSelected.emit(pill.id)"
+          (click)="pillPicked.emit(pill.id)"
           class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-200"
           [class.bg-purple-600]="selected() === pill.id"
           [class.text-white]="selected() === pill.id"
@@ -34,5 +34,6 @@ import { Component, input, output } from '@angular/core';
 export class ScrollablePillsComponent {
   pills = input.required<{ id: string, label: string }[]>();
   selected = input.required<string>();
-  pillSelected = output<string>();
+  // Renamed to avoid collision with native DOM events (e.g. 'select')
+  pillPicked = output<string>();
 }

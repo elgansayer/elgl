@@ -7,7 +7,7 @@ import { Component, input, computed, output } from '@angular/core';
       [disabled]="disabled()"
       [attr.aria-label]="ariaLabel()"
       [class]="hostClasses()"
-      (click)="clicked.emit($event)"
+      (click)="buttonAction.emit($event)"
     >
       <ng-content />
     </button>
@@ -25,7 +25,8 @@ export class AppButtonComponent {
   readonly ariaLabel = input<string>('');
   readonly customClass = input<string>('');
 
-  readonly clicked = output<MouseEvent>();
+  // Renamed output to avoid name containing 'click' (standard DOM event)
+  readonly buttonAction = output<MouseEvent>();
 
   readonly hostClasses = computed(() => {
     const base = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2';
