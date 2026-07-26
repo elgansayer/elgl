@@ -234,7 +234,8 @@
 - [x] Implement audio compression converting voice notes to lightweight `.m4a`/`.ogg`.
 - [x] Build AudioCompressionService to handle client-side audio transcoding.
 - [x] Implement actual client-side transcoding in AudioCompressionService using ffmpeg.wasm or Web Audio API.
-- [ ] Integrate AudioCompressionService into VoiceRecorderComponent.
+- [x] Integrate AudioCompressionService into VoiceRecorderComponent.
+  - [x] Update VoiceRecorderComponent to call compressAudio before uploading.
 - [ ] Integrate server-side AudioCompressionService into the media upload flow for voice notes.
 
 ## Phase 31: Legal & GDPR Compliance
