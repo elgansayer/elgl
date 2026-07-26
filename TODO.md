@@ -333,7 +333,9 @@
 - [x] Write E2E test flows for Authentication, Chat Messaging, and Moment Creation.
 
 ## Phase 49: Unit Testing (Jest)
-- [ ] Write NestJS unit tests for `DiscoveryService` PostGIS queries.
+- [x] Write NestJS unit tests for `DiscoveryService` PostGIS queries.
+- [x] Actually write the NestJS unit tests for `DiscoveryService` PostGIS queries (the previous diff was for audio-room co-hosts).
+- [x] The latest diff provided was STILL for audio-rooms co-hosts. Please actually write the tests for DiscoveryService in backend/src/discovery/discovery.service.spec.ts.
 - [ ] Write Angular unit tests for `VocabularyStore` signals.
 
 ## Phase 50: Admin Dashboard (Users)
