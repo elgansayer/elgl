@@ -1,9 +1,12 @@
 # TODO.md (Master HelloTalk Clone Architecture: Phases 1 to 79 + Phase C)
 
+## URGENT
+- [x] Fix QA test failure: `ReferenceError: describe is not defined`. (Root cause was not a Jest/Jasmine config or test globals issue: `qa-loop.sh` was running `npx playwright test` from `frontend/`, which has no `playwright.config.ts`, so Playwright fell back to its default glob and picked up the Angular Vitest unit `*.spec.ts` files under `frontend/src`. Those files use bare `describe`/`it` (Vitest globals) or `import { vi } from 'vitest'`, neither of which exist under the Playwright test runner, hence the `ReferenceError` and the "Vitest cannot be imported... using require()" errors. Fixed by pointing `qa-loop.sh` at the real Playwright suite in `e2e/` (its own `playwright.config.ts` + `tests/`); `ux-loop.sh` already targeted `e2e/` correctly. Verified no other script/CI invocation runs Playwright against `frontend/`.)
+
 ## GLOBAL ARCHITECTURAL RULES
 * **RULE 1:** ABSOLUTELY NO HARD-CODED DATA. All content, user profiles, and UI copy must be fetched dynamically or piped through `@ngx-translate`.
 * **RULE 2:** STRICT i18n (`@ngx-translate`). No raw text strings allowed inside Angular HTML templates.
-* **RULE 3:** PIXEL-PERFECT CLONING. Every UI component must be visually verified against the `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/` directory.
+* **RULE 3:** PIXEL-PERFECT CLONING. Every UI component must be visually verified against the `original-hello-talk-screenshots/` directory.
 
 ---
 
@@ -107,27 +110,27 @@
 - [x] Build a Language Selector toggle in settings to dynamically switch UI language.
 
 ## Phase 10: The Moments Engine (Feed & Media)
-- [x] Analyse Moments feed screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
+- [x] Analyse Moments feed screenshots in `original-hello-talk-screenshots/`.
 - [x] Build Moments Feed UI with infinite scrolling (15 posts per batch).
 - [x] Build multi-media attachments UI: text, up to 9 static images in CSS grid, or a 60s voice note.
 - [x] Build Audio Player component with waveform visualizer, play/pause, and timestamp tracker.
 - [x] Integrate `VisualDiffComponent` into Moments comment section for corrections.
 
 ## Phase 11: In-App NLP & Learning Utilities
-- [x] Analyse chat context menu screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
+- [x] Analyse chat context menu screenshots in `original-hello-talk-screenshots/`.
 - [x] Build in-line Message Context Menu: Translate, Transliterate, Speak, and Correct.
 - [x] Implement Transliteration UI (render Romaji/Pinyin below text in small grey font).
 - [x] Implement Text-to-Speech (TTS) using SpeechSynthesis or Azure Speech API.
 - [x] Implement Voice-to-Text transcription next to audio messages.
 
 ## Phase 12: Matchmaking & Discovery UI
-- [x] Analyse search screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
+- [x] Analyse search screenshots in `original-hello-talk-screenshots/`.
 - [x] Build Global Search UI with translated dropdowns for Native Language, Target Language, and Level.
 - [x] Build Nearby Search PostGIS distance slider for VIP users.
 - [x] Build VIP Profile Visitor Log UI with blurred cards for free users.
 
 ## Phase 13: HelloTalk Chat Specifics
-- [x] Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
+- [x] Analyse chat UI screenshots in `original-hello-talk-screenshots/`.
 - [x] Build HTML5 Canvas Doodle Pad component in chat modal.
 - [x] Build Virtual Gift picker modal with coin balance auto-deduction.
 - [x] Build Favourites bookmarking tab for saved messages and corrections.
@@ -334,7 +337,7 @@
 - [ ] Build "Forgot Password" UI and NestJS email dispatch service.
 
 ## Phase 64: Self-Healing QA & Visual Refinement Loop
-- [ ] AUTONOMOUS DIRECTIVE: Execute complete codebase audit. Verify zero hardcoded strings exist, confirm visual match against `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`, run test suites, and append any remaining visual bugs as new tasks below. Leave this box unchecked to loop continuously.
+- [ ] AUTONOMOUS DIRECTIVE: Execute complete codebase audit. Verify zero hardcoded strings exist, confirm visual match against `original-hello-talk-screenshots/`, run test suites, and append any remaining visual bugs as new tasks below. Leave this box unchecked to loop continuously.
 
 ## Phase 65: Comprehensive App Settings, Legal, & Security Architecture
 
