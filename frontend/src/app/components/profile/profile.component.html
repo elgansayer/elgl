@@ -17,6 +17,7 @@
                 [src]="profile()?.avatar_url"
                 alt="avatar"
                 class="h-16 w-16 object-cover"
+                loading="lazy"
               />
             } @else {
               <span class="text-2xl font-bold text-text-secondary">{{ profile()?.display_name?.charAt(0) || '?' }}</span>
