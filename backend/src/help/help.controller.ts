@@ -7,7 +7,7 @@ export class HelpController {
   constructor(private readonly helpService: HelpService) {}
 
   @Get('articles')
-  async getArticles(@Query() query: HelpQueryDto) {
+  getArticles(@Query() query: HelpQueryDto) {
     return this.helpService.findAll(query);
   }
 }
