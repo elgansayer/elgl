@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy, signal } from '@angular/core';
+import { Injectable, OnDestroy, signal, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
 import { environment } from '../../../environments/environment';
 import Centrifuge from 'centrifuge';
@@ -11,12 +11,24 @@ export interface SystemMessage {
   createdAt: Date;
 }
 
+interface SubscriptionContext {
+  data: unknown;
+}
+
+interface SystemMessageData {
+  type?: string;
+  text: string;
+  i18nKey?: string;
+  i18nArgs?: Record<string, unknown>;
+}
+
 @Injectable({ providedIn: 'root' })
 export class SystemMessageService implements OnDestroy {
-  private centrifuge: any;
+  private centrifuge?: Centrifuge;
+  private supabase = inject(SupabaseService);
   readonly messages = signal<SystemMessage[]>([]);
 
-  constructor(private supabase: SupabaseService) {
+  constructor() {
     this.init();
   }
 
@@ -31,17 +43,20 @@ export class SystemMessageService implements OnDestroy {
 
     this.centrifuge = new Centrifuge(wsUrl, { token });
 
-    this.centrifuge.subscribe('global_announcements', (ctx: any) => {
-      const payload = ctx.data;
-      if (payload?.type === 'system_message') {
-        const msg: SystemMessage = {
-          id: Date.now().toString(),
-          text: payload.text,
-          i18nKey: payload.i18nKey,
-          i18nArgs: payload.i18nArgs,
-          createdAt: new Date(),
-        };
-        this.messages.update((prev) => [msg, ...prev]);
+    this.centrifuge.subscribe('global_announcements', (ctx: SubscriptionContext) => {
+      const rawData = ctx.data;
+      if (rawData && typeof rawData === 'object' && 'type' in rawData) {
+        const payload = rawData as SystemMessageData;
+        if (payload.type === 'system_message') {
+          const msg: SystemMessage = {
+            id: Date.now().toString(),
+            text: payload.text,
+            i18nKey: payload.i18nKey,
+            i18nArgs: payload.i18nArgs,
+            createdAt: new Date(),
+          };
+          this.messages.update((prev) => [msg, ...prev]);
+        }
       }
     });
 
