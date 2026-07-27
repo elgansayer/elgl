@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment,
+                  @typescript-eslint/no-unsafe-call,
+                  @typescript-eslint/no-unsafe-member-access,
+                  @typescript-eslint/no-unsafe-return */
+
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
@@ -38,9 +43,11 @@ export class LinkPreviewService {
         image,
         siteName,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Failed to fetch link preview for ${url}: ${error?.message ?? error}`,
+        `Failed to fetch link preview for ${url}: ${message}`,
       );
       return null;
     }

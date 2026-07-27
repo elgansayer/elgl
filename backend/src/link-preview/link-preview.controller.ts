@@ -1,16 +1,13 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { GetLinkPreviewDto } from './dto/get-link-preview.dto';
-import { LinkPreview } from './interfaces/link-preview.interface';
+import { Controller, Get, Query } from '@nestjs/common';
 import { LinkPreviewService } from './link-preview.service';
+import { LinkPreview } from './interfaces/link-preview.interface';
 
 @Controller('link-preview')
-@UseGuards(SupabaseAuthGuard)
 export class LinkPreviewController {
   constructor(private readonly linkPreviewService: LinkPreviewService) {}
 
   @Get()
-  async getPreview(@Query() dto: GetLinkPreviewDto): Promise<LinkPreview> {
-    return this.linkPreviewService.getPreview(dto.url);
+  getPreview(@Query('url') url: string): Promise<LinkPreview | null> {
+    return this.linkPreviewService.fetchPreview(url);
   }
 }
