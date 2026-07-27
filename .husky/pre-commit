@@ -37,4 +37,12 @@ else
   echo "ℹ️  No staged files that Prettier can handle. Skipping Prettier check."
 fi
 
-npm run check:constitution
+echo "🛡️  Running Engineering Constitution check on staged files..."
+
+CONSTITUTION_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.ts' '*.html' '*.scss' '*.sql' '*.md' '*.json' '*.mdc')
+
+if [ -n "$CONSTITUTION_FILES" ]; then
+  npm run check:constitution -- $CONSTITUTION_FILES
+else
+  echo "ℹ️  No staged files for the constitution check. Skipping."
+fi

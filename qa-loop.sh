@@ -9,6 +9,8 @@ export LITELLM_NUM_RETRIES=0
 source "$(dirname "$0")/scripts/preflight-models.sh"
 # shellcheck source=scripts/claude-pro.sh
 source "$(dirname "$0")/scripts/claude-pro.sh"
+# shellcheck source=scripts/fallback-chain.sh
+source "$(dirname "$0")/scripts/fallback-chain.sh"
 
 echo "Starting 24/7 Adversarial QA Swarm..."
 
@@ -44,157 +46,6 @@ purge_phantom_paths() {
     return 0
 }
 
-# Returns 0 on success, 1 on non-quota failure, 2 on quota/rate limit
-run_copilot_cli() {
-    local MESSAGE="$1"
-
-    if ! command -v gh &> /dev/null; then
-        echo "GitHub CLI (gh) not found."
-        return 1
-    fi
-
-    if ! gh copilot --help &> /dev/null 2>&1; then
-        echo "GitHub Copilot CLI not available."
-        return 1
-    fi
-
-    echo "Running GitHub Copilot CLI..."
-    local output
-    output=$(gh copilot suggest "$MESSAGE" 2>&1)
-    local exit_code=$?
-
-    if [ $exit_code -ne 0 ]; then
-        if echo "$output" | grep -qiE "quota|rate.limit|429|too.many.requests"; then
-            echo "GitHub Copilot CLI hit quota/rate limit."
-            return 2
-        fi
-        echo "GitHub Copilot CLI failed with exit code $exit_code"
-        return 1
-    fi
-
-    echo "$output"
-    return 0
-}
-
-# Returns 0 on success, 1 on non-quota failure, 2 on quota/rate limit
-run_antigravity_cli() {
-    local MESSAGE="$1"
-
-    if ! command -v antigravity &> /dev/null; then
-        echo "Antigravity CLI not found."
-        return 1
-    fi
-
-    echo "Running Antigravity CLI..."
-    local output
-    output=$(antigravity "$MESSAGE" 2>&1)
-    local exit_code=$?
-
-    if [ $exit_code -ne 0 ]; then
-        if echo "$output" | grep -qiE "quota|rate.limit|429|too.many.requests"; then
-            echo "Antigravity CLI hit quota/rate limit."
-            return 2
-        fi
-        echo "Antigravity CLI failed with exit code $exit_code"
-        return 1
-    fi
-
-    echo "$output"
-    return 0
-}
-
-# Returns 0 on success, 1 on non-quota failure, 2 on quota/rate limit
-run_deepseek_api() {
-    local MESSAGE="$1"
-
-    if [ -z "$DEEPSEEK_API_KEY" ]; then
-        echo "DEEPSEEK_API_KEY not set."
-        return 1
-    fi
-
-    echo "Running DeepSeek API..."
-    local output
-    output=$(curl -s -X POST "https://api.deepseek.com/v1/chat/completions" \
-        -H "Content-Type: application/json" \
-        -H "Authorization: Bearer $DEEPSEEK_API_KEY" \
-        -d "{\"model\":\"deepseek-chat\",\"messages\":[{\"role\":\"user\",\"content\":\"$MESSAGE\"}]}" 2>&1)
-    local exit_code=$?
-
-    if [ $exit_code -ne 0 ]; then
-        if echo "$output" | grep -qiE "quota|rate.limit|429|insufficient_quota"; then
-            echo "DeepSeek API hit quota/rate limit."
-            return 2
-        fi
-        echo "DeepSeek API failed with exit code $exit_code"
-        return 1
-    fi
-
-    echo "$output"
-    return 0
-}
-
-# Entry point every pipeline stage should call.
-# Tries tools in order: Claude CLI -> GitHub Copilot CLI -> Antigravity CLI -> DeepSeek API
-# Falls through to next tool only on quota/rate limit errors (exit code 2).
-# Any other error stops the chain and returns 1.
-run_task_with_fallback() {
-    local MESSAGE="$1"
-    local FILES_AND_ARGS="$2"
-
-    # Step 1: Claude CLI
-    echo "Attempting Claude CLI..."
-    run_claude_code "$MESSAGE"
-    local rc=$?
-    if [ $rc -eq 0 ]; then
-        return 0
-    elif [ $rc -eq 2 ]; then
-        echo "Claude CLI quota/rate limit. Falling through to GitHub Copilot CLI."
-    else
-        echo "Claude CLI failed with non-quota error. Stopping."
-        return 1
-    fi
-
-    # Step 2: GitHub Copilot CLI
-    echo "Attempting GitHub Copilot CLI..."
-    run_copilot_cli "$MESSAGE"
-    rc=$?
-    if [ $rc -eq 0 ]; then
-        return 0
-    elif [ $rc -eq 2 ]; then
-        echo "GitHub Copilot CLI quota/rate limit. Falling through to Antigravity CLI."
-    else
-        echo "GitHub Copilot CLI failed with non-quota error. Stopping."
-        return 1
-    fi
-
-    # Step 3: Antigravity CLI
-    echo "Attempting Antigravity CLI..."
-    run_antigravity_cli "$MESSAGE"
-    rc=$?
-    if [ $rc -eq 0 ]; then
-        return 0
-    elif [ $rc -eq 2 ]; then
-        echo "Antigravity CLI quota/rate limit. Falling through to DeepSeek API."
-    else
-        echo "Antigravity CLI failed with non-quota error. Stopping."
-        return 1
-    fi
-
-    # Step 4: DeepSeek API
-    echo "Attempting DeepSeek API..."
-    run_deepseek_api "$MESSAGE"
-    rc=$?
-    if [ $rc -eq 0 ]; then
-        return 0
-    elif [ $rc -eq 2 ]; then
-        echo "DeepSeek API quota/rate limit. All tools exhausted."
-        return 2
-    else
-        echo "DeepSeek API failed with non-quota error. Stopping."
-        return 1
-    fi
-}
-
 while true; do
     echo "========================================"
     echo "QA STAGE: BREAK THE APP"
@@ -224,7 +75,13 @@ while true; do
         git commit -am "ci: qa agent discovered a bug and added it to TODO.md"
     else
         echo "App is robust. No bugs found this cycle."
-        git reset --hard HEAD
+        # Scoped to e2e/, where the QA task's own throwaway test file lives. A bare
+        # "git reset --hard HEAD" resets the WHOLE working tree, so it was also
+        # destroying any uncommitted work from the concurrently running main loop
+        # (or anyone else editing the repo) every time this branch ran, roughly every
+        # 5 minutes.
+        git checkout -- e2e/ 2>/dev/null || true
+        git clean -fd -- e2e/tests/adversarial/ 2>/dev/null || true
     fi
     
     echo "Sleeping before next QA attack..."
