@@ -1,3 +1,5 @@
+import { LinkPreview } from '../../link-preview/interfaces/link-preview.interface';
+
 export interface CorrectionPayload {
   original: string;
   corrected: string;
@@ -19,6 +21,7 @@ export interface ChatMessage {
     display_name?: string;
     avatar_url?: string | null;
   };
+  link_preview?: LinkPreview;
 }
 
 export interface FavouriteRecord {

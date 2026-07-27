@@ -3,6 +3,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
 import { SafetyService } from '../safety/safety.service';
+import { LinkPreviewService } from '../link-preview/link-preview.service';
+import { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import {
@@ -19,6 +21,7 @@ export class ChatService {
     private readonly centrifugoService: CentrifugoService,
     private readonly eventEmitter: EventEmitter2,
     private readonly safetyService: SafetyService,
+    private readonly linkPreviewService: LinkPreviewService,
   ) {}
 
   generateConnectionToken(userId: string): { token: string } {
@@ -149,9 +152,27 @@ export class ChatService {
 
     const savedMessage = insertResponse.data as ChatMessage;
 
-    // Publish to Centrifugo channel
+    // ---------- Link preview scraping ----------
+    let linkPreview: LinkPreview | null = null;
+    try {
+      if (dto.message_type === 'text' && dto.text_content) {
+        const urlMatch = dto.text_content.match(/https?:\/\/[^\s]+/);
+        if (urlMatch) {
+          linkPreview = await this.linkPreviewService.fetchPreview(urlMatch[0]);
+        }
+      }
+    } catch {
+      // ignore any error; just continue without preview
+    }
+
+    const messageWithPreview: ChatMessage = linkPreview
+      ? { ...savedMessage, link_preview: linkPreview }
+      : savedMessage;
+    // -------------------------------------------
+
+    // Publish to Centrifugo channel (with preview attached)
     await this.centrifugoService.publish(`chat:${dto.room_id}`, {
-      message: savedMessage,
+      message: messageWithPreview,
     });
 
     // Emit push notification event
@@ -180,7 +201,7 @@ export class ChatService {
       );
     }
 
-    return savedMessage;
+    return messageWithPreview;
   }
 
   async getMessages(
