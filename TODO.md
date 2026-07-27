@@ -590,7 +590,7 @@
 
 ## Phase 77: Collaborative Learning Tools
 
-- [ ] Build UI for threaded replies in chat to preserve conversation context.
+- [STUCK] Build UI for threaded replies in chat to preserve conversation context.
 - [ ] Implement "Request Correction from Group" feature/message type for group chats.
 - [ ] Add a "Mute Word" client-side filter for the Moments feed to hide posts with specific keywords.
 
