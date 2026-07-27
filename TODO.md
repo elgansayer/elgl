@@ -537,7 +537,7 @@
 
 ## Phase 69: Structured Learning Content
 
-- [ ] Build "Lessons" module in Angular.
+- [STUCK] Build "Lessons" module in Angular.
 - [ ] Create database schema for curated learning content (articles, dialogues by CEFR level).
 - [ ] Build CMS or admin interface to upload and manage lesson content.
 - [ ] Implement "Word of the Day" feature on the app's home screen.
