@@ -561,7 +561,7 @@
 ## Phase 72: Advanced AI-Tutor Features
 
 - [STUCK] Integrate AI to auto-generate `explanation` field for `correction` payloads in chat if the human corrector leaves it blank.
-- [ ] Build "Simplify this text" AI feature in the message context menu for learners to understand complex sentences.
+- [STUCK] Build "Simplify this text" AI feature in the message context menu for learners to understand complex sentences.
 - [ ] Implement AI-powered 'Conversation Starter' suggestions in new chat windows based on partner's profile interests.
 
 ## Phase 73: Deeper Gamification & Retention
