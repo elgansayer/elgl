@@ -12,6 +12,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SafetyService } from '../safety/safety.service';
+import { LinkPreviewService } from '../link-preview/link-preview.service';
 
 jest.mock('./centrifugo.service', () => ({
   CentrifugoService: jest.fn(),
@@ -71,6 +72,12 @@ describe('ChatService', () => {
           provide: SafetyService,
           useValue: {
             getBlockedAndBlockerIds: jest.fn().mockResolvedValue([]),
+          },
+        },
+        {
+          provide: LinkPreviewService,
+          useValue: {
+            fetchPreview: jest.fn().mockResolvedValue({}),
           },
         },
       ],
