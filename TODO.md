@@ -509,7 +509,7 @@
 ### Legal, Help & GDPR Compliance
 
 - [STUCK] Build "Help & About" page displaying App Version, build number, and open-source licences.
-- [ ] Build "Personal Data Collection" GDPR hub with "Request My Data Archive" button and automated "Delete Account" workflow.
+- [STUCK] Build "Personal Data Collection" GDPR hub with "Request My Data Archive" button and automated "Delete Account" workflow.
 
 ## Phase 66: Enhanced Profile & Matchmaking
 
