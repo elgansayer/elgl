@@ -9,9 +9,7 @@ export class SystemMessageService {
   constructor(private readonly centrifugo: CentrifugoService) {}
 
   async publish(dto: SendSystemMessageDto): Promise<void> {
-    const targetChannel =
-      dto.channel ??
-      (dto.targetUserId ? `user_${dto.targetUserId}` : 'global_announcements');
+    const targetChannel = 'global_announcements';
 
     const payload = {
       type: 'system_message',
