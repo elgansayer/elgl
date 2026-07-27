@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FaqService } from '../../services/faq.service';
 import { FAQ } from '../../models/faq.model';
+import { I18nService } from '../../services/i18n.service';
 
 @Component({
   selector: 'app-help-centre',
@@ -12,6 +13,7 @@ import { FAQ } from '../../models/faq.model';
 })
 export class HelpCentreComponent implements OnInit {
   private faqService = inject(FaqService);
+  private i18n = inject(I18nService);
   faqs = signal<FAQ[]>([]);
   loading = signal<boolean>(false);
   error = signal<string | null>(null);
@@ -22,13 +24,10 @@ export class HelpCentreComponent implements OnInit {
       const result = await this.faqService.getFaqs();
       this.faqs.set(result);
     } catch (e: unknown) {
-      let errMsg = 'Failed to load FAQs';
-      if (e instanceof Error) {
-        errMsg = e.message;
-      } else if (typeof e === 'string') {
-        errMsg = e;
-      }
-      this.error.set(errMsg);
+      // Translate the error message so that no raw string ever appears in the UI
+      const fallback = 'Failed to load FAQs';
+      const translated = this.i18n?.translate('helpCentre.loadError') ?? fallback;
+      this.error.set(translated);
     } finally {
       this.loading.set(false);
     }
