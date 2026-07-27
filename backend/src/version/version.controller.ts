@@ -7,7 +7,8 @@ export class VersionController {
 
   @Get('min-version')
   getMinVersion() {
-    const version = this.configService.get<string>('MIN_APP_VERSION') || '1.0.0';
+    const version =
+      this.configService.get<string>('MIN_APP_VERSION') || '1.0.0';
     return { minAppVersion: version };
   }
 }
