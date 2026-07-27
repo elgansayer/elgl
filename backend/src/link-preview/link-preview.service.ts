@@ -44,11 +44,8 @@ export class LinkPreviewService {
         siteName,
       };
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        `Failed to fetch link preview for ${url}: ${message}`,
-      );
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to fetch link preview for ${url}: ${message}`);
       return null;
     }
   }
