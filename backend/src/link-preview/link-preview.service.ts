@@ -32,11 +32,20 @@ export class LinkPreviewService {
       }
     }
 
-    const preview = await this.fetchPreview(url);
-    if (preview) {
-      await this.redis.set(cacheKey, JSON.stringify(preview), 'EX', 3600);
+    try {
+      const preview = await this.fetchPreview(url);
+      if (preview) {
+        await this.redis.set(cacheKey, JSON.stringify(preview), 'EX', 3600);
+      }
+      return preview;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to fetch link preview for ${url}: ${message}`);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Unable to fetch preview for this URL');
     }
-    return preview;
   }
 
   private validateUrl(raw: string): void {
@@ -70,38 +79,54 @@ export class LinkPreviewService {
   }
 
   private async fetchPreview(url: string): Promise<LinkPreview | null> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get(url, { timeout: 5000, maxRedirects: 3 }),
-      );
-      const html = (response.data ?? '') as string;
-      const $ = cheerio.load(html);
+    const response = await firstValueFrom(
+      this.httpService.get(url, { timeout: 5000, maxRedirects: 3 }),
+    );
 
-      const title =
-        this.getMetaTag($, 'og:title') || $('title').text().trim() || '';
-      const description =
-        this.getMetaTag($, 'og:description') ||
-        this.getMetaTag($, 'description') ||
-        '';
-      const image = this.getMetaTag($, 'og:image') || '';
-      const siteName = this.getMetaTag($, 'og:site_name') || '';
+    const contentType = (response.headers['content-type'] ?? '').toLowerCase();
+    if (!contentType.includes('text/html')) {
+      throw new BadRequestException('URL does not point to an HTML resource');
+    }
 
-      if (!title && !description && !image) {
-        return null;
+    const html = (response.data ?? '') as string;
+    const $ = cheerio.load(html);
+
+    // Remove script/style/noscript content so it does not pollute textual fields
+    $('script, style, noscript').remove();
+
+    let rawTitle =
+      this.getMetaTag($, 'og:title') || $('title').text().trim() || '';
+    let rawDescription =
+      this.getMetaTag($, 'og:description') ||
+      this.getMetaTag($, 'description') ||
+      '';
+
+    const title = rawTitle.trim();
+    const description = rawDescription.trim();
+
+    let image = this.getMetaTag($, 'og:image') || '';
+    if (image) {
+      try {
+        image = new URL(image, url).href;
+      } catch {
+        image = '';
       }
+    }
 
-      return {
-        url,
-        title,
-        description,
-        image,
-        siteName,
-      };
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Failed to fetch link preview for ${url}: ${message}`);
+    const siteName =
+      this.getMetaTag($, 'og:site_name') || new URL(url).hostname;
+
+    if (!title && !description && !image) {
       return null;
     }
+
+    return {
+      url,
+      title,
+      description,
+      imageUrl: image,
+      siteName,
+    };
   }
 
   private getMetaTag($: cheerio.CheerioAPI, property: string): string {
