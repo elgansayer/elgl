@@ -364,7 +364,7 @@
 - [x] Configure Prettier and Husky git pre-commit hooks.
 
 ## Phase 55: GitHub Actions CI/CD
-- [ ] Create `.github/workflows/deploy.yml` for automated testing and Docker image builds.
+- [x] Create `.github/workflows/deploy.yml` for automated testing and Docker image builds.
 
 ## Phase 56: Server Monitoring
 - [ ] Configure Prometheus and Grafana Docker containers for NestJS and Centrifugo metrics.
