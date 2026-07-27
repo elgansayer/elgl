@@ -6,7 +6,7 @@ import { SendSystemMessageDto } from './dto/send-system-message.dto';
 export class SystemMessageService {
   private readonly logger = new Logger(SystemMessageService.name);
 
-  constructor(private readonly centrifugo: CentrifugoService) {}
+  constructor(private readonly centrifugoService: CentrifugoService) {}
 
   async publish(dto: SendSystemMessageDto): Promise<void> {
     const targetChannel = 'global_announcements';
@@ -18,7 +18,9 @@ export class SystemMessageService {
       i18nArgs: dto.i18nArgs ?? null,
     };
 
-    this.logger.log(`Publishing system message to channel "${targetChannel}"`);
-    await this.centrifugo.publish(targetChannel, payload);
+    this.logger.log(
+      `Publishing system message to channel "${targetChannel}"`,
+    );
+    await this.centrifugoService.publish(targetChannel, payload);
   }
 }

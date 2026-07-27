@@ -1,22 +1,10 @@
-import { Injectable, OnDestroy, signal, inject } from '@angular/core';
-import { SupabaseService } from './supabase.service';
-import { environment } from '../../../environments/environment';
+import { Injectable, OnDestroy } from '@angular/core';
+import { Subject } from 'rxjs';
 import Centrifuge from 'centrifuge';
+import { environment } from '../../../environments/environment';
+import { SupabaseService } from './supabase.service';
 
 export interface SystemMessage {
-  id: string;
-  text: string;
-  i18nKey?: string;
-  i18nArgs?: Record<string, unknown>;
-  createdAt: Date;
-}
-
-interface SubscriptionContext {
-  data: unknown;
-}
-
-interface SystemMessageData {
-  type?: string;
   text: string;
   i18nKey?: string;
   i18nArgs?: Record<string, unknown>;
@@ -24,48 +12,56 @@ interface SystemMessageData {
 
 @Injectable({ providedIn: 'root' })
 export class SystemMessageService implements OnDestroy {
-  private centrifuge?: Centrifuge;
-  private supabase = inject(SupabaseService);
-  readonly messages = signal<SystemMessage[]>([]);
+  private centrifuge!: Centrifuge;
+  private messageSubject = new Subject<SystemMessage>();
+  readonly messages$ = this.messageSubject.asObservable();
 
-  constructor() {
-    this.init();
+  constructor(private supabase: SupabaseService) {
+    this.initialize();
   }
 
-  private async init() {
+  private async initialize() {
     const {
       data: { session },
     } = await this.supabase.getClient().auth.getSession();
     const token = session?.access_token;
-    if (!token) return;
+    if (!token) {
+      console.warn('SystemMessageService: no session token yet');
+      return;
+    }
 
     const wsUrl = `${environment.centrifugoWsUrl}/connection/websocket`;
 
     this.centrifuge = new Centrifuge(wsUrl, { token });
 
-    this.centrifuge.subscribe('global_announcements', (ctx: SubscriptionContext) => {
-      const rawData = ctx.data;
-      if (rawData && typeof rawData === 'object' && 'type' in rawData) {
-        const payload = rawData as SystemMessageData;
-        if (payload.type === 'system_message') {
-          const msg: SystemMessage = {
-            id: Date.now().toString(),
-            text: payload.text,
-            i18nKey: payload.i18nKey,
-            i18nArgs: payload.i18nArgs,
-            createdAt: new Date(),
-          };
-          this.messages.update((prev) => [msg, ...prev]);
-        }
+    this.centrifuge.on('connected', () => {
+      console.log('SystemMessageService connected');
+    });
+
+    const channel = 'global_announcements';
+    const sub = this.centrifuge.newSubscription(channel);
+
+    sub.on('publication', (ctx) => {
+      const data = ctx.data as {
+        type?: string;
+        text: string;
+        i18nKey?: string;
+        i18nArgs?: Record<string, unknown>;
+      };
+      if (data.type === 'system_message') {
+        this.messageSubject.next({
+          text: data.text,
+          i18nKey: data.i18nKey,
+          i18nArgs: data.i18nArgs,
+        });
       }
     });
 
+    sub.subscribe();
     this.centrifuge.connect();
   }
 
   ngOnDestroy(): void {
-    if (this.centrifuge) {
-      this.centrifuge.disconnect();
-    }
+    this.centrifuge?.disconnect();
   }
 }

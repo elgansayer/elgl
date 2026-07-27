@@ -1,33 +1,59 @@
-import { Component, Input } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
+import {
+  SystemMessageService,
+  SystemMessage,
+} from '../../services/system-message.service';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
-import { SystemMessage } from '../../services/system-message.service';
+
+interface BubbleMessage {
+  id: number;
+  text: string;
+  i18nKey?: string;
+  i18nArgs?: Record<string, unknown>;
+}
 
 @Component({
   selector: 'app-system-message-bubble',
   standalone: true,
   imports: [CommonModule, TranslatePipe],
-  template: `
-    <div
-      class="flex items-center gap-2 my-2 px-3 py-2 bg-yellow-100/70 dark:bg-yellow-800/30 rounded-lg border border-yellow-400 text-sm"
-    >
-      <span class="text-lg">🔔</span>
-      <span class="flex-1">
-        @if (message.i18nKey) {
-          {{ message.i18nKey | translate: message.i18nArgs }}
-        } @else {
-          {{ message.text }}
-        }
-      </span>
-      @if (message.createdAt) {
-        <span class="text-xs opacity-60 whitespace-nowrap">{{
-          message.createdAt | date : 'shortTime'
-        }}</span>
-      }
-    </div>
-  `,
-  styles: [],
+  templateUrl: './system-message-bubble.component.html',
 })
-export class SystemMessageBubbleComponent {
-  @Input({ required: true }) message!: SystemMessage;
+export class SystemMessageBubbleComponent implements OnInit, OnDestroy {
+  bubbles: BubbleMessage[] = [];
+  private sub!: Subscription;
+  private nextId = 0;
+
+  constructor(
+    private systemMessageService: SystemMessageService,
+    private cdr: ChangeDetectorRef,
+  ) {}
+
+  ngOnInit(): void {
+    this.sub = this.systemMessageService.messages$.subscribe((msg: SystemMessage) => {
+      const id = this.nextId++;
+      this.bubbles.push({
+        id,
+        text: msg.text,
+        i18nKey: msg.i18nKey,
+        i18nArgs: msg.i18nArgs,
+      });
+
+      this.cdr.detectChanges();
+
+      setTimeout(() => {
+        this.bubbles = this.bubbles.filter((b) => b.id !== id);
+        this.cdr.detectChanges();
+      }, 6000);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.sub.unsubscribe();
+  }
+
+  dismiss(id: number): void {
+    this.bubbles = this.bubbles.filter((b) => b.id !== id);
+  }
 }
