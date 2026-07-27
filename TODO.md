@@ -572,7 +572,7 @@
 
 ## Phase 74: Voiceroom Learning Tools
 
-- [ ] Build shared 'Voiceroom Notes' panel where hosts/speakers can post key vocabulary or discussion topics.
+- [STUCK] Build shared 'Voiceroom Notes' panel where hosts/speakers can post key vocabulary or discussion topics.
 - [ ] Implement LiveKit EgressClient to generate and save a full transcript of completed audio room sessions for participants to review.
 - [ ] Add AI-generated 'Session Summary' to the archived audio room recording, listing key topics and vocabulary discussed.
 
