@@ -1,0 +1,23 @@
+[WebServer] ▲ [WARNING] NG8113: All imports are unused [plugin angular-compiler]
+[WebServer] 
+[WebServer]     src/app/components/daily-login-modal/daily-login-modal.component.ts:7:2:
+[WebServer]       7 │   imports: [TranslatePipe],
+[WebServer]         ╵   ~~~~~~~
+[WebServer] 
+[WebServer] 
+[WebServer] ▲ [WARNING] NG8113: LikedByModalComponent is not used within the template of MomentsFeedComponent [plugin angular-compiler]
+[WebServer] 
+[WebServer]     src/app/components/moments-feed/moments-feed.component.ts:32:4:
+[WebServer]       32 │     LikedByModalComponent,
+[WebServer]          ╵     ~~~~~~~~~~~~~~~~~~~~~
+[WebServer] 
+[WebServer] 
+
+[WebServer] ✘ [ERROR] TS4111: Property 'status' comes from an index signature, so it must be accessed with ['status']. [plugin angular-compiler]
+[WebServer] 
+[WebServer]     src/app/services/moderation.service.ts:41:13:
+[WebServer]       41 │       params.status = status;
+[WebServer]          ╵              ~~~~~~
+[WebServer] 
+[WebServer] 
+
