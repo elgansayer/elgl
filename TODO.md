@@ -361,7 +361,7 @@
 - [x] Build blocking update modal in Angular if current app version is deprecated.
 
 ## Phase 54: Automated Code Formatting
-- [ ] Configure Prettier and Husky git pre-commit hooks.
+- [x] Configure Prettier and Husky git pre-commit hooks.
 
 ## Phase 55: GitHub Actions CI/CD
 - [ ] Create `.github/workflows/deploy.yml` for automated testing and Docker image builds.
