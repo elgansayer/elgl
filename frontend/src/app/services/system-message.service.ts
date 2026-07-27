@@ -1,69 +1,74 @@
-import { Injectable, OnDestroy, inject } from '@angular/core';
-import { Subject } from 'rxjs';
-import Centrifuge from 'centrifuge';
-import { environment } from '../../../environments/environment';
-import { SupabaseService } from './supabase.service';
+import { Injectable, inject, signal, OnDestroy } from '@angular/core';
+import { CentrifugeService } from './centrifuge.service';
+import { AuthService } from './auth.service';
 
-export interface SystemMessage {
+export interface SystemMessageBubble {
+  id: number;
   text: string;
   i18nKey?: string;
   i18nArgs?: Record<string, unknown>;
 }
 
+const BUBBLE_DISPLAY_MS = 6000;
+
 @Injectable({ providedIn: 'root' })
 export class SystemMessageService implements OnDestroy {
-  private supabase = inject(SupabaseService);
+  private centrifuge = inject(CentrifugeService);
+  private auth = inject(AuthService);
 
-  private centrifuge!: Centrifuge;
-  private messageSubject = new Subject<SystemMessage>();
-  readonly messages$ = this.messageSubject.asObservable();
+  private nextId = 0;
+  private channelSubscription: any | null = null;
+  private channelName?: string;
+
+  readonly bubbles = signal<SystemMessageBubble[]>([]);
 
   constructor() {
-    this.initialize();
+    this.initChannel();
   }
 
-  private async initialize() {
-    const {
-      data: { session },
-    } = await this.supabase.getClient().auth.getSession();
-    const token = session?.access_token;
-    if (!token) {
-      console.warn('SystemMessageService: no session token yet');
+  private initChannel(): void {
+    const user = this.auth.getCurrentUser();
+    if (!user?.id) {
       return;
     }
+    this.channelName = `user_${user.id}`;
+    this.channelSubscription = this.centrifuge.subscribe(
+      this.channelName,
+      (data: unknown) => {
+        const payload = data as {
+          type?: string;
+          text?: string;
+          i18nKey?: string;
+          i18nArgs?: Record<string, unknown>;
+        } | null;
 
-    const wsUrl = `${environment.centrifugoWsUrl}/connection/websocket`;
+        if (payload?.type === 'system') {
+          this.show(payload.text ?? '', payload.i18nKey, payload.i18nArgs);
+        }
+      },
+    );
+  }
 
-    this.centrifuge = new Centrifuge(wsUrl, { token });
+  dismiss(id: number): void {
+    this.bubbles.update((current) =>
+      current.filter((bubble) => bubble.id !== id),
+    );
+  }
 
-    this.centrifuge.on('connected', () => {
-      console.log('SystemMessageService connected');
-    });
-
-    const channel = 'global_announcements';
-    const sub = this.centrifuge.newSubscription(channel);
-
-    sub.on('publication', (ctx) => {
-      const data = ctx.data as {
-        type?: string;
-        text: string;
-        i18nKey?: string;
-        i18nArgs?: Record<string, unknown>;
-      };
-      if (data.type === 'system_message') {
-        this.messageSubject.next({
-          text: data.text,
-          i18nKey: data.i18nKey,
-          i18nArgs: data.i18nArgs,
-        });
-      }
-    });
-
-    sub.subscribe();
-    this.centrifuge.connect();
+  private show(
+    text: string,
+    i18nKey?: string,
+    i18nArgs?: Record<string, unknown>,
+  ): void {
+    const id = this.nextId++;
+    this.bubbles.update((current) => [
+      ...current,
+      { id, text, i18nKey, i18nArgs },
+    ]);
+    setTimeout(() => this.dismiss(id), BUBBLE_DISPLAY_MS);
   }
 
   ngOnDestroy(): void {
-    this.centrifuge?.disconnect();
+    this.channelSubscription?.unsubscribe?.();
   }
 }

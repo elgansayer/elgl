@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CentrifugoService } from '../chat/services/centrifugo.service';
-import { SystemEventPayload } from './interfaces/system-event.interface';
 
 @Injectable()
 export class SystemMessagesService {
@@ -9,21 +8,14 @@ export class SystemMessagesService {
   constructor(private readonly centrifugo: CentrifugoService) {}
 
   /**
-   * Sends a system message to a user's personal Centrifugo channel.
-   *
-   * @param userId - UUID of the recipient user.
-   * @param event  - The system event to send (type + optional payload).
+   * Publish a payload to the user's personal Centrifugo channel (`user_<id>`).
    */
-  async sendToUser(userId: string, event: SystemEventPayload): Promise<void> {
+  async sendToUser(
+    userId: string,
+    payload: Record<string, any>,
+  ): Promise<void> {
     const channel = `user_${userId}`;
-    const message = {
-      type: 'system',
-      system_event: event,
-      created_at: new Date().toISOString(),
-    };
-    await this.centrifugo.publish(channel, message);
-    this.logger.log(
-      `System message sent to user ${userId}, type ${event.type}`,
-    );
+    await this.centrifugo.publish(channel, payload);
+    this.logger.log(`System message sent to user ${userId}`);
   }
 }
