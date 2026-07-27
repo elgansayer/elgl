@@ -354,7 +354,7 @@
 - [x] Restore backend `banUser` and `warnUser` endpoints (removed in the latest diff) so the admin-actions component can actually call them.
 
 ## Phase 52: Help Centre
-- [ ] Build in-app Help Centre fetching dynamic FAQ articles from backend.
+- [STUCK] Build in-app Help Centre fetching dynamic FAQ articles from backend.
 
 ## Phase 53: Version Enforcer
 - [ ] Build NestJS endpoint returning minimum supported app version.
