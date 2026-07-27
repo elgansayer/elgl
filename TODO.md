@@ -479,7 +479,7 @@
 ### Authentication & Account Security
 
 - [STUCK] Build Social Login UI components (Google, Facebook, Apple OAuth buttons).
-- [ ] Build "Linked Accounts" settings page to manage connected social accounts.
+- [STUCK] Build "Linked Accounts" settings page to manage connected social accounts.
 - [ ] Build Password Policy & Reset UI with real-time regex validation (min 8 chars, numbers, symbols).
 
 ### Appearance & UI Configuration
