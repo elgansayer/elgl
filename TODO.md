@@ -472,7 +472,7 @@
 
 ## Phase 64: Self-Healing QA & Visual Refinement Loop
 
-- [ ] AUTONOMOUS DIRECTIVE: Execute complete codebase audit. Verify zero hardcoded strings exist, confirm visual match against `original-hello-talk-screenshots/`, run test suites, and append any remaining visual bugs as new tasks below. Leave this box unchecked to loop continuously.
+- [STUCK] AUTONOMOUS DIRECTIVE: Execute complete codebase audit. Verify zero hardcoded strings exist, confirm visual match against `original-hello-talk-screenshots/`, run test suites, and append any remaining visual bugs as new tasks below. Leave this box unchecked to loop continuously.
 
 ## Phase 65: Comprehensive App Settings, Legal, & Security Architecture
 
