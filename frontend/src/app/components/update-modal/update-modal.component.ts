@@ -9,13 +9,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
   template: `
     <div
       class="fixed inset-0 z-[150] bg-black/80 flex items-center justify-center p-4"
-      (click)="blockEvent($event)"
       (touchmove)="blockEvent($event)"
       (wheel)="blockEvent($event)"
     >
       <div
         class="bg-surface-200 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-surface-100 text-center space-y-4 animate-fadeIn"
-        (click)="blockEvent($event)"
       >
         <div class="text-4xl">🔄</div>
         <h2 class="text-2xl font-black text-text-primary">
