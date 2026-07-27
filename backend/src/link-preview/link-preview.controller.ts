@@ -1,13 +1,15 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, HttpException, HttpStatus } from '@nestjs/common';
 import { LinkPreviewService } from './link-preview.service';
-import { LinkPreview } from './interfaces/link-preview.interface';
 
 @Controller('link-preview')
 export class LinkPreviewController {
   constructor(private readonly linkPreviewService: LinkPreviewService) {}
 
   @Get()
-  getPreview(@Query('url') url: string): Promise<LinkPreview | null> {
+  async getPreview(@Query('url') url: string) {
+    if (!url) {
+      throw new HttpException('Missing url query parameter', HttpStatus.BAD_REQUEST);
+    }
     return this.linkPreviewService.fetchPreview(url);
   }
 }
