@@ -504,7 +504,7 @@
 ### Chat & Data Storage Settings
 
 - [STUCK] Build "Chat Settings" page (Toggle Auto-Translate, Read Receipts, Enter-to-Send).
-- [ ] Build "Data & Storage" page (Clear Local Cache, toggle cellular data auto-downloads).
+- [STUCK] Build "Data & Storage" page (Clear Local Cache, toggle cellular data auto-downloads).
 
 ### Legal, Help & GDPR Compliance
 
