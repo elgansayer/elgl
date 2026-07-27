@@ -12,6 +12,7 @@ import { ReportUserModalComponent } from './components/report-user-modal/report-
 import { ReportUserModalService } from './components/report-user-modal/report-user-modal.service';
 import { DailyLoginModalComponent } from './components/daily-login-modal/daily-login-modal.component';
 import { UnreadCounterService } from './services/unread-counter.service';
+import { VersionCheckService } from './services/version-check.service';
 
 @Component({
   selector: 'app-root',
@@ -37,6 +38,7 @@ export class AppComponent implements OnInit {
   private safetyService = inject(SafetyService);
   reportModalService = inject(ReportUserModalService);
   unreadCounter = inject(UnreadCounterService);
+  private versionCheckService = inject(VersionCheckService);
 
   // Incoming call state
   readonly incomingCallData = signal<IncomingCallData | null>(null);
@@ -54,6 +56,9 @@ export class AppComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    // Block the app immediately if the installed version is deprecated.
+    await this.versionCheckService.checkVersion();
+
     await this.economyStore.loadInitialData();
 
     // Subscribe to personal user notification channel for direct virtual gifts

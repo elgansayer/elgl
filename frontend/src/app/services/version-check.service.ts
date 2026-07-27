@@ -47,7 +47,8 @@ export class VersionCheckService {
 
   /**
    * Opens a full‑screen modal that prevents any interaction with the app.
-   * The only action available is to close the modal (which destroys it).
+   * The only action available is to trigger a full page reload in order to
+   * obtain the newest deployed version.
    */
   private showBlockingModal(): void {
     if (this.modalRef) {
@@ -68,14 +69,7 @@ export class VersionCheckService {
     document.body.appendChild(hostElement);
     this.appRef.attachView(componentRef.hostView);
 
-    componentRef.instance.close.subscribe(() => this.destroyModal(componentRef, hostElement));
+    // The modal is not dismissible; the only interaction leads to a full reload.
     this.modalRef = componentRef;
-  }
-
-  private destroyModal(componentRef: ComponentRef<UpdateModalComponent>, hostElement: HTMLElement): void {
-    this.appRef.detachView(componentRef.hostView);
-    componentRef.destroy();
-    document.body.removeChild(hostElement);
-    this.modalRef = undefined;
   }
 }
