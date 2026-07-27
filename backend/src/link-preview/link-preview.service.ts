@@ -83,7 +83,8 @@ export class LinkPreviewService {
       this.httpService.get<string>(url, { timeout: 5000, maxRedirects: 3 }),
     );
 
-    const rawContentType = (response.headers as Record<string, string>)['content-type'] ?? '';
+    const rawContentType =
+      (response.headers as Record<string, string>)['content-type'] ?? '';
     const contentType: string = rawContentType.toLowerCase();
     if (!contentType.includes('text/html')) {
       throw new BadRequestException('URL does not point to an HTML resource');
