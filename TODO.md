@@ -532,7 +532,7 @@
 - [STUCK] Design database schema for user achievements (`achievements` table, `user_achievements` join table).
 - [STUCK] Build Achievements service in NestJS to award badges for milestones (e.g., "100 messages sent", "7-day streak").
 - [STUCK] Build Achievements showcase page on user profiles.
-- [ ] Implement a point-based XP system, granting XP for learning activities.
+- [STUCK] Implement a point-based XP system, granting XP for learning activities.
 - [ ] Build Daily/Weekly Quests feature with coin rewards (e.g., "Correct 3 moments today").
 
 ## Phase 69: Structured Learning Content
