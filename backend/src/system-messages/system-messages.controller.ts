@@ -4,9 +4,7 @@ import { SendSystemBroadcastDto } from './dto/send-system-broadcast.dto';
 
 @Controller('system-messages')
 export class SystemMessagesController {
-  constructor(
-    private readonly systemMessagesService: SystemMessagesService,
-  ) {}
+  constructor(private readonly systemMessagesService: SystemMessagesService) {}
 
   @Post('send')
   async send(@Body() dto: SendSystemBroadcastDto) {
