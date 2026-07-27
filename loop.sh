@@ -72,14 +72,13 @@ run_aider_with_fallback() {
     local MESSAGE="$1"
     local FILES_AND_ARGS="$2"
 
-    # DeepSeek is the primary model because the user has a DeepSeek API key configured.
-    # It is the most reliable and cost-effective option for this project.
-    # Claude Opus and Gemini are kept as fallbacks in case DeepSeek is unavailable.
+    # Claude Opus is the primary model, falling back to Gemini and then DeepSeek.
+    # This order is based on user preference for model capabilities.
     local MODELS=(
-        "deepseek/deepseek-v4-pro deepseek/deepseek-v4-pro DeepSeek-V4-Pro"
         "openai/claude-opus-4.7 openai/claude-sonnet-4.5 Claude-Opus-4.7"
         "openai/claude-opus-5 openai/claude-sonnet-4.5 Claude-Opus-5"
         "gemini/gemini-3.1-pro-preview gemini/gemini-3.1-pro-preview Gemini-3-Pro"
+        "deepseek/deepseek-v4-pro deepseek/deepseek-v4-pro DeepSeek-V4-Pro"
         "gemini/gemini-3.5-flash gemini/gemini-3.5-flash Gemini-Flash"
     )
 

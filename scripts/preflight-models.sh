@@ -136,9 +136,24 @@ _preflight_probe_openai() {
         "${OPENAI_API_BASE:-https://api.openai.com/v1}/chat/completions" \
         -d "{\"model\":\"$model\",\"max_tokens\":1,\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}")
 
+    # If curl fails (e.g. DNS error, timeout), code can be empty or "000". This should
+    # not be treated as a callable model. The main catalogue fetch handles this as
+    # "unverifiable", but the probe should be stricter and fail closed.
+    if [ -z "$code" ] || [ "$code" = "000" ]; then
+        rm -f "$body_file"
+        echo "1" > "$verdict_file" # Treat as dead if probe fails to connect.
+        return 1
+    fi
+
     local verdict=0
-    if [ "$code" = "400" ] || [ "$code" = "404" ]; then
-        # Distinguish "this model is wrong" from an unrelated bad request.
+    # A quota/rate-limit error (any code) must pass the preflight check (return 0), so
+    # the main loop's watcher can see the error in Aider's log and correctly fall
+    # through to the next model for the current attempt.
+    if grep -i -q -E 'quota|rate limit' "$body_file" 2>/dev/null; then
+        verdict=0
+    elif [ "$code" = "400" ] || [ "$code" = "404" ]; then
+        # This is a definitive "model unavailable" error, not a transient quota issue.
+        # Mark it dead for 30 mins so we don't waste cycles on it.
         if grep -qE 'not available for integrator|unsupported_api_for_model|model_not_found|does not exist' \
             "$body_file" 2>/dev/null; then
             verdict=1
