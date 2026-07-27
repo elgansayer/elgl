@@ -484,7 +484,7 @@
 
 ### Appearance & UI Configuration
 
-- [ ] Build "Appearance Settings" menu.
+- [STUCK] Build "Appearance Settings" menu.
 - [ ] Implement System-wide Dark Mode, Light Mode, and System Default toggle.
 - [ ] Implement UI & Font Scaling slider adjusting base `rem` units across Angular.
 - [ ] Build "Language Settings" menu to switch UI language independently of study target.
