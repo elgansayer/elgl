@@ -529,7 +529,7 @@
 
 ## Phase 68: Gamification & Engagement Hooks
 
-- [ ] Design database schema for user achievements (`achievements` table, `user_achievements` join table).
+- [STUCK] Design database schema for user achievements (`achievements` table, `user_achievements` join table).
 - [ ] Build Achievements service in NestJS to award badges for milestones (e.g., "100 messages sent", "7-day streak").
 - [ ] Build Achievements showcase page on user profiles.
 - [ ] Implement a point-based XP system, granting XP for learning activities.
