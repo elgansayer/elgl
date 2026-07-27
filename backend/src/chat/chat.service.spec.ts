@@ -13,6 +13,7 @@ import { CentrifugoService } from './centrifugo.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SafetyService } from '../safety/safety.service';
 import { LinkPreviewService } from '../link-preview/link-preview.service';
+import { SystemMessageService } from './services/system-message.service';
 
 jest.mock('./centrifugo.service', () => ({
   CentrifugoService: jest.fn(),
@@ -78,6 +79,12 @@ describe('ChatService', () => {
           provide: LinkPreviewService,
           useValue: {
             fetchPreview: jest.fn().mockResolvedValue({}),
+          },
+        },
+        {
+          provide: SystemMessageService,
+          useValue: {
+            publishToRoom: jest.fn().mockResolvedValue(undefined),
           },
         },
       ],

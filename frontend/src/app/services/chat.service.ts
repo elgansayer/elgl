@@ -22,7 +22,7 @@ export interface ChatMessage {
   correction_payload?: CorrectionPayload;
   system_event?: {
     type: string;
-    message: string;
+    [param: string]: unknown;
   };
   is_read: boolean;
   created_at: string;
@@ -63,7 +63,7 @@ export interface GroupMember {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ChatService {
   private http = inject(HttpClient);
@@ -88,7 +88,7 @@ export class ChatService {
   });
 
   addBlockedUser(userId: string): void {
-    this.blockedUsers.update(blocked => {
+    this.blockedUsers.update((blocked) => {
       const newSet = new Set(blocked);
       newSet.add(userId);
       return newSet;
@@ -96,7 +96,7 @@ export class ChatService {
   }
 
   removeBlockedUser(userId: string): void {
-    this.blockedUsers.update(blocked => {
+    this.blockedUsers.update((blocked) => {
       const newSet = new Set(blocked);
       newSet.delete(userId);
       return newSet;
@@ -110,7 +110,7 @@ export class ChatService {
   private getHeaders() {
     const token = this.authService.getAccessToken();
     return {
-      Authorization: `Bearer ${token ?? ''}`
+      Authorization: `Bearer ${token ?? ''}`,
     };
   }
 
@@ -126,10 +126,12 @@ export class ChatService {
     if (currentUser?.id) {
       // Get room members to find the receiver
       const roomMembers = await firstValueFrom(
-        this.http.get<{ user_id: string }[]>(`${this.baseUrl}/rooms/${payload.room_id}/members`, { headers: this.getHeaders() })
+        this.http.get<{ user_id: string }[]>(`${this.baseUrl}/rooms/${payload.room_id}/members`, {
+          headers: this.getHeaders(),
+        }),
       ).catch(() => []);
       if (roomMembers && roomMembers.length > 0) {
-        const receiverId = roomMembers.find(m => m.user_id !== currentUser.id)?.user_id;
+        const receiverId = roomMembers.find((m) => m.user_id !== currentUser.id)?.user_id;
         if (receiverId) {
           const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
           if (blockedIds.includes(receiverId)) {
@@ -149,14 +151,16 @@ export class ChatService {
         media_url: payload.media_url,
         correction_payload: payload.correction_payload,
         is_read: false,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       };
       await this.offlineQueue.enqueueMessage(queuedMsg);
       return queuedMsg;
     }
 
     return firstValueFrom(
-      this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, { headers: this.getHeaders() })
+      this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, {
+        headers: this.getHeaders(),
+      }),
     );
   }
 
@@ -169,11 +173,13 @@ export class ChatService {
           message_type: msg.message_type,
           text_content: msg.text_content,
           media_url: msg.media_url,
-          correction_payload: msg.correction_payload
+          correction_payload: msg.correction_payload,
         };
-        
+
         await firstValueFrom(
-          this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, { headers: this.getHeaders() })
+          this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, {
+            headers: this.getHeaders(),
+          }),
         );
         await this.offlineQueue.removeMessage(msg.id);
       }
@@ -189,10 +195,10 @@ export class ChatService {
     }
 
     const messages = await firstValueFrom(
-      this.http.get<ChatMessage[]>(`${this.baseUrl}/messages/${roomId}`, { 
-        headers: this.getHeaders(), 
-        params 
-      })
+      this.http.get<ChatMessage[]>(`${this.baseUrl}/messages/${roomId}`, {
+        headers: this.getHeaders(),
+        params,
+      }),
     );
 
     // Filter out messages from blocked users
@@ -200,7 +206,7 @@ export class ChatService {
     if (currentUser?.id) {
       const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
       if (blockedIds.length > 0) {
-        return messages.filter(msg => !blockedIds.includes(msg.sender_id));
+        return messages.filter((msg) => !blockedIds.includes(msg.sender_id));
       }
     }
 
@@ -209,7 +215,7 @@ export class ChatService {
 
   async getRooms(): Promise<ChatRoom[]> {
     const rooms = await firstValueFrom(
-      this.http.get<ChatRoom[]>(`${this.baseUrl}/rooms`, { headers: this.getHeaders() })
+      this.http.get<ChatRoom[]>(`${this.baseUrl}/rooms`, { headers: this.getHeaders() }),
     );
 
     // Filter out rooms where the other participant is blocked
@@ -243,10 +249,10 @@ export class ChatService {
         'Content-Type': 'application/json',
         ...this.getHeaders(),
       },
-      body: JSON.stringify({ 
-        reported_id: messageId, 
+      body: JSON.stringify({
+        reported_id: messageId,
         reason: reason,
-        context_url: window.location.href 
+        context_url: window.location.href,
       }),
     });
     if (!response.ok) throw new Error('Failed to report message');
@@ -254,7 +260,9 @@ export class ChatService {
 
   async getFavourites(): Promise<FavouriteRecord[]> {
     return firstValueFrom(
-      this.http.get<FavouriteRecord[]>(`${this.baseUrl}/favourites`, { headers: this.getHeaders() })
+      this.http.get<FavouriteRecord[]>(`${this.baseUrl}/favourites`, {
+        headers: this.getHeaders(),
+      }),
     );
   }
 
@@ -271,8 +279,8 @@ export class ChatService {
     try {
       const response = await firstValueFrom(
         this.http.get<{ blocked: boolean }>(`${environment.apiUrl}/safety/is-blocked/${userId}`, {
-          headers: this.getHeaders()
-        })
+          headers: this.getHeaders(),
+        }),
       );
       return response.blocked;
     } catch (e) {
@@ -286,8 +294,8 @@ export class ChatService {
       this.http.post<ChatRoom>(
         `${this.baseUrl}/groups`,
         { name, memberIds },
-        { headers: this.getHeaders() }
-      )
+        { headers: this.getHeaders() },
+      ),
     );
   }
 
@@ -296,8 +304,8 @@ export class ChatService {
       this.http.patch(
         `${this.baseUrl}/groups/${roomId}/rename`,
         { name },
-        { headers: this.getHeaders() }
-      )
+        { headers: this.getHeaders() },
+      ),
     );
   }
 
@@ -306,23 +314,24 @@ export class ChatService {
       this.http.post(
         `${this.baseUrl}/groups/${roomId}/members`,
         { memberIds },
-        { headers: this.getHeaders() }
-      )
+        { headers: this.getHeaders() },
+      ),
     );
   }
 
   async removeGroupMember(roomId: string, memberId: string): Promise<void> {
     await firstValueFrom(
-      this.http.delete(
-        `${this.baseUrl}/groups/${roomId}/members/${memberId}`,
-        { headers: this.getHeaders() }
-      )
+      this.http.delete(`${this.baseUrl}/groups/${roomId}/members/${memberId}`, {
+        headers: this.getHeaders(),
+      }),
     );
   }
 
   async getGroupMembers(roomId: string): Promise<GroupMember[]> {
     return firstValueFrom(
-      this.http.get<GroupMember[]>(`${this.baseUrl}/groups/${roomId}/members`, { headers: this.getHeaders() })
+      this.http.get<GroupMember[]>(`${this.baseUrl}/groups/${roomId}/members`, {
+        headers: this.getHeaders(),
+      }),
     );
   }
 
@@ -331,8 +340,8 @@ export class ChatService {
       this.http.post<{ translated_text: string }>(
         `${environment.apiUrl}/nlp/translate`,
         { text, target_language: targetLanguage },
-        { headers: this.getHeaders() }
-      )
+        { headers: this.getHeaders() },
+      ),
     );
   }
 }

@@ -13,6 +13,7 @@ import {
   FavouriteRecord,
 } from './interfaces/chat-message.interface';
 import { ChatMessageEvent } from '../notifications/events/notification.events';
+import { SystemMessageService } from './services/system-message.service';
 
 @Injectable()
 export class ChatService {
@@ -22,6 +23,7 @@ export class ChatService {
     private readonly eventEmitter: EventEmitter2,
     private readonly safetyService: SafetyService,
     private readonly linkPreviewService: LinkPreviewService,
+    private readonly systemMessageService: SystemMessageService,
   ) {}
 
   generateConnectionToken(userId: string): { token: string } {
@@ -402,6 +404,10 @@ export class ChatService {
       .eq('id', roomId);
 
     if (error) throw new Error('Failed to rename group');
+
+    await this.systemMessageService.publishToRoom(roomId, 'groupRenamed', {
+      name: newName,
+    });
   }
 
   async addGroupMembers(
@@ -422,6 +428,10 @@ export class ChatService {
       .insert(membersData);
 
     if (error) throw new Error('Failed to add members');
+
+    await this.systemMessageService.publishToRoom(roomId, 'memberAdded', {
+      count: memberIds.length,
+    });
   }
 
   async removeGroupMember(
@@ -438,6 +448,8 @@ export class ChatService {
       .match({ room_id: roomId, user_id: memberId });
 
     if (error) throw new Error('Failed to remove member');
+
+    await this.systemMessageService.publishToRoom(roomId, 'memberRemoved', {});
   }
 
   async getGroupMembers(roomId: string): Promise<any[]> {

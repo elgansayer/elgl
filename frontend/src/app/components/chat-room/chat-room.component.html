@@ -7,15 +7,29 @@
         💬
       </div>
       <div>
-        <h1 class="text-base font-black text-text-primary sm:text-lg">{{ roomDetails?.title || roomId }}</h1>
-        <p class="text-xs" [class]="centrifugeService.isConnected() ? 'text-xs text-emerald-600' : 'text-xs text-amber-600'">
-          {{ centrifugeService.isConnected() ? ('chatRoom.liveStatus' | t) : ('chatRoom.connectingStatus' | t) }}
+        <h1 class="text-base font-black text-text-primary sm:text-lg">
+          {{ roomDetails?.title || roomId }}
+        </h1>
+        <p
+          class="text-xs"
+          [class]="
+            centrifugeService.isConnected() ? 'text-xs text-emerald-600' : 'text-xs text-amber-600'
+          "
+        >
+          {{
+            centrifugeService.isConnected()
+              ? ('chatRoom.liveStatus' | t)
+              : ('chatRoom.connectingStatus' | t)
+          }}
         </p>
       </div>
     </div>
     <div class="flex items-center gap-2">
       @if (isAdmin) {
-        <button (click)="showAdminPanel.set(!showAdminPanel())" class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs">
+        <button
+          (click)="showAdminPanel.set(!showAdminPanel())"
+          class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
+        >
           Admin
         </button>
       }
@@ -33,19 +47,45 @@
   </div>
 
   @if (showAdminPanel()) {
-    <div class="mt-2 rounded-card border border-primary/30 bg-primary/10 ps-3 pe-3 pt-3 pb-3 space-y-2">
+    <div
+      class="mt-2 rounded-card border border-primary/30 bg-primary/10 ps-3 pe-3 pt-3 pb-3 space-y-2"
+    >
       <h3 class="text-sm font-bold text-text-primary">Group Admin Settings</h3>
       <div class="flex gap-2">
-        <input type="text" [(ngModel)]="newGroupName" placeholder="New Group Name" class="app-input flex-1 pt-2 pb-2 text-xs" />
-        <button (click)="renameGroup()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs">Rename</button>
+        <input
+          type="text"
+          [(ngModel)]="newGroupName"
+          placeholder="New Group Name"
+          class="app-input flex-1 pt-2 pb-2 text-xs"
+        />
+        <button (click)="renameGroup()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs">
+          Rename
+        </button>
       </div>
       <div class="flex gap-2">
-        <input type="text" [(ngModel)]="newMemberId" placeholder="User ID to Add" class="app-input flex-1 pt-2 pb-2 text-xs" />
-        <button (click)="addMember()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs">Add Member</button>
+        <input
+          type="text"
+          [(ngModel)]="newMemberId"
+          placeholder="User ID to Add"
+          class="app-input flex-1 pt-2 pb-2 text-xs"
+        />
+        <button (click)="addMember()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs">
+          Add Member
+        </button>
       </div>
       <div class="flex gap-2">
-        <input type="text" [(ngModel)]="memberToRemoveId" placeholder="User ID to Remove" class="app-input flex-1 pt-2 pb-2 text-xs" />
-        <button (click)="removeMember()" class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs text-red-500">Remove Member</button>
+        <input
+          type="text"
+          [(ngModel)]="memberToRemoveId"
+          placeholder="User ID to Remove"
+          class="app-input flex-1 pt-2 pb-2 text-xs"
+        />
+        <button
+          (click)="removeMember()"
+          class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs text-red-500"
+        >
+          Remove Member
+        </button>
       </div>
     </div>
   }
@@ -54,101 +94,113 @@
     class="mt-2.5 flex-1 overflow-y-auto rounded-card border border-surface-100 bg-surface-300 ps-2 pe-2 pt-2 pb-2 space-y-2"
   >
     @if (isLoading()) {
-      <div class="pt-10 text-center text-sm text-text-secondary">{{ 'chatRoom.loadingMessages' | t }}</div>
+      <div class="pt-10 text-center text-sm text-text-secondary">
+        {{ 'chatRoom.loadingMessages' | t }}
+      </div>
     }
     @if (!isLoading() && messages().length === 0) {
-      <div class="pt-10 text-center text-sm text-text-secondary">{{ 'chatRoom.noMessages' | t }}</div>
+      <div class="pt-10 text-center text-sm text-text-secondary">
+        {{ 'chatRoom.noMessages' | t }}
+      </div>
     }
 
     @for (msg of filteredMessages(); track msg.id) {
-      <app-long-press-context-menu
-        [messageId]="msg.id"
-        [messageContent]="msg.text_content ?? ''"
-        [messageType]="msg.message_type"
-        [senderId]="msg.sender_id"
-        [roomId]="roomId"
-        [isBlocked]="blockedUserIds().includes(msg.sender_id)"
-        (favourite)="bookmark(msg)"
-        (report)="reportMessage(msg)"
-        (block)="onBlockToggle($event)"
-      >
-        <div
-          [class]="
-            'flex gap-2 ' +
-            (msg.sender_id === authService.currentUser()?.id ? 'justify-end' : 'justify-start')
-          "
+      @if (msg.message_type === 'system' && msg.system_event) {
+        <app-chat-system-bubble
+          [eventType]="msg.system_event.type"
+          [params]="msg.system_event"
+        ></app-chat-system-bubble>
+      } @else {
+        <app-long-press-context-menu
+          [messageId]="msg.id"
+          [messageContent]="msg.text_content ?? ''"
+          [messageType]="msg.message_type"
+          [senderId]="msg.sender_id"
+          [roomId]="roomId"
+          [isBlocked]="blockedUserIds().includes(msg.sender_id)"
+          (favourite)="bookmark(msg)"
+          (report)="reportMessage(msg)"
+          (block)="onBlockToggle($event)"
         >
           <div
             [class]="
-              'max-w-[80%] rounded-2xl ps-3 pe-3 pt-2.5 pb-2.5 text-sm shadow-sm transition-colors ' +
-              (msg.sender_id === authService.currentUser()?.id
-                ? 'bg-primary text-white'
-                : 'bg-surface-200 border border-surface-100 text-text-primary')
+              'flex gap-2 ' +
+              (msg.sender_id === authService.currentUser()?.id ? 'justify-end' : 'justify-start')
             "
           >
-            <p class="mb-1 text-[11px] opacity-70">
-              {{ msg.sender?.display_name || ('chatRoom.partnerFallback' | t) }} · {{ msg.created_at | date: 'shortTime' }}
-            </p>
-            @if (msg.message_type === 'text' && msg.text_content) {
-              <app-tokenised-text
-                [text]="msg.text_content"
-                (wordClicked)="onWordClicked($event)"
-              ></app-tokenised-text>
-              @if (transliterations()[msg.id]) {
-                <p class="mt-1 text-[10px] text-text-muted italic">
-                  {{ transliterations()[msg.id] }}
-                </p>
-              }
-            }
-            @if (msg.message_type === 'correction' && msg.correction_payload) {
-              <app-visual-diff
-                [original]="msg.correction_payload.original"
-                [corrected]="msg.correction_payload.corrected"
-                [explanation]="msg.correction_payload.explanation"
-              ></app-visual-diff>
-            }
-            @if (msg.message_type === 'doodle' && msg.media_url) {
-              <img
-                [src]="msg.media_url"
-                alt="doodle"
-                class="max-h-52 rounded-xl border border-surface-100"
-              />
-            }
-            @if (msg.message_type === 'sticker' && msg.media_url) {
-              <img
-                [src]="msg.media_url"
-                alt="sticker"
-                class="max-h-32 w-auto object-contain drop-shadow-md"
-              />
-            }
-            @if (msg.message_type === 'voice' && msg.media_url) {
-              <audio [src]="msg.media_url" controls class="w-full min-w-52"></audio>
-            }
-            <div class="mt-2 flex items-center gap-1">
+            <div
+              [class]="
+                'max-w-[80%] rounded-2xl ps-3 pe-3 pt-2.5 pb-2.5 text-sm shadow-sm transition-colors ' +
+                (msg.sender_id === authService.currentUser()?.id
+                  ? 'bg-primary text-white'
+                  : 'bg-surface-200 border border-surface-100 text-text-primary')
+              "
+            >
+              <p class="mb-1 text-[11px] opacity-70">
+                {{ msg.sender?.display_name || ('chatRoom.partnerFallback' | t) }} ·
+                {{ msg.created_at | date: 'shortTime' }}
+              </p>
               @if (msg.message_type === 'text' && msg.text_content) {
+                <app-tokenised-text
+                  [text]="msg.text_content"
+                  (wordClicked)="onWordClicked($event)"
+                ></app-tokenised-text>
+                @if (transliterations()[msg.id]) {
+                  <p class="mt-1 text-[10px] text-text-muted italic">
+                    {{ transliterations()[msg.id] }}
+                  </p>
+                }
+              }
+              @if (msg.message_type === 'correction' && msg.correction_payload) {
+                <app-visual-diff
+                  [original]="msg.correction_payload.original"
+                  [corrected]="msg.correction_payload.corrected"
+                  [explanation]="msg.correction_payload.explanation"
+                ></app-visual-diff>
+              }
+              @if (msg.message_type === 'doodle' && msg.media_url) {
+                <img
+                  [src]="msg.media_url"
+                  alt="doodle"
+                  class="max-h-52 rounded-xl border border-surface-100"
+                />
+              }
+              @if (msg.message_type === 'sticker' && msg.media_url) {
+                <img
+                  [src]="msg.media_url"
+                  alt="sticker"
+                  class="max-h-32 w-auto object-contain drop-shadow-md"
+                />
+              }
+              @if (msg.message_type === 'voice' && msg.media_url) {
+                <audio [src]="msg.media_url" controls class="w-full min-w-52"></audio>
+              }
+              <div class="mt-2 flex items-center gap-1">
+                @if (msg.message_type === 'text' && msg.text_content) {
+                  <button
+                    (click)="saveSentenceToLingq(msg)"
+                    class="rounded-lg bg-amber-500/90 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-white"
+                  >
+                    {{ 'chatRoom.saveBtn' | t }}
+                  </button>
+                  <button
+                    (click)="transliterateMessage(msg)"
+                    class="rounded-lg bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-primary"
+                  >
+                    {{ 'chatRoom.transliterateBtn' | t }}
+                  </button>
+                }
                 <button
-                  (click)="saveSentenceToLingq(msg)"
-                  class="rounded-lg bg-amber-500/90 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-white"
-                >
-                  {{ 'chatRoom.saveBtn' | t }}
-                </button>
-                <button
-                  (click)="transliterateMessage(msg)"
+                  (click)="bookmark(msg)"
                   class="rounded-lg bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-primary"
                 >
-                  {{ 'chatRoom.transliterateBtn' | t }}
+                  {{ 'chatRoom.favBtn' | t }}
                 </button>
-              }
-              <button
-                (click)="bookmark(msg)"
-                class="rounded-lg bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-primary"
-              >
-                {{ 'chatRoom.favBtn' | t }}
-              </button>
+              </div>
             </div>
           </div>
-        </div>
-      </app-long-press-context-menu>
+        </app-long-press-context-menu>
+      }
     }
 
     @if (isTyping()) {
@@ -186,7 +238,9 @@
   }
 
   @if (showCorrectionForm()) {
-    <div class="mt-2 rounded-card border border-amber-500/30 bg-amber-500/10 ps-3 pe-3 pt-3 pb-3 space-y-2">
+    <div
+      class="mt-2 rounded-card border border-amber-500/30 bg-amber-500/10 ps-3 pe-3 pt-3 pb-3 space-y-2"
+    >
       <input
         type="text"
         [(ngModel)]="originalText"
@@ -251,7 +305,9 @@
     </div>
 
     @if (showStickerDrawer()) {
-      <div class="absolute bottom-full start-0 end-0 mb-2 z-40 shadow-xl rounded-t-2xl overflow-hidden border border-surface-100">
+      <div
+        class="absolute bottom-full start-0 end-0 mb-2 z-40 shadow-xl rounded-t-2xl overflow-hidden border border-surface-100"
+      >
         <app-sticker-picker
           (selectSticker)="sendSticker($event)"
           (close)="showStickerDrawer.set(false)"

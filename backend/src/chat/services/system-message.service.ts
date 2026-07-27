@@ -1,34 +1,26 @@
 import { Injectable } from '@nestjs/common';
-import { CentrifugoService } from './centrifugo.service';
-
-export interface SystemMessageEvent {
-  event_type: string;
-  [key: string]: any;
-}
+import { CentrifugoService } from '../centrifugo.service';
+import { ChatMessage } from '../interfaces/chat-message.interface';
 
 @Injectable()
 export class SystemMessageService {
   constructor(private readonly centrifugoService: CentrifugoService) {}
 
-  async publishSystemMessage(
+  async publishToRoom(
     roomId: string,
-    senderId: string,
-    event: SystemMessageEvent,
-  ) {
-    const channel = `room_${roomId}`;
-    const message = {
-      id: `sys_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    eventType: string,
+    params: Record<string, unknown> = {},
+  ): Promise<void> {
+    const message: ChatMessage = {
+      id: `sys_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       room_id: roomId,
-      sender_id: senderId,
+      sender_id: '',
       message_type: 'system',
-      system_event: {
-        type: event.event_type,
-        ...event,
-      },
+      system_event: { type: eventType, ...params },
       is_read: false,
       created_at: new Date().toISOString(),
     };
 
-    await this.centrifugoService.publish(channel, message);
+    await this.centrifugoService.publish(`chat:${roomId}`, { message });
   }
 }

@@ -6,11 +6,22 @@ import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
 import { GroupsController } from './groups.controller';
 import { GroupsService } from './groups.service';
+import { SystemMessageService } from './services/system-message.service';
 
 @Module({
   imports: [SafetyModule, LinkPreviewModule],
   controllers: [ChatController, GroupsController],
-  providers: [CentrifugoService, ChatService, GroupsService],
-  exports: [CentrifugoService, ChatService, GroupsService],
+  providers: [
+    CentrifugoService,
+    ChatService,
+    GroupsService,
+    SystemMessageService,
+  ],
+  exports: [
+    CentrifugoService,
+    ChatService,
+    GroupsService,
+    SystemMessageService,
+  ],
 })
 export class ChatModule {}

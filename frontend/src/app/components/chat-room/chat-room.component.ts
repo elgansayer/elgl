@@ -17,6 +17,7 @@ import { TokenisedTextComponent } from '../tokenised-text/tokenised-text.compone
 import { WordDefinitionModalComponent } from '../word-definition-modal/word-definition-modal.component';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { StickerPickerComponent } from '../sticker-picker/sticker-picker.component';
+import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
 import { SafetyService } from '../../services/safety.service';
 import { firstValueFrom } from 'rxjs';
 
@@ -32,10 +33,11 @@ import { firstValueFrom } from 'rxjs';
     TokenisedTextComponent,
     WordDefinitionModalComponent,
     LongPressContextMenuComponent,
-    StickerPickerComponent
+    StickerPickerComponent,
+    ChatSystemBubbleComponent,
   ],
   templateUrl: './chat-room.component.html',
-  styleUrls: ['./chat-room.component.scss']
+  styleUrls: ['./chat-room.component.scss'],
 })
 export class ChatRoomComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
@@ -62,12 +64,12 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   readonly blockedUserIds = signal<string[]>([]);
   readonly filteredMessages = computed(() => {
     const blocked = this.blockedUserIds();
-    return this.messages().filter(m => !blocked.includes(m.sender_id));
+    return this.messages().filter((m) => !blocked.includes(m.sender_id));
   });
 
   // Transliteration state: message id -> romaji/pinyin string
   readonly transliterations = signal<Record<string, string>>({});
-  
+
   // Translation state: message id -> translated string
   readonly translations = signal<Record<string, string>>({});
   // Toggle state: message id -> boolean
@@ -95,7 +97,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   private subscription: unknown = null;
 
   async ngOnInit(): Promise<void> {
-    this.route.params.subscribe(async params => {
+    this.route.params.subscribe(async (params) => {
       if (params['id']) {
         this.roomId = params['id'];
       }
@@ -109,7 +111,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   async loadRoomDetails(): Promise<void> {
     try {
       const rooms = await this.chatService.getRooms();
-      this.roomDetails = rooms.find(r => r.id === this.roomId) || null;
+      this.roomDetails = rooms.find((r) => r.id === this.roomId) || null;
     } catch (e) {
       console.error('Failed to load room details:', e);
     }
@@ -155,7 +157,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     this.subscription = this.centrifugeService.subscribe(`chat:${this.roomId}`, (data: unknown) => {
       const payload = data as { message?: ChatMessage; typing?: boolean } | null;
       if (payload?.message) {
-        this.messages.update(list => [...list, payload.message!]);
+        this.messages.update((list) => [...list, payload.message!]);
       } else if (payload?.typing) {
         this.isTyping.set(true);
         setTimeout(() => this.isTyping.set(false), 3000);
@@ -177,10 +179,10 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
       const sent = await this.chatService.sendMessage({
         room_id: this.roomId,
         message_type: 'text',
-        text_content: text
+        text_content: text,
       });
       // Add locally if not duplicate
-      this.messages.update(list => list.some(m => m.id === sent.id) ? list : [...list, sent]);
+      this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to send text message:', e);
     }
@@ -195,10 +197,10 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
         correction_payload: {
           original: this.originalText.trim(),
           corrected: this.correctedText.trim(),
-          explanation: this.explanationText.trim() || undefined
-        }
+          explanation: this.explanationText.trim() || undefined,
+        },
       });
-      this.messages.update(list => list.some(m => m.id === sent.id) ? list : [...list, sent]);
+      this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
       this.originalText = '';
       this.correctedText = '';
       this.explanationText = '';
@@ -215,9 +217,9 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
         room_id: this.roomId,
         message_type: 'doodle',
         media_url: dataUrl,
-        text_content: this.i18n.translate('chatRoom.doodleCaption')
+        text_content: this.i18n.translate('chatRoom.doodleCaption'),
       });
-      this.messages.update(list => list.some(m => m.id === sent.id) ? list : [...list, sent]);
+      this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to send doodle:', e);
     }
@@ -230,9 +232,9 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
         room_id: this.roomId,
         message_type: 'voice',
         media_url: mediaUrl,
-        text_content: this.i18n.translate('chatRoom.voiceNoteCaption')
+        text_content: this.i18n.translate('chatRoom.voiceNoteCaption'),
       });
-      this.messages.update(list => list.some(m => m.id === sent.id) ? list : [...list, sent]);
+      this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to send voice note:', e);
     }
@@ -245,9 +247,9 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
         room_id: this.roomId,
         message_type: 'sticker',
         media_url: stickerUrl,
-        text_content: this.i18n.translate('chatRoom.stickerCaption') || 'Sticker'
+        text_content: this.i18n.translate('chatRoom.stickerCaption') || 'Sticker',
       });
-      this.messages.update(list => list.some(m => m.id === sent.id) ? list : [...list, sent]);
+      this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to send sticker:', e);
     }
@@ -265,12 +267,14 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
 
   async reportMessage(msg: ChatMessage): Promise<void> {
     try {
-      await firstValueFrom(this.safetyService.reportUser({
-        reported_id: msg.sender_id,
-        reason_category: 'inappropriate_content',
-        description: 'Inappropriate message content',
-        context_url: `${window.location.origin}/chat/${this.roomId}`
-      }));
+      await firstValueFrom(
+        this.safetyService.reportUser({
+          reported_id: msg.sender_id,
+          reason_category: 'inappropriate_content',
+          description: 'Inappropriate message content',
+          context_url: `${window.location.origin}/chat/${this.roomId}`,
+        }),
+      );
       showToast(this.i18n.translate('chatRoom.reportedAlert'));
     } catch (e) {
       console.error('Failed to report message:', e);
@@ -280,10 +284,10 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
 
   onBlockToggle(event: { senderId: string; blocked: boolean }): void {
     if (event.blocked) {
-      this.blockedUserIds.update(ids => [...ids, event.senderId]);
+      this.blockedUserIds.update((ids) => [...ids, event.senderId]);
       showToast(this.i18n.translate('safety.blockedAlert') || 'User blocked');
     } else {
-      this.blockedUserIds.update(ids => ids.filter(id => id !== event.senderId));
+      this.blockedUserIds.update((ids) => ids.filter((id) => id !== event.senderId));
       showToast(this.i18n.translate('safety.unblockedAlert') || 'User unblocked');
     }
   }
@@ -296,7 +300,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
         word_token: msg.text_content,
         translation: trans?.translated_text || `Sentence: ${msg.text_content}`,
         original_context: `Chat room: ${this.roomId}`,
-        definition: 'Saved full chat sentence to LingQ Spaced Repetition deck.'
+        definition: 'Saved full chat sentence to LingQ Spaced Repetition deck.',
       });
       await this.vocabStore.updateSrsLevel(created.id, 1);
       showToast(this.i18n.translate('chatRoom.savedLingqAlert', { text: msg.text_content }));
@@ -313,12 +317,12 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     // For the UI implementation, we provide a mock transliteration.
     const mockTransliteration = msg.text_content
       .split(' ')
-      .map(word => word.toLowerCase() + '-romaji')
+      .map((word) => word.toLowerCase() + '-romaji')
       .join(' ');
 
-    this.transliterations.update(prev => ({
+    this.transliterations.update((prev) => ({
       ...prev,
-      [msg.id]: mockTransliteration
+      [msg.id]: mockTransliteration,
     }));
   }
 
@@ -327,23 +331,23 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
 
     const currentShow = this.showTranslation()[msg.id];
     if (currentShow) {
-      this.showTranslation.update(prev => ({ ...prev, [msg.id]: false }));
+      this.showTranslation.update((prev) => ({ ...prev, [msg.id]: false }));
       return;
     }
 
     if (this.translations()[msg.id]) {
-      this.showTranslation.update(prev => ({ ...prev, [msg.id]: true }));
+      this.showTranslation.update((prev) => ({ ...prev, [msg.id]: true }));
       return;
     }
 
     try {
       const targetLang = this.i18n.currentLang().split('-')[0] || 'en';
       const res = await this.chatService.translateText(msg.text_content, targetLang);
-      this.translations.update(prev => ({
+      this.translations.update((prev) => ({
         ...prev,
-        [msg.id]: res.translated_text
+        [msg.id]: res.translated_text,
       }));
-      this.showTranslation.update(prev => ({ ...prev, [msg.id]: true }));
+      this.showTranslation.update((prev) => ({ ...prev, [msg.id]: true }));
     } catch (e) {
       console.error('Failed to translate message:', e);
       showToast(this.i18n.translate('moments.transError') || 'Translation failed');
@@ -359,7 +363,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   }
 
   async toggleParticipantDrawer(): Promise<void> {
-    this.showParticipantDrawer.update(v => !v);
+    this.showParticipantDrawer.update((v) => !v);
     if (this.showParticipantDrawer() && this.participants().length === 0) {
       await this.loadParticipants();
     }
@@ -394,7 +398,11 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     }
   }
 
-  sendCorrectionFromInput(correction: { original: string; corrected: string; explanation?: string }): void {
+  sendCorrectionFromInput(correction: {
+    original: string;
+    corrected: string;
+    explanation?: string;
+  }): void {
     this.originalText = correction.original;
     this.correctedText = correction.corrected;
     this.explanationText = correction.explanation || '';
@@ -402,7 +410,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   }
 
   scrollToMessage(message: ChatMessage): void {
-    const index = this.messages().findIndex(m => m.id === message.id);
+    const index = this.messages().findIndex((m) => m.id === message.id);
     if (index >= 0) {
       // Scroll logic - could use ViewChild to scroll container
     }
@@ -461,10 +469,11 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   async playNextVoiceNote(currentMessageId: string): Promise<void> {
     try {
       const profile = await this.userService.getMyProfile();
-      if (!profile || !(profile as { auto_play_voice_notes?: boolean }).auto_play_voice_notes) return;
+      if (!profile || !(profile as { auto_play_voice_notes?: boolean }).auto_play_voice_notes)
+        return;
 
       const msgs = this.messages();
-      const currentIndex = msgs.findIndex(m => m.id === currentMessageId);
+      const currentIndex = msgs.findIndex((m) => m.id === currentMessageId);
       if (currentIndex === -1) return;
 
       for (let i = currentIndex + 1; i < msgs.length; i++) {
@@ -472,7 +481,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
         if (nextMsg.message_type === 'voice' && nextMsg.media_url) {
           const audioElement = document.getElementById(`audio-${nextMsg.id}`) as HTMLAudioElement;
           if (audioElement) {
-            audioElement.play().catch(e => console.error('Auto-play failed:', e));
+            audioElement.play().catch((e) => console.error('Auto-play failed:', e));
           }
           break;
         }

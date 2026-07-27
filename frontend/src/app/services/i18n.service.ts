@@ -15,8 +15,20 @@ export class I18nService {
   readonly currentLang = signal<string>('en-GB');
 
   readonly availableLanguages: LanguageInfo[] = [
-    { code: 'en-GB', name: 'British English', nativeName: 'English (UK)', flag: '🇬🇧', isRtl: false },
-    { code: 'en-US', name: 'American English', nativeName: 'English (US)', flag: '🇺🇸', isRtl: false },
+    {
+      code: 'en-GB',
+      name: 'British English',
+      nativeName: 'English (UK)',
+      flag: '🇬🇧',
+      isRtl: false,
+    },
+    {
+      code: 'en-US',
+      name: 'American English',
+      nativeName: 'English (US)',
+      flag: '🇺🇸',
+      isRtl: false,
+    },
     { code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸', isRtl: false },
     { code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷', isRtl: false },
     { code: 'de', name: 'German', nativeName: 'Deutsch', flag: '🇩🇪', isRtl: false },
@@ -51,7 +63,8 @@ export class I18nService {
     'notifications.tabComments': 'Comments',
     'notifications.tabFollows': 'Followers',
     'notifications.emptyTitle': 'No notifications yet',
-    'notifications.emptySubtitle': 'When partners interact with your profile or posts, you will see alerts here.',
+    'notifications.emptySubtitle':
+      'When partners interact with your profile or posts, you will see alerts here.',
     'notifications.likedProfile': 'liked your profile',
     'notifications.likedMoment': 'liked your moment',
     'notifications.commentedMoment': 'commented on your moment',
@@ -138,7 +151,8 @@ export class I18nService {
     'discovery.filterNearMe': 'Near Me (Radius)',
     'discovery.filterSerious': 'Serious Learners Only',
     'discovery.radiusLabel': 'Maximum Distance: {{radius}} km',
-    'discovery.vipRadiusNote': 'VIP users (8 UKP / $10 USD) get global discovery and location spoofing.',
+    'discovery.vipRadiusNote':
+      'VIP users (8 UKP / $10 USD) get global discovery and location spoofing.',
     'discovery.searchPlaceholder': 'Search by name, language, or bio...',
     'discovery.emptyState': 'No language partners matched your current filter criteria.',
     'discovery.streakDays': '🔥 {{days}}d Streak',
@@ -153,7 +167,8 @@ export class I18nService {
     'discovery.bannerPaid': 'Unlock Paid Practice',
     'discovery.bannerDesc': 'Get 1-on-1 native practice',
     'discovery.bannerView': 'View VIP',
-    'discovery.partnerBioFallback': 'I want to improve my language skills! Let us practice together.',
+    'discovery.partnerBioFallback':
+      'I want to improve my language skills! Let us practice together.',
 
     // Moments Feed Component
     'moments.title': 'Moments',
@@ -236,7 +251,8 @@ export class I18nService {
     'audioRoom.listenerAudience': '🎧 Listener audience',
     'audioRoom.memberPrefix': '🎧 Member #{{num}}',
     'audioRoom.roomsTitle': '🎙️ Live audio and video rooms',
-    'audioRoom.roomsSubtitle': 'Join language rooms, raise your hand to speak, or launch your own room.',
+    'audioRoom.roomsSubtitle':
+      'Join language rooms, raise your hand to speak, or launch your own room.',
     'audioRoom.launchRoomBtn': '+ Launch live room',
     'audioRoom.chipExchange': '🌍 Language exchange',
     'audioRoom.chipStages': '🔴 Host-led stages',
@@ -262,7 +278,8 @@ export class I18nService {
     'audioRoom.videoStreamLabel': 'Enable split-screen video',
     'audioRoom.cancelBtn': 'Cancel',
     'audioRoom.launchStageBtn': 'Launch stage',
-    'audioRoom.archiveConfirm': 'Are you sure you want to end this room and archive the recording to Cloudflare R2?',
+    'audioRoom.archiveConfirm':
+      'Are you sure you want to end this room and archive the recording to Cloudflare R2?',
     'audioRoom.launchError': 'Failed to launch audio room.',
     'audioRoom.joinError': 'Could not join room right now.',
     'audioRoom.inviteCoHostBtn': '🎥 Invite co-host',
@@ -271,10 +288,13 @@ export class I18nService {
     'audioRoom.removeCoHostError': 'Could not remove co-host right now.',
     'audioRoom.coHostPromotedToast': '🎉 The host invited you to co-host with live video!',
     'audioRoom.coHostRemovedToast': 'The host ended your co-host video session.',
-    'audioRoom.speakerApprovedToast': '🎉 Host approved your request to speak! Your microphone is now live on stage.',
+    'audioRoom.speakerApprovedToast':
+      '🎉 Host approved your request to speak! Your microphone is now live on stage.',
     'audioRoom.speakerDemotedToast': 'The host moved you back to the listener audience.',
-    'audioRoom.roomEndedToast': 'This audio/video room has ended and been archived to Cloudflare R2.',
-    'audioRoom.raiseHandToast': '✋ Hand raised! The host has been notified of your request to speak on stage.',
+    'audioRoom.roomEndedToast':
+      'This audio/video room has ended and been archived to Cloudflare R2.',
+    'audioRoom.raiseHandToast':
+      '✋ Hand raised! The host has been notified of your request to speak on stage.',
 
     // Video Room Component (split-screen co-host video layout)
     'videoRoom.hostBadge': 'Host',
@@ -340,7 +360,8 @@ export class I18nService {
 
     // LingQ & Vocabulary Studio
     'vocabulary.title': '📚 Vocabulary studio',
-    'vocabulary.subtitle': 'Spaced repetition, word decks, grammar coaching, and pronunciation scoring.',
+    'vocabulary.subtitle':
+      'Spaced repetition, word decks, grammar coaching, and pronunciation scoring.',
     'vocabulary.tabReview': '🎯 Review ({{count}})',
     'vocabulary.tabDeck': '📖 Deck ({{count}})',
     'vocabulary.tabAi': '🤖 AI practice',
@@ -357,7 +378,8 @@ export class I18nService {
     'vocabulary.noSaved': 'No saved words yet.',
     'vocabulary.nextReview': 'Next review: {{date}}',
     'vocabulary.aiBannerTitle': '🤖 AI grammar and pronunciation',
-    'vocabulary.aiBannerDesc': 'Free usage is capped daily. VIP unlocks full access for 8 UKP / $10 USD per month.',
+    'vocabulary.aiBannerDesc':
+      'Free usage is capped daily. VIP unlocks full access for 8 UKP / $10 USD per month.',
     'vocabulary.practiceLabel': 'Practice sentence',
     'vocabulary.practicePlaceholder': 'Enter sentence to evaluate',
     'vocabulary.checkGrammarBtn': '✏️ Check grammar',
@@ -388,7 +410,8 @@ export class I18nService {
     'developer.bannerTier': '⚡ Developer tier & AI Sandbox',
     'developer.bannerActive': 'Active: 20 UKP / $26 USD monthly',
     'developer.bannerTitle': 'Programmatic API & Diagnostics Platform',
-    'developer.bannerSubtitle': 'Inspect PostGIS spatial queries, Centrifugo real-time fan-out, and LiveKit WebRTC stage permissions in real time.',
+    'developer.bannerSubtitle':
+      'Inspect PostGIS spatial queries, Centrifugo real-time fan-out, and LiveKit WebRTC stage permissions in real time.',
     'developer.upgradeDevBtn': 'Upgrade developer tier (20 UKP / $26 USD)',
     'developer.upgradeConsumerBtn': 'Consumer VIP (8 UKP / $10 USD)',
     'developer.tabOverview': '📊 Telemetry Overview',
@@ -410,27 +433,33 @@ export class I18nService {
     'developer.statLatencyLabel': 'Average latency',
     'developer.statLatencySub': 'P95 baseline: 28 ms',
     'developer.postgisTitle': '🗺️ PostGIS Geography Query Simulator (ST_DWithin)',
-    'developer.postgisSubtitle': 'Simulate spatial indexing calculations and VIP location spoofing without modifying production data.',
+    'developer.postgisSubtitle':
+      'Simulate spatial indexing calculations and VIP location spoofing without modifying production data.',
     'developer.latLabel': 'Search Latitude (SRID 4326)',
     'developer.lngLabel': 'Search Longitude (SRID 4326)',
     'developer.radiusLabel': 'Radius (Metres): {{radius}}m',
-    'developer.spoofCheckbox': 'Enable VIP mock location spoofing override (8 UKP / $10 USD feature)',
+    'developer.spoofCheckbox':
+      'Enable VIP mock location spoofing override (8 UKP / $10 USD feature)',
     'developer.executeBtn': '🔍 Execute Spatial Query',
     'developer.executingBtn': '⏳ Executing...',
     'developer.queryResults': 'Query Results: {{count}} matching learners',
     'developer.distanceAway': '{{distance}}m away',
     'developer.nearPoint': 'Near point',
-    'developer.noResults': 'No spatial results generated yet. Click "Execute Spatial Query" to test index.',
+    'developer.noResults':
+      'No spatial results generated yet. Click "Execute Spatial Query" to test index.',
     'developer.centrifugoTitle': '⚡ Centrifugo v5 & Redis 7 Fan-Out Diagnostics',
-    'developer.centrifugoSubtitle': 'Inspect real-time WebSocket connection signals and simulated Redis queue broadcasts.',
+    'developer.centrifugoSubtitle':
+      'Inspect real-time WebSocket connection signals and simulated Redis queue broadcasts.',
     'developer.statusPrefix': 'Status: {{status}}',
     'developer.disconnectBtn': 'Disconnect',
     'developer.connectBtn': 'Connect WebSocket',
     'developer.redisTitle': 'Redis Timeline Queue Fan-Out Simulation',
-    'developer.redisDesc': 'When a user publishes a Moment, TimelineWorker executes RPUSH timeline_queue:[id] to distribute IDs to all subscribers asynchronously.',
+    'developer.redisDesc':
+      'When a user publishes a Moment, TimelineWorker executes RPUSH timeline_queue:[id] to distribute IDs to all subscribers asynchronously.',
     'developer.triggerRedisBtn': '🚀 Trigger Simulated Redis Fan-Out (RPUSH)',
     'developer.livekitTitle': '🎙️ LiveKit WebRTC SFU Stage Permissions (RoomServiceClient)',
-    'developer.livekitSubtitle': 'Simulate stage hand-raising workflows and token canPublish claims inside live audio/video rooms.',
+    'developer.livekitSubtitle':
+      'Simulate stage hand-raising workflows and token canPublish claims inside live audio/video rooms.',
     'developer.simRoleLabel': 'Simulated Stage Role',
     'developer.permLabel': 'Publish Permission (canPublish JWT Claim): ',
     'developer.permGranted': 'GRANTED (Microphone ON)',
@@ -440,7 +469,8 @@ export class I18nService {
     'developer.recordingTitle': 'Composite Recording Engine',
     'developer.recordingActive': '🔴 RECORDING ACTIVE',
     'developer.recordingIdle': '⚪ IDLE',
-    'developer.recordingDesc': 'Archive live stage audio/video composites directly to Cloudflare R2 bucket with zero egress fees.',
+    'developer.recordingDesc':
+      'Archive live stage audio/video composites directly to Cloudflare R2 bucket with zero egress fees.',
     'developer.stopRecordingBtn': '⏹️ Stop & Save R2 Archive',
     'developer.startRecordingBtn': '🔴 Start Composite Recording',
     'developer.logsTitle': '🛡️ Live Architectural Diagnostics Stream',
@@ -588,7 +618,8 @@ export class I18nService {
     'roomChat.showChatBtn': '💬 Show chat',
     'roomChat.showSubtitlesBtn': '🎙️ Show AI subtitles ({{count}})',
     'roomChat.emptyChat': 'No messages in this live room yet. Say hello to the stage speakers!',
-    'roomChat.emptySubtitles': 'No live subtitles yet. When speakers talk on stage or use speech-to-text, closed captions broadcast here!',
+    'roomChat.emptySubtitles':
+      'No live subtitles yet. When speakers talk on stage or use speech-to-text, closed captions broadcast here!',
     'roomChat.speakerCaptionPrefix': '🎙️ {{name}} (Live AI caption):',
     'roomChat.inputPlaceholder': 'Send a chat message to the room...',
     'roomChat.sendBtn': 'Send',
@@ -609,6 +640,13 @@ export class I18nService {
     'context_menu.unblock': 'Unblock',
     'chat.message_blocked': 'This message is from a blocked user',
     'chat.unblock_user': 'Unblock user',
+
+    // Chat System Messages (real-time bubbles published over Centrifugo)
+    'system.profileUpdated': '{{name}} updated their profile.',
+    'system.missedCall': 'You missed a call from {{name}}.',
+    'system.groupRenamed': 'Group renamed to "{{name}}".',
+    'system.memberAdded': '{{count}} member(s) joined the group.',
+    'system.memberRemoved': 'A member left the group.',
 
     // VoIP Call UI
     'voip.mute': 'Mute',
