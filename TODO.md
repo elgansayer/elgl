@@ -596,7 +596,7 @@
 
 ## Phase 78: Proactive AI Tutor
 
-- [ ] Implement AI-powered "Daily Learning Tip" push notification or chat message.
+- [STUCK] Implement AI-powered "Daily Learning Tip" push notification or chat message.
 - [ ] Build "Suggest Flashcards" feature to auto-detect and suggest new vocabulary from a user's conversations.
 
 ## Phase 79: Economy-Driven Learning
