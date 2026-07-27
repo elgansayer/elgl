@@ -487,7 +487,7 @@
 - [STUCK] Build "Appearance Settings" menu.
 - [STUCK] Implement System-wide Dark Mode, Light Mode, and System Default toggle.
 - [STUCK] Implement UI & Font Scaling slider adjusting base `rem` units across Angular.
-- [ ] Build "Language Settings" menu to switch UI language independently of study target.
+- [STUCK] Build "Language Settings" menu to switch UI language independently of study target.
 
 ### Privacy, Blocking & Discoverability
 
