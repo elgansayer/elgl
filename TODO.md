@@ -289,7 +289,7 @@
 - [x] Fix `inviteCoHost` to demote/notify the existing co-host (and stop their publish) before assigning a new one, instead of silently overwriting `co_host_id`.
 - [x] Fix race condition where the `co_host_removed`/`co_host_invited` Centrifugo events published in `inviteCoHost` can arrive out of order (both are fire-and-forget, unawaited HTTP calls), and the frontend's `co_host_removed` handler unconditionally nulls `co_host_id` without checking it still matches the removed user, which can wipe out a just-assigned new co-host.
 
-## Phase 40: Moment Interactivity
+## Phase 40: Moment Inter interactivity
 - [x] Build "Liked By" modal listing all users who liked a Moment.
 - [x] Create backend endpoint to fetch users who liked a specific moment.
 - [x] Create Angular component for the Liked By modal.
@@ -384,12 +384,14 @@
 - [x] Fix `ChatRoomComponent.sendTextMessage()` (`frontend/src/app/components/chat-room/chat-room.component.ts:171`): it clears `textInput` and calls `draftsService.clearChatDraft()` *before* `chatService.sendMessage` is awaited, with no restore in the `catch` block. A failed send (offline, server error, moderation rejection) currently loses the message text entirely instead of leaving it recoverable as a draft. Move the clear to after a successful send, matching the pattern already used correctly in `MomentsFeedComponent.submitMoment()`.
 
 ## Phase 61: Link Previews
-- [ ] Build NestJS OpenGraph scraper rendering rich link preview cards in chat.
-- [ ] Implement the NestJS OpenGraph parser service: fetch URL, extract title/description/image with `cheerio` + `dompurify`, cache results, and expose `GET /link-preview?url=...` for the chat frontend.
-- [ ] Complete the implementation of the NestJS OpenGraph scraper and frontend rendering.
-- [ ] Write the NestJS controller and service logic for the OpenGraph scraper (dependencies are installed).
-- [ ] Implement actual OpenGraph service using installed dependencies (cheerio, dompurify, jsdom).
-- [ ] Create `LinkPreviewModule`, `LinkPreviewController` and `LinkPreviewService` in `backend/src/link-preview/` that uses `jsdom`/`cheerio` to fetch a URL, extract OpenGraph tags, sanitise with DOMPurify, cache results for 1 hour, and expose `GET /link-preview?url=...`.
+- [x] Build NestJS OpenGraph scraper rendering rich link preview cards in chat.
+- [x] Implement the NestJS OpenGraph parser service: fetch URL, extract title/description/image with `cheerio` + `dompurify`, cache results, and expose `GET /link-preview?url=...` for the chat frontend.
+- [x] Complete the implementation of the NestJS OpenGraph scraper and frontend rendering.
+- [x] Write the NestJS controller and service logic for the OpenGraph scraper (dependencies are installed).
+- [x] Implement actual OpenGraph service using installed dependencies (cheerio, dompurify, jsdom).
+- [x] Create `LinkPreviewModule`, `LinkPreviewController` and `LinkPreviewService` in `backend/src/link-preview/` that uses `jsdom`/`cheerio` to fetch a URL, extract OpenGraph tags, sanitise with DOMPurify, cache results for 1 hour, and expose `GET /link-preview?url=...`.
+- [x] Write the actual NestJS code for the OpenGraph scraper (`LinkPreviewModule`, `LinkPreviewController`, `LinkPreviewService`) since only the dependencies were installed in the previous step.
+- [x] Wire `LinkPreviewModule` into the main `AppModule` imports array.
 
 ## Phase 62: System Messages
 - [ ] Render custom system event bubbles in chat (e.g., "Profile updated", "Missed call").
