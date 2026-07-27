@@ -555,7 +555,7 @@
 ## Phase 71: Enhanced Content Interaction
 
 - [STUCK] Implement 'Create Flashcard' context menu option for any text selection within chat messages and moment posts.
-- [ ] Build 'Correction Quality' rating system (up/down votes) for community corrections on Moments.
+- [STUCK] Build 'Correction Quality' rating system (up/down votes) for community corrections on Moments.
 - [ ] Implement a user-level 'Corrector Score' based on ratings to display on profiles.
 
 ## Phase 72: Advanced AI-Tutor Features
