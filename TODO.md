@@ -549,7 +549,7 @@
 - [STUCK] Add subtle micro-animations (`framer-motion` or CSS) to button clicks and hover states.
 - [STUCK] Animate Angular route transitions for a smoother navigation feel.
 - [STUCK] Build an interactive, multi-step product tour for new users using a library like `ngx-joyride`.
-- [ ] Refine chat bubble appearance with distinct sent/received styles and message-tail pointers.
+- [STUCK] Refine chat bubble appearance with distinct sent/received styles and message-tail pointers.
 - [ ] Add haptic feedback on mobile for key actions (e.g., sending message, liking a post).
 
 ## Phase 71: Enhanced Content Interaction
