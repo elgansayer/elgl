@@ -1,6 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-
-import { Injectable, Logger, BadRequestException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  Inject,
+} from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import * as cheerio from 'cheerio';
@@ -46,7 +49,9 @@ export class LinkPreviewService {
 
     const protocol = parsed.protocol.toLowerCase();
     if (protocol !== 'http:' && protocol !== 'https:') {
-      throw new BadRequestException('Only http and https protocols are allowed');
+      throw new BadRequestException(
+        'Only http and https protocols are allowed',
+      );
     }
 
     if (parsed.username || parsed.password) {
