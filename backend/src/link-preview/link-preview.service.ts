@@ -88,7 +88,7 @@ export class LinkPreviewService {
       throw new BadRequestException('URL does not point to an HTML resource');
     }
 
-    const html = (response.data ?? '') as string;
+    const html = response.data ?? '';
     const $ = cheerio.load(html);
 
     // Remove script/style/noscript content so it does not pollute textual fields
