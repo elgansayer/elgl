@@ -18,9 +18,7 @@ export class SystemMessageService {
       i18nArgs: dto.i18nArgs ?? null,
     };
 
-    this.logger.log(
-      `Publishing system message to channel "${targetChannel}"`,
-    );
+    this.logger.log(`Publishing system message to channel "${targetChannel}"`);
     await this.centrifugoService.publish(targetChannel, payload);
   }
 }
