@@ -1,5 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject, EnvironmentInjector, ApplicationRef, createComponent, ComponentRef } from '@angular/core';
 import { APP_VERSION, MIN_SUPPORTED_VERSION } from '../version.constants';
+import { UpdateModalComponent } from '../components/update-modal/update-modal.component';
 
 /**
  * Checks whether the installed app version is deprecated and
@@ -10,11 +11,10 @@ export class VersionCheckService {
   /** True when the current app version is below the minimum supported version */
   readonly isDeprecated = signal(false);
 
-  /**
-   * Platform-specific store link shown inside the forced-update modal.
-   * Can be overridden by consumers.
-   */
-  private readonly storeBase = 'https://yourapp.com/update';
+  private environmentInjector = inject(EnvironmentInjector);
+  private appRef = inject(ApplicationRef);
+
+  private modalRef?: ComponentRef<UpdateModalComponent> = undefined;
 
   /** Parse and compare version strings */
   private isVersionLower(installed: string, minimum: string): boolean {
@@ -32,25 +32,50 @@ export class VersionCheckService {
   }
 
   /**
-   * Runs the version comparison and updates the `isDeprecated` signal.
+   * Runs the version comparison, updates the `isDeprecated` signal,
+   * and displays a blocking modal if the app is deprecated.
    * @returns true if the app is deprecated
    */
   async checkVersion(): Promise<boolean> {
     const deprecated = this.isVersionLower(APP_VERSION, MIN_SUPPORTED_VERSION);
     this.isDeprecated.set(deprecated);
+    if (deprecated) {
+      this.showBlockingModal();
+    }
     return deprecated;
   }
 
   /**
-   * Returns a store link appropriate for the current device.
-   * Override this method in a subclass or configure the base URL.
+   * Opens a full‑screen modal that prevents any interaction with the app.
+   * The only action available is to close the modal (which destroys it).
    */
-  getUpdateStoreUrl(): string {
-    // Basic user‑agent detection; refine as needed
-    const ios = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
-    const android = /android/i.test(window.navigator.userAgent);
-    if (ios) return `${this.storeBase}?platform=ios`;
-    if (android) return `${this.storeBase}?platform=android`;
-    return this.storeBase;
+  private showBlockingModal(): void {
+    if (this.modalRef) {
+      return; // already visible
+    }
+
+    const hostElement = document.createElement('div');
+    const componentRef = createComponent(UpdateModalComponent, {
+      environmentInjector: this.environmentInjector,
+      hostElement,
+    });
+
+    componentRef.setInput(
+      'message',
+      'A new version is available. Please update the app to continue.'
+    );
+
+    document.body.appendChild(hostElement);
+    this.appRef.attachView(componentRef.hostView);
+
+    componentRef.instance.close.subscribe(() => this.destroyModal(componentRef, hostElement));
+    this.modalRef = componentRef;
+  }
+
+  private destroyModal(componentRef: ComponentRef<UpdateModalComponent>, hostElement: HTMLElement): void {
+    this.appRef.detachView(componentRef.hostView);
+    componentRef.destroy();
+    document.body.removeChild(hostElement);
+    this.modalRef = undefined;
   }
 }
