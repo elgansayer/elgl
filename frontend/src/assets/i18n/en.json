@@ -545,5 +545,7 @@
   "help.centre.noResults": "No matching articles found.",
   "forcedUpdateModal.title": "Update Required",
   "forcedUpdateModal.message": "A new version of the app is available. Please update to continue.",
-  "forcedUpdateModal.updateButton": "Update Now"
+  "forcedUpdateModal.updateButton": "Update Now",
+  "system.profileUpdated": "Profile updated",
+  "system.missedCall": "Missed call"
 }
