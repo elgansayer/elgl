@@ -52,6 +52,6 @@ export default defineConfig({
     command: 'cd ../frontend && npm run start',
     url: 'http://localhost:4200',
     reuseExistingServer: !process.env.CI,
-    timeout: 120000
+    timeout: 300000
   }
 });

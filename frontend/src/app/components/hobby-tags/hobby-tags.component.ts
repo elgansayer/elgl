@@ -135,12 +135,6 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                     <span class="text-sm font-semibold text-text-primary">{{ word.word }}</span>
                     <span class="text-xs text-text-muted ms-2">{{ word.translation }}</span>
                   </div>
-                  <app-pill
-                    [colour]="getDifficultyColour(word.difficulty)"
-                    [size]="'sm'"
-                  >
-                    {{ word.difficulty }}
-                  </app-pill>
                 </div>
                 @if (word.context_sentence) {
                   <p class="text-xs text-text-muted mt-1 italic">{{ word.context_sentence }}</p>
@@ -250,15 +244,6 @@ export class HobbyTagsComponent implements OnInit {
       case 1: return 'warning';
       case 2: return 'info';
       case 3: return 'primary';
-      default: return 'neutral';
-    }
-  }
-
-  getDifficultyColour(difficulty: string): 'success' | 'warning' | 'danger' | 'neutral' {
-    switch (difficulty) {
-      case 'easy': return 'success';
-      case 'medium': return 'warning';
-      case 'hard': return 'danger';
       default: return 'neutral';
     }
   }
