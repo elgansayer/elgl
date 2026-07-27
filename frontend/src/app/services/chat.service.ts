@@ -16,10 +16,14 @@ export interface ChatMessage {
   id: string;
   room_id: string;
   sender_id: string;
-  message_type: 'text' | 'voice' | 'correction' | 'doodle' | 'sticker';
+  message_type: 'text' | 'voice' | 'correction' | 'doodle' | 'sticker' | 'system';
   text_content?: string;
   media_url?: string;
   correction_payload?: CorrectionPayload;
+  system_event?: {
+    type: string;
+    message: string;
+  };
   is_read: boolean;
   created_at: string;
   sender?: {

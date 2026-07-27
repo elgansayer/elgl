@@ -11,31 +11,39 @@ import { TranslatePipe } from '../services/translate.pipe';
   standalone: true,
   imports: [LongPressContextMenuComponent, DatePipe, TranslatePipe],
   template: `
-    <div class="flex flex-col" [class.items-end]="isOwnMessage()" [class.items-start]="!isOwnMessage()">
-      <app-long-press-context-menu 
-        [messageId]="message().id"
-        [messageContent]="message().text_content ?? ''"
-        [messageType]="message().message_type"
-        [senderId]="message().sender_id"
-        [roomId]="channelId()"
-        (favourite)="onFavouriteAdded($event.messageId)"
-        (report)="onReportSubmitted()"
-      >
-        <div 
-          class="message-bubble p-3 rounded-lg cursor-pointer select-none"
-          [class.bg-blue-600]="isOwnMessage()"
-          [class.bg-surface-100]="!isOwnMessage()"
+    @if (message().message_type === 'system' && message().system_event) {
+      <div class="flex justify-center w-full my-2">
+        <span class="rounded-full bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-xs px-4 py-1">
+          {{ message().system_event?.message }}
+        </span>
+      </div>
+    } @else {
+      <div class="flex flex-col" [class.items-end]="isOwnMessage()" [class.items-start]="!isOwnMessage()">
+        <app-long-press-context-menu 
+          [messageId]="message().id"
+          [messageContent]="message().text_content ?? ''"
+          [messageType]="message().message_type"
+          [senderId]="message().sender_id"
+          [roomId]="channelId()"
+          (favourite)="onFavouriteAdded($event.messageId)"
+          (report)="onReportSubmitted()"
         >
-          <p class="text-white text-sm">{{ message().text_content }}</p>
-          @if (message().media_url) {
-            <img [src]="message().media_url" [alt]="'chat.attachedImageAlt' | t" class="mt-2 rounded max-w-full max-h-64 object-cover" />
-          }
-          <span class="text-xs text-text-muted mt-1 block">
-            {{ message().created_at | date:'short' }}
-          </span>
-        </div>
-      </app-long-press-context-menu>
-    </div>
+          <div 
+            class="message-bubble p-3 rounded-lg cursor-pointer select-none"
+            [class.bg-blue-600]="isOwnMessage()"
+            [class.bg-surface-100]="!isOwnMessage()"
+          >
+            <p class="text-white text-sm">{{ message().text_content }}</p>
+            @if (message().media_url) {
+              <img [src]="message().media_url" [alt]="'chat.attachedImageAlt' | t" class="mt-2 rounded max-w-full max-h-64 object-cover" />
+            }
+            <span class="text-xs text-text-muted mt-1 block">
+              {{ message().created_at | date:'short' }}
+            </span>
+          </div>
+        </app-long-press-context-menu>
+      </div>
+    }
   `,
   styles: [`
     .message-bubble {
