@@ -367,19 +367,21 @@
 - [x] Create `.github/workflows/deploy.yml` for automated testing and Docker image builds.
 
 ## Phase 56: Server Monitoring
-- [ ] Configure Prometheus and Grafana Docker containers for NestJS and Centrifugo metrics.
+- [x] Configure Prometheus and Grafana Docker containers for NestJS and Centrifugo metrics.
 
 ## Phase 57: Global Error Handler
-- [ ] Implement custom Angular `ErrorHandler` logging client crashes to backend analytics.
+- [x] Implement custom Angular `ErrorHandler` logging client crashes to backend analytics.
 
 ## Phase 58: Empty States
-- [ ] Design custom vector illustrations for "No Messages", "No Moments Found", and "No Users Nearby".
+- [x] Design custom vector illustrations for "No Messages", "No Moments Found", and "No Users Nearby".
 
 ## Phase 59: Input Sanitisation
-- [ ] Implement strict HTML sanitisation using `DOMPurify` on all user-submitted text.
+- [x] Implement strict HTML sanitisation using `DOMPurify` on all user-submitted text.
+- [x] Exempt non-user-authored body fields (client error `stack` traces in `LogClientErrorDto`, Apple/Google IAP webhook payloads) from the global `SanitiseHtmlPipe`, which currently strips angle-bracket content like `<anonymous>` and generic type params from stack traces before they reach analytics.
 
 ## Phase 60: Drafts System
-- [ ] Persist unsent chat messages and Moment drafts to `localStorage`.
+- [x] Persist unsent chat messages and Moment drafts to `localStorage`. (Added `DraftsService` (`frontend/src/app/services/drafts.service.ts`) with per-room chat draft keys (`hellotalk_chat_draft_{roomId}`) and a single moment compose draft key (`hellotalk_moment_draft`), guarded for SSR/no-`localStorage` environments. Wired into `ChatRoomComponent`: loads the room's draft into `textInput` on room load, persists on every keystroke via `onTextInputChange`. Wired into `MomentsFeedComponent`: loads the compose draft (text, media URLs/type, target language) on init and reopens the compose form if one exists, persists on text/media changes, and clears it once a moment is published successfully (correctly only clears after the `createMoment` await succeeds). Verified: `npm run lint` and `npx tsc --noEmit -p tsconfig.app.json` show no new errors (pre-existing unrelated `environments/environment` and `moderation.service.ts` errors confirmed present before this change via `git stash`).)
+- [x] Fix `ChatRoomComponent.sendTextMessage()` (`frontend/src/app/components/chat-room/chat-room.component.ts:171`): it clears `textInput` and calls `draftsService.clearChatDraft()` *before* `chatService.sendMessage` is awaited, with no restore in the `catch` block. A failed send (offline, server error, moderation rejection) currently loses the message text entirely instead of leaving it recoverable as a draft. Move the clear to after a successful send, matching the pattern already used correctly in `MomentsFeedComponent.submitMoment()`.
 
 ## Phase 61: Link Previews
 - [ ] Build NestJS OpenGraph scraper rendering rich link preview cards in chat.
