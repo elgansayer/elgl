@@ -521,7 +521,7 @@
 
 ## Phase 67: AI-Powered Learning Tools
 
-- [ ] Design and build AI Conversation Partner chat interface.
+- [STUCK] Design and build AI Conversation Partner chat interface.
 - [ ] Implement NestJS service to proxy chat messages to a Large Language Model (e.g., GPT-4, Llama).
 - [ ] Add "Explain this" context menu option on corrected text to get AI-generated grammar breakdown.
 - [ ] Implement AI-generated suggested replies in chat based on conversation context.
