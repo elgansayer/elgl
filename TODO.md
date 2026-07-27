@@ -395,6 +395,8 @@
 
 ## Phase 62: System Messages
 - [ ] Render custom system event bubbles in chat (e.g., "Profile updated", "Missed call").
+- [ ] Create system message integration (backend Centrifugo publish and frontend i18n bubble).
+- [ ] Build `system-message-bubble` component handling i18n keys 'system.profileUpdated', 'system.missedCall' and wire to Centrifugo events.
 
 ## Phase 63: Account Recovery
 - [ ] Build "Forgot Password" UI and NestJS email dispatch service.
