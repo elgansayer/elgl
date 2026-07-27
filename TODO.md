@@ -581,7 +581,7 @@
 
 - [STUCK] Implement real-time translation for the text chat overlay inside Voicerooms.
 - [STUCK] Build a "Quick Poll" feature for Voiceroom hosts to create multiple-choice questions for the audience.
-- [ ] Add a "Soundboard" feature for hosts to play pre-recorded audio clips (e.g., applause, jingles).
+- [STUCK] Add a "Soundboard" feature for hosts to play pre-recorded audio clips (e.g., applause, jingles).
 
 ## Phase 76: Advanced Discovery & Onboarding
 
