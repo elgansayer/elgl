@@ -23,7 +23,7 @@ export class SystemMessagesService {
     };
     await this.centrifugo.publish(channel, message);
     this.logger.log(
-      `System message sent to user ${userId}, type ${event.type}`
+      `System message sent to user ${userId}, type ${event.type}`,
     );
   }
 }
