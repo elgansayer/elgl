@@ -21,8 +21,14 @@ export class HelpCentreComponent implements OnInit {
     try {
       const result = await this.faqService.getFaqs();
       this.faqs.set(result);
-    } catch (e: any) {
-      this.error.set(e?.message || 'Failed to load FAQs');
+    } catch (e: unknown) {
+      let errMsg = 'Failed to load FAQs';
+      if (e instanceof Error) {
+        errMsg = e.message;
+      } else if (typeof e === 'string') {
+        errMsg = e;
+      }
+      this.error.set(errMsg);
     } finally {
       this.loading.set(false);
     }
