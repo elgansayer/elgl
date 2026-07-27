@@ -517,7 +517,7 @@
 - [STUCK] Implement proficiency level filter in Discovery search.
 - [STUCK] Build "Interests" tagging UI in profile settings (e.g., "tech", "travel", "movies").
 - [STUCK] Add "Interests" filter to Discovery search to match users with shared hobbies.
-- [ ] Add "Learning Goals" free-text field to user profile to state user motivations.
+- [STUCK] Add "Learning Goals" free-text field to user profile to state user motivations.
 
 ## Phase 67: AI-Powered Learning Tools
 
