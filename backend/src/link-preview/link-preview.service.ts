@@ -94,9 +94,9 @@ export class LinkPreviewService {
     // Remove script/style/noscript content so it does not pollute textual fields
     $('script, style, noscript').remove();
 
-    let rawTitle =
+    const rawTitle =
       this.getMetaTag($, 'og:title') || $('title').text().trim() || '';
-    let rawDescription =
+    const rawDescription =
       this.getMetaTag($, 'og:description') ||
       this.getMetaTag($, 'description') ||
       '';
