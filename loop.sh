@@ -68,110 +68,155 @@ has_substantive_changes() {
     [ -n "$changed" ]
 }
 
-run_aider_with_fallback() {
+# Returns 0 on success, 1 on non-quota failure, 2 on quota/rate limit
+run_copilot_cli() {
     local MESSAGE="$1"
-    local FILES_AND_ARGS="$2"
 
-    # Claude Opus is the primary model, falling back to Gemini and then DeepSeek.
-    # This order is based on user preference for model capabilities.
-    local MODELS=(
-        "openai/claude-opus-4.7 openai/claude-sonnet-4.5 Claude-Opus-4.7"
-        "openai/claude-opus-5 openai/claude-sonnet-4.5 Claude-Opus-5"
-        "gemini/gemini-3.1-pro-preview gemini/gemini-3.1-pro-preview Gemini-3-Pro"
-        "deepseek/deepseek-v4-pro deepseek/deepseek-v4-pro DeepSeek-V4-Pro"
-        "gemini/gemini-3.5-flash gemini/gemini-3.5-flash Gemini-Flash"
-    )
-
-    # Preflight: drop entries whose model or editor model is not actually callable, so a
-    # dead id cannot masquerade as "this model tried the task and failed".
-    local USABLE=()
-    local VERIFIED=0
-    local rc
-    for config in "${MODELS[@]}"; do
-        read -r MODEL EDITOR NAME <<< "$config"
-
-        model_is_callable "$MODEL"; rc=$?
-        if [ $rc -eq 1 ]; then
-            echo "Preflight: skipping $NAME, model $MODEL is not callable."
-            continue
-        fi
-        local model_rc=$rc
-
-        model_is_callable "$EDITOR"; rc=$?
-        if [ $rc -eq 1 ]; then
-            echo "Preflight: skipping $NAME, editor model $EDITOR is not callable."
-            continue
-        fi
-
-        # rc 3 means unverifiable, so allow it through but do not count it as proof that
-        # the credentials work.
-        [ $model_rc -eq 0 ] && [ $rc -eq 0 ] && VERIFIED=$((VERIFIED + 1))
-        USABLE+=("$config")
-    done
-
-    if [ ${#USABLE[@]} -eq 0 ]; then
-        echo "CRITICAL: no callable models. This is a credential or configuration fault,"
-        echo "not a task failure. Check .env and scripts/preflight-models.sh output."
-        return 2
-    fi
-    echo "Preflight: ${#USABLE[@]} of ${#MODELS[@]} models callable ($VERIFIED verified)."
-
-    for config in "${USABLE[@]}"; do
-        read -r MODEL EDITOR NAME <<< "$config"
-        echo "Attempting: $NAME..."
-        > current_aider.log
-        
-        # Watcher: kills Aider instantly if litellm rate limits or quota is hit
-        ( tail -f current_aider.log 2>/dev/null | grep -i -m 1 -E "RateLimitError|quota exceeded|rate limited" && pkill -f "aider.*$MODEL" ) &
-        WATCHER_PID=$!
-        disown $WATCHER_PID # Stops Bash from printing "Killed" when we terminate it
-        
-        timeout 12m aider --yes --no-show-model-warnings --editor-edit-format diff-fenced $FILES_AND_ARGS --model "$MODEL" --editor-model "$EDITOR" --message "$MESSAGE" 2>&1 | tee current_aider.log
-        AIDER_EXIT=${PIPESTATUS[0]}
-
-        kill -9 $WATCHER_PID 2>/dev/null || true
-
-        # Guard: some models emit reasoning prose before the filename, which makes
-        # Aider create phantom directories such as "Let me produce the block.backend/src/x.ts".
-        # Delete them immediately so they never reach a commit.
-        purge_phantom_paths
-
-        if [ $AIDER_EXIT -eq 0 ]; then
-            return 0
-        fi
-
-        # Do NOT reset --hard here. A model timeout or quota error is not a reason to
-        # destroy the edits earlier models already landed; the next model builds on them.
-        echo "$NAME failed or hit quota limit. Falling through to the next model, work preserved."
-    done
-
-    # Everything failed and we could not verify a single model against its provider. That
-    # is almost always a dead API key or no network, so report it as infrastructure
-    # (exit 2) rather than letting three cycles of it mark a sound task [STUCK].
-    if [ $VERIFIED -eq 0 ]; then
-        echo "CRITICAL: every model failed and none could be verified. Treating as an"
-        echo "infrastructure fault. Check the API keys in .env."
-        return 2
+    if ! command -v gh &> /dev/null; then
+        echo "GitHub CLI (gh) not found."
+        return 1
     fi
 
-    echo "CRITICAL: all ${#USABLE[@]} callable models failed for this step."
-    return 1
+    if ! gh copilot --help &> /dev/null 2>&1; then
+        echo "GitHub Copilot CLI not available."
+        return 1
+    fi
+
+    echo "Running GitHub Copilot CLI..."
+    local output
+    output=$(gh copilot suggest "$MESSAGE" 2>&1)
+    local exit_code=$?
+
+    if [ $exit_code -ne 0 ]; then
+        if echo "$output" | grep -qiE "quota|rate.limit|429|too.many.requests"; then
+            echo "GitHub Copilot CLI hit quota/rate limit."
+            return 2
+        fi
+        echo "GitHub Copilot CLI failed with exit code $exit_code"
+        return 1
+    fi
+
+    echo "$output"
+    return 0
 }
 
-# Entry point every pipeline stage should call. Tries the Claude Pro subscription first
-# (via Claude Code CLI, run_claude_code in scripts/claude-pro.sh) since it is the strongest
-# model and costs nothing extra to attempt; only when that tier fails (usage cap hit, CLI
-# missing, or an error) does it bail to the Aider waterfall on Copilot/Gemini/DeepSeek.
+# Returns 0 on success, 1 on non-quota failure, 2 on quota/rate limit
+run_antigravity_cli() {
+    local MESSAGE="$1"
+
+    if ! command -v antigravity &> /dev/null; then
+        echo "Antigravity CLI not found."
+        return 1
+    fi
+
+    echo "Running Antigravity CLI..."
+    local output
+    output=$(antigravity "$MESSAGE" 2>&1)
+    local exit_code=$?
+
+    if [ $exit_code -ne 0 ]; then
+        if echo "$output" | grep -qiE "quota|rate.limit|429|too.many.requests"; then
+            echo "Antigravity CLI hit quota/rate limit."
+            return 2
+        fi
+        echo "Antigravity CLI failed with exit code $exit_code"
+        return 1
+    fi
+
+    echo "$output"
+    return 0
+}
+
+# Returns 0 on success, 1 on non-quota failure, 2 on quota/rate limit
+run_deepseek_api() {
+    local MESSAGE="$1"
+
+    if [ -z "$DEEPSEEK_API_KEY" ]; then
+        echo "DEEPSEEK_API_KEY not set."
+        return 1
+    fi
+
+    echo "Running DeepSeek API..."
+    local output
+    output=$(curl -s -X POST "https://api.deepseek.com/v1/chat/completions" \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $DEEPSEEK_API_KEY" \
+        -d "{\"model\":\"deepseek-chat\",\"messages\":[{\"role\":\"user\",\"content\":\"$MESSAGE\"}]}" 2>&1)
+    local exit_code=$?
+
+    if [ $exit_code -ne 0 ]; then
+        if echo "$output" | grep -qiE "quota|rate.limit|429|insufficient_quota"; then
+            echo "DeepSeek API hit quota/rate limit."
+            return 2
+        fi
+        echo "DeepSeek API failed with exit code $exit_code"
+        return 1
+    fi
+
+    echo "$output"
+    return 0
+}
+
+# Entry point every pipeline stage should call.
+# Tries tools in order: Claude CLI -> GitHub Copilot CLI -> Antigravity CLI -> DeepSeek API
+# Falls through to next tool only on quota/rate limit errors (exit code 2).
+# Any other error stops the chain and returns 1.
 run_task_with_fallback() {
     local MESSAGE="$1"
     local FILES_AND_ARGS="$2"
 
+    # Step 1: Claude CLI
+    echo "Attempting Claude CLI..."
     run_claude_code "$MESSAGE"
-    if [ $? -eq 0 ]; then
+    local rc=$?
+    if [ $rc -eq 0 ]; then
         return 0
+    elif [ $rc -eq 2 ]; then
+        echo "Claude CLI quota/rate limit. Falling through to GitHub Copilot CLI."
+    else
+        echo "Claude CLI failed with non-quota error. Stopping."
+        return 1
     fi
 
-    run_aider_with_fallback "$MESSAGE" "$FILES_AND_ARGS"
+    # Step 2: GitHub Copilot CLI
+    echo "Attempting GitHub Copilot CLI..."
+    run_copilot_cli "$MESSAGE"
+    rc=$?
+    if [ $rc -eq 0 ]; then
+        return 0
+    elif [ $rc -eq 2 ]; then
+        echo "GitHub Copilot CLI quota/rate limit. Falling through to Antigravity CLI."
+    else
+        echo "GitHub Copilot CLI failed with non-quota error. Stopping."
+        return 1
+    fi
+
+    # Step 3: Antigravity CLI
+    echo "Attempting Antigravity CLI..."
+    run_antigravity_cli "$MESSAGE"
+    rc=$?
+    if [ $rc -eq 0 ]; then
+        return 0
+    elif [ $rc -eq 2 ]; then
+        echo "Antigravity CLI quota/rate limit. Falling through to DeepSeek API."
+    else
+        echo "Antigravity CLI failed with non-quota error. Stopping."
+        return 1
+    fi
+
+    # Step 4: DeepSeek API
+    echo "Attempting DeepSeek API..."
+    run_deepseek_api "$MESSAGE"
+    rc=$?
+    if [ $rc -eq 0 ]; then
+        return 0
+    elif [ $rc -eq 2 ]; then
+        echo "DeepSeek API quota/rate limit. All tools exhausted."
+        return 2
+    else
+        echo "DeepSeek API failed with non-quota error. Stopping."
+        return 1
+    fi
 }
 
 while true; do
