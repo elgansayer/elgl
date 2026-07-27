@@ -15,7 +15,8 @@ export interface ChatMessage {
   id: string;
   room_id: string;
   sender_id: string;
-  message_type: 'text' | 'voice' | 'correction' | 'doodle' | 'sticker' | 'system';
+  message_type:
+    'text' | 'voice' | 'correction' | 'doodle' | 'sticker' | 'system';
   text_content?: string;
   media_url?: string;
   correction_payload?: CorrectionPayload;

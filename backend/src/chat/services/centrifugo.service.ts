@@ -32,7 +32,7 @@ export class CentrifugoService {
     } catch (error) {
       this.logger.error(
         `Failed to publish to Centrifugo channel ${channel}`,
-        (error as any)?.stack,
+        error?.stack,
       );
       throw error;
     }
