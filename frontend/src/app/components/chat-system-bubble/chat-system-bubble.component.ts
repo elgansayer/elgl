@@ -28,7 +28,7 @@ import { I18nService } from '../../services/i18n.service';
 })
 export class ChatSystemBubbleComponent {
   @Input({ required: true }) eventType!: string;
-  @Input() payload?: Record<string, any>;
+  @Input() payload?: Record<string, unknown>;
 
   private i18n = inject(I18nService);
 
