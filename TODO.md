@@ -296,7 +296,7 @@
 
 - [x] Build "My Stats" dashboard tracking study hours, messages sent, and corrections made.
 - [x] Render visual charts using Chart.js inside Angular.
-- [x] Implement backend endpoints for user statistics.
+- [ ] Implement backend endpoints for user statistics.
 
 ## Phase 34: UI Theming
 

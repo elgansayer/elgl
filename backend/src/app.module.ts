@@ -92,7 +92,7 @@ import { validationSchema } from './config/validation.schema';
     AppService,
     {
       provide: APP_GUARD,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       useClass: ThrottlerGuard,
     },
   ],

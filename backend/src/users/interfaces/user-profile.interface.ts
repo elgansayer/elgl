@@ -22,6 +22,7 @@ export interface UserProfile {
   privacy_hide_gender: boolean;
   is_admin?: boolean;
   created_at: string;
+  scheduled_for_deletion_at?: string;
 }
 
 export interface ProfileVisitor {
