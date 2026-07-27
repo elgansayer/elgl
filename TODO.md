@@ -397,6 +397,8 @@
 - [ ] Render custom system event bubbles in chat (e.g., "Profile updated", "Missed call").
 - [ ] Create system message integration (backend Centrifugo publish and frontend i18n bubble).
 - [ ] Build `system-message-bubble` component handling i18n keys 'system.profileUpdated', 'system.missedCall' and wire to Centrifugo events.
+- [ ] Complete implementation of system event bubbles (the diff provided for Phase 62 only touched unrelated configuration files and did not deliver the feature).
+- [ ] Implement the actual system‑message bubble rendering (chat component, i18n keys, and Centrifugo integration) – currently missing from the codebase.
 
 ## Phase 63: Account Recovery
 - [ ] Build "Forgot Password" UI and NestJS email dispatch service.
