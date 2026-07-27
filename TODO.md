@@ -513,7 +513,7 @@
 
 ## Phase 66: Enhanced Profile & Matchmaking
 
-- [ ] Add `proficiency_level` (`'a1'` to `'c2'`) to `users` table schema and profile UI.
+- [STUCK] Add `proficiency_level` (`'a1'` to `'c2'`) to `users` table schema and profile UI.
 - [ ] Implement proficiency level filter in Discovery search.
 - [ ] Build "Interests" tagging UI in profile settings (e.g., "tech", "travel", "movies").
 - [ ] Add "Interests" filter to Discovery search to match users with shared hobbies.
