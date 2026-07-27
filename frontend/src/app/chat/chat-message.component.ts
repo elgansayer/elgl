@@ -13,9 +13,10 @@ import { TranslatePipe } from '../services/translate.pipe';
   template: `
     @if (message().message_type === 'system' && message().system_event) {
       <div class="flex justify-center w-full my-2">
-        <span class="rounded-full bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-xs px-4 py-1">
-          {{ message().system_event?.message }}
-        </span>
+        <div class="inline-flex items-center gap-1.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-xs px-4 py-1 whitespace-nowrap">
+          <span class="text-sm leading-none" aria-hidden="true">{{ getSystemEventIcon(message().system_event?.type) }}</span>
+          <span>{{ message().system_event?.message }}</span>
+        </div>
       </div>
     } @else {
       <div class="flex flex-col" [class.items-end]="isOwnMessage()" [class.items-start]="!isOwnMessage()">
@@ -58,6 +59,19 @@ export class ChatMessageComponent {
   readonly isOwnMessage = input<boolean>(false);
   private favouriteService = inject(FavouriteService);
   private safetyService = inject(SafetyService);
+
+  private systemEventIcons: Record<string, string> = {
+    'profile_updated': '👤',
+    'missed_call':    '📞',
+    'room_joined':    '👥',
+    'room_left':      '👋',
+    'call_ended':     '⏹️',
+    'default':        'ℹ️'
+  };
+
+  getSystemEventIcon(type: string | undefined): string {
+    return this.systemEventIcons[type ?? ''] ?? this.systemEventIcons['default'];
+  }
 
   onFavouriteAdded(messageId: string): void {
     this.favouriteService.addFavourite({ message_id: messageId }).subscribe({
