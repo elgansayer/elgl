@@ -80,7 +80,7 @@ export class LinkPreviewService {
 
   private async fetchPreview(url: string): Promise<LinkPreview | null> {
     const response = await firstValueFrom(
-      this.httpService.get(url, { timeout: 5000, maxRedirects: 3 }),
+      this.httpService.get<string>(url, { timeout: 5000, maxRedirects: 3 }),
     );
 
     const contentType = (response.headers['content-type'] ?? '').toLowerCase();
