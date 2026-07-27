@@ -602,7 +602,7 @@
 ## Phase 79: Economy-Driven Learning
 
 - [STUCK] Allow spending virtual coins to unlock premium one-off AI services (e.g., "Conversation Analysis Report").
-- [ ] Build "Language Challenge" system with coin-based entry fees and prize pools (e.g., "7-day writing streak challenge").
+- [STUCK] Build "Language Challenge" system with coin-based entry fees and prize pools (e.g., "7-day writing streak challenge").
 
 ## Phase C: Chat Interface Feature Checklist (WhatsApp Clone)
 
