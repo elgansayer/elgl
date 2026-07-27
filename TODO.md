@@ -568,7 +568,7 @@
 
 - [STUCK] Build celebratory full-screen animation/confetti for completing study streaks (e.g., 7, 30, 100 days).
 - [STUCK] Implement "Partner of the Week" algorithm to highlight highly-rated language partners in the Discovery feed.
-- [ ] Add haptic feedback for grading flashcards (e.g., success buzz for 'Known', gentle pulse for 'Learning').
+- [STUCK] Add haptic feedback for grading flashcards (e.g., success buzz for 'Known', gentle pulse for 'Learning').
 
 ## Phase 74: Voiceroom Learning Tools
 
