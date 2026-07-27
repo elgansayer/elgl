@@ -546,7 +546,7 @@
 ## Phase 70: UI/UX Polish & Animation
 
 - [STUCK] Implement skeleton loaders (`ngx-skeleton-loader`) for all data-heavy components (feed, chat, profiles).
-- [ ] Add subtle micro-animations (`framer-motion` or CSS) to button clicks and hover states.
+- [STUCK] Add subtle micro-animations (`framer-motion` or CSS) to button clicks and hover states.
 - [ ] Animate Angular route transitions for a smoother navigation feel.
 - [ ] Build an interactive, multi-step product tour for new users using a library like `ngx-joyride`.
 - [ ] Refine chat bubble appearance with distinct sent/received styles and message-tail pointers.
