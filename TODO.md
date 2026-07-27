@@ -492,7 +492,7 @@
 ### Privacy, Blocking & Discoverability
 
 - [STUCK] Build "Privacy Settings" hub.
-- [ ] Implement "Who can see my profile" toggle (Everyone, VIPs only, Hidden).
+- [STUCK] Implement "Who can see my profile" toggle (Everyone, VIPs only, Hidden).
 - [ ] Build "User Filter Settings" to restrict initial message senders by age or native language.
 - [ ] Build "Block Management" page to manage and unblock users.
 
