@@ -468,7 +468,7 @@
 
 ## Phase 63: Account Recovery
 
-- [ ] Build "Forgot Password" UI and NestJS email dispatch service.
+- [STUCK] Build "Forgot Password" UI and NestJS email dispatch service.
 
 ## Phase 64: Self-Healing QA & Visual Refinement Loop
 
