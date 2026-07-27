@@ -25,15 +25,15 @@ RTL logical class check passed.
 > backend@0.0.1 test
 > NODE_OPTIONS='--experimental-vm-modules' jest
 
-(node:846428) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(node:846962) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
-[31m[Nest] 846428  - [39m07/27/2026, 7:09:18 PM [31m  ERROR[39m [38;5;3m[LinkPreviewService] [39m[31mFailed to fetch link preview for https://example.com/data.json: URL does not point to an HTML resource[39m
-[31m[Nest] 846428  - [39m07/27/2026, 7:09:18 PM [31m  ERROR[39m [38;5;3m[LinkPreviewService] [39m[31mFailed to fetch link preview for https://unreachable.example.com: timeout[39m
+[31m[Nest] 846962  - [39m07/27/2026, 7:11:26 PM [31m  ERROR[39m [38;5;3m[LinkPreviewService] [39m[31mFailed to fetch link preview for https://example.com/data.json: URL does not point to an HTML resource[39m
+[31m[Nest] 846962  - [39m07/27/2026, 7:11:26 PM [31m  ERROR[39m [38;5;3m[LinkPreviewService] [39m[31mFailed to fetch link preview for https://unreachable.example.com: timeout[39m
 
 Test Suites: 37 passed, 37 total
 Tests:       357 passed, 357 total
 Snapshots:   0 total
-Time:        27.965 s, estimated 29 s
+Time:        42.916 s
 Ran all test suites.
 
 > frontend@0.0.0 test
@@ -41,7 +41,7 @@ Ran all test suites.
 
 ❯ Building...
 ✔ Building...
-Application bundle generation complete. [14.226 seconds] - 2026-07-27T19:09:46.569Z
+Application bundle generation complete. [16.535 seconds] - 2026-07-27T19:12:05.371Z
 
 
 [1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90m/home/dev/hellotalk/frontend[39m
@@ -51,6 +51,6 @@ Not implemented: HTMLMediaElement's pause() method
 
 [2m Test Files [22m [1m[32m29 passed[39m[22m[90m (29)[39m
 [2m      Tests [22m [1m[32m124 passed[39m[22m[2m | [22m[33m4 skipped[39m[90m (128)[39m
-[2m   Start at [22m 19:09:47
-[2m   Duration [22m 5.68s[2m (transform 1.35s, setup 673ms, import 1.87s, tests 1.75s, environment 963ms)[22m
+[2m   Start at [22m 19:12:05
+[2m   Duration [22m 6.17s[2m (transform 1.48s, setup 703ms, import 1.96s, tests 1.94s, environment 1.06s)[22m
 
