@@ -498,7 +498,7 @@
 
 ### Notifications & Alerts
 
-- [ ] Build unified "Notifications Area" (Inbox) for system alerts, likes, comments, and followers.
+- [STUCK] Build unified "Notifications Area" (Inbox) for system alerts, likes, comments, and followers.
 - [ ] Build "Notification Settings" toggles for Push Alerts and Badges across Direct Messages, Groups, Likes, and Voicerooms.
 
 ### Chat & Data Storage Settings
