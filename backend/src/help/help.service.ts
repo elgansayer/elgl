@@ -91,9 +91,7 @@ export class HelpService {
     const search = query.search?.toLowerCase();
 
     if (cat) {
-      filtered = filtered.filter(
-        (f) => f.category.toLowerCase() === cat,
-      );
+      filtered = filtered.filter((f) => f.category.toLowerCase() === cat);
     }
 
     if (search) {
