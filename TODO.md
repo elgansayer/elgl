@@ -358,7 +358,7 @@
 
 ## Phase 53: Version Enforcer
 - [x] Build NestJS endpoint returning minimum supported app version.
-- [ ] Build blocking update modal in Angular if current app version is deprecated.
+- [x] Build blocking update modal in Angular if current app version is deprecated.
 
 ## Phase 54: Automated Code Formatting
 - [ ] Configure Prettier and Husky git pre-commit hooks.
