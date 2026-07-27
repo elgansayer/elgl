@@ -586,7 +586,7 @@
 ## Phase 76: Advanced Discovery & Onboarding
 
 - [STUCK] Build "Audio Intros" feed in Discovery to browse users by listening to their spoken introductions.
-- [ ] Implement "Translate Bio" button on user profile cards and pages.
+- [STUCK] Implement "Translate Bio" button on user profile cards and pages.
 
 ## Phase 77: Collaborative Learning Tools
 
