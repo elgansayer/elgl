@@ -357,7 +357,7 @@
 - [STUCK] Build in-app Help Centre fetching dynamic FAQ articles from backend.
 
 ## Phase 53: Version Enforcer
-- [ ] Build NestJS endpoint returning minimum supported app version.
+- [x] Build NestJS endpoint returning minimum supported app version.
 - [ ] Build blocking update modal in Angular if current app version is deprecated.
 
 ## Phase 54: Automated Code Formatting
