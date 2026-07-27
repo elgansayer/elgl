@@ -1,41 +1,33 @@
 import { Component, Input } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
-import { ChatMessage } from '../../../services/chat.service';
+import { SystemMessage } from '../../services/system-message.service';
 
 @Component({
-  standalone: true,
   selector: 'app-system-message-bubble',
-  imports: [TranslatePipe],
+  standalone: true,
+  imports: [CommonModule, TranslatePipe],
   template: `
-    <div class="flex justify-center my-2">
-      <div
-        class="bg-indigo-100/70 dark:bg-indigo-800/30 rounded-full px-4 py-1 text-xs text-indigo-700 dark:text-indigo-300 font-medium"
-      >
-        {{ (translationKey | translate) || displayFallback }}
-      </div>
+    <div
+      class="flex items-center gap-2 my-2 px-3 py-2 bg-yellow-100/70 dark:bg-yellow-800/30 rounded-lg border border-yellow-400 text-sm"
+    >
+      <span class="text-lg">🔔</span>
+      <span class="flex-1">
+        @if (message.i18nKey) {
+          {{ message.i18nKey | translate: message.i18nArgs }}
+        } @else {
+          {{ message.text }}
+        }
+      </span>
+      @if (message.createdAt) {
+        <span class="text-xs opacity-60 whitespace-nowrap">{{
+          message.createdAt | date : 'shortTime'
+        }}</span>
+      }
     </div>
   `,
   styles: [],
 })
 export class SystemMessageBubbleComponent {
-  @Input({ required: true }) message!: ChatMessage;
-
-  get translationKey(): string {
-    const systemEvent = this.message.system_event as {
-      type?: string;
-      [key: string]: unknown;
-    };
-    if (systemEvent?.type) {
-      return `system.${systemEvent.type}`;
-    }
-    return 'system.unknown';
-  }
-
-  get displayFallback(): string {
-    const systemEvent = this.message.system_event as {
-      type?: string;
-      [key: string]: unknown;
-    };
-    return systemEvent?.type ?? 'unknown event';
-  }
+  @Input({ required: true }) message!: SystemMessage;
 }
