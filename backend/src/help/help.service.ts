@@ -87,7 +87,7 @@ export class HelpService {
   findAll(query: HelpQueryDto) {
     let filtered = [...this.faqs];
 
-    const category = (query as { category?: string }).category;
+    const category = query.category;
     const cat = category?.toLowerCase();
 
     const searchTerm = (query as { search?: string }).search;
