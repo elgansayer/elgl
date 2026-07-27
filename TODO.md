@@ -634,7 +634,7 @@
 ### 3. Audio & Video Calls
 
 - [x] End-to-end encrypted voice calls.
-- [ ] End-to-end encrypted video calls.
+- [STUCK] End-to-end encrypted video calls.
 - [ ] Group calls with a specific participant limit.
 - [ ] Call waiting and switching between calls.
 - [ ] Picture-in-picture mode for video calls.
