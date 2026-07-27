@@ -1,4 +1,5 @@
 import { Component, Input } from '@angular/core';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 /**
  * A modal overlay that blocks all interaction until the user navigates
@@ -10,6 +11,7 @@ import { Component, Input } from '@angular/core';
 @Component({
   selector: 'app-forced-update-modal',
   standalone: true,
+  imports: [TranslatePipe],
   template: `
     <div
       class="fixed inset-0 z-[11000] flex items-center justify-center
@@ -20,10 +22,10 @@ import { Component, Input } from '@angular/core';
                shadow-xl shadow-black/40"
       >
         <h2 class="text-xl font-bold text-white mb-4">
-          {{ title }}
+          {{ 'forcedUpdateModal.title' | t }}
         </h2>
         <p class="text-slate-300 text-sm mb-6">
-          {{ message }}
+          {{ 'forcedUpdateModal.message' | t }}
         </p>
         <a
           [href]="storeUrl"
@@ -33,15 +35,12 @@ import { Component, Input } from '@angular/core';
                  hover:bg-purple-500 transition-colors"
           rel="noopener"
         >
-          Update Now
+          {{ 'forcedUpdateModal.updateButton' | t }}
         </a>
       </div>
     </div>
   `
 })
 export class ForcedUpdateModalComponent {
-  @Input() title = 'Update Required';
-  @Input() message =
-    'A new version of the app is available. Please update to continue.';
   @Input() storeUrl = 'https://yourapp.com/update';
 }

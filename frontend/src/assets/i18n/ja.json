@@ -22,5 +22,8 @@
   },
   "help.centre.title": "ヘルプセンター",
   "help.centre.searchPlaceholder": "FAQを検索…",
-  "help.centre.noResults": "該当する記事が見つかりません。"
+  "help.centre.noResults": "該当する記事が見つかりません。",
+  "forcedUpdateModal.title": "アップデートが必要です",
+  "forcedUpdateModal.message": "新しいバージョンが利用可能です。続行するにはアップデートしてください。",
+  "forcedUpdateModal.updateButton": "今すぐアップデート"
 }
