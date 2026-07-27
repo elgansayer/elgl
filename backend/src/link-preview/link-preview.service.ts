@@ -22,7 +22,7 @@ export class LinkPreviewService {
   async getPreview(url: string): Promise<LinkPreview | null> {
     this.validateUrl(url);
 
-    const cacheKey = `linkPreview:${url}`;
+    const cacheKey = `link_preview:${url}`;
     const cached = await this.redis.get(cacheKey);
     if (cached) {
       try {
@@ -103,8 +103,8 @@ export class LinkPreviewService {
       this.getMetaTag($, 'description') ||
       '';
 
-    const title = rawTitle.trim();
-    const description = rawDescription.trim();
+    const title = this.sanitizeMetaContent(rawTitle);
+    const description = this.sanitizeMetaContent(rawDescription);
 
     let image = this.getMetaTag($, 'og:image') || '';
     if (image) {
@@ -137,5 +137,11 @@ export class LinkPreviewService {
       $(`meta[name="${property}"]`).attr('content') ||
       ''
     ).trim();
+  }
+
+  private sanitizeMetaContent(raw: string): string {
+    const $inner = cheerio.load(`<div>${raw}</div>`);
+    $inner('script, style, noscript').remove();
+    return $inner('div').text().trim();
   }
 }
