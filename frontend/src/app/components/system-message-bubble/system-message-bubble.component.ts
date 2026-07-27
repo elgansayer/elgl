@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { Subscription } from 'rxjs';
 import {
   SystemMessageService,
@@ -21,14 +21,12 @@ interface BubbleMessage {
   templateUrl: './system-message-bubble.component.html',
 })
 export class SystemMessageBubbleComponent implements OnInit, OnDestroy {
+  private systemMessageService = inject(SystemMessageService);
+  private cdr = inject(ChangeDetectorRef);
+
   bubbles: BubbleMessage[] = [];
   private sub!: Subscription;
   private nextId = 0;
-
-  constructor(
-    private systemMessageService: SystemMessageService,
-    private cdr: ChangeDetectorRef,
-  ) {}
 
   ngOnInit(): void {
     this.sub = this.systemMessageService.messages$.subscribe((msg: SystemMessage) => {

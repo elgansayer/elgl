@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, inject } from '@angular/core';
 import { Subject } from 'rxjs';
 import Centrifuge from 'centrifuge';
 import { environment } from '../../../environments/environment';
@@ -12,11 +12,13 @@ export interface SystemMessage {
 
 @Injectable({ providedIn: 'root' })
 export class SystemMessageService implements OnDestroy {
+  private supabase = inject(SupabaseService);
+
   private centrifuge!: Centrifuge;
   private messageSubject = new Subject<SystemMessage>();
   readonly messages$ = this.messageSubject.asObservable();
 
-  constructor(private supabase: SupabaseService) {
+  constructor() {
     this.initialize();
   }
 
