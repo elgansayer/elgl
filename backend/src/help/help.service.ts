@@ -1,54 +1,112 @@
 import { Injectable } from '@nestjs/common';
-import { FAQ } from './interfaces/faq.interface';
+import { HelpQueryDto } from './dto/help-query.dto';
+
+export interface FAQ {
+  id: string;
+  category: string;
+  question: string;
+  answer: string;
+}
 
 @Injectable()
 export class HelpService {
-  private faqs: FAQ[] = [
+  // In-memory store – replace with a real DB call in production.
+  private readonly faqs: FAQ[] = [
     {
       id: '1',
-      question: 'How do I start a language exchange?',
+      category: 'account',
+      question: 'How do I reset my password?',
       answer:
-        'Go to the Discovery tab, find a partner, and send a chat request.',
-      category: 'getting-started',
+        'Go to Settings > Account > Change Password. If you are unable to log in, use the “Forgot password” link on the login screen.',
     },
     {
       id: '2',
-      question: 'What are Moments and how do I create one?',
+      category: 'account',
+      question: 'Can I change my display name?',
       answer:
-        'Moments are public posts visible to your followers and classmates. Tap the camera icon on the Moments feed to create a new Moment.',
-      category: 'features',
+        'Yes. Visit your profile, tap the edit icon next to your name, and save the desired display name.',
     },
     {
       id: '3',
-      question: 'How does the VIP subscription work?',
+      category: 'privacy',
+      question: 'Who can see my profile?',
       answer:
-        'VIP unlocks unlimited translations, advanced corrections, and location spoofing. You can subscribe from the VIP tab.',
-      category: 'billing',
+        'You control your visibility in Settings > Privacy. You can hide your profile from search, hide your age, and block specific users.',
     },
     {
       id: '4',
-      question: 'How do I report a user?',
+      category: 'privacy',
+      question: 'How do I block another user?',
       answer:
-        'Go to the user’s profile, tap the three-dot menu, and select Report user.',
-      category: 'safety',
+        'Go to the user’s profile, tap the three‑dot menu, and choose “Block”. Blocked users cannot message you or see your moments.',
     },
     {
       id: '5',
-      question: 'Can I use HelloTalk for free?',
-      answer:
-        'Yes! Free users have access to core features like language exchange, Moments, and basic audio rooms.',
       category: 'billing',
+      question: 'How do I cancel my VIP subscription?',
+      answer:
+        'Navigate to Settings > Subscription and tap “Cancel subscription”. Your VIP benefits remain active until the end of the current period.',
+    },
+    {
+      id: '6',
+      category: 'billing',
+      question: 'Can I get a refund?',
+      answer:
+        'Refund requests are handled by the app store. Please follow the standard refund process provided by Google Play or the Apple App Store.',
+    },
+    {
+      id: '7',
+      category: 'audio-rooms',
+      question: 'What is an Audio Room?',
+      answer:
+        'Audio Rooms are live voice‑based conversations where you can practise your target language with native speakers. You can listen or, when invited, speak on stage.',
+    },
+    {
+      id: '8',
+      category: 'audio-rooms',
+      question: 'How do I become a speaker?',
+      answer:
+        'Raise your hand by tapping the hand icon. The room host can then approve you, allowing you to speak on stage.',
+    },
+    {
+      id: '9',
+      category: 'general',
+      question: 'Is HelloTalk free?',
+      answer:
+        'The core features (text chat, discovery, moments) are free. A VIP subscription unlocks additional features such as unlimited AI translations and advanced search filters.',
+    },
+    {
+      id: '10',
+      category: 'general',
+      question: 'What is a LingQ‑style reading session?',
+      answer:
+        'When you open an article, every word is colour‑coded based on your flashcard level. Tap a word to see its translation and add it to your vocabulary bank.',
     },
   ];
 
-  getFaqs(category?: string): FAQ[] {
-    if (category) {
-      return this.faqs.filter((f) => f.category === category);
-    }
-    return this.faqs;
-  }
+  async findAll(query: HelpQueryDto) {
+    let filtered = [...this.faqs];
 
-  getFaq(id: string): FAQ | undefined {
-    return this.faqs.find((f) => f.id === id);
+    if (query.category) {
+      const cat = query.category.toLowerCase();
+      filtered = filtered.filter((f) => f.category.toLowerCase() === cat);
+    }
+
+    if (query.search) {
+      const s = query.search.toLowerCase();
+      filtered = filtered.filter(
+        (f) =>
+          f.question.toLowerCase().includes(s) ||
+          f.answer.toLowerCase().includes(s),
+      );
+    }
+
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const total = filtered.length;
+    const start = (page - 1) * limit;
+    const items = filtered.slice(start, start + limit);
+
+    return { items, total, page, limit };
   }
 }

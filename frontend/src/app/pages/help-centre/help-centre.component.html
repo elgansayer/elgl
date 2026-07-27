@@ -1,13 +1,79 @@
-<main class="help-centre p-4 max-w-3xl mx-auto">
-  <h1 class="text-2xl font-bold mb-4">Help Centre</h1>
-  <div *ngIf="loading()" class="text-slate-400">Loading FAQs…</div>
-  <div *ngIf="error()" class="text-red-400">{{ error() }}</div>
-  <div *ngIf="faqs().length > 0 && !loading()">
-    <div *ngFor="let faq of faqs(); trackBy: trackById" class="border-b border-slate-800 py-4">
-      <h2 class="text-lg font-semibold">{{ faq.question }}</h2>
-      <p class="mt-2 text-slate-300">{{ faq.answer }}</p>
-      <span class="inline-block mt-2 text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded-full" *ngIf="faq.category">{{ faq.category }}</span>
+<div class="max-w-3xl mx-auto px-4 py-6">
+  <h1 class="text-2xl font-bold mb-6">Help Centre</h1>
+
+  <!-- Filters -->
+  <div class="flex flex-col sm:flex-row gap-3 mb-6">
+    <div class="flex flex-wrap gap-2">
+      <button
+        *ngFor="let cat of ['', 'general', 'account', 'privacy', 'billing', 'audio-rooms']"
+        (click)="applyCategory(cat)"
+        [class.bg-indigo-600]="selectedCategory() === cat"
+        [class.text-white]="selectedCategory() === cat"
+        class="px-3 py-1 rounded-full border text-sm transition"
+        [ngClass]="{
+          'border-indigo-300 text-indigo-700': selectedCategory() !== cat,
+          'border-indigo-600': selectedCategory() === cat
+        }"
+      >
+        {{ cat || 'All' }}
+      </button>
+    </div>
+
+    <div class="relative flex-1 max-w-xs">
+      <input
+        type="text"
+        placeholder="Search…"
+        [(ngModel)]="searchText"
+        (keyup.enter)="applySearch()"
+        class="w-full border rounded-lg pl-3 pr-10 py-2 text-sm"
+      />
+      <button
+        (click)="applySearch()"
+        class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-4.35-4.35M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" />
+        </svg>
+      </button>
     </div>
   </div>
-  <div *ngIf="faqs().length === 0 && !loading()" class="text-slate-500">No articles found.</div>
-</main>
+
+  <!-- Loading / Error -->
+  <div *ngIf="loading()" class="py-8 text-gray-500">Loading…</div>
+  <div *ngIf="error()" class="py-8 text-red-500">{{ error() }}</div>
+
+  <!-- Articles -->
+  <div *ngIf="!loading() && !error()">
+    <div *ngIf="articles().length === 0" class="py-8 text-gray-400">
+      No articles found.
+    </div>
+
+    <div *ngFor="let article of articles()" class="faq-item">
+      <div class="faq-category">{{ article.category }}</div>
+      <h3 class="font-semibold text-lg mb-1">{{ article.question }}</h3>
+      <p class="text-gray-600 whitespace-pre-line">{{ article.answer }}</p>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="total() > limit()" class="flex items-center justify-between mt-8">
+      <button
+        (click)="goToPage(page() - 1)"
+        [disabled]="!hasPrevious()"
+        class="px-4 py-2 rounded border text-sm disabled:opacity-40"
+      >
+        Previous
+      </button>
+      <span class="text-sm text-gray-500">
+        Page {{ page() }} of {{ totalPages() }}
+      </span>
+      <button
+        (click)="goToPage(page() + 1)"
+        [disabled]="!hasNext()"
+        class="px-4 py-2 rounded border text-sm disabled:opacity-40"
+      >
+        Next
+      </button>
+    </div>
+  </div>
+</div>
