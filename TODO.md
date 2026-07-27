@@ -388,6 +388,8 @@
 - [ ] Implement the NestJS OpenGraph parser service: fetch URL, extract title/description/image with `cheerio` + `dompurify`, cache results, and expose `GET /link-preview?url=...` for the chat frontend.
 - [ ] Complete the implementation of the NestJS OpenGraph scraper and frontend rendering.
 - [ ] Write the NestJS controller and service logic for the OpenGraph scraper (dependencies are installed).
+- [ ] Implement actual OpenGraph service using installed dependencies (cheerio, dompurify, jsdom).
+- [ ] Create `LinkPreviewModule`, `LinkPreviewController` and `LinkPreviewService` in `backend/src/link-preview/` that uses `jsdom`/`cheerio` to fetch a URL, extract OpenGraph tags, sanitise with DOMPurify, cache results for 1 hour, and expose `GET /link-preview?url=...`.
 
 ## Phase 62: System Messages
 - [ ] Render custom system event bubbles in chat (e.g., "Profile updated", "Missed call").
