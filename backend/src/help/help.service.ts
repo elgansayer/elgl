@@ -84,20 +84,23 @@ export class HelpService {
     },
   ];
 
-  async findAll(query: HelpQueryDto) {
+  findAll(query: HelpQueryDto) {
     let filtered = [...this.faqs];
 
-    if (query.category) {
-      const cat = query.category.toLowerCase();
-      filtered = filtered.filter((f) => f.category.toLowerCase() === cat);
+    const cat = query.category?.toLowerCase();
+    const search = query.search?.toLowerCase();
+
+    if (cat) {
+      filtered = filtered.filter(
+        (f) => f.category.toLowerCase() === cat,
+      );
     }
 
-    if (query.search) {
-      const s = query.search.toLowerCase();
+    if (search) {
       filtered = filtered.filter(
         (f) =>
-          f.question.toLowerCase().includes(s) ||
-          f.answer.toLowerCase().includes(s),
+          f.question.toLowerCase().includes(search) ||
+          f.answer.toLowerCase().includes(search),
       );
     }
 
