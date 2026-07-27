@@ -30,9 +30,10 @@ export class CentrifugoService {
       );
       this.logger.log(`Published to Centrifugo channel ${channel}`);
     } catch (error) {
+      const stackTrace = error instanceof Error ? error.stack : undefined;
       this.logger.error(
         `Failed to publish to Centrifugo channel ${channel}`,
-        error?.stack,
+        stackTrace,
       );
       throw error;
     }
