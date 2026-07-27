@@ -385,6 +385,7 @@
 
 ## Phase 61: Link Previews
 - [ ] Build NestJS OpenGraph scraper rendering rich link preview cards in chat.
+- [ ] Implement the NestJS OpenGraph parser service: fetch URL, extract title/description/image with `cheerio` + `dompurify`, cache results, and expose `GET /link-preview?url=...` for the chat frontend.
 
 ## Phase 62: System Messages
 - [ ] Render custom system event bubbles in chat (e.g., "Profile updated", "Missed call").
