@@ -28,6 +28,7 @@ describe('LinkPreviewService', () => {
           provide: SupabaseService,
           useValue: { getRedisClient: jest.fn().mockReturnValue(redis) },
         },
+        { provide: 'REDIS_CLIENT', useValue: redis },
       ],
     }).compile();
 
