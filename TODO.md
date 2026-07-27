@@ -523,7 +523,7 @@
 
 - [STUCK] Design and build AI Conversation Partner chat interface.
 - [STUCK] Implement NestJS service to proxy chat messages to a Large Language Model (e.g., GPT-4, Llama).
-- [ ] Add "Explain this" context menu option on corrected text to get AI-generated grammar breakdown.
+- [STUCK] Add "Explain this" context menu option on corrected text to get AI-generated grammar breakdown.
 - [ ] Implement AI-generated suggested replies in chat based on conversation context.
 - [ ] Build "Role-play" scenarios for AI chat (e.g., "ordering coffee", "job interview").
 
