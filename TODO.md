@@ -541,7 +541,7 @@
 - [STUCK] Create database schema for curated learning content (articles, dialogues by CEFR level).
 - [STUCK] Build CMS or admin interface to upload and manage lesson content.
 - [STUCK] Implement "Word of the Day" feature on the app's home screen.
-- [ ] Integrate short cultural etiquette guides for different languages within the app.
+- [STUCK] Integrate short cultural etiquette guides for different languages within the app.
 
 ## Phase 70: UI/UX Polish & Animation
 
