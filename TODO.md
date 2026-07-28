@@ -636,7 +636,7 @@
 - [x] End-to-end encrypted voice calls.
 - [STUCK] End-to-end encrypted video calls.
 - [STUCK] Group calls with a specific participant limit.
-- [ ] Call waiting and switching between calls.
+- [STUCK] Call waiting and switching between calls.
 - [ ] Picture-in-picture mode for video calls.
 - [ ] Screen sharing during video calls.
 - [ ] Call logs (missed, incoming, outgoing).
