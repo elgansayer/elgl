@@ -15,14 +15,18 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        directory: [backend, frontend]
+        include:
+          - directory: backend
+            node-version: 20
+          - directory: frontend
+            node-version: 22
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           cache: 'npm'
           cache-dependency-path: ${{ matrix.directory }}/package-lock.json
 
