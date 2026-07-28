@@ -36,18 +36,18 @@ jobs:
             echo "Wiki repository not found. Please initialize the wiki by creating the first page on GitHub."
             exit 0
           fi
-          
+
           # Copy the core documentation files to the Wiki
           cp main-repo/README.md wiki-repo/Home.md
           cp main-repo/TODO.md wiki-repo/Live-Task-Board.md
           cp main-repo/AGENTS.md wiki-repo/AI-Constitution.md
           cp main-repo/SPEC.md wiki-repo/Product-Spec.md
-          
+
           cd wiki-repo
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          
+
           git add .
           # Only commit and push if there are actual changes
           git commit -m "docs(wiki): auto-sync documentation from main repo" || echo "No changes to commit"
-          git push
+          git push -u origin HEAD
