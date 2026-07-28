@@ -13,11 +13,7 @@ describe('LanguageSelectorComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [LanguageSelectorComponent, TranslatePipe],
-      providers: [
-        I18nService,
-        provideHttpClient(),
-        provideHttpClientTesting()
-      ],
+      providers: [I18nService, provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LanguageSelectorComponent);
@@ -43,5 +39,4 @@ describe('LanguageSelectorComponent', () => {
     expect(i18nService.currentLang()).toBe('es');
     expect(component.isOpen()).toBe(false);
   });
-
 });

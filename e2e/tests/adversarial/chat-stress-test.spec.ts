@@ -6,10 +6,14 @@ test.describe('Chat UI Stress and Edge Case Tests', () => {
     await page.goto('http://localhost:4200/chat/room_chaos_999');
   });
 
-  test('should handle rapid message submission without crashing or duplicating state', async ({ page }) => {
+  test('should handle rapid message submission without crashing or duplicating state', async ({
+    page,
+  }) => {
     // Adjust selectors based on your actual Angular component templates
     const chatInput = page.locator('textarea, input[type="text"]').first();
-    const sendButton = page.locator('button[aria-label="Send"], [data-testid="send-button"]').first();
+    const sendButton = page
+      .locator('button[aria-label="Send"], [data-testid="send-button"]')
+      .first();
 
     await chatInput.waitFor({ state: 'visible' });
 
@@ -26,7 +30,9 @@ test.describe('Chat UI Stress and Edge Case Tests', () => {
 
   test('should handle extremely long text payloads gracefully', async ({ page }) => {
     const chatInput = page.locator('textarea, input[type="text"]').first();
-    const sendButton = page.locator('button[aria-label="Send"], [data-testid="send-button"]').first();
+    const sendButton = page
+      .locator('button[aria-label="Send"], [data-testid="send-button"]')
+      .first();
 
     await chatInput.waitFor({ state: 'visible' });
 
@@ -43,8 +49,10 @@ test.describe('Chat UI Stress and Edge Case Tests', () => {
   test('should handle rapid toggling of the long-press context menu', async ({ page }) => {
     // Ensure at least one message exists to interact with
     const chatInput = page.locator('textarea, input[type="text"]').first();
-    const sendButton = page.locator('button[aria-label="Send"], [data-testid="send-button"]').first();
-    
+    const sendButton = page
+      .locator('button[aria-label="Send"], [data-testid="send-button"]')
+      .first();
+
     await chatInput.fill('Context menu test message');
     await sendButton.click();
 
@@ -62,7 +70,7 @@ test.describe('Chat UI Stress and Edge Case Tests', () => {
     await lastMessage.click({ button: 'right' });
     const contextMenu = page.locator('.context-menu-popup');
     await expect(contextMenu).toBeVisible();
-    
+
     await page.mouse.click(0, 0);
     await expect(contextMenu).toBeHidden();
   });

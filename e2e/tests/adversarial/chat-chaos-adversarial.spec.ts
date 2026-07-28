@@ -10,8 +10,8 @@ async function setupChaosEnvironment(page: Page) {
         id: 'room_chaos_999',
         title: 'Chaos Test Room',
         is_online: true,
-        messages: []
-      })
+        messages: [],
+      }),
     });
   });
 
@@ -20,7 +20,7 @@ async function setupChaosEnvironment(page: Page) {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ token: 'chaos-jwt-token' })
+      body: JSON.stringify({ token: 'chaos-jwt-token' }),
     });
   });
 
@@ -30,7 +30,7 @@ async function setupChaosEnvironment(page: Page) {
       await route.fulfill({
         status: 201,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true, id: `msg_${Date.now()}` })
+        body: JSON.stringify({ success: true, id: `msg_${Date.now()}` }),
       });
     }, 50);
   });
@@ -54,22 +54,30 @@ async function setupChaosEnvironment(page: Page) {
           JSON.stringify({
             push: {
               channel: 'chat_room_chaos_999',
-              pub: { data: { type: 'CORRUPT_PAYLOAD', content: undefined, nested: { deep: NaN } } }
-            }
-          })
+              pub: { data: { type: 'CORRUPT_PAYLOAD', content: undefined, nested: { deep: NaN } } },
+            },
+          }),
         );
       }
-    }
+    },
   };
 }
 
-test('should survive concurrent massive payloads, rapid clicks, and garbage websocket data', async ({ page }) => {
+test('should survive concurrent massive payloads, rapid clicks, and garbage websocket data', async ({
+  page,
+}) => {
   const chaosEnv = await setupChaosEnvironment(page);
-  
+
   await page.goto('/chat/room_chaos_999');
 
-  const inputField = page.locator('textarea[name="chat-input"], input[name="chat-input"], [data-testid="chat-input"], textarea, input[type="text"]').first();
-  const sendButton = page.locator('button[type="submit"], [data-testid="send-button"], button:has-text("Send")').first();
+  const inputField = page
+    .locator(
+      'textarea[name="chat-input"], input[name="chat-input"], [data-testid="chat-input"], textarea, input[type="text"]',
+    )
+    .first();
+  const sendButton = page
+    .locator('button[type="submit"], [data-testid="send-button"], button:has-text("Send")')
+    .first();
 
   await expect(inputField).toBeVisible({ timeout: 10000 });
 
@@ -102,7 +110,7 @@ test('should survive concurrent massive payloads, rapid clicks, and garbage webs
         await page.context().setOffline(false);
         await page.waitForTimeout(50);
       }
-    })()
+    })(),
   ]);
 
   // 3. Verify the application hasn't completely crashed (Error boundary check)

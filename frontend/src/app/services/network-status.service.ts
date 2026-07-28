@@ -5,7 +5,7 @@ import { Injectable, signal } from '@angular/core';
  * global UI (e.g. the offline banner) can react to connectivity changes.
  */
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class NetworkStatusService {
   private readonly onlineSignal = signal<boolean>(

@@ -4,16 +4,11 @@ import { AppPillComponent } from './pill.component';
 
 @Component({
   template: `
-    <app-pill
-      [label]="label()"
-      [colour]="colour()"
-      [size]="size()"
-      [customClass]="customClass()"
-    >
+    <app-pill [label]="label()" [colour]="colour()" [size]="size()" [customClass]="customClass()">
       Projected Pill
     </app-pill>
   `,
-  imports: [AppPillComponent]
+  imports: [AppPillComponent],
 })
 class TestHostComponent {
   label = signal('Active Status');
@@ -29,7 +24,7 @@ describe('AppPillComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TestHostComponent, AppPillComponent]
+      imports: [TestHostComponent, AppPillComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TestHostComponent);

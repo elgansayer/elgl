@@ -1,11 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Chat & Video UI Stress Tests (Adversarial)', () => {
-  
   test.beforeEach(async ({ page }) => {
     // Navigate to a test chat room. Adjust the URL to match your routing structure.
     await page.goto('/chat/room_stress_test_123');
-    
+
     // Wait for the chat interface to be ready
     await page.waitForSelector('[data-testid="chat-input-area"]', { state: 'visible' });
   });
@@ -23,9 +22,11 @@ test.describe('Chat & Video UI Stress Tests (Adversarial)', () => {
     // Verify the UI hasn't crashed and the last message is visible
     const lastMessage = page.getByText('Stress test message 49');
     await expect(lastMessage).toBeVisible({ timeout: 10000 });
-    
+
     // Ensure the page is still responsive
-    const isResponsive = await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => resolve(true))));
+    const isResponsive = await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(() => resolve(true))),
+    );
     expect(isResponsive).toBe(true);
   });
 
@@ -43,7 +44,7 @@ test.describe('Chat & Video UI Stress Tests (Adversarial)', () => {
     // We check that the input area is still functional afterwards
     await expect(messageInput).toBeVisible();
     await expect(messageInput).toBeEmpty();
-    
+
     // Verify no critical error modals are blocking the screen
     const errorModal = page.getByTestId('critical-error-modal');
     await expect(errorModal).not.toBeVisible();
@@ -78,11 +79,11 @@ test.describe('Chat & Video UI Stress Tests (Adversarial)', () => {
 
     // Simulate pasting a massive JSON object instead of plain text
     const malformedData = JSON.stringify({ nested: { deep: 'A'.repeat(50000) } });
-    
+
     await messageInput.focus();
     await page.evaluate((data) => {
       const pasteEvent = new ClipboardEvent('paste', {
-        clipboardData: new DataTransfer()
+        clipboardData: new DataTransfer(),
       });
       pasteEvent.clipboardData?.setData('text/plain', data);
       document.activeElement?.dispatchEvent(pasteEvent);

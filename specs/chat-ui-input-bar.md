@@ -3,19 +3,23 @@
 # Input Bar Component Specification
 
 ## Overview
+
 The main message composition area at the bottom of the chat view, supporting text input, attachments, and message sending.
 
 ## Props / Inputs
+
 - `roomId`: string (required)
 - `placeholder`: string (default "Type a message...")
 - `disabled`: boolean (default false)
 - `replyToMessage`: ChatMessage | null (default null) - Message being replied to
 
 ## Outputs / Events
+
 - `messageSent`: emits `{ type: string, content: any }`
 - `attachmentTriggered`: emits `{ type: 'emoji' | 'gift' | 'doodle' | 'voice' | 'attachment' }`
 
 ## States
+
 1. **Empty**: Placeholder text visible, send button disabled
 2. **Typing**: Text entered, send button enabled, character count (if near limit)
 3. **Reply Mode**: Reply preview bar above input, showing quoted message
@@ -23,6 +27,7 @@ The main message composition area at the bottom of the chat view, supporting tex
 5. **Disabled**: Grayed out, "You cannot send messages in this room" text
 
 ## Visual Design
+
 - **Container**: `bg-gray-900 border-t border-gray-700 px-4 py-3`
 - **Reply preview**: `bg-gray-800 rounded-t-lg px-3 py-2 flex items-center gap-2`
   - Quoted message preview (1 line, truncated)
@@ -35,6 +40,7 @@ The main message composition area at the bottom of the chat view, supporting tex
 - **Voice button**: Microphone icon (when input empty), replaces send button
 
 ## Behavior
+
 - Auto-resize textarea as user types (up to 4 lines)
 - Enter sends message, Shift+Enter adds new line
 - Ctrl+Enter or Cmd+Enter also sends
@@ -44,6 +50,7 @@ The main message composition area at the bottom of the chat view, supporting tex
 - Drop files: Drag-and-drop images into input area triggers upload
 
 ## Accessibility
+
 - `role="form"` on container
 - `aria-label="Message input"` on textarea
 - Keyboard: Tab through all buttons, Enter to send
@@ -51,6 +58,7 @@ The main message composition area at the bottom of the chat view, supporting tex
 - Screen reader: Announce reply mode when active
 
 ## Edge Cases
+
 - Network offline: Show "No internet connection" warning, queue message for retry
 - Message too long: Show character count in red, disable send
 - Empty message with attachment: Send attachment without text

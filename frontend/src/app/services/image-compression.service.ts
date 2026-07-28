@@ -1,14 +1,19 @@
 import { Injectable } from '@angular/core';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ImageCompressionService {
   /**
    * Compresses an image file to a maximum of 1080p (1920x1080) resolution.
    * Preserves aspect ratio and converts to JPEG.
    */
-  async compressImage(file: File, maxWidth = 1920, maxHeight = 1080, quality = 0.85): Promise<File> {
+  async compressImage(
+    file: File,
+    maxWidth = 1920,
+    maxHeight = 1080,
+    quality = 0.85,
+  ): Promise<File> {
     // Skip compression if it's not an image (e.g., video or audio)
     if (!file.type.startsWith('image/')) {
       return file;
@@ -46,14 +51,14 @@ export class ImageCompressionService {
             if (!blob) {
               return resolve(file); // Fallback to original if blob creation fails
             }
-            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), {
+            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
               type: 'image/jpeg',
               lastModified: Date.now(),
             });
             resolve(compressedFile);
           },
           'image/jpeg',
-          quality
+          quality,
         );
       };
 

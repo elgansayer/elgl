@@ -17,12 +17,12 @@ describe('VocabularyStore', () => {
     translation: 'hola',
     srs_level: 1,
     next_review_at: new Date().toISOString(),
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
   };
 
   beforeEach(() => {
     const spy = {
-      getAccessToken: vi.fn().mockReturnValue('mock-token')
+      getAccessToken: vi.fn().mockReturnValue('mock-token'),
     };
 
     TestBed.configureTestingModule({
@@ -30,8 +30,8 @@ describe('VocabularyStore', () => {
         VocabularyStore,
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: AuthService, useValue: spy }
-      ]
+        { provide: AuthService, useValue: spy },
+      ],
     });
 
     store = TestBed.inject(VocabularyStore);
@@ -48,13 +48,13 @@ describe('VocabularyStore', () => {
 
   it('should load all flashcards and update signals', async () => {
     const promise = store.loadAllFlashcards();
-    
+
     expect(store.isLoading()).toBe(true);
 
     const req = httpMock.expectOne(`${environment.apiUrl}/flashcards`);
     expect(req.request.method).toBe('GET');
     expect(req.request.headers.get('Authorization')).toBe('Bearer mock-token');
-    
+
     req.flush([mockFlashcard]);
     await promise;
 
@@ -69,7 +69,7 @@ describe('VocabularyStore', () => {
 
     const req = httpMock.expectOne(`${environment.apiUrl}/flashcards/due`);
     expect(req.request.method).toBe('GET');
-    
+
     req.flush([mockFlashcard]);
     await promise;
 
@@ -107,7 +107,7 @@ describe('VocabularyStore', () => {
     const req = httpMock.expectOne(`${environment.apiUrl}/flashcards`);
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(payload);
-    
+
     req.flush(newCard);
     await promise;
 
@@ -126,7 +126,7 @@ describe('VocabularyStore', () => {
     const req = httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`);
     expect(req.request.method).toBe('PATCH');
     expect(req.request.body).toEqual({ srs_level: 2 });
-    
+
     req.flush(updatedCard);
     await promise;
 

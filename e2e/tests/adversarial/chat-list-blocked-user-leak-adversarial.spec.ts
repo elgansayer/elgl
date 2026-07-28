@@ -50,7 +50,9 @@ async function mockBlockedUserChatLeak(page: Page): Promise<void> {
 
   // A couple of other safety endpoints the app may probe on init; keep them
   // harmless so this test stays focused on the getRooms() leak.
-  await page.route(`${API}/safety/blocked-ids`, (route) => route.fulfill({ json: [BLOCKED_USER_ID] }));
+  await page.route(`${API}/safety/blocked-ids`, (route) =>
+    route.fulfill({ json: [BLOCKED_USER_ID] }),
+  );
 
   await page.route(`${API}/chat/rooms`, (route) =>
     route.fulfill({
@@ -115,7 +117,7 @@ async function mockBlockedUserChatLeak(page: Page): Promise<void> {
 }
 
 test.describe('Adversarial: blocked user chat room leaks onto the chat list', () => {
-  test('a blocked user\'s chat thread and last-message preview keep showing on the main chat list', async ({
+  test("a blocked user's chat thread and last-message preview keep showing on the main chat list", async ({
     page,
   }) => {
     const pageErrors: Error[] = [];

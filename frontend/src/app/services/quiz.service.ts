@@ -9,7 +9,7 @@ export interface QuizQuestion {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class QuizService {
   private http = inject(HttpClient);

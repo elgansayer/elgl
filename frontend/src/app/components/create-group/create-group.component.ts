@@ -11,42 +11,49 @@ import { TranslatePipe } from '../../services/translate.pipe';
   template: `
     <div class="p-4 bg-[#121212] text-white min-h-screen">
       <h2 class="text-xl font-bold mb-4">{{ 'group.createTitle' | t }}</h2>
-      
+
       <div class="mb-4">
-        <label for="groupNameInput" class="block text-sm font-medium mb-1">{{ 'group.nameLabel' | t }}</label>
-        <input 
+        <label for="groupNameInput" class="block text-sm font-medium mb-1">{{
+          'group.nameLabel' | t
+        }}</label>
+        <input
           id="groupNameInput"
-          type="text" 
-          [(ngModel)]="groupName" 
+          type="text"
+          [(ngModel)]="groupName"
           class="w-full p-2 rounded bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500"
           placeholder="{{ 'group.namePlaceholder' | t }}"
         />
       </div>
 
       <div class="mb-4">
-        <label for="newMemberIdInput" class="block text-sm font-medium mb-1">{{ 'group.addMembers' | t }} ({{ selectedMembers().length }}/49)</label>
+        <label for="newMemberIdInput" class="block text-sm font-medium mb-1"
+          >{{ 'group.addMembers' | t }} ({{ selectedMembers().length }}/49)</label
+        >
         <div class="flex gap-2 mb-2">
-          <input 
+          <input
             id="newMemberIdInput"
-            type="text" 
-            [(ngModel)]="newMemberId" 
+            type="text"
+            [(ngModel)]="newMemberId"
             class="flex-1 p-2 rounded bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500"
             placeholder="{{ 'group.userIdPlaceholder' | t }}"
           />
-          <button 
-            (click)="addMember()" 
+          <button
+            (click)="addMember()"
             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded font-bold transition-colors"
             [disabled]="selectedMembers().length >= 49 || !newMemberId.trim()"
           >
             {{ 'group.addBtn' | t }}
           </button>
         </div>
-        
+
         <ul class="space-y-2 mt-4">
           @for (member of selectedMembers(); track member) {
             <li class="flex justify-between items-center bg-gray-800 p-2 rounded">
               <span class="text-sm">{{ member }}</span>
-              <button (click)="removeMember(member)" class="text-red-400 hover:text-red-300 text-sm font-bold">
+              <button
+                (click)="removeMember(member)"
+                class="text-red-400 hover:text-red-300 text-sm font-bold"
+              >
                 {{ 'group.removeBtn' | t }}
               </button>
             </li>
@@ -54,8 +61,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
         </ul>
       </div>
 
-      <button 
-        (click)="createGroup()" 
+      <button
+        (click)="createGroup()"
         class="w-full py-3 bg-green-600 hover:bg-green-700 rounded-full font-bold transition-colors mt-6"
         [disabled]="isCreating() || !groupName.trim() || selectedMembers().length === 0"
       >
@@ -73,7 +80,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <p class="text-green-400 mt-4 text-sm text-center">{{ 'group.successMsg' | t }}</p>
       }
     </div>
-  `
+  `,
 })
 export class CreateGroupComponent {
   private chatService = inject(ChatService);
@@ -88,13 +95,13 @@ export class CreateGroupComponent {
   addMember() {
     const id = this.newMemberId.trim();
     if (id && !this.selectedMembers().includes(id) && this.selectedMembers().length < 49) {
-      this.selectedMembers.update(members => [...members, id]);
+      this.selectedMembers.update((members) => [...members, id]);
       this.newMemberId = '';
     }
   }
 
   removeMember(id: string) {
-    this.selectedMembers.update(members => members.filter(m => m !== id));
+    this.selectedMembers.update((members) => members.filter((m) => m !== id));
   }
 
   async createGroup() {

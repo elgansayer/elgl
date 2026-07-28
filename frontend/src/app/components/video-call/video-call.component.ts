@@ -298,17 +298,13 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     this.cleanup();
   }
 
-  private onTrackSubscribed(
-    track: RemoteTrack,
-  ): void {
+  private onTrackSubscribed(track: RemoteTrack): void {
     if (track.kind === Track.Kind.Video) {
       this.remoteVideoTrack.set(track as unknown as VideoTrack);
     }
   }
 
-  private onTrackUnsubscribed(
-    track: RemoteTrack,
-  ): void {
+  private onTrackUnsubscribed(track: RemoteTrack): void {
     if (track.kind === Track.Kind.Video) {
       this.remoteVideoTrack.set(null);
     }

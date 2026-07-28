@@ -29,7 +29,9 @@
             (change)="toggleDoNotDisturb()"
             class="sr-only peer"
           />
-          <div class="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          <div
+            class="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"
+          ></div>
         </label>
       </div>
 
@@ -62,7 +64,9 @@
     <!-- Category Toggles -->
     <div class="space-y-3">
       @for (category of categories; track category.key) {
-        <div class="p-4 bg-slate-800/30 rounded-xl border border-slate-700/50 hover:border-slate-600 transition-colors">
+        <div
+          class="p-4 bg-slate-800/30 rounded-xl border border-slate-700/50 hover:border-slate-600 transition-colors"
+        >
           <div class="flex items-start justify-between mb-3">
             <div class="flex items-center gap-3">
               <span class="text-xl">{{ category.icon }}</span>
@@ -83,7 +87,9 @@
                   class="sr-only peer"
                   [disabled]="saving()"
                 />
-                <div class="w-9 h-5 bg-slate-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                <div
+                  class="w-9 h-5 bg-slate-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"
+                ></div>
                 <span class="text-sm text-slate-300">{{ channel.label }}</span>
               </label>
             }

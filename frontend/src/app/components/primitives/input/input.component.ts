@@ -22,8 +22,8 @@ import { Component, input, output, computed } from '@angular/core';
     />
   `,
   host: {
-    '[class]': "'block w-full'"
-  }
+    '[class]': "'block w-full'",
+  },
 })
 export class AppInputComponent {
   readonly value = input<string>('');
@@ -40,7 +40,8 @@ export class AppInputComponent {
   readonly focused = output<FocusEvent>();
 
   readonly inputClasses = computed(() => {
-    const base = 'block w-full rounded-2xl border ps-4 pe-4 pt-2.5 pb-2.5 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary';
+    const base =
+      'block w-full rounded-2xl border ps-4 pe-4 pt-2.5 pb-2.5 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary';
     const state = this.disabled()
       ? 'bg-surface-100 text-text-muted border-surface-100 cursor-not-allowed'
       : 'bg-surface-200 border-surface-100 text-text-primary';

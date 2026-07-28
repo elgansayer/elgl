@@ -6,6 +6,7 @@ description: 'Run the full completion checklist (lint, build, test, control-flow
 # Verification Gate
 
 ## When to Use
+
 Before marking any `TODO.md` item complete, before ending a work session, and after any non-trivial code change - per `AGENTS.md` Section 4 ("Autonomous Execution Protocol") and Section 6 ("Completion gate for frontend changes").
 
 ## Full Command Sequence
@@ -34,6 +35,7 @@ npm run check:template-bindings
 ```
 
 Or via the root `package.json` shortcuts:
+
 ```bash
 npm run lint     # constitution check + backend eslint
 npm run build    # frontend ng build + backend nest build
@@ -42,6 +44,7 @@ npm run check:control-flow
 ```
 
 ## Pass Criteria
+
 - Zero TypeScript compiler errors in both `frontend/` and `backend/`.
 - Zero ESLint errors (warnings should still be reviewed, but the hard gate is errors) in both projects.
 - 100% of existing Jest (`backend/`) and Vitest (`frontend/`) test suites passing - do not mark work done with a known-broken test; fix or explicitly and visibly flag it first.
@@ -49,10 +52,12 @@ npm run check:control-flow
 - Frontend `check:control-flow` / `check:rtl-logical` / `check:template-bindings` all report "passed" (no legacy `*ngIf`/physical direction classes/`ngClass`/`ngStyle`).
 
 ## What This Does NOT Catch (verify manually)
+
 - Explicit `standalone: true` or `ChangeDetectionStrategy.OnPush` in `@Component`/`@Directive` decorators (banned by `AGENTS.md`/`copilot-instructions.md`, but not grepped by `verify-constitution.mjs`). Grep manually: `grep -rn "standalone: true" frontend/src`.
 - Hard-coded UI strings that aren't obviously American-English words (see `i18n-translation-workflow` skill - there is no automated check for this yet).
 - Payment/webhook authenticity (see `payment-webhook-security` skill - signature verification bugs pass every test above because the missing check simply isn't exercised by existing tests).
 - Whether newly-added tests actually assert the security/behavioural property they claim to (happy-path-only tests can pass while a real vulnerability exists, as found in the 2026-07-22 audit of `monetisation`/`economy`).
 
 ## After Verification Passes
+
 Only then check off the corresponding `TODO.md` item(s), and update `AGENTS.md` Section 8 if the change resolves (or newly reveals) a known issue.

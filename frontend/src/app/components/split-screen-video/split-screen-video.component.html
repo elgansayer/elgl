@@ -1,8 +1,16 @@
 <div class="flex w-full h-full gap-2" [class.flex-col]="true" [class.md:flex-row]="true">
   <!-- Host Video -->
   <div class="relative flex-1 bg-black rounded-xl overflow-hidden shadow-lg">
-    <video [src]="hostVideoUrl()" autoplay playsinline muted class="w-full h-full object-cover"></video>
-    <div class="absolute bottom-4 start-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md">
+    <video
+      [src]="hostVideoUrl()"
+      autoplay
+      playsinline
+      muted
+      class="w-full h-full object-cover"
+    ></video>
+    <div
+      class="absolute bottom-4 start-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md"
+    >
       {{ hostName() }} (Host)
     </div>
   </div>
@@ -10,15 +18,34 @@
   <!-- Co-Host Video or Invite Placeholder -->
   @if (hasCoHost()) {
     <div class="relative flex-1 bg-black rounded-xl overflow-hidden shadow-lg">
-      <video [src]="coHostVideoUrl()" autoplay playsinline class="w-full h-full object-cover"></video>
-      <div class="absolute bottom-4 start-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md">
+      <video
+        [src]="coHostVideoUrl()"
+        autoplay
+        playsinline
+        class="w-full h-full object-cover"
+      ></video>
+      <div
+        class="absolute bottom-4 start-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md"
+      >
         {{ coHostName() }} (Co-Host)
       </div>
     </div>
   } @else {
-    <div class="relative flex-1 bg-slate-900 rounded-xl overflow-hidden shadow-lg border-2 border-dashed border-slate-700 flex items-center justify-center">
-      <button (click)="onInviteClick()" class="flex flex-col items-center text-slate-400 hover:text-white transition-colors p-6 rounded-xl hover:bg-slate-800">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+    <div
+      class="relative flex-1 bg-slate-900 rounded-xl overflow-hidden shadow-lg border-2 border-dashed border-slate-700 flex items-center justify-center"
+    >
+      <button
+        (click)="onInviteClick()"
+        class="flex flex-col items-center text-slate-400 hover:text-white transition-colors p-6 rounded-xl hover:bg-slate-800"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-12 w-12 mb-3"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
         </svg>
         <span class="text-lg font-semibold">Invite Co-Host</span>

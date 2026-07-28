@@ -4,11 +4,11 @@
   background-color: rgb(15 23 42); // slate-900
 }
 
-input[type="time"]::-webkit-calendar-picker-indicator {
+input[type='time']::-webkit-calendar-picker-indicator {
   filter: invert(0.7);
   cursor: pointer;
 }
 
-input[type="time"]:focus {
+input[type='time']:focus {
   outline: none;
 }

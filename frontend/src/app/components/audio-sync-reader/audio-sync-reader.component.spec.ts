@@ -16,15 +16,13 @@ describe('AudioSyncReaderComponent', () => {
       getWordStatus: () => ({
         level: 0,
         colorClass: 'bg-blue-500/20 text-blue-900',
-        colourClass: 'bg-blue-500/20 text-blue-900'
-      })
+        colourClass: 'bg-blue-500/20 text-blue-900',
+      }),
     };
 
     await TestBed.configureTestingModule({
       imports: [AudioSyncReaderComponent, HttpClientTestingModule],
-      providers: [
-        { provide: VocabularyStore, useValue: mockVocabStore }
-      ]
+      providers: [{ provide: VocabularyStore, useValue: mockVocabStore }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AudioSyncReaderComponent);
@@ -38,7 +36,7 @@ describe('AudioSyncReaderComponent', () => {
   it('should create and segment word tokens using Intl.Segmenter or fallback', () => {
     expect(component).toBeTruthy();
     expect(component.tokens().length).toBeGreaterThan(0);
-    const words = component.tokens().filter(t => t.isWordLike);
+    const words = component.tokens().filter((t) => t.isWordLike);
     expect(words[0].segment).toBe('Hello');
     expect(words[1].segment).toBe('world');
   });
@@ -48,17 +46,18 @@ describe('AudioSyncReaderComponent', () => {
       cancel: () => {},
       speak: (ut: { onstart?: () => void }) => {
         if (ut && ut.onstart) ut.onstart();
-      }
+      },
     };
     Object.defineProperty(window, 'speechSynthesis', {
       value: mockSpeechSynthesis,
       writable: true,
-      configurable: true
+      configurable: true,
     });
     // Also mock SpeechSynthesisUtterance globally as a constructor function
-    (window as unknown as { SpeechSynthesisUtterance: unknown }).SpeechSynthesisUtterance = function (this: Record<string, unknown>) {
-      return this;
-    };
+    (window as unknown as { SpeechSynthesisUtterance: unknown }).SpeechSynthesisUtterance =
+      function (this: Record<string, unknown>) {
+        return this;
+      };
 
     expect(component.isPlaying()).toBe(false);
     component.togglePlay();
@@ -70,11 +69,11 @@ describe('AudioSyncReaderComponent', () => {
   });
 
   it('should emit wordClicked and select token when token is clicked', () => {
-    const word = component.tokens().find(t => t.isWordLike && t.segment === 'welcome');
+    const word = component.tokens().find((t) => t.isWordLike && t.segment === 'welcome');
     expect(word).toBeDefined();
 
     let clickedWord = '';
-    component.wordClicked.subscribe(e => clickedWord = e.token);
+    component.wordClicked.subscribe((e) => (clickedWord = e.token));
 
     if (word) {
       component.onTokenClick(word);

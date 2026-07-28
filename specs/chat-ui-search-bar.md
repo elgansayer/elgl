@@ -3,16 +3,20 @@
 # Chat Search Bar Component Specification
 
 ## Overview
+
 A search interface for finding messages within the current chat room.
 
 ## Props / Inputs
+
 - `roomId`: string (required)
 
 ## Outputs / Events
+
 - `messageSelected`: emits `{ message: ChatMessage }`
 - `searchClosed`: emits void
 
 ## States
+
 1. **Closed**: Not visible
 2. **Open - Empty**: Search input focused, no query yet
 3. **Searching**: Loading spinner while fetching results
@@ -21,6 +25,7 @@ A search interface for finding messages within the current chat room.
 6. **Error**: Error message with retry
 
 ## Visual Design
+
 - **Container**: `bg-gray-800 border-b border-gray-700 p-3`
 - **Search input**: `w-full bg-gray-700 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-400 border border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500`
   - Search icon: `absolute left-3 top-1/2 -translate-y-1/2 text-gray-400`
@@ -37,6 +42,7 @@ A search interface for finding messages within the current chat room.
 - **Close button**: X icon in top-right corner
 
 ## Behavior
+
 - Debounced search (300ms after user stops typing)
 - Minimum 2 characters to trigger search
 - Searches via `GET /chat/{roomId}/search?q={query}&type={filter}`
@@ -46,6 +52,7 @@ A search interface for finding messages within the current chat room.
 - Filter chips: Refine search by message type
 
 ## Accessibility
+
 - `role="search"` on container
 - `aria-label="Search messages"`
 - `aria-live="polite"` on results count
@@ -53,6 +60,7 @@ A search interface for finding messages within the current chat room.
 - Focus management: Auto-focus input on open
 
 ## Edge Cases
+
 - Very long query (> 100 chars): Trim to 100 chars
 - Special characters: Escape regex special characters for safe search
 - No results for filter: Show "No {type} messages found"

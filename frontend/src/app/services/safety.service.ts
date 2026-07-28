@@ -48,9 +48,7 @@ export class SafetyService {
    */
   async loadBlockedUsers(): Promise<void> {
     try {
-      const ids = await lastValueFrom(
-        this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids`),
-      );
+      const ids = await lastValueFrom(this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids`));
       const newSet = new Set(ids);
       this._blockedUserIds.set(newSet);
       this.blockedIdsSubject.next(newSet);
@@ -73,9 +71,7 @@ export class SafetyService {
     return lastValueFrom(this.reportUser(dto));
   }
 
-  blockUser(
-    blockedId: string,
-  ): Observable<{ success: boolean; blocked_id: string }> {
+  blockUser(blockedId: string): Observable<{ success: boolean; blocked_id: string }> {
     return this.http.post<{ success: boolean; blocked_id: string }>(
       `${this.apiUrl}/safety/block/${blockedId}`,
       {},
@@ -83,9 +79,7 @@ export class SafetyService {
   }
 
   /** Promise-based version that also updates the local cache */
-  async blockUserAsync(
-    blockedId: string,
-  ): Promise<{ success: boolean; blocked_id: string }> {
+  async blockUserAsync(blockedId: string): Promise<{ success: boolean; blocked_id: string }> {
     const res = await lastValueFrom(this.blockUser(blockedId));
     this._blockedUserIds.update((prev) => {
       const next = new Set(prev);
@@ -97,10 +91,7 @@ export class SafetyService {
   }
 
   unblockUser(blockedId: string): Observable<{ success: boolean }> {
-    return this.http.post<{ success: boolean }>(
-      `${this.apiUrl}/safety/unblock/${blockedId}`,
-      {},
-    );
+    return this.http.post<{ success: boolean }>(`${this.apiUrl}/safety/unblock/${blockedId}`, {});
   }
 
   /** Promise-based version that also updates the local cache */
@@ -131,7 +122,7 @@ export class SafetyService {
       catchError(() => {
         // Fall back to static list if the API fails (e.g., network issue)
         return of(this.getStaticReportCategories());
-      })
+      }),
     );
   }
 
@@ -180,11 +171,7 @@ export class SafetyService {
 
   async getBlockedUserIds(userId: string): Promise<string[]> {
     try {
-      return lastValueFrom(
-        this.http.get<string[]>(
-          `${this.apiUrl}/safety/blocked-ids/${userId}`,
-        ),
-      );
+      return lastValueFrom(this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids/${userId}`));
     } catch (e) {
       console.error('Failed to get blocked user IDs:', e);
       return [];
@@ -193,11 +180,7 @@ export class SafetyService {
 
   async getBlockerUserIds(userId: string): Promise<string[]> {
     try {
-      return lastValueFrom(
-        this.http.get<string[]>(
-          `${this.apiUrl}/safety/blocker-ids/${userId}`,
-        ),
-      );
+      return lastValueFrom(this.http.get<string[]>(`${this.apiUrl}/safety/blocker-ids/${userId}`));
     } catch (e) {
       console.error('Failed to get blocker user IDs:', e);
       return [];
@@ -207,9 +190,7 @@ export class SafetyService {
   async getBlockedAndBlockerIds(userId: string): Promise<string[]> {
     try {
       return lastValueFrom(
-        this.http.get<string[]>(
-          `${this.apiUrl}/safety/blocked-and-blocker-ids/${userId}`,
-        ),
+        this.http.get<string[]>(`${this.apiUrl}/safety/blocked-and-blocker-ids/${userId}`),
       );
     } catch (e) {
       console.error('Failed to get blocked and blocker IDs:', e);
@@ -224,9 +205,7 @@ export class SafetyService {
     }
     try {
       return lastValueFrom(
-        this.http.get<{ blocked: boolean }>(
-          `${this.apiUrl}/safety/is-blocked/${userId}`,
-        ),
+        this.http.get<{ blocked: boolean }>(`${this.apiUrl}/safety/is-blocked/${userId}`),
       );
     } catch (e) {
       console.error('Failed to check block status:', e);

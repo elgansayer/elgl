@@ -14,19 +14,15 @@ describe('UserDetailComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [UserDetailComponent],
-      providers: [
-        provideRouter([]),
-        provideHttpClient(),
-        provideHttpClientTesting(),
-      ],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     })
-    .overrideProvider(SafetyService, {
-      useValue: {
-        getBlockedUserIds: vi.fn().mockReturnValue(of([])),
-      },
-    })
-    .compileComponents();
-    
+      .overrideProvider(SafetyService, {
+        useValue: {
+          getBlockedUserIds: vi.fn().mockReturnValue(of([])),
+        },
+      })
+      .compileComponents();
+
     fixture = TestBed.createComponent(UserDetailComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();

@@ -7,7 +7,13 @@ import { ChatMessage } from '../../services/chat.service';
   standalone: true,
   imports: [],
   template: `
-    <div class="fixed inset-0 z-50" (click)="close()" (touchstart)="close()" (keydown.enter)="close()" tabindex="0">
+    <div
+      class="fixed inset-0 z-50"
+      (click)="close()"
+      (touchstart)="close()"
+      (keydown.enter)="close()"
+      tabindex="0"
+    >
       <div class="absolute" [style.top.px]="y()" [style.left.px]="x()">
         <div
           class="bg-surface-200 border border-gray-600 rounded-lg shadow-xl py-1 min-w-[160px]"

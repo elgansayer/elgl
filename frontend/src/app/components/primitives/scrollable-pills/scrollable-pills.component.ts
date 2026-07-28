@@ -21,18 +21,20 @@ import { Component, input, output } from '@angular/core';
       }
     </div>
   `,
-  styles: [`
-    .hide-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
-    .hide-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
-  `]
+  styles: [
+    `
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    `,
+  ],
 })
 export class ScrollablePillsComponent {
-  pills = input.required<{ id: string, label: string }[]>();
+  pills = input.required<{ id: string; label: string }[]>();
   selected = input.required<string>();
   // Renamed to avoid collision with native DOM events (e.g. 'select')
   pillPicked = output<string>();

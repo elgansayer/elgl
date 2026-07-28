@@ -38,7 +38,8 @@ export class ModerationQueueComponent implements OnInit {
       if (this.momentItems().length > 0) return;
       this.loadingMoments.set(true);
       this.error.set(null);
-      this.moderationService.getItems('moment', 'pending')
+      this.moderationService
+        .getItems('moment', 'pending')
         .pipe(
           tap((items) => this.momentItems.set(items)),
           catchError(() => {
@@ -46,12 +47,14 @@ export class ModerationQueueComponent implements OnInit {
             return of([]);
           }),
           finalize(() => this.loadingMoments.set(false)),
-        ).subscribe();
+        )
+        .subscribe();
     } else {
       if (this.profileItems().length > 0) return;
       this.loadingProfiles.set(true);
       this.error.set(null);
-      this.moderationService.getItems('profile', 'pending')
+      this.moderationService
+        .getItems('profile', 'pending')
         .pipe(
           tap((items) => this.profileItems.set(items)),
           catchError(() => {
@@ -59,26 +62,27 @@ export class ModerationQueueComponent implements OnInit {
             return of([]);
           }),
           finalize(() => this.loadingProfiles.set(false)),
-        ).subscribe();
+        )
+        .subscribe();
     }
   }
 
   approveItem(item: ModerationItem) {
     const type = item.type;
-    this.moderationService.approveItem(item.id, type)
-      .pipe(
-        finalize(() => this.refreshItems(type)),
-      ).subscribe({
+    this.moderationService
+      .approveItem(item.id, type)
+      .pipe(finalize(() => this.refreshItems(type)))
+      .subscribe({
         error: () => this.error.set(`Failed to approve ${type}.`),
       });
   }
 
   rejectItem(item: ModerationItem) {
     const type = item.type;
-    this.moderationService.rejectItem(item.id, type, 'Violation')
-      .pipe(
-        finalize(() => this.refreshItems(type)),
-      ).subscribe({
+    this.moderationService
+      .rejectItem(item.id, type, 'Violation')
+      .pipe(finalize(() => this.refreshItems(type)))
+      .subscribe({
         error: () => this.error.set(`Failed to reject ${type}.`),
       });
   }
@@ -94,16 +98,14 @@ export class ModerationQueueComponent implements OnInit {
   }
 
   get filteredMoments() {
-    return this.momentItems().filter(i => i.status === 'pending');
+    return this.momentItems().filter((i) => i.status === 'pending');
   }
 
   get filteredProfiles() {
-    return this.profileItems().filter(i => i.status === 'pending');
+    return this.profileItems().filter((i) => i.status === 'pending');
   }
 
   itemsForTab(): ModerationItem[] {
-    return this.activeTab() === 'moment'
-      ? this.filteredMoments
-      : this.filteredProfiles;
+    return this.activeTab() === 'moment' ? this.filteredMoments : this.filteredProfiles;
   }
 }

@@ -37,11 +37,15 @@
         <p class="text-[11px] text-text-muted">{{ fav.created_at | date: 'short' }}</p>
       </div>
       @if (fav.item_payload?.message_type === 'text') {
-        <p class="mt-3 rounded-card bg-surface-300 ps-3 pe-3 pt-2.5 pb-2.5 text-sm text-text-primary">
+        <p
+          class="mt-3 rounded-card bg-surface-300 ps-3 pe-3 pt-2.5 pb-2.5 text-sm text-text-primary"
+        >
           {{ fav.item_payload?.text_content }}
         </p>
       }
-      @if (fav.item_payload?.message_type === 'correction' && fav.item_payload?.correction_payload) {
+      @if (
+        fav.item_payload?.message_type === 'correction' && fav.item_payload?.correction_payload
+      ) {
         <div class="mt-3">
           <app-visual-diff
             [original]="fav.item_payload!.correction_payload!.original"

@@ -6,7 +6,7 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class CentrifugeService {
   private http = inject(HttpClient);
@@ -18,16 +18,23 @@ export class CentrifugeService {
   readonly connectionStatus = signal<string>('disconnected');
 
   async connect(): Promise<void> {
-    if (this.centrifuge && (this.centrifuge.state === 'connected' || this.centrifuge.state === 'connecting')) {
+    if (
+      this.centrifuge &&
+      (this.centrifuge.state === 'connected' || this.centrifuge.state === 'connecting')
+    ) {
       return;
     }
 
     this.connectionStatus.set('connecting');
     try {
       const tokenObj = await firstValueFrom(
-        this.http.post<{ token: string }>(`${environment.apiUrl}/chat/token`, {}, {
-          headers: { Authorization: `Bearer ${this.authService.getAccessToken() ?? ''}` }
-        })
+        this.http.post<{ token: string }>(
+          `${environment.apiUrl}/chat/token`,
+          {},
+          {
+            headers: { Authorization: `Bearer ${this.authService.getAccessToken() ?? ''}` },
+          },
+        ),
       );
 
       if (!tokenObj?.token) {
@@ -36,7 +43,7 @@ export class CentrifugeService {
       }
 
       this.centrifuge = new Centrifuge(environment.centrifugoUrl, {
-        token: tokenObj.token
+        token: tokenObj.token,
       });
 
       this.centrifuge.on('connected', () => {
@@ -93,7 +100,9 @@ export class CentrifugeService {
       }
     } else if (this.centrifuge) {
       try {
-        await (this.centrifuge as unknown as { publish: (ch: string, d: unknown) => Promise<void> }).publish(channel, data);
+        await (
+          this.centrifuge as unknown as { publish: (ch: string, d: unknown) => Promise<void> }
+        ).publish(channel, data);
       } catch (e) {
         console.error('Centrifuge publish error:', e);
       }

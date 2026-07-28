@@ -17,7 +17,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
         </app-card>
       </div>
     </div>
-  `
+  `,
 })
 export class DocumentViewerComponent {
   readonly title = input.required<string>();

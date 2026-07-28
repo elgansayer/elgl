@@ -4,8 +4,10 @@ function fixChatRoom() {
   const file = 'frontend/src/app/components/chat-room/chat-room.component.ts';
   let content = fs.readFileSync(file, 'utf8');
   if (!content.includes('computed,')) {
-    content = content.replace(/import { Component, signal, inject, OnInit, ViewChild, ElementRef, HostListener, effect } from '@angular\/core';/, 
-      "import { Component, signal, inject, OnInit, ViewChild, ElementRef, HostListener, effect, computed } from '@angular/core';");
+    content = content.replace(
+      /import { Component, signal, inject, OnInit, ViewChild, ElementRef, HostListener, effect } from '@angular\/core';/,
+      "import { Component, signal, inject, OnInit, ViewChild, ElementRef, HostListener, effect, computed } from '@angular/core';",
+    );
   }
   fs.writeFileSync(file, content);
 }
@@ -16,10 +18,15 @@ function fixDiscoveryComponent() {
   // getNativeLangs(user: UserProfile) {
   //   return [ { code: user.native_languages, level: 100 } ];
   // }
-  content = content.replace(/code: user\.native_languages,/g, 'code: user.native_languages[0] || "",');
+  content = content.replace(
+    /code: user\.native_languages,/g,
+    'code: user.native_languages[0] || "",',
+  );
   // wait, better yet, map over native_languages!
-  content = content.replace(/return \[\s*{\s*code: user\.native_languages(\[0\] \|\| "")?,\s*level: 100\s*}\s*\];/g, 
-    "return (user.native_languages || []).map(lang => ({ code: lang, level: 100 }));");
+  content = content.replace(
+    /return \[\s*{\s*code: user\.native_languages(\[0\] \|\| "")?,\s*level: 100\s*}\s*\];/g,
+    'return (user.native_languages || []).map(lang => ({ code: lang, level: 100 }));',
+  );
   fs.writeFileSync(file, content);
 }
 
@@ -34,13 +41,19 @@ function fixProfileVisitors() {
   const file = 'frontend/src/app/components/profile-visitors/profile-visitors.component.html';
   if (fs.existsSync(file)) {
     let content = fs.readFileSync(file, 'utf8');
-    content = content.replace(/\{\{\s*visit\.visitor\.native_languages\s*\|\s*uppercase\s*\}\}/g, "{{ visit.visitor.native_languages.join(', ') | uppercase }}");
+    content = content.replace(
+      /\{\{\s*visit\.visitor\.native_languages\s*\|\s*uppercase\s*\}\}/g,
+      "{{ visit.visitor.native_languages.join(', ') | uppercase }}",
+    );
     fs.writeFileSync(file, content);
   }
   const tsFile = 'frontend/src/app/components/profile-visitors/profile-visitors.component.ts';
   if (fs.existsSync(tsFile)) {
     let content = fs.readFileSync(tsFile, 'utf8');
-    content = content.replace(/\{\{\s*visit\.visitor\.native_languages\s*\|\s*uppercase\s*\}\}/g, "{{ (visit.visitor.native_languages || []).join(', ') | uppercase }}");
+    content = content.replace(
+      /\{\{\s*visit\.visitor\.native_languages\s*\|\s*uppercase\s*\}\}/g,
+      "{{ (visit.visitor.native_languages || []).join(', ') | uppercase }}",
+    );
     fs.writeFileSync(tsFile, content);
   }
 }
@@ -48,16 +61,22 @@ function fixProfileVisitors() {
 function fixUserDetail() {
   const file = 'frontend/src/app/components/user-detail/user-detail.component.html';
   let content = fs.readFileSync(file, 'utf8');
-  content = content.replace(/\{\{\s*profile\(\)\?\.native_languages\s*\|\s*uppercase\s*\}\}/g, "{{ profile()?.native_languages?.join(', ') | uppercase }}");
+  content = content.replace(
+    /\{\{\s*profile\(\)\?\.native_languages\s*\|\s*uppercase\s*\}\}/g,
+    "{{ profile()?.native_languages?.join(', ') | uppercase }}",
+  );
   fs.writeFileSync(file, content);
 }
 
 function fixProfileComponent() {
   const file = 'frontend/src/app/components/profile/profile.component.html';
   let content = fs.readFileSync(file, 'utf8');
-  
-  // replace nativeLanguages display 
-  content = content.replace(/\{\{\s*profile\(\)\?\.native_languages\s*\}\}/g, "{{ profile()?.native_languages?.join(', ') }}");
+
+  // replace nativeLanguages display
+  content = content.replace(
+    /\{\{\s*profile\(\)\?\.native_languages\s*\}\}/g,
+    "{{ profile()?.native_languages?.join(', ') }}",
+  );
 
   // replace nativeLanguages editing with chip UI
   const oldPicker = `<app-language-picker (languageSelected)="nativeLanguages = $event" [selectedCode]="nativeLanguages"></app-language-picker>`;

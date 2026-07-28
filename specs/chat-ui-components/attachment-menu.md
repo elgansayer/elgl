@@ -1,11 +1,13 @@
 # Attachment Menu Specification
 
 ## Purpose
+
 Provide quick access to media attachment options: camera, photo library, document, location sharing, and contact sharing.
 
 ## Visual Design
 
 ### Layout
+
 ```
 ┌─────────────────────────────────────┐
 │                                     │
@@ -23,6 +25,7 @@ Provide quick access to media attachment options: camera, photo library, documen
 ```
 
 ### Dimensions
+
 - **Width**: 280px (mobile), 320px (desktop)
 - **Height**: Auto (based on content)
 - **Grid**: 3 columns
@@ -31,6 +34,7 @@ Provide quick access to media attachment options: camera, photo library, documen
 - **Padding**: 16px
 
 ### Color Scheme
+
 - **Background**: `bg-slate-800` (`#1e293b`)
 - **Border**: `border border-slate-700`
 - **Item background**: `bg-slate-700`, hover `bg-slate-600`
@@ -40,40 +44,55 @@ Provide quick access to media attachment options: camera, photo library, documen
 ## States
 
 ### Default
+
 - Grid of attachment options
 - Each option has icon and label
 
 ### Hover
+
 - Item background: `bg-slate-600`
 - Scale: `scale(1.05)`
 - Icon color brightens
 
 ### Disabled
+
 - Opacity: 40%
 - Cursor: `not-allowed`
 - Tooltip: "Permission required" or "Not available"
 
 ### Loading
+
 - Spinner overlay on the selected option
 - "Processing..." text below
 
 ## Animations
 
 ### Menu Open
+
 ```css
 @keyframes menuScaleIn {
-  from { opacity: 0; transform: scale(0.9) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 /* Duration: 200ms, ease-out */
 ```
 
 ### Item Hover
+
 ```css
-transition: transform 150ms ease, background-color 150ms ease;
+transition:
+  transform 150ms ease,
+  background-color 150ms ease;
 ```
 
 ## Accessibility
+
 - `role="menu"` on container
 - `role="menuitem"` on each option
 - `aria-label="[Action] - [Description]"` on each item
@@ -81,6 +100,7 @@ transition: transform 150ms ease, background-color 150ms ease;
 - Focus trap when menu is open
 
 ## Edge Cases
+
 - **No camera available**: Hide or disable camera option
 - **Permission denied**: Show error toast, disable relevant options
 - **File too large**: Show error message with size limit

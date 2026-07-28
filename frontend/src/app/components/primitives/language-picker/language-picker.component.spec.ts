@@ -8,7 +8,7 @@ describe('LanguagePickerComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [LanguagePickerComponent, TranslatePipe]
+      imports: [LanguagePickerComponent, TranslatePipe],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LanguagePickerComponent);
@@ -35,7 +35,7 @@ describe('LanguagePickerComponent', () => {
     // Let's test with 'spani' for Spanish
     component.searchQuery.set('spani');
     const filteredSpan = component.filteredLanguages();
-    expect(filteredSpan.some(l => l.code === 'es')).toBe(true);
+    expect(filteredSpan.some((l) => l.code === 'es')).toBe(true);
   });
 
   it('should select language and close modal', () => {

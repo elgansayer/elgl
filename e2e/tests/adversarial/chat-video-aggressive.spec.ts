@@ -10,9 +10,7 @@ async function mockServices(page: any) {
     }),
   );
   // Mock safety blocked list
-  await page.route(`${API}/safety/blocked-ids`, (route) =>
-    route.fulfill({ json: [] }),
-  );
+  await page.route(`${API}/safety/blocked-ids`, (route) => route.fulfill({ json: [] }));
   // Mock chat rooms list
   await page.route(`${API}/chat/rooms`, (route) =>
     route.fulfill({
@@ -129,7 +127,7 @@ test.describe('Aggressive Chat & Video UI Attacks', () => {
       await page.waitForTimeout(3000);
       // Expect at least a video container to be present if the room is video-stream enabled
       const video = page.locator('video').first();
-      if (await video.count() > 0) {
+      if ((await video.count()) > 0) {
         await expect(video).toBeVisible();
       }
       const leaveButton = page.locator('button:has-text("Leave")');

@@ -16,7 +16,7 @@ export interface LegalSection {
       <h1 class="text-3xl font-extrabold mb-6 text-slate-900 dark:text-white">
         {{ title() }}
       </h1>
-      
+
       <div class="prose dark:prose-invert max-w-none">
         @for (section of sections(); track section.id) {
           <section class="mb-8">
@@ -29,12 +29,12 @@ export interface LegalSection {
           </section>
         }
       </div>
-      
+
       <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 text-sm text-slate-500">
-        Last updated: {{ lastUpdated() | date:'longDate' }}
+        Last updated: {{ lastUpdated() | date: 'longDate' }}
       </div>
     </div>
-  `
+  `,
 })
 export class LegalDocumentViewerComponent {
   readonly title = input.required<string>();

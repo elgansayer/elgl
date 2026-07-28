@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-developer-dashboard',
   imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './developer-dashboard.component.html',
-  styleUrls: ['./developer-dashboard.component.scss']
+  styleUrls: ['./developer-dashboard.component.scss'],
 })
 export class DeveloperDashboardComponent implements OnInit {
   readonly store = inject(EconomyStore);
@@ -38,10 +38,7 @@ export class DeveloperDashboardComponent implements OnInit {
   readonly isRecordingActive = signal<boolean>(false);
 
   async ngOnInit(): Promise<void> {
-    await Promise.all([
-      this.store.loadDeveloperAnalytics(),
-      this.store.loadDiagnosticLogs()
-    ]);
+    await Promise.all([this.store.loadDeveloperAnalytics(), this.store.loadDiagnosticLogs()]);
   }
 
   setTab(tab: 'overview' | 'postgis' | 'centrifugo' | 'livekit'): void {
@@ -51,7 +48,11 @@ export class DeveloperDashboardComponent implements OnInit {
   async upgrade(tier: 'consumer' | 'developer'): Promise<void> {
     await this.store.upgradeVip(tier);
     await this.store.loadDeveloperAnalytics();
-    await this.addLog('REDIS', `VIP Tier updated to ${tier.toUpperCase()}. Limits adjusted.`, 'success');
+    await this.addLog(
+      'REDIS',
+      `VIP Tier updated to ${tier.toUpperCase()}. Limits adjusted.`,
+      'success',
+    );
   }
 
   async generateKey(): Promise<void> {
@@ -66,13 +67,21 @@ export class DeveloperDashboardComponent implements OnInit {
         latitude: this.searchLatitude(),
         longitude: this.searchLongitude(),
         radius_metres: this.searchRadiusMetres(),
-        serious_learner_only: false
+        serious_learner_only: false,
       };
-      await this.addLog('POSTGIS', `Executing ST_DWithin query: Lat ${params.latitude}, Lon ${params.longitude}, Radius: ${params.radius_metres}m (VIP Spoofing: ${this.spoofVipLocation() ? 'ON' : 'OFF'}).`, 'info');
+      await this.addLog(
+        'POSTGIS',
+        `Executing ST_DWithin query: Lat ${params.latitude}, Lon ${params.longitude}, Radius: ${params.radius_metres}m (VIP Spoofing: ${this.spoofVipLocation() ? 'ON' : 'OFF'}).`,
+        'info',
+      );
 
       const results = await this.discoveryService.findPartners(params);
       this.discoveryResults.set(results);
-      await this.addLog('POSTGIS', `Spatial query completed in P95 latency. Found ${results.length} learners within geography boundary.`, 'success');
+      await this.addLog(
+        'POSTGIS',
+        `Spatial query completed in P95 latency. Found ${results.length} learners within geography boundary.`,
+        'success',
+      );
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown query failure';
       await this.addLog('POSTGIS', `Query error: ${errorMessage}`, 'warn');
@@ -84,42 +93,74 @@ export class DeveloperDashboardComponent implements OnInit {
   async toggleCentrifugo(): Promise<void> {
     if (this.centrifugeService.isConnected()) {
       this.centrifugeService.disconnect();
-      await this.addLog('CENTRIFUGO', 'Disconnected WebSocket client from Centrifugo v5 server.', 'warn');
+      await this.addLog(
+        'CENTRIFUGO',
+        'Disconnected WebSocket client from Centrifugo v5 server.',
+        'warn',
+      );
     } else {
       await this.centrifugeService.connect();
-      await this.addLog('CENTRIFUGO', `Connected with JWT sub: ${this.authService.currentUser()?.id || 'anon'}. Redis fan-out ready.`, 'success');
+      await this.addLog(
+        'CENTRIFUGO',
+        `Connected with JWT sub: ${this.authService.currentUser()?.id || 'anon'}. Redis fan-out ready.`,
+        'success',
+      );
     }
   }
 
   async simulateRedisTimelineFanout(): Promise<void> {
     const mockPostId = `moment_${Math.floor(Math.random() * 8999 + 1000)}`;
     const mockFollowerCount = Math.floor(Math.random() * 120 + 15);
-    await this.addLog('REDIS', `Simulated RPUSH timeline_queue for post [${mockPostId}] across ${mockFollowerCount} follower streams.`, 'success');
+    await this.addLog(
+      'REDIS',
+      `Simulated RPUSH timeline_queue for post [${mockPostId}] across ${mockFollowerCount} follower streams.`,
+      'success',
+    );
   }
 
   async simulateStageHandRaise(): Promise<void> {
     this.simulatedStageRole.set('speaker');
     this.simulatedCanPublish.set(true);
-    await this.addLog('LIVEKIT', 'Host approved speaker request. Re-issued JWT with canPublish: true.', 'success');
+    await this.addLog(
+      'LIVEKIT',
+      'Host approved speaker request. Re-issued JWT with canPublish: true.',
+      'success',
+    );
   }
 
   async simulateStageDemote(): Promise<void> {
     this.simulatedStageRole.set('listener');
     this.simulatedCanPublish.set(false);
-    await this.addLog('LIVEKIT', 'Demoted to audience listener. Re-issued JWT with canPublish: false.', 'warn');
+    await this.addLog(
+      'LIVEKIT',
+      'Demoted to audience listener. Re-issued JWT with canPublish: false.',
+      'warn',
+    );
   }
 
   async toggleRecordingArchive(): Promise<void> {
     const newState = !this.isRecordingActive();
     this.isRecordingActive.set(newState);
     if (newState) {
-      await this.addLog('LIVEKIT', 'Triggered composite WebRTC recording. Streaming egress to Cloudflare R2 bucket.', 'info');
+      await this.addLog(
+        'LIVEKIT',
+        'Triggered composite WebRTC recording. Streaming egress to Cloudflare R2 bucket.',
+        'info',
+      );
     } else {
-      await this.addLog('LIVEKIT', 'Stopped recording. Saved MP4 archive with pre-signed URL.', 'success');
+      await this.addLog(
+        'LIVEKIT',
+        'Stopped recording. Saved MP4 archive with pre-signed URL.',
+        'success',
+      );
     }
   }
 
-  private async addLog(category: 'POSTGIS' | 'CENTRIFUGO' | 'REDIS' | 'LIVEKIT', message: string, status: 'info' | 'success' | 'warn'): Promise<void> {
+  private async addLog(
+    category: 'POSTGIS' | 'CENTRIFUGO' | 'REDIS' | 'LIVEKIT',
+    message: string,
+    status: 'info' | 'success' | 'warn',
+  ): Promise<void> {
     await this.store.createDiagnosticLog({ category, message, status });
   }
 }

@@ -7,7 +7,7 @@ describe('MessageReactionBarComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [MessageReactionBarComponent]
+      imports: [MessageReactionBarComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(MessageReactionBarComponent);

@@ -34,7 +34,9 @@
               @if (user.avatar_url) {
                 <img [src]="user.avatar_url" alt="" class="w-full h-full object-cover" />
               } @else {
-                <div class="w-full h-full flex items-center justify-center text-text-secondary text-sm">
+                <div
+                  class="w-full h-full flex items-center justify-center text-text-secondary text-sm"
+                >
                   {{ displayNameFor(user).charAt(0) }}
                 </div>
               }
@@ -56,14 +58,21 @@
                 size="sm"
                 [label]="user.is_vip ? ('admin.badgeVip' | t) : ('admin.badgeFree' | t)"
               />
-              <app-pill colour="warning" size="sm" [label]="'admin.coinsBadge' | t: { coins: user.coins_balance }" />
+              <app-pill
+                colour="warning"
+                size="sm"
+                [label]="'admin.coinsBadge' | t: { coins: user.coins_balance }"
+              />
             </div>
 
             <button
               type="button"
               class="app-pill border border-surface-100"
               [disabled]="vipUpdatingId() === user.id"
-              [attr.aria-label]="(user.is_vip ? 'admin.revokeVipAria' : 'admin.grantVipAria') | t: { name: displayNameFor(user) }"
+              [attr.aria-label]="
+                (user.is_vip ? 'admin.revokeVipAria' : 'admin.grantVipAria')
+                  | t: { name: displayNameFor(user) }
+              "
               (click)="toggleVip(user)"
             >
               {{ (user.is_vip ? 'admin.revokeVipBtn' : 'admin.grantVipBtn') | t }}
@@ -101,7 +110,10 @@
       }
     </div>
 
-    <nav class="flex items-center justify-between mt-4" [attr.aria-label]="'admin.paginationAria' | t">
+    <nav
+      class="flex items-center justify-between mt-4"
+      [attr.aria-label]="'admin.paginationAria' | t"
+    >
       <button
         type="button"
         class="app-pill border border-surface-100"

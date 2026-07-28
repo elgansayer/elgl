@@ -3,7 +3,7 @@ import { Injectable, signal, effect } from '@angular/core';
 export type Theme = 'light' | 'dark' | 'system';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ThemeService {
   readonly currentTheme = signal<Theme>('system');
@@ -44,8 +44,8 @@ export class ThemeService {
   private applyTheme(theme: Theme): void {
     if (typeof document === 'undefined' || typeof window === 'undefined') return;
 
-    const isDark = 
-      theme === 'dark' || 
+    const isDark =
+      theme === 'dark' ||
       (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
     if (isDark) {

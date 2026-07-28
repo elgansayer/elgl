@@ -6,8 +6,8 @@ import { Component, input, computed } from '@angular/core';
   host: {
     '[class]': 'hostClasses()',
     '[attr.role]': 'roleAttribute()',
-    '[attr.tabindex]': 'tabindexAttribute()'
-  }
+    '[attr.tabindex]': 'tabindexAttribute()',
+  },
 })
 export class AppCardComponent {
   readonly padding = input<'none' | 'sm' | 'md' | 'lg'>('md');
@@ -24,7 +24,7 @@ export class AppCardComponent {
 
   readonly hostClasses = computed(() => {
     const base = 'block rounded-2xl bg-surface-200 transition-all';
-    
+
     let paddingClass = '';
     switch (this.padding()) {
       case 'none':
@@ -53,7 +53,8 @@ export class AppCardComponent {
         variantClass = 'border-2 border-surface-100 shadow-none';
         break;
       case 'interactive':
-        variantClass = 'border border-surface-100 shadow-sm cursor-pointer hover:shadow-md hover:border-surface-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2';
+        variantClass =
+          'border border-surface-100 shadow-sm cursor-pointer hover:shadow-md hover:border-surface-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2';
         break;
     }
 

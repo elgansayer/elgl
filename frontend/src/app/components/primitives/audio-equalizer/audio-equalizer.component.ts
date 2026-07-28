@@ -17,20 +17,27 @@ import { Component, input, computed } from '@angular/core';
       }
     </div>
   `,
-  styles: [`
-    @keyframes eq {
-      0%, 100% { height: 20%; }
-      50% { height: 100%; }
-    }
-    .animate-eq {
-      animation: eq 0.8s ease-in-out infinite;
-    }
-  `]
+  styles: [
+    `
+      @keyframes eq {
+        0%,
+        100% {
+          height: 20%;
+        }
+        50% {
+          height: 100%;
+        }
+      }
+      .animate-eq {
+        animation: eq 0.8s ease-in-out infinite;
+      }
+    `,
+  ],
 })
 export class AudioEqualizerComponent {
   /** Whether the speaker is currently talking */
   isActive = input<boolean>(false);
-  
+
   /** Number of equalizer bars to display */
   barCount = input<number>(4);
 
@@ -39,7 +46,7 @@ export class AudioEqualizerComponent {
     const count = this.barCount();
     return Array.from({ length: count }).map((_, i) => ({
       // Stagger the animation delay so the bars bounce out of sync
-      delay: `-${(i * 0.25) % 1}s`
+      delay: `-${(i * 0.25) % 1}s`,
     }));
   });
 }

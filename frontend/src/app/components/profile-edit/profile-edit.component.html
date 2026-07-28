@@ -23,7 +23,9 @@
     <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-4">
       <!-- Display Name -->
       <div>
-        <label for="display_name" class="block text-sm font-medium mb-1">{{ 'profile.displayNamePlaceholder' | t }}</label>
+        <label for="display_name" class="block text-sm font-medium mb-1">{{
+          'profile.displayNamePlaceholder' | t
+        }}</label>
         <input
           id="display_name"
           formControlName="display_name"
@@ -35,7 +37,9 @@
 
       <!-- Native Language -->
       <div>
-        <label for="native_languages" class="block text-sm font-medium mb-1">{{ 'profile.nativeLabel' | t }}</label>
+        <label for="native_languages" class="block text-sm font-medium mb-1">{{
+          'profile.nativeLabel' | t
+        }}</label>
         <input
           id="native_languages"
           formControlName="native_languages"
@@ -47,7 +51,9 @@
 
       <!-- Target Languages -->
       <div>
-        <label for="target_languages" class="block text-sm font-medium mb-1">{{ 'profile.targetPlaceholder' | t }}</label>
+        <label for="target_languages" class="block text-sm font-medium mb-1">{{
+          'profile.targetPlaceholder' | t
+        }}</label>
         <input
           id="target_languages"
           formControlName="target_languages"
@@ -55,7 +61,9 @@
           class="input input-bordered w-full"
           required
         />
-        <p class="text-xs text-text-muted mt-1">Free users: max 1 language. VIP: up to 3 languages.</p>
+        <p class="text-xs text-text-muted mt-1">
+          Free users: max 1 language. VIP: up to 3 languages.
+        </p>
       </div>
 
       <!-- Bio -->

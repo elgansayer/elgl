@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Adversarial WebSocket Payload Injection', () => {
-  test('should not crash the UI when receiving malformed or unexpected WebSocket messages', async ({ page }) => {
+  test('should not crash the UI when receiving malformed or unexpected WebSocket messages', async ({
+    page,
+  }) => {
     const errors: string[] = [];
     page.on('pageerror', (err) => errors.push(err.message));
-    
+
     // Mock the chat room and token endpoints
     await page.route('**/chat/rooms/*', async (route) => {
       await route.fulfill({
@@ -36,12 +38,14 @@ test.describe('Adversarial WebSocket Payload Injection', () => {
         try {
           const parsed = JSON.parse(message as string);
           if (parsed.publish) {
-            ws.send(JSON.stringify({
-              push: {
-                channel: parsed.publish.channel,
-                pub: { data: parsed.publish.data }
-              }
-            }));
+            ws.send(
+              JSON.stringify({
+                push: {
+                  channel: parsed.publish.channel,
+                  pub: { data: parsed.publish.data },
+                },
+              }),
+            );
           }
         } catch (e) {
           // Ignore
@@ -54,7 +58,7 @@ test.describe('Adversarial WebSocket Payload Injection', () => {
 
     // Wait for the chat interface to load
     const messageInput = page.locator('input[placeholder="Type a message..."], textarea');
-    if (await messageInput.count() > 0) {
+    if ((await messageInput.count()) > 0) {
       await messageInput.fill('Initial normal message');
       await page.keyboard.press('Enter');
     }
@@ -70,48 +74,54 @@ test.describe('Adversarial WebSocket Payload Injection', () => {
       mockWs.send(JSON.stringify({ random_data: true, nested: { deeply: true } }));
 
       // 3. Send valid Centrifugo wrapper but malformed chat payload (wrong types)
-      mockWs.send(JSON.stringify({
-        push: {
-          channel: 'chat_room_malformed_123',
-          pub: {
-            data: {
-              type: 'text',
-              // Expected string, sending array of numbers
-              content: [1, 2, 3, 4, 5],
-              sender_id: null,
-              // Expected boolean, sending object
-              is_read: { value: 'not a boolean' }
-            }
-          }
-        }
-      }));
+      mockWs.send(
+        JSON.stringify({
+          push: {
+            channel: 'chat_room_malformed_123',
+            pub: {
+              data: {
+                type: 'text',
+                // Expected string, sending array of numbers
+                content: [1, 2, 3, 4, 5],
+                sender_id: null,
+                // Expected boolean, sending object
+                is_read: { value: 'not a boolean' },
+              },
+            },
+          },
+        }),
+      );
 
       // 4. Send an unknown message type
-      mockWs.send(JSON.stringify({
-        push: {
-          channel: 'chat_room_malformed_123',
-          pub: {
-            data: {
-              type: 'hacker_type_does_not_exist',
-              payload: 'DROP TABLE users;'
-            }
-          }
-        }
-      }));
+      mockWs.send(
+        JSON.stringify({
+          push: {
+            channel: 'chat_room_malformed_123',
+            pub: {
+              data: {
+                type: 'hacker_type_does_not_exist',
+                payload: 'DROP TABLE users;',
+              },
+            },
+          },
+        }),
+      );
 
       // 5. Send a massive payload from the server
-      mockWs.send(JSON.stringify({
-        push: {
-          channel: 'chat_room_malformed_123',
-          pub: {
-            data: {
-              type: 'text',
-              content: 'B'.repeat(50000),
-              sender_id: 'evil_server'
-            }
-          }
-        }
-      }));
+      mockWs.send(
+        JSON.stringify({
+          push: {
+            channel: 'chat_room_malformed_123',
+            pub: {
+              data: {
+                type: 'text',
+                content: 'B'.repeat(50000),
+                sender_id: 'evil_server',
+              },
+            },
+          },
+        }),
+      );
     }
 
     // Wait to see if the frontend crashes from processing the garbage data
@@ -122,7 +132,7 @@ test.describe('Adversarial WebSocket Payload Injection', () => {
     await expect(body).toBeVisible();
 
     // Ensure no fatal uncaught exceptions occurred in the Angular app
-    const fatalErrors = errors.filter(e => e.includes('Uncaught') || e.includes('Fatal'));
+    const fatalErrors = errors.filter((e) => e.includes('Uncaught') || e.includes('Fatal'));
     expect(fatalErrors).toHaveLength(0);
   });
 });

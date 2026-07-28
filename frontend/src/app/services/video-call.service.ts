@@ -38,8 +38,8 @@ export class VideoCallService {
         this.http.post<{ token: string; roomName: string }>(
           `${environment.apiUrl}/video-calls/start`,
           { remoteUserId },
-          { headers: { Authorization: `Bearer ${token}` } }
-        )
+          { headers: { Authorization: `Bearer ${token}` } },
+        ),
       );
 
       this.room = new Room({
@@ -65,7 +65,9 @@ export class VideoCallService {
 
       this.startDurationTimer();
 
-      const localVideoPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
+      const localVideoPublication = this.room.localParticipant.getTrackPublication(
+        Track.Source.Camera,
+      );
       if (localVideoPublication?.track) {
         this.localVideoTrack.set(localVideoPublication.track.mediaStreamTrack);
       }
@@ -101,7 +103,9 @@ export class VideoCallService {
 
       this.startDurationTimer();
 
-      const localVideoPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
+      const localVideoPublication = this.room.localParticipant.getTrackPublication(
+        Track.Source.Camera,
+      );
       if (localVideoPublication?.track) {
         this.localVideoTrack.set(localVideoPublication.track.mediaStreamTrack);
       }
@@ -132,7 +136,9 @@ export class VideoCallService {
     const currentState = this.callState();
     if (!currentState) return;
 
-    const audioPublication = this.room.localParticipant.getTrackPublication(Track.Source.Microphone);
+    const audioPublication = this.room.localParticipant.getTrackPublication(
+      Track.Source.Microphone,
+    );
     if (audioPublication?.track) {
       if (!currentState.isMuted) {
         await audioPublication.track.mute();
@@ -165,7 +171,9 @@ export class VideoCallService {
 
     const videoPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
     if (videoPublication?.track && 'restartTrack' in videoPublication.track) {
-      await (videoPublication.track as unknown as { restartTrack: () => Promise<void> }).restartTrack();
+      await (
+        videoPublication.track as unknown as { restartTrack: () => Promise<void> }
+      ).restartTrack();
     }
   }
 

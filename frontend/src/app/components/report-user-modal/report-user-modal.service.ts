@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { ReportUserModalComponent } from './report-user-modal.component';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ReportUserModalService {
   private modalComponent: ReportUserModalComponent | null = null;

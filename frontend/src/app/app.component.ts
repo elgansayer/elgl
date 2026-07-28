@@ -6,7 +6,10 @@ import { CentrifugeService } from './services/centrifuge.service';
 import { FcmService } from './services/fcm.service';
 import { SafetyService } from './services/safety.service';
 import { TranslatePipe } from './services/translate.pipe';
-import { IncomingCallModalComponent, IncomingCallData } from './components/incoming-call-modal/incoming-call-modal.component';
+import {
+  IncomingCallModalComponent,
+  IncomingCallData,
+} from './components/incoming-call-modal/incoming-call-modal.component';
 import { ToastComponent } from './components/primitives/toast/toast.component';
 import { ReportUserModalComponent } from './components/report-user-modal/report-user-modal.component';
 import { ReportUserModalService } from './components/report-user-modal/report-user-modal.service';
@@ -17,14 +20,14 @@ import { VersionCheckService } from './services/version-check.service';
 @Component({
   selector: 'app-root',
   imports: [
-    RouterOutlet, 
-    RouterLink, 
-    RouterLinkActive, 
-    TranslatePipe, 
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    TranslatePipe,
     IncomingCallModalComponent,
     ToastComponent,
     ReportUserModalComponent,
-    DailyLoginModalComponent
+    DailyLoginModalComponent,
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],

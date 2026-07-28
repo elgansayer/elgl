@@ -9,15 +9,19 @@ import { TranslatePipe } from '../../services/translate.pipe';
   standalone: true,
   imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
-    <div class="bg-surface-200 border border-surface-100 rounded-xl shadow-2xl w-80 max-h-96 overflow-hidden">
+    <div
+      class="bg-surface-200 border border-surface-100 rounded-xl shadow-2xl w-80 max-h-96 overflow-hidden"
+    >
       <!-- Search input -->
       <div class="p-3 border-b border-surface-100">
         <div class="relative">
-          <input type="text"
-                 [(ngModel)]="query"
-                 (input)="onSearch()"
-                 placeholder="{{ 'chatSearch.placeholder' | t }}"
-                 class="w-full bg-surface-100 text-white text-sm rounded-lg ps-9 pe-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-400" />
+          <input
+            type="text"
+            [(ngModel)]="query"
+            (input)="onSearch()"
+            placeholder="{{ 'chatSearch.placeholder' | t }}"
+            class="w-full bg-surface-100 text-white text-sm rounded-lg ps-9 pe-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-400"
+          />
           <span class="absolute start-3 top-2.5 text-text-muted text-sm">🔍</span>
         </div>
       </div>
@@ -25,8 +29,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
       <!-- Filter by type -->
       <div class="flex gap-1 p-2 border-b border-surface-100 overflow-x-auto">
         @for (type of messageTypes; track type) {
-          <button (click)="selectedType.set(type)"
-                  [class]="selectedType() === type ? 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-blue-600 text-white' : 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-surface-100 text-text-secondary hover:bg-gray-600'">
+          <button
+            (click)="selectedType.set(type)"
+            [class]="
+              selectedType() === type
+                ? 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-blue-600 text-white'
+                : 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-surface-100 text-text-secondary hover:bg-gray-600'
+            "
+          >
             {{ type }}
           </button>
         }
@@ -45,8 +55,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
           </div>
         }
         @for (msg of results(); track msg.id) {
-          <button (click)="messageSelect.emit(msg)"
-                  class="w-full text-start px-3 py-2 hover:bg-surface-100 transition-colors border-b border-surface-100 last:border-b-0">
+          <button
+            (click)="messageSelect.emit(msg)"
+            class="w-full text-start px-3 py-2 hover:bg-surface-100 transition-colors border-b border-surface-100 last:border-b-0"
+          >
             <div class="ms-3 min-w-0 flex-1">
               <p class="text-sm font-bold text-text-primary truncate">
                 {{ msg.sender?.display_name || ('common.unknownSender' | t) }}
@@ -56,16 +68,20 @@ import { TranslatePipe } from '../../services/translate.pipe';
               {{ msg.text_content || msg.message_type }}
             </div>
             <div class="text-[10px] text-text-muted mt-1">
-              {{ msg.created_at | date:'short' }}
+              {{ msg.created_at | date: 'short' }}
             </div>
           </button>
         }
       </div>
     </div>
   `,
-  styles: [`
-    :host { display: block; }
-  `]
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+    `,
+  ],
 })
 export class ChatSearchComponent {
   private chatService = inject(ChatService);
@@ -96,7 +112,8 @@ export class ChatSearchComponent {
       try {
         const messages = await this.chatService.getMessages(this.roomId(), q);
         const type = this.selectedType();
-        const filtered = type === 'All' ? messages : messages.filter(m => m.message_type === type);
+        const filtered =
+          type === 'All' ? messages : messages.filter((m) => m.message_type === type);
         this.results.set(filtered);
       } catch (e) {
         console.error('Search failed:', e);

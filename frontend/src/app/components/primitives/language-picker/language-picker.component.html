@@ -26,9 +26,13 @@
       aria-modal="true"
       aria-labelledby="lang-picker-title"
     >
-      <div class="bg-surface-200 rounded-3xl shadow-2xl border border-surface-100 w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden">
+      <div
+        class="bg-surface-200 rounded-3xl shadow-2xl border border-surface-100 w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden"
+      >
         <!-- Modal Header -->
-        <div class="flex items-center justify-between px-6 py-4 border-b border-surface-100 bg-surface-300/80">
+        <div
+          class="flex items-center justify-between px-6 py-4 border-b border-surface-100 bg-surface-300/80"
+        >
           <h3 id="lang-picker-title" class="text-lg font-bold text-text-primary">
             {{ 'lang.selectLanguage' | t }}
           </h3>
@@ -68,20 +72,28 @@
               <div class="flex items-center gap-3">
                 <span class="text-2xl leading-none">{{ lang.flag }}</span>
                 <div class="flex flex-col">
-                  <span class="text-sm font-bold" [class.text-primary]="selectedCode() === lang.code" [class.text-text-primary]="selectedCode() !== lang.code">
+                  <span
+                    class="text-sm font-bold"
+                    [class.text-primary]="selectedCode() === lang.code"
+                    [class.text-text-primary]="selectedCode() !== lang.code"
+                  >
                     {{ lang.name }}
                   </span>
-                <span class="text-xs mt-0.5" [class.text-primary]="selectedCode() === lang.code" [class.text-text-secondary]="selectedCode() !== lang.code" [class.opacity-80]="selectedCode() === lang.code">
-                  {{ lang.nativeName }}
-                </span>
+                  <span
+                    class="text-xs mt-0.5"
+                    [class.text-primary]="selectedCode() === lang.code"
+                    [class.text-text-secondary]="selectedCode() !== lang.code"
+                    [class.opacity-80]="selectedCode() === lang.code"
+                  >
+                    {{ lang.nativeName }}
+                  </span>
                 </div>
               </div>
               @if (selectedCode() === lang.code) {
                 <span class="text-primary font-bold">✓</span>
               }
             </button>
-          }
-          @empty {
+          } @empty {
             <div class="px-4 py-8 text-center text-text-muted text-sm">
               {{ 'discovery.noMatches' | t }}
             </div>

@@ -69,7 +69,10 @@ test.describe('Adversarial: incoming call with a malformed E2EE key', () => {
     await page.waitForTimeout(1000);
 
     const rejectButton = page.locator('button[aria-label="Reject call"]');
-    await expect(rejectButton, 'call modal must still offer a way to dismiss it after a failed join').toBeVisible();
+    await expect(
+      rejectButton,
+      'call modal must still offer a way to dismiss it after a failed join',
+    ).toBeVisible();
 
     // The modal must remain fully functional: the user must be able to reject
     // (dismiss) it. IncomingCallComponent.acceptCall() unconditionally clears
@@ -85,6 +88,9 @@ test.describe('Adversarial: incoming call with a malformed E2EE key', () => {
       'BUG: the incoming-call modal is stuck open with no working accept/reject action after a failed join - it permanently blocks the whole app behind a fixed full-screen overlay',
     ).not.toBeVisible();
 
-    expect(pageErrors, `Expected no uncaught page errors, but got: ${pageErrors.map((e) => e.message).join('; ')}`).toHaveLength(0);
+    expect(
+      pageErrors,
+      `Expected no uncaught page errors, but got: ${pageErrors.map((e) => e.message).join('; ')}`,
+    ).toHaveLength(0);
   });
 });

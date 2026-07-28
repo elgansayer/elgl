@@ -11,13 +11,14 @@
     --app-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
-  html, body {
+  html,
+  body {
     /* Enforce Dark Theme Defaults */
     @apply antialiased text-text-primary bg-surface-500 m-0 p-0 h-full w-full;
   }
 
   /* Support RTL mirroring natively */
-  html[dir="rtl"] {
+  html[dir='rtl'] {
     text-align: start;
   }
 }
@@ -67,7 +68,7 @@
   .app-chip {
     @apply rounded-pill bg-surface-100 text-text-secondary text-xs font-semibold ps-3 pe-3 pt-1.5 pb-1.5 hover:bg-surface-50 hover:text-text-primary cursor-pointer transition-colors;
   }
-  
+
   .app-chip-active {
     @apply bg-primary/20 text-primary hover:bg-primary/30;
   }
@@ -80,7 +81,7 @@
   .app-filter-scroll {
     @apply flex items-center gap-2 overflow-x-auto no-scrollbar pb-1;
   }
-  
+
   /* Hide scrollbar utility */
   .no-scrollbar::-webkit-scrollbar {
     display: none;

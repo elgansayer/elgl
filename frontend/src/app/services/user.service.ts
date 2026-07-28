@@ -63,7 +63,7 @@ export interface ProfileVisitor {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class UserService {
   private http = inject(HttpClient);
@@ -75,15 +75,15 @@ export class UserService {
   private getHeaders() {
     const token = this.authService.getAccessToken();
     return {
-      Authorization: `Bearer ${token ?? ''}`
+      Authorization: `Bearer ${token ?? ''}`,
     };
   }
 
   async getMyProfile(): Promise<UserProfile | null> {
     return firstValueFrom(
-      this.http.get<UserProfile>(`${this.baseUrl}/me`, { headers: this.getHeaders() }).pipe(
-        catchError(() => of(MOCK_USER_PROFILE))
-      )
+      this.http
+        .get<UserProfile>(`${this.baseUrl}/me`, { headers: this.getHeaders() })
+        .pipe(catchError(() => of(MOCK_USER_PROFILE))),
     );
   }
 
@@ -91,85 +91,99 @@ export class UserService {
     return firstValueFrom(
       this.http.get<UserProfile>(`${this.baseUrl}/${userId}`, { headers: this.getHeaders() }).pipe(
         catchError(() => {
-          const user = [MOCK_USER_PROFILE, ...MOCK_PARTNERS].find(u => u.id === userId);
+          const user = [MOCK_USER_PROFILE, ...MOCK_PARTNERS].find((u) => u.id === userId);
           return of(user || null);
-        })
-      )
+        }),
+      ),
     );
   }
 
   async followUser(userId: string): Promise<void> {
     return firstValueFrom(
-      this.http.post<void>(`${this.baseUrl}/${userId}/follow`, {}, { headers: this.getHeaders() }).pipe(
-        catchError(() => of(undefined))
-      )
+      this.http
+        .post<void>(`${this.baseUrl}/${userId}/follow`, {}, { headers: this.getHeaders() })
+        .pipe(catchError(() => of(undefined))),
     );
   }
 
   async unfollowUser(userId: string): Promise<void> {
     return firstValueFrom(
-      this.http.delete<void>(`${this.baseUrl}/${userId}/follow`, { headers: this.getHeaders() }).pipe(
-        catchError(() => of(undefined))
-      )
+      this.http
+        .delete<void>(`${this.baseUrl}/${userId}/follow`, { headers: this.getHeaders() })
+        .pipe(catchError(() => of(undefined))),
     );
   }
 
   async likeProfile(userId: string): Promise<void> {
     return firstValueFrom(
-      this.http.post<void>(`${this.baseUrl}/${userId}/like`, {}, { headers: this.getHeaders() }).pipe(
-        catchError(() => of(undefined))
-      )
+      this.http
+        .post<void>(`${this.baseUrl}/${userId}/like`, {}, { headers: this.getHeaders() })
+        .pipe(catchError(() => of(undefined))),
     );
   }
 
-  async updateMyProfile(update: Partial<UserProfile> & { location?: { latitude: number; longitude: number }; mock_location?: { latitude: number; longitude: number } }): Promise<UserProfile> {
+  async updateMyProfile(
+    update: Partial<UserProfile> & {
+      location?: { latitude: number; longitude: number };
+      mock_location?: { latitude: number; longitude: number };
+    },
+  ): Promise<UserProfile> {
     return firstValueFrom(
-      this.http.patch<UserProfile>(`${this.baseUrl}/me`, update, { headers: this.getHeaders() }).pipe(
-        catchError(() => {
-          const updated = { ...MOCK_USER_PROFILE, ...update } as UserProfile;
-          return of(updated);
-        })
-      )
+      this.http
+        .patch<UserProfile>(`${this.baseUrl}/me`, update, { headers: this.getHeaders() })
+        .pipe(
+          catchError(() => {
+            const updated = { ...MOCK_USER_PROFILE, ...update } as UserProfile;
+            return of(updated);
+          }),
+        ),
     );
   }
 
   async getMyVisitors(): Promise<VisitorLog[]> {
     return firstValueFrom(
-      this.http.get<VisitorLog[]>(`${this.visitsUrl}/my-visitors`, { headers: this.getHeaders() })
+      this.http.get<VisitorLog[]>(`${this.visitsUrl}/my-visitors`, { headers: this.getHeaders() }),
     );
   }
 
   async getProfileVisitors(): Promise<ProfileVisitor[]> {
     return firstValueFrom(
-      this.http.get<ProfileVisitor[]>(`${this.baseUrl}/me/visitors`, { headers: this.getHeaders() }).pipe(
-        catchError(() => of(MOCK_VISITORS))
-      )
+      this.http
+        .get<ProfileVisitor[]>(`${this.baseUrl}/me/visitors`, { headers: this.getHeaders() })
+        .pipe(catchError(() => of(MOCK_VISITORS))),
     );
   }
 
   async recordVisit(viewedUserId: string): Promise<unknown> {
     return firstValueFrom(
-      this.http.post(`${this.visitsUrl}/${viewedUserId}`, {}, { headers: this.getHeaders() })
+      this.http.post(`${this.visitsUrl}/${viewedUserId}`, {}, { headers: this.getHeaders() }),
     );
   }
 
-  async getPresignedUploadUrl(filename: string, contentType: string, folder: string): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+  async getPresignedUploadUrl(
+    filename: string,
+    contentType: string,
+    folder: string,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
     return firstValueFrom(
       this.http.post<{ uploadUrl: string; mediaUrl: string; objectKey: string }>(
         `${this.mediaUrl}/presigned-url`,
         { filename, contentType, folder },
-        { headers: this.getHeaders() }
-      )
+        { headers: this.getHeaders() },
+      ),
     );
   }
 
-  async getPresignedCoverPhotoUrl(filename: string, contentType: string): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+  async getPresignedCoverPhotoUrl(
+    filename: string,
+    contentType: string,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
     return firstValueFrom(
       this.http.post<{ uploadUrl: string; mediaUrl: string; objectKey: string }>(
         `${this.baseUrl}/me/cover-photo/presigned-url`,
         { filename, contentType },
-        { headers: this.getHeaders() }
-      )
+        { headers: this.getHeaders() },
+      ),
     );
   }
 
@@ -178,16 +192,13 @@ export class UserService {
       this.http.patch<UserProfile>(
         `${this.baseUrl}/me/cover-photo`,
         { cover_photo_url: coverPhotoUrl },
-        { headers: this.getHeaders() }
-      )
+        { headers: this.getHeaders() },
+      ),
     );
   }
 
   async uploadCoverPhoto(file: File): Promise<string> {
-    const { uploadUrl, mediaUrl } = await this.getPresignedCoverPhotoUrl(
-      file.name,
-      file.type
-    );
+    const { uploadUrl, mediaUrl } = await this.getPresignedCoverPhotoUrl(file.name, file.type);
 
     const uploadResponse = await fetch(uploadUrl, {
       method: 'PUT',
@@ -204,9 +215,9 @@ export class UserService {
 
   async downloadMyData(): Promise<void> {
     const data = await firstValueFrom(
-      this.http.get(`${this.baseUrl}/me/export`, { headers: this.getHeaders() })
+      this.http.get(`${this.baseUrl}/me/export`, { headers: this.getHeaders() }),
     );
-    
+
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');

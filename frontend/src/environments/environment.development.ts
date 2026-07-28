@@ -3,5 +3,5 @@ export const environment = {
   supabaseUrl: 'https://mock.supabase.co',
   supabaseAnonKey: 'mock-anon-key',
   apiUrl: 'http://localhost:3000',
-  centrifugoUrl: 'ws://localhost:8000/connection/websocket'
+  centrifugoUrl: 'ws://localhost:8000/connection/websocket',
 };

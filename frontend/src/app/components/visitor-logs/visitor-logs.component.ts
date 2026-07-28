@@ -7,7 +7,7 @@ import { UserService, VisitorLog, UserProfile } from '../../services/user.servic
   selector: 'app-visitor-logs',
   imports: [CommonModule, TranslatePipe],
   templateUrl: './visitor-logs.component.html',
-  styleUrls: ['./visitor-logs.component.scss']
+  styleUrls: ['./visitor-logs.component.scss'],
 })
 export class VisitorLogsComponent implements OnInit {
   private userService = inject(UserService);
@@ -17,14 +17,14 @@ export class VisitorLogsComponent implements OnInit {
   readonly isLoading = signal<boolean>(true);
   readonly hideBlurred = signal<boolean>(false);
 
-  readonly visibleVisitorsCount = computed(() =>
-    this.visitors().filter((visitor) => !visitor.is_blurred).length
+  readonly visibleVisitorsCount = computed(
+    () => this.visitors().filter((visitor) => !visitor.is_blurred).length,
   );
-  readonly blurredVisitorsCount = computed(() =>
-    this.visitors().filter((visitor) => visitor.is_blurred).length
+  readonly blurredVisitorsCount = computed(
+    () => this.visitors().filter((visitor) => visitor.is_blurred).length,
   );
   readonly filteredVisitors = computed(() =>
-    this.hideBlurred() ? this.visitors().filter((visitor) => !visitor.is_blurred) : this.visitors()
+    this.hideBlurred() ? this.visitors().filter((visitor) => !visitor.is_blurred) : this.visitors(),
   );
 
   async ngOnInit(): Promise<void> {
@@ -36,7 +36,7 @@ export class VisitorLogsComponent implements OnInit {
     try {
       const [profileData, logs] = await Promise.all([
         this.userService.getMyProfile(),
-        this.userService.getMyVisitors()
+        this.userService.getMyVisitors(),
       ]);
       this.profile.set(profileData);
       this.visitors.set(logs);

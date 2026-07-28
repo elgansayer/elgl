@@ -1,4 +1,6 @@
-<div class="min-h-[100dvh] flex flex-col bg-surface-500 text-text-primary font-sans relative overflow-x-hidden">
+<div
+  class="min-h-[100dvh] flex flex-col bg-surface-500 text-text-primary font-sans relative overflow-x-hidden"
+>
   @if (economyStore.activeGiftAnimation(); as overlay) {
     <div class="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center p-4">
       <div
@@ -51,7 +53,9 @@
     </div>
   </main>
 
-  <nav class="fixed bottom-0 inset-x-0 z-40 border-t border-surface-100/80 bg-surface-200/95 backdrop-blur">
+  <nav
+    class="fixed bottom-0 inset-x-0 z-40 border-t border-surface-100/80 bg-surface-200/95 backdrop-blur"
+  >
     <div class="mx-auto max-w-4xl grid grid-cols-5 ps-2 pe-2 pt-2 pb-2">
       @for (item of navItems; track item.path) {
         <a

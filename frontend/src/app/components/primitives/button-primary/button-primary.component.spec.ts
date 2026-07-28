@@ -14,7 +14,7 @@ import { AppButtonPrimaryComponent } from './button-primary.component';
       Click Me
     </app-button-primary>
   `,
-  imports: [AppButtonPrimaryComponent]
+  imports: [AppButtonPrimaryComponent],
 })
 class TestHostComponent {
   size = signal<'sm' | 'md' | 'lg'>('md');
@@ -35,7 +35,7 @@ describe('AppButtonPrimaryComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TestHostComponent, AppButtonPrimaryComponent]
+      imports: [TestHostComponent, AppButtonPrimaryComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TestHostComponent);

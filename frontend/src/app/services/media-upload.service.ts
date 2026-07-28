@@ -39,7 +39,12 @@ export class MediaUploadService {
   ): Promise<Omit<UploadedMedia, 'previewUrl'>> {
     // 1. Get presigned URL from backend
     const presigned = await firstValueFrom(
-      this.http.post<{ uploadUrl: string; mediaUrl: string; objectKey: string; mediaKind: 'image' | 'video' }>(
+      this.http.post<{
+        uploadUrl: string;
+        mediaUrl: string;
+        objectKey: string;
+        mediaKind: 'image' | 'video';
+      }>(
         `${environment.apiUrl}/media/moments/presigned-url`,
         {
           filename: file.name,

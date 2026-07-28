@@ -7,8 +7,11 @@ import { AppCardComponent } from '../primitives/card/card.component';
   standalone: true,
   imports: [CommonModule, AppCardComponent],
   template: `
-    <app-card variant="elevated" padding="md" customClass="bg-slate-800 text-white flex flex-row items-center justify-between gap-4 border border-slate-700">
-      
+    <app-card
+      variant="elevated"
+      padding="md"
+      customClass="bg-slate-800 text-white flex flex-row items-center justify-between gap-4 border border-slate-700"
+    >
       <!-- Viewer Count -->
       <div class="flex flex-col items-start">
         <span class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Viewers</span>
@@ -20,7 +23,9 @@ import { AppCardComponent } from '../primitives/card/card.component';
 
       <!-- Earned Coins -->
       <div class="flex flex-col items-start border-s border-slate-700 ps-4">
-        <span class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Coins Earned</span>
+        <span class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1"
+          >Coins Earned</span
+        >
         <div class="flex items-center gap-2">
           <span class="text-yellow-400 text-xl">🪙</span>
           <span class="text-xl font-bold text-yellow-400">{{ earnedCoins() }}</span>
@@ -34,9 +39,8 @@ import { AppCardComponent } from '../primitives/card/card.component';
           <span class="text-xl font-mono font-bold text-emerald-400">{{ uptime() }}</span>
         </div>
       </div>
-
     </app-card>
-  `
+  `,
 })
 export class HostDashboardComponent implements OnInit, OnDestroy {
   viewerCount = input<number>(0);

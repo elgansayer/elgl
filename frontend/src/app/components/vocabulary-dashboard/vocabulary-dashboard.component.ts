@@ -4,14 +4,18 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import { VocabularyStore, PronunciationScoreResult, GrammarCheckResult } from '../../services/vocabulary.store';
+import {
+  VocabularyStore,
+  PronunciationScoreResult,
+  GrammarCheckResult,
+} from '../../services/vocabulary.store';
 import { TokenisedTextComponent } from '../tokenised-text/tokenised-text.component';
 
 @Component({
   selector: 'app-vocabulary-dashboard',
   imports: [CommonModule, FormsModule, TokenisedTextComponent, TranslatePipe],
   templateUrl: './vocabulary-dashboard.component.html',
-  styleUrls: ['./vocabulary-dashboard.component.scss']
+  styleUrls: ['./vocabulary-dashboard.component.scss'],
 })
 export class VocabularyDashboardComponent implements OnInit {
   readonly vocabStore = inject(VocabularyStore);
@@ -47,7 +51,7 @@ export class VocabularyDashboardComponent implements OnInit {
       await this.vocabStore.updateSrsLevel(currentCard.id, newLevel);
       this.isCardFlipped.set(false);
       if (this.currentReviewIndex() < due.length - 1) {
-        this.currentReviewIndex.update(i => i + 1);
+        this.currentReviewIndex.update((i) => i + 1);
       } else {
         await this.vocabStore.loadDueReviews();
         this.currentReviewIndex.set(0);

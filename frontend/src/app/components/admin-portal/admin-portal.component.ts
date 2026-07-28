@@ -2,11 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import {
-  AdminService,
-  AdminUserSummary,
-  LoginHistoryEntry,
-} from '../../services/admin.service';
+import { AdminService, AdminUserSummary, LoginHistoryEntry } from '../../services/admin.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppPillComponent } from '../primitives/pill/pill.component';
 
@@ -28,14 +24,10 @@ export class AdminPortalComponent implements OnInit {
   readonly isLoading = signal<boolean>(true);
   readonly errorMessage = signal<string>('');
   readonly vipUpdatingId = signal<string | null>(null);
-  readonly loginHistoryByUser = signal<Record<string, LoginHistoryEntry[]>>(
-    {},
-  );
+  readonly loginHistoryByUser = signal<Record<string, LoginHistoryEntry[]>>({});
   readonly loginHistoryLoadingId = signal<string | null>(null);
 
-  readonly totalPages = computed(() =>
-    Math.max(1, Math.ceil(this.total() / this.pageSize)),
-  );
+  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize)));
 
   async ngOnInit(): Promise<void> {
     await this.loadUsers();
@@ -78,13 +70,8 @@ export class AdminPortalComponent implements OnInit {
   async toggleVip(user: AdminUserSummary): Promise<void> {
     this.vipUpdatingId.set(user.id);
     try {
-      const updated = await this.adminService.setVipStatus(
-        user.id,
-        !user.is_vip,
-      );
-      this.users.update((list) =>
-        list.map((u) => (u.id === user.id ? updated : u)),
-      );
+      const updated = await this.adminService.setVipStatus(user.id, !user.is_vip);
+      this.users.update((list) => list.map((u) => (u.id === user.id ? updated : u)));
     } catch {
       this.errorMessage.set(this.i18n.translate('admin.vipUpdateError'));
     } finally {

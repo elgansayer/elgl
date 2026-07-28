@@ -17,7 +17,9 @@
         <label class="block text-sm font-medium text-slate-300 mb-2">Reason</label>
         <div class="space-y-2">
           @for (cat of categories; track cat.value) {
-            <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-800 hover:bg-slate-700 cursor-pointer">
+            <label
+              class="flex items-center gap-2 p-2 rounded-lg bg-slate-800 hover:bg-slate-700 cursor-pointer"
+            >
               <input
                 type="radio"
                 name="reportCategory"
@@ -33,7 +35,9 @@
 
       <!-- Optional description -->
       <div class="mb-4">
-        <label class="block text-sm font-medium text-slate-300 mb-1">Additional details (optional)</label>
+        <label class="block text-sm font-medium text-slate-300 mb-1"
+          >Additional details (optional)</label
+        >
         <textarea
           [(ngModel)]="description"
           rows="3"
@@ -63,7 +67,11 @@
           (click)="submitReport()"
           [disabled]="submitting"
         >
-          @if (submitting) { Submitting... } @else { Report }
+          @if (submitting) {
+            Submitting...
+          } @else {
+            Report
+          }
         </button>
       </div>
     </div>

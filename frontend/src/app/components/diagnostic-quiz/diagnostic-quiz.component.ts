@@ -32,33 +32,33 @@ export class DiagnosticQuizComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.quizService.getQuestions('en').subscribe(data => {
+    this.quizService.getQuestions('en').subscribe((data) => {
       this.questions.set(data);
     });
   }
 
   selectOption(questionId: string, points: number): void {
-    this.answers.update(prev => ({ ...prev, [questionId]: points }));
+    this.answers.update((prev) => ({ ...prev, [questionId]: points }));
   }
 
   next(): void {
     if (this.isLastQuestion()) {
       this.finishQuiz();
     } else {
-      this.currentIndex.update(i => i + 1);
+      this.currentIndex.update((i) => i + 1);
     }
   }
 
   previous(): void {
     if (this.currentIndex() > 0) {
-      this.currentIndex.update(i => i - 1);
+      this.currentIndex.update((i) => i - 1);
     }
   }
 
   private finishQuiz(): void {
     const totalScore = Object.values(this.answers()).reduce((sum, pts) => sum + pts, 0);
     let suggestedLevel = 'A1';
-    
+
     if (totalScore >= 8) suggestedLevel = 'C1/C2';
     else if (totalScore >= 6) suggestedLevel = 'B2';
     else if (totalScore >= 4) suggestedLevel = 'B1';

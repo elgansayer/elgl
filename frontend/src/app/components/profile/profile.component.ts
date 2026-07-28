@@ -7,13 +7,24 @@ import { I18nService } from '../../services/i18n.service';
 import { UserService, UserProfile } from '../../services/user.service';
 import { CoverPhotoUploaderComponent } from '../cover-photo-uploader/cover-photo-uploader.component';
 import { HobbyTagsComponent } from '../hobby-tags/hobby-tags.component';
-import { LanguagePickerComponent, getLanguageFlag } from '../primitives/language-picker/language-picker.component';
+import {
+  LanguagePickerComponent,
+  getLanguageFlag,
+} from '../primitives/language-picker/language-picker.component';
 
 @Component({
   selector: 'app-profile',
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, CoverPhotoUploaderComponent, HobbyTagsComponent, LanguagePickerComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    TranslatePipe,
+    CoverPhotoUploaderComponent,
+    HobbyTagsComponent,
+    LanguagePickerComponent,
+  ],
   templateUrl: './profile.component.html',
-  styleUrls: ['./profile.component.scss']
+  styleUrls: ['./profile.component.scss'],
 })
 export class ProfileComponent implements OnInit {
   private userService = inject(UserService);
@@ -78,7 +89,9 @@ export class ProfileComponent implements OnInit {
       this.successMessage.set(this.i18n.translate('profile.successUpdate'));
     } catch (e: unknown) {
       const err = e as { message?: string; error?: { message?: string } };
-      this.errorMessage.set(err.error?.message || err.message || this.i18n.translate('profile.updateError'));
+      this.errorMessage.set(
+        err.error?.message || err.message || this.i18n.translate('profile.updateError'),
+      );
     }
   }
 
@@ -89,7 +102,7 @@ export class ProfileComponent implements OnInit {
   }
 
   onCoverUploaded(coverUrl: string): void {
-    this.profile.update(p => p ? { ...p, cover_photo_url: coverUrl } : p);
+    this.profile.update((p) => (p ? { ...p, cover_photo_url: coverUrl } : p));
     this.successMessage.set(this.i18n.translate('profile.coverUpdated'));
   }
 
@@ -106,7 +119,6 @@ export class ProfileComponent implements OnInit {
     return getLanguageFlag(code);
   }
 
-  
   addNativeLanguage(code: string) {
     if (this.nativeLanguages.length < 3 && !this.nativeLanguages.includes(code)) {
       this.nativeLanguages = [...this.nativeLanguages, code];
@@ -114,7 +126,7 @@ export class ProfileComponent implements OnInit {
   }
 
   removeNativeLanguage(code: string) {
-    this.nativeLanguages = this.nativeLanguages.filter(l => l !== code);
+    this.nativeLanguages = this.nativeLanguages.filter((l) => l !== code);
   }
 
   addTargetLanguage(code: string): void {
@@ -122,11 +134,13 @@ export class ProfileComponent implements OnInit {
     if (this.targetLanguages.length < 3) {
       this.targetLanguages.push(code);
     } else {
-      this.errorMessage.set(this.i18n.translate('profile.maxLanguagesError') || 'Max 3 languages allowed');
+      this.errorMessage.set(
+        this.i18n.translate('profile.maxLanguagesError') || 'Max 3 languages allowed',
+      );
     }
   }
 
   removeTargetLanguage(code: string): void {
-    this.targetLanguages = this.targetLanguages.filter(l => l !== code);
+    this.targetLanguages = this.targetLanguages.filter((l) => l !== code);
   }
 }

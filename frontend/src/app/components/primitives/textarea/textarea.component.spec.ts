@@ -18,7 +18,7 @@ import { AppTextareaComponent } from './textarea.component';
       (focused)="onFocused()"
     />
   `,
-  imports: [AppTextareaComponent]
+  imports: [AppTextareaComponent],
 })
 class TestHostComponent {
   value = signal('initial bio');
@@ -53,7 +53,7 @@ describe('AppTextareaComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TestHostComponent, AppTextareaComponent]
+      imports: [TestHostComponent, AppTextareaComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TestHostComponent);

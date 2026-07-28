@@ -8,7 +8,7 @@ import { AppCardComponent } from './card.component';
       <p>Card content</p>
     </app-card>
   `,
-  imports: [AppCardComponent]
+  imports: [AppCardComponent],
 })
 class TestHostComponent {
   padding = signal<'none' | 'sm' | 'md' | 'lg'>('md');
@@ -23,7 +23,7 @@ describe('AppCardComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TestHostComponent, AppCardComponent]
+      imports: [TestHostComponent, AppCardComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TestHostComponent);

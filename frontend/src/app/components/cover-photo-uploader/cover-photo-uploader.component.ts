@@ -1,10 +1,4 @@
-import {
-  Component,
-  signal,
-  output,
-  input,
-  inject,
-} from '@angular/core';
+import { Component, signal, output, input, inject } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 import { HttpClient } from '@angular/common/http';

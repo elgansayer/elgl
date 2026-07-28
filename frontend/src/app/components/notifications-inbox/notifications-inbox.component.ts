@@ -3,10 +3,7 @@ import { CommonModule, Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import {
-  NotificationService,
-  InAppNotification,
-} from '../../services/notification.service';
+import { NotificationService, InAppNotification } from '../../services/notification.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 
 export type NotificationTab = 'all' | 'likes' | 'comments' | 'follows';
@@ -70,9 +67,7 @@ export class NotificationsInboxComponent implements OnInit {
   async markAllAsRead(): Promise<void> {
     await this.notificationService.markAllAsRead();
     this.unreadCount.set(0);
-    this.notifications.update((list) =>
-      list.map((item) => ({ ...item, is_read: true }))
-    );
+    this.notifications.update((list) => list.map((item) => ({ ...item, is_read: true })));
   }
 
   async onNotificationClick(notif: InAppNotification): Promise<void> {

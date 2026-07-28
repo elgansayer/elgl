@@ -28,7 +28,9 @@
 
   <!-- Error banner -->
   @if (error()) {
-    <div class="mb-4 rounded-md bg-red-50 dark:bg-red-900/30 p-3 text-red-700 dark:text-red-300 text-sm">
+    <div
+      class="mb-4 rounded-md bg-red-50 dark:bg-red-900/30 p-3 text-red-700 dark:text-red-300 text-sm"
+    >
       {{ error() }}
     </div>
   }
@@ -37,9 +39,25 @@
   @if (activeTab() === 'moment') {
     @if (loadingMoments()) {
       <div class="flex items-center justify-center py-12">
-        <svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        <svg
+          class="animate-spin h-8 w-8 text-blue-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+          ></path>
         </svg>
       </div>
     } @else if (itemsForTab().length === 0) {
@@ -48,22 +66,37 @@
       </div>
     } @else {
       @for (item of itemsForTab(); track item.id) {
-        <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 mb-4 shadow-sm">
+        <div
+          class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 mb-4 shadow-sm"
+        >
           <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div class="flex-1">
               <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-2">
-                <span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700">{{ item.type === 'moment' ? 'Moment' : 'Profile' }}</span>
-                <span class="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">{{ item.reason }}</span>
+                <span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700">{{
+                  item.type === 'moment' ? 'Moment' : 'Profile'
+                }}</span>
+                <span
+                  class="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                  >{{ item.reason }}</span
+                >
               </div>
               @if (item.moment_content) {
-                <p class="text-sm text-slate-700 dark:text-slate-200 mb-2 line-clamp-3">{{ item.moment_content }}</p>
+                <p class="text-sm text-slate-700 dark:text-slate-200 mb-2 line-clamp-3">
+                  {{ item.moment_content }}
+                </p>
               }
-              <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-                <span>Reported by: <strong>{{ item.reporter.name }}</strong></span>
+              <div
+                class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400"
+              >
+                <span
+                  >Reported by: <strong>{{ item.reporter.name }}</strong></span
+                >
                 @if (item.reported_user) {
-                  <span>User: <strong>{{ item.reported_user.name }}</strong></span>
+                  <span
+                    >User: <strong>{{ item.reported_user.name }}</strong></span
+                  >
                 }
-                <span>{{ item.created_at | date:'medium' }}</span>
+                <span>{{ item.created_at | date: 'medium' }}</span>
               </div>
             </div>
             <div class="flex items-center gap-2 self-end sm:self-start">
@@ -92,9 +125,25 @@
   @if (activeTab() === 'profile') {
     @if (loadingProfiles()) {
       <div class="flex items-center justify-center py-12">
-        <svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        <svg
+          class="animate-spin h-8 w-8 text-blue-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+          ></path>
         </svg>
       </div>
     } @else if (itemsForTab().length === 0) {
@@ -103,17 +152,28 @@
       </div>
     } @else {
       @for (item of itemsForTab(); track item.id) {
-        <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 mb-4 shadow-sm">
+        <div
+          class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 mb-4 shadow-sm"
+        >
           <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div class="flex-1">
               <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-2">
                 <span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700">Profile</span>
-                <span class="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">{{ item.reason }}</span>
+                <span
+                  class="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                  >{{ item.reason }}</span
+                >
               </div>
-              <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-                <span>Reported user: <strong>{{ item.reported_user?.name }}</strong></span>
-                <span>Reported by: <strong>{{ item.reporter.name }}</strong></span>
-                <span>{{ item.created_at | date:'medium' }}</span>
+              <div
+                class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400"
+              >
+                <span
+                  >Reported user: <strong>{{ item.reported_user?.name }}</strong></span
+                >
+                <span
+                  >Reported by: <strong>{{ item.reporter.name }}</strong></span
+                >
+                <span>{{ item.created_at | date: 'medium' }}</span>
               </div>
             </div>
             <div class="flex items-center gap-2 self-end sm:self-start">

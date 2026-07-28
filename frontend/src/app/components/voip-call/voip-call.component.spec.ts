@@ -7,9 +7,10 @@ import { AuthService } from '../../services/auth.service';
 import { ChatService } from '../../services/chat.service';
 import { LocalTrack, Room, Track } from 'livekit-client';
 
-(globalThis as unknown as { MediaStreamTrack: typeof MediaStreamTrack }).MediaStreamTrack = class MediaStreamTrack {
-  stop() {}
-} as unknown as typeof MediaStreamTrack;
+(globalThis as unknown as { MediaStreamTrack: typeof MediaStreamTrack }).MediaStreamTrack =
+  class MediaStreamTrack {
+    stop() {}
+  } as unknown as typeof MediaStreamTrack;
 
 describe('VoipCallComponent', () => {
   let component: VoipCallComponent;

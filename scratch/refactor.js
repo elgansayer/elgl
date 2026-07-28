@@ -30,18 +30,18 @@ const files = [
   'frontend/src/app/services/mock-data.ts',
   'frontend/src/app/services/user.service.ts',
   'frontend/src/app/services/discovery.service.ts',
-  'frontend/src/app/services/notification.service.ts'
+  'frontend/src/app/services/notification.service.ts',
 ];
 
 for (const file of files) {
   if (!fs.existsSync(file)) continue;
   let content = fs.readFileSync(file, 'utf8');
-  
+
   // TypeScript Typings
   content = content.replace(/native_language\?: string;/g, 'native_languages?: string[];');
   content = content.replace(/native_language: string;/g, 'native_languages: string[];');
   content = content.replace(/native_language!: string \| null;/g, 'native_languages!: string[];');
-  
+
   // Seed/Mock Data formatting: native_language: 'en' => native_languages: ['en']
   content = content.replace(/native_language: (['"].*?['"])/g, 'native_languages: [$1]');
 
@@ -54,24 +54,32 @@ for (const file of files) {
   content = content.replace(/nativeLanguages = 'en';/g, "nativeLanguages: string[] = ['en'];");
 
   // Discovery array checks (Supabase JS requires contains for array)
-  content = content.replace(/queryBuilder = queryBuilder\.eq\('native_languages', query\.native_languages\);/g, 
-    "queryBuilder = queryBuilder.contains('native_languages', [query.native_languages]);");
-  
+  content = content.replace(
+    /queryBuilder = queryBuilder\.eq\('native_languages', query\.native_languages\);/g,
+    "queryBuilder = queryBuilder.contains('native_languages', [query.native_languages]);",
+  );
+
   // Discovery spec array mock check
-  content = content.replace(/expect\(mockQueryBuilder\.eq\)\.toHaveBeenCalledWith\('native_languages', 'ES'\);/g, 
-    "expect(mockQueryBuilder.contains).toHaveBeenCalledWith('native_languages', ['ES']);");
-  
+  content = content.replace(
+    /expect\(mockQueryBuilder\.eq\)\.toHaveBeenCalledWith\('native_languages', 'ES'\);/g,
+    "expect(mockQueryBuilder.contains).toHaveBeenCalledWith('native_languages', ['ES']);",
+  );
+
   // Profile Visited spec
-  content = content.replace(/expect\(result\[0\]\.visitor\.native_languages\)\.toBe\(\['en'\]\);/g,
-    "expect(result[0].visitor.native_languages).toEqual(['en']);");
-  
+  content = content.replace(
+    /expect\(result\[0\]\.visitor\.native_languages\)\.toBe\(\['en'\]\);/g,
+    "expect(result[0].visitor.native_languages).toEqual(['en']);",
+  );
+
   // Discovery Target Lang logic (frontend)
-  content = content.replace(/u => u\.native_languages === query\.native_languages/g, 
-    "u => u.native_languages?.includes(query.native_languages!)");
+  content = content.replace(
+    /u => u\.native_languages === query\.native_languages/g,
+    'u => u.native_languages?.includes(query.native_languages!)',
+  );
 
   // feed.service.ts
-  content = content.replace(/u\.profile\.native_languages/g, "u.profile.native_languages?.[0]");
-  
+  content = content.replace(/u\.profile\.native_languages/g, 'u.profile.native_languages?.[0]');
+
   fs.writeFileSync(file, content);
 }
 console.log('Refactor complete');

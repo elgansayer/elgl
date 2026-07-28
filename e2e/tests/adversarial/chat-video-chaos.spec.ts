@@ -3,11 +3,11 @@ import { test, expect } from '@playwright/test';
 test.describe('Adversarial Chat & Video Chaos', () => {
   test.beforeEach(async ({ page }) => {
     // Mock authentication and necessary tokens to bypass login
-    await page.route('**/auth/session', (route) => 
-      route.fulfill({ status: 200, json: { user: { id: 'chaos-tester-1', is_vip: true } } })
+    await page.route('**/auth/session', (route) =>
+      route.fulfill({ status: 200, json: { user: { id: 'chaos-tester-1', is_vip: true } } }),
     );
-    await page.route('**/chat/token', (route) => 
-      route.fulfill({ status: 200, json: { token: 'fake-chaos-token' } })
+    await page.route('**/chat/token', (route) =>
+      route.fulfill({ status: 200, json: { token: 'fake-chaos-token' } }),
     );
     // Mock Centrifugo WebSocket connection to prevent actual network hangs during spam
     await page.routeWebSocket(/connection\/websocket/, (ws) => {
@@ -18,20 +18,22 @@ test.describe('Adversarial Chat & Video Chaos', () => {
     });
   });
 
-  test('should survive rapid video toggling and massive chat payload spam without crashing', async ({ page }) => {
+  test('should survive rapid video toggling and massive chat payload spam without crashing', async ({
+    page,
+  }) => {
     // Navigate to a hypothetical chat room
     await page.goto('/chat/chaos-room-999');
 
     // 1. Attempt to find the chat input and spam it with massive payloads
     const chatInput = page.locator('textarea, input[type="text"]').first();
-    
+
     // Wait for the UI to render
     await page.waitForTimeout(1000);
 
     if (await chatInput.isVisible()) {
       const massiveString = 'ZALGO '.repeat(500) + ' 👾 '.repeat(100);
       const xssString = '<script>alert("XSS")</script><img src="x" onerror="alert(1)">';
-      
+
       // Fire 20 massive messages in rapid succession
       for (let i = 0; i < 20; i++) {
         const payload = i % 2 === 0 ? massiveString : xssString;
@@ -43,8 +45,12 @@ test.describe('Adversarial Chat & Video Chaos', () => {
     }
 
     // 2. Rapidly toggle video/audio call buttons to trigger race conditions in LiveKit/WebRTC state
-    const callButton = page.locator('button[aria-label*="call" i], button[aria-label*="video" i], button:has-text("Call")').first();
-    
+    const callButton = page
+      .locator(
+        'button[aria-label*="call" i], button[aria-label*="video" i], button:has-text("Call")',
+      )
+      .first();
+
     if (await callButton.isVisible()) {
       for (let i = 0; i < 15; i++) {
         await callButton.click({ force: true });

@@ -1,7 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
 test.describe('Adversarial Chat & Video Stress Tests', () => {
-  
   test.beforeEach(async ({ page }) => {
     // Mock the initial chat room load to prevent actual backend calls during stress test
     await page.route('**/chat/rooms/*', async (route) => {
@@ -12,7 +11,10 @@ test.describe('Adversarial Chat & Video Stress Tests', () => {
           id: 'room_stress_999',
           title: 'Stress Test Room',
           is_online: true,
-          participants: [{ id: 'user_1', name: 'Attacker' }, { id: 'user_2', name: 'Victim' }]
+          participants: [
+            { id: 'user_1', name: 'Attacker' },
+            { id: 'user_2', name: 'Victim' },
+          ],
         }),
       });
     });
@@ -39,18 +41,24 @@ test.describe('Adversarial Chat & Video Stress Tests', () => {
     await page.goto('/chat/room_stress_999');
   });
 
-  test('should survive rapid video/audio toggling while receiving massive chat payloads', async ({ page }) => {
+  test('should survive rapid video/audio toggling while receiving massive chat payloads', async ({
+    page,
+  }) => {
     const pageErrors: Error[] = [];
     page.on('pageerror', (error) => {
       pageErrors.push(error);
     });
 
     // 1. Rapidly toggle video and audio buttons to test for race conditions in LiveKit/WebRTC state
-    const videoToggle = page.locator('button[aria-label="Toggle Video"], button:has-text("Video")').first();
-    const audioToggle = page.locator('button[aria-label="Toggle Audio"], button:has-text("Audio")').first();
-    
+    const videoToggle = page
+      .locator('button[aria-label="Toggle Video"], button:has-text("Video")')
+      .first();
+    const audioToggle = page
+      .locator('button[aria-label="Toggle Audio"], button:has-text("Audio")')
+      .first();
+
     // If the buttons exist in the UI, spam them
-    if (await videoToggle.isVisible() && await audioToggle.isVisible()) {
+    if ((await videoToggle.isVisible()) && (await audioToggle.isVisible())) {
       for (let i = 0; i < 50; i++) {
         await videoToggle.click({ force: true });
         await audioToggle.click({ force: true });
@@ -58,7 +66,9 @@ test.describe('Adversarial Chat & Video Stress Tests', () => {
     }
 
     // 2. Inject massive and malicious chat payloads
-    const chatInput = page.locator('textarea[placeholder*="message" i], input[placeholder*="message" i]').first();
+    const chatInput = page
+      .locator('textarea[placeholder*="message" i], input[placeholder*="message" i]')
+      .first();
     const sendButton = page.locator('button[aria-label="Send"], button:has-text("Send")').first();
 
     if (await chatInput.isVisible()) {
@@ -67,7 +77,7 @@ test.describe('Adversarial Chat & Video Stress Tests', () => {
         'إختبار النص العربي مع RTL \u202E \u202D \u202C', // RTL override characters
         '<script>alert("xss")</script><img src=x onerror=alert(1)>', // Basic XSS
         '👩‍👩‍👧‍👦'.repeat(1000), // Heavy ZWJ emoji payload
-        '{"type": "crash", "payload": null}' // Fake JSON structure
+        '{"type": "crash", "payload": null}', // Fake JSON structure
       ];
 
       for (const payload of maliciousPayloads) {

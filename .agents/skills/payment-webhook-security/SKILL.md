@@ -6,7 +6,9 @@ description: 'Secure payment, webhook, and in-app-purchase (IAP) endpoints for S
 # Payment & Webhook Security
 
 ## Why This Skill Exists
+
 A 2026-07-22 audit found three critical, currently-unfixed vulnerabilities in this exact codebase (see `AGENTS.md` Section 8.1):
+
 1. `POST /monetisation/webhooks/stripe` never verifies the Stripe signature - anyone can forge a `checkout.session.completed` body and grant free VIP to any `userId`.
 2. `POST /monetisation/upgrade` sets `is_vip: true` for any authenticated caller with zero payment check.
 3. `POST /economy/purchase-coins` credits `coins_balance` using a client-supplied `amount` with no receipt verification - infinite free coins.
@@ -32,6 +34,7 @@ Treat every rule below as mandatory whenever you touch `backend/src/monetisation
 6. **Rate limit and monitor:** coin-purchase and VIP-upgrade endpoints should be covered by the same kind of anomaly detection used elsewhere (Redis rate limiting, e.g. `daily_ai_usage:{userId}:{date}` pattern in `nlp.service.ts#checkRateLimit`) to catch abuse even if a verification bug slips through.
 
 ## Remediation Checklist for This Repo (`backend/src/monetisation`, `backend/src/economy`)
+
 - [ ] Add `stripe` to `backend/package.json` dependencies.
 - [ ] Wire raw-body parsing for `POST /monetisation/webhooks/stripe` and call `constructEvent` before touching `dto`.
 - [ ] Remove or internally-gate `POST /monetisation/upgrade` so it can't unilaterally set `is_vip`.
@@ -40,4 +43,5 @@ Treat every rule below as mandatory whenever you touch `backend/src/monetisation
 - [ ] Add Jest tests asserting: forged webhook signatures are rejected (`401`/`400`), and `upgrade`/`purchase-coins` cannot change state without a verified payment record.
 
 ## Testing Guidance
+
 Every payment-adjacent test suite should include a specific "forged/invalid signature" test case that expects rejection, not just a "happy path" test - this is the exact class of bug the audit found (happy-path tests existed and passed while the security check was entirely absent).

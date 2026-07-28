@@ -18,10 +18,16 @@ import { AdminService, AdminUserSummary } from '../../services/admin.service';
       </ul>
     </div>
   `,
-  styles: [`
-    .admin-actions { margin: 16px; }
-    button { margin-left: 8px; }
-  `],
+  styles: [
+    `
+      .admin-actions {
+        margin: 16px;
+      }
+      button {
+        margin-left: 8px;
+      }
+    `,
+  ],
 })
 export class AdminActionsComponent implements OnInit {
   private readonly adminService = inject(AdminService);

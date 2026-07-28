@@ -8,7 +8,14 @@ export interface InAppNotification {
   id: string;
   recipient_id: string;
   actor_id: string;
-  type: 'follow' | 'like_profile' | 'like_moment' | 'comment_moment' | 'reply_comment' | 'profile_visit' | 'mention_comment';
+  type:
+    | 'follow'
+    | 'like_profile'
+    | 'like_moment'
+    | 'comment_moment'
+    | 'reply_comment'
+    | 'profile_visit'
+    | 'mention_comment';
   entity_id?: string;
   message?: string;
   is_read: boolean;
@@ -40,33 +47,35 @@ export class NotificationService {
   async getNotifications(type?: string): Promise<InAppNotification[]> {
     const url = type ? `${this.baseUrl}?type=${type}` : this.baseUrl;
     return firstValueFrom(
-      this.http.get<InAppNotification[]>(url, { headers: this.getHeaders() }).pipe(
-        catchError(() => of(this.getFallbackNotifications(type)))
-      )
+      this.http
+        .get<InAppNotification[]>(url, { headers: this.getHeaders() })
+        .pipe(catchError(() => of(this.getFallbackNotifications(type)))),
     );
   }
 
   async getUnreadCount(): Promise<number> {
     return firstValueFrom(
-      this.http.get<{ unreadCount: number }>(`${this.baseUrl}/unread-count`, { headers: this.getHeaders() }).pipe(
-        catchError(() => of({ unreadCount: 2 })),
-      )
+      this.http
+        .get<{ unreadCount: number }>(`${this.baseUrl}/unread-count`, {
+          headers: this.getHeaders(),
+        })
+        .pipe(catchError(() => of({ unreadCount: 2 }))),
     ).then((res) => res.unreadCount);
   }
 
   async markAsRead(notificationId: string): Promise<void> {
     return firstValueFrom(
-      this.http.patch<void>(`${this.baseUrl}/${notificationId}/read`, {}, { headers: this.getHeaders() }).pipe(
-        catchError(() => of(undefined))
-      )
+      this.http
+        .patch<void>(`${this.baseUrl}/${notificationId}/read`, {}, { headers: this.getHeaders() })
+        .pipe(catchError(() => of(undefined))),
     );
   }
 
   async markAllAsRead(): Promise<void> {
     return firstValueFrom(
-      this.http.patch<void>(`${this.baseUrl}/read-all`, {}, { headers: this.getHeaders() }).pipe(
-        catchError(() => of(undefined))
-      )
+      this.http
+        .patch<void>(`${this.baseUrl}/read-all`, {}, { headers: this.getHeaders() })
+        .pipe(catchError(() => of(undefined))),
     );
   }
 
@@ -151,8 +160,13 @@ export class NotificationService {
     ];
 
     if (!type || type === 'all') return mocks;
-    if (type === 'likes') return mocks.filter((n) => n.type === 'like_profile' || n.type === 'like_moment');
-    if (type === 'comments') return mocks.filter((n) => n.type === 'comment_moment' || n.type === 'reply_comment' || n.type === 'mention_comment');
+    if (type === 'likes')
+      return mocks.filter((n) => n.type === 'like_profile' || n.type === 'like_moment');
+    if (type === 'comments')
+      return mocks.filter(
+        (n) =>
+          n.type === 'comment_moment' || n.type === 'reply_comment' || n.type === 'mention_comment',
+      );
     if (type === 'follows') return mocks.filter((n) => n.type === 'follow');
     return mocks;
   }

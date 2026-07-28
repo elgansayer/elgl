@@ -119,6 +119,7 @@ while true; do
     if [ $EXECUTOR_EXIT -eq 2 ]; then
         echo "Pausing 5 minutes before re-checking model availability."
         RETRY_COUNT=$((RETRY_COUNT - 1))
+        [ $RETRY_COUNT -lt 0 ] && RETRY_COUNT=0
         sleep 300
         continue
     fi
@@ -127,6 +128,16 @@ while true; do
     # do not commit: there is nothing to commit but logs.
     if [ $EXECUTOR_EXIT -ne 0 ]; then
         echo "Executor produced no work for this task. Skipping to the next cycle."
+        purge_phantom_paths
+        sleep 15
+        continue
+    fi
+
+    # Executor reported success but verify actual file changes exist.
+    # Advisory tools (Copilot, Antigravity, raw DeepSeek) can never satisfy the chain
+    # anymore, but this is a safety net in case anything slips through.
+    if ! has_substantive_changes; then
+        echo "Executor returned success but no source files changed. Treating as failure."
         purge_phantom_paths
         sleep 15
         continue

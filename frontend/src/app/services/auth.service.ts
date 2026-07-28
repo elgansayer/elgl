@@ -10,7 +10,7 @@ export interface AppUser extends User {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuthService {
   private supabaseService = inject(SupabaseService);
@@ -28,10 +28,12 @@ export class AuthService {
   }
 
   private async initAuthListener(): Promise<void> {
-    const { data: { session } } = await this.supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await this.supabase.auth.getSession();
     this.updateAuthState(session);
     if (!session) {
-      import('./mock-data').then(m => {
+      import('./mock-data').then((m) => {
         this.currentUser.set(m.MOCK_CURRENT_USER);
       });
     }
@@ -40,7 +42,7 @@ export class AuthService {
     this.supabase.auth.onAuthStateChange((_event, session) => {
       this.updateAuthState(session);
       if (!session) {
-        import('./mock-data').then(m => {
+        import('./mock-data').then((m) => {
           this.currentUser.set(m.MOCK_CURRENT_USER);
         });
       }
@@ -50,11 +52,14 @@ export class AuthService {
   private updateAuthState(session: Session | null): void {
     this.currentSession.set(session);
     if (session) {
-      this.currentUser.set((session.user as AppUser));
+      this.currentUser.set(session.user as AppUser);
     }
   }
 
-  async signInWithEmail(email: string, password: string): Promise<{ user: AppUser | null; error: AuthError | null }> {
+  async signInWithEmail(
+    email: string,
+    password: string,
+  ): Promise<{ user: AppUser | null; error: AuthError | null }> {
     const { data, error } = await this.supabase.auth.signInWithPassword({ email, password });
     if (data.session) {
       this.updateAuthState(data.session);
@@ -62,7 +67,10 @@ export class AuthService {
     return { user: (data.user as AppUser) || null, error };
   }
 
-  async signUpWithEmail(email: string, password: string): Promise<{ user: AppUser | null; error: AuthError | null }> {
+  async signUpWithEmail(
+    email: string,
+    password: string,
+  ): Promise<{ user: AppUser | null; error: AuthError | null }> {
     const { data, error } = await this.supabase.auth.signUp({ email, password });
     if (data.session) {
       this.updateAuthState(data.session);
@@ -74,8 +82,8 @@ export class AuthService {
     const { error } = await this.supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin
-      }
+        redirectTo: window.location.origin,
+      },
     });
     return { error };
   }
@@ -84,8 +92,8 @@ export class AuthService {
     const { error } = await this.supabase.auth.signInWithOAuth({
       provider: 'apple',
       options: {
-        redirectTo: window.location.origin
-      }
+        redirectTo: window.location.origin,
+      },
     });
     return { error };
   }

@@ -29,10 +29,7 @@
     },
     "flyonui": {
       "command": "npx",
-      "args": [
-        "-y",
-        "flyonui-mcp"
-      ]
+      "args": ["-y", "flyonui-mcp"]
     }
   }
 }

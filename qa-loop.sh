@@ -72,7 +72,11 @@ while true; do
         BUG_REPORT=$(grep -E -A 5 "Error:|failed" qa_errors.log | head -n 1)
         TRIAGE_TASK="The QA tests just failed with this error: $BUG_REPORT. Add a new task to the VERY TOP of TODO.md to fix this specific bug."
         run_task_with_fallback "$TRIAGE_TASK" "TODO.md"
-        git commit -am "ci: qa agent discovered a bug and added it to TODO.md"
+        if ! git diff --quiet HEAD; then
+            git commit -am "ci: qa agent discovered a bug and added it to TODO.md"
+        else
+            echo "Triage produced no changes. Skipping commit."
+        fi
     else
         echo "App is robust. No bugs found this cycle."
         # Scoped to e2e/, where the QA task's own throwaway test file lives. A bare

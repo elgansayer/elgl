@@ -12,7 +12,7 @@ export class GiftAnimationService {
 
   playAnimation(giftId: string, animationUrl: string) {
     this.currentAnimation.set({ id: Math.random().toString(), giftId, animationUrl });
-    
+
     // Auto-hide after 4 seconds
     setTimeout(() => {
       this.currentAnimation.set(null);

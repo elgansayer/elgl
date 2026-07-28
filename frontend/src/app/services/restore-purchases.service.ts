@@ -24,7 +24,9 @@ export class RestorePurchasesService {
 
     try {
       const supabase = this.supabaseService.getClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       if (!user) {
         const result: RestoreResult = {

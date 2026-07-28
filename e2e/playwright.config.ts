@@ -10,15 +10,15 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:4200',
     trace: 'on-first-retry',
-    screenshot: 'only-on-failure'
+    screenshot: 'only-on-failure',
   },
   projects: [
     {
       name: 'desktop-english',
       use: {
         ...devices['Desktop Chrome'],
-        locale: 'en-GB'
-      }
+        locale: 'en-GB',
+      },
     },
     {
       name: 'rtl-arabic',
@@ -26,9 +26,9 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         locale: 'ar-SA',
         extraHTTPHeaders: {
-          'Accept-Language': 'ar-SA,ar;q=0.9'
-        }
-      }
+          'Accept-Language': 'ar-SA,ar;q=0.9',
+        },
+      },
     },
     {
       name: 'rtl-hebrew',
@@ -36,22 +36,22 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         locale: 'he-IL',
         extraHTTPHeaders: {
-          'Accept-Language': 'he-IL,he;q=0.9'
-        }
-      }
+          'Accept-Language': 'he-IL,he;q=0.9',
+        },
+      },
     },
     {
       name: 'mobile-safari-english',
       use: {
         ...devices['iPhone 14'],
-        locale: 'en-GB'
-      }
-    }
+        locale: 'en-GB',
+      },
+    },
   ],
   webServer: {
     command: 'cd ../frontend && npm run start',
     url: 'http://localhost:4200',
     reuseExistingServer: !process.env.CI,
-    timeout: 300000
-  }
+    timeout: 300000,
+  },
 });

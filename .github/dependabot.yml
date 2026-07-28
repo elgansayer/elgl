@@ -1,14 +1,14 @@
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/frontend"
+  - package-ecosystem: 'npm'
+    directory: '/frontend'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     assignees:
-      - "elgansayer"
-  - package-ecosystem: "npm"
-    directory: "/backend"
+      - 'elgansayer'
+  - package-ecosystem: 'npm'
+    directory: '/backend'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     assignees:
-      - "elgansayer"
+      - 'elgansayer'

@@ -3,22 +3,27 @@
 # Favourites Tab Component Specification
 
 ## Overview
+
 A tab panel displaying bookmarked messages, corrections, and audio clips for study reference.
 
 ## Props / Inputs
+
 - `userId`: string (required) - Current user's ID
 
 ## Outputs / Events
+
 - `messageSelected`: emits `{ message: ChatMessage, roomId: string }` - Navigate to message in chat
 - `removeFavourite`: emits `{ favouriteId: string }`
 
 ## States
+
 1. **Loading**: Skeleton placeholders (3 rows of shimmer animation)
 2. **Empty**: AppEmptyStateComponent with icon "📌", title "No favourites yet", description "Bookmark messages to study them later"
 3. **Populated**: List of favourite items grouped by type
 4. **Error**: Error message with retry button
 
 ## Visual Design
+
 - **Tabs**: Three tab buttons at top: "Messages" (💬), "Corrections" (✏️), "Audio" (🎵)
   - Active tab: `bg-blue-600 text-white`
   - Inactive tab: `bg-gray-700 text-gray-300 hover:bg-gray-600`
@@ -31,6 +36,7 @@ A tab panel displaying bookmarked messages, corrections, and audio clips for stu
 - **Audio items**: Show play button + duration + transcript preview
 
 ## Behavior
+
 - Fetches favourites from `GET /favourites?userId={userId}` on init
 - Supports infinite scroll (20 items per page)
 - Clicking "View in chat" emits `messageSelected` with room ID and message ID
@@ -38,6 +44,7 @@ A tab panel displaying bookmarked messages, corrections, and audio clips for stu
 - Real-time updates via Centrifugo channel `user_{userId}_favourites`
 
 ## Accessibility
+
 - `role="tablist"` on tab container
 - `role="tab"` on each tab button with `aria-selected`
 - `role="tabpanel"` on content area
@@ -45,6 +52,7 @@ A tab panel displaying bookmarked messages, corrections, and audio clips for stu
 - Focus management: Focus first item when tab changes
 
 ## Edge Cases
+
 - Network failure during fetch: Show error state with retry
 - Item deleted from original chat: Show "This message is no longer available" placeholder
 - Rapid tab switching: Cancel previous request, debounce 300ms

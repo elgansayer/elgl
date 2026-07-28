@@ -13,8 +13,8 @@ import { Component, input, output, computed } from '@angular/core';
     </button>
   `,
   host: {
-    '[class]': "'inline-block'"
-  }
+    '[class]': "'inline-block'",
+  },
 })
 export class AppButtonPrimaryComponent {
   readonly size = input<'sm' | 'md' | 'lg'>('md');
@@ -25,8 +25,9 @@ export class AppButtonPrimaryComponent {
   readonly clicked = output<MouseEvent>();
 
   readonly buttonClasses = computed(() => {
-    const base = 'inline-flex items-center justify-center font-bold rounded-2xl transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2';
-    
+    const base =
+      'inline-flex items-center justify-center font-bold rounded-2xl transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2';
+
     let sizeClass = '';
     switch (this.size()) {
       case 'sm':

@@ -8,6 +8,7 @@ description: Provides comprehensive architectural patterns, full-stack guideline
 When modifying or generating code for **HelloTalk**, adhere to this exact full-stack architecture and domain rulebook.
 
 ## 1. System Architecture & Topology
+
 - **Frontend (`/frontend`)**: Angular v22 standalone components using signals (`computed()`, `input()`, `output()`, Signal Forms) and strictly logical Tailwind CSS properties for native RTL (`ps-`, `pe-`, `ms-`, `me-`, `border-s`).
 - **Backend (`/backend`)**: NestJS (TypeScript) with REST endpoints (`Controllers` + `Services`), strict `@nestjs/config` validation (`Joi`/`Zod`), and Supabase JWT guards.
 - **Database (`/supabase/migrations`)**: Supabase PostgreSQL with **PostGIS** spatial queries (`ST_DWithin`, geography columns) and **`pg_trgm`** trigram text search.
@@ -16,6 +17,7 @@ When modifying or generating code for **HelloTalk**, adhere to this exact full-s
 - **Media Storage**: Cloudflare R2 (`@aws-sdk/client-s3`) pre-signed URLs.
 
 ## 2. Mandatory Linguistic & Design Rules
+
 - **British English Only**: Use `colour`, `favourite`, `monetisation`, `tokenise`, `favourite_languages` across variables, database columns, API JSON keys, and UI copy.
 - **Banned Punctuation**: Never use an em dash anywhere in code, comments, or documentation. Use standard hyphens or colons instead.
 - **Monetary Display**: Always render both currencies in UI or logs: `8 UKP / $10 USD` (or `20 UKP / $26 USD`).
@@ -24,7 +26,9 @@ When modifying or generating code for **HelloTalk**, adhere to this exact full-s
 ## 3. Key Architectural Patterns
 
 ### PostGIS Matchmaking & Discovery
+
 When writing spatial queries in NestJS (`DiscoveryService` / Supabase), construct geography points using standard PostGIS format:
+
 ```sql
 ST_DWithin(
   location::geography,
@@ -32,20 +36,26 @@ ST_DWithin(
   radius_meters
 )
 ```
+
 If `user.is_vip === true`, override real GPS coordinates with `mock_location` before performing spatial matching.
 
 ### Centrifugo Real-Time Messaging (`CentrifugeService`)
+
 Every chat room connects to Centrifugo channels (`room_{id}`). Messages route via `POST /chat/messages` on NestJS, which validates and persists to `chat_messages` table before publishing via `/api/publish` to Centrifugo.
 
 ### Universal Word Tokenisation (`Intl.Segmenter`)
+
 When rendering interactive text (`TokenisedTextComponent`), parse sentences without regex:
+
 ```typescript
 const segmenter = new Intl.Segmenter(locale, { granularity: 'word' });
 const segments = Array.from(segmenter.segment(rawText));
 ```
 
 ## 4. Verification & Build Commands
+
 Before marking any task complete, verify clean execution:
+
 - **Angular Build**: `cd frontend && npx ng build`
 - **NestJS Build**: `cd backend && npm run build`
 - **Backend Lint Check**: `cd backend && npm run lint`

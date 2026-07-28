@@ -16,10 +16,7 @@ describe('DiscoveryComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [DiscoveryComponent],
-      providers: [
-        provideRouter([]),
-        { provide: DiscoveryService, useValue: mockDiscoveryService },
-      ],
+      providers: [provideRouter([]), { provide: DiscoveryService, useValue: mockDiscoveryService }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(DiscoveryComponent);

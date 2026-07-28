@@ -29,7 +29,10 @@ describe('AdminService', () => {
         AdminService,
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: AuthService, useValue: { getAccessToken: vi.fn().mockReturnValue('mock-token') } },
+        {
+          provide: AuthService,
+          useValue: { getAccessToken: vi.fn().mockReturnValue('mock-token') },
+        },
       ],
     });
 
@@ -103,9 +106,7 @@ describe('AdminService', () => {
 
     const req = httpMock.expectOne(`${environment.apiUrl}/admin/users/user-1/login-history`);
     expect(req.request.method).toBe('GET');
-    req.flush([
-      { id: 'log-1', user_id: 'user-1', created_at: new Date().toISOString() },
-    ]);
+    req.flush([{ id: 'log-1', user_id: 'user-1', created_at: new Date().toISOString() }]);
 
     const result = await promise;
     expect(result.length).toBe(1);

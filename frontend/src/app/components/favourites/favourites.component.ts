@@ -8,7 +8,7 @@ import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
   selector: 'app-favourites',
   imports: [CommonModule, VisualDiffComponent, TranslatePipe],
   templateUrl: './favourites.component.html',
-  styleUrls: ['./favourites.component.scss']
+  styleUrls: ['./favourites.component.scss'],
 })
 export class FavouritesComponent implements OnInit {
   private chatService = inject(ChatService);

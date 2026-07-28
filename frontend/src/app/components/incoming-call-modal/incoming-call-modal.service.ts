@@ -2,7 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { IncomingCallData } from './incoming-call-modal.component';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class IncomingCallModalService {
   /** Signal holding the current incoming call data, or null if no active call */

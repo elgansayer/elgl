@@ -27,5 +27,4 @@ export class LanguageSelectorComponent {
     this.isSwitching.set(false);
     this.closeModal();
   }
-
 }

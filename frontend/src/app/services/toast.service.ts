@@ -9,9 +9,13 @@ export interface ToastMessage {
 export const toastsSignal = signal<ToastMessage[]>([]);
 let nextId = 0;
 
-export function showToast(message: string, type: 'info' | 'error' | 'success' = 'info', durationMs = 3000) {
+export function showToast(
+  message: string,
+  type: 'info' | 'error' | 'success' = 'info',
+  durationMs = 3000,
+) {
   const id = nextId++;
-  toastsSignal.update(current => [...current, { id, message, type }]);
+  toastsSignal.update((current) => [...current, { id, message, type }]);
   setTimeout(() => removeToast(id), durationMs);
 }
 
@@ -20,5 +24,5 @@ export function notImplementedToast(featureName?: string) {
 }
 
 export function removeToast(id: number) {
-  toastsSignal.update(current => current.filter(t => t.id !== id));
+  toastsSignal.update((current) => current.filter((t) => t.id !== id));
 }

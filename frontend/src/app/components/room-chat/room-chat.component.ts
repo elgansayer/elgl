@@ -13,9 +13,7 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
       <div
         class="bg-surface-300 px-4 py-3 border-b border-surface-100 flex items-center justify-between"
       >
-        <span
-          class="font-black text-xs text-text-primary flex items-center gap-1.5"
-        >
+        <span class="font-black text-xs text-text-primary flex items-center gap-1.5">
           <span>💬 Synchronised room chat and subtitles</span>
         </span>
         <button
@@ -65,9 +63,7 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
             </div>
           }
           @for (cap of store.captions(); track cap.id) {
-            <div
-              class="p-2.5 rounded-xl bg-purple-500/10 border border-purple-200"
-            >
+            <div class="p-2.5 rounded-xl bg-purple-500/10 border border-purple-200">
               <span class="font-bold text-[10px] text-purple-900 block mb-1"
                 >🎙️ {{ cap.speaker_name }} (Live AI caption):</span
               >
@@ -80,9 +76,7 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
       </div>
 
       @if (activeTab() === 'chat') {
-        <div
-          class="p-3 bg-surface-300 border-t border-surface-100 flex gap-2"
-        >
+        <div class="p-3 bg-surface-300 border-t border-surface-100 flex gap-2">
           <input
             type="text"
             [(ngModel)]="inputText"
@@ -100,9 +94,7 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
       }
 
       @if (activeTab() === 'subtitles' && store.isSpeaker()) {
-        <div
-          class="p-3 bg-purple-500/10 border-t border-purple-200 flex gap-2"
-        >
+        <div class="p-3 bg-purple-500/10 border-t border-purple-200 flex gap-2">
           <input
             type="text"
             [(ngModel)]="inputCaption"

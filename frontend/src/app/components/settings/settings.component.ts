@@ -46,8 +46,12 @@ export class SettingsComponent implements OnInit {
         this.privacyHideLocation = Boolean(profile.privacy_hide_location);
         this.privacyHideSearch = Boolean(profile.privacy_hide_from_search);
         this.privacyHideAge = Boolean(profile.privacy_hide_age);
-        this.privacyHideGender = Boolean((profile as unknown as Record<string, unknown>)['privacy_hide_gender']);
-        this.autoPlayVoiceNotes = Boolean((profile as unknown as Record<string, unknown>)['auto_play_voice_notes']);
+        this.privacyHideGender = Boolean(
+          (profile as unknown as Record<string, unknown>)['privacy_hide_gender'],
+        );
+        this.autoPlayVoiceNotes = Boolean(
+          (profile as unknown as Record<string, unknown>)['auto_play_voice_notes'],
+        );
       }
     } catch {
       this.errorMessage.set('Failed to load settings');

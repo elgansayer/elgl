@@ -6,9 +6,8 @@ import { LongPressContextMenuComponent } from './long-press-context-menu.compone
 import { of } from 'rxjs';
 import { SafetyService } from '../../services/safety.service';
 
- 
 (globalThis as any).Touch = class Touch {} as any;
- 
+
 (globalThis as any).TouchEvent = class TouchEvent extends Event {} as any;
 
 describe('LongPressContextMenuComponent', () => {
@@ -44,7 +43,7 @@ describe('LongPressContextMenuComponent', () => {
 
   it('should emit copy event when copy option is clicked', () => {
     vi.spyOn(component.copyMessage, 'emit');
-     
+
     (component as any).onOptionClick('copy');
     expect(component.copyMessage.emit).toHaveBeenCalledWith({
       messageId: 'test-message-id',
@@ -54,7 +53,7 @@ describe('LongPressContextMenuComponent', () => {
 
   it('should emit favourite event when favourite option is clicked', () => {
     vi.spyOn(component.favourite, 'emit');
-     
+
     (component as any).onOptionClick('favourite');
     expect(component.favourite.emit).toHaveBeenCalledWith({
       messageId: 'test-message-id',
@@ -66,7 +65,7 @@ describe('LongPressContextMenuComponent', () => {
   it('should emit report event when report option is clicked', () => {
     vi.spyOn(component.report, 'emit');
     // Clicking report opens the modal but does not emit directly
-     
+
     (component as any).onOptionClick('report');
     // After the modal submits, the event is emitted
     component.onReportSubmitted();
@@ -79,11 +78,10 @@ describe('LongPressContextMenuComponent', () => {
   });
 
   it('should close menu after option click', () => {
-     
     vi.spyOn(component as any, 'close');
-     
+
     (component as any).onOptionClick('copy');
-     
+
     expect((component as any).close).toHaveBeenCalled();
   });
 
@@ -141,10 +139,10 @@ describe('LongPressContextMenuComponent', () => {
     const touchEvent = {
       type: 'touchstart',
       touches: [{ clientX: 0, clientY: 0 }],
-      preventDefault: vi.fn()
+      preventDefault: vi.fn(),
     } as unknown as TouchEvent;
     component.onTouchStart(touchEvent);
-     
+
     expect((component as any).longPressTimer).not.toBeNull();
     vi.advanceTimersByTime(component.longPressDuration());
     expect(component.showMenu()).toBe(true);
@@ -155,11 +153,11 @@ describe('LongPressContextMenuComponent', () => {
     const touchEvent = {
       type: 'touchstart',
       touches: [{ clientX: 0, clientY: 0 }],
-      preventDefault: vi.fn()
+      preventDefault: vi.fn(),
     } as unknown as TouchEvent;
     component.onTouchStart(touchEvent);
     component.onTouchMove();
-     
+
     expect((component as any).longPressTimer).toBeNull();
   });
 
@@ -167,11 +165,11 @@ describe('LongPressContextMenuComponent', () => {
     const touchEvent = {
       type: 'touchstart',
       touches: [{ clientX: 0, clientY: 0 }],
-      preventDefault: vi.fn()
+      preventDefault: vi.fn(),
     } as unknown as TouchEvent;
     component.onTouchStart(touchEvent);
     component.onTouchEnd();
-     
+
     expect((component as any).longPressTimer).toBeNull();
   });
 
@@ -193,7 +191,7 @@ describe('LongPressContextMenuComponent', () => {
     fixture.detectChanges();
 
     const buttons = fixture.debugElement.queryAll(By.css('button[role="menuitem"]'));
-    buttons.forEach(btn => {
+    buttons.forEach((btn) => {
       expect(btn.nativeElement.disabled).toBe(true);
     });
   });

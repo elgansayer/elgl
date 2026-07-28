@@ -18,7 +18,7 @@ import { AppInputComponent } from './input.component';
       (focused)="onFocused()"
     />
   `,
-  imports: [AppInputComponent]
+  imports: [AppInputComponent],
 })
 class TestHostComponent {
   value = signal('initial');
@@ -53,7 +53,7 @@ describe('AppInputComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TestHostComponent, AppInputComponent]
+      imports: [TestHostComponent, AppInputComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TestHostComponent);

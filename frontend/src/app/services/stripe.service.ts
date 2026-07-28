@@ -15,10 +15,13 @@ export class StripeService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiUrl}/stripe`;
 
-  createCheckoutSession(planId: string, interval: 'month' | 'year'): Observable<CreateCheckoutSessionResponse> {
-    return this.http.post<CreateCheckoutSessionResponse>(
-      `${this.apiUrl}/create-checkout-session`,
-      { planId, interval },
-    );
+  createCheckoutSession(
+    planId: string,
+    interval: 'month' | 'year',
+  ): Observable<CreateCheckoutSessionResponse> {
+    return this.http.post<CreateCheckoutSessionResponse>(`${this.apiUrl}/create-checkout-session`, {
+      planId,
+      interval,
+    });
   }
 }

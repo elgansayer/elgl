@@ -40,10 +40,38 @@ export class HobbyTagsService {
   private readonly apiUrl = `${environment.apiUrl}/hobby-tags`;
 
   private readonly mockTags: HobbyTag[] = [
-    { id: '1', name: 'Photography', category: 'Arts', icon: '📸', target_vocabulary: [], created_at: new Date().toISOString() },
-    { id: '2', name: 'Gaming', category: 'Entertainment', icon: '🎮', target_vocabulary: [], created_at: new Date().toISOString() },
-    { id: '3', name: 'Cooking', category: 'Lifestyle', icon: '🍳', target_vocabulary: [], created_at: new Date().toISOString() },
-    { id: '4', name: 'Traveling', category: 'Lifestyle', icon: '✈️', target_vocabulary: [], created_at: new Date().toISOString() },
+    {
+      id: '1',
+      name: 'Photography',
+      category: 'Arts',
+      icon: '📸',
+      target_vocabulary: [],
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '2',
+      name: 'Gaming',
+      category: 'Entertainment',
+      icon: '🎮',
+      target_vocabulary: [],
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '3',
+      name: 'Cooking',
+      category: 'Lifestyle',
+      icon: '🍳',
+      target_vocabulary: [],
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '4',
+      name: 'Traveling',
+      category: 'Lifestyle',
+      icon: '✈️',
+      target_vocabulary: [],
+      created_at: new Date().toISOString(),
+    },
   ];
   private mockUserTags: UserHobbyTag[] = [];
 
@@ -55,7 +83,7 @@ export class HobbyTagsService {
           return of(this.mockTags.filter((t) => t.category === category));
         }
         return of(this.mockTags);
-      })
+      }),
     );
   }
 
@@ -77,42 +105,44 @@ export class HobbyTagsService {
           category,
           icon,
           target_vocabulary: [],
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
         };
         this.mockTags.push(newTag);
         return of(newTag);
-      })
+      }),
     );
   }
 
   getMyTags(): Observable<UserHobbyTag[]> {
-    return this.http.get<UserHobbyTag[]>(`${this.apiUrl}/my`).pipe(
-      catchError(() => of([...this.mockUserTags]))
-    );
+    return this.http
+      .get<UserHobbyTag[]>(`${this.apiUrl}/my`)
+      .pipe(catchError(() => of([...this.mockUserTags])));
   }
 
   addMyTag(hobbyTagId: string, proficiencyLevel?: number): Observable<UserHobbyTag> {
-    return this.http.post<UserHobbyTag>(`${this.apiUrl}/my`, {
-      hobby_tag_id: hobbyTagId,
-      proficiency_level: proficiencyLevel,
-    }).pipe(
-      catchError(() => {
-        const tag = this.mockTags.find(t => t.id === hobbyTagId);
-        if (!tag) return of();
-        const existing = this.mockUserTags.find(ut => ut.hobby_tag_id === hobbyTagId);
-        if (existing) return of(existing);
-        const newTag: UserHobbyTag = {
-          id: `ut-${Date.now()}`,
-          user_id: 'me',
-          hobby_tag_id: hobbyTagId,
-          proficiency_level: proficiencyLevel || 0,
-          created_at: new Date().toISOString(),
-          hobby_tag: tag
-        };
-        this.mockUserTags.push(newTag);
-        return of(newTag);
+    return this.http
+      .post<UserHobbyTag>(`${this.apiUrl}/my`, {
+        hobby_tag_id: hobbyTagId,
+        proficiency_level: proficiencyLevel,
       })
-    );
+      .pipe(
+        catchError(() => {
+          const tag = this.mockTags.find((t) => t.id === hobbyTagId);
+          if (!tag) return of();
+          const existing = this.mockUserTags.find((ut) => ut.hobby_tag_id === hobbyTagId);
+          if (existing) return of(existing);
+          const newTag: UserHobbyTag = {
+            id: `ut-${Date.now()}`,
+            user_id: 'me',
+            hobby_tag_id: hobbyTagId,
+            proficiency_level: proficiencyLevel || 0,
+            created_at: new Date().toISOString(),
+            hobby_tag: tag,
+          };
+          this.mockUserTags.push(newTag);
+          return of(newTag);
+        }),
+      );
   }
 
   removeMyTag(hobbyTagId: string): Observable<{ success: boolean }> {
@@ -120,30 +150,32 @@ export class HobbyTagsService {
       catchError(() => {
         this.mockUserTags = this.mockUserTags.filter((t) => t.hobby_tag_id !== hobbyTagId);
         return of({ success: true });
-      })
+      }),
     );
   }
 
   updateProficiency(hobbyTagId: string, level: number): Observable<UserHobbyTag> {
-    return this.http.patch<UserHobbyTag>(`${this.apiUrl}/my/${hobbyTagId}/proficiency`, {
-      proficiency_level: level,
-    }).pipe(
-      catchError(() => {
-        const tag = this.mockUserTags.find((t) => t.hobby_tag_id === hobbyTagId);
-        if (tag) {
-          tag.proficiency_level = level;
-          return of(tag);
-        }
-        return of();
+    return this.http
+      .patch<UserHobbyTag>(`${this.apiUrl}/my/${hobbyTagId}/proficiency`, {
+        proficiency_level: level,
       })
-    );
+      .pipe(
+        catchError(() => {
+          const tag = this.mockUserTags.find((t) => t.hobby_tag_id === hobbyTagId);
+          if (tag) {
+            tag.proficiency_level = level;
+            return of(tag);
+          }
+          return of();
+        }),
+      );
   }
 
   getVocabulary(language: string): Observable<VocabularyItem[]> {
-    return this.http.get<VocabularyItem[]>(`${this.apiUrl}/vocabulary`, {
-      params: { language },
-    }).pipe(
-      catchError(() => of([]))
-    );
+    return this.http
+      .get<VocabularyItem[]>(`${this.apiUrl}/vocabulary`, {
+        params: { language },
+      })
+      .pipe(catchError(() => of([])));
   }
 }

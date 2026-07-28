@@ -35,7 +35,7 @@ export interface CreateMomentPayload {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class FeedService {
   private http = inject(HttpClient);
@@ -46,7 +46,7 @@ export class FeedService {
   private getHeaders() {
     const token = this.authService.getAccessToken();
     return {
-      Authorization: `Bearer ${token ?? ''}`
+      Authorization: `Bearer ${token ?? ''}`,
     };
   }
 
@@ -59,8 +59,8 @@ export class FeedService {
     const moments = await firstValueFrom(
       this.http.get<Moment[]>(`${this.baseUrl}`, {
         headers: this.getHeaders(),
-        params
-      })
+        params,
+      }),
     );
 
     // Apply client-side blocklist filtering (both directions)
@@ -68,7 +68,7 @@ export class FeedService {
     if (currentUser?.id) {
       const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
       if (blockedIds.length > 0) {
-        return moments.filter(moment => !blockedIds.includes(moment.author_id));
+        return moments.filter((moment) => !blockedIds.includes(moment.author_id));
       }
     }
 
@@ -79,8 +79,8 @@ export class FeedService {
     try {
       const moment = await firstValueFrom(
         this.http.get<Moment>(`${this.baseUrl}/${momentId}`, {
-          headers: this.getHeaders()
-        })
+          headers: this.getHeaders(),
+        }),
       );
 
       // Check if author is blocked
@@ -98,48 +98,56 @@ export class FeedService {
   async createMoment(payload: CreateMomentPayload): Promise<Moment> {
     return firstValueFrom(
       this.http.post<Moment>(`${this.baseUrl}`, payload, {
-        headers: this.getHeaders()
-      })
+        headers: this.getHeaders(),
+      }),
     );
   }
 
   async deleteMoment(momentId: string): Promise<void> {
     await firstValueFrom(
       this.http.delete(`${this.baseUrl}/${momentId}`, {
-        headers: this.getHeaders()
-      })
+        headers: this.getHeaders(),
+      }),
     );
   }
 
   async likeMoment(momentId: string): Promise<void> {
     await firstValueFrom(
-      this.http.post(`${this.baseUrl}/${momentId}/like`, {}, {
-        headers: this.getHeaders()
-      })
+      this.http.post(
+        `${this.baseUrl}/${momentId}/like`,
+        {},
+        {
+          headers: this.getHeaders(),
+        },
+      ),
     );
   }
 
   async unlikeMoment(momentId: string): Promise<void> {
     await firstValueFrom(
       this.http.delete(`${this.baseUrl}/${momentId}/like`, {
-        headers: this.getHeaders()
-      })
+        headers: this.getHeaders(),
+      }),
     );
   }
 
   async getComments(momentId: string): Promise<unknown[]> {
     return firstValueFrom(
       this.http.get<unknown[]>(`${this.baseUrl}/${momentId}/comments`, {
-        headers: this.getHeaders()
-      })
+        headers: this.getHeaders(),
+      }),
     );
   }
 
   async addComment(momentId: string, content: string): Promise<unknown> {
     return firstValueFrom(
-      this.http.post(`${this.baseUrl}/${momentId}/comments`, { content }, {
-        headers: this.getHeaders()
-      })
+      this.http.post(
+        `${this.baseUrl}/${momentId}/comments`,
+        { content },
+        {
+          headers: this.getHeaders(),
+        },
+      ),
     );
   }
 }

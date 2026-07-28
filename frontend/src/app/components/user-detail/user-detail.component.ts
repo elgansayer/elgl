@@ -10,7 +10,7 @@ import { UserService, UserProfile } from '../../services/user.service';
   standalone: true,
   imports: [CommonModule, RouterLink, TranslatePipe],
   templateUrl: './user-detail.component.html',
-  styleUrls: ['./user-detail.component.scss']
+  styleUrls: ['./user-detail.component.scss'],
 })
 export class UserDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
@@ -21,7 +21,7 @@ export class UserDetailComponent implements OnInit {
   readonly profile = signal<UserProfile | null>(null);
   readonly isLoading = signal<boolean>(true);
   readonly errorMessage = signal<string>('');
-  
+
   readonly isFollowing = signal<boolean>(false);
   readonly isLiked = signal<boolean>(false);
 
@@ -61,10 +61,10 @@ export class UserDetailComponent implements OnInit {
   async toggleFollow(): Promise<void> {
     const p = this.profile();
     if (!p) return;
-    
+
     const currentlyFollowing = this.isFollowing();
     this.isFollowing.set(!currentlyFollowing);
-    
+
     try {
       if (currentlyFollowing) {
         await this.userService.unfollowUser(p.id);
@@ -80,10 +80,10 @@ export class UserDetailComponent implements OnInit {
   async toggleLike(): Promise<void> {
     const p = this.profile();
     if (!p) return;
-    
+
     const currentlyLiked = this.isLiked();
     this.isLiked.set(!currentlyLiked);
-    
+
     try {
       if (!currentlyLiked) {
         await this.userService.likeProfile(p.id);

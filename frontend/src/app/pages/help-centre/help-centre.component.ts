@@ -23,10 +23,20 @@ interface HelpResponse {
   standalone: true,
   imports: [CommonModule, FormsModule, HttpClientModule],
   templateUrl: './help-centre.component.html',
-  styles: [`
-    .faq-item { border-bottom: 1px solid #e5e7eb; padding: 1rem 0; }
-    .faq-category { text-transform: uppercase; font-size: 0.75rem; color: #6b7280; margin-bottom: 0.25rem; }
-  `]
+  styles: [
+    `
+      .faq-item {
+        border-bottom: 1px solid #e5e7eb;
+        padding: 1rem 0;
+      }
+      .faq-category {
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin-bottom: 0.25rem;
+      }
+    `,
+  ],
 })
 export class HelpCentreComponent implements OnInit {
   private readonly baseUrl = `${environment.apiUrl}/help/articles`;

@@ -96,9 +96,7 @@ async function setupFakeCentrifugo(page: Page): Promise<FakeCentrifugo> {
 async function mockAudioRoomApi(page: Page, room: ReturnType<typeof makeRoom>) {
   let currentRoom = room;
 
-  await page.route(`${API}/audio-rooms/list`, (route) =>
-    route.fulfill({ json: [currentRoom] }),
-  );
+  await page.route(`${API}/audio-rooms/list`, (route) => route.fulfill({ json: [currentRoom] }));
 
   await page.route(`${API}/audio-rooms/token`, (route) =>
     route.fulfill({
@@ -138,7 +136,9 @@ test.describe('Adversarial: audio/video room co-host and chat', () => {
     page.on('pageerror', (err) => pageErrors.push(err));
   });
 
-  test('a spoofed self co-host realtime event duplicates the host into a fake split-screen participant', async ({ page }) => {
+  test('a spoofed self co-host realtime event duplicates the host into a fake split-screen participant', async ({
+    page,
+  }) => {
     const fake = await setupFakeCentrifugo(page);
     await mockAudioRoomApi(page, makeRoom());
 
@@ -161,10 +161,15 @@ test.describe('Adversarial: audio/video room co-host and chat', () => {
     await expect(page.getByText('Host', { exact: true })).toBeVisible();
     await expect(page.getByText('Co-Host', { exact: true })).toBeVisible();
 
-    expect(pageErrors, `Unexpected uncaught page errors: ${pageErrors.map(e => e.message).join('; ')}`).toEqual([]);
+    expect(
+      pageErrors,
+      `Unexpected uncaught page errors: ${pageErrors.map((e) => e.message).join('; ')}`,
+    ).toEqual([]);
   });
 
-  test('a sent room chat message vanishes forever when its own realtime echo never arrives', async ({ page }) => {
+  test('a sent room chat message vanishes forever when its own realtime echo never arrives', async ({
+    page,
+  }) => {
     const fake = await setupFakeCentrifugo(page);
     // audio-rooms.store.ts sendRoomChatMessage() never appends to roomMessages()
     // locally - it relies entirely on Centrifugo echoing the publish back to the
@@ -190,12 +195,19 @@ test.describe('Adversarial: audio/video room co-host and chat', () => {
     await page.waitForTimeout(2000);
 
     await expect(page.getByText(distinctiveMessage)).toHaveCount(0);
-    await expect(page.getByText('No messages in this live room yet', { exact: false })).toBeVisible();
+    await expect(
+      page.getByText('No messages in this live room yet', { exact: false }),
+    ).toBeVisible();
 
-    expect(pageErrors, `Unexpected uncaught page errors: ${pageErrors.map(e => e.message).join('; ')}`).toEqual([]);
+    expect(
+      pageErrors,
+      `Unexpected uncaught page errors: ${pageErrors.map((e) => e.message).join('; ')}`,
+    ).toEqual([]);
   });
 
-  test('rapid chat spam and co-host invite-picker toggling do not crash the room or leak raw markup', async ({ page }) => {
+  test('rapid chat spam and co-host invite-picker toggling do not crash the room or leak raw markup', async ({
+    page,
+  }) => {
     const fake = await setupFakeCentrifugo(page);
     await mockAudioRoomApi(page, makeRoom());
 
@@ -229,7 +241,9 @@ test.describe('Adversarial: audio/video room co-host and chat', () => {
       await page.waitForTimeout(20);
     }
 
-    await expect.poll(() => fake.receivedPublishes.length, { timeout: 5000 }).toBeGreaterThanOrEqual(payloads.length);
+    await expect
+      .poll(() => fake.receivedPublishes.length, { timeout: 5000 })
+      .toBeGreaterThanOrEqual(payloads.length);
 
     // Angular interpolation must have kept the script/img payloads as inert text,
     // never executed or inserted as live markup.
@@ -240,6 +254,9 @@ test.describe('Adversarial: audio/video room co-host and chat', () => {
     // The app must still be alive and rendering, not a white screen.
     await expect(page.locator('app-root')).toBeVisible();
 
-    expect(pageErrors, `Unexpected uncaught page errors: ${pageErrors.map(e => e.message).join('; ')}`).toEqual([]);
+    expect(
+      pageErrors,
+      `Unexpected uncaught page errors: ${pageErrors.map((e) => e.message).join('; ')}`,
+    ).toEqual([]);
   });
 });

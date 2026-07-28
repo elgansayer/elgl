@@ -16,7 +16,7 @@ import { GiftAnimationService } from '../../services/gift-animation.service';
         </div>
       </div>
     }
-  `
+  `,
 })
 export class GiftAnimationOverlayComponent {
   animationService = inject(GiftAnimationService);

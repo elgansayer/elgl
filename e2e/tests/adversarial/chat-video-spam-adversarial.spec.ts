@@ -38,12 +38,14 @@ test.describe('Adversarial Chat & Video Spam', () => {
         try {
           const parsed = JSON.parse(message as string);
           if (parsed.publish) {
-            ws.send(JSON.stringify({
-              push: {
-                channel: parsed.publish.channel,
-                pub: { data: parsed.publish.data }
-              }
-            }));
+            ws.send(
+              JSON.stringify({
+                push: {
+                  channel: parsed.publish.channel,
+                  pub: { data: parsed.publish.data },
+                },
+              }),
+            );
           }
         } catch (e) {
           // Ignore parse errors in mock
@@ -60,7 +62,7 @@ test.describe('Adversarial Chat & Video Spam', () => {
     const videoToggle = page.locator('button[aria-label="Toggle Video"], button:has-text("Video")');
 
     // If the UI elements exist, perform the aggressive actions
-    if (await messageInput.count() > 0 && await sendButton.count() > 0) {
+    if ((await messageInput.count()) > 0 && (await sendButton.count()) > 0) {
       // 1. Spam chat messages rapidly
       for (let i = 0; i < 50; i++) {
         await messageInput.fill(`Spam message ${i} 🚀`);
@@ -68,7 +70,7 @@ test.describe('Adversarial Chat & Video Spam', () => {
       }
 
       // 2. Rapidly toggle video on and off
-      if (await videoToggle.count() > 0) {
+      if ((await videoToggle.count()) > 0) {
         for (let i = 0; i < 20; i++) {
           await videoToggle.click();
           await page.waitForTimeout(50); // Very short delay to induce race conditions
@@ -92,9 +94,9 @@ test.describe('Adversarial Chat & Video Spam', () => {
     const body = page.locator('body');
     await expect(body).toBeVisible();
 
-    // We expect no fatal page errors (console errors might happen due to mock limitations, 
+    // We expect no fatal page errors (console errors might happen due to mock limitations,
     // but we strictly check for uncaught exceptions that crash the app)
-    const fatalErrors = errors.filter(e => e.includes('Uncaught') || e.includes('Fatal'));
+    const fatalErrors = errors.filter((e) => e.includes('Uncaught') || e.includes('Fatal'));
     expect(fatalErrors).toHaveLength(0);
   });
 });

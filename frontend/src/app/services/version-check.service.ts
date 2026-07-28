@@ -1,4 +1,12 @@
-import { Injectable, signal, inject, EnvironmentInjector, ApplicationRef, createComponent, ComponentRef } from '@angular/core';
+import {
+  Injectable,
+  signal,
+  inject,
+  EnvironmentInjector,
+  ApplicationRef,
+  createComponent,
+  ComponentRef,
+} from '@angular/core';
 import { APP_VERSION, MIN_SUPPORTED_VERSION } from '../version.constants';
 import { UpdateModalComponent } from '../components/update-modal/update-modal.component';
 
@@ -63,7 +71,7 @@ export class VersionCheckService {
 
     componentRef.setInput(
       'message',
-      'A new version is available. Please update the app to continue.'
+      'A new version is available. Please update the app to continue.',
     );
 
     document.body.appendChild(hostElement);

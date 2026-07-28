@@ -6,7 +6,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
  * to the app store for an update.
  *
  * Place `<app-forced-update-modal .../>` at the top of your root component
- * template and bind `*ngIf="versionCheck.isDeprecated()"`.
+ * template and bind with `@if (versionCheck.isDeprecated())`.
  */
 @Component({
   selector: 'app-forced-update-modal',
@@ -39,7 +39,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         </a>
       </div>
     </div>
-  `
+  `,
 })
 export class ForcedUpdateModalComponent {
   @Input() storeUrl = 'https://yourapp.com/update';

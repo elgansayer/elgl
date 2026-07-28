@@ -3,15 +3,18 @@
 # Read Receipts Component Specification
 
 ## Overview
+
 Shows delivery and read status indicators for sent messages, with detailed view of who has read the message.
 
 ## Props / Inputs
+
 - `messageId`: string (required)
 - `status`: 'sending' | 'sent' | 'delivered' | 'read' (required)
 - `readBy`: ReadReceiptUser[] (optional) - Users who have read the message
 - `isGroupChat`: boolean (default false)
 
 ## ReadReceiptUser Interface
+
 ```typescript
 interface ReadReceiptUser {
   userId: string;
@@ -22,6 +25,7 @@ interface ReadReceiptUser {
 ```
 
 ## States
+
 1. **Sending**: Grey clock icon ⏳
 2. **Sent**: Grey checkmark ✓
 3. **Delivered**: Grey double checkmark ✓✓
@@ -29,6 +33,7 @@ interface ReadReceiptUser {
 5. **Detailed**: On hover/click, shows tooltip/popover with list of readers
 
 ## Visual Design
+
 - **Icon container**: `inline-flex items-center`, `w-4 h-4`
 - **Single check**: `text-gray-400 text-xs`
 - **Double check**: `text-gray-400 text-xs` (delivered), `text-blue-400 text-xs` (read)
@@ -38,6 +43,7 @@ interface ReadReceiptUser {
   - Max 5 shown, then "+3 more"
 
 ## Behavior
+
 - Updates in real-time via Centrifugo channel `chat_{roomId}_receipts`
 - On message sent: status transitions sending → sent
 - On server delivery: sent → delivered
@@ -46,11 +52,13 @@ interface ReadReceiptUser {
 - Tooltip appears on hover (desktop) or tap (mobile)
 
 ## Accessibility
+
 - `aria-label` changes based on status: "Sending", "Sent", "Delivered", "Read by 3 people"
 - `role="status"` on icon
 - Tooltip: `role="tooltip"` with `aria-describedby` on icon
 
 ## Edge Cases
+
 - Message failed to send: Show red exclamation icon with "Tap to retry"
 - User blocks sender: Show "delivered" only, never "read"
 - User deleted message: Remove receipt tracking

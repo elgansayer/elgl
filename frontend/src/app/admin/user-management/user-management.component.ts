@@ -6,11 +6,11 @@ import { AdminService, AdminUserSummary } from '../../services/admin.service';
   selector: 'app-user-management',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './user-management.component.html'
+  templateUrl: './user-management.component.html',
 })
 export class UserManagementComponent implements OnInit {
   private adminService = inject(AdminService);
-  
+
   users = signal<AdminUserSummary[]>([]);
   isLoading = signal<boolean>(true);
 
@@ -33,7 +33,7 @@ export class UserManagementComponent implements OnInit {
   async toggleVip(user: AdminUserSummary): Promise<void> {
     const newVipStatus = !user.is_vip;
     const newTier = newVipStatus ? 'consumer_8_ukp_10_usd' : 'free';
-    
+
     try {
       await this.adminService.setVipStatus(user.id, newVipStatus, newTier);
       await this.loadUsers(); // Reload to reflect changes

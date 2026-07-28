@@ -1,8 +1,13 @@
 <div class="h-full flex flex-col bg-surface-500 text-text-primary overflow-y-auto">
   <!-- Top App Header -->
-  <header class="sticky top-0 z-10 bg-surface-500/90 backdrop-blur border-b border-surface-100 p-4 flex items-center justify-between">
+  <header
+    class="sticky top-0 z-10 bg-surface-500/90 backdrop-blur border-b border-surface-100 p-4 flex items-center justify-between"
+  >
     <div class="flex items-center gap-3">
-      <button (click)="goBack()" class="p-2 -ms-2 rounded-full hover:bg-surface-300 transition-colors">
+      <button
+        (click)="goBack()"
+        class="p-2 -ms-2 rounded-full hover:bg-surface-300 transition-colors"
+      >
         <span class="text-xl">←</span>
       </button>
       <div class="flex items-center gap-2">
@@ -15,7 +20,10 @@
       </div>
     </div>
 
-    <button (click)="markAllAsRead()" class="text-xs font-bold text-neon-blue hover:opacity-80 transition-opacity">
+    <button
+      (click)="markAllAsRead()"
+      class="text-xs font-bold text-neon-blue hover:opacity-80 transition-opacity"
+    >
       {{ 'notifications.markAllRead' | t }}
     </button>
   </header>
@@ -25,7 +33,8 @@
     <app-scrollable-pills
       [pills]="filterPills()"
       [selected]="selectedTab()"
-      (select)="setTab($any($event))">
+      (select)="setTab($any($event))"
+    >
     </app-scrollable-pills>
   </div>
 
@@ -47,18 +56,26 @@
           <article
             (click)="onNotificationClick(notif)"
             class="flex items-start gap-4 p-4 hover:bg-surface-300/50 transition-colors cursor-pointer relative"
-            [class.bg-surface-300/30]="!notif.is_read">
-            
+            [class.bg-surface-300/30]="!notif.is_read"
+          >
             <!-- Actor Avatar with Badge Overlay -->
             <div class="relative shrink-0">
               @if (notif.actor?.avatar_url) {
-                <img [src]="notif.actor?.avatar_url" alt="avatar" class="h-12 w-12 rounded-full object-cover border border-surface-100" />
+                <img
+                  [src]="notif.actor?.avatar_url"
+                  alt="avatar"
+                  class="h-12 w-12 rounded-full object-cover border border-surface-100"
+                />
               } @else {
-                <div class="h-12 w-12 rounded-full bg-surface-300 border border-surface-100 flex items-center justify-center font-bold text-text-secondary">
+                <div
+                  class="h-12 w-12 rounded-full bg-surface-300 border border-surface-100 flex items-center justify-center font-bold text-text-secondary"
+                >
                   {{ notif.actor?.display_name?.charAt(0) || '?' }}
                 </div>
               }
-              <span class="absolute -bottom-1 -end-1 h-6 w-6 rounded-full bg-surface-400 border border-surface-100 flex items-center justify-center text-xs">
+              <span
+                class="absolute -bottom-1 -end-1 h-6 w-6 rounded-full bg-surface-400 border border-surface-100 flex items-center justify-center text-xs"
+              >
                 {{ getBadgeIcon(notif.type) }}
               </span>
             </div>
@@ -80,7 +97,9 @@
               </div>
 
               @if (notif.message) {
-                <p class="text-xs text-text-secondary italic bg-surface-300/60 p-2 rounded-xl mt-1 line-clamp-2">
+                <p
+                  class="text-xs text-text-secondary italic bg-surface-300/60 p-2 rounded-xl mt-1 line-clamp-2"
+                >
                   "{{ notif.message }}"
                 </p>
               }

@@ -14,7 +14,7 @@ import { AppButtonSecondaryComponent } from './button-secondary.component';
       Secondary Action
     </app-button-secondary>
   `,
-  imports: [AppButtonSecondaryComponent]
+  imports: [AppButtonSecondaryComponent],
 })
 class TestHostComponent {
   size = signal<'sm' | 'md' | 'lg'>('md');
@@ -35,7 +35,7 @@ describe('AppButtonSecondaryComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TestHostComponent, AppButtonSecondaryComponent]
+      imports: [TestHostComponent, AppButtonSecondaryComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TestHostComponent);

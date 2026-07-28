@@ -9,7 +9,7 @@ export interface AddFavouriteDto {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class FavouriteService {
   private http = inject(HttpClient);

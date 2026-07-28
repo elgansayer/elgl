@@ -2,7 +2,12 @@ import { Component, OnInit, computed, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
-import { HobbyTagsService, HobbyTag, UserHobbyTag, VocabularyItem } from '../../services/hobby-tags.service';
+import {
+  HobbyTagsService,
+  HobbyTag,
+  UserHobbyTag,
+  VocabularyItem,
+} from '../../services/hobby-tags.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppPillComponent } from '../primitives/pill/pill.component';
 
@@ -48,8 +53,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                     <span class="text-xs text-text-muted">+</span>
                   </button>
                 }
-              }
-              @empty {
+              } @empty {
                 <div class="w-full flex flex-col items-center gap-3 py-4">
                   <p class="text-text-muted text-sm">No hobbies found</p>
                   @if (searchQuery().trim()) {
@@ -90,8 +94,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
               ✕
             </button>
           </div>
-        }
-        @empty {
+        } @empty {
           <p class="text-text-muted text-sm italic">
             No hobbies added yet. Click "Add Hobby" to get started!
           </p>
@@ -109,10 +112,16 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
               <button
                 (click)="updateProficiency(selectedTagForProficiency()!, level)"
                 class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                [class.bg-indigo-600]="getCurrentProficiency(selectedTagForProficiency()!) === level"
-                [class.bg-surface-200]="getCurrentProficiency(selectedTagForProficiency()!) !== level"
+                [class.bg-indigo-600]="
+                  getCurrentProficiency(selectedTagForProficiency()!) === level
+                "
+                [class.bg-surface-200]="
+                  getCurrentProficiency(selectedTagForProficiency()!) !== level
+                "
                 [class.text-white]="getCurrentProficiency(selectedTagForProficiency()!) === level"
-                [class.text-slate-300]="getCurrentProficiency(selectedTagForProficiency()!) !== level"
+                [class.text-slate-300]="
+                  getCurrentProficiency(selectedTagForProficiency()!) !== level
+                "
               >
                 {{ level | titlecase }}
               </button>
@@ -124,9 +133,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
       <!-- Vocabulary Section -->
       @if (userVocabulary().length > 0) {
         <div class="mt-6">
-          <h3 class="text-lg font-semibold text-slate-200 mb-3">
-            Vocabulary from Your Hobbies
-          </h3>
+          <h3 class="text-lg font-semibold text-slate-200 mb-3">Vocabulary from Your Hobbies</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             @for (word of userVocabulary(); track word.id) {
               <app-card variant="outlined" customClass="p-3">
@@ -167,9 +174,7 @@ export class HobbyTagsComponent implements OnInit {
   readonly filteredTags = computed(() => {
     const query = this.searchQuery().toLowerCase();
     return this.allTags().filter(
-      (tag) =>
-        tag.name.toLowerCase().includes(query) ||
-        tag.category.toLowerCase().includes(query)
+      (tag) => tag.name.toLowerCase().includes(query) || tag.category.toLowerCase().includes(query),
     );
   });
 
@@ -182,15 +187,15 @@ export class HobbyTagsComponent implements OnInit {
   }
 
   fetchAllTags(): void {
-    this.hobbyTagsService.getAllTags().subscribe(tags => this.allTags.set(tags));
+    this.hobbyTagsService.getAllTags().subscribe((tags) => this.allTags.set(tags));
   }
 
   fetchUserTags(): void {
-    this.hobbyTagsService.getMyTags().subscribe(tags => this.userTags.set(tags));
+    this.hobbyTagsService.getMyTags().subscribe((tags) => this.userTags.set(tags));
   }
 
   fetchUserVocabulary(): void {
-    this.hobbyTagsService.getVocabulary('en').subscribe(vocab => this.userVocabulary.set(vocab));
+    this.hobbyTagsService.getVocabulary('en').subscribe((vocab) => this.userVocabulary.set(vocab));
   }
 
   isTagAdded(tagId: string): boolean {
@@ -224,27 +229,28 @@ export class HobbyTagsComponent implements OnInit {
   }
 
   getTagName(tagId: string): string {
-    const tag = this.userTags().find(
-      (t) => t.hobby_tag_id === tagId
-    );
+    const tag = this.userTags().find((t) => t.hobby_tag_id === tagId);
     return tag?.hobby_tag?.name || '';
   }
 
   getCurrentProficiency(tagId: string): string {
-    const tag = this.userTags().find(
-      (t) => t.hobby_tag_id === tagId
-    );
+    const tag = this.userTags().find((t) => t.hobby_tag_id === tagId);
     const lvl = tag?.proficiency_level || 0;
     return this.proficiencyLevels[lvl] || 'beginner';
   }
 
   getProficiencyColour(level: number): 'success' | 'warning' | 'info' | 'primary' | 'neutral' {
     switch (level) {
-      case 0: return 'success';
-      case 1: return 'warning';
-      case 2: return 'info';
-      case 3: return 'primary';
-      default: return 'neutral';
+      case 0:
+        return 'success';
+      case 1:
+        return 'warning';
+      case 2:
+        return 'info';
+      case 3:
+        return 'primary';
+      default:
+        return 'neutral';
     }
   }
 }

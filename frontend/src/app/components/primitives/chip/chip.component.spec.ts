@@ -16,7 +16,7 @@ import { AppChipComponent } from './chip.component';
       Projected Chip
     </app-chip>
   `,
-  imports: [AppChipComponent]
+  imports: [AppChipComponent],
 })
 class TestHostComponent {
   label = signal('Tag 1');
@@ -43,7 +43,7 @@ describe('AppChipComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TestHostComponent, AppChipComponent]
+      imports: [TestHostComponent, AppChipComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TestHostComponent);

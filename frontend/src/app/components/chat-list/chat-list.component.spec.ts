@@ -8,7 +8,10 @@ import { provideRouter } from '@angular/router';
 describe('ChatListComponent', () => {
   let component: ChatListComponent;
   let fixture: ComponentFixture<ChatListComponent>;
-  let mockChatService: { getRooms: ReturnType<typeof vi.fn>; getRecentChats: ReturnType<typeof vi.fn> };
+  let mockChatService: {
+    getRooms: ReturnType<typeof vi.fn>;
+    getRecentChats: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     mockChatService = {
@@ -18,10 +21,7 @@ describe('ChatListComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [ChatListComponent],
-      providers: [
-        { provide: ChatService, useValue: mockChatService },
-        provideRouter([]),
-      ],
+      providers: [{ provide: ChatService, useValue: mockChatService }, provideRouter([])],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ChatListComponent);

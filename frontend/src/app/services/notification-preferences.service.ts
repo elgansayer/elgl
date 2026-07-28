@@ -44,9 +44,7 @@ export class NotificationPreferencesService {
     return this.http.get<NotificationPreferences>(this.baseUrl);
   }
 
-  updatePreferences(
-    dto: Partial<NotificationPreferences>,
-  ): Observable<NotificationPreferences> {
+  updatePreferences(dto: Partial<NotificationPreferences>): Observable<NotificationPreferences> {
     return this.http.put<NotificationPreferences>(this.baseUrl, dto);
   }
 

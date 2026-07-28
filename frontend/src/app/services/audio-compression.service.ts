@@ -1,49 +1,52 @@
 import { Injectable } from '@angular/core';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AudioCompressionService {
-  
   /**
    * Compresses or transcodes an audio Blob on the client side using the Web Audio API.
    * Downsamples the audio to 16kHz Mono to significantly reduce file size for voice notes.
-   * 
+   *
    * @param audioBlob The original audio recording blob.
    * @returns A promise resolving to the compressed audio Blob.
    */
   async compressAudio(audioBlob: Blob): Promise<Blob> {
-    console.log(`[AudioCompressionService] Compressing audio blob of size: ${audioBlob.size} bytes`);
-    
+    console.log(
+      `[AudioCompressionService] Compressing audio blob of size: ${audioBlob.size} bytes`,
+    );
+
     try {
       // 1. Convert Blob to ArrayBuffer
       const arrayBuffer = await audioBlob.arrayBuffer();
-      
+
       // 2. Decode Audio Data
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       const audioContext = new AudioContextClass();
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      
+
       // 3. Downsample to 16kHz Mono for voice compression
       const targetSampleRate = 16000;
       const offlineContext = new OfflineAudioContext(
         1, // mono
         audioBuffer.duration * targetSampleRate,
-        targetSampleRate
+        targetSampleRate,
       );
-      
+
       const source = offlineContext.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(offlineContext.destination);
       source.start(0);
-      
+
       const renderedBuffer = await offlineContext.startRendering();
-      
+
       // 4. Encode to WAV
       const wavBlob = this.audioBufferToWav(renderedBuffer);
-      console.log(`[AudioCompressionService] Compressed to WAV blob of size: ${wavBlob.size} bytes`);
-      
+      console.log(
+        `[AudioCompressionService] Compressed to WAV blob of size: ${wavBlob.size} bytes`,
+      );
+
       return wavBlob;
     } catch (error) {
       console.error('[AudioCompressionService] Compression failed, returning original blob', error);

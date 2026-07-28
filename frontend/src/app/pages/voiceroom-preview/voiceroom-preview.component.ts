@@ -17,22 +17,37 @@ interface RoomPreview {
   imports: [CommonModule, RouterModule],
   template: `
     <div class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4">
-      <div class="max-w-md w-full bg-gray-800 rounded-2xl p-6 shadow-xl text-center border border-gray-700">
-        <div class="w-20 h-20 bg-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+      <div
+        class="max-w-md w-full bg-gray-800 rounded-2xl p-6 shadow-xl text-center border border-gray-700"
+      >
+        <div
+          class="w-20 h-20 bg-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center"
+        >
           <span class="text-3xl">🎙️</span>
         </div>
         <h1 class="text-2xl font-bold mb-2">{{ roomName }}</h1>
         <div class="flex justify-center gap-2 mb-6">
-          <span class="px-3 py-1 bg-gray-700 rounded-full text-sm font-medium">{{ languagePair }}</span>
-          <span class="px-3 py-1 bg-purple-900/50 text-purple-300 rounded-full text-sm font-medium">{{ topicTag }}</span>
+          <span class="px-3 py-1 bg-gray-700 rounded-full text-sm font-medium">{{
+            languagePair
+          }}</span>
+          <span
+            class="px-3 py-1 bg-purple-900/50 text-purple-300 rounded-full text-sm font-medium"
+            >{{ topicTag }}</span
+          >
         </div>
-        <p class="text-gray-400 mb-8">Join this live audio room to practice your speaking skills!</p>
-        <a [routerLink]="['/audio-rooms']" [queryParams]="{ join: roomId }" class="block w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors">
+        <p class="text-gray-400 mb-8">
+          Join this live audio room to practice your speaking skills!
+        </p>
+        <a
+          [routerLink]="['/audio-rooms']"
+          [queryParams]="{ join: roomId }"
+          class="block w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors"
+        >
           Join Room
         </a>
       </div>
     </div>
-  `
+  `,
 })
 export class VoiceroomPreviewComponent implements OnInit {
   private route = inject(ActivatedRoute);
@@ -66,7 +81,7 @@ export class VoiceroomPreviewComponent implements OnInit {
           this.transferState.set(ROOM_KEY, room);
           this.applyRoomData(room);
         },
-        error: (err) => console.error('Failed to load room preview', err)
+        error: (err) => console.error('Failed to load room preview', err),
       });
     }
   }
@@ -79,7 +94,10 @@ export class VoiceroomPreviewComponent implements OnInit {
 
     this.title.setTitle(`${this.roomName} - Live Audio Room`);
     this.meta.updateTag({ property: 'og:title', content: `${this.roomName} - Live Audio Room` });
-    this.meta.updateTag({ property: 'og:description', content: `Practice ${this.languagePair} in this live audio room about ${this.topicTag}.` });
+    this.meta.updateTag({
+      property: 'og:description',
+      content: `Practice ${this.languagePair} in this live audio room about ${this.topicTag}.`,
+    });
     this.meta.updateTag({ property: 'og:type', content: 'website' });
   }
 }

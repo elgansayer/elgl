@@ -5,7 +5,7 @@ import { CommonModule } from '@angular/common';
   selector: 'app-split-screen-video',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './split-screen-video.component.html'
+  templateUrl: './split-screen-video.component.html',
 })
 export class SplitScreenVideoComponent {
   readonly hostVideoUrl = input<string>('');

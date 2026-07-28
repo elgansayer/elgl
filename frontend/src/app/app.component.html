@@ -1,16 +1,37 @@
-<div class="min-h-[100dvh] flex flex-col bg-surface-500 text-text-primary font-sans relative overflow-x-hidden">
+<div
+  class="min-h-[100dvh] flex flex-col bg-surface-500 text-text-primary font-sans relative overflow-x-hidden"
+>
   <app-toast />
   <!-- Global Animated Virtual Gift Broadcast Overlay -->
   @if (economyStore.activeGiftAnimation(); as overlay) {
-    <div class="fixed inset-0 z-[100] pointer-events-none flex flex-col items-center justify-center">
+    <div
+      class="fixed inset-0 z-[100] pointer-events-none flex flex-col items-center justify-center"
+    >
       @if (overlay.gift.animationUrl) {
-        <img [src]="overlay.gift.animationUrl" class="w-full h-full absolute inset-0 object-contain z-[-1] animate-pulse" alt="Gift Animation" />
+        <img
+          [src]="overlay.gift.animationUrl"
+          class="w-full h-full absolute inset-0 object-contain z-[-1] animate-pulse"
+          alt="Gift Animation"
+        />
       }
-      <div class="bg-gradient-to-r from-amber-500 via-purple-600 to-amber-500 text-white px-8 py-6 rounded-3xl shadow-2xl border-4 border-amber-500/30 flex flex-col items-center gap-2 transform scale-125 z-10 animate-bounce">
+      <div
+        class="bg-gradient-to-r from-amber-500 via-purple-600 to-amber-500 text-white px-8 py-6 rounded-3xl shadow-2xl border-4 border-amber-500/30 flex flex-col items-center gap-2 transform scale-125 z-10 animate-bounce"
+      >
         <span class="text-6xl animate-pulse">{{ overlay.gift.icon }}</span>
-        <h3 class="text-2xl font-black tracking-wide">{{ 'gift.broadcastTitle' | t: { giftName: overlay.gift.name } }}</h3>
+        <h3 class="text-2xl font-black tracking-wide">
+          {{ 'gift.broadcastTitle' | t: { giftName: overlay.gift.name } }}
+        </h3>
         <p class="text-sm font-extrabold text-amber-100">
-          {{ 'gift.broadcastDesc' | t: { sender: overlay.sender_name, receiver: overlay.receiver_name, giftName: overlay.gift.name, cost: overlay.gift.cost_coins } }}
+          {{
+            'gift.broadcastDesc'
+              | t
+                : {
+                    sender: overlay.sender_name,
+                    receiver: overlay.receiver_name,
+                    giftName: overlay.gift.name,
+                    cost: overlay.gift.cost_coins,
+                  }
+          }}
         </p>
       </div>
     </div>
@@ -24,34 +45,57 @@
   <!-- Mobile Bottom Navigation Bar -->
   <nav class="fixed bottom-0 inset-x-0 z-50 bg-surface-200 border-t border-surface-100 pb-safe">
     <div class="flex justify-around items-center h-[60px]">
-      <a routerLink="/chat" routerLinkActive="text-primary" [routerLinkActiveOptions]="{exact: false}" class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors">
+      <a
+        routerLink="/chat"
+        routerLinkActive="text-primary"
+        [routerLinkActiveOptions]="{ exact: false }"
+        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+      >
         <div class="relative">
           <span class="text-2xl leading-none">💬</span>
           @if (unreadCounter.totalUnread() > 0) {
-            <span class="absolute -top-1 -end-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200">
+            <span
+              class="absolute -top-1 -end-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
+            >
               {{ unreadCounter.totalUnread() > 99 ? '99+' : unreadCounter.totalUnread() }}
             </span>
           }
         </div>
         <span class="text-[10px] font-bold">{{ 'nav.helloTalk' | t }}</span>
       </a>
-      
-      <a routerLink="/moments" routerLinkActive="text-primary" class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors">
+
+      <a
+        routerLink="/moments"
+        routerLinkActive="text-primary"
+        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+      >
         <span class="text-2xl leading-none">⭕</span>
         <span class="text-[10px] font-bold">{{ 'nav.moments' | t }}</span>
       </a>
-      
-      <a routerLink="/discovery" routerLinkActive="text-primary" class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors">
+
+      <a
+        routerLink="/discovery"
+        routerLinkActive="text-primary"
+        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+      >
         <span class="text-2xl leading-none">🌍</span>
         <span class="text-[10px] font-bold">{{ 'nav.connect' | t }}</span>
       </a>
-      
-      <a routerLink="/audio-rooms" routerLinkActive="text-primary" class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors">
+
+      <a
+        routerLink="/audio-rooms"
+        routerLinkActive="text-primary"
+        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+      >
         <span class="text-2xl leading-none">🎙️</span>
         <span class="text-[10px] font-bold">{{ 'nav.liveRooms' | t }}</span>
       </a>
-      
-      <a routerLink="/profile" routerLinkActive="text-primary" class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors">
+
+      <a
+        routerLink="/profile"
+        routerLinkActive="text-primary"
+        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+      >
         <span class="text-2xl leading-none">👤</span>
         <span class="text-[10px] font-bold">{{ 'nav.profile' | t }}</span>
       </a>
@@ -70,6 +114,9 @@
 
   <!-- Daily Login Reward Modal -->
   @if (showDailyRewardModal()) {
-    <app-daily-login-modal [coins]="dailyRewardCoins()" (closed)="showDailyRewardModal.set(false)" />
+    <app-daily-login-modal
+      [coins]="dailyRewardCoins()"
+      (closed)="showDailyRewardModal.set(false)"
+    />
   }
 </div>

@@ -18,9 +18,13 @@ test.describe('Adversarial Chat and Video Tests', () => {
     await page.goto('/chat/room_chaos_video_1');
 
     // Wait for the chat input to be visible
-    const chatInput = page.locator('textarea[name="chat-input"], input[name="chat-input"], [contenteditable="true"]').first();
+    const chatInput = page
+      .locator('textarea[name="chat-input"], input[name="chat-input"], [contenteditable="true"]')
+      .first();
     const sendButton = page.locator('button[aria-label="Send"], button:has-text("Send")').first();
-    const videoToggle = page.locator('button[aria-label="Toggle Video"], button:has-text("Video")').first();
+    const videoToggle = page
+      .locator('button[aria-label="Toggle Video"], button:has-text("Video")')
+      .first();
 
     // 1. Spam the video toggle button rapidly
     if (await videoToggle.isVisible()) {
@@ -30,23 +34,23 @@ test.describe('Adversarial Chat and Video Tests', () => {
     }
 
     // 2. Inject a massive string into the chat
-    if (await chatInput.isVisible() && await sendButton.isVisible()) {
+    if ((await chatInput.isVisible()) && (await sendButton.isVisible())) {
       const massiveString = 'A'.repeat(50000); // 50k characters
       await chatInput.fill(massiveString);
       await sendButton.click();
-      
+
       // 3. Send rapid-fire empty or special character messages (Zalgo, RTL overrides, XSS)
       const specialChars = [
-        '\0', 
-        '\n\n\n', 
-        '<script>alert(1)</script>', 
-        '👍🏽', 
+        '\0',
+        '\n\n\n',
+        '<script>alert(1)</script>',
+        '👍🏽',
         'జ్ఞ‌ా',
         'Z͑ͫ̓ͪ̂ͫ̽͏̴̙̤̞͉͚̯̞̠͍A̴̵̜̰͔ͫ͗͢Lͨͧͽ̵̟̜͍͔̯ͯ̃ͯͪ͊ͧ͟͞G̦̝̑ͨ͊̋ͯͦ͂͆̀͢Ǫ̵̹̻̝̳͂̌̌͘!̵̡̠̰͕̿̋ͥͥ̂ͣ̐́́͞',
         '\u202E‮this is right to left text',
-        '{"type": "fake_json_payload"}'
+        '{"type": "fake_json_payload"}',
       ];
-      
+
       for (const chars of specialChars) {
         await chatInput.fill(chars);
         await sendButton.click();
@@ -59,7 +63,7 @@ test.describe('Adversarial Chat and Video Tests', () => {
       await chatInput.fill('Message sent while offline');
       await sendButton.click();
     }
-    
+
     // Rapidly toggle network state
     for (let i = 0; i < 5; i++) {
       await page.context().setOffline(false);
@@ -70,7 +74,7 @@ test.describe('Adversarial Chat and Video Tests', () => {
     // 5. Verify the page hasn't crashed (basic check)
     const body = page.locator('body');
     await expect(body).toBeVisible();
-    
+
     // Ensure no generic error overlays are present
     const errorOverlay = page.locator('.error-overlay, .crash-screen, .error-boundary');
     await expect(errorOverlay).toHaveCount(0);

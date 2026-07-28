@@ -15,7 +15,7 @@ import { AppEmptyStateComponent } from './empty-state.component';
       <p class="projected-note">Additional note</p>
     </app-empty-state>
   `,
-  imports: [AppEmptyStateComponent]
+  imports: [AppEmptyStateComponent],
 })
 class TestHostComponent {
   icon = signal('🔍');
@@ -37,7 +37,7 @@ describe('AppEmptyStateComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TestHostComponent, AppEmptyStateComponent]
+      imports: [TestHostComponent, AppEmptyStateComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TestHostComponent);

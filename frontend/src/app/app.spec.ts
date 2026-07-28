@@ -19,25 +19,25 @@ describe('App', () => {
           provide: AuthService,
           useValue: {
             currentUser: signal(null),
-            signOut: () => Promise.resolve()
-          }
+            signOut: () => Promise.resolve(),
+          },
         },
         {
           provide: EconomyStore,
           useValue: {
             coinsBalance: signal(50),
             activeGiftAnimation: signal(null),
-            loadInitialData: () => Promise.resolve()
-          }
+            loadInitialData: () => Promise.resolve(),
+          },
         },
         {
           provide: CentrifugeService,
           useValue: {
             connect: () => Promise.resolve(),
-            subscribe: () => undefined
-          }
-        }
-      ]
+            subscribe: () => undefined,
+          },
+        },
+      ],
     }).compileComponents();
   });
 

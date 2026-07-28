@@ -8,7 +8,7 @@ import { CommonModule } from '@angular/common';
   template: `
     <!-- Backdrop -->
     @if (isOpen()) {
-      <div 
+      <div
         class="fixed inset-0 z-40 bg-black/20 transition-opacity"
         (click)="closePicker.emit()"
         (keydown.enter)="closePicker.emit()"
@@ -18,19 +18,27 @@ import { CommonModule } from '@angular/common';
     }
 
     <!-- Drawer -->
-    <div 
+    <div
       class="fixed bottom-0 start-0 end-0 z-50 flex flex-col bg-white dark:bg-slate-800 rounded-t-2xl shadow-xl transition-transform duration-300 ease-in-out transform"
       [class.translate-y-0]="isOpen()"
       [class.translate-y-full]="!isOpen()"
       style="max-height: 50vh;"
     >
       <!-- Handle -->
-      <div class="flex justify-center pt-3 pb-2 cursor-pointer" (click)="closePicker.emit()" (keydown.enter)="closePicker.emit()" tabindex="0" role="button">
+      <div
+        class="flex justify-center pt-3 pb-2 cursor-pointer"
+        (click)="closePicker.emit()"
+        (keydown.enter)="closePicker.emit()"
+        tabindex="0"
+        role="button"
+      >
         <div class="w-12 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full"></div>
       </div>
 
       <!-- Header -->
-      <div class="px-4 pb-2 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+      <div
+        class="px-4 pb-2 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center"
+      >
         <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200">Stickers</h3>
       </div>
 
@@ -38,10 +46,16 @@ import { CommonModule } from '@angular/common';
       <div class="flex-1 overflow-y-auto p-4">
         <div class="grid grid-cols-4 gap-4">
           @for (sticker of stickers(); track sticker.id) {
-            <button 
+            <button
               (click)="onSelectSticker(sticker.url)"
-              class="aspect-square p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center focus:outline-none">
-              <img [src]="sticker.url" [alt]="sticker.name" class="w-full h-full object-contain drop-shadow-sm hover:scale-110 transition-transform" loading="lazy" />
+              class="aspect-square p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center focus:outline-none"
+            >
+              <img
+                [src]="sticker.url"
+                [alt]="sticker.name"
+                class="w-full h-full object-contain drop-shadow-sm hover:scale-110 transition-transform"
+                loading="lazy"
+              />
             </button>
           }
         </div>

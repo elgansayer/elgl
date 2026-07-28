@@ -9,7 +9,7 @@ services:
       - /app/node_modules
     command: npm run start:dev
     ports:
-      - "3000:3000"
+      - '3000:3000'
     env_file:
       - .env
     depends_on:
@@ -24,7 +24,7 @@ services:
       - /app/node_modules
     command: npm run start -- --host 0.0.0.0 --port 4200
     ports:
-      - "4200:4200"
+      - '4200:4200'
     depends_on:
       - api
 
@@ -32,7 +32,7 @@ services:
     image: redis:7-alpine
     command: redis-server --appendonly yes
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redis_dev_data:/data
 
@@ -40,8 +40,8 @@ services:
     image: centrifugo/centrifugo:v5
     command: centrifugo -c /centrifugo/config.json
     ports:
-      - "8000:8000"
-      - "8001:8001"
+      - '8000:8000'
+      - '8001:8001'
     volumes:
       - ./config/centrifugo:/centrifugo
     depends_on:
@@ -51,9 +51,9 @@ services:
     image: livekit/livekit-server:latest
     command: --config /livekit/config.yaml
     ports:
-      - "7880:7880"
-      - "7881:7881"
-      - "50000-50100:50000-50100/udp"
+      - '7880:7880'
+      - '7881:7881'
+      - '50000-50100:50000-50100/udp'
     volumes:
       - ./config/livekit:/livekit
 

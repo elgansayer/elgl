@@ -3,27 +3,33 @@
 # Attachment Menu Component Specification
 
 ## Overview
+
 A bottom sheet / popover menu showing available attachment types when user taps the attachment button.
 
 ## Props / Inputs
+
 - `isOpen`: boolean (required)
 - `position`: 'bottom' | 'top' (default 'bottom')
 
 ## Outputs / Events
+
 - `optionSelected`: emits `{ type: AttachmentType }`
 - `menuClosed`: emits void
 
 ## AttachmentType
+
 ```typescript
 type AttachmentType = 'camera' | 'gallery' | 'document' | 'doodle' | 'voice' | 'gift' | 'location';
 ```
 
 ## States
+
 1. **Closed**: Not rendered
 2. **Open**: Menu visible with slide-up animation
 3. **Selecting**: Option tapped, brief highlight before action
 
 ## Visual Design
+
 - **Overlay**: `fixed inset-0 bg-black/50 z-50` (tap to close)
 - **Menu panel**: `bg-gray-800 rounded-t-2xl p-4 pb-8`
   - Handle bar: `w-10 h-1 bg-gray-600 rounded-full mx-auto mb-4`
@@ -41,6 +47,7 @@ type AttachmentType = 'camera' | 'gallery' | 'document' | 'doodle' | 'voice' | '
   - Location: `bg-cyan-500/20 text-cyan-400` 📍
 
 ## Behavior
+
 - Opens with slide-up animation (300ms ease-out)
 - Closes on overlay tap, Escape key, or swipe down
 - Each option triggers specific action:
@@ -53,6 +60,7 @@ type AttachmentType = 'camera' | 'gallery' | 'document' | 'doodle' | 'voice' | '
   - Location: Requests geolocation, sends coordinates
 
 ## Accessibility
+
 - `role="dialog"` on menu panel
 - `aria-label="Attachment options"`
 - Focus trap while open
@@ -60,6 +68,7 @@ type AttachmentType = 'camera' | 'gallery' | 'document' | 'doodle' | 'voice' | '
 - `aria-describedby` for each option
 
 ## Edge Cases
+
 - Camera not available (desktop): Show "Camera not available" toast, fallback to gallery
 - Location permission denied: Show "Enable location in browser settings"
 - File too large (> 25MB): Show error toast with size limit

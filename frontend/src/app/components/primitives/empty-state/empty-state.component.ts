@@ -26,8 +26,8 @@ import { Component, input, output, computed } from '@angular/core';
   host: {
     '[class]': "'block w-full'",
     '[attr.role]': "'region'",
-    '[attr.aria-label]': 'ariaLabelAttribute()'
-  }
+    '[attr.aria-label]': 'ariaLabelAttribute()',
+  },
 })
 export class AppEmptyStateComponent {
   readonly icon = input<string>('📭');
@@ -43,7 +43,8 @@ export class AppEmptyStateComponent {
   });
 
   readonly containerClasses = computed(() => {
-    const base = 'flex flex-col items-center justify-center text-center p-6 rounded-2xl bg-surface-300 border border-dashed border-surface-100';
+    const base =
+      'flex flex-col items-center justify-center text-center p-6 rounded-2xl bg-surface-300 border border-dashed border-surface-100';
     const extra = this.customClass();
     return `${base}${extra ? ' ' + extra : ''}`.trim();
   });

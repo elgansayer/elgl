@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
   template: `
     <div class="p-4">
       <h2 class="text-xl font-bold mb-4">Profile Visitors</h2>
-      
+
       @if (isLoading()) {
         <div class="flex justify-center py-8">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -25,19 +25,32 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <!-- VIP: Full access to visitor log -->
         <div class="space-y-3">
           @for (visit of visitors(); track visit.id) {
-            <div class="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg hover:bg-slate-700/50 transition-colors">
-              <a [routerLink]="['/profile', visit.visitor_id]" class="flex items-center gap-3 flex-1 min-w-0">
+            <div
+              class="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg hover:bg-slate-700/50 transition-colors"
+            >
+              <a
+                [routerLink]="['/profile', visit.visitor_id]"
+                class="flex items-center gap-3 flex-1 min-w-0"
+              >
                 <div class="w-10 h-10 rounded-full bg-slate-700 flex-shrink-0 overflow-hidden">
                   @if (visit.visitor?.avatar_url) {
-                    <img [src]="visit.visitor?.avatar_url" alt="" class="w-full h-full object-cover" />
+                    <img
+                      [src]="visit.visitor?.avatar_url"
+                      alt=""
+                      class="w-full h-full object-cover"
+                    />
                   } @else {
-                    <div class="w-full h-full flex items-center justify-center text-slate-400 text-lg">
+                    <div
+                      class="w-full h-full flex items-center justify-center text-slate-400 text-lg"
+                    >
                       {{ (visit.visitor?.display_name || '?')[0] }}
                     </div>
                   }
                 </div>
                 <div class="ms-3 min-w-0">
-                  <p class="font-medium truncate">{{ visit.visitor?.display_name || ('common.unknownUser' | t) }}</p>
+                  <p class="font-medium truncate">
+                    {{ visit.visitor?.display_name || ('common.unknownUser' | t) }}
+                  </p>
                   <p class="text-sm text-text-secondary">
                     {{ visit.created_at | date: 'medium' }}
                   </p>
@@ -50,9 +63,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
               }
             </div>
           } @empty {
-            <div class="text-center py-8 text-slate-400">
-              No visitors yet
-            </div>
+            <div class="text-center py-8 text-slate-400">No visitors yet</div>
           }
         </div>
       } @else {
@@ -69,18 +80,31 @@ import { TranslatePipe } from '../../services/translate.pipe';
               </div>
             }
           </div>
-          
+
           <!-- Overlay with upgrade CTA -->
-          <div class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/60 rounded-lg">
+          <div
+            class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/60 rounded-lg"
+          >
             <div class="text-center p-6 max-w-sm">
-              <svg class="w-12 h-12 mx-auto mb-3 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+              <svg
+                class="w-12 h-12 mx-auto mb-3 text-yellow-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                />
               </svg>
               <h3 class="text-lg font-bold mb-2">Upgrade to VIP</h3>
               <p class="text-sm text-slate-300 mb-4">
-                See who's been visiting your profile. Upgrade to VIP for full access to visitor analytics.
+                See who's been visiting your profile. Upgrade to VIP for full access to visitor
+                analytics.
               </p>
-              <button 
+              <button
                 (click)="onUpgradeClick()"
                 class="px-6 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold rounded-full hover:from-yellow-400 hover:to-orange-400 transition-all"
               >
@@ -92,11 +116,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
       }
     </div>
   `,
-  styles: [`
-    :host {
-      display: block;
-    }
-  `]
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+    `,
+  ],
 })
 export class ProfileVisitorsComponent {
   private userService = inject(UserService);

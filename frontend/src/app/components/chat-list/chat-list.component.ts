@@ -24,7 +24,7 @@ interface ChatRoomPreview {
 @Component({
   selector: 'app-chat-list',
   imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ScrollablePillsComponent],
-  templateUrl: './chat-list.component.html'
+  templateUrl: './chat-list.component.html',
 })
 export class ChatListComponent implements OnInit {
   private readonly chatService = inject(ChatService);
@@ -34,7 +34,7 @@ export class ChatListComponent implements OnInit {
   readonly isLoading = signal<boolean>(true);
   readonly previews = signal<ChatRoomPreview[]>([]);
   readonly search = signal<string>('');
-  
+
   notImplemented(): void {
     notImplementedToast();
   }
@@ -46,7 +46,7 @@ export class ChatListComponent implements OnInit {
       { id: 'online', label: this.i18n.translate('chatList.filterOnline') },
       { id: 'unread', label: this.i18n.translate('chatList.filterUnread') },
       { id: 'my_turn', label: this.i18n.translate('chatList.filterMyTurn') },
-      { id: 'timezone', label: this.i18n.translate('chatList.filterTimezone') }
+      { id: 'timezone', label: this.i18n.translate('chatList.filterTimezone') },
     ];
   });
   readonly selectedFilter = signal<string>('all');
@@ -58,29 +58,32 @@ export class ChatListComponent implements OnInit {
   readonly filteredPreviews = computed(() => {
     const query = this.search().trim().toLowerCase();
     const filter = this.selectedFilter();
-    
+
     let result = this.previews();
-    if (filter === 'online') result = result.filter(p => p.isOnline);
-    if (filter === 'unread') result = result.filter(p => p.unreadCount > 0);
-    
+    if (filter === 'online') result = result.filter((p) => p.isOnline);
+    if (filter === 'unread') result = result.filter((p) => p.unreadCount > 0);
+
     if (!query) {
       return result;
     }
-    return result.filter((preview) =>
-      preview.title.toLowerCase().includes(query) ||
-      preview.subtitle.toLowerCase().includes(query) ||
-      preview.lastMessageText.toLowerCase().includes(query)
+    return result.filter(
+      (preview) =>
+        preview.title.toLowerCase().includes(query) ||
+        preview.subtitle.toLowerCase().includes(query) ||
+        preview.lastMessageText.toLowerCase().includes(query),
     );
   });
 
-  readonly pinnedPreviews = computed(() => this.filteredPreviews().filter((preview) => preview.isPinned));
-  readonly regularPreviews = computed(() => this.filteredPreviews().filter((preview) => !preview.isPinned));
+  readonly pinnedPreviews = computed(() =>
+    this.filteredPreviews().filter((preview) => preview.isPinned),
+  );
+  readonly regularPreviews = computed(() =>
+    this.filteredPreviews().filter((preview) => !preview.isPinned),
+  );
 
   async ngOnInit(): Promise<void> {
     await this.loadPreviews();
   }
-
-
 
   async loadPreviews(): Promise<void> {
     this.isLoading.set(true);
@@ -91,7 +94,7 @@ export class ChatListComponent implements OnInit {
         rooms.map(async (room) => {
           const messages = await this.loadRoomMessages(room.id);
           return this.toPreview(room, messages);
-        })
+        }),
       );
 
       previewList.sort((a, b) => {
@@ -119,15 +122,12 @@ export class ChatListComponent implements OnInit {
     }
   }
 
-  private toPreview(
-    room: ChatRoom,
-    messages: ChatMessage[]
-  ): ChatRoomPreview {
+  private toPreview(room: ChatRoom, messages: ChatMessage[]): ChatRoomPreview {
     const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
     const currentUserId = this.authService.currentUser()?.id;
 
     const unreadCount = messages.filter(
-      (message) => !message.is_read && message.sender_id !== currentUserId
+      (message) => !message.is_read && message.sender_id !== currentUserId,
     ).length;
 
     return {
@@ -139,7 +139,7 @@ export class ChatListComponent implements OnInit {
       isPinned: room.is_pinned,
       lastMessageText: this.toMessagePreview(lastMessage),
       lastMessageAt: lastMessage?.created_at ?? null,
-      unreadCount
+      unreadCount,
     };
   }
 

@@ -37,13 +37,11 @@ self.addEventListener('push', (event) => {
     ],
   };
 
-  event.waitUntil(
-    self.registration.showNotification(notificationTitle, notificationOptions)
-  );
+  event.waitUntil(self.registration.showNotification(notificationTitle, notificationOptions));
 
   // Forward the message to the client (for foreground handling)
-  self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-    clients.forEach(client => {
+  self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+    clients.forEach((client) => {
       client.postMessage(data);
     });
   });

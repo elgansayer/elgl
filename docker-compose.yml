@@ -12,7 +12,7 @@ services:
     env_file:
       - .env
     ports:
-      - "3000:3000"
+      - '3000:3000'
     depends_on:
       - cache
       - websocket
@@ -23,7 +23,7 @@ services:
       target: production
     restart: always
     ports:
-      - "80:80"
+      - '80:80'
     depends_on:
       - api
 
@@ -32,7 +32,7 @@ services:
     restart: always
     command: redis-server --appendonly yes
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redis_data:/data
 
@@ -41,8 +41,8 @@ services:
     restart: always
     command: centrifugo -c /centrifugo/config.json
     ports:
-      - "8000:8000"
-      - "8001:8001"
+      - '8000:8000'
+      - '8001:8001'
     volumes:
       - ./config/centrifugo:/centrifugo
     depends_on:
@@ -59,9 +59,9 @@ services:
       - LIVEKIT_TURN_UDP_PORT=3478
       - LIVEKIT_RTC_STUN_SERVERS=stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302
     ports:
-      - "7880:7880"
-      - "7881:7881"
-      - "50000-60000:50000-60000/udp"
+      - '7880:7880'
+      - '7881:7881'
+      - '50000-60000:50000-60000/udp'
     volumes:
       - ./config/livekit:/livekit
 
@@ -75,7 +75,7 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
     ports:
-      - "9090:9090"
+      - '9090:9090'
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
@@ -90,7 +90,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
     ports:
-      - "3001:3000"
+      - '3001:3000'
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/datasources:/etc/grafana/provisioning/datasources

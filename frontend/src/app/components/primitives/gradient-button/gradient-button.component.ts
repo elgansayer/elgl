@@ -4,17 +4,13 @@ import { Component, input, output, computed } from '@angular/core';
   selector: 'app-gradient-button',
   standalone: true,
   template: `
-    <button
-      [disabled]="disabled()"
-      [class]="buttonClasses()"
-      (click)="onClick($event)"
-    >
+    <button [disabled]="disabled()" [class]="buttonClasses()" (click)="onClick($event)">
       <ng-content />
     </button>
   `,
   host: {
-    '[class]': "'inline-block'"
-  }
+    '[class]': "'inline-block'",
+  },
 })
 export class AppGradientButtonComponent {
   readonly size = input<'sm' | 'md' | 'icon'>('md');
@@ -23,13 +19,20 @@ export class AppGradientButtonComponent {
   readonly clicked = output<MouseEvent>();
 
   readonly buttonClasses = computed(() => {
-    const base = 'inline-flex items-center justify-center font-bold rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2';
-    
+    const base =
+      'inline-flex items-center justify-center font-bold rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2';
+
     let sizeClass = '';
     switch (this.size()) {
-      case 'sm': sizeClass = 'px-3 py-1.5 text-xs'; break;
-      case 'md': sizeClass = 'px-6 py-2.5 text-sm'; break;
-      case 'icon': sizeClass = 'w-10 h-10'; break;
+      case 'sm':
+        sizeClass = 'px-3 py-1.5 text-xs';
+        break;
+      case 'md':
+        sizeClass = 'px-6 py-2.5 text-sm';
+        break;
+      case 'icon':
+        sizeClass = 'w-10 h-10';
+        break;
     }
 
     const stateClass = this.disabled()

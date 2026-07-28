@@ -3,20 +3,21 @@
     <h1 class="app-section-title">Who viewed me</h1>
     <p class="app-muted">Recent profile visitors and language matches.</p>
     <div class="mt-3 flex flex-wrap items-center gap-2">
-      <span class="app-chip text-[11px]">
-        Visible: {{ visibleVisitorsCount() }}
-      </span>
-      <span class="app-chip text-[11px]">
-        Blurred: {{ blurredVisitorsCount() }}
-      </span>
-      <button (click)="toggleHideBlurred()" class="app-button-secondary ps-2.5 pe-2.5 pt-1 pb-1 text-[11px]">
+      <span class="app-chip text-[11px]"> Visible: {{ visibleVisitorsCount() }} </span>
+      <span class="app-chip text-[11px]"> Blurred: {{ blurredVisitorsCount() }} </span>
+      <button
+        (click)="toggleHideBlurred()"
+        class="app-button-secondary ps-2.5 pe-2.5 pt-1 pb-1 text-[11px]"
+      >
         {{ hideBlurred() ? 'Show all' : 'Hide blurred' }}
       </button>
     </div>
   </section>
 
   @if (profile() && !profile()?.is_vip) {
-    <section class="rounded-sheet border border-amber-500/30 bg-amber-500/10 ps-4 pe-4 pt-4 pb-4 shadow-card">
+    <section
+      class="rounded-sheet border border-amber-500/30 bg-amber-500/10 ps-4 pe-4 pt-4 pb-4 shadow-card"
+    >
       <p class="text-sm font-bold text-amber-400">Unlock full visitor identities with VIP</p>
       <p class="mt-1 text-xs text-amber-400">Visitor details are blurred on the free tier.</p>
       <p class="mt-2 text-sm font-black text-amber-400">8 UKP / $10 USD per month</p>
@@ -24,15 +25,11 @@
   }
 
   @if (isLoading()) {
-    <div class="app-empty-state text-text-secondary">
-      Loading visitors...
-    </div>
+    <div class="app-empty-state text-text-secondary">Loading visitors...</div>
   }
 
   @if (!isLoading() && filteredVisitors().length === 0) {
-    <div class="app-empty-state">
-      No visitors yet.
-    </div>
+    <div class="app-empty-state">No visitors yet.</div>
   }
 
   @for (log of filteredVisitors(); track log.id) {

@@ -32,7 +32,7 @@ import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.componen
     LikedByModalComponent,
   ],
   templateUrl: './moments-feed.component.html',
-  styleUrls: ['./moments-feed.component.scss']
+  styleUrls: ['./moments-feed.component.scss'],
 })
 export class MomentsFeedComponent implements OnInit {
   readonly momentsStore = inject(MomentsStore);
@@ -55,7 +55,7 @@ export class MomentsFeedComponent implements OnInit {
     return [
       { id: 'All', label: this.i18n.translate('moments.tabAll') },
       { id: 'Classmates', label: this.i18n.translate('moments.tabClassmates') },
-      { id: 'Following', label: this.i18n.translate('moments.tabFollowing') }
+      { id: 'Following', label: this.i18n.translate('moments.tabFollowing') },
     ];
   });
   readonly showComposeForm = signal<boolean>(false);
@@ -114,7 +114,7 @@ export class MomentsFeedComponent implements OnInit {
         text_content: this.newText.trim() || undefined,
         media_urls: this.newMediaUrls,
         media_type: this.newMediaType,
-        target_language: this.newTargetLanguage
+        target_language: this.newTargetLanguage,
       });
       this.newText = '';
       this.newMediaUrls = [];
@@ -160,7 +160,7 @@ export class MomentsFeedComponent implements OnInit {
         word_token: moment.text_content,
         translation: trans?.translated_text || `Post: ${moment.text_content}`,
         original_context: `Moment by ${moment.author?.display_name || this.i18n.translate('common.unknownUser')}`,
-        definition: 'Saved full social feed moment to LingQ Spaced Repetition deck.'
+        definition: 'Saved full social feed moment to LingQ Spaced Repetition deck.',
       });
       await this.vocabStore.updateSrsLevel(created.id, 1);
       showToast(this.i18n.translate('moments.savedLingqAlert', { text: moment.text_content }));
@@ -185,7 +185,10 @@ export class MomentsFeedComponent implements OnInit {
   }
 
   // Comment reply state map
-  replyingToMap: Record<string, { parentCommentId: string; replyToUserId: string; replyToName: string } | null> = {};
+  replyingToMap: Record<
+    string,
+    { parentCommentId: string; replyToUserId: string; replyToName: string } | null
+  > = {};
 
   startReply(momentId: string, comment: MomentComment): void {
     this.replyingToMap[momentId] = {
@@ -212,7 +215,7 @@ export class MomentsFeedComponent implements OnInit {
         correction_payload: {
           original: orig,
           corrected: corr,
-          explanation: exp || undefined
+          explanation: exp || undefined,
         },
         parent_comment_id: replyTo?.parentCommentId,
         reply_to_user_id: replyTo?.replyToUserId,
@@ -276,12 +279,16 @@ export class MomentsFeedComponent implements OnInit {
     showToast(this.i18n.translate('moments.quotedTextAlert'));
   }
 
-  async onCorrectionModalSubmitted(payload: { original: string; corrected: string; explanation?: string }): Promise<void> {
+  async onCorrectionModalSubmitted(payload: {
+    original: string;
+    corrected: string;
+    explanation?: string;
+  }): Promise<void> {
     const momentId = this.activeCorrectionMomentId();
     if (!momentId) return;
 
     await this.momentsStore.addComment(momentId, {
-      correction_payload: payload
+      correction_payload: payload,
     });
     this.activeCorrectionMomentId.set(null);
     const map = new Set(this.openCommentsMap());

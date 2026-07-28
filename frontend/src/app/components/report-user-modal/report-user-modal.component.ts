@@ -9,11 +9,7 @@ import {
   inject,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import {
-  SafetyService,
-  ReportCategory,
-  ReportUserDto,
-} from '../../services/safety.service';
+import { SafetyService, ReportCategory, ReportUserDto } from '../../services/safety.service';
 import { ToastService } from '../../components/primitives/toast/toast.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -125,9 +121,7 @@ export class ReportUserModalComponent implements OnInit {
         // Fire‑and‑forget block – errors are logged but don’t block the report flow
         this.safetyService
           .blockUserAsync(this.reportUserId)
-          .catch((err) =>
-            console.error('Failed to block user after report:', err),
-          );
+          .catch((err) => console.error('Failed to block user after report:', err));
       }
 
       this.isOpen.set(false);

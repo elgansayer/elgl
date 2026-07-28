@@ -143,7 +143,9 @@ test.describe('Adversarial: co-host invite vs raised-hand realtime race', () => 
     page.on('pageerror', (err) => pageErrors.push(err));
   });
 
-  test('a raised hand that arrives while inviting a co-host is silently erased once the invite response lands', async ({ page }) => {
+  test('a raised hand that arrives while inviting a co-host is silently erased once the invite response lands', async ({
+    page,
+  }) => {
     const fake = await setupFakeCentrifugo(page);
 
     // Hold the invite-co-host REST response open until the test explicitly
@@ -166,7 +168,10 @@ test.describe('Adversarial: co-host invite vs raised-hand realtime race', () => 
     // open until we release it below.
     const inviteButton = page.getByRole('button', { name: '🎥 Invite co-host' });
     await inviteButton.click();
-    await page.getByRole('button', { name: /Speaker.*[a-f0-9]{6}/i }).first().click();
+    await page
+      .getByRole('button', { name: /Speaker.*[a-f0-9]{6}/i })
+      .first()
+      .click();
 
     await expect.poll(() => inviteRequestReceived, { timeout: 5000 }).toBe(true);
 
@@ -175,8 +180,12 @@ test.describe('Adversarial: co-host invite vs raised-hand realtime race', () => 
     // immediately via the realtime handler (currentRoom.update(...)).
     fake.pushToChannel(CHANNEL, { type: 'raise_hand', user_id: RAISED_HAND_USER });
 
-    await expect(page.getByText('✋ Raised hands', { exact: false })).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText(`Learner ${RAISED_HAND_USER.slice(0, 8)}`, { exact: false })).toBeVisible();
+    await expect(page.getByText('✋ Raised hands', { exact: false })).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(
+      page.getByText(`Learner ${RAISED_HAND_USER.slice(0, 8)}`, { exact: false }),
+    ).toBeVisible();
 
     // Now let the stale invite-co-host response land. It carries a room
     // snapshot from before the raised hand existed and is applied with a
@@ -195,6 +204,9 @@ test.describe('Adversarial: co-host invite vs raised-hand realtime race', () => 
       page.getByText(`Learner ${RAISED_HAND_USER.slice(0, 8)}`, { exact: false }),
     ).toBeVisible({ timeout: 3000 });
 
-    expect(pageErrors, `Unexpected uncaught page errors: ${pageErrors.map(e => e.message).join('; ')}`).toEqual([]);
+    expect(
+      pageErrors,
+      `Unexpected uncaught page errors: ${pageErrors.map((e) => e.message).join('; ')}`,
+    ).toEqual([]);
   });
 });

@@ -2,7 +2,7 @@
 
 ## URGENT
 
-- [x] Fix QA test failure: `Error: Timed out waiting 300000ms from config.webServer.` (from `e2e/playwright.config.ts`, whose `webServer.command` runs `cd ../frontend && npm run start`). Root cause per `qa_errors.log`: the Angular dev server never reached a successful compile because of a real TypeScript build error, `TS4111: Property 'status' comes from an index signature, so it must be accessed with ['status']` at `frontend/src/app/services/moderation.service.ts:41` (`params.status = status;`, where `params` is typed `Record<string, string>`). The swarm had marked this `[STUCK]` across many prior cycles without ever landing the one-line fix (`git blame` on the line showed it untouched); changed line 41 to bracket notation, `params['status'] = status;`. Verified: `cd frontend && npx tsc --noEmit -p tsconfig.app.json` is clean, `npm run build` compiles with no errors, and `npm run lint` passes.
+- [x] Fix QA test failure: `Error: Timed out waiting 300000ms from config.webServer.` (from `e2e/playwright.config.ts`, whose `webServer.command` runs `cd ../frontend && npm run start`). Root cause per `qa_errors.log`: the Angular dev server never reached a successful compile because of a real TypeScript build error, `TS4111: Property 'status' comes from an index signature, so it must be accessed with ['status']` at `frontend/src/app/services/moderation.service.ts:41` (`params.status = status;`, where `params` is typed `Record<string, string>`). The swarm had marked this `[ ]` across many prior cycles without ever landing the one-line fix (`git blame` on the line showed it untouched); changed line 41 to bracket notation, `params['status'] = status;`. Verified: `cd frontend && npx tsc --noEmit -p tsconfig.app.json` is clean, `npm run build` compiles with no errors, and `npm run lint` passes.
 - [x] Fix QA test failure: `TS2307: Cannot find module '../../../environments/environment' or its corresponding type declarations.` in `frontend/src/app/services/faq.service.ts:4` and `frontend/src/app/services/moderation.service.ts:5` (per `qa_errors.log`). This was stale: both files already import `../../environments/environment` (2 levels up, matching every sibling service). No change needed; the swarm was re-triaging an already-resolved error, likely from the same unbounded/stale `qa_errors.log` matching described below.
 - [x] Fix QA test failure: `ReferenceError: describe is not defined` (recurred again). Root cause of this second recurrence: the previous fix below (truncating `qa_errors.log` each cycle) was only ever written up in this TODO entry, it was never actually committed to `qa-loop.sh` (`git log -p -- qa-loop.sh` shows only the `cd frontend` to `cd e2e` change landed, no `> qa_errors.log` line). So the log kept growing unbounded again (16.5k+ lines) and the triage grep kept re-matching the same months-old stale `describe is not defined` entry at the top of the file regardless of what actually failed. Fixed by actually adding `> qa_errors.log` truncation at the top of the loop in `qa-loop.sh` (alongside the existing `> qa_aider.log`), and cleared the stale accumulated log. Restarted the live `qa-loop.sh` process (via its tmux `QA_Swarm` window) so the fix takes effect, since bash caches the parsed loop body in memory for the life of the process.
 - [x] Investigated the claimed "third recurrence" (`qa-loop.sh` truncation line allegedly unstaged again). This premise was stale/false by the time it was actioned: `git diff -- qa-loop.sh` and `git diff --cached -- qa-loop.sh` were both empty, and `git blame` confirmed the `> qa_errors.log` line was already committed in `a694af4` ("feat: add error log file for QA loop", 2026-07-26 22:11:16), so there was nothing to stage or commit. The real, still-live bug was the other half of the same warning: the tmux `QA_Swarm` window's `qa-loop.sh` process (PID 583073) had started at 22:07, four minutes _before_ commit `a694af4` landed, so it was still running on the old cached loop body without the truncation line (bash caches the parsed loop body in memory for the life of the process). It would have kept appending to `qa_errors.log` unbounded despite the file on disk being fixed. Restarted the process (new `QA_Swarm` tmux window, `qa-loop.sh` relaunched at 22:13, after the commit) so the already-committed fix actually takes effect. Lesson for future cycles: verify `git diff`/`git log` state fresh each time rather than trusting a prior TODO entry's claim, since the entry itself can go stale between being written and being actioned.
@@ -23,7 +23,7 @@
 
 ## Outstanding Blockers
 
-- [STUCK] Build "Report User" modal with dynamic category selection (BLOCKED: missing design spec, screenshots not accessible).
+- [ ] Build "Report User" modal with dynamic category selection (BLOCKED: missing design spec, screenshots not accessible).
 
 ---
 
@@ -109,7 +109,7 @@
 
 - [x] Build NestJS `MonetisationController` handling Stripe & App Store webhooks (`POST /webhooks/stripe`) to toggle `user.is_vip` and `vip_tier`.
 - [x] Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 annual equivalent): unlimited AI, 3 target languages, location spoofing, incognito profile views.
-- [STUCK] Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`) adding balance to `users.coins_balance`. (Requires receipt validation to prevent infinite coin exploit).
+- [ ] Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`) adding balance to `users.coins_balance`. (Requires receipt validation to prevent infinite coin exploit).
 - [x] Build Virtual Gift catalog & sending endpoint (`POST /economy/send-gift`), deducting coins and publishing animated Centrifugo broadcast events.
 - [x] Build Audio Room tipping mechanism allowing listeners to gift coins directly to hosts on stage.
 - [x] Build Developer Tier (20 UKP / $26 USD per month) API key management and developer analytics dashboard.
@@ -117,11 +117,11 @@
 
 ## Phase 8: Audit Remediation & Security Lockdown
 
-- [STUCK] Verify Stripe webhook signatures (`stripe.webhooks.constructEvent` with `STRIPE_WEBHOOK_SECRET`) in `MonetisationService#handleStripeWebhook`.
-- [STUCK] Lock down `POST /monetisation/upgrade` so VIP status can only change via verified payment webhooks.
-- [STUCK] Rework `POST /economy/purchase-coins` to verify purchase receipt records server-side before updating balances.
-- [STUCK] Implement Apple App Store Server Notifications and Google Play Billing webhook handlers.
-- [STUCK] Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azure AI API calls.
+- [ ] Verify Stripe webhook signatures (`stripe.webhooks.constructEvent` with `STRIPE_WEBHOOK_SECRET`) in `MonetisationService#handleStripeWebhook`.
+- [ ] Lock down `POST /monetisation/upgrade` so VIP status can only change via verified payment webhooks.
+- [ ] Rework `POST /economy/purchase-coins` to verify purchase receipt records server-side before updating balances.
+- [ ] Implement Apple App Store Server Notifications and Google Play Billing webhook handlers.
+- [ ] Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azure AI API calls.
 
 ## Phase 9: Internationalisation (i18n) Foundation
 
@@ -170,32 +170,32 @@
 ## Phase 15: Advanced User Profiles
 
 - [x] Build 30-second Audio Introduction recorder and playback card on profile.
-- [STUCK] Implement dynamic Hobbies & Interests tags mapped to target vocabulary.
-- [STUCK] Build Profile Cover Photo uploader with client-side cropping.
+- [ ] Implement dynamic Hobbies & Interests tags mapped to target vocabulary.
+- [ ] Build Profile Cover Photo uploader with client-side cropping.
 
 ## Phase 16: Live Chat Micro-Interactions
 
 - [x] Implement WebSockets typing indicators ("User is typing...").
 - [x] Build Read Receipts (Sent vs Delivered vs Read checkmarks).
-- [STUCK] Add long-press context menu on mobile to copy, favourite, or report messages.
+- [ ] Add long-press context menu on mobile to copy, favourite, or report messages.
 
 ## Phase 17: Audio & Video Calling (WebRTC / LiveKit)
 
-- [STUCK] Build Incoming Call modal with ringtone audio and accept/reject controls.
-- [STUCK] Implement active VoIP Call UI (Mute, Speakerphone, End Call).
-- [STUCK] Build 1-on-1 Video Call interface with local preview overlay.
+- [ ] Build Incoming Call modal with ringtone audio and accept/reject controls.
+- [ ] Implement active VoIP Call UI (Mute, Speakerphone, End Call).
+- [ ] Build 1-on-1 Video Call interface with local preview overlay.
 
 ## Phase 18: Monetisation & VIP Tiers
 
-- [STUCK] Build VIP Subscription showcase page detailing all premium benefits.
-- [STUCK] Integrate Stripe Checkout for Monthly (8 UKP / $10 USD) and Yearly (50 UKP / $63 USD) plans.
-- [STUCK] Build "Restore Purchases" button for app store compliance.
+- [ ] Build VIP Subscription showcase page detailing all premium benefits.
+- [ ] Integrate Stripe Checkout for Monthly (8 UKP / $10 USD) and Yearly (50 UKP / $63 USD) plans.
+- [ ] Build "Restore Purchases" button for app store compliance.
 
 ## Phase 19: Gamification & Study Streaks
 
-- [STUCK] Build Daily Study Streak counter widget on home screen.
-- [STUCK] Implement NestJS CRON job to reset streaks if inactive for 24 hours.
-- [STUCK] Build "Top Corrector" community leaderboard.
+- [ ] Build Daily Study Streak counter widget on home screen.
+- [ ] Implement NestJS CRON job to reset streaks if inactive for 24 hours.
+- [ ] Build "Top Corrector" community leaderboard.
 
 ## Phase 20: Spaced Repetition (SRS) Flashcards
 
@@ -205,28 +205,28 @@
 
 ## Phase 21: Push Notifications
 
-- [STUCK] Integrate Firebase Cloud Messaging (FCM) in Angular.
-- [STUCK] Build NestJS event listeners to dispatch push alerts for chats, comments, and profile views.
-- [STUCK] Build Notification Preferences UI with granular category toggles.
+- [ ] Integrate Firebase Cloud Messaging (FCM) in Angular.
+- [ ] Build NestJS event listeners to dispatch push alerts for chats, comments, and profile views.
+- [ ] Build Notification Preferences UI with granular category toggles.
 
 ## Phase 22: Moderation & Trust Engine
 
-- [STUCK] Build "Report User" modal with dynamic category selection (BLOCKED: missing design spec, screenshots not accessible).
-- [STUCK] Implement Blocklist system hiding blocked accounts across chat, feed, and search.
-- [STUCK] Build automated NLP spam detector in NestJS to flag duplicate copy-paste messages.
+- [ ] Build "Report User" modal with dynamic category selection (BLOCKED: missing design spec, screenshots not accessible).
+- [ ] Implement Blocklist system hiding blocked accounts across chat, feed, and search.
+- [ ] Build automated NLP spam detector in NestJS to flag duplicate copy-paste messages.
 
 ## Phase 23: Onboarding Flow
 
-- [STUCK] Build multi-step Angular onboarding wizard.
-- [STUCK] Step 1: Native Language and Target Language selection.
-- [STUCK] Step 2: Proficiency Level assessment.
-- [STUCK] Step 3: Avatar upload and permissions prompt (Microphone, Camera).
+- [ ] Build multi-step Angular onboarding wizard.
+- [ ] Step 1: Native Language and Target Language selection.
+- [ ] Step 2: Proficiency Level assessment.
+- [ ] Step 3: Avatar upload and permissions prompt (Microphone, Camera).
 
 ## Phase 24: Advanced Search Filters
 
-- [STUCK] Implement Gender filter in discovery (VIP tier).
-- [STUCK] Implement Age Range dual-thumb slider controls.
-- [STUCK] Add "Voice Room Active" filter to find users currently hosting streams.
+- [ ] Implement Gender filter in discovery (VIP tier).
+- [ ] Implement Age Range dual-thumb slider controls.
+- [ ] Add "Voice Room Active" filter to find users currently hosting streams.
 
 ## Phase 25: Voiceroom Management
 
@@ -268,7 +268,7 @@
 ## Phase 30: Media Pipeline Optimisation
 
 - [x] Implement client-side image compression (max 1080p) before R2 upload.
-- [STUCK] Integrate ImageCompressionService into the R2 upload flow (e.g., in MediaService or component upload handlers).
+- [ ] Integrate ImageCompressionService into the R2 upload flow (e.g., in MediaService or component upload handlers).
 - [x] Implement audio compression converting voice notes to lightweight `.m4a`/`.ogg`.
 - [x] Build AudioCompressionService to handle client-side audio transcoding.
 - [x] Implement actual client-side transcoding in AudioCompressionService using ffmpeg.wasm or Web Audio API.
@@ -291,17 +291,17 @@
 
 - [x] Build Sticker Store UI.
 - [x] Allow spending virtual coins to unlock animated sticker packs.
-- [STUCK] Build custom sticker picker drawer inside chat window.
+- [ ] Build custom sticker picker drawer inside chat window.
 
 ## Phase 33: User Analytics Dashboard
 
 - [x] Build "My Stats" dashboard tracking study hours, messages sent, and corrections made.
 - [x] Render visual charts using Chart.js inside Angular.
-- [STUCK] Implement backend endpoints for user statistics.
+- [ ] Implement backend endpoints for user statistics.
 
 ## Phase 34: UI Theming
 
-- [STUCK] Build Theme Selector (Dark, Light, System Default).
+- [ ] Build Theme Selector (Dark, Light, System Default).
 - [x] Allow VIP users to select custom primary accent colours.
 - [x] Build UI for VIP users to select custom primary accent colours in settings.
 
@@ -328,7 +328,7 @@
 
 ## Phase 39: Live Stream Host Mechanics
 
-- [STUCK] Build Host Dashboard showing live viewer count, earned coins, and stream uptime.
+- [ ] Build Host Dashboard showing live viewer count, earned coins, and stream uptime.
 - [x] Implement "Invite Co-Host" split-screen video layout.
 - [x] Fix `inviteCoHost` to demote/notify the existing co-host (and stop their publish) before assigning a new one, instead of silently overwriting `co_host_id`.
 - [x] Fix race condition where the `co_host_removed`/`co_host_invited` Centrifugo events published in `inviteCoHost` can arrive out of order (both are fire-and-forget, unawaited HTTP calls), and the frontend's `co_host_removed` handler unconditionally nulls `co_host_id` without checking it still matches the removed user, which can wipe out a just-assigned new co-host.
@@ -411,7 +411,7 @@
 
 ## Phase 52: Help Centre
 
-- [STUCK] Build in-app Help Centre fetching dynamic FAQ articles from backend.
+- [ ] Build in-app Help Centre fetching dynamic FAQ articles from backend.
 
 ## Phase 53: Version Enforcer
 
@@ -469,140 +469,140 @@
 
 ## Phase 63: Account Recovery
 
-- [STUCK] Build "Forgot Password" UI and NestJS email dispatch service.
+- [ ] Build "Forgot Password" UI and NestJS email dispatch service.
 
 ## Phase 64: Self-Healing QA & Visual Refinement Loop
 
-- [STUCK] AUTONOMOUS DIRECTIVE: Execute complete codebase audit. Verify zero hardcoded strings exist, confirm visual match against `original-hello-talk-screenshots/`, run test suites, and append any remaining visual bugs as new tasks below. Leave this box unchecked to loop continuously.
+- [ ] AUTONOMOUS DIRECTIVE: Execute complete codebase audit. Verify zero hardcoded strings exist, confirm visual match against `original-hello-talk-screenshots/`, run test suites, and append any remaining visual bugs as new tasks below. Leave this box unchecked to loop continuously.
 
 ## Phase 65: Comprehensive App Settings, Legal, & Security Architecture
 
 ### Authentication & Account Security
 
-- [STUCK] Build Social Login UI components (Google, Facebook, Apple OAuth buttons).
-- [STUCK] Build "Linked Accounts" settings page to manage connected social accounts.
-- [STUCK] Build Password Policy & Reset UI with real-time regex validation (min 8 chars, numbers, symbols).
+- [ ] Build Social Login UI components (Google, Facebook, Apple OAuth buttons).
+- [ ] Build "Linked Accounts" settings page to manage connected social accounts.
+- [ ] Build Password Policy & Reset UI with real-time regex validation (min 8 chars, numbers, symbols).
 
 ### Appearance & UI Configuration
 
-- [STUCK] Build "Appearance Settings" menu.
-- [STUCK] Implement System-wide Dark Mode, Light Mode, and System Default toggle.
-- [STUCK] Implement UI & Font Scaling slider adjusting base `rem` units across Angular.
-- [STUCK] Build "Language Settings" menu to switch UI language independently of study target.
+- [ ] Build "Appearance Settings" menu.
+- [ ] Implement System-wide Dark Mode, Light Mode, and System Default toggle.
+- [ ] Implement UI & Font Scaling slider adjusting base `rem` units across Angular.
+- [ ] Build "Language Settings" menu to switch UI language independently of study target.
 
 ### Privacy, Blocking & Discoverability
 
-- [STUCK] Build "Privacy Settings" hub.
-- [STUCK] Implement "Who can see my profile" toggle (Everyone, VIPs only, Hidden).
-- [STUCK] Build "User Filter Settings" to restrict initial message senders by age or native language.
-- [STUCK] Build "Block Management" page to manage and unblock users.
+- [ ] Build "Privacy Settings" hub.
+- [ ] Implement "Who can see my profile" toggle (Everyone, VIPs only, Hidden).
+- [ ] Build "User Filter Settings" to restrict initial message senders by age or native language.
+- [ ] Build "Block Management" page to manage and unblock users.
 
 ### Notifications & Alerts
 
-- [STUCK] Build unified "Notifications Area" (Inbox) for system alerts, likes, comments, and followers.
-- [STUCK] Build "Notification Settings" toggles for Push Alerts and Badges across Direct Messages, Groups, Likes, and Voicerooms.
+- [ ] Build unified "Notifications Area" (Inbox) for system alerts, likes, comments, and followers.
+- [ ] Build "Notification Settings" toggles for Push Alerts and Badges across Direct Messages, Groups, Likes, and Voicerooms.
 
 ### Chat & Data Storage Settings
 
-- [STUCK] Build "Chat Settings" page (Toggle Auto-Translate, Read Receipts, Enter-to-Send).
-- [STUCK] Build "Data & Storage" page (Clear Local Cache, toggle cellular data auto-downloads).
+- [ ] Build "Chat Settings" page (Toggle Auto-Translate, Read Receipts, Enter-to-Send).
+- [ ] Build "Data & Storage" page (Clear Local Cache, toggle cellular data auto-downloads).
 
 ### Legal, Help & GDPR Compliance
 
-- [STUCK] Build "Help & About" page displaying App Version, build number, and open-source licences.
-- [STUCK] Build "Personal Data Collection" GDPR hub with "Request My Data Archive" button and automated "Delete Account" workflow.
+- [ ] Build "Help & About" page displaying App Version, build number, and open-source licences.
+- [ ] Build "Personal Data Collection" GDPR hub with "Request My Data Archive" button and automated "Delete Account" workflow.
 
 ## Phase 66: Enhanced Profile & Matchmaking
 
-- [STUCK] Add `proficiency_level` (`'a1'` to `'c2'`) to `users` table schema and profile UI.
-- [STUCK] Implement proficiency level filter in Discovery search.
-- [STUCK] Build "Interests" tagging UI in profile settings (e.g., "tech", "travel", "movies").
-- [STUCK] Add "Interests" filter to Discovery search to match users with shared hobbies.
-- [STUCK] Add "Learning Goals" free-text field to user profile to state user motivations.
+- [ ] Add `proficiency_level` (`'a1'` to `'c2'`) to `users` table schema and profile UI.
+- [ ] Implement proficiency level filter in Discovery search.
+- [ ] Build "Interests" tagging UI in profile settings (e.g., "tech", "travel", "movies").
+- [ ] Add "Interests" filter to Discovery search to match users with shared hobbies.
+- [ ] Add "Learning Goals" free-text field to user profile to state user motivations.
 
 ## Phase 67: AI-Powered Learning Tools
 
-- [STUCK] Design and build AI Conversation Partner chat interface.
-- [STUCK] Implement NestJS service to proxy chat messages to a Large Language Model (e.g., GPT-4, Llama).
-- [STUCK] Add "Explain this" context menu option on corrected text to get AI-generated grammar breakdown.
-- [STUCK] Implement AI-generated suggested replies in chat based on conversation context.
-- [STUCK] Build "Role-play" scenarios for AI chat (e.g., "ordering coffee", "job interview").
+- [ ] Design and build AI Conversation Partner chat interface.
+- [ ] Implement NestJS service to proxy chat messages to a Large Language Model (e.g., GPT-4, Llama).
+- [ ] Add "Explain this" context menu option on corrected text to get AI-generated grammar breakdown.
+- [ ] Implement AI-generated suggested replies in chat based on conversation context.
+- [ ] Build "Role-play" scenarios for AI chat (e.g., "ordering coffee", "job interview").
 
 ## Phase 68: Gamification & Engagement Hooks
 
-- [STUCK] Design database schema for user achievements (`achievements` table, `user_achievements` join table).
-- [STUCK] Build Achievements service in NestJS to award badges for milestones (e.g., "100 messages sent", "7-day streak").
-- [STUCK] Build Achievements showcase page on user profiles.
-- [STUCK] Implement a point-based XP system, granting XP for learning activities.
-- [STUCK] Build Daily/Weekly Quests feature with coin rewards (e.g., "Correct 3 moments today").
+- [ ] Design database schema for user achievements (`achievements` table, `user_achievements` join table).
+- [ ] Build Achievements service in NestJS to award badges for milestones (e.g., "100 messages sent", "7-day streak").
+- [ ] Build Achievements showcase page on user profiles.
+- [ ] Implement a point-based XP system, granting XP for learning activities.
+- [ ] Build Daily/Weekly Quests feature with coin rewards (e.g., "Correct 3 moments today").
 
 ## Phase 69: Structured Learning Content
 
-- [STUCK] Build "Lessons" module in Angular.
-- [STUCK] Create database schema for curated learning content (articles, dialogues by CEFR level).
-- [STUCK] Build CMS or admin interface to upload and manage lesson content.
-- [STUCK] Implement "Word of the Day" feature on the app's home screen.
-- [STUCK] Integrate short cultural etiquette guides for different languages within the app.
+- [ ] Build "Lessons" module in Angular.
+- [ ] Create database schema for curated learning content (articles, dialogues by CEFR level).
+- [ ] Build CMS or admin interface to upload and manage lesson content.
+- [ ] Implement "Word of the Day" feature on the app's home screen.
+- [ ] Integrate short cultural etiquette guides for different languages within the app.
 
 ## Phase 70: UI/UX Polish & Animation
 
-- [STUCK] Implement skeleton loaders (`ngx-skeleton-loader`) for all data-heavy components (feed, chat, profiles).
-- [STUCK] Add subtle micro-animations (`framer-motion` or CSS) to button clicks and hover states.
-- [STUCK] Animate Angular route transitions for a smoother navigation feel.
-- [STUCK] Build an interactive, multi-step product tour for new users using a library like `ngx-joyride`.
-- [STUCK] Refine chat bubble appearance with distinct sent/received styles and message-tail pointers.
-- [STUCK] Add haptic feedback on mobile for key actions (e.g., sending message, liking a post).
+- [ ] Implement skeleton loaders (`ngx-skeleton-loader`) for all data-heavy components (feed, chat, profiles).
+- [ ] Add subtle micro-animations (`framer-motion` or CSS) to button clicks and hover states.
+- [ ] Animate Angular route transitions for a smoother navigation feel.
+- [ ] Build an interactive, multi-step product tour for new users using a library like `ngx-joyride`.
+- [ ] Refine chat bubble appearance with distinct sent/received styles and message-tail pointers.
+- [ ] Add haptic feedback on mobile for key actions (e.g., sending message, liking a post).
 
 ## Phase 71: Enhanced Content Interaction
 
-- [STUCK] Implement 'Create Flashcard' context menu option for any text selection within chat messages and moment posts.
-- [STUCK] Build 'Correction Quality' rating system (up/down votes) for community corrections on Moments.
-- [STUCK] Implement a user-level 'Corrector Score' based on ratings to display on profiles.
+- [ ] Implement 'Create Flashcard' context menu option for any text selection within chat messages and moment posts.
+- [ ] Build 'Correction Quality' rating system (up/down votes) for community corrections on Moments.
+- [ ] Implement a user-level 'Corrector Score' based on ratings to display on profiles.
 
 ## Phase 72: Advanced AI-Tutor Features
 
-- [STUCK] Integrate AI to auto-generate `explanation` field for `correction` payloads in chat if the human corrector leaves it blank.
-- [STUCK] Build "Simplify this text" AI feature in the message context menu for learners to understand complex sentences.
-- [STUCK] Implement AI-powered 'Conversation Starter' suggestions in new chat windows based on partner's profile interests.
+- [ ] Integrate AI to auto-generate `explanation` field for `correction` payloads in chat if the human corrector leaves it blank.
+- [ ] Build "Simplify this text" AI feature in the message context menu for learners to understand complex sentences.
+- [ ] Implement AI-powered 'Conversation Starter' suggestions in new chat windows based on partner's profile interests.
 
 ## Phase 73: Deeper Gamification & Retention
 
-- [STUCK] Build celebratory full-screen animation/confetti for completing study streaks (e.g., 7, 30, 100 days).
-- [STUCK] Implement "Partner of the Week" algorithm to highlight highly-rated language partners in the Discovery feed.
-- [STUCK] Add haptic feedback for grading flashcards (e.g., success buzz for 'Known', gentle pulse for 'Learning').
+- [ ] Build celebratory full-screen animation/confetti for completing study streaks (e.g., 7, 30, 100 days).
+- [ ] Implement "Partner of the Week" algorithm to highlight highly-rated language partners in the Discovery feed.
+- [ ] Add haptic feedback for grading flashcards (e.g., success buzz for 'Known', gentle pulse for 'Learning').
 
 ## Phase 74: Voiceroom Learning Tools
 
-- [STUCK] Build shared 'Voiceroom Notes' panel where hosts/speakers can post key vocabulary or discussion topics.
-- [STUCK] Implement LiveKit EgressClient to generate and save a full transcript of completed audio room sessions for participants to review.
-- [STUCK] Add AI-generated 'Session Summary' to the archived audio room recording, listing key topics and vocabulary discussed.
+- [ ] Build shared 'Voiceroom Notes' panel where hosts/speakers can post key vocabulary or discussion topics.
+- [ ] Implement LiveKit EgressClient to generate and save a full transcript of completed audio room sessions for participants to review.
+- [ ] Add AI-generated 'Session Summary' to the archived audio room recording, listing key topics and vocabulary discussed.
 
 ## Phase 75: Advanced Voiceroom Inter interactivity
 
-- [STUCK] Implement real-time translation for the text chat overlay inside Voicerooms.
-- [STUCK] Build a "Quick Poll" feature for Voiceroom hosts to create multiple-choice questions for the audience.
-- [STUCK] Add a "Soundboard" feature for hosts to play pre-recorded audio clips (e.g., applause, jingles).
+- [ ] Implement real-time translation for the text chat overlay inside Voicerooms.
+- [ ] Build a "Quick Poll" feature for Voiceroom hosts to create multiple-choice questions for the audience.
+- [ ] Add a "Soundboard" feature for hosts to play pre-recorded audio clips (e.g., applause, jingles).
 
 ## Phase 76: Advanced Discovery & Onboarding
 
-- [STUCK] Build "Audio Intros" feed in Discovery to browse users by listening to their spoken introductions.
-- [STUCK] Implement "Translate Bio" button on user profile cards and pages.
+- [ ] Build "Audio Intros" feed in Discovery to browse users by listening to their spoken introductions.
+- [ ] Implement "Translate Bio" button on user profile cards and pages.
 
 ## Phase 77: Collaborative Learning Tools
 
-- [STUCK] Build UI for threaded replies in chat to preserve conversation context.
-- [STUCK] Implement "Request Correction from Group" feature/message type for group chats.
-- [STUCK] Add a "Mute Word" client-side filter for the Moments feed to hide posts with specific keywords.
+- [ ] Build UI for threaded replies in chat to preserve conversation context.
+- [ ] Implement "Request Correction from Group" feature/message type for group chats.
+- [ ] Add a "Mute Word" client-side filter for the Moments feed to hide posts with specific keywords.
 
 ## Phase 78: Proactive AI Tutor
 
-- [STUCK] Implement AI-powered "Daily Learning Tip" push notification or chat message.
-- [STUCK] Build "Suggest Flashcards" feature to auto-detect and suggest new vocabulary from a user's conversations.
+- [ ] Implement AI-powered "Daily Learning Tip" push notification or chat message.
+- [ ] Build "Suggest Flashcards" feature to auto-detect and suggest new vocabulary from a user's conversations.
 
 ## Phase 79: Economy-Driven Learning
 
-- [STUCK] Allow spending virtual coins to unlock premium one-off AI services (e.g., "Conversation Analysis Report").
-- [STUCK] Build "Language Challenge" system with coin-based entry fees and prize pools (e.g., "7-day writing streak challenge").
+- [ ] Allow spending virtual coins to unlock premium one-off AI services (e.g., "Conversation Analysis Report").
+- [ ] Build "Language Challenge" system with coin-based entry fees and prize pools (e.g., "7-day writing streak challenge").
 
 ## Phase C: Chat Interface Feature Checklist (WhatsApp Clone)
 
@@ -634,28 +634,28 @@
 ### 3. Audio & Video Calls
 
 - [x] End-to-end encrypted voice calls.
-- [STUCK] End-to-end encrypted video calls.
-- [STUCK] Group calls with a specific participant limit.
-- [STUCK] Call waiting and switching between calls.
-- [STUCK] Picture-in-picture mode for video calls.
-- [STUCK] Screen sharing during video calls.
-- [STUCK] Call logs (missed, incoming, outgoing).
+- [ ] End-to-end encrypted video calls.
+- [ ] Group calls with a specific participant limit.
+- [ ] Call waiting and switching between calls.
+- [ ] Picture-in-picture mode for video calls.
+- [ ] Screen sharing during video calls.
+- [ ] Call logs (missed, incoming, outgoing).
 
 ### 4. Group Chats & Communities
 
-- [STUCK] Create and manage group chats.
-- [STUCK] Admin controls (add/remove members, restrict who can send messages or edit group info).
-- [STUCK] Mentioning participants (@mentions).
-- [STUCK] Group descriptions and rules.
-- [STUCK] Join groups via invite links or QR codes.
-- [STUCK] Communities feature to organize related groups under one umbrella.
-- [STUCK] Announcement groups for admins to broadcast messages.
+- [ ] Create and manage group chats.
+- [ ] Admin controls (add/remove members, restrict who can send messages or edit group info).
+- [ ] Mentioning participants (@mentions).
+- [ ] Group descriptions and rules.
+- [ ] Join groups via invite links or QR codes.
+- [ ] Communities feature to organize related groups under one umbrella.
+- [ ] Announcement groups for admins to broadcast messages.
 
 ### 5. Status & Stories
 
-- [STUCK] Share text, photo, video, and voice updates that disappear after 24 hours.
-- [STUCK] Privacy controls for who can view status updates.
-- [STUCK] Reply to status updates directly in chat.
+- [ ] Share text, photo, video, and voice updates that disappear after 24 hours.
+- [ ] Privacy controls for who can view status updates.
+- [ ] Reply to status updates directly in chat.
 - [ ] View list of users who have seen the status.
 
 ### 6. Privacy & Security

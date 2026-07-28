@@ -24,7 +24,7 @@ export class HobbyTagsStore {
     return map;
   });
 
-  readonly userTagIds = computed(() => new Set(this.userTags().map(ut => ut.hobby_tag_id)));
+  readonly userTagIds = computed(() => new Set(this.userTags().map((ut) => ut.hobby_tag_id)));
 
   readonly vocabularyByTag = computed(() => {
     const vocab = this.vocabulary();
@@ -73,7 +73,7 @@ export class HobbyTagsStore {
     this.loading.set(true);
     this.hobbyTagsService.addMyTag(hobbyTagId, proficiencyLevel).subscribe({
       next: (userTag) => {
-        this.userTags.update(tags => [...tags, userTag]);
+        this.userTags.update((tags) => [...tags, userTag]);
         this.loading.set(false);
       },
       error: (err) => {
@@ -87,7 +87,7 @@ export class HobbyTagsStore {
     this.loading.set(true);
     this.hobbyTagsService.removeMyTag(hobbyTagId).subscribe({
       next: () => {
-        this.userTags.update(tags => tags.filter(t => t.hobby_tag_id !== hobbyTagId));
+        this.userTags.update((tags) => tags.filter((t) => t.hobby_tag_id !== hobbyTagId));
         this.loading.set(false);
       },
       error: (err) => {
@@ -101,8 +101,8 @@ export class HobbyTagsStore {
     this.loading.set(true);
     this.hobbyTagsService.updateProficiency(hobbyTagId, level).subscribe({
       next: (updated) => {
-        this.userTags.update(tags =>
-          tags.map(t => t.hobby_tag_id === hobbyTagId ? updated : t)
+        this.userTags.update((tags) =>
+          tags.map((t) => (t.hobby_tag_id === hobbyTagId ? updated : t)),
         );
         this.loading.set(false);
       },

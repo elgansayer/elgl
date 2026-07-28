@@ -71,22 +71,15 @@ export class MonetisationService {
   }
 
   generateApiKey(): Observable<GenerateApiKeyResponse> {
-    return this.http.post<GenerateApiKeyResponse>(
-      `${this.baseUrl}/generate-api-key`,
-      {},
-    );
+    return this.http.post<GenerateApiKeyResponse>(`${this.baseUrl}/generate-api-key`, {});
   }
 
   getAnalytics(): Observable<DeveloperAnalyticsResponse> {
-    return this.http.get<DeveloperAnalyticsResponse>(
-      `${this.baseUrl}/analytics`,
-    );
+    return this.http.get<DeveloperAnalyticsResponse>(`${this.baseUrl}/analytics`);
   }
 
   getDiagnosticLogs(): Observable<DiagnosticLog[]> {
-    return this.http.get<DiagnosticLog[]>(
-      `${this.baseUrl}/diagnostics/logs`,
-    );
+    return this.http.get<DiagnosticLog[]>(`${this.baseUrl}/diagnostics/logs`);
   }
 
   createDiagnosticLog(
@@ -94,10 +87,11 @@ export class MonetisationService {
     status: 'info' | 'success' | 'warn',
     message: string,
   ): Observable<DiagnosticLog> {
-    return this.http.post<DiagnosticLog>(
-      `${this.baseUrl}/diagnostics/logs`,
-      { category, status, message },
-    );
+    return this.http.post<DiagnosticLog>(`${this.baseUrl}/diagnostics/logs`, {
+      category,
+      status,
+      message,
+    });
   }
 
   validateAppleReceipt(

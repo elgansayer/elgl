@@ -57,7 +57,8 @@ export const MOCK_PARTNERS: UserProfile[] = [
     is_serious_learner: true,
     privacy_hide_age: false,
     privacy_hide_location: false,
-    privacy_hide_from_search: false, privacy_hide_gender: false,
+    privacy_hide_from_search: false,
+    privacy_hide_gender: false,
     created_at: new Date().toISOString(),
     is_followed_by_me: true,
     is_liked_by_me: false,
@@ -77,11 +78,12 @@ export const MOCK_PARTNERS: UserProfile[] = [
     is_serious_learner: false,
     privacy_hide_age: false,
     privacy_hide_location: false,
-    privacy_hide_from_search: false, privacy_hide_gender: false,
+    privacy_hide_from_search: false,
+    privacy_hide_gender: false,
     created_at: new Date().toISOString(),
     is_followed_by_me: false,
     is_liked_by_me: true,
-  }
+  },
 ];
 
 export const MOCK_VISITORS: ProfileVisitor[] = [
@@ -95,9 +97,9 @@ export const MOCK_VISITORS: ProfileVisitor[] = [
       display_name: 'Kenji',
       avatar_url: 'https://i.pravatar.cc/150?u=partner-1',
       native_languages: ['ja'],
-      target_languages: ['en']
-    }
-  }
+      target_languages: ['en'],
+    },
+  },
 ];
 
 export const MOCK_MOMENTS = [
@@ -118,9 +120,9 @@ export const MOCK_MOMENTS = [
     author: {
       id: 'partner-1',
       display_name: 'Kenji',
-      avatar_url: 'https://i.pravatar.cc/150?u=partner-1'
+      avatar_url: 'https://i.pravatar.cc/150?u=partner-1',
     },
-    comments: []
+    comments: [],
   },
   {
     id: 'moment-2',
@@ -139,8 +141,8 @@ export const MOCK_MOMENTS = [
     author: {
       id: 'partner-2',
       display_name: 'Maria',
-      avatar_url: 'https://i.pravatar.cc/150?u=partner-2'
+      avatar_url: 'https://i.pravatar.cc/150?u=partner-2',
     },
-    comments: []
-  }
+    comments: [],
+  },
 ];

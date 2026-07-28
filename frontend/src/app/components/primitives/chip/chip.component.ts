@@ -28,8 +28,8 @@ import { Component, input, output, computed } from '@angular/core';
     </span>
   `,
   host: {
-    '[class]': "'inline-block'"
-  }
+    '[class]': "'inline-block'",
+  },
 })
 export class AppChipComponent {
   readonly label = input<string>('');
@@ -42,8 +42,9 @@ export class AppChipComponent {
   readonly clicked = output<MouseEvent>();
 
   readonly chipClasses = computed(() => {
-    const base = 'inline-flex items-center rounded-xl font-bold text-xs ps-3 pe-3 pt-1.5 pb-1.5 transition-all cursor-pointer';
-    
+    const base =
+      'inline-flex items-center rounded-xl font-bold text-xs ps-3 pe-3 pt-1.5 pb-1.5 transition-all cursor-pointer';
+
     let variantClass = '';
     switch (this.variant()) {
       case 'default':

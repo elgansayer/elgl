@@ -12,11 +12,13 @@ import { Component, input, computed, output } from '@angular/core';
       <ng-content />
     </button>
   `,
-  styles: [`
-    :host {
-      display: inline-block;
-    }
-  `]
+  styles: [
+    `
+      :host {
+        display: inline-block;
+      }
+    `,
+  ],
 })
 export class AppButtonComponent {
   readonly variant = input<'primary' | 'secondary' | 'outline' | 'ghost' | 'danger'>('primary');
@@ -29,7 +31,8 @@ export class AppButtonComponent {
   readonly buttonAction = output<MouseEvent>();
 
   readonly hostClasses = computed(() => {
-    const base = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2';
+    const base =
+      'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2';
 
     let sizeClass = '';
     switch (this.size()) {
@@ -47,19 +50,24 @@ export class AppButtonComponent {
     let variantClass = '';
     switch (this.variant()) {
       case 'primary':
-        variantClass = 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed';
+        variantClass =
+          'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed';
         break;
       case 'secondary':
-        variantClass = 'bg-surface-400 text-text-primary hover:bg-gray-300 focus:ring-gray-400 disabled:bg-surface-300 disabled:cursor-not-allowed';
+        variantClass =
+          'bg-surface-400 text-text-primary hover:bg-gray-300 focus:ring-gray-400 disabled:bg-surface-300 disabled:cursor-not-allowed';
         break;
       case 'outline':
-        variantClass = 'border border-surface-200 text-text-secondary hover:bg-surface-300 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed';
+        variantClass =
+          'border border-surface-200 text-text-secondary hover:bg-surface-300 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed';
         break;
       case 'ghost':
-        variantClass = 'text-text-secondary hover:bg-surface-300 focus:ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed';
+        variantClass =
+          'text-text-secondary hover:bg-surface-300 focus:ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed';
         break;
       case 'danger':
-        variantClass = 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:bg-red-300 disabled:cursor-not-allowed';
+        variantClass =
+          'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:bg-red-300 disabled:cursor-not-allowed';
         break;
     }
 

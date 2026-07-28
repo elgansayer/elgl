@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 function walkDir(dir, callback) {
-  fs.readdirSync(dir).forEach(f => {
+  fs.readdirSync(dir).forEach((f) => {
     let dirPath = path.join(dir, f);
     let isDirectory = fs.statSync(dirPath).isDirectory();
     isDirectory ? walkDir(dirPath, callback) : callback(path.join(dir, f));
@@ -46,7 +46,7 @@ const colorMap = {
   'bg-indigo-100': 'bg-indigo-500/20',
   'text-indigo-700': 'text-indigo-400',
   'text-indigo-800': 'text-indigo-400',
-  
+
   'bg-slate-50': 'bg-surface-300',
   'bg-slate-100': 'bg-surface-300',
   'bg-slate-200': 'bg-surface-200',
@@ -59,14 +59,14 @@ const colorMap = {
   'text-gray-300': 'text-text-secondary',
   'bg-gray-800': 'bg-surface-200',
   'bg-gray-700': 'bg-surface-100',
-  'border-gray-700': 'border-surface-100'
+  'border-gray-700': 'border-surface-100',
 };
 
-walkDir('./frontend/src/app', function(filePath) {
+walkDir('./frontend/src/app', function (filePath) {
   if (filePath.endsWith('.html') || filePath.endsWith('.ts')) {
     let content = fs.readFileSync(filePath, 'utf8');
     let original = content;
-    
+
     for (const [key, value] of Object.entries(colorMap)) {
       // Replace exact class matches in strings
       const regex = new RegExp(`\\b${key}\\b`, 'g');

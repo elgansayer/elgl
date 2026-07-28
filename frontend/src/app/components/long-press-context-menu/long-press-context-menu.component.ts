@@ -121,7 +121,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
     '(document:keydown.escape)': 'onEscape()',
     '(window:resize)': 'onResize()',
     '(window:scroll)': 'onScroll()',
-  }
+  },
 })
 export class LongPressContextMenuComponent {
   readonly messageId = input<string>('');

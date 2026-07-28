@@ -10,7 +10,7 @@ export interface ChatGroup {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class GroupsService {
   private readonly http = inject(HttpClient);
@@ -25,7 +25,9 @@ export class GroupsService {
   }
 
   addMember(groupId: string, userId: string): Observable<{ success: boolean }> {
-    return this.http.post<{ success: boolean }>(`${this.apiUrl}/${groupId}/members`, { user_id: userId });
+    return this.http.post<{ success: boolean }>(`${this.apiUrl}/${groupId}/members`, {
+      user_id: userId,
+    });
   }
 
   removeMember(groupId: string, userId: string): Observable<{ success: boolean }> {

@@ -44,7 +44,12 @@ export class AudioRoomComponent implements OnInit {
 
   async createRoom(payload: VoiceroomCreatePayload): Promise<void> {
     try {
-      const room = await this.store.createRoom(payload.title, payload.languagePair, payload.topicTag, payload.isVideoStream);
+      const room = await this.store.createRoom(
+        payload.title,
+        payload.languagePair,
+        payload.topicTag,
+        payload.isVideoStream,
+      );
       this.showCreateModal.set(false);
       await this.store.joinRoom(room);
     } catch (e) {

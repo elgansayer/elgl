@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { ChatMessage } from './chat.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class OfflineQueueService {
   private readonly dbName = 'chat_offline_db';

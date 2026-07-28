@@ -25,13 +25,26 @@ try {
 const ROOT_DIR = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 
 const BANNED_AMERICAN_WORDS = [
-  { pattern: /\b(color|colors)\b/i, replacement: 'colour/colours', excludeFiles: ['tailwind.config.js', 'package.json', 'package-lock.json', '.scss'] },
+  {
+    pattern: /\b(color|colors)\b/i,
+    replacement: 'colour/colours',
+    excludeFiles: ['tailwind.config.js', 'package.json', 'package-lock.json', '.scss'],
+  },
   { pattern: /\b(favorite|favorites)\b/i, replacement: 'favourite/favourites', excludeFiles: [] },
-  { pattern: /\b(monetization|monetize)\b/i, replacement: 'monetisation/monetise', excludeFiles: [] },
-  { pattern: /\b(tokenize|tokenized|tokenization)\b/i, replacement: 'tokenise/tokenised/tokenisation', excludeFiles: [] }
+  {
+    pattern: /\b(monetization|monetize)\b/i,
+    replacement: 'monetisation/monetise',
+    excludeFiles: [],
+  },
+  {
+    pattern: /\b(tokenize|tokenized|tokenization)\b/i,
+    replacement: 'tokenise/tokenised/tokenisation',
+    excludeFiles: [],
+  },
 ];
 
-const PHYSICAL_CSS_REGEX = /\b(pl-\d+|pr-\d+|ml-\d+|mr-\d+|border-l(-\d+)?|border-r(-\d+)?|text-left|text-right)\b/;
+const PHYSICAL_CSS_REGEX =
+  /\b(pl-\d+|pr-\d+|ml-\d+|mr-\d+|border-l(-\d+)?|border-r(-\d+)?|text-left|text-right)\b/;
 const LEGACY_ANGULAR_FLOW_REGEX = /\*(ngIf|ngFor|ngSwitch|ngSwitchCase|ngSwitchDefault)\b/;
 const SUPABASE_DB_QUERY_REGEX = /\b(supabase|client)\.from\s*\(/;
 const SUPABASE_CLIENT_REGEX = /import\s+.*createClient.*from\s+['"]@supabase\/supabase-js['"]/;
@@ -45,7 +58,14 @@ function getAllFiles(dir, fileList = []) {
   if (!fs.existsSync(dir)) return fileList;
   const files = fs.readdirSync(dir);
   for (const file of files) {
-    if (file === 'node_modules' || file === 'dist' || file === '.git' || file === 'original-hello-talk-screenshots' || file.startsWith('.aider')) continue;
+    if (
+      file === 'node_modules' ||
+      file === 'dist' ||
+      file === '.git' ||
+      file === 'original-hello-talk-screenshots' ||
+      file.startsWith('.aider')
+    )
+      continue;
     const filePath = path.join(dir, file);
     const stat = fs.statSync(filePath);
     if (stat.isDirectory()) {
@@ -76,16 +96,23 @@ function checkFile(filePath) {
     // Check 1: Em dash check
     if (EM_DASH_REGEX.test(line)) {
       console.error(`❌ [EM DASH VIOLATION] ${relPath}:${lineNum}`);
-      console.error(`   Found em dash ('—'). Use standard hyphens or colons instead (AGENTS.md Section 2).`);
+      console.error(
+        `   Found em dash ('—'). Use standard hyphens or colons instead (AGENTS.md Section 2).`,
+      );
       totalErrors++;
     }
 
     // Check 2: Physical Tailwind directions in frontend
-    if (isFrontend && (relPath.endsWith('.html') || relPath.endsWith('.ts') || relPath.endsWith('.scss'))) {
+    if (
+      isFrontend &&
+      (relPath.endsWith('.html') || relPath.endsWith('.ts') || relPath.endsWith('.scss'))
+    ) {
       const match = line.match(PHYSICAL_CSS_REGEX);
       if (match) {
         console.error(`❌ [RTL VIOLATION] ${relPath}:${lineNum}`);
-        console.error(`   Found physical direction utility '${match[0]}'. Strictly use logical properties (ps-, pe-, ms-, me-, border-s, border-e) (AGENTS.md Section 3).`);
+        console.error(
+          `   Found physical direction utility '${match[0]}'. Strictly use logical properties (ps-, pe-, ms-, me-, border-s, border-e) (AGENTS.md Section 3).`,
+        );
         totalErrors++;
       }
     }
@@ -95,7 +122,9 @@ function checkFile(filePath) {
       const match = line.match(LEGACY_ANGULAR_FLOW_REGEX);
       if (match && !line.includes('// ignore-check')) {
         console.error(`❌ [CONTROL FLOW VIOLATION] ${relPath}:${lineNum}`);
-        console.error(`   Found legacy control flow '*${match[1]}'. Strictly use native control flow (@if, @for, @switch) (AGENTS.md Section 6).`);
+        console.error(
+          `   Found legacy control flow '*${match[1]}'. Strictly use native control flow (@if, @for, @switch) (AGENTS.md Section 6).`,
+        );
         totalErrors++;
       }
     }
@@ -104,12 +133,16 @@ function checkFile(filePath) {
     if (isFrontend && relPath.endsWith('.ts')) {
       if (SUPABASE_DB_QUERY_REGEX.test(line)) {
         console.error(`❌ [API-FIRST VIOLATION] ${relPath}:${lineNum}`);
-        console.error(`   Direct database query (.from) call in frontend. All database queries must route via NestJS REST or Centrifugo (AGENTS.md Section 4).`);
+        console.error(
+          `   Direct database query (.from) call in frontend. All database queries must route via NestJS REST or Centrifugo (AGENTS.md Section 4).`,
+        );
         totalErrors++;
       }
       if (SUPABASE_CLIENT_REGEX.test(line) && !relPath.endsWith('supabase.service.ts')) {
         console.error(`❌ [API-FIRST VIOLATION] ${relPath}:${lineNum}`);
-        console.error(`   Direct @supabase/supabase-js client import in ${relPath}. Only SupabaseService may instantiate auth client (AGENTS.md Section 4).`);
+        console.error(
+          `   Direct @supabase/supabase-js client import in ${relPath}. Only SupabaseService may instantiate auth client (AGENTS.md Section 4).`,
+        );
         totalErrors++;
       }
     }
@@ -117,15 +150,22 @@ function checkFile(filePath) {
     // Check 5: British English spelling (Warnings / Errors)
     if (!relPath.includes('node_modules') && !relPath.includes('dist')) {
       for (const rule of BANNED_AMERICAN_WORDS) {
-        const isExcluded = rule.excludeFiles.some(ex => relPath.endsWith(ex));
+        const isExcluded = rule.excludeFiles.some((ex) => relPath.endsWith(ex));
         if (!isExcluded) {
           const match = line.match(rule.pattern);
           // Allow standard DOM/CSS or Tailwind words like canvas.color, transition-colors, background-color
-          const isCssOrDomProperty = relPath.endsWith('.scss') || line.includes('background-color') || line.includes('border-color') || line.includes('transition-colors') || line.includes('color:');
+          const isCssOrDomProperty =
+            relPath.endsWith('.scss') ||
+            line.includes('background-color') ||
+            line.includes('border-color') ||
+            line.includes('transition-colors') ||
+            line.includes('color:');
           if (match && !isCssOrDomProperty && !line.includes('ignore-spelling')) {
             // If in documentation or schema file where we explicitly enforce British English, warn or error
             if (isDoc || relPath.endsWith('.sql')) {
-              console.warn(`⚠️  [SPELLING WARNING] ${relPath}:${lineNum} -> Found '${match[0]}', prefer British English '${rule.replacement}'.`);
+              console.warn(
+                `⚠️  [SPELLING WARNING] ${relPath}:${lineNum} -> Found '${match[0]}', prefer British English '${rule.replacement}'.`,
+              );
               totalWarnings++;
             }
           }
@@ -138,7 +178,10 @@ function checkFile(filePath) {
 function main() {
   console.log('🛡️  Running HelloTalk Engineering Constitution Verification...');
   const targetFiles = process.argv.slice(2);
-  const filesToCheck = targetFiles.length > 0 ? targetFiles.map(f => path.resolve(ROOT_DIR, f)).filter(f => fs.existsSync(f)) : getAllFiles(ROOT_DIR);
+  const filesToCheck =
+    targetFiles.length > 0
+      ? targetFiles.map((f) => path.resolve(ROOT_DIR, f)).filter((f) => fs.existsSync(f))
+      : getAllFiles(ROOT_DIR);
 
   for (const filePath of filesToCheck) {
     checkFile(filePath);

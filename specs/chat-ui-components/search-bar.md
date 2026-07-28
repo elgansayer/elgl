@@ -1,11 +1,13 @@
 # Search Bar Specification
 
 ## Purpose
+
 Allow users to search through chat history by text content, message type, date range, and sender.
 
 ## Visual Design
 
 ### Layout
+
 ```
 ┌─────────────────────────────────────┐
 │ [🔙]  Search Messages               │ ← Header
@@ -40,6 +42,7 @@ Allow users to search through chat history by text content, message type, date r
 ```
 
 ### Dimensions
+
 - **Full screen** on mobile, **modal** (500px width) on desktop
 - **Search input**: 44px height
 - **Filter chips**: 32px height
@@ -47,6 +50,7 @@ Allow users to search through chat history by text content, message type, date r
 - **Highlight padding**: 2px
 
 ### Color Scheme
+
 - **Background**: `bg-slate-900`
 - **Search input background**: `bg-slate-800`
 - **Search input border**: `border-slate-600`, focus `border-purple-500`
@@ -59,22 +63,26 @@ Allow users to search through chat history by text content, message type, date r
 ## States
 
 ### Default (Empty)
+
 - Search input focused
 - Placeholder text visible
 - No results shown
 - Filter chips all inactive
 
 ### Typing
+
 - Real-time search (debounced 300ms)
 - Loading spinner in input
 - Results update as user types
 
 ### Results Found
+
 - Result count displayed
 - Results listed with highlights
 - Click result to navigate to message
 
 ### No Results
+
 ```
 ┌─────────────────────────────────────┐
 │                                     │
@@ -86,6 +94,7 @@ Allow users to search through chat history by text content, message type, date r
 ```
 
 ### Error
+
 - Red border on input
 - Error message: "Search failed. Please try again."
 - Retry button
@@ -93,29 +102,44 @@ Allow users to search through chat history by text content, message type, date r
 ## Animations
 
 ### Search Debounce
+
 ```css
 /* No visual animation, but 300ms delay before search executes */
 ```
 
 ### Results Appear
+
 ```css
 @keyframes resultFadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 /* Staggered: 50ms delay per result */
 ```
 
 ### Highlight Pulse
+
 ```css
 @keyframes highlightPulse {
-  0%, 100% { background-color: rgba(234, 179, 8, 0.3); }
-  50% { background-color: rgba(234, 179, 8, 0.5); }
+  0%,
+  100% {
+    background-color: rgba(234, 179, 8, 0.3);
+  }
+  50% {
+    background-color: rgba(234, 179, 8, 0.5);
+  }
 }
 /* Applied to search term highlights */
 ```
 
 ## Accessibility
+
 - `role="search"` on container
 - `aria-label="Search messages"` on input
 - Live region (`aria-live="polite"`) for result count updates
@@ -123,6 +147,7 @@ Allow users to search through chat history by text content, message type, date r
 - Keyboard: Enter to search, Escape to clear/close, Arrow keys to navigate results
 
 ## Edge Cases
+
 - **Very long chat history**: Server-side search with pagination (20 results per page)
 - **Special characters**: Escape regex special characters in search query
 - **RTL search terms**: Handle RTL text in search

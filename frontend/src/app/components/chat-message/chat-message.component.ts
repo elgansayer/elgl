@@ -33,12 +33,17 @@ import { Subject, takeUntil } from 'rxjs';
         (favourite)="onFavourite($event)"
         (report)="onReport($event)"
       >
-        <div class="flex" [class.justify-end]="isOwnMessage()" [class.justify-start]="!isOwnMessage()">
-          <div class="max-w-[70%] rounded-lg p-3"
-               [class.bg-blue-600]="isOwnMessage()"
-               [class.text-white]="isOwnMessage()"
-               [class.bg-surface-300]="!isOwnMessage()">
-            
+        <div
+          class="flex"
+          [class.justify-end]="isOwnMessage()"
+          [class.justify-start]="!isOwnMessage()"
+        >
+          <div
+            class="max-w-[70%] rounded-lg p-3"
+            [class.bg-blue-600]="isOwnMessage()"
+            [class.text-white]="isOwnMessage()"
+            [class.bg-surface-300]="!isOwnMessage()"
+          >
             @if (message.message_type === 'text') {
               <p class="text-sm">{{ message.text_content }}</p>
             }
@@ -47,7 +52,9 @@ import { Subject, takeUntil } from 'rxjs';
               <div class="flex items-center gap-2">
                 <button (click)="playVoice()" class="p-2 rounded-full hover:bg-black/10">
                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/>
+                    <path
+                      d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"
+                    />
                   </svg>
                 </button>
                 <span class="text-sm">{{ 'chatRoom.voiceMessage' | t }}</span>
@@ -56,7 +63,9 @@ import { Subject, takeUntil } from 'rxjs';
 
             @if (message.message_type === 'correction' && message.correction_payload) {
               <div class="space-y-1">
-                <p class="text-sm line-through opacity-75">{{ message.correction_payload.original }}</p>
+                <p class="text-sm line-through opacity-75">
+                  {{ message.correction_payload.original }}
+                </p>
                 <p class="text-sm font-medium">{{ message.correction_payload.corrected }}</p>
                 @if (message.correction_payload.explanation) {
                   <p class="text-xs opacity-75 mt-1">
@@ -67,20 +76,29 @@ import { Subject, takeUntil } from 'rxjs';
             }
 
             @if (message.message_type === 'doodle' && message.media_url) {
-              <img [src]="message.media_url" class="max-w-full rounded" alt="Doodle" loading="lazy">
+              <img
+                [src]="message.media_url"
+                class="max-w-full rounded"
+                alt="Doodle"
+                loading="lazy"
+              />
             }
 
-            <p class="text-xs mt-1 opacity-60 text-end">{{ message.created_at | date:'shortTime' }}</p>
+            <p class="text-xs mt-1 opacity-60 text-end">
+              {{ message.created_at | date: 'shortTime' }}
+            </p>
           </div>
         </div>
       </app-long-press-context-menu>
     }
   `,
-  styles: [`
-    :host {
-      display: block;
-    }
-  `],
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+    `,
+  ],
 })
 export class ChatMessageComponent implements OnInit, OnDestroy {
   @Input({ required: true }) message!: ChatMessage;
@@ -97,20 +115,16 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // Initial fast check from cache
-    this.isBlocked.set(
-      this.safetyService.isUserBlockedCached(this.message.sender_id),
-    );
+    this.isBlocked.set(this.safetyService.isUserBlockedCached(this.message.sender_id));
 
     // Subscribe to changes so we always stay in sync
-    this.safetyService.blockedUserIds$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((blockedIds) => {
-        const currentlyBlocked = blockedIds.has(this.message.sender_id);
-        this.isBlocked.set(currentlyBlocked);
-        if (currentlyBlocked) {
-          this.messageBlocked.emit(this.message.sender_id);
-        }
-      });
+    this.safetyService.blockedUserIds$.pipe(takeUntil(this.destroy$)).subscribe((blockedIds) => {
+      const currentlyBlocked = blockedIds.has(this.message.sender_id);
+      this.isBlocked.set(currentlyBlocked);
+      if (currentlyBlocked) {
+        this.messageBlocked.emit(this.message.sender_id);
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -144,14 +158,16 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
   }
 
   onReport(event: { messageId: string; content: string; senderId: string; roomId: string }): void {
-    this.safetyService.reportUser({
-      reported_id: event.senderId,
-      reason_category: 'inappropriate_content',
-      description: 'Inappropriate message',
-      context_url: window.location.href,
-    }).subscribe({
-      next: () => console.log('Report submitted'),
-      error: (err) => console.error('Failed to report', err),
-    });
+    this.safetyService
+      .reportUser({
+        reported_id: event.senderId,
+        reason_category: 'inappropriate_content',
+        description: 'Inappropriate message',
+        context_url: window.location.href,
+      })
+      .subscribe({
+        next: () => console.log('Report submitted'),
+        error: (err) => console.error('Failed to report', err),
+      });
   }
 }

@@ -2,7 +2,7 @@
 # Pinned explicitly: DEEPSEEK_API_KEY is the paid-for account for aider. GEMINI_API_KEY
 # is reserved for the Antigravity CLI (Gemini Pro plan) and must never be picked up here,
 # since Gemini API usage from aider bills per-token on top of the flat Gemini Pro plan.
-model: deepseek/deepseek-chat
+model: deepseek/deepseek-reasoner
 
 read:
   - SPEC.md

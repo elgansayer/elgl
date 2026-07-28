@@ -14,9 +14,17 @@ import { SearchFilterParams } from '../../../services/discovery.service';
       </h3>
 
       <div class="flex flex-col gap-1.5">
-        <label for="nativeLanguages" class="text-sm font-medium text-text-primary flex flex-col gap-1.5">
+        <label
+          for="nativeLanguages"
+          class="text-sm font-medium text-text-primary flex flex-col gap-1.5"
+        >
           {{ 'discovery.native_languages' | t }}
-          <select id="nativeLanguages" [ngModel]="nativeLanguages()" (ngModelChange)="nativeLanguages.set($event)" class="w-full p-2.5 rounded-lg border border-surface-100  bg-surface-200  text-text-primary  focus:ring-2 focus:ring-blue-500 outline-none">
+          <select
+            id="nativeLanguages"
+            [ngModel]="nativeLanguages()"
+            (ngModelChange)="nativeLanguages.set($event)"
+            class="w-full p-2.5 rounded-lg border border-surface-100  bg-surface-200  text-text-primary  focus:ring-2 focus:ring-blue-500 outline-none"
+          >
             <option value="">{{ 'discovery.any_language' | t }}</option>
             @for (lang of i18n.availableLanguages; track lang.code) {
               <option [value]="lang.code">{{ lang.nativeName }} {{ lang.flag }}</option>
@@ -26,9 +34,17 @@ import { SearchFilterParams } from '../../../services/discovery.service';
       </div>
 
       <div class="flex flex-col gap-1.5">
-        <label for="targetLanguage" class="text-sm font-medium text-text-primary flex flex-col gap-1.5">
+        <label
+          for="targetLanguage"
+          class="text-sm font-medium text-text-primary flex flex-col gap-1.5"
+        >
           {{ 'discovery.target_language' | t }}
-          <select id="targetLanguage" [ngModel]="targetLanguage()" (ngModelChange)="targetLanguage.set($event)" class="w-full p-2.5 rounded-lg border border-surface-100  bg-surface-200  text-text-primary  focus:ring-2 focus:ring-blue-500 outline-none">
+          <select
+            id="targetLanguage"
+            [ngModel]="targetLanguage()"
+            (ngModelChange)="targetLanguage.set($event)"
+            class="w-full p-2.5 rounded-lg border border-surface-100  bg-surface-200  text-text-primary  focus:ring-2 focus:ring-blue-500 outline-none"
+          >
             <option value="">{{ 'discovery.any_language' | t }}</option>
             @for (lang of i18n.availableLanguages; track lang.code) {
               <option [value]="lang.code">{{ lang.nativeName }} {{ lang.flag }}</option>
@@ -38,9 +54,17 @@ import { SearchFilterParams } from '../../../services/discovery.service';
       </div>
 
       <div class="flex flex-col gap-1.5">
-        <label for="proficiencyLevel" class="text-sm font-medium text-text-primary flex flex-col gap-1.5">
+        <label
+          for="proficiencyLevel"
+          class="text-sm font-medium text-text-primary flex flex-col gap-1.5"
+        >
           {{ 'discovery.proficiency_level' | t }}
-          <select id="proficiencyLevel" [ngModel]="level()" (ngModelChange)="level.set($event)" class="w-full p-2.5 rounded-lg border border-surface-100  bg-surface-200  text-text-primary  focus:ring-2 focus:ring-blue-500 outline-none">
+          <select
+            id="proficiencyLevel"
+            [ngModel]="level()"
+            (ngModelChange)="level.set($event)"
+            class="w-full p-2.5 rounded-lg border border-surface-100  bg-surface-200  text-text-primary  focus:ring-2 focus:ring-blue-500 outline-none"
+          >
             <option value="">{{ 'discovery.any_level' | t }}</option>
             @for (lvl of levels; track lvl) {
               <option [value]="lvl">{{ 'levels.' + lvl | t }}</option>
@@ -49,15 +73,18 @@ import { SearchFilterParams } from '../../../services/discovery.service';
         </label>
       </div>
 
-      <button (click)="applyFilters()" class="mt-2 w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors">
+      <button
+        (click)="applyFilters()"
+        class="mt-2 w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors"
+      >
         {{ 'discovery.search_button' | t }}
       </button>
     </div>
-  `
+  `,
 })
 export class GlobalSearchComponent {
   readonly i18n = inject(I18nService);
-  
+
   readonly searchFilters = output<SearchFilterParams>();
 
   readonly nativeLanguages = signal<string>('');
@@ -70,7 +97,7 @@ export class GlobalSearchComponent {
     this.searchFilters.emit({
       native_languages: this.nativeLanguages() || undefined,
       target_language: this.targetLanguage() || undefined,
-      level: this.level() || undefined
+      level: this.level() || undefined,
     });
   }
 }
