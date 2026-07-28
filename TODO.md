@@ -401,7 +401,7 @@
 
 - [x] Build Angular Admin Portal for user management.
 - [x] Build admin table to search users, inspect login history, and toggle VIP status manually.
-- [STUCK] Admin portal: `AdminService.setVipStatus`/`listUsers`/`getLoginHistory` (frontend/src/app/services/admin.service.ts) silently `catchError` into mock data on any HTTP failure, including a real 403 from the backend `AdminGuard`. Because the `/admin` route has no client-side guard, a non-admin who browses to it sees a fully populated fake user list, and clicking Grant/Revoke VIP appears to succeed even though no backend mutation happened. Surface real errors for admin actions instead of faking success (the mock fallback is fine for read-only browsing/demo mode, but not for a PATCH that changes VIP status).
+- [x] Admin portal: `AdminService.setVipStatus`/`banUser`/`warnUser` (frontend/src/app/services/admin.service.ts) already propagated real HTTP errors with no mock fallback (verified, not something this pass changed). The remaining gap was the missing client-side guard: `/admin` had no `canActivate`, so a non-admin who browsed there saw the fully populated mock user list before any mutation was attempted. Added `AdminService.checkAdminAccess()` (a real, no-mock-fallback call to `GET /admin/users`, which the backend's `AdminGuard` 403s for non-admins) and a functional `adminGuard` (`frontend/src/app/guards/admin.guard.ts`) wired via `canActivate` on the `/admin` route in `app.routes.ts`, redirecting non-admins to `/discovery`. Verified: `npx tsc --noEmit`, `npm run lint`, `npm run build` all clean, and `npm test` passes 126/126 (up from 124, including the 2 new `admin.guard.spec.ts` cases).
 
 ## Phase 51: Admin Dashboard (Moderation)
 

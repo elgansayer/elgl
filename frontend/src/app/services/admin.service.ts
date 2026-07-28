@@ -111,14 +111,26 @@ export class AdminService {
     };
   }
 
-  async listUsers(
-    search: string,
-    page: number,
-    pageSize: number,
-  ): Promise<AdminUserListResult> {
-    let params = new HttpParams()
-      .set('page', page.toString())
-      .set('pageSize', pageSize.toString());
+  /**
+   * Real backend check with no mock fallback, unlike listUsers()/getLoginHistory()
+   * below. A non-admin must be told they lack access, not shown a fake page.
+   */
+  async checkAdminAccess(): Promise<boolean> {
+    try {
+      await firstValueFrom(
+        this.http.get<AdminUserListResult>(`${this.baseUrl}/users`, {
+          headers: this.getHeaders(),
+          params: new HttpParams().set('page', '1').set('pageSize', '1'),
+        }),
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async listUsers(search: string, page: number, pageSize: number): Promise<AdminUserListResult> {
+    let params = new HttpParams().set('page', page.toString()).set('pageSize', pageSize.toString());
     if (search) {
       params = params.set('search', search);
     }
@@ -134,9 +146,7 @@ export class AdminService {
             of({
               users: search
                 ? MOCK_ADMIN_USERS.filter((u) =>
-                    (u.display_name ?? '')
-                      .toLowerCase()
-                      .includes(search.toLowerCase()),
+                    (u.display_name ?? '').toLowerCase().includes(search.toLowerCase()),
                   )
                 : MOCK_ADMIN_USERS,
               total: MOCK_ADMIN_USERS.length,
@@ -148,11 +158,7 @@ export class AdminService {
     );
   }
 
-  async setVipStatus(
-    userId: string,
-    isVip: boolean,
-    vipTier?: string,
-  ): Promise<AdminUserSummary> {
+  async setVipStatus(userId: string, isVip: boolean, vipTier?: string): Promise<AdminUserSummary> {
     // This is a mutation, so HTTP failures (e.g. a 403 from AdminGuard) must
     // propagate to the caller rather than being masked by a fake success.
     return firstValueFrom(
@@ -167,15 +173,10 @@ export class AdminService {
   async getLoginHistory(userId: string): Promise<LoginHistoryEntry[]> {
     return firstValueFrom(
       this.http
-        .get<LoginHistoryEntry[]>(
-          `${this.baseUrl}/users/${userId}/login-history`,
-          { headers: this.getHeaders() },
-        )
-        .pipe(
-          catchError(() =>
-            of(MOCK_LOGIN_HISTORY.filter((h) => h.user_id === userId)),
-          ),
-        ),
+        .get<LoginHistoryEntry[]>(`${this.baseUrl}/users/${userId}/login-history`, {
+          headers: this.getHeaders(),
+        })
+        .pipe(catchError(() => of(MOCK_LOGIN_HISTORY.filter((h) => h.user_id === userId)))),
     );
   }
 
