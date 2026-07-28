@@ -653,7 +653,7 @@
 
 ### 5. Status & Stories
 
-- [ ] Share text, photo, video, and voice updates that disappear after 24 hours.
+- [STUCK] Share text, photo, video, and voice updates that disappear after 24 hours.
 - [ ] Privacy controls for who can view status updates.
 - [ ] Reply to status updates directly in chat.
 - [ ] View list of users who have seen the status.
