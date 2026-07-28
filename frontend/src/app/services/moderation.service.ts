@@ -38,7 +38,7 @@ export class ModerationService {
   getItems(type: 'moment' | 'profile', status?: string): Observable<ModerationItem[]> {
     const params: Record<string, string> = { type };
     if (status) {
-      params.status = status;
+      params['status'] = status;
     }
     return this.http
       .get<ModerationItem[]>(`${this.baseUrl}/items`, {
