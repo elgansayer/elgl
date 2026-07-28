@@ -645,7 +645,7 @@
 
 - [STUCK] Create and manage group chats.
 - [STUCK] Admin controls (add/remove members, restrict who can send messages or edit group info).
-- [ ] Mentioning participants (@mentions).
+- [STUCK] Mentioning participants (@mentions).
 - [ ] Group descriptions and rules.
 - [ ] Join groups via invite links or QR codes.
 - [ ] Communities feature to organize related groups under one umbrella.
