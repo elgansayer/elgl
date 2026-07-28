@@ -644,7 +644,7 @@
 ### 4. Group Chats & Communities
 
 - [STUCK] Create and manage group chats.
-- [ ] Admin controls (add/remove members, restrict who can send messages or edit group info).
+- [STUCK] Admin controls (add/remove members, restrict who can send messages or edit group info).
 - [ ] Mentioning participants (@mentions).
 - [ ] Group descriptions and rules.
 - [ ] Join groups via invite links or QR codes.
