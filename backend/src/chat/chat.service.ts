@@ -160,7 +160,7 @@ export class ChatService {
       if (dto.message_type === 'text' && dto.text_content) {
         const urlMatch = dto.text_content.match(/https?:\/\/[^\s]+/);
         if (urlMatch) {
-          linkPreview = await this.linkPreviewService.fetchPreview(urlMatch[0]);
+          linkPreview = await this.linkPreviewService.getPreview(urlMatch[0]);
         }
       }
     } catch {

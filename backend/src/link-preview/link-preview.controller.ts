@@ -19,6 +19,6 @@ export class LinkPreviewController {
         HttpStatus.BAD_REQUEST,
       );
     }
-    return this.linkPreviewService.fetchPreview(url);
+    return this.linkPreviewService.getPreview(url);
   }
 }

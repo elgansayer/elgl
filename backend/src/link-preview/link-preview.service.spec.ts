@@ -98,7 +98,7 @@ describe('LinkPreviewService', () => {
       url: 'https://example.com/post',
       title: 'Great Article',
       description: 'A description',
-      imageUrl: 'https://example.com/img/cover.png',
+      image: 'https://example.com/img/cover.png',
       siteName: 'Example',
     });
     expect(redis.set).toHaveBeenCalledWith(

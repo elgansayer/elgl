@@ -24,7 +24,7 @@ jobs:
         run: |
           set +e
           echo "Scanning TODO.md to mirror state to GitHub Issues..."
-          
+
           while IFS= read -r line; do
             # Parse markdown checkboxes: - [ ] or - [x] or - [STUCK]
             if [[ "$line" =~ ^-[[:space:]]\[([ xX]|STUCK)\][[:space:]]+(.*)$ ]]; then
@@ -74,6 +74,3 @@ jobs:
               fi
             fi
           done < TODO.md
-          
-          # Force a successful exit code so the action is always green, even if the last loop iteration failed
-          exit 0

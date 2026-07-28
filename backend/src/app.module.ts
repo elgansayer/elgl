@@ -27,7 +27,6 @@ import { StreakModule } from './streak/streak.module';
 import { StreakMiddleware } from './streak/streak.middleware';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CallsModule } from './calls/calls.module';
-import { StatsModule } from './stats/stats.module';
 import { QuizModule } from './quiz/quiz.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { RecommendationsModule } from './recommendations/recommendations.module';
@@ -80,7 +79,6 @@ import { validationSchema } from './config/validation.schema';
     StreakModule,
     NotificationsModule,
     CallsModule,
-    StatsModule,
     QuizModule,
     RecommendationsModule,
     AdminModule,

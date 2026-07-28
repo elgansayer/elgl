@@ -126,7 +126,7 @@ export class LinkPreviewService {
       url,
       title,
       description,
-      imageUrl: image,
+      image,
       siteName,
     };
   }

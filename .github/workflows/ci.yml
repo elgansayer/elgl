@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   lint:
@@ -30,8 +30,13 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Install backend dependencies and run lint
-        run: |
-          cd backend
-          npm ci --legacy-peer-deps
-          npm run lint
+      - name: Install frontend dependencies
+        run: npm ci --legacy-peer-deps
+        working-directory: frontend
+
+      - name: Install backend dependencies
+        run: npm ci --legacy-peer-deps
+        working-directory: backend
+
+      - name: Lint frontend and backend
+        run: npm run lint
