@@ -312,7 +312,7 @@
 
 ## Phase 36: Backend Rate Limiting
 
-- [STUCK] Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints.
+- [x] Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints. `ThrottlerModule`/`APP_GUARD` was already applied globally (`app.module.ts`, 10 req/60s default) - likely why prior attempts got stuck looking for a dedicated "auth endpoint" to target: this backend has no NestJS-hosted login/signup/password-reset endpoint at all, auth is delegated entirely to Supabase Auth (outside this codebase, with its own rate limiting). The closest genuinely sensitive, auth-adjacent operation this backend controls is `POST /chat/token` (mints a signed Centrifugo connection token); added `@Throttle({ default: { limit: 5, ttl: 60000 } })` there, tighter than the app-wide default. Verified: `nest build`, `npm run lint`, `npm test` (357/357) all clean.
 - [x] Implement WebSocket connection rate limiting in Centrifugo.
 
 ## Phase 37: WebRTC Fallback Infrastructure

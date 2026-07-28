@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -26,6 +27,11 @@ import { ChatService } from './chat.service';
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
+  // Tighter than the app-wide default (10/60s, app.module.ts) - this mints a
+  // signed Centrifugo connection token, the most auth-sensitive operation this
+  // backend issues (actual login/signup is delegated entirely to Supabase Auth,
+  // which is not part of this codebase and has its own rate limiting).
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('token')
   getConnectionToken(
     @CurrentUser() user: User | null,
