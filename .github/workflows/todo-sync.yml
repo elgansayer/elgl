@@ -67,11 +67,32 @@ jobs:
               fi
 
               if [ -z "$ISSUE_NUM" ] || [ "$ISSUE_NUM" == "null" ]; then
-                echo "Creating new issue for: $TITLE"
-                ISSUE_URL=$(gh issue create --title "$TITLE" --body "Tracked in TODO.md by the AI Swarm pipeline.")
-                ISSUE_NUM=${ISSUE_URL##*/}
-                NEW_STATE="open"
+                # GitHub issue titles are capped at 256 characters; gh issue create
+                # 422s on anything longer, which - if unguarded - leaves ISSUE_NUM
+                # empty and, worse, made the jq --argjson append below error out and
+                # silently wipe the entire in-memory snapshot, corrupting matching
+                # for every remaining TODO.md line in the run (this is how 924 open
+                # issues became 1500+ in a single push: one oversized title early in
+                # the file broke state tracking for everything after it). Truncate
+                # defensively instead of letting gh issue create reject it outright.
+                CREATE_TITLE="$TITLE"
+                if [ "${#CREATE_TITLE}" -gt 256 ]; then
+                  CREATE_TITLE="${CREATE_TITLE:0:253}..."
+                fi
 
+                echo "Creating new issue for: $TITLE"
+                ISSUE_URL=$(gh issue create --title "$CREATE_TITLE" --body "Tracked in TODO.md by the AI Swarm pipeline.")
+                ISSUE_NUM=${ISSUE_URL##*/}
+
+                # Never trust a create that didn't return a real numeric issue ID -
+                # skip recording it rather than feed a non-numeric value into
+                # --argjson, which would corrupt ISSUES_JSON for the rest of the run.
+                if ! [[ "$ISSUE_NUM" =~ ^[0-9]+$ ]]; then
+                  echo "::warning::gh issue create did not return a valid issue number for: $TITLE (got '$ISSUE_URL') - skipping snapshot update for this item."
+                  continue
+                fi
+
+                NEW_STATE="open"
                 # If the task was already completed in TODO.md, close the newly created issue immediately
                 if [[ "$STATUS" == "x" || "$STATUS" == "X" || "$STATUS" == "STUCK" ]]; then
                   gh issue close "$ISSUE_NUM" -m "Completed in TODO.md"
@@ -80,7 +101,15 @@ jobs:
 
                 # Record it in the in-memory snapshot so a duplicate title later in
                 # this same TODO.md pass is matched instead of creating another copy.
-                ISSUES_JSON=$(echo "$ISSUES_JSON" | jq --arg t "$TITLE" --argjson n "$ISSUE_NUM" --arg s "$NEW_STATE" '. + [{number: $n, title: $t, state: $s}]')
+                # Use the original (untruncated) $TITLE here so later exact matches
+                # against TODO.md still work even though GitHub stored the
+                # truncated version.
+                UPDATED_JSON=$(echo "$ISSUES_JSON" | jq --arg t "$TITLE" --argjson n "$ISSUE_NUM" --arg s "$NEW_STATE" '. + [{number: $n, title: $t, state: $s}]')
+                if [ -n "$UPDATED_JSON" ]; then
+                  ISSUES_JSON="$UPDATED_JSON"
+                else
+                  echo "::warning::Failed to update in-memory issue snapshot after creating #$ISSUE_NUM - leaving snapshot unchanged rather than corrupting it."
+                fi
               else
                 # Issue exists, enforce state sync. The REST API (gh api) returns
                 # lowercase state values ("open"/"closed"), unlike `gh issue list
