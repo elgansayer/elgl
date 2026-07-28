@@ -648,7 +648,7 @@
 - [STUCK] Mentioning participants (@mentions).
 - [STUCK] Group descriptions and rules.
 - [STUCK] Join groups via invite links or QR codes.
-- [ ] Communities feature to organize related groups under one umbrella.
+- [STUCK] Communities feature to organize related groups under one umbrella.
 - [ ] Announcement groups for admins to broadcast messages.
 
 ### 5. Status & Stories
