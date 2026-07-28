@@ -638,7 +638,7 @@
 - [STUCK] Group calls with a specific participant limit.
 - [STUCK] Call waiting and switching between calls.
 - [STUCK] Picture-in-picture mode for video calls.
-- [ ] Screen sharing during video calls.
+- [STUCK] Screen sharing during video calls.
 - [ ] Call logs (missed, incoming, outgoing).
 
 ### 4. Group Chats & Communities
