@@ -639,7 +639,7 @@
 - [STUCK] Call waiting and switching between calls.
 - [STUCK] Picture-in-picture mode for video calls.
 - [STUCK] Screen sharing during video calls.
-- [ ] Call logs (missed, incoming, outgoing).
+- [STUCK] Call logs (missed, incoming, outgoing).
 
 ### 4. Group Chats & Communities
 
