@@ -50,4 +50,17 @@ jobs:
           git add .
           # Only commit and push if there are actual changes
           git commit -m "docs(wiki): auto-sync documentation from main repo" || echo "No changes to commit"
+
+          # actions/checkout leaves a valid-looking local .git dir even when the wiki
+          # remote itself doesn't exist yet - GitHub only provisions the wiki.git
+          # repository after a human creates the first page via the web UI (there is
+          # no git-only or API way to do this). Detect that case up front so a repo
+          # whose wiki was never initialised gets a clear one-time instruction
+          # instead of a failed job on every push.
+          if ! git ls-remote origin &> /dev/null; then
+            echo "Wiki repository does not exist on GitHub yet."
+            echo "One-time manual step required: visit https://github.com/${{ github.repository }}/wiki and click 'Create the first page', then this workflow will sync automatically on the next push."
+            exit 0
+          fi
+
           git push -u origin HEAD
