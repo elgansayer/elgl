@@ -96,7 +96,7 @@ jobs:
                 NEW_STATE="open"
                 # If the task was already completed in TODO.md, close the newly created issue immediately
                 if [[ "$STATUS" == "x" || "$STATUS" == "X" || "$STATUS" == "STUCK" ]]; then
-                  gh issue close "$ISSUE_NUM" -m "Completed in TODO.md"
+                  gh issue close "$ISSUE_NUM" --comment "Completed in TODO.md"
                   NEW_STATE="closed"
                 fi
 
@@ -118,7 +118,7 @@ jobs:
                 if [[ "$STATUS" == "x" || "$STATUS" == "X" || "$STATUS" == "STUCK" ]]; then
                   if [ "$ISSUE_STATE" == "open" ]; then
                     echo "Closing issue #$ISSUE_NUM ($TITLE)"
-                    gh issue close "$ISSUE_NUM" -m "This task was completed and verified autonomously by the AI Swarm pipeline."
+                    gh issue close "$ISSUE_NUM" --comment "This task was completed and verified autonomously by the AI Swarm pipeline."
                   fi
                 else
                   if [ "$ISSUE_STATE" == "closed" ]; then
