@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'TODO.md'
+  workflow_dispatch: {}
 
 permissions:
   issues: write
