@@ -76,10 +76,10 @@ export class MessageContextMenuComponent {
   copyMessage = output<ChatMessage>();
   favourite = output<ChatMessage>();
   report = output<ChatMessage>();
+  closed = output<void>();
 
   close() {
-    // Emit undefined to signal close
-    this.copyMessage.emit(undefined as unknown as ChatMessage);
+    this.closed.emit();
   }
 
   onCopy() {

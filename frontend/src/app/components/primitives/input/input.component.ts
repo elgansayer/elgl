@@ -50,8 +50,8 @@ export class AppInputComponent {
   });
 
   onInput(event: Event): void {
-    const target = event.target as HTMLInputElement | null;
-    if (target && !this.disabled()) {
+    const target = event.target;
+    if (target instanceof HTMLInputElement && !this.disabled()) {
       this.valueChange.emit(target.value);
     }
   }

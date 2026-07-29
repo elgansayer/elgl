@@ -26,6 +26,7 @@ export interface UserProfile {
   privacy_hide_from_search: boolean;
   gender?: string;
   privacy_hide_gender: boolean;
+  auto_play_voice_notes?: boolean;
   distance_metres?: number;
   is_admin?: boolean;
   created_at: string;
@@ -133,7 +134,7 @@ export class UserService {
         .patch<UserProfile>(`${this.baseUrl}/me`, update, { headers: this.getHeaders() })
         .pipe(
           catchError(() => {
-            const updated = { ...MOCK_USER_PROFILE, ...update } as UserProfile;
+            const updated: UserProfile = { ...MOCK_USER_PROFILE, ...update };
             return of(updated);
           }),
         ),

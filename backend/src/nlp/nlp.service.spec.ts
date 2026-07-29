@@ -388,7 +388,7 @@ describe('NlpService', () => {
       mockRedisClient.get.mockResolvedValueOnce(null);
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
+        json: () => ({
           translations: [{ text: 'App de Prueba' }],
         }),
       });
@@ -422,7 +422,7 @@ describe('NlpService', () => {
       mockRedisClient.get.mockResolvedValueOnce(null);
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
+        json: () => ({
           translations: [{ text: 'Willkommen' }, { text: 'Startseite' }],
         }),
       });
@@ -442,7 +442,7 @@ describe('NlpService', () => {
 
     it('should throw BadRequestException when DeepL API key is not configured', async () => {
       mockRedisClient.get.mockResolvedValueOnce(null);
-      (mockConfigService.get as jest.Mock).mockImplementation((key: string) => {
+      mockConfigService.get.mockImplementation((key: string) => {
         if (key === 'AZURE_TRANSLATOR_KEY') return 'mock-azure-key';
         if (key === 'AZURE_SPEECH_REGION') return 'mock-region';
         return null;
@@ -463,7 +463,7 @@ describe('NlpService', () => {
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 500,
-        text: async () => 'Internal Server Error',
+        text: () => 'Internal Server Error',
       });
 
       const dto = {
@@ -481,7 +481,7 @@ describe('NlpService', () => {
       mockRedisClient.set.mockRejectedValueOnce(new Error('Redis set fail'));
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
+        json: () => ({
           translations: [{ text: 'Clon de HelloTalk' }],
         }),
       });

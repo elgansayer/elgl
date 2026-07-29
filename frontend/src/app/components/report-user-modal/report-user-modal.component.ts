@@ -118,8 +118,8 @@ export class ReportUserModalComponent {
       this.isOpen.set(false);
       this.modalClosed.emit();
     } catch (err: unknown) {
-      const errorObj = err as { error?: { message?: string } };
-      this.errorMessage.set(errorObj?.error?.message || this.i18n.translate('report.toast_error'));
+      const message = err instanceof Error ? err.message : String(err);
+      this.errorMessage.set(message || this.i18n.translate('report.toast_error'));
     } finally {
       this.isSubmitting.set(false);
     }

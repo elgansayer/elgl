@@ -49,7 +49,7 @@ export class HobbyTagsStore {
         this.loading.set(false);
       },
       (err: unknown) => {
-        this.error.set((err as Error).message);
+        this.error.set(err instanceof Error ? err.message : String(err));
         this.loading.set(false);
       },
     );
@@ -63,7 +63,7 @@ export class HobbyTagsStore {
         this.loading.set(false);
       },
       (err: unknown) => {
-        this.error.set((err as Error).message);
+        this.error.set(err instanceof Error ? err.message : String(err));
         this.loading.set(false);
       },
     );
@@ -77,7 +77,7 @@ export class HobbyTagsStore {
         this.loading.set(false);
       },
       (err: unknown) => {
-        this.error.set((err as Error).message);
+        this.error.set(err instanceof Error ? err.message : String(err));
         this.loading.set(false);
       },
     );
@@ -91,7 +91,7 @@ export class HobbyTagsStore {
         this.loading.set(false);
       },
       (err: unknown) => {
-        this.error.set((err as Error).message);
+        this.error.set(err instanceof Error ? err.message : String(err));
         this.loading.set(false);
       },
     );
@@ -107,7 +107,7 @@ export class HobbyTagsStore {
         this.loading.set(false);
       },
       (err: unknown) => {
-        this.error.set((err as Error).message);
+        this.error.set(err instanceof Error ? err.message : String(err));
         this.loading.set(false);
       },
     );
@@ -121,7 +121,7 @@ export class HobbyTagsStore {
         this.loading.set(false);
       },
       (err: unknown) => {
-        this.error.set((err as Error).message);
+        this.error.set(err instanceof Error ? err.message : String(err));
         this.loading.set(false);
       },
     );

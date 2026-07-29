@@ -52,6 +52,12 @@ function makeRoom() {
 async function mockChatApi(page: Page) {
   const room = makeRoom();
 
+  // Playwright matches routes in reverse registration order (most recently
+  // added wins), so the catch-all must be registered first - otherwise it
+  // shadows every specific mock below and hands back `{}` for endpoints
+  // that must return arrays (e.g. rooms.find() crashes on a bare object).
+  await page.route(`${API}/**`, (route) => route.fulfill({ status: 200, json: {} }));
+
   await page.route(`${API}/chat/rooms`, (route) => route.fulfill({ json: [room] }));
   await page.route(`${API}/chat/rooms/${ROOM_ID}`, (route) => route.fulfill({ json: room }));
   await page.route(`${API}/chat/messages/${ROOM_ID}*`, (route) => route.fulfill({ json: [] }));
@@ -82,9 +88,6 @@ async function mockChatApi(page: Page) {
   await page.route(`${API}/chat/groups/${ROOM_ID}/members/*`, (route) =>
     route.fulfill({ json: {} }),
   );
-
-  // Catch-all so no unmocked request ever reaches a real backend.
-  await page.route(`${API}/**`, (route) => route.fulfill({ status: 200, json: {} }));
 
   return { addMemberRequests };
 }

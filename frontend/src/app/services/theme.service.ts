@@ -2,6 +2,10 @@ import { Injectable, signal, effect } from '@angular/core';
 
 export type Theme = 'light' | 'dark' | 'system';
 
+function isTheme(value: unknown): value is Theme {
+  return typeof value === 'string' && ['light', 'dark', 'system'].includes(value);
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -27,8 +31,8 @@ export class ThemeService {
 
   private initTheme(): void {
     if (typeof localStorage !== 'undefined') {
-      const savedTheme = localStorage.getItem('app_theme') as Theme;
-      if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
+      const savedTheme = localStorage.getItem('app_theme');
+      if (isTheme(savedTheme)) {
         this.currentTheme.set(savedTheme);
       }
     }

@@ -60,8 +60,8 @@ export class ProfileComponent implements OnInit {
         this.bioText = data.bio_text || '';
       }
     } catch (e: unknown) {
-      const err = e as { message?: string };
-      this.errorMessage.set(err.message || this.i18n.translate('profile.loadError'));
+      const message = e instanceof Error ? e.message : String(e);
+      this.errorMessage.set(message || this.i18n.translate('profile.loadError'));
     } finally {
       this.isLoading.set(false);
     }

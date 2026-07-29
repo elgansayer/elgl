@@ -450,8 +450,7 @@ export class ChatRoomComponent implements OnDestroy {
   async playNextVoiceNote(currentMessageId: string): Promise<void> {
     try {
       const profile = await this.userService.getMyProfile();
-      if (!profile || !(profile as { auto_play_voice_notes?: boolean }).auto_play_voice_notes)
-        return;
+      if (!profile || !profile.auto_play_voice_notes) return;
 
       const msgs = this.messages();
       const currentIndex = msgs.findIndex((m) => m.id === currentMessageId);

@@ -70,8 +70,9 @@ export class AppChipComponent {
     this.clicked.emit(event);
   }
 
-  onClickKey(event: Event): void {
-    this.clicked.emit(event as unknown as MouseEvent);
+  onClickKey(_event: Event): void {
+    const syntheticEvent = new MouseEvent('click');
+    this.clicked.emit(syntheticEvent);
   }
 
   onRemove(event: MouseEvent): void {

@@ -7,10 +7,11 @@
 #   3. Installs Node.js 22 LTS via NVM
 #   4. Installs npm deps across root/backend/frontend
 #   5. Installs Aider (AI coding agent)
-#   6. Sets up the watchdog cron job
+#   6. Sets up the watchdog cron job (Telegram alerts only)
 #   7. Configures sudo askpass for non-interactive apt installs
 #
 # Usage: ./setup-debian.sh
+# Notifications: Telegram only. Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env.
 set -eo pipefail
 
 echo "=========================================="
@@ -133,7 +134,8 @@ echo "   Aider: $(aider --version 2>/dev/null || echo 'installed')"
 echo "   Swap: $(free -h | grep Swap)"
 echo ""
 echo " Next steps:"
-echo "   1. Set DEEPSEEK_API_KEY in .env"
-echo "   2. (Optional) Set SWARM_SUDO_PW in .env or create ~/.swarm_sudo"
-echo "   3. Run ./kickoff.sh to start the 24/7 swarm"
+echo "   1. Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env"
+echo "   2. Set DEEPSEEK_API_KEY in .env"
+echo "   3. (Optional) Set SWARM_SUDO_PW in .env or create ~/.swarm_sudo"
+echo "   4. Run ./kickoff.sh to start the 24/7 swarm"
 echo "=========================================="

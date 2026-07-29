@@ -46,12 +46,8 @@ export class SettingsComponent implements OnInit {
         this.privacyHideLocation = Boolean(profile.privacy_hide_location);
         this.privacyHideSearch = Boolean(profile.privacy_hide_from_search);
         this.privacyHideAge = Boolean(profile.privacy_hide_age);
-        this.privacyHideGender = Boolean(
-          (profile as unknown as Record<string, unknown>)['privacy_hide_gender'],
-        );
-        this.autoPlayVoiceNotes = Boolean(
-          (profile as unknown as Record<string, unknown>)['auto_play_voice_notes'],
-        );
+        this.privacyHideGender = Boolean(profile.privacy_hide_gender);
+        this.autoPlayVoiceNotes = Boolean(profile.auto_play_voice_notes);
       }
     } catch {
       this.errorMessage.set('Failed to load settings');
@@ -82,8 +78,8 @@ export class SettingsComponent implements OnInit {
         privacy_hide_age: this.privacyHideAge,
         privacy_hide_gender: this.privacyHideGender,
         auto_play_voice_notes: this.autoPlayVoiceNotes,
-        primary_accent_color: this.primaryAccentColor(),
-      } as unknown as Record<string, unknown>);
+        primary_accent_color: this.primaryAccentColor() ?? undefined,
+      });
       this.successMessage.set('Settings saved successfully');
     } catch {
       this.errorMessage.set('Failed to save settings');

@@ -208,9 +208,9 @@ export class EconomyStore {
       return true;
     } catch (e: unknown) {
       console.error('Send gift error:', e);
-      const err = e as { error?: { message?: string } };
+      const message = e instanceof Error ? e.message : String(e);
       showToast(
-        err?.error?.message ||
+        message ||
           'Failed to send virtual gift. Ensure you have sufficient coin balance.',
       );
       return false;
@@ -307,9 +307,9 @@ export class EconomyStore {
       return res.api_key;
     } catch (e: unknown) {
       console.error('Generate API key error:', e);
-      const err = e as { error?: { message?: string } };
+      const message = e instanceof Error ? e.message : String(e);
       showToast(
-        err?.error?.message ||
+        message ||
           'Failed to generate API key. Requires Developer Tier subscription (20 UKP / $26 USD per month).',
       );
       return null;

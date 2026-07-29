@@ -48,10 +48,18 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    command: 'cd ../frontend && npm run start',
-    url: 'http://localhost:4200',
-    reuseExistingServer: !process.env.CI,
-    timeout: 300000,
-  },
+  webServer: [
+    {
+      command: 'cd ../backend && npm run start:dev',
+      url: 'http://localhost:3000/api/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+    },
+    {
+      command: 'cd ../frontend && npm run start',
+      url: 'http://localhost:4200',
+      reuseExistingServer: !process.env.CI,
+      timeout: 300000,
+    },
+  ],
 });

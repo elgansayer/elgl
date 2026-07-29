@@ -49,8 +49,8 @@ export class UserDetailComponent {
         this.errorMessage.set(this.i18n.translate('userProfile.notFound'));
       }
     } catch (e: unknown) {
-      const err = e as { message?: string };
-      this.errorMessage.set(err.message || this.i18n.translate('userProfile.loadError'));
+      const message = e instanceof Error ? e.message : String(e);
+      this.errorMessage.set(message || this.i18n.translate('userProfile.loadError'));
     } finally {
       this.isLoading.set(false);
     }

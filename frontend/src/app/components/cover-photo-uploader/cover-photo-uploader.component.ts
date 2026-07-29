@@ -211,21 +211,25 @@ export class CoverPhotoUploaderComponent {
   private activeHandle: string | null = null;
 
   onFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (!input.files?.length) return;
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || !input.files?.length) return;
 
     const file = input.files[0];
     const reader = new FileReader();
     reader.onload = (e) => {
-      this.imageSource.set(e.target?.result as string);
-      this.isCropping.set(false);
-      this.croppedPreviewUrl.set(null);
+      const result = e.target?.result;
+      if (typeof result === 'string') {
+        this.imageSource.set(result);
+        this.isCropping.set(false);
+        this.croppedPreviewUrl.set(null);
+      }
     };
     reader.readAsDataURL(file);
   }
 
   onImageLoad(event: Event): void {
-    const img = event.target as HTMLImageElement;
+    const img = event.target;
+    if (!(img instanceof HTMLImageElement)) return;
     this.originalImage = img;
     this.imageWidth.set(img.naturalWidth);
     this.imageHeight.set(img.naturalHeight);

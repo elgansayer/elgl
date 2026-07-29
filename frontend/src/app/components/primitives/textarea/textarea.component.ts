@@ -50,8 +50,8 @@ export class AppTextareaComponent {
   });
 
   onInput(event: Event): void {
-    const target = event.target as HTMLTextAreaElement | null;
-    if (target && !this.disabled()) {
+    const target = event.target;
+    if (target instanceof HTMLTextAreaElement && !this.disabled()) {
       this.valueChange.emit(target.value);
     }
   }

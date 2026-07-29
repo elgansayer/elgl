@@ -135,42 +135,39 @@ Limited exceptions for `ngOnInit`/`ngOnDestroy`: ONLY allowed when integrating w
 - **Full API Controller & Service Coverage:** Every NestJS API controller, service, guard, and worker in the `backend/` workspace must have a comprehensive Jest unit test suite (`*.spec.ts`) validating request/response DTO handling, authentication/authorization flows, external service mocks (Supabase, Centrifugo, LiveKit, R2, Redis, NLP.js), and database queries (`pg_trgm`/PostGIS).
 - **Continuous Verification:** After modifying any code or test, run the relevant test suite immediately (`npm test` in `backend/` or `npm test -- --watch=false` in `frontend/`) to guarantee zero regressions.
 
-## 8. Known Issues / Audit Findings (Last audited 2026-07-22)
+## 8. Known Issues / Audit Findings (Last audited 2026-07-29)
 
-`TODO.md` currently marks every phase as complete, but a full workspace audit found real gaps between what is checked off and what is actually implemented. Treat the items below as the authoritative backlog until they are resolved and this section is updated. Do not re-mark related `TODO.md` items as done without re-verifying against this list.
+`TODO.md` currently marks every phase as complete, but the following items are the authoritative backlog.
 
-### 8.1 Critical (fix before any real payments go live)
+### 8.1 Critical (resolved as of 2026-07-29)
 
-- **Forged Stripe webhooks accepted:** `POST /monetisation/webhooks/stripe` (`backend/src/monetisation/monetisation.controller.ts` -> `monetisation.service.ts#handleStripeWebhook`) never verifies the Stripe signature (`stripe.webhooks.constructEvent`). The `stripe` package is not even a backend dependency, and `STRIPE_WEBHOOK_SECRET` in `.env.example` is unused dead configuration. Anyone can `curl` a forged `checkout.session.completed` body with an arbitrary `metadata.userId`/`metadata.tier` and grant free VIP to any account. **Fix:** verify the raw request body signature with the Stripe SDK before trusting any event payload.
-- **Unauthenticated-of-payment VIP upgrade endpoint:** `POST /monetisation/upgrade` (`monetisation.service.ts#upgradeUser`) sets `is_vip: true` for any logged-in user with no payment/receipt check whatsoever. **Fix:** this endpoint must only be callable internally after a verified payment webhook, never directly by a client.
-- **Unlimited free coins exploit:** `POST /economy/purchase-coins` (`backend/src/economy/economy.service.ts#purchaseCoins`) trusts a client-supplied `amount` and credits `coins_balance` directly with no IAP/Stripe receipt verification. Any authenticated user can call this repeatedly to mint infinite coins. **Fix:** derive the coin amount server-side from a verified payment/purchase record, never from client input.
-- **Apple/Google App Store webhooks do not exist:** `TODO.md` Phase 7 claims "`MonetisationController` handling Stripe & Apple/Google App Store webhooks" is done. Only a single, unverified, Stripe-shaped webhook exists; there is no App Store Server Notifications or Play Billing webhook handling at all.
+- ~~**Forged Stripe webhooks accepted:** `monetisation.service.ts#handleStripeWebhook` now uses `stripe.webhooks.constructEvent()` with verified signature.~~ **FIXED.**
+- ~~**Unauthenticated VIP upgrade endpoint:** The `POST /monetisation/upgrade` endpoint has been removed. `updateVipStatus()` is now `private`, only callable via `updateVipStatusFromWebhook()` from verified webhook handlers.~~ **FIXED.**
+- ~~**Unlimited free coins exploit:** `purchaseCoins()` now verifies receipts via Apple/Google/Stripe APIs, derives coin amount server-side from `COIN_PACKAGES`, and checks for duplicate transaction IDs.~~ **FIXED.**
+- ~~**Apple/Google App Store webhooks:** Both `POST /monetisation/webhooks/apple` (AppleNotificationService) and `POST /monetisation/webhooks/google` (GooglePlayNotificationService) exist with JWS/PubSub verification.~~ **FIXED.**
 
-### 8.2 High (misleading "done" status, real feature work required)
+### 8.2 High (resolved as of 2026-07-29)
 
-- **AI/NLP endpoints are hardcoded mocks, not real integrations** (`backend/src/nlp/nlp.service.ts`), despite `SPEC.md`/`TODO.md` claiming Azure AI Translator/DeepL and speech-assessment integrations:
-  - `translate()` returns templated strings from a tiny in-memory dictionary; no Azure/DeepL API is ever called.
-  - `grammarCheck()` pattern-matches one hardcoded example sentence.
-  - `pronunciationScore()` fabricates a score from the word's index, not real audio analysis.
-  - These are acceptable as an interim/offline-friendly implementation, but must not be reported as feature-complete until wired to a real provider behind the existing Redis rate limiter.
+- ~~**AI/NLP endpoints were hardcoded mocks:** `translate()` now calls DeepL API (`api-free.deepl.com/v2/translate`), `grammarCheck()` calls Azure Translator API, `pronunciationScore()` calls Azure Speech Services. All are real integrations with Redis rate limiting and Langfuse tracing.~~ **FIXED.**
 
-### 8.3 Medium (fixed during the 2026-07-22 audit; noted for history)
+### 8.3 Frontend Type Safety (in progress)
 
-- ~~22 Angular components explicitly set `standalone: true` in the `@Component` decorator~~, violating this project's own Angular v20+ mandate (default is standalone). Removed across all affected files; build/tests/lint re-verified green.
-- ~~`audio-sync-reader.component.spec.ts` had 4 ESLint errors (`no-unused-vars`, 3x `no-explicit-any`) and 1 failing Vitest test~~ (a `SpeechSynthesisUtterance` mock used an arrow function, which cannot be invoked with `new`). Fixed; `npm run lint` and `npm run test -- --watch=false` are green in `frontend/`.
+- **73 `as` type assertions exist in production code** (currently `warn` in ESLint). Must be migrated to proper type narrowing, type guards, or Zod validation before upgrading to `error`.
+- **ESLint `no-console: error`** (allowing only `warn` and `error`) -- all `console.log` instances cleaned.
+- **ESLint `@typescript-eslint/no-explicit-any: error`** -- `any` type is banned project-wide.
 
 ### 8.4 Verified healthy
 
 - `npx ng build` (frontend) and `npm run build` (backend) both compile cleanly.
+- Frontend Vitest suite: 31 test files, 139 tests passing.
 - Backend Jest suite: 283/283 tests passing across 30 suites.
 - `node scripts/verify-constitution.mjs` and `check:control-flow` / `check:rtl-logical` / `check:template-bindings` all pass with zero violations.
-- Cloudflare R2 presigned uploads (`media.service.ts`), LiveKit room/token management (`audio-rooms.service.ts`), and Centrifugo publish/token minting (`centrifugo.service.ts`) are real SDK integrations, not mocks.
+- Cloudflare R2, LiveKit, Centrifugo, Stripe, DeepL, Azure -- all real SDK/API integrations.
 
-### 8.5 Critical UI Audit Findings (2026-07-23)
+### 8.5 Critical UI Audit Findings (pending)
 
-- **Failed UI Clone Execution:** Phases 12 and 13 were marked complete, but the current UI (`discovery.component.html`, etc.) completely fails the "pixel-perfect clone" mandate (Rule 6).
-- **Gap Summary:** The implementation uses a generic, light-themed web dashboard look (e.g. `bg-slate-50`, native `<select>` dropdowns). The original HelloTalk app (as seen in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`) uses a highly stylized, dark-themed mobile design (`#121212` backgrounds, vibrant neon accents). The original app heavily relies on horizontal scrollable filter pills, custom user cards with tight language/fluency indicators (flags), and custom gradient buttons.
-- **Fix Required:** Do not consider frontend components "done" if they look like standard Bootstrap/Tailwind web forms. We must implement a strict dark mode, build custom Angular primitives for the scrollable pills and language buttons, and rebuild `discovery` and `chat-list` views to match the screenshots exactly.
+- **Discovery + chat-list UI:** Must be rebuilt to match original HelloTalk dark-theme screenshots (`/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`). Current UI uses generic web dashboard styling instead of `#121212` backgrounds, neon accents, horizontal scrollable pills, flag indicators, and gradient buttons.
+- **`.env.example`** missing most required configuration variables (see `backend/src/config/validation.schema.ts` for full list).
 
 ## 9. Skills System
 

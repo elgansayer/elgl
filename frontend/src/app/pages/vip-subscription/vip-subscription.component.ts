@@ -7,6 +7,8 @@ import {
 import { AppButtonPrimaryComponent } from '../../components/primitives/button-primary/button-primary.component';
 import { AppGradientButtonComponent } from '../../components/primitives/gradient-button/gradient-button.component';
 
+const EMPTY_PLANS: SubscriptionPlan[] = [];
+
 @Component({
   selector: 'app-vip-subscription',
   imports: [RouterLink, AppButtonPrimaryComponent, AppGradientButtonComponent],
@@ -40,12 +42,12 @@ export class VipSubscriptionComponent {
       } catch (err) {
         console.error('Failed to load subscription plans:', err);
         this.error.set('Failed to load subscription plans. Please try again later.');
-        return [] as SubscriptionPlan[];
+        return EMPTY_PLANS;
       } finally {
         this.loading.set(false);
       }
     },
-    defaultValue: [] as SubscriptionPlan[],
+    defaultValue: EMPTY_PLANS,
   });
 
   loadPlans(): void {

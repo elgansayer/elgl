@@ -200,9 +200,9 @@ export class MomentsStore {
       });
     } catch (e: unknown) {
       console.error('Failed to pin moment:', e);
-      const err = e as { error?: { message?: string } };
+      const message = e instanceof Error ? e.message : String(e);
       showToast(
-        err?.error?.message ||
+        message ||
           'Error pinning Moment. Ensure you have an active VIP subscription (8 UKP / $10 USD).',
       );
     }

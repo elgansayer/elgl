@@ -90,6 +90,7 @@ archive_completed_todos() {
 }
 
 while true; do
+    mkdir -p /tmp/ai_swarm_watchdog 2>/dev/null || true
     touch /tmp/ai_swarm_watchdog/heartbeat 2>/dev/null || true
     archive_completed_todos
     echo "========================================"

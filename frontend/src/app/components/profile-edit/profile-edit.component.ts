@@ -127,7 +127,8 @@ export class ProfileEditComponent {
   }
 
   onFileSelected(event: Event) {
-    const input = event.target as HTMLInputElement;
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) return;
     const file = input.files?.[0];
     if (file) {
       this.selectedFile.set(file);

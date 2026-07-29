@@ -10,7 +10,7 @@ test.describe('Chat UI Stress and Edge Case Tests', () => {
     page,
   }) => {
     // Adjust selectors based on your actual Angular component templates
-    const chatInput = page.locator('textarea, input[type="text"]').first();
+    const chatInput = page.locator('[data-testid="chat-message-input"]');
     const sendButton = page
       .locator('button[aria-label="Send"], [data-testid="send-button"]')
       .first();
@@ -29,7 +29,7 @@ test.describe('Chat UI Stress and Edge Case Tests', () => {
   });
 
   test('should handle extremely long text payloads gracefully', async ({ page }) => {
-    const chatInput = page.locator('textarea, input[type="text"]').first();
+    const chatInput = page.locator('[data-testid="chat-message-input"]');
     const sendButton = page
       .locator('button[aria-label="Send"], [data-testid="send-button"]')
       .first();
@@ -48,7 +48,7 @@ test.describe('Chat UI Stress and Edge Case Tests', () => {
 
   test('should handle rapid toggling of the long-press context menu', async ({ page }) => {
     // Ensure at least one message exists to interact with
-    const chatInput = page.locator('textarea, input[type="text"]').first();
+    const chatInput = page.locator('[data-testid="chat-message-input"]');
     const sendButton = page
       .locator('button[aria-label="Send"], [data-testid="send-button"]')
       .first();

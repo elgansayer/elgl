@@ -9,6 +9,8 @@ import {
   SubscriptionPlansService,
   SubscriptionPlan,
 } from '../../services/subscription-plans.service';
+
+const EMPTY_PLANS: SubscriptionPlan[] = [];
 @Component({
   selector: 'app-subscription-page',
   imports: [
@@ -134,12 +136,12 @@ export class SubscriptionPageComponent {
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unable to load subscription plans.';
         this.errorMessage.set(message);
-        return [] as SubscriptionPlan[];
+        return EMPTY_PLANS;
       } finally {
         this.isLoading.set(false);
       }
     },
-    defaultValue: [] as SubscriptionPlan[],
+    defaultValue: EMPTY_PLANS,
   });
 
   loadPlans(): void {

@@ -21,8 +21,8 @@ export class AudioCompressionService {
       const arrayBuffer = await audioBlob.arrayBuffer();
 
       // 2. Decode Audio Data
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const win = window as unknown as { webkitAudioContext?: typeof AudioContext };
+      const AudioContextClass = window.AudioContext ?? win.webkitAudioContext;
       const audioContext = new AudioContextClass();
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 

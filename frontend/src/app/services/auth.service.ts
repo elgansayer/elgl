@@ -49,10 +49,15 @@ export class AuthService {
     });
   }
 
+  private toAppUser(user: User | null): AppUser | null {
+    if (!user) return null;
+    return { ...user };
+  }
+
   private updateAuthState(session: Session | null): void {
     this.currentSession.set(session);
     if (session) {
-      this.currentUser.set(session.user as AppUser);
+      this.currentUser.set(this.toAppUser(session.user)!);
     }
   }
 
@@ -64,7 +69,7 @@ export class AuthService {
     if (data.session) {
       this.updateAuthState(data.session);
     }
-    return { user: (data.user as AppUser) || null, error };
+    return { user: this.toAppUser(data.user), error };
   }
 
   async signUpWithEmail(
@@ -75,7 +80,7 @@ export class AuthService {
     if (data.session) {
       this.updateAuthState(data.session);
     }
-    return { user: (data.user as AppUser) || null, error };
+    return { user: this.toAppUser(data.user), error };
   }
 
   async signInWithGoogle(): Promise<{ error: AuthError | null }> {

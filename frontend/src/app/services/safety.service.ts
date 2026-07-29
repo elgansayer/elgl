@@ -166,7 +166,9 @@ export class SafetyService {
 
   async getBlockedUserIds(userId: string): Promise<string[]> {
     try {
-      return firstValueFrom(this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids/${userId}`));
+      return await firstValueFrom(
+        this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids/${userId}`),
+      );
     } catch (e) {
       console.error('Failed to get blocked user IDs:', e);
       return [];
@@ -175,7 +177,9 @@ export class SafetyService {
 
   async getBlockerUserIds(userId: string): Promise<string[]> {
     try {
-      return firstValueFrom(this.http.get<string[]>(`${this.apiUrl}/safety/blocker-ids/${userId}`));
+      return await firstValueFrom(
+        this.http.get<string[]>(`${this.apiUrl}/safety/blocker-ids/${userId}`),
+      );
     } catch (e) {
       console.error('Failed to get blocker user IDs:', e);
       return [];
@@ -184,7 +188,7 @@ export class SafetyService {
 
   async getBlockedAndBlockerIds(userId: string): Promise<string[]> {
     try {
-      return firstValueFrom(
+      return await firstValueFrom(
         this.http.get<string[]>(`${this.apiUrl}/safety/blocked-and-blocker-ids/${userId}`),
       );
     } catch (e) {
@@ -199,7 +203,7 @@ export class SafetyService {
       return { blocked: true };
     }
     try {
-      return firstValueFrom(
+      return await firstValueFrom(
         this.http.get<{ blocked: boolean }>(`${this.apiUrl}/safety/is-blocked/${userId}`),
       );
     } catch (e) {

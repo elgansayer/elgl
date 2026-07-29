@@ -122,8 +122,9 @@
           (block)="onBlockToggle($event)"
         >
           <div
+            data-testid="chat-message"
             [class]="
-              'flex gap-2 ' +
+              'chat-message flex gap-2 ' +
               (msg.sender_id === authService.currentUser()?.id ? 'justify-end' : 'justify-start')
             "
           >
@@ -317,12 +318,18 @@
     <div class="flex items-center gap-2">
       <input
         type="text"
+        data-testid="chat-message-input"
         [(ngModel)]="textInput"
         (keyup.enter)="sendTextMessage()"
         [placeholder]="'chatRoom.typePlaceholder' | t"
         class="app-input flex-1 pt-3 pb-3"
       />
-      <button (click)="sendTextMessage()" class="app-button-primary ps-5 pe-5 pt-3 pb-3 text-sm">
+      <button
+        (click)="sendTextMessage()"
+        [attr.aria-label]="'chatRoom.sendBtn' | t"
+        data-testid="send-button"
+        class="app-button-primary ps-5 pe-5 pt-3 pb-3 text-sm"
+      >
         {{ 'chatRoom.sendBtn' | t }}
       </button>
     </div>

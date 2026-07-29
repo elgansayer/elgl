@@ -56,7 +56,9 @@ export class DiscoveryService {
     // Filter out blocked users client-side
     const currentUser = this.authService.currentUser();
     if (currentUser?.id) {
-      const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
+      const blockedIds = await this.safetyService
+        .getBlockedAndBlockerIds(currentUser.id)
+        .catch((): string[] => []);
       if (blockedIds.length > 0) {
         return users.filter((user) => !blockedIds.includes(user.id));
       }
