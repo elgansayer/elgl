@@ -3,7 +3,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
-import { MediaService } from '../media/media.service';
+import { MediaModule } from '../media/media.module';
 import { StreakResetCron } from './cron/streak-reset.cron';
 import { AccountDeletionCron } from './cron/account-deletion.cron';
 import { LastActiveInterceptor } from './interceptors/last-active.interceptor';
@@ -12,11 +12,15 @@ import { SupabaseModule } from '../supabase/supabase.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [ScheduleModule.forRoot(), SupabaseModule, NotificationsModule],
+  imports: [
+    ScheduleModule.forRoot(),
+    SupabaseModule,
+    NotificationsModule,
+    MediaModule,
+  ],
   controllers: [UsersController],
   providers: [
     UsersService,
-    MediaService,
     StreakResetCron,
     AccountDeletionCron,
     {

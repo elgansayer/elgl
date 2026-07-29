@@ -51,6 +51,7 @@ export class MonetisationService {
     @Inject(forwardRef(() => GooglePlayNotificationService))
     private readonly googlePlayNotificationService: GooglePlayNotificationService,
     private readonly subscriptionPlansService: SubscriptionPlansService,
+    @Inject(forwardRef(() => AppleReceiptValidatorService))
     private readonly appleReceiptValidatorService: AppleReceiptValidatorService,
   ) {
     this.stripe = new Stripe(

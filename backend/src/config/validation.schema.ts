@@ -42,5 +42,11 @@ export const validationSchema = Joi.object({
   // RTDN webhooks, used to verify the OIDC bearer token Google attaches to
   // every push request (see GooglePlayNotificationService#verifyPubSubAuthorization).
   GOOGLE_PUBSUB_AUDIENCE: Joi.string().uri().required(),
-  GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL: Joi.string().email().required(),
+  // tlds disabled: this is matched as a literal string against an OIDC claim
+  // (see GooglePlayNotificationService#verifyPubSubAuthorization), never used
+  // for delivery, so dev/test placeholder domains (e.g. `*.test`) must be
+  // allowed without tripping Joi's ICANN TLD allow-list.
+  GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL: Joi.string()
+    .email({ tlds: { allow: false } })
+    .required(),
 });
