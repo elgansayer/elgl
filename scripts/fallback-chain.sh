@@ -1,7 +1,7 @@
 #!/bin/bash
 # fallback-chain.sh - Shared multi-tool CLI fallback chain
 #
-# Provides run_copilot_cli(), run_antigravity_cli(), run_aider(), run_deepseek_api() and
+# Provides run_claude_code(), run_antigravity_cli(), run_aider(), run_deepseek_api() and
 # run_task_with_fallback() used by loop.sh and qa-loop.sh. Previously each script
 # carried its own copy of these functions, which let the two definitions drift.
 #
@@ -11,9 +11,8 @@
 # non-zero exit; it is not the only one, so it must not be the only thing that
 # triggers fallthrough). Only exhausting every tool in the chain is a hard failure.
 #
-# Advisory tools (Copilot, Antigravity, raw DeepSeek) always return 1 so they never
-# stop the chain. They produce debug output but cannot edit files. Only Claude Code
-# and Aider can actually write code and return 0 to satisfy the chain.
+# DeepSeek API is the only advisory-only tool (always returns 1, for debug output).
+# Claude, Antigravity (Gemini), and Aider (DeepSeek) can write code and return 0.
 
 FALLBACK_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 
@@ -28,26 +27,6 @@ git_locked() {
 # AI APIs simultaneously (credit burn). Uses file-lock via mkdir (atomic).
 # shellcheck source=scripts/rate-limiter.sh
 source "$FALLBACK_DIR/rate-limiter.sh"
-
-# Advisory only: always returns 1. Produces text suggestions but cannot edit files.
-run_copilot_cli() {
-    local MESSAGE="$1"
-
-    if ! command -v gh &> /dev/null; then
-        echo "GitHub CLI (gh) not found - advisory skip."
-        return 1
-    fi
-
-    if ! gh copilot --help &> /dev/null 2>&1; then
-        echo "GitHub Copilot CLI not available - advisory skip."
-        return 1
-    fi
-
-    echo "Running GitHub Copilot CLI (advisory, will fall through)..."
-    gh copilot suggest "$MESSAGE" 2>&1 || true
-    echo "Copilot advisory run complete. Falling through to next tool."
-    return 1
-}
 
 # Returns 0 if Antigravity produced real file changes, 1 otherwise.
 run_antigravity_cli() {
@@ -184,7 +163,7 @@ run_deepseek_api() {
 # Entry point every pipeline stage should call.
 # Usage: run_task_with_fallback "message" ["additional context or files"]
 # Tries tools in order: Claude CLI -> Antigravity (Gemini) -> Aider (DeepSeek)
-# Copilot and raw DeepSeek are advisory-only (always fall through).
+# DeepSeek API is advisory-only (always falls through, for debugging).
 # Claude, Antigravity, and Aider can write code files.
 # Returns 0 as soon as any code-writing tool succeeds, or 2 once every
 # tool in the chain has been exhausted.
@@ -208,12 +187,10 @@ run_task_with_fallback() {
     fi
     echo "Antigravity unavailable or no changes. Falling through."
 
-    echo "--- GitHub Copilot CLI (advisory) ---"
-    run_copilot_cli "$FULL_MESSAGE"
     echo "--- DeepSeek API (advisory) ---"
     run_deepseek_api "$FULL_MESSAGE"
 
-    echo "All advisory tools complete. Attempting Aider for real code changes..."
+    echo "Advisory tools complete. Attempting Aider for real code changes..."
     run_aider "$FULL_MESSAGE"
     if [ $? -eq 0 ]; then
         return 0
