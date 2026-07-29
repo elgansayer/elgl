@@ -7,11 +7,11 @@
 #   3. Installs Node.js 22 LTS via NVM
 #   4. Installs npm deps across root/backend/frontend
 #   5. Installs Aider (AI coding agent)
-#   6. Sets up the watchdog cron job (Telegram alerts only)
+#   6. Sets up the watchdog (cron + systemd timer)
 #   7. Configures sudo askpass for non-interactive apt installs
+#   8. Installs logrotate config for swarm logs
 #
 # Usage: ./setup-debian.sh
-# Notifications: Telegram only. Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env.
 set -eo pipefail
 
 echo "=========================================="
@@ -98,7 +98,7 @@ if ! command -v aider &> /dev/null; then
 fi
 
 # ---- 6. Sudo askpass (optional) ----
-echo "[6/7] Configuring sudo askpass helper..."
+echo "[6/8] Configuring sudo askpass helper..."
 mkdir -p "$SCRIPT_DIR/scripts"
 if [ ! -f "$SCRIPT_DIR/scripts/sudo-askpass.sh" ]; then
     cat > "$SCRIPT_DIR/scripts/sudo-askpass.sh" << 'ASKPASS_EOF'
@@ -114,14 +114,48 @@ ASKPASS_EOF
 fi
 echo "   Set SWARM_SUDO_PW in .env or create ~/.swarm_sudo (chmod 600) for non-interactive sudo."
 
-# ---- 7. Watchdog cron ----
-echo "[7/7] Installing watchdog cron job..."
+# ---- 7. Watchdog (cron + systemd timer) ----
+echo "[7/8] Installing watchdog (cron + systemd)..."
+# Cron fallback (compatible with all Linux distros)
 WATCHDOG_CRON="*/5 * * * * cd $SCRIPT_DIR && ./scripts/watchdog.sh >> /tmp/watchdog.log 2>&1"
 if ! crontab -l 2>/dev/null | grep -q "watchdog.sh"; then
     (crontab -l 2>/dev/null; echo "$WATCHDOG_CRON") | crontab -
     echo "   Watchdog cron installed (every 5 min)."
 else
     echo "   Watchdog cron already installed."
+fi
+
+# Systemd timer (more robust: survives cron daemon crashes, has OnFailure hooks)
+if command -v systemctl &> /dev/null && [ -d /etc/systemd/system ]; then
+    if [ ! -f /etc/systemd/system/swarm-watchdog.service ]; then
+        sudo cp "$SCRIPT_DIR/config/systemd/swarm-watchdog.service" /etc/systemd/system/
+        sudo cp "$SCRIPT_DIR/config/systemd/swarm-watchdog.timer" /etc/systemd/system/
+        # Adjust User in service file to current user
+        sudo sed -i "s|User=%u|User=$(whoami)|g" /etc/systemd/system/swarm-watchdog.service
+        sudo sed -i "s|WorkingDirectory=/home/dev/hellotalk|WorkingDirectory=$SCRIPT_DIR|g" /etc/systemd/system/swarm-watchdog.service
+        sudo sed -i "s|ExecStart=/home/dev/hellotalk/scripts/watchdog.sh|ExecStart=$SCRIPT_DIR/scripts/watchdog.sh|g" /etc/systemd/system/swarm-watchdog.service
+        sudo sed -i "s|ReadWritePaths=/home/dev/hellotalk|ReadWritePaths=$SCRIPT_DIR|g" /etc/systemd/system/swarm-watchdog.service
+        sudo systemctl daemon-reload
+        sudo systemctl enable --now swarm-watchdog.timer
+        echo "   Systemd watchdog timer installed and started."
+    else
+        echo "   Systemd watchdog timer already installed."
+    fi
+else
+    echo "   Systemd not available - using cron only."
+fi
+
+# ---- 8. Logrotate ----
+echo "[8/8] Installing logrotate config..."
+if command -v logrotate &> /dev/null && [ -d /etc/logrotate.d ]; then
+    if [ ! -f /etc/logrotate.d/ai-swarm ]; then
+        sudo cp "$SCRIPT_DIR/config/logrotate/ai-swarm" /etc/logrotate.d/ai-swarm
+        echo "   Logrotate config installed for swarm logs."
+    else
+        echo "   Logrotate config already installed."
+    fi
+else
+    echo "   logrotate not found - skipping."
 fi
 
 # ---- Done ----
@@ -132,6 +166,8 @@ echo "   Node: $(node -v)"
 echo "   NPM:  $(npm -v)"
 echo "   Aider: $(aider --version 2>/dev/null || echo 'installed')"
 echo "   Swap: $(free -h | grep Swap)"
+echo ""
+echo " Notifications: Telegram only. Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env."
 echo ""
 echo " Next steps:"
 echo "   1. Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env"

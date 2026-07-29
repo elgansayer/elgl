@@ -17,7 +17,7 @@ services:
       - cache
       - websocket
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/health']
+      test: ['CMD', 'node', '-e', 'require("http").get("http://localhost:3000/health",r=>{let d="";r.on("data",c=>d+=c);r.on("end",()=>process.exit(d.includes("ok")?0:1))})']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -32,6 +32,12 @@ services:
       - '80:80'
     depends_on:
       - api
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:80/']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   cache:
     image: redis:7-alpine
@@ -41,6 +47,12 @@ services:
       - '6379:6379'
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   websocket:
     image: centrifugo/centrifugo:v5
@@ -53,6 +65,12 @@ services:
       - ./config/centrifugo:/centrifugo
     depends_on:
       - cache
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:8000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   sfu:
     image: livekit/livekit-server:latest
@@ -70,6 +88,12 @@ services:
       - '50000-60000:50000-60000/udp'
     volumes:
       - ./config/livekit:/livekit
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:7880/']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   prometheus:
     image: prom/prometheus:latest
@@ -88,6 +112,12 @@ services:
     depends_on:
       - api
       - websocket
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:9090/-/healthy']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   grafana:
     image: grafana/grafana:latest
@@ -104,6 +134,12 @@ services:
       - ./grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
       - prometheus
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/api/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
 volumes:
   redis_data:

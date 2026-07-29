@@ -13,6 +13,12 @@ services:
       - web
       - api
       - websocket
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:80/']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   api:
     build:
@@ -29,6 +35,12 @@ services:
     depends_on:
       - cache
       - websocket
+    healthcheck:
+      test: ['CMD', 'node', '-e', 'require("http").get("http://localhost:3000/health",r=>{let d="";r.on("data",c=>d+=c);r.on("end",()=>process.exit(d.includes("ok")?0:1))})']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   web:
     build:
@@ -39,6 +51,12 @@ services:
       - '8080:80'
     depends_on:
       - api
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:80/']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   cache:
     image: redis:7-alpine
@@ -48,6 +66,12 @@ services:
       - '6379:6379'
     volumes:
       - redis_prod_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   websocket:
     image: centrifugo/centrifugo:v5
@@ -60,6 +84,12 @@ services:
       - ./config/centrifugo:/centrifugo
     depends_on:
       - cache
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:8000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   sfu:
     image: livekit/livekit-server:latest
@@ -68,6 +98,12 @@ services:
     network_mode: host
     volumes:
       - ./config/livekit:/livekit
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:7880/']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
 volumes:
   redis_prod_data:
