@@ -1,26 +1,6 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 test.describe('Adversarial Chat & Video System', () => {
-  /**
-   * Helper: log in with credentials stored in environment variables.
-   * This function is idempotent – it skips login if already authenticated.
-   */
-  async function loginIfNeeded(page: Page) {
-    const loginUrl = new URL('/auth/login', 'http://localhost:4200').href;
-    await page.goto(loginUrl);
-    // Check if already redirected away (already logged in)
-    if (page.url().includes('/auth/login')) {
-      await page.fill('input[name="email"]', process.env.E2E_TEST_EMAIL ?? '');
-      await page.fill('input[name="password"]', process.env.E2E_TEST_PASSWORD ?? '');
-      await page.click('button[type="submit"]');
-      await page.waitForURL('**/chat', { timeout: 15000 });
-    }
-  }
-
-  test.beforeEach(async ({ page }) => {
-    await loginIfNeeded(page);
-  });
-
   test('XSS injection in chat message is properly escaped', async ({ page }) => {
     // Navigate to chat list
     await page.goto('/chat');
