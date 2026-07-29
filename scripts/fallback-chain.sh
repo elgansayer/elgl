@@ -111,7 +111,7 @@ PLAYWRIGHT_STUB
     acquire_ai_slot || { echo "Aider/Copilot: rate limiter timed out."; rm -rf "$aid_stub_dir"; return 1; }
     output=$(PATH="$aid_stub_dir:$PATH" run_with_liveness "$AIDER_TIMEOUT" "$AIDER_STUCK_TIMEOUT" \
         aider --model openai/gpt-4o --openai-api-base "$COPILOT_BASE" \
-              --message "$MESSAGE" --no-auto-commits --no-git)
+              --message "$MESSAGE" --no-auto-commits --yes --no-suggest-shell-commands)
     exit_code=$?
     release_ai_slot
     rm -rf "$aid_stub_dir"
@@ -175,7 +175,7 @@ PLAYWRIGHT_STUB
 
     # Rate-limit: only one AI API call across all swarm agents at a time.
     acquire_ai_slot || { echo "Aider: rate limiter timed out."; rm -rf "$aid_stub_dir"; return 1; }
-    output=$(PATH="$aid_stub_dir:$PATH" run_with_liveness "$AIDER_TIMEOUT" "$AIDER_STUCK_TIMEOUT" aider --message "$MESSAGE" --no-auto-commits --no-git)
+    output=$(PATH="$aid_stub_dir:$PATH" run_with_liveness "$AIDER_TIMEOUT" "$AIDER_STUCK_TIMEOUT" aider --message "$MESSAGE" --no-auto-commits --yes --no-suggest-shell-commands)
     exit_code=$?
     release_ai_slot
     rm -rf "$aid_stub_dir"
@@ -203,8 +203,8 @@ PLAYWRIGHT_STUB
 # Entry point every pipeline stage should call.
 # Usage: run_task_with_fallback "message" ["additional context or files"]
 # Tries tools in order:
-#   Claude CLI -> Antigravity (Gemini) -> Aider/Copilot -> Aider (DeepSeek)
-# All four can write code; falls through on rate limit/failure.
+#   Aider (DeepSeek) → Aider/Copilot → Antigravity (Gemini) → Claude CLI
+# Aider is the primary code editor; Claude and Antigravity are last-resort fallbacks.
 # Returns 0 as soon as any tool succeeds, or 2 if all exhausted.
 run_task_with_fallback() {
     local MESSAGE="$1"
@@ -212,29 +212,29 @@ run_task_with_fallback() {
     local FULL_MESSAGE="$MESSAGE"
     [ -n "$EXTRA_CONTEXT" ] && FULL_MESSAGE="$MESSAGE -- context files: $EXTRA_CONTEXT"
 
-    echo "Attempting Claude CLI..."
-    run_claude_code "$FULL_MESSAGE"
+    echo "Attempting Aider (DeepSeek, code-editing)..."
+    run_aider "$FULL_MESSAGE"
     if [ $? -eq 0 ]; then
         return 0
     fi
-    echo "Claude CLI unavailable. Trying Antigravity (Gemini)..."
-
-    echo "--- Antigravity CLI (Gemini, code-editing) ---"
-    run_antigravity_cli "$FULL_MESSAGE"
-    if [ $? -eq 0 ]; then
-        return 0
-    fi
-    echo "Antigravity unavailable. Trying Aider/Copilot..."
+    echo "DeepSeek unavailable. Trying Aider/Copilot..."
 
     echo "--- Aider (GitHub Copilot Pro) ---"
     run_aider_copilot "$FULL_MESSAGE"
     if [ $? -eq 0 ]; then
         return 0
     fi
-    echo "Copilot unavailable. Falling through to Aider/DeepSeek."
+    echo "Copilot unavailable. Falling through to Antigravity."
 
-    echo "Attempting Aider (DeepSeek)..."
-    run_aider "$FULL_MESSAGE"
+    echo "--- Antigravity CLI (Gemini) ---"
+    run_antigravity_cli "$FULL_MESSAGE"
+    if [ $? -eq 0 ]; then
+        return 0
+    fi
+    echo "Antigravity unavailable. Trying Claude..."
+
+    echo "Attempting Claude CLI..."
+    run_claude_code "$FULL_MESSAGE"
     if [ $? -eq 0 ]; then
         return 0
     fi
