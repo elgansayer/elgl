@@ -1,0 +1,67 @@
+<div
+  class="fixed inset-0 z-50 flex flex-col items-center justify-between bg-[#121212] ps-4 pe-4 pt-12 pb-8"
+>
+  <!-- Top section: caller info -->
+  <div class="flex flex-col items-center">
+    @if (callerAvatar()) {
+      <img
+        [src]="callerAvatar()"
+        [alt]="'call.caller_avatar' | t"
+        class="w-24 h-24 rounded-full object-cover mb-4"
+      />
+    }
+    <h2 class="text-xl font-semibold text-white mb-1">{{ callerName() }}</h2>
+    <p class="text-sm text-gray-400">{{ 'call.connecting_text' | t }}</p>
+  </div>
+
+  <!-- Bottom controls -->
+  <div class="flex items-center justify-center gap-x-8 w-full">
+
+    <!-- Mute / Unmute button -->
+    <div class="flex flex-col items-center">
+      <button
+        class="flex flex-col items-center bg-gray-800 rounded-full p-4 w-16 h-16 justify-center"
+        (click)="onToggleMute()"
+        [class.bg-red-800]="isMuted()"
+        [attr.aria-label]="(isMuted() ? 'call.unmute' : 'call.mute') | t"
+      >
+        <span class="text-white text-2xl">
+          {{ isMuted() ? '🔇' : '🎤' }}
+        </span>
+      </button>
+      <span class="text-xs text-gray-300 mt-2">
+        {{ (isMuted() ? 'call.unmute' : 'call.mute') | t }}
+      </span>
+    </div>
+
+    <!-- Speakerphone button -->
+    <div class="flex flex-col items-center">
+      <button
+        class="flex flex-col items-center bg-gray-800 rounded-full p-4 w-16 h-16 justify-center"
+        (click)="onToggleSpeaker()"
+        [class.bg-blue-800]="isSpeakerphone()"
+        [attr.aria-label]="(isSpeakerphone() ? 'call.speaker_off' : 'call.speaker_on') | t"
+      >
+        <span class="text-white text-2xl">
+          {{ isSpeakerphone() ? '🔊' : '🔉' }}
+        </span>
+      </button>
+      <span class="text-xs text-gray-300 mt-2">
+        {{ (isSpeakerphone() ? 'call.speaker_off' : 'call.speaker_on') | t }}
+      </span>
+    </div>
+
+    <!-- End call button -->
+    <div class="flex flex-col items-center">
+      <button
+        class="flex flex-col items-center bg-red-700 hover:bg-red-600 rounded-full p-4 w-16 h-16 justify-center"
+        (click)="onEndCall()"
+        [attr.aria-label]="'call.end_call' | t"
+      >
+        <span class="text-white text-2xl">📞</span>
+      </button>
+      <span class="text-xs text-gray-300 mt-2">{{ 'call.end_call' | t }}</span>
+    </div>
+
+  </div>
+</div>

@@ -14,6 +14,7 @@ import { ToastComponent } from './components/primitives/toast/toast.component';
 import { ReportUserModalComponent } from './components/report-user-modal/report-user-modal.component';
 import { ReportUserModalService } from './components/report-user-modal/report-user-modal.service';
 import { DailyLoginModalComponent } from './components/daily-login-modal/daily-login-modal.component';
+import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dialog.component';
 import { UnreadCounterService } from './services/unread-counter.service';
 import { VersionCheckService } from './services/version-check.service';
 
@@ -28,6 +29,7 @@ import { VersionCheckService } from './services/version-check.service';
     ToastComponent,
     ReportUserModalComponent,
     DailyLoginModalComponent,
+    ConfirmDialogComponent,
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],

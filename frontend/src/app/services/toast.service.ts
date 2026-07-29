@@ -19,6 +19,10 @@ export function showToast(
   setTimeout(() => removeToast(id), durationMs);
 }
 
+export function showErrorToast(message: string, durationMs = 5000) {
+  showToast(message, 'error', durationMs);
+}
+
 export function notImplementedToast(featureName?: string) {
   showToast(featureName ? `${featureName} is not implemented yet` : 'Not implemented yet', 'info');
 }

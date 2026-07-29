@@ -3,6 +3,7 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
+import { ConfirmService } from '../../services/confirm.service';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
 import { RoomChatComponent } from '../room-chat/room-chat.component';
@@ -33,6 +34,7 @@ export class AudioRoomComponent implements OnInit {
   readonly store = inject(AudioRoomsStore);
   readonly authService = inject(AuthService);
   private readonly i18n = inject(I18nService);
+  private readonly confirmService = inject(ConfirmService);
 
   readonly showCreateModal = signal<boolean>(false);
   readonly showGiftModal = signal<boolean>(false);
@@ -88,7 +90,10 @@ export class AudioRoomComponent implements OnInit {
   }
 
   async archive(): Promise<void> {
-    if (!confirm(this.i18n.translate('audioRoom.archiveConfirm'))) return;
+    const confirmed = await this.confirmService.confirm(
+      this.i18n.translate('audioRoom.archiveConfirm'),
+    );
+    if (!confirmed) return;
     await this.store.archiveRoom();
   }
 }

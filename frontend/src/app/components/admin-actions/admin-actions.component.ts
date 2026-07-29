@@ -1,5 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
+import { I18nService } from '../../services/i18n.service';
+import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-actions',
@@ -30,6 +32,7 @@ import { AdminService, AdminUserSummary } from '../../services/admin.service';
 })
 export class AdminActionsComponent implements OnInit {
   private readonly adminService = inject(AdminService);
+  private readonly i18n = inject(I18nService);
 
   readonly users = signal<AdminUserSummary[]>([]);
 
@@ -41,18 +44,18 @@ export class AdminActionsComponent implements OnInit {
   async ban(userId: string) {
     try {
       await this.adminService.banUser(userId);
-      alert('User banned');
+      showToast(this.i18n.translate('admin.userBanned'), 'success');
     } catch {
-      alert('Ban failed');
+      showErrorToast(this.i18n.translate('admin.banFailed'));
     }
   }
 
   async warn(userId: string) {
     try {
       await this.adminService.warnUser(userId);
-      alert('Warning issued');
+      showToast(this.i18n.translate('admin.warningIssued'), 'success');
     } catch {
-      alert('Warning failed');
+      showErrorToast(this.i18n.translate('admin.warningFailed'));
     }
   }
 }

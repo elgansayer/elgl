@@ -5,6 +5,8 @@ import { AuthService } from '../../services/auth.service';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { FavouriteService } from '../../services/favourite.service';
 import { SafetyService } from '../../services/safety.service';
+import { ConfirmService } from '../../services/confirm.service';
+import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
@@ -98,6 +100,8 @@ export class ChatMessageComponent {
   private authService = inject(AuthService);
   private favouriteService = inject(FavouriteService);
   private safetyService = inject(SafetyService);
+  private confirmService = inject(ConfirmService);
+  private i18n = inject(I18nService);
 
   isBlocked = signal(false);
 
@@ -135,8 +139,10 @@ export class ChatMessageComponent {
     this.favouriteService.addFavourite({ message_id: event.messageId }).catch(() => {});
   }
 
-  onReport(event: { messageId: string; senderId: string }): void {
-    const confirmed = window.confirm('Are you sure you want to report this message?');
+  async onReport(event: { messageId: string; senderId: string }): Promise<void> {
+    const confirmed = await this.confirmService.confirm(
+      this.i18n.translate('report.confirmMessage'),
+    );
     if (!confirmed) return;
     this.safetyService
       .reportUser({

@@ -92,38 +92,25 @@ export class LiveChatOverlayComponent implements OnInit, OnDestroy {
 
   messages = signal<LiveMessage[]>([]);
   private channelName = '';
-
-  constructor() {
-    // Listen to global Centrifugo events and filter for this room's chat
-    effect(() => {
-      const events = this.centrifugo.events();
-      if (events.length === 0) return;
-
-      const latestEvent = events[events.length - 1];
-
-      if (latestEvent && latestEvent.channel === this.channelName) {
-        const data = latestEvent.data as CentrifugoMessageData;
-
-        // Handle text payloads as defined in SPEC.md
-        if (data.type === 'text') {
-          this.addMessage({
-            id: data.id || Math.random().toString(36).substring(2),
-            senderName: data.senderName || 'User',
-            text: data.content,
-            timestamp: Date.now(),
-          });
-        }
-      }
-    });
-  }
+  private subscription: unknown = null;
 
   ngOnInit() {
-    // SPEC.md: Audio Room Chat Overlay uses channel `room_{audio_room_id}`
     this.channelName = `room_${this.roomId()}`;
 
-    // Ensure we are subscribed to the room's chat channel
-    // (Assuming the parent component might have already subscribed, but safe to call if idempotent)
-    // this.centrifugo.subscribe(this.channelName);
+    // Subscribe directly to the channel and listen for publications
+    this.subscription = this.centrifugo.subscribe(this.channelName, (data: unknown) => {
+      const event = data as CentrifugoMessageData;
+
+      // Handle text payloads as defined in SPEC.md
+      if (event.type === 'text') {
+        this.addMessage({
+          id: event.id || Math.random().toString(36).substring(2),
+          senderName: event.senderName || 'User',
+          text: event.content,
+          timestamp: Date.now(),
+        });
+      }
+    });
   }
 
   private addMessage(msg: LiveMessage) {

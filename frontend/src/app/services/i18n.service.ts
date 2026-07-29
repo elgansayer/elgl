@@ -205,6 +205,7 @@ export class I18nService {
     'moments.correctionSentAlert': 'Correction published to timeline.',
     'common.optional': 'optional',
     'common.cancel': 'Cancel',
+    'common.confirm': 'Confirm',
     'common.close': 'Close',
     'common.loadError': 'Failed to load data',
     'moments.showMore': 'Show more',
@@ -738,6 +739,17 @@ export class I18nService {
     'admin.prevPage': 'Previous',
     'admin.nextPage': 'Next',
     'admin.pageIndicator': 'Page {{page}} of {{totalPages}}',
+    'admin.userBanned': 'User banned',
+    'admin.banFailed': 'Ban failed',
+    'admin.warningIssued': 'Warning issued',
+    'admin.warningFailed': 'Warning failed',
+
+    // Sticker Store
+    'sticker.purchaseSuccess': 'Successfully purchased {{name}}!',
+    'sticker.notEnoughCoins': 'Not enough coins!',
+
+    // Report confirm
+    'report.confirmMessage': 'Are you sure you want to report this message?',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });

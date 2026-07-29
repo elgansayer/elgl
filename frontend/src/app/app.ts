@@ -1,7 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { TranslatePipe } from './services/translate.pipe';
-import { filter } from 'rxjs';
 import { AuthService } from './services/auth.service';
 import { CentrifugeService } from './services/centrifuge.service';
 import { EconomyStore, VirtualGift } from './services/economy.store';

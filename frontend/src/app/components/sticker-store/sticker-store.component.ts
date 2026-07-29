@@ -1,4 +1,6 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
+import { I18nService } from '../../services/i18n.service';
+import { showToast, showErrorToast } from '../../services/toast.service';
 import { CommonModule } from '@angular/common';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
@@ -18,7 +20,8 @@ export interface Sticker {
   templateUrl: './sticker-store.component.html',
 })
 export class StickerStoreComponent {
-  // Mock data for the sticker store
+  private readonly i18n = inject(I18nService);
+
   readonly stickers = signal<Sticker[]>([
     {
       id: 'stk_1',
@@ -55,10 +58,9 @@ export class StickerStoreComponent {
   purchaseSticker(sticker: Sticker): void {
     if (this.userCoins() >= sticker.coinPrice) {
       this.userCoins.update((coins) => coins - sticker.coinPrice);
-      alert(`Successfully purchased ${sticker.name}!`);
-      // In a real app, call a service to process the transaction
+      showToast(this.i18n.translate('sticker.purchaseSuccess', { name: sticker.name }), 'success');
     } else {
-      alert('Not enough coins!');
+      showErrorToast(this.i18n.translate('sticker.notEnoughCoins'));
     }
   }
 }
