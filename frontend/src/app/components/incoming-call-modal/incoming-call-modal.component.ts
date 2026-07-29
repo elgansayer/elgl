@@ -10,7 +10,6 @@ export interface IncomingCallData {
 
 @Component({
   selector: 'app-incoming-call-modal',
-  standalone: true,
   imports: [],
   template: `
     @if (callData(); as data) {

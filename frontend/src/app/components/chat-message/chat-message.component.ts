@@ -1,13 +1,4 @@
-import {
-  Component,
-  Input,
-  Output,
-  EventEmitter,
-  inject,
-  signal,
-  OnInit,
-  OnDestroy,
-} from '@angular/core';
+import { Component, input, output, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
@@ -15,11 +6,9 @@ import { LongPressContextMenuComponent } from '../long-press-context-menu/long-p
 import { FavouriteService } from '../../services/favourite.service';
 import { SafetyService } from '../../services/safety.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-chat-message',
-  standalone: true,
   imports: [CommonModule, LongPressContextMenuComponent, TranslatePipe],
   template: `
     @if (!isBlocked()) {
@@ -31,7 +20,6 @@ import { Subject, takeUntil } from 'rxjs';
         [roomId]="message.room_id"
         (copyMessage)="onCopy($event)"
         (favourite)="onFavourite($event)"
-        (report)="onReport($event)"
       >
         <div
           class="flex"
@@ -100,48 +88,40 @@ import { Subject, takeUntil } from 'rxjs';
     `,
   ],
 })
-export class ChatMessageComponent implements OnInit, OnDestroy {
-  @Input({ required: true }) message!: ChatMessage;
-  @Input() currentUserId?: string;
+export class ChatMessageComponent {
+  message = input.required<ChatMessage>();
+  currentUserId = input<string>();
 
-  @Output() readonly messageBlocked = new EventEmitter<string>();
+  readonly messageBlocked = output<string>();
 
   private authService = inject(AuthService);
   private favouriteService = inject(FavouriteService);
   private safetyService = inject(SafetyService);
-  private destroy$ = new Subject<void>();
 
   isBlocked = signal(false);
 
-  ngOnInit(): void {
-    // Initial fast check from cache
-    this.isBlocked.set(this.safetyService.isUserBlockedCached(this.message.sender_id));
-
-    // Subscribe to changes so we always stay in sync
-    this.safetyService.blockedUserIds$.pipe(takeUntil(this.destroy$)).subscribe((blockedIds) => {
-      const currentlyBlocked = blockedIds.has(this.message.sender_id);
+  constructor() {
+    effect(() => {
+      const senderId = this.message().sender_id;
+      const blockedIds = this.safetyService.blockedUserIdsSignal();
+      const currentlyBlocked = blockedIds.has(senderId);
       this.isBlocked.set(currentlyBlocked);
       if (currentlyBlocked) {
-        this.messageBlocked.emit(this.message.sender_id);
+        this.messageBlocked.emit(senderId);
       }
     });
   }
 
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
   isOwnMessage(): boolean {
-    if (this.currentUserId != null) {
-      return this.message.sender_id === this.currentUserId;
+    if (this.currentUserId() != null) {
+      return this.message().sender_id === this.currentUserId();
     }
-    return this.message.sender_id === this.authService.currentUser()?.id;
+    return this.message().sender_id === this.authService.currentUser()?.id;
   }
 
   playVoice(): void {
-    if (this.message.media_url) {
-      const audio = new Audio(this.message.media_url);
+    if (this.message().media_url) {
+      const audio = new Audio(this.message().media_url);
       audio.play().catch(console.error);
     }
   }
@@ -151,23 +131,9 @@ export class ChatMessageComponent implements OnInit, OnDestroy {
   }
 
   onFavourite(event: { messageId: string; content: string; messageType: string }): void {
-    this.favouriteService.addFavourite({ message_id: event.messageId }).subscribe({
-      next: () => console.log('Favourite added'),
-      error: (err) => console.error('Failed to add favourite', err),
-    });
-  }
-
-  onReport(event: { messageId: string; content: string; senderId: string; roomId: string }): void {
-    this.safetyService
-      .reportUser({
-        reported_id: event.senderId,
-        reason_category: 'inappropriate_content',
-        description: 'Inappropriate message',
-        context_url: window.location.href,
-      })
-      .subscribe({
-        next: () => console.log('Report submitted'),
-        error: (err) => console.error('Failed to report', err),
-      });
+    this.favouriteService
+      .addFavourite({ message_id: event.messageId })
+      .then(() => console.log('Favourite added'))
+      .catch((err) => console.error('Failed to add favourite', err));
   }
 }

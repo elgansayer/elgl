@@ -9,7 +9,6 @@ export interface LegalSection {
 
 @Component({
   selector: 'app-legal-document-viewer',
-  standalone: true,
   imports: [CommonModule],
   template: `
     <div class="max-w-4xl mx-auto p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm">

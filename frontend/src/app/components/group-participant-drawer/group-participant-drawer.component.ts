@@ -13,7 +13,6 @@ export interface GroupParticipant {
 
 @Component({
   selector: 'app-group-participant-drawer',
-  standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
     @if (isOpen()) {

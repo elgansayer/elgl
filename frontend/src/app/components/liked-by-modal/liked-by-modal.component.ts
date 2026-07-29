@@ -13,7 +13,6 @@ interface LikedUser {
 
 @Component({
   selector: 'app-liked-by-modal',
-  standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
     <div

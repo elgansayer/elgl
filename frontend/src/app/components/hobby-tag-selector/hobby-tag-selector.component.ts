@@ -5,7 +5,6 @@ import { HobbyTag } from '../../services/hobby-tags.service';
 
 @Component({
   selector: 'app-hobby-tag-selector',
-  standalone: true,
   imports: [],
   template: `
     <div class="space-y-4">

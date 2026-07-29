@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, input, OnInit, inject, signal, computed } from '@angular/core';
 
 import { ChatMessageComponent } from '../chat-message/chat-message.component';
 import { ChatService, ChatMessage } from '../../services/chat.service';
@@ -8,7 +8,6 @@ import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-chat-view',
-  standalone: true,
   imports: [FormsModule, ChatMessageComponent],
   template: `
     <div class="flex flex-col h-full">
@@ -42,8 +41,8 @@ import { FormsModule } from '@angular/forms';
   ],
 })
 export class ChatViewComponent implements OnInit {
-  @Input({ required: true }) roomId!: string;
-  @Input() currentUserId?: string;
+  roomId = input.required<string>();
+  currentUserId = input<string>();
 
   private chatService = inject(ChatService);
   private authService = inject(AuthService);
@@ -54,6 +53,10 @@ export class ChatViewComponent implements OnInit {
 
   private blockedUserIds = signal<Set<string>>(new Set());
 
+  readonly effectiveUserId = computed(
+    () => this.currentUserId() ?? this.authService.currentUser()?.id,
+  );
+
   readonly filteredMessages = computed(() => {
     const blocked = this.blockedUserIds();
     if (blocked.size === 0) return this.messages;
@@ -61,25 +64,23 @@ export class ChatViewComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
-    // If currentUserId not provided, fall back to auth service
-    if (!this.currentUserId) {
-      this.currentUserId = this.authService.currentUser()?.id;
-    }
     await this.loadMessages();
     await this.loadBlockedUsers();
   }
 
   private async loadMessages(): Promise<void> {
     try {
-      this.messages = await this.chatService.getMessages(this.roomId);
+      this.messages = await this.chatService.getMessages(this.roomId());
     } catch (err) {
       console.error('Failed to load messages', err);
     }
   }
 
   private async loadBlockedUsers(): Promise<void> {
+    const userId = this.effectiveUserId();
+    if (!userId) return;
     try {
-      const blockedIds = await this.safetyService.getBlockedAndBlockerIds(this.currentUserId!);
+      const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
       this.blockedUserIds.set(new Set(blockedIds));
     } catch (err) {
       console.error('Failed to load blocked users', err);
@@ -104,7 +105,7 @@ export class ChatViewComponent implements OnInit {
 
     try {
       const sent = await this.chatService.sendMessage({
-        room_id: this.roomId,
+        room_id: this.roomId(),
         message_type: 'text',
         text_content: text,
       });

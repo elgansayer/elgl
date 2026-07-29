@@ -28,7 +28,6 @@ const AVAILABLE_GIFTS: GiftItem[] = [
 
 @Component({
   selector: 'app-gift-picker',
-  standalone: true,
   imports: [FormsModule, TranslatePipe],
   template: `
     <div

@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 
 export interface QuizQuestion {
   id: string;
@@ -14,7 +14,9 @@ export interface QuizQuestion {
 export class QuizService {
   private http = inject(HttpClient);
 
-  getQuestions(language: string): Observable<QuizQuestion[]> {
-    return this.http.get<QuizQuestion[]>(`/api/quiz/questions?language=${language}`);
+  getQuestions(language: string): Promise<QuizQuestion[]> {
+    return firstValueFrom(
+      this.http.get<QuizQuestion[]>(`/api/quiz/questions?language=${language}`),
+    );
   }
 }

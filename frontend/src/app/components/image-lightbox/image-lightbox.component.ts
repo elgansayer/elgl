@@ -1,9 +1,8 @@
-import { Component, EventEmitter, Input, Output, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-image-lightbox',
-  standalone: true,
   imports: [CommonModule],
   host: {
     '(window:keydown)': 'handleKeyDown($event)',
@@ -109,9 +108,9 @@ import { CommonModule } from '@angular/common';
   `,
 })
 export class ImageLightboxComponent implements OnInit, OnDestroy {
-  @Input({ required: true }) images: string[] = [];
-  @Input() initialIndex = 0;
-  @Output() closed = new EventEmitter<void>();
+  images = input.required<string[]>();
+  initialIndex = input(0);
+  closed = output<void>();
 
   currentIndex = 0;
   private touchStartX = 0;
@@ -119,7 +118,9 @@ export class ImageLightboxComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.currentIndex =
-      this.initialIndex >= 0 && this.initialIndex < this.images.length ? this.initialIndex : 0;
+      this.initialIndex() >= 0 && this.initialIndex() < this.images().length
+        ? this.initialIndex()
+        : 0;
     document.body.style.overflow = 'hidden'; // Prevent background scrolling
   }
 
@@ -139,7 +140,7 @@ export class ImageLightboxComponent implements OnInit, OnDestroy {
 
   next(event?: Event) {
     event?.stopPropagation();
-    if (this.currentIndex < this.images.length - 1) {
+    if (this.currentIndex < this.images().length - 1) {
       this.currentIndex++;
     }
   }

@@ -50,7 +50,8 @@ run_antigravity_cli() {
     fi
 
     echo "Running Antigravity CLI ($AGY_BIN) (advisory, will fall through)..."
-    "$AGY_BIN" "$MESSAGE" 2>&1 || true
+    timeout --foreground -s KILL 120 "$AGY_BIN" "$MESSAGE" 2>&1 || true
+    pkill -9 -f "$AGY_BIN" 2>/dev/null || true
     echo "Antigravity advisory run complete. Falling through to next tool."
     return 1
 }
@@ -69,21 +70,26 @@ run_aider() {
         return 1
     fi
 
-    echo "Running Aider (deepseek/deepseek-reasoner, code-editing mode, 5min timeout)..."
+    echo "Running Aider (deepseek/deepseek-reasoner, code-editing mode)..."
     local output
-    output=$(timeout 300 aider --message "$MESSAGE" --no-auto-commits 2>&1)
+    export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+    output=$(aider --message "$MESSAGE" --no-auto-commits --no-git 2>&1)
     local exit_code=$?
 
-    if [ $exit_code -ne 0 ]; then
-        echo "Aider failed with exit code $exit_code:"
-        echo "$output"
+    # Verify Aider actually produced changes. Accept partial work even when
+    # timeout killed the process. It can also exit 0 while doing nothing.
+    if git diff --quiet && git diff --cached --quiet; then
+        if [ $exit_code -ne 0 ]; then
+            echo "Aider failed with exit code $exit_code and made no file changes:"
+            echo "$output"
+        else
+            echo "Aider exited 0 but made no file changes. Treating as failure."
+        fi
         return 1
     fi
 
-    # Verify Aider actually produced changes. It can exit 0 while doing nothing.
-    if git diff --quiet && git diff --cached --quiet; then
-        echo "Aider exited 0 but made no file changes. Treating as failure."
-        return 1
+    if [ $exit_code -ne 0 ]; then
+        echo "Aider was killed (exit $exit_code) but produced file changes. Accepting partial work."
     fi
 
     echo "$output"
@@ -100,7 +106,7 @@ run_deepseek_api() {
     fi
 
     echo "Running DeepSeek API (advisory, will fall through)..."
-    curl -sf -X POST "https://api.deepseek.com/v1/chat/completions" \
+    timeout 60 curl -sf -X POST "https://api.deepseek.com/v1/chat/completions" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $DEEPSEEK_API_KEY" \
         -d "{\"model\":\"deepseek-chat\",\"messages\":[{\"role\":\"user\",\"content\":\"$MESSAGE\"}]}" 2>&1 || true

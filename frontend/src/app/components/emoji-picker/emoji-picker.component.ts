@@ -1404,7 +1404,6 @@ const EMOJI_CATEGORIES = [
 
 @Component({
   selector: 'app-emoji-picker',
-  standalone: true,
   imports: [FormsModule],
   template: `
     <div

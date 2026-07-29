@@ -4,7 +4,6 @@ import { ChatMessage } from '../../services/chat.service';
 
 @Component({
   selector: 'app-message-context-menu',
-  standalone: true,
   imports: [],
   template: `
     <div

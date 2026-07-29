@@ -2,6 +2,7 @@ import { Component, signal, output, input, inject } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 interface CropBox {
@@ -13,7 +14,6 @@ interface CropBox {
 
 @Component({
   selector: 'app-cover-photo-uploader',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="relative w-full max-w-2xl mx-auto">
@@ -286,16 +286,16 @@ export class CoverPhotoUploaderComponent {
       const filename = `cover-${Date.now()}.jpg`;
 
       // Get presigned URL from backend
-      const presignedResponse = await this.http
-        .post<{ uploadUrl: string; mediaUrl: string; objectKey: string }>(
+      const presignedResponse = await firstValueFrom(
+        this.http.post<{ uploadUrl: string; mediaUrl: string; objectKey: string }>(
           `${environment.apiUrl}/media/cover/presigned-url`,
           {
             filename,
             contentType: 'image/jpeg',
             folder: 'covers',
           },
-        )
-        .toPromise();
+        ),
+      );
 
       if (!presignedResponse) throw new Error('Failed to get presigned URL');
 
@@ -309,11 +309,11 @@ export class CoverPhotoUploaderComponent {
       if (!uploadResponse.ok) throw new Error('Upload failed');
 
       // Confirm upload with backend
-      const confirmResponse = await this.http
-        .post<{ coverUrl: string }>(`${environment.apiUrl}/media/cover/confirm`, {
+      const confirmResponse = await firstValueFrom(
+        this.http.post<{ coverUrl: string }>(`${environment.apiUrl}/media/cover/confirm`, {
           objectKey: presignedResponse.objectKey,
-        })
-        .toPromise();
+        }),
+      );
 
       if (confirmResponse) {
         this.coverPhotoUploaded.emit(confirmResponse.coverUrl);

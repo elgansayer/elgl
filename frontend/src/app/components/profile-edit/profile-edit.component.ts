@@ -6,7 +6,6 @@ import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-c
 
 @Component({
   selector: 'app-profile-edit',
-  standalone: true,
   imports: [FormsModule, CoverPhotoCropperComponent],
   template: `
     <div class="max-w-2xl mx-auto p-6">

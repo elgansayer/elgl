@@ -12,7 +12,7 @@ describe('CorrectionModalComponent', () => {
 
     fixture = TestBed.createComponent(CorrectionModalComponent);
     component = fixture.componentInstance;
-    component.originalText = 'I goes to market yesterday.';
+    fixture.componentRef.setInput('originalText', 'I goes to market yesterday.');
     fixture.detectChanges();
   });
 

@@ -1,10 +1,9 @@
-import { Component, Input } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-update-modal',
-  standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
     <div
@@ -37,7 +36,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
   },
 })
 export class UpdateModalComponent {
-  @Input() message = 'A new version is available.';
+  message = input('A new version is available.');
 
   /**
    * Prevent any background clicks from reaching elements behind the overlay.

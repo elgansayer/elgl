@@ -1,22 +1,23 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, signal, input, effect } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { UserService, UserProfile } from '../../services/user.service';
+import { ReportButtonComponent } from '../report-user-modal/report-button.component';
 
 @Component({
   selector: 'app-user-detail',
-  standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, RouterLink, TranslatePipe, ReportButtonComponent],
   templateUrl: './user-detail.component.html',
   styleUrls: ['./user-detail.component.scss'],
 })
-export class UserDetailComponent implements OnInit {
-  private route = inject(ActivatedRoute);
+export class UserDetailComponent {
   private location = inject(Location);
   private userService = inject(UserService);
   private readonly i18n = inject(I18nService);
+
+  userId = input.required<string>();
 
   readonly profile = signal<UserProfile | null>(null);
   readonly isLoading = signal<boolean>(true);
@@ -25,14 +26,11 @@ export class UserDetailComponent implements OnInit {
   readonly isFollowing = signal<boolean>(false);
   readonly isLiked = signal<boolean>(false);
 
-  async ngOnInit(): Promise<void> {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id) {
-      await this.loadProfile(id);
-    } else {
-      this.errorMessage.set(this.i18n.translate('userProfile.notFound'));
-      this.isLoading.set(false);
-    }
+  constructor() {
+    effect(() => {
+      const id = this.userId();
+      this.loadProfile(id);
+    });
   }
 
   goBack(): void {

@@ -1,7 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { firstValueFrom, of, catchError } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface ModerationItem {
@@ -35,40 +34,46 @@ export class ModerationService {
     });
   }
 
-  getItems(type: 'moment' | 'profile', status?: string): Observable<ModerationItem[]> {
+  getItems(type: 'moment' | 'profile', status?: string): Promise<ModerationItem[]> {
     const params: Record<string, string> = { type };
     if (status) {
       params['status'] = status;
     }
-    return this.http
-      .get<ModerationItem[]>(`${this.baseUrl}/items`, {
-        headers: this.getHeaders(),
-        params,
-      })
-      .pipe(catchError(() => of([])));
+    return firstValueFrom(
+      this.http
+        .get<ModerationItem[]>(`${this.baseUrl}/items`, {
+          headers: this.getHeaders(),
+          params,
+        })
+        .pipe(catchError(() => of([]))),
+    );
   }
 
-  approveItem(itemId: string, type: string): Observable<unknown> {
-    return this.http
-      .post(
-        `${this.baseUrl}/approve`,
-        { itemId, type },
-        {
-          headers: this.getHeaders(),
-        },
-      )
-      .pipe(catchError(() => of(null)));
+  approveItem(itemId: string, type: string): Promise<unknown> {
+    return firstValueFrom(
+      this.http
+        .post(
+          `${this.baseUrl}/approve`,
+          { itemId, type },
+          {
+            headers: this.getHeaders(),
+          },
+        )
+        .pipe(catchError(() => of(null))),
+    );
   }
 
-  rejectItem(itemId: string, type: string, reason?: string): Observable<unknown> {
-    return this.http
-      .post(
-        `${this.baseUrl}/reject`,
-        { itemId, type, reason },
-        {
-          headers: this.getHeaders(),
-        },
-      )
-      .pipe(catchError(() => of(null)));
+  rejectItem(itemId: string, type: string, reason?: string): Promise<unknown> {
+    return firstValueFrom(
+      this.http
+        .post(
+          `${this.baseUrl}/reject`,
+          { itemId, type, reason },
+          {
+            headers: this.getHeaders(),
+          },
+        )
+        .pipe(catchError(() => of(null))),
+    );
   }
 }

@@ -2,7 +2,6 @@ import { Component, input, output, computed } from '@angular/core';
 
 @Component({
   selector: 'app-gradient-button',
-  standalone: true,
   template: `
     <button [disabled]="disabled()" [class]="buttonClasses()" (click)="onClick($event)">
       <ng-content />

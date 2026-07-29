@@ -1,5 +1,4 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
-
+import { Component, inject, signal, computed, resource } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   SubscriptionPlansService,
@@ -10,12 +9,11 @@ import { AppGradientButtonComponent } from '../../components/primitives/gradient
 
 @Component({
   selector: 'app-vip-subscription',
-  standalone: true,
   imports: [RouterLink, AppButtonPrimaryComponent, AppGradientButtonComponent],
   templateUrl: './vip-subscription.component.html',
   styleUrls: ['./vip-subscription.component.scss'],
 })
-export class VipSubscriptionComponent implements OnInit {
+export class VipSubscriptionComponent {
   private subscriptionPlansService = inject(SubscriptionPlansService);
 
   readonly plans = signal<SubscriptionPlan[]>([]);
@@ -28,25 +26,30 @@ export class VipSubscriptionComponent implements OnInit {
 
   readonly paidPlans = computed(() => this.plans().filter((p) => p.id !== 'free'));
 
-  ngOnInit(): void {
-    this.loadPlans();
-  }
+  private reloadTrigger = signal(0);
 
-  loadPlans(): void {
-    this.loading.set(true);
-    this.error.set(null);
-
-    this.subscriptionPlansService.getAllPlans().subscribe({
-      next: (plans) => {
+  private plansLoader = resource({
+    params: () => this.reloadTrigger(),
+    loader: async () => {
+      this.loading.set(true);
+      this.error.set(null);
+      try {
+        const plans = await this.subscriptionPlansService.getAllPlans();
         this.plans.set(plans);
-        this.loading.set(false);
-      },
-      error: (err) => {
+        return plans;
+      } catch (err) {
         console.error('Failed to load subscription plans:', err);
         this.error.set('Failed to load subscription plans. Please try again later.');
+        return [] as SubscriptionPlan[];
+      } finally {
         this.loading.set(false);
-      },
-    });
+      }
+    },
+    defaultValue: [] as SubscriptionPlan[],
+  });
+
+  loadPlans(): void {
+    this.reloadTrigger.update((v) => v + 1);
   }
 
   getPriceDisplay(plan: SubscriptionPlan): string {
@@ -107,7 +110,6 @@ export class VipSubscriptionComponent implements OnInit {
   }
 
   onSubscribe(planId: string): void {
-    // Navigate to checkout or show subscription modal
     window.location.href = `/subscription?plan=${planId}`;
   }
 }

@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 /**
@@ -10,7 +10,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
  */
 @Component({
   selector: 'app-forced-update-modal',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div
@@ -42,5 +41,5 @@ import { TranslatePipe } from '../../services/translate.pipe';
   `,
 })
 export class ForcedUpdateModalComponent {
-  @Input() storeUrl = 'https://yourapp.com/update';
+  storeUrl = input('https://yourapp.com/update');
 }

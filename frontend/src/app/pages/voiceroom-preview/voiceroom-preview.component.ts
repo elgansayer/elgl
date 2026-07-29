@@ -1,8 +1,9 @@
-import { Component, OnInit, inject, TransferState, makeStateKey } from '@angular/core';
+import { Component, inject, TransferState, makeStateKey, input, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 interface RoomPreview {
@@ -13,7 +14,6 @@ interface RoomPreview {
 
 @Component({
   selector: 'app-voiceroom-preview',
-  standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
     <div class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4">
@@ -49,24 +49,26 @@ interface RoomPreview {
     </div>
   `,
 })
-export class VoiceroomPreviewComponent implements OnInit {
-  private route = inject(ActivatedRoute);
+export class VoiceroomPreviewComponent {
   private meta = inject(Meta);
   private title = inject(Title);
   private http = inject(HttpClient);
-  private transferState = inject(TransferState); // Inject TransferState
+  private transferState = inject(TransferState);
+
+  id = input.required<string>();
 
   roomId = '';
   roomName = 'Loading Room...';
   languagePair = '...';
   topicTag = '...';
 
-  ngOnInit() {
-    this.roomId = this.route.snapshot.paramMap.get('id') || '';
-    if (this.roomId) {
-      const ROOM_KEY = makeStateKey<RoomPreview>(`room-${this.roomId}`);
+  constructor() {
+    effect(() => {
+      const id = this.id();
+      if (!id) return;
+      this.roomId = id;
+      const ROOM_KEY = makeStateKey<RoomPreview>(`room-${id}`);
 
-      // Check if data was already fetched by the server
       if (this.transferState.hasKey(ROOM_KEY)) {
         const room = this.transferState.get(ROOM_KEY, null);
         if (room) {
@@ -75,15 +77,13 @@ export class VoiceroomPreviewComponent implements OnInit {
         }
       }
 
-      // Otherwise, fetch it and store it in TransferState for the client
-      this.http.get<RoomPreview>(`${environment.apiUrl}/audio-rooms/${this.roomId}`).subscribe({
-        next: (room) => {
+      firstValueFrom(this.http.get<RoomPreview>(`${environment.apiUrl}/audio-rooms/${id}`))
+        .then((room) => {
           this.transferState.set(ROOM_KEY, room);
           this.applyRoomData(room);
-        },
-        error: (err) => console.error('Failed to load room preview', err),
-      });
-    }
+        })
+        .catch((err: unknown) => console.error('Failed to load room preview', err));
+    });
   }
 
   // Extract the data application and meta tag logic into a helper method

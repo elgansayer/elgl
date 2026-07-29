@@ -3,7 +3,6 @@ import { toastsSignal } from '../../../services/toast.service';
 
 @Component({
   selector: 'app-toast',
-  standalone: true,
   template: `
     <div
       class="fixed top-10 inset-x-0 z-[9999] flex flex-col items-center gap-2 pointer-events-none p-4"

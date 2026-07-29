@@ -4,7 +4,6 @@ import { HobbyTagsStore } from '../../services/hobby-tags.store';
 
 @Component({
   selector: 'app-vocabulary-display',
-  standalone: true,
   imports: [],
   template: `
     <div class="space-y-4">

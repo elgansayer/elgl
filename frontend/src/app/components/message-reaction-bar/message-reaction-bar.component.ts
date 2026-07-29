@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 
 @Component({
   selector: 'app-message-reaction-bar',
@@ -10,7 +10,7 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
           (click)="toggleReaction(reaction.emoji)"
           [class]="
             'flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors ' +
-            (reaction.users.includes(currentUserId)
+            (reaction.users.includes(currentUserId())
               ? 'bg-primary/20 text-primary border border-primary/30'
               : 'bg-surface-200 text-text-secondary hover:bg-surface-100')
           "
@@ -33,21 +33,21 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
   `,
 })
 export class MessageReactionBarComponent {
-  @Input() reactions?: Record<string, string[]> = {};
-  @Input() currentUserId = '';
-  @Input() messageId = '';
-  @Output() reacted = new EventEmitter<{ messageId: string; emoji: string; added: boolean }>();
+  reactions = input<Record<string, string[]>>({});
+  currentUserId = input('');
+  messageId = input('');
+  reacted = output<{ messageId: string; emoji: string; added: boolean }>();
 
   quickEmojis = ['❤️', '😂', '👍', '😮', '😢', '🙏'];
 
   getReactionEntries() {
-    if (!this.reactions) return [];
-    return Object.entries(this.reactions).map(([emoji, users]) => ({ emoji, users }));
+    if (!this.reactions()) return [];
+    return Object.entries(this.reactions()).map(([emoji, users]) => ({ emoji, users }));
   }
 
   toggleReaction(emoji: string) {
-    const users = this.reactions?.[emoji] || [];
-    const added = !users.includes(this.currentUserId);
-    this.reacted.emit({ messageId: this.messageId, emoji, added });
+    const users = this.reactions()?.[emoji] || [];
+    const added = !users.includes(this.currentUserId());
+    this.reacted.emit({ messageId: this.messageId(), emoji, added });
   }
 }

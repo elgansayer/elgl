@@ -39,7 +39,7 @@
         <div
           class="bg-surface-400/80 border border-surface-100/50 rounded-2xl p-3 text-sm text-text-muted italic relative"
         >
-          <span class="opacity-70">"{{ originalText }}"</span>
+          <span class="opacity-70">"{{ originalText() }}"</span>
           <span
             class="absolute top-2 end-2 text-[10px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full font-bold"
             >Ghost Text</span
@@ -63,12 +63,12 @@
       </div>
 
       <!-- Live Diff Preview -->
-      @if (correctedText().trim() && correctedText().trim() !== originalText.trim()) {
+      @if (correctedText().trim() && correctedText().trim() !== originalText().trim()) {
         <div>
           <label class="block text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">
             {{ 'moments.liveDiffPreview' | t }}
           </label>
-          <app-visual-diff [original]="originalText" [corrected]="correctedText()">
+          <app-visual-diff [original]="originalText()" [corrected]="correctedText()">
           </app-visual-diff>
         </div>
       }
@@ -100,7 +100,7 @@
       </button>
       <button
         (click)="submitCorrection()"
-        [disabled]="!correctedText().trim() || correctedText().trim() === originalText.trim()"
+        [disabled]="!correctedText().trim() || correctedText().trim() === originalText().trim()"
         class="px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-full hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md"
       >
         {{ 'moments.sendCorrection' | t }}

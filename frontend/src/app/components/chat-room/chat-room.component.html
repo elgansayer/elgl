@@ -119,7 +119,6 @@
           [roomId]="roomId"
           [isBlocked]="blockedUserIds().includes(msg.sender_id)"
           (favourite)="bookmark(msg)"
-          (report)="reportMessage(msg)"
           (block)="onBlockToggle($event)"
         >
           <div

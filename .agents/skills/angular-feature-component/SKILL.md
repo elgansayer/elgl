@@ -36,7 +36,16 @@ export class FeatureComponent {}
 - Do **NOT** add `changeDetection: ChangeDetectionStrategy.OnPush` - default in Angular v22+.
 - Use `inject()` for all dependencies (`private userService = inject(UserService)`), never constructor injection.
 - Prefer `signal()` / `computed()` for all component state; never call `.mutate()` on a signal, use `.set()`/`.update()`.
-- Use `input()` / `output()` functions instead of `@Input()`/`@Output()` decorators for new components.
+- Use `input.required<T>()` / `input<T>(default)` functions for all component inputs. NEVER `@Input()` decorator.
+- Use `output<T>()` functions for all component outputs. NEVER `@Output()` decorator or `EventEmitter` (do not import `EventEmitter` at all).
+- Use `viewChild()` / `viewChildren()` signal queries for template elements. NEVER `@ViewChild()` / `@ViewChildren()`.
+- Use `resource<T>({ loader, request })` for ALL async data fetching. NEVER `.subscribe()`, `Promise.then()`, or `ngOnInit()` for data loading.
+- Use `toSignal(observable)` to convert Observables to signals. NEVER `.subscribe()` and manually call `.set()`.
+- Use `effect(() => { ... })` ONLY for side effects that cannot be expressed declaratively. NEVER `effect()` for state derivation (use `computed()`).
+- NEVER `ngOnChanges()`, `ngAfterViewInit()`. NEVER `ngOnInit()` for data loading. NEVER `ngOnDestroy()` for subscription cleanup - use `takeUntilDestroyed()` / `DestroyRef`.
+- NEVER `Subject` / `BehaviorSubject` for state - use `signal<T>()` instead.
+- NEVER `setTimeout` / `setInterval` for state or async work - use `resource()` with polling or `interval()` from rxjs + `toSignal()`.
+- NEVER import from `rxjs/operators` - all operators are exported from `rxjs` directly.
 
 ## Template Rules (strict - enforced by `npm run check:*` scripts in `frontend/`)
 

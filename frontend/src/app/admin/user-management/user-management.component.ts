@@ -4,7 +4,6 @@ import { AdminService, AdminUserSummary } from '../../services/admin.service';
 
 @Component({
   selector: 'app-user-management',
-  standalone: true,
   imports: [CommonModule],
   templateUrl: './user-management.component.html',
 })

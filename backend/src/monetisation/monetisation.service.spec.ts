@@ -196,6 +196,50 @@ describe('MonetisationService', () => {
       expect(mockQueryBuilder.update).not.toHaveBeenCalled();
       expect(result).toEqual({ received: true, status: 'processed' });
     });
+
+    it('should verify the signature via stripe.webhooks.constructEvent using the raw body, signature header, and configured webhook secret', async () => {
+      const event: any = {
+        type: 'unknown.event',
+        data: { object: {} },
+      };
+      mockConstructEvent.mockReturnValue(event);
+      const rawBody = Buffer.from('{"id":"evt_123"}');
+
+      await service.handleStripeWebhook(rawBody, 'stripe-signature-header');
+
+      expect(mockConstructEvent).toHaveBeenCalledWith(
+        rawBody,
+        'stripe-signature-header',
+        'whsec_test',
+      );
+    });
+
+    it('should throw BadRequestException and not mutate VIP status when signature verification fails', async () => {
+      mockConstructEvent.mockImplementation(() => {
+        throw new Error(
+          'No signatures found matching the expected signature for payload',
+        );
+      });
+
+      await expect(
+        service.handleStripeWebhook(Buffer.from('tampered'), 'bad-sig'),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+    });
+
+    it('should throw an error when STRIPE_WEBHOOK_SECRET is not configured', async () => {
+      const configService = module.get<ConfigService>(ConfigService);
+      jest
+        .spyOn(configService, 'get')
+        .mockImplementation((key: string) =>
+          key === 'STRIPE_WEBHOOK_SECRET' ? undefined : 'sk_test',
+        );
+
+      await expect(
+        service.handleStripeWebhook(Buffer.from(''), 'sig'),
+      ).rejects.toThrow('STRIPE_WEBHOOK_SECRET is not configured');
+      expect(mockConstructEvent).not.toHaveBeenCalled();
+    });
   });
 
   describe('generateApiKey', () => {

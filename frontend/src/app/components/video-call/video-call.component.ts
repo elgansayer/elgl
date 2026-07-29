@@ -28,7 +28,6 @@ import { AppGradientButtonComponent } from '../primitives/gradient-button/gradie
 
 @Component({
   selector: 'app-video-call',
-  standalone: true,
   imports: [AppButtonSecondaryComponent, AppGradientButtonComponent],
   template: `
     <div class="fixed inset-0 z-50 bg-black flex flex-col">

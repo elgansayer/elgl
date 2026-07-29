@@ -11,7 +11,6 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
 
 @Component({
   selector: 'app-voip-call',
-  standalone: true,
   imports: [FormsModule],
   template: `
     @if (showCallUI()) {

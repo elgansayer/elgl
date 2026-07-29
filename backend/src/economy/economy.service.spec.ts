@@ -167,20 +167,71 @@ describe('EconomyService', () => {
         }),
       );
 
-      // Mock checkDuplicateTransaction
-      mockQueryBuilder.maybeSingle.mockResolvedValue({ data: null });
+      mockQueryBuilder.maybeSingle.mockResolvedValue({
+        data: null,
+        error: null,
+      });
 
       const result = await service.purchaseCoins('user-1', {
         receipt_token: 'ios_token123',
         platform: 'ios',
       });
 
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('coin_purchases');
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          transaction_id: 'txn123',
+          receipt_token: 'ios_token123',
+        }),
+      );
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
       expect(mockQueryBuilder.update).toHaveBeenCalledWith({
         coins_balance: 600,
       });
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'user-1');
       expect(result).toEqual({ coins: 500, newBalance: 600 });
+    });
+
+    it('should reject a replayed transaction atomically without crediting coins twice', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-1', coins_balance: 100 },
+        error: null,
+      });
+
+      jest.spyOn(service['httpService'], 'post').mockReturnValue(
+        of({
+          data: {
+            status: 0,
+            latest_receipt_info: [
+              {
+                product_id: 'com.linguaexchange.coins.medium',
+                transaction_id: 'txn123',
+              },
+            ],
+          },
+        }),
+      );
+
+      // Simulate the DB unique constraint on coin_purchases.transaction_id
+      // rejecting a duplicate insert (Postgres unique_violation).
+      mockQueryBuilder.insert.mockResolvedValueOnce({
+        error: { code: '23505', message: 'duplicate key value' },
+      });
+
+      mockQueryBuilder.maybeSingle.mockResolvedValue({
+        data: null,
+        error: null,
+      });
+
+      await expect(
+        service.purchaseCoins('user-1', {
+          receipt_token: 'ios_token123',
+          platform: 'ios',
+        }),
+      ).rejects.toThrow('This transaction has already been processed');
+
+      // Balance must never be touched when the transaction is a replay.
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
     });
   });
 

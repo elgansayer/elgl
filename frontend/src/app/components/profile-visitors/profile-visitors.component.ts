@@ -7,7 +7,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-profile-visitors',
-  standalone: true,
   imports: [DatePipe, RouterLink, UpperCasePipe, CommonModule, TranslatePipe],
   template: `
     <div class="p-4">

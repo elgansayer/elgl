@@ -1,9 +1,9 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-subscription-success',
-  standalone: true,
   imports: [],
   template: `
     <div
@@ -25,18 +25,20 @@ import { ActivatedRoute, Router } from '@angular/router';
     </div>
   `,
 })
-export class SubscriptionSuccessComponent implements OnInit {
+export class SubscriptionSuccessComponent {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
 
-  ngOnInit(): void {
-    this.route.queryParams.subscribe((params) => {
-      const sessionId = params['session_id'];
-      if (sessionId) {
-        // Optionally verify the session with backend
-        console.log('Session ID:', sessionId);
-      }
-    });
+  constructor() {
+    this.init();
+  }
+
+  private async init(): Promise<void> {
+    const params = await firstValueFrom(this.route.queryParams);
+    const sessionId = params['session_id'];
+    if (sessionId) {
+      console.log('Session ID:', sessionId);
+    }
   }
 
   goToDashboard(): void {

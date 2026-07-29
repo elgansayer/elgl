@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 
 export interface CategoryPreference {
   push: boolean;
@@ -40,16 +40,16 @@ export class NotificationPreferencesService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/api/notification-preferences';
 
-  getPreferences(): Observable<NotificationPreferences> {
-    return this.http.get<NotificationPreferences>(this.baseUrl);
+  getPreferences(): Promise<NotificationPreferences> {
+    return firstValueFrom(this.http.get<NotificationPreferences>(this.baseUrl));
   }
 
-  updatePreferences(dto: Partial<NotificationPreferences>): Observable<NotificationPreferences> {
-    return this.http.put<NotificationPreferences>(this.baseUrl, dto);
+  updatePreferences(dto: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
+    return firstValueFrom(this.http.put<NotificationPreferences>(this.baseUrl, dto));
   }
 
-  resetToDefaults(): Observable<NotificationPreferences> {
-    return this.http.post<NotificationPreferences>(`${this.baseUrl}/reset`, {});
+  resetToDefaults(): Promise<NotificationPreferences> {
+    return firstValueFrom(this.http.post<NotificationPreferences>(`${this.baseUrl}/reset`, {}));
   }
 
   toggleCategoryChannel(
@@ -57,7 +57,7 @@ export class NotificationPreferencesService {
     channel: NotificationChannel,
     enabled: boolean,
     currentPrefs: NotificationPreferences,
-  ): Observable<NotificationPreferences> {
+  ): Promise<NotificationPreferences> {
     const update: Record<string, unknown> = {
       [category]: {
         ...currentPrefs[category],
@@ -71,7 +71,7 @@ export class NotificationPreferencesService {
     enabled: boolean,
     start?: string,
     end?: string,
-  ): Observable<NotificationPreferences> {
+  ): Promise<NotificationPreferences> {
     const update: Record<string, unknown> = { do_not_disturb: enabled };
     if (start !== undefined) update['quiet_hours_start'] = start;
     if (end !== undefined) update['quiet_hours_end'] = end;

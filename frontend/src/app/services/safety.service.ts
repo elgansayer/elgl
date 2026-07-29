@@ -1,7 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, lastValueFrom, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { firstValueFrom, of, catchError } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface ReportUserDto {
@@ -34,9 +33,6 @@ export class SafetyService {
   private _blockedUserIds = signal<Set<string>>(new Set());
   public readonly blockedUserIdsSignal = this._blockedUserIds.asReadonly();
 
-  private blockedIdsSubject = new BehaviorSubject<Set<string>>(new Set());
-  public blockedUserIds$ = this.blockedIdsSubject.asObservable();
-
   // Public read-only accessor (could be used for reactivity)
   get blockedUserIds(): ReadonlySet<string> {
     return this._blockedUserIds();
@@ -48,10 +44,11 @@ export class SafetyService {
    */
   async loadBlockedUsers(): Promise<void> {
     try {
-      const ids = await lastValueFrom(this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids`));
+      const ids = await firstValueFrom(
+        this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids`),
+      );
       const newSet = new Set(ids);
       this._blockedUserIds.set(newSet);
-      this.blockedIdsSubject.next(newSet);
     } catch (e) {
       console.error('Failed to load blocked user IDs', e);
     }
@@ -62,72 +59,70 @@ export class SafetyService {
     return this._blockedUserIds().has(userId);
   }
 
-  reportUser(dto: ReportUserDto): Observable<ReportResponse> {
-    return this.http.post<ReportResponse>(`${this.apiUrl}/safety/report`, dto);
+  reportUser(dto: ReportUserDto): Promise<ReportResponse> {
+    return firstValueFrom(this.http.post<ReportResponse>(`${this.apiUrl}/safety/report`, dto));
   }
 
-  /** Promise-based version for use with async/await in components */
   async reportUserAsync(dto: ReportUserDto): Promise<ReportResponse> {
-    return lastValueFrom(this.reportUser(dto));
+    return this.reportUser(dto);
   }
 
-  blockUser(blockedId: string): Observable<{ success: boolean; blocked_id: string }> {
-    return this.http.post<{ success: boolean; blocked_id: string }>(
-      `${this.apiUrl}/safety/block/${blockedId}`,
-      {},
+  blockUser(blockedId: string): Promise<{ success: boolean; blocked_id: string }> {
+    return firstValueFrom(
+      this.http.post<{ success: boolean; blocked_id: string }>(
+        `${this.apiUrl}/safety/block/${blockedId}`,
+        {},
+      ),
     );
   }
 
-  /** Promise-based version that also updates the local cache */
   async blockUserAsync(blockedId: string): Promise<{ success: boolean; blocked_id: string }> {
-    const res = await lastValueFrom(this.blockUser(blockedId));
+    const res = await this.blockUser(blockedId);
     this._blockedUserIds.update((prev) => {
       const next = new Set(prev);
       next.add(blockedId);
       return next;
     });
-    this.blockedIdsSubject.next(this._blockedUserIds());
     return res;
   }
 
-  unblockUser(blockedId: string): Observable<{ success: boolean }> {
-    return this.http.post<{ success: boolean }>(`${this.apiUrl}/safety/unblock/${blockedId}`, {});
+  unblockUser(blockedId: string): Promise<{ success: boolean }> {
+    return firstValueFrom(
+      this.http.post<{ success: boolean }>(`${this.apiUrl}/safety/unblock/${blockedId}`, {}),
+    );
   }
 
-  /** Promise-based version that also updates the local cache */
   async unblockUserAsync(blockedId: string): Promise<{ success: boolean }> {
-    const res = await lastValueFrom(this.unblockUser(blockedId));
+    const res = await this.unblockUser(blockedId);
     this._blockedUserIds.update((prev) => {
       const next = new Set(prev);
       next.delete(blockedId);
       return next;
     });
-    this.blockedIdsSubject.next(this._blockedUserIds());
     return res;
   }
 
-  getBlockedIds(): Observable<string[]> {
-    return this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids`);
+  getBlockedIds(): Promise<string[]> {
+    return firstValueFrom(this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids`));
   }
 
-  /** Promise-based version for use with async/await in components */
   async getBlockedIdsAsync(): Promise<string[]> {
-    return lastValueFrom(this.getBlockedIds());
+    return this.getBlockedIds();
   }
 
   /** Returns report categories from the backend.
    *  The response must be localised using the Accept-Language header. */
-  getReportCategories(): Observable<ReportCategory[]> {
-    return this.http.get<ReportCategory[]>(`${this.apiUrl}/safety/report-categories`).pipe(
-      catchError(() => {
-        // Fall back to static list if the API fails (e.g., network issue)
-        return of(this.getStaticReportCategories());
-      }),
+  getReportCategories(): Promise<ReportCategory[]> {
+    return firstValueFrom(
+      this.http.get<ReportCategory[]>(`${this.apiUrl}/safety/report-categories`).pipe(
+        catchError(() => {
+          return of(this.getStaticReportCategories());
+        }),
+      ),
     );
   }
 
-  /** Alias for getReportCategories used by the report modal */
-  getCategories(): Observable<ReportCategory[]> {
+  getCategories(): Promise<ReportCategory[]> {
     return this.getReportCategories();
   }
 
@@ -171,7 +166,7 @@ export class SafetyService {
 
   async getBlockedUserIds(userId: string): Promise<string[]> {
     try {
-      return lastValueFrom(this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids/${userId}`));
+      return firstValueFrom(this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids/${userId}`));
     } catch (e) {
       console.error('Failed to get blocked user IDs:', e);
       return [];
@@ -180,7 +175,7 @@ export class SafetyService {
 
   async getBlockerUserIds(userId: string): Promise<string[]> {
     try {
-      return lastValueFrom(this.http.get<string[]>(`${this.apiUrl}/safety/blocker-ids/${userId}`));
+      return firstValueFrom(this.http.get<string[]>(`${this.apiUrl}/safety/blocker-ids/${userId}`));
     } catch (e) {
       console.error('Failed to get blocker user IDs:', e);
       return [];
@@ -189,7 +184,7 @@ export class SafetyService {
 
   async getBlockedAndBlockerIds(userId: string): Promise<string[]> {
     try {
-      return lastValueFrom(
+      return firstValueFrom(
         this.http.get<string[]>(`${this.apiUrl}/safety/blocked-and-blocker-ids/${userId}`),
       );
     } catch (e) {
@@ -204,7 +199,7 @@ export class SafetyService {
       return { blocked: true };
     }
     try {
-      return lastValueFrom(
+      return firstValueFrom(
         this.http.get<{ blocked: boolean }>(`${this.apiUrl}/safety/is-blocked/${userId}`),
       );
     } catch (e) {

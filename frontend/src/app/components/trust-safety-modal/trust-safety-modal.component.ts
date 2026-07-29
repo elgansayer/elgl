@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { Component, inject, input, output } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
@@ -125,9 +125,9 @@ import { EconomyStore } from '../../services/economy.store';
   `,
 })
 export class TrustSafetyModalComponent {
-  @Input({ required: true }) targetId = '';
-  @Input({ required: true }) targetName = 'User';
-  @Output() closed = new EventEmitter<void>();
+  targetId = input.required<string>();
+  targetName = input.required<string>();
+  closed = output<void>();
 
   readonly store = inject(EconomyStore);
   mode: 'report' | 'block' = 'report';
@@ -135,12 +135,12 @@ export class TrustSafetyModalComponent {
   reportDetails = '';
 
   async submitReport(): Promise<void> {
-    await this.store.reportUser(this.targetId, this.reportReason, this.reportDetails);
+    await this.store.reportUser(this.targetId(), this.reportReason, this.reportDetails);
     this.closed.emit();
   }
 
   async confirmBlock(): Promise<void> {
-    await this.store.blockUser(this.targetId);
+    await this.store.blockUser(this.targetId());
     this.closed.emit();
   }
 }

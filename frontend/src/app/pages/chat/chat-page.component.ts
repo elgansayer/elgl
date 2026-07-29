@@ -7,7 +7,6 @@ import { ChatMessageComponent } from '../../components/chat-message/chat-message
 
 @Component({
   selector: 'app-chat-page',
-  standalone: true,
   imports: [FormsModule, ChatMessageComponent],
   template: `
     <div class="flex h-full">

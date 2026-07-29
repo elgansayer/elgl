@@ -189,42 +189,90 @@ export class EconomyService {
     userId: string,
     dto: PurchaseCoinsDto,
   ): Promise<{ coins: number; newBalance: number }> {
-    // 1. Detect platform from receipt token if not provided
-    const platform = dto.platform ?? this.detectPlatform(dto.receipt_token);
+    const supabase = this.supabaseService.getClient();
 
-    // 2. Verify receipt with the appropriate store
-    const verified = await this.verifyReceipt(dto.receipt_token, platform);
+    // 1. Determine platform and verify the receipt with the store
+    const platform = this.detectPlatform(dto.receipt_token);
+    const verifiedReceipt = await this.verifyReceipt(
+      dto.receipt_token,
+      platform,
+    );
 
-    if (!verified.valid) {
+    if (!verifiedReceipt.valid) {
       throw new BadRequestException('Receipt verification failed');
     }
 
-    // 3. Determine the coin package based on the product ID returned by the store
-    const coinPackage = this.getCoinPackageByProductId(verified.productId);
+    const { productId, transactionId } = verifiedReceipt;
+
+    // 2. Find corresponding coin package (coins amount is derived server-side)
+    const coinPackage = COIN_PACKAGES.find(
+      (pkg) =>
+        pkg.platform_product_id.ios === productId ||
+        pkg.platform_product_id.android === productId ||
+        pkg.platform_product_id.web === productId,
+    );
     if (!coinPackage) {
-      throw new BadRequestException(
-        `Unknown product ID: ${verified.productId}`,
+      throw new BadRequestException(`Unknown product ID: ${productId}.`);
+    }
+
+    // 3. Check if this transaction has already been processed (unique index)
+    const { data: existing } = await supabase
+      .from('coin_purchases')
+      .select('id')
+      .eq('transaction_id', transactionId)
+      .maybeSingle();
+    if (existing) {
+      throw new ConflictException(
+        'This transaction has already been processed',
       );
     }
 
-    // 4. Prevent duplicate transactions
-    await this.checkDuplicateTransaction(verified.transactionId);
+    // 4. Insert the coin_purchases record
+    const { error: insertError } = await supabase
+      .from('coin_purchases')
+      .insert({
+        user_id: userId,
+        package_id: coinPackage.id,
+        coins_added: coinPackage.coins,
+        amount_paid: coinPackage.price,
+        currency: 'usd',
+        receipt_token: dto.receipt_token,
+        platform,
+        transaction_id: transactionId,
+        status: 'completed',
+      });
 
-    // 5. Add coins to user balance
-    const supabase = this.supabaseService.getClient();
-    const userResponse = await supabase
+    if (insertError) {
+      // Unique violation (race condition)
+      if (insertError.code === '23505') {
+        throw new ConflictException(
+          'This transaction has already been processed',
+        );
+      }
+      this.logger.error(
+        `Failed to record coin purchase for user ${userId}: ${insertError.message}`,
+      );
+      throw new InternalServerErrorException('Failed to record purchase');
+    }
+
+    // 5. Read current balance and credit coins
+    const { data: userData, error: userError } = await supabase
       .from('users')
       .select('coins_balance')
       .eq('id', userId)
       .single();
 
-    if (userResponse.error || !userResponse.data) {
+    if (userError || !userData) {
+      // Rollback the purchase record (best effort)
+      await supabase
+        .from('coin_purchases')
+        .delete()
+        .eq('transaction_id', transactionId);
       throw new BadRequestException('User not found');
     }
 
-    const user = userResponse.data as { coins_balance?: number };
-    const currentBalance = user.coins_balance ?? 0;
-    const newBalance = currentBalance + coinPackage.coins;
+    const user = userData as { coins_balance?: number };
+    const newBalance = (user.coins_balance ?? 0) + coinPackage.coins;
 
     const { error: updateError } = await supabase
       .from('users')
@@ -232,36 +280,21 @@ export class EconomyService {
       .eq('id', userId);
 
     if (updateError) {
-      throw new BadRequestException('Failed to update coin balance');
-    }
-
-    // 6. Log the purchase for audit
-    try {
-      await this.logPurchase(
-        userId,
-        coinPackage,
-        dto.receipt_token,
-        platform,
-        verified.transactionId,
+      // Rollback the purchase record
+      await supabase
+        .from('coin_purchases')
+        .delete()
+        .eq('transaction_id', transactionId);
+      this.logger.error(
+        `Failed to credit coin balance for user ${userId}: ${updateError.message}`,
       );
-    } catch {
-      // Rollback coin balance on failure
-      const { error: rollbackError } = await supabase
-        .from('users')
-        .update({ coins_balance: currentBalance })
-        .eq('id', userId);
-
-      if (rollbackError) {
-        this.logger.error(
-          `Failed to rollback coins for user ${userId}: ${rollbackError.message}`,
-        );
-      }
-
-      throw new InternalServerErrorException('Failed to record purchase');
+      throw new InternalServerErrorException(
+        'Failed to credit coin balance.  Your payment was recorded; please contact support.',
+      );
     }
 
     this.logger.log(
-      `User ${userId} purchased ${coinPackage.coins} coins (product: ${verified.productId})`,
+      `User ${userId} received ${coinPackage.coins} coins (transaction ${transactionId})`,
     );
 
     return {
@@ -477,24 +510,7 @@ export class EconomyService {
     );
   }
 
-  private async checkDuplicateTransaction(
-    transactionId: string,
-  ): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-    const { data: existing } = await supabase
-      .from('coin_purchases')
-      .select('id')
-      .eq('transaction_id', transactionId)
-      .maybeSingle();
-
-    if (existing) {
-      throw new ConflictException(
-        'This transaction has already been processed',
-      );
-    }
-  }
-
-  private async logPurchase(
+  private async recordPurchase(
     userId: string,
     coinPackage: CoinPackage,
     receiptToken: string,
@@ -515,12 +531,22 @@ export class EconomyService {
       status: 'completed',
     });
 
-    if (error) {
-      this.logger.error(
-        `Failed to log purchase for user ${userId}: ${error.message}`,
-      );
-      throw new InternalServerErrorException('Failed to record purchase');
+    if (!error) {
+      return;
     }
+
+    // Postgres unique_violation: this receipt/transaction was already
+    // consumed by a prior (possibly concurrent) request.
+    if (error.code === '23505') {
+      throw new ConflictException(
+        'This transaction has already been processed',
+      );
+    }
+
+    this.logger.error(
+      `Failed to record purchase for user ${userId}: ${error.message}`,
+    );
+    throw new InternalServerErrorException('Failed to record purchase');
   }
 
   async sendGift(

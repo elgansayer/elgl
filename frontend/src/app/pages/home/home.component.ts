@@ -4,7 +4,6 @@ import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-home',
-  standalone: true,
   imports: [],
   template: `
     <div class="min-h-screen bg-gray-900 text-white">

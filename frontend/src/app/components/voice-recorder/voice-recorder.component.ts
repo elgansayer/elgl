@@ -1,5 +1,5 @@
 import { showToast } from '../../services/toast.service';
-import { Component, EventEmitter, Output, signal, inject } from '@angular/core';
+import { Component, output, signal, inject } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -16,8 +16,8 @@ export class VoiceRecorderComponent {
   private userService = inject(UserService);
   private audioCompressionService = inject(AudioCompressionService);
 
-  @Output() audioUploaded = new EventEmitter<string>();
-  @Output() cancelled = new EventEmitter<void>();
+  audioUploaded = output<string>();
+  cancelled = output<void>();
 
   readonly isRecording = signal<boolean>(false);
   readonly isUploading = signal<boolean>(false);

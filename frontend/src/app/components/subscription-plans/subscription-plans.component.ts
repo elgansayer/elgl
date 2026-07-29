@@ -1,7 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
-
+import { Component, inject, signal, resource } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import {
   SubscriptionPlansService,
   SubscriptionPlan,
@@ -13,7 +13,6 @@ import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-subscription-plans',
-  standalone: true,
   imports: [
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
@@ -29,7 +28,6 @@ import { environment } from '../../../environments/environment';
           </p>
         </div>
 
-        <!-- Billing Toggle -->
         <div class="flex justify-center mb-10">
           <div class="bg-slate-800 rounded-full p-1 inline-flex items-center">
             <button
@@ -58,7 +56,6 @@ import { environment } from '../../../environments/environment';
           </div>
         </div>
 
-        <!-- Plans Grid -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
           @for (plan of plans(); track plan.id) {
             <div [class]="getPlanCardClass(plan)">
@@ -76,7 +73,6 @@ import { environment } from '../../../environments/environment';
                 <h3 class="text-xl font-bold text-white mb-2">{{ plan.name }}</h3>
                 <p class="text-slate-400 text-sm mb-6">{{ plan.description }}</p>
 
-                <!-- Price -->
                 <div class="mb-6">
                   <div class="flex items-baseline">
                     <span class="text-4xl font-bold text-white">
@@ -92,7 +88,6 @@ import { environment } from '../../../environments/environment';
                   }
                 </div>
 
-                <!-- Highlighted Benefits -->
                 @if (plan.highlighted_benefits?.length) {
                   <div class="mb-6 space-y-2">
                     @for (benefit of plan.highlighted_benefits; track benefit) {
@@ -104,7 +99,6 @@ import { environment } from '../../../environments/environment';
                   </div>
                 }
 
-                <!-- Features List -->
                 <ul class="space-y-3 mb-8">
                   @for (feature of plan.features; track feature) {
                     <li class="flex items-start gap-2">
@@ -114,7 +108,6 @@ import { environment } from '../../../environments/environment';
                   }
                 </ul>
 
-                <!-- CTA Button -->
                 @if (plan.price_usd === 0) {
                   <app-button-secondary [disabled]="true" customClass="w-full">
                     Current Plan
@@ -137,7 +130,6 @@ import { environment } from '../../../environments/environment';
           }
         </div>
       </div>
-      <!-- Restore Purchases Section -->
       <div class="mt-6 text-center">
         <p class="text-xs text-slate-400 mb-2">
           Already purchased? Restore your previous purchases below.
@@ -163,16 +155,16 @@ export class SubscriptionPlansComponent {
   readonly billingInterval = signal<'month' | 'year'>('month');
   readonly loading = signal(false);
 
-  constructor() {
-    this.loadPlans();
-  }
-
-  private loadPlans(): void {
-    this.plansService.getAllPlans().subscribe({
-      next: (plans) => this.plans.set(plans),
-      error: (err) => console.error('Failed to load plans', err),
-    });
-  }
+  private plansLoader = resource({
+    loader: async () => {
+      try {
+        const plans = await this.plansService.getAllPlans();
+        this.plans.set(plans);
+      } catch (err) {
+        console.error('Failed to load plans', err);
+      }
+    },
+  });
 
   getPlanCardClass(plan: SubscriptionPlan): string {
     const base = 'relative rounded-2xl border transition-all duration-300';
@@ -185,32 +177,27 @@ export class SubscriptionPlansComponent {
   getDisplayPrice(plan: SubscriptionPlan): string {
     if (plan.price_usd === 0) return 'Free';
     if (this.billingInterval() === 'year') {
-      // Yearly price: £50 / $63 USD
       return '£50 / $63 USD';
     }
-    // Monthly price: £8 / $10 USD
     return `£${plan.price_ukp} / $${plan.price_usd} USD`;
   }
 
-  onSelectPlan(plan: SubscriptionPlan): void {
+  async onSelectPlan(plan: SubscriptionPlan): Promise<void> {
     if (plan.price_usd === 0) return;
 
     this.loading.set(true);
 
-    this.http
-      .post<{ sessionUrl: string; sessionId: string }>(
-        `${environment.apiUrl}/monetisation/create-checkout-session`,
-        { planId: plan.id, interval: this.billingInterval() },
-      )
-      .subscribe({
-        next: (response) => {
-          // Redirect to Stripe Checkout
-          window.location.href = response.sessionUrl;
-        },
-        error: (err) => {
-          console.error('Failed to create checkout session', err);
-          this.loading.set(false);
-        },
-      });
+    try {
+      const response = await firstValueFrom(
+        this.http.post<{ sessionUrl: string; sessionId: string }>(
+          `${environment.apiUrl}/monetisation/create-checkout-session`,
+          { planId: plan.id, interval: this.billingInterval() },
+        ),
+      );
+      window.location.href = response.sessionUrl;
+    } catch (err) {
+      console.error('Failed to create checkout session', err);
+      this.loading.set(false);
+    }
   }
 }

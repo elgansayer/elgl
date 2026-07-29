@@ -2,7 +2,6 @@ import { Component, input, computed } from '@angular/core';
 
 @Component({
   selector: 'app-audio-equalizer',
-  standalone: true,
   imports: [],
   template: `
     <div class="flex items-end justify-center gap-0.5 h-4" [class.opacity-30]="!isActive()">

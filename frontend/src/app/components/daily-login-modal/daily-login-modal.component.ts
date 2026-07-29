@@ -1,9 +1,8 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-daily-login-modal',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 animate-fadeIn">
@@ -27,6 +26,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
   `,
 })
 export class DailyLoginModalComponent {
-  @Input() coins = 0;
-  @Output() closed = new EventEmitter<void>();
+  coins = input(0);
+  closed = output<void>();
 }

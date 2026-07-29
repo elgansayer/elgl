@@ -5,7 +5,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-cover-photo-cropper',
-  standalone: true,
   imports: [ImageCropperComponent, TranslatePipe],
   template: `
     <div

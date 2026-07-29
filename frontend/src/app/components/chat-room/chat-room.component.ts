@@ -1,8 +1,7 @@
 import { showToast } from '../../services/toast.service';
-import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, input, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
@@ -19,7 +18,6 @@ import { LongPressContextMenuComponent } from '../long-press-context-menu/long-p
 import { StickerPickerComponent } from '../sticker-picker/sticker-picker.component';
 import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
 import { SafetyService } from '../../services/safety.service';
-import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-chat-room',
@@ -39,8 +37,7 @@ import { firstValueFrom } from 'rxjs';
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss'],
 })
-export class ChatRoomComponent implements OnInit, OnDestroy {
-  private route = inject(ActivatedRoute);
+export class ChatRoomComponent implements OnDestroy {
   readonly centrifugeService = inject(CentrifugeService);
   private chatService = inject(ChatService);
   readonly authService = inject(AuthService);
@@ -48,6 +45,16 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   readonly vocabStore = inject(VocabularyStore);
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
+
+  id = input.required<string>();
+
+  constructor() {
+    effect(() => {
+      const roomId = this.id();
+      this.roomId = roomId;
+      void this.initializeRoom();
+    });
+  }
 
   readonly messages = signal<ChatMessage[]>([]);
   readonly isLoading = signal<boolean>(true);
@@ -96,16 +103,11 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
 
   private subscription: unknown = null;
 
-  async ngOnInit(): Promise<void> {
-    this.route.params.subscribe(async (params) => {
-      if (params['id']) {
-        this.roomId = params['id'];
-      }
-      await this.loadRoomDetails();
-      await this.loadBlockedUsers();
-      await this.loadMessages();
-      await this.setupRealTime();
-    });
+  private async initializeRoom(): Promise<void> {
+    await this.loadRoomDetails();
+    await this.loadBlockedUsers();
+    await this.loadMessages();
+    await this.setupRealTime();
   }
 
   async loadRoomDetails(): Promise<void> {
@@ -265,23 +267,6 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     }
   }
 
-  async reportMessage(msg: ChatMessage): Promise<void> {
-    try {
-      await firstValueFrom(
-        this.safetyService.reportUser({
-          reported_id: msg.sender_id,
-          reason_category: 'inappropriate_content',
-          description: 'Inappropriate message content',
-          context_url: `${window.location.origin}/chat/${this.roomId}`,
-        }),
-      );
-      showToast(this.i18n.translate('chatRoom.reportedAlert'));
-    } catch (e) {
-      console.error('Failed to report message:', e);
-      showToast(this.i18n.translate('chatRoom.reportErrorAlert'));
-    }
-  }
-
   onBlockToggle(event: { senderId: string; blocked: boolean }): void {
     if (event.blocked) {
       this.blockedUserIds.update((ids) => [...ids, event.senderId]);
@@ -356,10 +341,6 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
 
   onSearch(): void {
     void this.loadMessages();
-  }
-
-  trackByMessageId(index: number, message: ChatMessage): string {
-    return message.id;
   }
 
   async toggleParticipantDrawer(): Promise<void> {

@@ -4,7 +4,6 @@ import { getLanguageFlag } from '../language-picker/language-picker.component';
 
 @Component({
   selector: 'app-fluency-indicator',
-  standalone: true,
   imports: [],
   template: `
     <div class="flex items-center gap-1.5 text-xs font-bold text-text-primary">

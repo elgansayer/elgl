@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-lightbox',
-  standalone: true,
   imports: [CommonModule],
   host: {
     '(window:keydown)': 'handleKeyDown($event)',

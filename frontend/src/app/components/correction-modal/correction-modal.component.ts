@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, signal, OnInit } from '@angular/core';
+import { Component, input, output, signal, OnInit } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -11,34 +11,34 @@ import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
   styleUrls: ['./correction-modal.component.scss'],
 })
 export class CorrectionModalComponent implements OnInit {
-  @Input({ required: true }) originalText = '';
-  @Input() authorName = '';
+  originalText = input.required<string>();
+  authorName = input('');
 
-  @Output() submitted = new EventEmitter<{
+  submitted = output<{
     original: string;
     corrected: string;
     explanation?: string;
   }>();
-  @Output() cancelled = new EventEmitter<void>();
+  cancelled = output<void>();
 
   readonly correctedText = signal<string>('');
   readonly explanation = signal<string>('');
 
   ngOnInit(): void {
-    this.correctedText.set(this.originalText);
+    this.correctedText.set(this.originalText());
   }
 
   onOriginalClick(): void {
     // Re-sync ghost text if user wants to reset
-    this.correctedText.set(this.originalText);
+    this.correctedText.set(this.originalText());
   }
 
   submitCorrection(): void {
     const corr = this.correctedText().trim();
-    if (!corr || corr === this.originalText.trim()) return;
+    if (!corr || corr === this.originalText().trim()) return;
 
     this.submitted.emit({
-      original: this.originalText,
+      original: this.originalText(),
       corrected: corr,
       explanation: this.explanation().trim() || undefined,
     });

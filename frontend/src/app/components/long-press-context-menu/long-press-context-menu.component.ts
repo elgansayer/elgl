@@ -1,22 +1,11 @@
-import {
-  Component,
-  Input,
-  Output,
-  EventEmitter,
-  input,
-  model,
-  signal,
-  ElementRef,
-  inject,
-} from '@angular/core';
+import { Component, input, model, output, signal, ElementRef, inject } from '@angular/core';
 
-import { ReportUserModalComponent } from '../report-user-modal/report-user-modal.component';
+import { ReportUserModalService } from '../report-user-modal/report-user-modal.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-long-press-context-menu',
-  standalone: true,
-  imports: [ReportUserModalComponent, TranslatePipe],
+  imports: [TranslatePipe],
   template: `
     @if (showMenu()) {
       <div
@@ -69,14 +58,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
           </li>
         </ul>
       </div>
-    }
-    @if (showReportModal()) {
-      <app-report-user-modal
-        [reportUserId]="senderId()"
-        [contextUrl]="buildContextUrl()"
-        (closeModal)="showReportModal.set(false)"
-        (reported)="onReportSubmitted()"
-      ></app-report-user-modal>
     }
   `,
   styles: [
@@ -136,27 +117,18 @@ export class LongPressContextMenuComponent {
   showMenu = model(false);
   position = signal({ x: 0, y: 0 });
 
-  @Input() messageAuthorId?: string;
-
-  @Output() copyMessage = new EventEmitter<{ messageId: string; content: string }>();
-  @Output() favourite = new EventEmitter<{
+  readonly copyMessage = output<{ messageId: string; content: string }>();
+  readonly favourite = output<{
     messageId: string;
     content: string;
     messageType: string;
   }>();
-  @Output() report = new EventEmitter<{
-    messageId: string;
-    content: string;
-    senderId: string;
-    roomId: string;
-  }>();
-  @Output() block = new EventEmitter<{ senderId: string; blocked: boolean }>();
+  readonly block = output<{ senderId: string; blocked: boolean }>();
 
   longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
-  showReportModal = signal(false);
-
   private elementRef = inject(ElementRef);
+  private readonly reportModalService = inject(ReportUserModalService);
 
   onOptionClick(option: string): void {
     if (option === 'copy') {
@@ -170,9 +142,8 @@ export class LongPressContextMenuComponent {
       });
       this.close();
     } else if (option === 'report') {
-      this.close(); // hide context menu
-      this.showReportModal.set(true); // open report modal
-      return;
+      this.close();
+      this.reportModalService.open(this.senderId(), this.buildContextUrl());
     } else if (option === 'block') {
       this.block.emit({ senderId: this.senderId(), blocked: !this.isBlocked() });
       this.close();
@@ -211,16 +182,6 @@ export class LongPressContextMenuComponent {
     this.clearLongPressTimer();
   }
 
-  onReportSubmitted(): void {
-    this.showReportModal.set(false);
-    this.report.emit({
-      messageId: this.messageId(),
-      content: this.messageContent(),
-      senderId: this.senderId(),
-      roomId: this.roomId(),
-    });
-  }
-
   onDocumentClick(event: MouseEvent): void {
     const clickedInside = this.elementRef.nativeElement?.contains(event.target);
     if (!clickedInside) {
@@ -252,7 +213,7 @@ export class LongPressContextMenuComponent {
     }
   }
 
-  buildContextUrl(): string {
+  private buildContextUrl(): string {
     return window.location.href;
   }
 }

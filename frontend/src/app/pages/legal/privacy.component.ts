@@ -4,7 +4,6 @@ import { DocumentViewerComponent } from '../../components/document-viewer/docume
 
 @Component({
   selector: 'app-privacy',
-  standalone: true,
   imports: [DocumentViewerComponent, DatePipe],
   template: `
     <app-document-viewer title="Privacy Policy">

@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface CreateCheckoutSessionResponse {
@@ -18,10 +18,12 @@ export class StripeService {
   createCheckoutSession(
     planId: string,
     interval: 'month' | 'year',
-  ): Observable<CreateCheckoutSessionResponse> {
-    return this.http.post<CreateCheckoutSessionResponse>(`${this.apiUrl}/create-checkout-session`, {
-      planId,
-      interval,
-    });
+  ): Promise<CreateCheckoutSessionResponse> {
+    return firstValueFrom(
+      this.http.post<CreateCheckoutSessionResponse>(`${this.apiUrl}/create-checkout-session`, {
+        planId,
+        interval,
+      }),
+    );
   }
 }

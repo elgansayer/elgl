@@ -3,7 +3,6 @@ import { AdminService, AdminUserSummary } from '../../services/admin.service';
 
 @Component({
   selector: 'app-admin-actions',
-  standalone: true,
   template: `
     <div class="admin-actions">
       <h2>One‑click moderation</h2>

@@ -162,25 +162,28 @@ export class EconomyStore {
     }
   }
 
+  /**
+   * VIP status can only ever change via a verified payment webhook
+   * (Stripe/Apple/Google). This starts a real Stripe Checkout session and
+   * redirects the browser there; it must never set `is_vip` client-side.
+   */
   async upgradeVip(tier: 'consumer' | 'developer'): Promise<void> {
+    const planId = tier === 'developer' ? 'developer_20_ukp_26_usd' : 'consumer_8_ukp_10_usd';
     try {
-      await firstValueFrom(
-        this.http.post(`${this.monetisationUrl}/upgrade`, { tier }, { headers: this.getHeaders() }),
+      const res = await firstValueFrom(
+        this.http.post<{ sessionUrl: string; sessionId: string }>(
+          `${this.monetisationUrl}/create-checkout-session`,
+          { planId, interval: 'month' },
+          { headers: this.getHeaders() },
+        ),
       );
-      const user = this.authService.currentUser();
-      if (user) {
-        this.authService.currentUser.set({ ...user, is_vip: true, vip_tier: tier });
+      if (!res.sessionUrl) {
+        throw new Error('Checkout session missing redirect URL');
       }
-      const title =
-        tier === 'developer'
-          ? 'Developer Tier (20 UKP / $26 USD per month)'
-          : 'Consumer VIP (8 UKP / $10 USD per month)';
-      showToast(
-        `🎊 Congratulations! You have successfully upgraded to ${title}. All premium features and unlocked limits are now active!`,
-      );
+      window.location.href = res.sessionUrl;
     } catch (e) {
       console.error('VIP upgrade error:', e);
-      showToast('Failed to process VIP upgrade.');
+      showToast('Failed to start VIP checkout. Please try again.');
     }
   }
 

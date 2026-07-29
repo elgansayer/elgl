@@ -18,7 +18,6 @@ export interface IncomingCallInfo {
 
 @Component({
   selector: 'app-incoming-call',
-  standalone: true,
   imports: [AppButtonPrimaryComponent, AppButtonSecondaryComponent],
   template: `
     @if (showCallModal()) {

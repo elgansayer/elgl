@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-sticker-picker',
-  standalone: true,
   imports: [CommonModule],
   template: `
     <!-- Backdrop -->

@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-split-screen-video',
-  standalone: true,
   imports: [CommonModule],
   templateUrl: './split-screen-video.component.html',
 })

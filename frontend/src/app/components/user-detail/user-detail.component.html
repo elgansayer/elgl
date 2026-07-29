@@ -44,6 +44,10 @@
         </div>
 
         <div class="flex gap-2">
+          @if (profile()) {
+            <app-report-button [userId]="profile()!.id" />
+          }
+
           <button
             (click)="toggleLike()"
             class="h-10 w-10 rounded-full border border-surface-100 bg-surface-300 flex items-center justify-center transition-colors"

@@ -6,7 +6,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-create-group',
-  standalone: true,
   imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <div class="p-4 bg-[#121212] text-white min-h-screen">

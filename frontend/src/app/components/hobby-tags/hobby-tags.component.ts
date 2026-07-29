@@ -1,5 +1,4 @@
-import { Component, OnInit, computed, signal, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, computed, signal, inject, resource } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
 import {
@@ -13,11 +12,9 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
 
 @Component({
   selector: 'app-hobby-tags',
-  standalone: true,
-  imports: [CommonModule, FormsModule, AppCardComponent, AppPillComponent, TranslatePipe],
+  imports: [FormsModule, AppCardComponent, AppPillComponent, TranslatePipe],
   template: `
     <div class="space-y-6">
-      <!-- Header -->
       <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold text-text-primary">Hobbies & Interests</h2>
         <button
@@ -28,7 +25,6 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
         </button>
       </div>
 
-      <!-- Add Hobby Panel -->
       @if (showAddPanel()) {
         <app-card variant="elevated" customClass="p-4">
           <div class="space-y-4">
@@ -71,7 +67,6 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
         </app-card>
       }
 
-      <!-- User's Hobby Tags -->
       <div class="flex flex-wrap gap-3">
         @for (userTag of userTags(); track userTag.id) {
           <div class="group relative">
@@ -101,7 +96,6 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
         }
       </div>
 
-      <!-- Proficiency Level Selector -->
       @if (selectedTagForProficiency()) {
         <app-card variant="outlined" customClass="p-4">
           <h3 class="text-sm font-semibold text-slate-300 mb-3">
@@ -130,7 +124,6 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
         </app-card>
       }
 
-      <!-- Vocabulary Section -->
       @if (userVocabulary().length > 0) {
         <div class="mt-6">
           <h3 class="text-lg font-semibold text-slate-200 mb-3">Vocabulary from Your Hobbies</h3>
@@ -160,7 +153,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
     </div>
   `,
 })
-export class HobbyTagsComponent implements OnInit {
+export class HobbyTagsComponent {
   readonly showAddPanel = signal(false);
   readonly searchQuery = signal('');
   readonly selectedTagForProficiency = signal<string | null>(null);
@@ -180,52 +173,47 @@ export class HobbyTagsComponent implements OnInit {
 
   public hobbyTagsService = inject(HobbyTagsService);
 
-  ngOnInit(): void {
-    this.fetchAllTags();
-    this.fetchUserTags();
-    this.fetchUserVocabulary();
-  }
-
-  fetchAllTags(): void {
-    this.hobbyTagsService.getAllTags().subscribe((tags) => this.allTags.set(tags));
-  }
-
-  fetchUserTags(): void {
-    this.hobbyTagsService.getMyTags().subscribe((tags) => this.userTags.set(tags));
-  }
-
-  fetchUserVocabulary(): void {
-    this.hobbyTagsService.getVocabulary('en').subscribe((vocab) => this.userVocabulary.set(vocab));
-  }
+  private dataLoader = resource({
+    loader: async () => {
+      const [allTags, userTags, vocab] = await Promise.all([
+        this.hobbyTagsService.getAllTags(),
+        this.hobbyTagsService.getMyTags(),
+        this.hobbyTagsService.getVocabulary('en'),
+      ]);
+      this.allTags.set(allTags);
+      this.userTags.set(userTags);
+      this.userVocabulary.set(vocab);
+    },
+  });
 
   isTagAdded(tagId: string): boolean {
     return this.userTags().some((t) => t.hobby_tag_id === tagId);
   }
 
-  addTag(tagId: string): void {
-    this.hobbyTagsService.addMyTag(tagId, 0).subscribe(() => this.fetchUserTags());
+  async addTag(tagId: string): Promise<void> {
+    await this.hobbyTagsService.addMyTag(tagId, 0);
+    this.dataLoader.reload();
   }
 
-  removeTag(tagId: string): void {
-    this.hobbyTagsService.removeMyTag(tagId).subscribe(() => {
-      this.fetchUserTags();
-      if (this.selectedTagForProficiency() === tagId) {
-        this.selectedTagForProficiency.set(null);
-      }
-    });
+  async removeTag(tagId: string): Promise<void> {
+    await this.hobbyTagsService.removeMyTag(tagId);
+    if (this.selectedTagForProficiency() === tagId) {
+      this.selectedTagForProficiency.set(null);
+    }
+    this.dataLoader.reload();
   }
 
-  createGlobalTag(name: string): void {
-    this.hobbyTagsService.createGlobalTag(name, 'Other', '✨').subscribe((newTag) => {
-      this.fetchAllTags();
-      this.addTag(newTag.id);
-      this.searchQuery.set('');
-    });
+  async createGlobalTag(name: string): Promise<void> {
+    const newTag = await this.hobbyTagsService.createGlobalTag(name, 'Other', '✨');
+    await this.hobbyTagsService.addMyTag(newTag.id, 0);
+    this.searchQuery.set('');
+    this.dataLoader.reload();
   }
 
-  updateProficiency(tagId: string, level: string): void {
+  async updateProficiency(tagId: string, level: string): Promise<void> {
     const levelNum = this.proficiencyLevels.indexOf(level);
-    this.hobbyTagsService.updateProficiency(tagId, levelNum).subscribe(() => this.fetchUserTags());
+    await this.hobbyTagsService.updateProficiency(tagId, levelNum);
+    this.dataLoader.reload();
   }
 
   getTagName(tagId: string): string {

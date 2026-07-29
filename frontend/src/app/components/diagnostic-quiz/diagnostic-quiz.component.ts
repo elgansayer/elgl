@@ -1,14 +1,13 @@
-import { Component, computed, output, signal, inject, OnInit } from '@angular/core';
+import { Component, computed, output, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { QuizService, QuizQuestion } from '../../services/quiz.service';
 
 @Component({
   selector: 'app-diagnostic-quiz',
-  standalone: true,
   imports: [CommonModule],
   templateUrl: './diagnostic-quiz.component.html',
 })
-export class DiagnosticQuizComponent implements OnInit {
+export class DiagnosticQuizComponent {
   private quizService = inject(QuizService);
   quizCompleted = output<{ score: number; suggestedLevel: string }>();
 
@@ -31,10 +30,13 @@ export class DiagnosticQuizComponent implements OnInit {
     return this.answers()[q.id] !== undefined;
   });
 
-  ngOnInit(): void {
-    this.quizService.getQuestions('en').subscribe((data) => {
-      this.questions.set(data);
-    });
+  constructor() {
+    this.loadQuestions();
+  }
+
+  private async loadQuestions(): Promise<void> {
+    const data = await this.quizService.getQuestions('en');
+    this.questions.set(data);
   }
 
   selectOption(questionId: string, points: number): void {

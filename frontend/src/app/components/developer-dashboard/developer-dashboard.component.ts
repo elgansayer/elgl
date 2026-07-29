@@ -46,13 +46,15 @@ export class DeveloperDashboardComponent implements OnInit {
   }
 
   async upgrade(tier: 'consumer' | 'developer'): Promise<void> {
-    await this.store.upgradeVip(tier);
-    await this.store.loadDeveloperAnalytics();
+    // Starts a verified Stripe Checkout session and redirects the browser
+    // there. VIP status only actually changes once Stripe's webhook confirms
+    // payment, so no local state is updated here.
     await this.addLog(
       'REDIS',
-      `VIP Tier updated to ${tier.toUpperCase()}. Limits adjusted.`,
-      'success',
+      `Redirecting to Stripe Checkout for ${tier.toUpperCase()} tier.`,
+      'info',
     );
+    await this.store.upgradeVip(tier);
   }
 
   async generateKey(): Promise<void> {

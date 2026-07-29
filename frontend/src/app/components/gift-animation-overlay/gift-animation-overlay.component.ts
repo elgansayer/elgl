@@ -3,7 +3,6 @@ import { GiftAnimationService } from '../../services/gift-animation.service';
 
 @Component({
   selector: 'app-gift-animation-overlay',
-  standalone: true,
   template: `
     @if (animationService.currentAnimation(); as anim) {
       <div class="fixed inset-0 pointer-events-none z-[9999] flex items-center justify-center">

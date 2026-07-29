@@ -1,10 +1,11 @@
-import { Component, input, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, input, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AppCardComponent } from '../primitives/card/card.component';
+import { interval } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-host-dashboard',
-  standalone: true,
   imports: [CommonModule, AppCardComponent],
   template: `
     <app-card
@@ -42,39 +43,23 @@ import { AppCardComponent } from '../primitives/card/card.component';
     </app-card>
   `,
 })
-export class HostDashboardComponent implements OnInit, OnDestroy {
+export class HostDashboardComponent {
   viewerCount = input<number>(0);
   earnedCoins = input<number>(0);
   startTime = input.required<Date>();
 
-  uptimeSeconds = signal<number>(0);
-  private timerRef: ReturnType<typeof setInterval> | undefined;
+  private tick = toSignal(interval(1000), { initialValue: 0 });
 
   uptime = computed(() => {
-    const totalSeconds = this.uptimeSeconds();
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
+    this.tick();
+    const now = Date.now();
+    const start = this.startTime().getTime();
+    const diffSeconds = Math.max(0, Math.floor((now - start) / 1000));
+    const hours = Math.floor(diffSeconds / 3600);
+    const minutes = Math.floor((diffSeconds % 3600) / 60);
+    const seconds = diffSeconds % 60;
 
     const pad = (num: number) => num.toString().padStart(2, '0');
     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
   });
-
-  ngOnInit(): void {
-    this.updateUptime();
-    this.timerRef = setInterval(() => this.updateUptime(), 1000);
-  }
-
-  ngOnDestroy(): void {
-    if (this.timerRef) {
-      clearInterval(this.timerRef);
-    }
-  }
-
-  private updateUptime(): void {
-    const now = new Date().getTime();
-    const start = this.startTime().getTime();
-    const diffSeconds = Math.max(0, Math.floor((now - start) / 1000));
-    this.uptimeSeconds.set(diffSeconds);
-  }
 }

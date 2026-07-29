@@ -3,8 +3,7 @@ import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { LongPressContextMenuComponent } from './long-press-context-menu.component';
-import { of } from 'rxjs';
-import { SafetyService } from '../../services/safety.service';
+import { ReportUserModalService } from '../report-user-modal/report-user-modal.service';
 
 (globalThis as any).Touch = class Touch {} as any;
 
@@ -13,18 +12,16 @@ import { SafetyService } from '../../services/safety.service';
 describe('LongPressContextMenuComponent', () => {
   let component: LongPressContextMenuComponent;
   let fixture: ComponentFixture<LongPressContextMenuComponent>;
+  let reportModalService: { open: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
+    reportModalService = {
+      open: vi.fn(),
+    };
+
     await TestBed.configureTestingModule({
       imports: [LongPressContextMenuComponent],
-      providers: [
-        {
-          provide: SafetyService,
-          useValue: {
-            reportUser: vi.fn().mockReturnValue(of(null)),
-          },
-        },
-      ],
+      providers: [{ provide: ReportUserModalService, useValue: reportModalService }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LongPressContextMenuComponent);
@@ -62,19 +59,10 @@ describe('LongPressContextMenuComponent', () => {
     });
   });
 
-  it('should emit report event when report option is clicked', () => {
-    vi.spyOn(component.report, 'emit');
-    // Clicking report opens the modal but does not emit directly
-
+  it('should open the report modal when report option is clicked', () => {
     (component as any).onOptionClick('report');
-    // After the modal submits, the event is emitted
-    component.onReportSubmitted();
-    expect(component.report.emit).toHaveBeenCalledWith({
-      messageId: 'test-message-id',
-      content: 'Hello world',
-      senderId: 'user-123',
-      roomId: 'room-456',
-    });
+
+    expect(reportModalService.open).toHaveBeenCalledWith('user-123', window.location.href);
   });
 
   it('should close menu after option click', () => {

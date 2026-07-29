@@ -1,6 +1,6 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
-import { ToastService } from '../components/primitives/toast/toast.service';
+import { showToast } from './toast.service';
 
 export interface RestoreResult {
   success: boolean;
@@ -16,7 +16,6 @@ export class RestorePurchasesService {
   readonly lastRestoreResult = signal<RestoreResult | null>(null);
 
   private supabaseService = inject(SupabaseService);
-  private toastService = inject(ToastService);
 
   async restorePurchases(): Promise<RestoreResult> {
     this.isRestoring.set(true);
@@ -82,15 +81,9 @@ export class RestorePurchasesService {
       this.lastRestoreResult.set(result);
 
       if (result.success) {
-        this.toastService.show(result.message, {
-          type: 'success',
-          duration: 4000,
-        });
+        showToast(result.message, 'success', 4000);
       } else {
-        this.toastService.show(result.message, {
-          type: 'info',
-          duration: 4000,
-        });
+        showToast(result.message, 'info', 4000);
       }
 
       return result;
@@ -102,10 +95,7 @@ export class RestorePurchasesService {
       };
       this.lastRestoreResult.set(result);
 
-      this.toastService.show(result.message, {
-        type: 'error',
-        duration: 5000,
-      });
+      showToast(result.message, 'error', 5000);
 
       return result;
     } finally {

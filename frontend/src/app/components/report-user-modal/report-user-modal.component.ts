@@ -1,93 +1,85 @@
-import {
-  Component,
-  EventEmitter,
-  Input,
-  OnInit,
-  Output,
-  signal,
-  computed,
-  inject,
-} from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, inject, output, signal } from '@angular/core';
+import { form, required, FormField } from '@angular/forms/signals';
+import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { SafetyService, ReportCategory, ReportUserDto } from '../../services/safety.service';
-import { ToastService } from '../../components/primitives/toast/toast.service';
+import { showToast } from '../../services/toast.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
+
+interface ReportFormModel {
+  category: string;
+  description: string;
+  blockUser: boolean;
+}
 
 @Component({
   selector: 'app-report-user-modal',
-  standalone: true,
-  imports: [FormsModule, TranslatePipe],
+  imports: [FormField, TranslatePipe, CdkTrapFocus],
   templateUrl: './report-user-modal.component.html',
 })
-export class ReportUserModalComponent implements OnInit {
-  @Input({ required: false }) reportUserId: string = '';
-  @Input() contextUrl?: string;
-  // Renamed to avoid 'closed' being treated as a native DOM event name
-  @Output() modalClosed = new EventEmitter<void>();
-  @Output() reported = new EventEmitter<void>();
+export class ReportUserModalComponent {
+  readonly modalClosed = output<void>();
+  readonly reported = output<void>();
+
+  private readonly safetyService = inject(SafetyService);
+  private readonly i18n = inject(I18nService);
 
   readonly isOpen = signal(false);
+  readonly titleId = 'report-user-modal-title';
 
-  open(userId: string): void {
-    this.reportUserId = userId;
-    this.selectedCategory.set(null);
-    this.description.set('');
+  private readonly reportUserId = signal('');
+  private readonly contextUrl = signal<string | undefined>(undefined);
+
+  readonly loadingCategories = signal(false);
+  readonly loadError = signal(false);
+  readonly categories = signal<ReportCategory[]>([]);
+
+  readonly isSubmitting = signal(false);
+  readonly errorMessage = signal<string | null>(null);
+
+  private readonly formModel = signal<ReportFormModel>({
+    category: '',
+    description: '',
+    blockUser: false,
+  });
+  readonly reportForm = form(this.formModel, (p) => {
+    required(p.category);
+  });
+
+  readonly canSubmit = computed(() => this.reportForm().valid() && !this.isSubmitting());
+
+  /** Opens the modal for the given target user. Called by ReportUserModalService. */
+  open(userId: string, contextUrl?: string): void {
+    this.reportUserId.set(userId);
+    this.contextUrl.set(contextUrl);
+    this.formModel.set({ category: '', description: '', blockUser: false });
     this.errorMessage.set(null);
     this.isOpen.set(true);
+    this.loadCategories();
   }
 
-  // Loading / error states for categories
-  loadingCategories = signal(false);
-  loadError = signal(false);
+  categoryLabel(cat: ReportCategory): string {
+    return this.i18n.translate(`report.category.${cat.value}.label`) || cat.label;
+  }
 
-  // Categories from backend / static fallback
-  categories = signal<ReportCategory[]>([]);
-
-  // Selected category value
-  selectedCategory = signal<string | null>(null);
-
-  // Additional form fields
-  description = signal('');
-  blockUser = signal(false);
-
-  // Submission state
-  isSubmitting = signal(false);
-  errorMessage = signal<string | null>(null);
-
-  // Derived list of categories to show
-  categoriesToShow = computed(() => this.categories());
-
-  private safetyService = inject(SafetyService);
-  private toastService = inject(ToastService);
-
-  ngOnInit(): void {
-    this.loadCategories();
+  categoryDescription(cat: ReportCategory): string {
+    return this.i18n.translate(`report.category.${cat.value}.description`) || cat.description || '';
   }
 
   loadCategories(): void {
     this.loadingCategories.set(true);
     this.loadError.set(false);
 
-    this.safetyService.getReportCategories().subscribe({
-      next: (cats) => {
+    this.safetyService
+      .getReportCategories()
+      .then((cats) => {
         this.categories.set(cats);
         this.loadingCategories.set(false);
-      },
-      error: () => {
-        // Even though the service provides a fallback, we show an error UI
+      })
+      .catch(() => {
         this.loadError.set(true);
         this.loadingCategories.set(false);
-      },
-    });
-  }
-
-  retryLoadCategories(): void {
-    this.loadCategories();
-  }
-
-  selectCategory(value: string): void {
-    this.selectedCategory.set(value);
-    this.errorMessage.set(null); // clear any submission error
+      });
   }
 
   cancel(): void {
@@ -96,31 +88,30 @@ export class ReportUserModalComponent implements OnInit {
   }
 
   async submitReport(): Promise<void> {
-    if (!this.selectedCategory() || this.isSubmitting()) {
+    if (!this.canSubmit()) {
       return;
     }
 
     this.isSubmitting.set(true);
     this.errorMessage.set(null);
 
+    const model = this.formModel();
     const dto: ReportUserDto = {
-      reported_id: this.reportUserId,
-      reason_category: this.selectedCategory()!,
-      description: this.description() || undefined,
-      context_url: this.contextUrl,
+      reported_id: this.reportUserId(),
+      reason_category: model.category,
+      description: model.description || undefined,
+      context_url: this.contextUrl(),
     };
 
     try {
       await this.safetyService.reportUserAsync(dto);
       this.reported.emit();
-      this.toastService.show('Report submitted successfully.', {
-        type: 'success',
-      });
+      showToast(this.i18n.translate('report.toast_success'), 'success');
 
-      if (this.blockUser()) {
-        // Fire‑and‑forget block – errors are logged but don’t block the report flow
+      if (model.blockUser) {
+        // Fire-and-forget: a block failure shouldn't prevent the report from closing out.
         this.safetyService
-          .blockUserAsync(this.reportUserId)
+          .blockUserAsync(this.reportUserId())
           .catch((err) => console.error('Failed to block user after report:', err));
       }
 
@@ -128,9 +119,8 @@ export class ReportUserModalComponent implements OnInit {
       this.modalClosed.emit();
     } catch (err: unknown) {
       const errorObj = err as { error?: { message?: string } };
-      this.errorMessage.set(
-        errorObj?.error?.message || 'Failed to submit report. Please try again.',
-      );
+      this.errorMessage.set(errorObj?.error?.message || this.i18n.translate('report.toast_error'));
+    } finally {
       this.isSubmitting.set(false);
     }
   }

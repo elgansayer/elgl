@@ -1,5 +1,5 @@
 import { showToast } from '../../services/toast.service';
-import { Component, Input, signal } from '@angular/core';
+import { Component, input, signal } from '@angular/core';
 
 @Component({
   selector: 'app-text-to-speech',
@@ -21,19 +21,19 @@ import { Component, Input, signal } from '@angular/core';
   `,
 })
 export class TextToSpeechComponent {
-  @Input({ required: true }) text = '';
-  @Input() language = 'en';
+  text = input.required<string>();
+  language = input('en');
 
   readonly isPlaying = signal<boolean>(false);
 
   speak(event: Event): void {
     event.stopPropagation();
-    if (!this.text.trim()) return;
+    if (!this.text().trim()) return;
 
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel(); // Stop prior speeches
-      const utterance = new SpeechSynthesisUtterance(this.text);
-      utterance.lang = this.language;
+      const utterance = new SpeechSynthesisUtterance(this.text());
+      utterance.lang = this.language();
       utterance.rate = 0.9; // Slightly slower for language learners
 
       utterance.onstart = () => this.isPlaying.set(true);

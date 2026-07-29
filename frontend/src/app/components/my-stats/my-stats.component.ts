@@ -5,7 +5,6 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
 
 @Component({
   selector: 'app-my-stats',
-  standalone: true,
   imports: [CommonModule, NgChartsModule],
   template: `
     <div class="p-4 max-w-4xl mx-auto space-y-6">

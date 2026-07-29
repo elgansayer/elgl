@@ -4,7 +4,6 @@ import { DocumentViewerComponent } from '../../components/document-viewer/docume
 
 @Component({
   selector: 'app-terms',
-  standalone: true,
   imports: [DocumentViewerComponent, DatePipe],
   template: `
     <app-document-viewer title="Terms of Service">

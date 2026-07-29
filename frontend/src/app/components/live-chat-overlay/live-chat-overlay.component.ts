@@ -28,7 +28,6 @@ interface CentrifugoMessageData {
 
 @Component({
   selector: 'app-live-chat-overlay',
-  standalone: true,
   imports: [CommonModule],
   template: `
     <!-- Overlay container positioned at the bottom of the video stream -->

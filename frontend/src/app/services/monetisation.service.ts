@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 
 export interface SubscriptionPlan {
   id: string;
@@ -63,44 +63,52 @@ export class MonetisationService {
   createCheckoutSession(
     planId: string,
     interval: 'month' | 'year',
-  ): Observable<CreateCheckoutSessionResponse> {
-    return this.http.post<CreateCheckoutSessionResponse>(
-      `${this.baseUrl}/create-checkout-session`,
-      { planId, interval },
+  ): Promise<CreateCheckoutSessionResponse> {
+    return firstValueFrom(
+      this.http.post<CreateCheckoutSessionResponse>(`${this.baseUrl}/create-checkout-session`, {
+        planId,
+        interval,
+      }),
     );
   }
 
-  generateApiKey(): Observable<GenerateApiKeyResponse> {
-    return this.http.post<GenerateApiKeyResponse>(`${this.baseUrl}/generate-api-key`, {});
+  generateApiKey(): Promise<GenerateApiKeyResponse> {
+    return firstValueFrom(
+      this.http.post<GenerateApiKeyResponse>(`${this.baseUrl}/generate-api-key`, {}),
+    );
   }
 
-  getAnalytics(): Observable<DeveloperAnalyticsResponse> {
-    return this.http.get<DeveloperAnalyticsResponse>(`${this.baseUrl}/analytics`);
+  getAnalytics(): Promise<DeveloperAnalyticsResponse> {
+    return firstValueFrom(this.http.get<DeveloperAnalyticsResponse>(`${this.baseUrl}/analytics`));
   }
 
-  getDiagnosticLogs(): Observable<DiagnosticLog[]> {
-    return this.http.get<DiagnosticLog[]>(`${this.baseUrl}/diagnostics/logs`);
+  getDiagnosticLogs(): Promise<DiagnosticLog[]> {
+    return firstValueFrom(this.http.get<DiagnosticLog[]>(`${this.baseUrl}/diagnostics/logs`));
   }
 
   createDiagnosticLog(
     category: 'POSTGIS' | 'CENTRIFUGO' | 'REDIS' | 'LIVEKIT',
     status: 'info' | 'success' | 'warn',
     message: string,
-  ): Observable<DiagnosticLog> {
-    return this.http.post<DiagnosticLog>(`${this.baseUrl}/diagnostics/logs`, {
-      category,
-      status,
-      message,
-    });
+  ): Promise<DiagnosticLog> {
+    return firstValueFrom(
+      this.http.post<DiagnosticLog>(`${this.baseUrl}/diagnostics/logs`, {
+        category,
+        status,
+        message,
+      }),
+    );
   }
 
   validateAppleReceipt(
     receiptData: string,
     excludeOldTransactions?: boolean,
-  ): Observable<AppleReceiptValidationResponse> {
-    return this.http.post<AppleReceiptValidationResponse>(
-      `${this.baseUrl}/validate-apple-receipt`,
-      { receipt_data: receiptData, exclude_old_transactions: excludeOldTransactions },
+  ): Promise<AppleReceiptValidationResponse> {
+    return firstValueFrom(
+      this.http.post<AppleReceiptValidationResponse>(`${this.baseUrl}/validate-apple-receipt`, {
+        receipt_data: receiptData,
+        exclude_old_transactions: excludeOldTransactions,
+      }),
     );
   }
 
@@ -108,13 +116,12 @@ export class MonetisationService {
    * Restore previous purchases (Apple App Store / Google Play).
    * Calls the backend endpoint that validates receipts and restores VIP status.
    */
-  restorePurchases(): Observable<{ received: boolean; status: string }> {
-    // The backend expects a POST to /monetisation/restore-purchases
-    // with an empty body (or a payload containing platform info).
-    // For simplicity, we send an empty object.
-    return this.http.post<{ received: boolean; status: string }>(
-      `${this.baseUrl}/restore-purchases`,
-      {},
+  restorePurchases(): Promise<{ received: boolean; status: string }> {
+    return firstValueFrom(
+      this.http.post<{ received: boolean; status: string }>(
+        `${this.baseUrl}/restore-purchases`,
+        {},
+      ),
     );
   }
 }

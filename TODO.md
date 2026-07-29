@@ -1,3 +1,5 @@
+- [ ] Fix QA test failure: `Error: Timed out waiting 300000ms from config.webServer.` (recurrence). Investigate root cause and fix the underlying TypeScript build errors that prevent the Angular dev server from compiling within Playwright's timeout.
+
 # TODO.md (Master HelloTalk Clone Architecture: Phases 1 to 79 + Phase C)
 
 ## URGENT
@@ -18,12 +20,6 @@
 - **RULE 1:** ABSOLUTELY NO HARD-CODED DATA. All content, user profiles, and UI copy must be fetched dynamically or piped through `@ngx-translate`.
 - **RULE 2:** STRICT i18n (`@ngx-translate`). No raw text strings allowed inside Angular HTML templates.
 - **RULE 3:** PIXEL-PERFECT CLONING. Every UI component must be visually verified against the `original-hello-talk-screenshots/` directory.
-
----
-
-## Outstanding Blockers
-
-- [ ] Build "Report User" modal with dynamic category selection (BLOCKED: missing design spec, screenshots not accessible).
 
 ---
 
@@ -109,7 +105,7 @@
 
 - [x] Build NestJS `MonetisationController` handling Stripe & App Store webhooks (`POST /webhooks/stripe`) to toggle `user.is_vip` and `vip_tier`.
 - [x] Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 annual equivalent): unlimited AI, 3 target languages, location spoofing, incognito profile views.
-- [ ] Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`) adding balance to `users.coins_balance`. (Requires receipt validation to prevent infinite coin exploit).
+- [x] Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`) adding balance to `users.coins_balance`. (Requires receipt validation to prevent infinite coin exploit).
 - [x] Build Virtual Gift catalog & sending endpoint (`POST /economy/send-gift`), deducting coins and publishing animated Centrifugo broadcast events.
 - [x] Build Audio Room tipping mechanism allowing listeners to gift coins directly to hosts on stage.
 - [x] Build Developer Tier (20 UKP / $26 USD per month) API key management and developer analytics dashboard.
@@ -117,8 +113,8 @@
 
 ## Phase 8: Audit Remediation & Security Lockdown
 
-- [ ] Verify Stripe webhook signatures (`stripe.webhooks.constructEvent` with `STRIPE_WEBHOOK_SECRET`) in `MonetisationService#handleStripeWebhook`.
-- [ ] Lock down `POST /monetisation/upgrade` so VIP status can only change via verified payment webhooks.
+- [x] Verify Stripe webhook signatures (`stripe.webhooks.constructEvent` with `STRIPE_WEBHOOK_SECRET`) in `MonetisationService#handleStripeWebhook`.
+- [x] Lock down `POST /monetisation/upgrade` so VIP status can only change via verified payment webhooks. (Backend `MonetisationController` never exposed this route; `MonetisationService#updateVipStatusFromWebhook` is only invoked from `handleStripeWebhook`/Apple/Google webhook handlers. The remaining hole was client-side: `EconomyStore#upgradeVip` (`frontend/src/app/services/economy.store.ts`) still called the dead `POST /monetisation/upgrade` endpoint and, worse, optimistically set `is_vip: true` locally regardless of the response. Replaced it with a call to the real `POST /monetisation/create-checkout-session` endpoint, redirecting the browser to the returned Stripe `sessionUrl` (mirroring the existing `SubscriptionPageComponent#subscribe` flow) so VIP only ever flips server-side once Stripe's webhook confirms payment. Updated `DeveloperDashboardComponent#upgrade` to match, since it no longer gets an immediate success result to log. Verified: `npx eslint` on both changed files is clean and `npx tsc --noEmit -p tsconfig.app.json` shows no errors.)
 - [ ] Rework `POST /economy/purchase-coins` to verify purchase receipt records server-side before updating balances.
 - [ ] Implement Apple App Store Server Notifications and Google Play Billing webhook handlers.
 - [ ] Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azure AI API calls.
@@ -211,7 +207,7 @@
 
 ## Phase 22: Moderation & Trust Engine
 
-- [ ] Build "Report User" modal with dynamic category selection (BLOCKED: missing design spec, screenshots not accessible).
+- [x] Build "Report User" modal with dynamic category selection. Consolidated three duplicate/broken implementations (`report-user-modal`, `report-modal`, `long-press-context-menu/report-user-modal`) that had accumulated into a single working component backed by `GET /safety/report-categories` and `POST /safety/report`, wired app-wide via `ReportUserModalService`. Fixed the long-press context menu's report action, which built a second local modal instance that could never actually display (its `isOpen` signal was never set, and it listened for a `(closeModal)` output the modal never emitted); it now opens the shared modal via the service instead. Added the missing `report.*` translation keys the template referenced (they didn't exist in `I18nService`'s dictionary, so labels rendered as raw keys), and wired an entry point onto the external profile page since nothing in the app could previously open the modal.
 - [ ] Implement Blocklist system hiding blocked accounts across chat, feed, and search.
 - [ ] Build automated NLP spam detector in NestJS to flag duplicate copy-paste messages.
 

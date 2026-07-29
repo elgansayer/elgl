@@ -1,5 +1,6 @@
-import { Component, signal, OnInit, inject } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppPillComponent } from '../primitives/pill/pill.component';
@@ -15,7 +16,6 @@ interface Corrector {
 
 @Component({
   selector: 'app-leaderboard',
-  standalone: true,
   imports: [AppCardComponent, AppPillComponent],
   template: `
     <div class="max-w-2xl mx-auto ps-4 pe-4 pt-6 pb-6">
@@ -57,14 +57,22 @@ interface Corrector {
     </div>
   `,
 })
-export class LeaderboardComponent implements OnInit {
+export class LeaderboardComponent {
   private http = inject(HttpClient);
   readonly correctors = signal<Corrector[]>([]);
 
-  ngOnInit(): void {
-    this.http.get<Corrector[]>('/api/leaderboard/top-correctors').subscribe({
-      next: (data) => this.correctors.set(data),
-      error: () => this.correctors.set([]),
-    });
+  constructor() {
+    this.loadLeaderboard();
+  }
+
+  private async loadLeaderboard(): Promise<void> {
+    try {
+      const data = await firstValueFrom(
+        this.http.get<Corrector[]>('/api/leaderboard/top-correctors'),
+      );
+      this.correctors.set(data);
+    } catch {
+      this.correctors.set([]);
+    }
   }
 }

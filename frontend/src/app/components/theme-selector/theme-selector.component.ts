@@ -4,7 +4,6 @@ import { ThemeService, Theme } from '../../services/theme.service';
 
 @Component({
   selector: 'app-theme-selector',
-  standalone: true,
   imports: [CommonModule],
   template: `
     <div

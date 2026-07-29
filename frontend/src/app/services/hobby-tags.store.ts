@@ -43,87 +43,87 @@ export class HobbyTagsStore {
 
   loadAllTags(): void {
     this.loading.set(true);
-    this.hobbyTagsService.getAllTags().subscribe({
-      next: (tags) => {
+    this.hobbyTagsService.getAllTags().then(
+      (tags) => {
         this.allTags.set(tags);
         this.loading.set(false);
       },
-      error: (err) => {
-        this.error.set(err.message);
+      (err: unknown) => {
+        this.error.set((err as Error).message);
         this.loading.set(false);
       },
-    });
+    );
   }
 
   loadUserTags(): void {
     this.loading.set(true);
-    this.hobbyTagsService.getMyTags().subscribe({
-      next: (tags) => {
+    this.hobbyTagsService.getMyTags().then(
+      (tags) => {
         this.userTags.set(tags);
         this.loading.set(false);
       },
-      error: (err) => {
-        this.error.set(err.message);
+      (err: unknown) => {
+        this.error.set((err as Error).message);
         this.loading.set(false);
       },
-    });
+    );
   }
 
   addTag(hobbyTagId: string, proficiencyLevel?: number): void {
     this.loading.set(true);
-    this.hobbyTagsService.addMyTag(hobbyTagId, proficiencyLevel).subscribe({
-      next: (userTag) => {
+    this.hobbyTagsService.addMyTag(hobbyTagId, proficiencyLevel).then(
+      (userTag) => {
         this.userTags.update((tags) => [...tags, userTag]);
         this.loading.set(false);
       },
-      error: (err) => {
-        this.error.set(err.message);
+      (err: unknown) => {
+        this.error.set((err as Error).message);
         this.loading.set(false);
       },
-    });
+    );
   }
 
   removeTag(hobbyTagId: string): void {
     this.loading.set(true);
-    this.hobbyTagsService.removeMyTag(hobbyTagId).subscribe({
-      next: () => {
+    this.hobbyTagsService.removeMyTag(hobbyTagId).then(
+      () => {
         this.userTags.update((tags) => tags.filter((t) => t.hobby_tag_id !== hobbyTagId));
         this.loading.set(false);
       },
-      error: (err) => {
-        this.error.set(err.message);
+      (err: unknown) => {
+        this.error.set((err as Error).message);
         this.loading.set(false);
       },
-    });
+    );
   }
 
   updateProficiency(hobbyTagId: string, level: number): void {
     this.loading.set(true);
-    this.hobbyTagsService.updateProficiency(hobbyTagId, level).subscribe({
-      next: (updated) => {
+    this.hobbyTagsService.updateProficiency(hobbyTagId, level).then(
+      (updated) => {
         this.userTags.update((tags) =>
           tags.map((t) => (t.hobby_tag_id === hobbyTagId ? updated : t)),
         );
         this.loading.set(false);
       },
-      error: (err) => {
-        this.error.set(err.message);
+      (err: unknown) => {
+        this.error.set((err as Error).message);
         this.loading.set(false);
       },
-    });
+    );
   }
 
   loadVocabulary(language: string): void {
     this.loading.set(true);
-    this.hobbyTagsService.getVocabulary(language).subscribe({
-      next: (vocab) => {
+    this.hobbyTagsService.getVocabulary(language).then(
+      (vocab) => {
         this.vocabulary.set(vocab);
         this.loading.set(false);
       },
-      error: (err) => {
-        this.error.set(err.message);
+      (err: unknown) => {
+        this.error.set((err as Error).message);
         this.loading.set(false);
       },
-    });
+    );
   }
 }

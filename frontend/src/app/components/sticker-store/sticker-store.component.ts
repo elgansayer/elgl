@@ -14,7 +14,6 @@ export interface Sticker {
 
 @Component({
   selector: 'app-sticker-store',
-  standalone: true,
   imports: [CommonModule, AppCardComponent, AppButtonSecondaryComponent, AppPillComponent],
   templateUrl: './sticker-store.component.html',
 })

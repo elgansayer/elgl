@@ -5,7 +5,6 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 
 @Component({
   selector: 'app-restore-purchases-button',
-  standalone: true,
   imports: [AppButtonSecondaryComponent],
   template: `
     <app-button-secondary

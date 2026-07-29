@@ -6,7 +6,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-chat-search',
-  standalone: true,
   imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <div

@@ -1,7 +1,7 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { Component, signal, computed, inject, resource } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 interface FAQ {
@@ -20,8 +20,7 @@ interface HelpResponse {
 
 @Component({
   selector: 'app-help-centre',
-  standalone: true,
-  imports: [CommonModule, FormsModule, HttpClientModule],
+  imports: [FormsModule],
   templateUrl: './help-centre.component.html',
   styles: [
     `
@@ -38,10 +37,9 @@ interface HelpResponse {
     `,
   ],
 })
-export class HelpCentreComponent implements OnInit {
+export class HelpCentreComponent {
   private readonly baseUrl = `${environment.apiUrl}/help/articles`;
 
-  // State
   loading = signal(false);
   error = signal<string | null>(null);
 
@@ -50,66 +48,65 @@ export class HelpCentreComponent implements OnInit {
   page = signal(1);
   limit = signal(10);
 
-  // Filters
   selectedCategory = signal('');
   searchText = '';
+  private searchSignal = signal('');
 
-  // Pagination helpers
   totalPages = computed(() => Math.ceil(this.total() / this.limit()) || 1);
   hasPrevious = computed(() => this.page() > 1);
   hasNext = computed(() => this.page() < this.totalPages());
 
   private http = inject(HttpClient);
 
-  ngOnInit(): void {
-    this.loadArticles();
-  }
-
-  loadArticles(): void {
-    this.loading.set(true);
-    this.error.set(null);
-
-    const params: Record<string, string | number> = {
+  private articlesLoader = resource({
+    params: () => ({
       page: this.page(),
       limit: this.limit(),
-    };
-    if (this.selectedCategory()) {
-      params['category'] = this.selectedCategory();
-    }
-    if (this.searchText) {
-      params['search'] = this.searchText;
-    }
+      category: this.selectedCategory(),
+      search: this.searchSignal(),
+    }),
+    loader: async ({ params }) => {
+      this.loading.set(true);
+      this.error.set(null);
 
-    this.http.get<HelpResponse>(this.baseUrl, { params }).subscribe({
-      next: (res) => {
+      const queryParams: Record<string, string | number> = {
+        page: params.page,
+        limit: params.limit,
+      };
+      if (params.category) queryParams['category'] = params.category;
+      if (params.search) queryParams['search'] = params.search;
+
+      try {
+        const res = await firstValueFrom(
+          this.http.get<HelpResponse>(this.baseUrl, { params: queryParams }),
+        );
         this.articles.set(res.items);
         this.total.set(res.total);
         this.page.set(res.page);
         this.limit.set(res.limit);
-        this.loading.set(false);
-      },
-      error: (err) => {
+        return res;
+      } catch (err) {
         console.error(err);
         this.error.set('Failed to load help articles. Please try again.');
+        return null;
+      } finally {
         this.loading.set(false);
-      },
-    });
-  }
+      }
+    },
+  });
 
   applyCategory(category: string): void {
     this.selectedCategory.set(category);
     this.page.set(1);
-    this.loadArticles();
   }
 
   applySearch(): void {
+    this.searchSignal.set(this.searchText);
     this.page.set(1);
-    this.loadArticles();
   }
 
   goToPage(page: number): void {
     if (page < 1 || page > this.totalPages()) return;
     this.page.set(page);
-    this.loadArticles();
   }
 }

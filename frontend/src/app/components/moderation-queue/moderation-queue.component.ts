@@ -1,17 +1,13 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, signal, inject, resource } from '@angular/core';
 import { ModerationService, ModerationItem } from '../../services/moderation.service';
-import { of } from 'rxjs';
-import { catchError, finalize, tap } from 'rxjs/operators';
 
 @Component({
   selector: 'app-moderation-queue',
-  standalone: true,
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './moderation-queue.component.html',
   styleUrls: ['./moderation-queue.component.scss'],
 })
-export class ModerationQueueComponent implements OnInit {
+export class ModerationQueueComponent {
   private moderationService = inject(ModerationService);
 
   activeTab = signal<'moment' | 'profile'>('moment');
@@ -24,77 +20,68 @@ export class ModerationQueueComponent implements OnInit {
 
   error = signal<string | null>(null);
 
-  ngOnInit(): void {
-    this.fetchItemsForTab('moment');
-  }
+  private itemsLoader = resource({
+    params: () => ({ tab: this.activeTab() }),
+    loader: async ({ params }) => {
+      this.error.set(null);
+      if (params.tab === 'moment') {
+        this.loadingMoments.set(true);
+        try {
+          const items = await this.moderationService.getItems('moment', 'pending');
+          this.momentItems.set(items);
+          return items;
+        } catch {
+          this.error.set('Failed to load flagged moments.');
+          return [] as ModerationItem[];
+        } finally {
+          this.loadingMoments.set(false);
+        }
+      } else {
+        this.loadingProfiles.set(true);
+        try {
+          const items = await this.moderationService.getItems('profile', 'pending');
+          this.profileItems.set(items);
+          return items;
+        } catch {
+          this.error.set('Failed to load flagged profiles.');
+          return [] as ModerationItem[];
+        } finally {
+          this.loadingProfiles.set(false);
+        }
+      }
+    },
+    defaultValue: [] as ModerationItem[],
+  });
 
   setTab(tab: 'moment' | 'profile'): void {
     this.activeTab.set(tab);
-    this.fetchItemsForTab(tab);
   }
 
-  fetchItemsForTab(tab: 'moment' | 'profile') {
-    if (tab === 'moment') {
-      if (this.momentItems().length > 0) return;
-      this.loadingMoments.set(true);
-      this.error.set(null);
-      this.moderationService
-        .getItems('moment', 'pending')
-        .pipe(
-          tap((items) => this.momentItems.set(items)),
-          catchError(() => {
-            this.error.set('Failed to load flagged moments.');
-            return of([]);
-          }),
-          finalize(() => this.loadingMoments.set(false)),
-        )
-        .subscribe();
-    } else {
-      if (this.profileItems().length > 0) return;
-      this.loadingProfiles.set(true);
-      this.error.set(null);
-      this.moderationService
-        .getItems('profile', 'pending')
-        .pipe(
-          tap((items) => this.profileItems.set(items)),
-          catchError(() => {
-            this.error.set('Failed to load flagged profiles.');
-            return of([]);
-          }),
-          finalize(() => this.loadingProfiles.set(false)),
-        )
-        .subscribe();
+  async approveItem(item: ModerationItem) {
+    try {
+      await this.moderationService.approveItem(item.id, item.type);
+      this.refreshItems(item.type);
+    } catch {
+      this.error.set(`Failed to approve ${item.type}.`);
     }
   }
 
-  approveItem(item: ModerationItem) {
-    const type = item.type;
-    this.moderationService
-      .approveItem(item.id, type)
-      .pipe(finalize(() => this.refreshItems(type)))
-      .subscribe({
-        error: () => this.error.set(`Failed to approve ${type}.`),
-      });
-  }
-
-  rejectItem(item: ModerationItem) {
-    const type = item.type;
-    this.moderationService
-      .rejectItem(item.id, type, 'Violation')
-      .pipe(finalize(() => this.refreshItems(type)))
-      .subscribe({
-        error: () => this.error.set(`Failed to reject ${type}.`),
-      });
+  async rejectItem(item: ModerationItem) {
+    try {
+      await this.moderationService.rejectItem(item.id, item.type, 'Violation');
+      this.refreshItems(item.type);
+    } catch {
+      this.error.set(`Failed to reject ${item.type}.`);
+    }
   }
 
   private refreshItems(type: 'moment' | 'profile') {
     if (type === 'moment') {
       this.momentItems.set([]);
-      this.fetchItemsForTab('moment');
     } else {
       this.profileItems.set([]);
-      this.fetchItemsForTab('profile');
     }
+    this.itemsLoader.reload();
   }
 
   get filteredMoments() {

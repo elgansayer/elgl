@@ -29,7 +29,16 @@ This skill enforces universal coding and project management best practices acros
 - **Test-Driven:** Write unit tests for all business logic and edge cases.
 - **Continuous Verification:** Ensure all tests pass locally before committing.
 
-## 5. Agent Instructions
+## 5. Angular Modern Patterns (Non-Negotiable)
+
+- **ZERO TOLERANCE for decorators:** NEVER `@Input()`, `@Output()`, `@ViewChild()`, `@ViewChildren()`, `@ContentChild()`, `@ContentChildren()`, `@HostBinding()`, `@HostListener()`. Use `input()`, `output()`, `viewChild()`, `viewChildren()`, `contentChild()`, `contentChildren()`, and `host: {}` property.
+- **ZERO TOLERANCE for legacy state:** NEVER `Subject` / `BehaviorSubject` for state (use `signal<T>()`). NEVER `.subscribe()` (use `toSignal()`, `resource()`, or `async` pipe). NEVER `setTimeout` / `setInterval` for data (use `resource()` with polling).
+- **Mandatory signals:** ALL component inputs use `input.required<T>()` / `input<T>(default)`. ALL outputs use `output<T>()`. ALL async data uses `resource<T>()`. ALL template queries use `viewChild()` / `viewChildren()`.
+- **Mandatory injection:** ALL dependencies use `inject()` function. NEVER constructor injection.
+- **Mandatory standalone:** ALL components are standalone (default in v20+). NEVER `@NgModule`. NEVER `standalone: true` in decorator.
+- **Mandatory control flow:** NEVER `*ngIf`/`*ngFor`/`*ngSwitch`. Use `@if`/`@for`/`@switch`.
+
+## 6. Agent Instructions
 
 - **MANDATORY TESTING RULE:** For absolutely everything we do, we must build a test. Code should never be generated, modified, or considered complete without a corresponding test verifying its functionality.
 - Whenever generating code or refactoring, ensure strict adherence to these rules without exception.

@@ -25,6 +25,7 @@ describe('UserDetailComponent', () => {
 
     fixture = TestBed.createComponent(UserDetailComponent);
     component = fixture.componentInstance;
+    fixture.componentRef.setInput('userId', 'test-user-123');
     fixture.detectChanges();
   });
 

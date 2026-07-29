@@ -4,7 +4,6 @@ import { AppCardComponent } from '../primitives/card/card.component';
 
 @Component({
   selector: 'app-document-viewer',
-  standalone: true,
   imports: [CommonModule, AppCardComponent],
   template: `
     <div class="min-h-screen bg-slate-900 text-slate-200 p-4 md:p-8">

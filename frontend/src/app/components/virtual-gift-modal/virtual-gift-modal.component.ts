@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, inject, OnInit } from '@angular/core';
+import { Component, input, output, inject, OnInit } from '@angular/core';
 
 import { EconomyStore, VirtualGift } from '../../services/economy.store';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -182,10 +182,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
   `,
 })
 export class VirtualGiftModalComponent implements OnInit {
-  @Input({ required: true }) receiverId = '';
-  @Input({ required: true }) receiverName = 'Host';
-  @Input() roomId?: string;
-  @Output() closed = new EventEmitter<void>();
+  receiverId = input.required<string>();
+  receiverName = input.required<string>();
+  roomId = input<string>();
+  closed = output<void>();
 
   readonly economyStore = inject(EconomyStore);
   selectedGift: VirtualGift | null = null;
@@ -207,15 +207,15 @@ export class VirtualGiftModalComponent implements OnInit {
     this.isSending = true;
     try {
       const ok = await this.economyStore.sendGift(
-        this.receiverId,
+        this.receiverId(),
         this.selectedGift.id,
-        this.roomId,
+        this.roomId(),
       );
       if (ok) {
         this.economyStore.triggerGiftAnimation({
           gift: this.selectedGift,
           sender_name: 'You',
-          receiver_name: this.receiverName,
+          receiver_name: this.receiverName(),
         });
         this.closed.emit();
       }
