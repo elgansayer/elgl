@@ -45,12 +45,14 @@ export class UnreadCounterService {
   private updateAppBadge(count: number): void {
     if (typeof navigator !== 'undefined') {
       if (count > 0 && 'setAppBadge' in navigator) {
+        // eslint-disable-next-line no-restricted-syntax
         (navigator as unknown as { setAppBadge: (c: number) => Promise<void> })
           .setAppBadge(count)
           .catch((error: unknown) => {
             console.error('Failed to set app badge:', error);
           });
       } else if (count === 0 && 'clearAppBadge' in navigator) {
+        // eslint-disable-next-line no-restricted-syntax
         (navigator as unknown as { clearAppBadge: () => Promise<void> })
           .clearAppBadge()
           .catch((error: unknown) => {

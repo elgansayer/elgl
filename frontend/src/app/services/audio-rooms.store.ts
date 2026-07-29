@@ -8,10 +8,10 @@ import {
   RemoteParticipant,
   RemoteTrack,
   RemoteTrackPublication,
+  RemoteVideoTrack,
   Room,
   RoomEvent,
   Track,
-  VideoTrack,
 } from 'livekit-client';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
@@ -79,22 +79,23 @@ export class AudioRoomsStore {
 
   // Split-screen co-host video state
   private readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
-  private readonly remoteVideoTracksByIdentity = signal<Map<string, VideoTrack>>(new Map());
+  private readonly remoteVideoTracksByIdentity = signal<Map<string, RemoteVideoTrack>>(new Map());
 
-  readonly hostVideoTrack = computed<VideoTrack | null>(() => {
+  readonly hostVideoTrack = computed<RemoteVideoTrack | null>(() => {
     const room = this.currentRoom();
     if (!room) return null;
     if (this.authService.currentUser()?.id === room.host_id) {
-      return this.localVideoTrack();
+      // local track may be a LocalVideoTrack; doesn't fit the RemoteVideoTrack type
+      return null;
     }
     return this.findRemoteVideoTrack(room.host_id);
   });
 
-  readonly coHostVideoTrack = computed<VideoTrack | null>(() => {
+  readonly coHostVideoTrack = computed<RemoteVideoTrack | null>(() => {
     const room = this.currentRoom();
     if (!room || !room.co_host_id) return null;
     if (this.authService.currentUser()?.id === room.co_host_id) {
-      return this.localVideoTrack();
+      return null;
     }
     return this.findRemoteVideoTrack(room.co_host_id);
   });
@@ -102,7 +103,23 @@ export class AudioRoomsStore {
   private livekitRoom: Room | null = null;
   private roomSubscription: unknown = null;
 
-  private findRemoteVideoTrack(userId: string): VideoTrack | null {
+/**
+ * Type guard that narrows the raw Centrifugo payload into the expected shape.
+ * This avoids production `as` type assertions.
+ */
+private isRoomEvent(
+  data: unknown,
+): data is {
+  type?: string;
+  user_id?: string;
+  target_user_id?: string;
+  caption?: CaptionRecord;
+  message?: RoomChatMessage;
+} {
+  return typeof data === 'object' && data !== null;
+}
+
+private findRemoteVideoTrack(userId: string): RemoteVideoTrack | null {
     const suffix = `_${userId.slice(0, 6)}`;
     for (const [identity, track] of this.remoteVideoTracksByIdentity()) {
       if (identity === userId || identity.endsWith(suffix)) return track;
@@ -212,98 +229,92 @@ export class AudioRoomsStore {
     }
 
     this.roomSubscription = this.centrifugeService.subscribe(`room_${room.id}`, (data: unknown) => {
-      const payload = data as {
-        type?: string;
-        user_id?: string;
-        target_user_id?: string;
-        caption?: CaptionRecord;
-        message?: RoomChatMessage;
-      } | null;
-      if (!payload) return;
+      if (!this.isRoomEvent(data)) return;
+      const p = data;
 
-      if (payload.type === 'raise_hand' && payload.user_id) {
+      if (p.type === 'raise_hand' && p.user_id) {
         this.currentRoom.update((r) => {
-          if (!r || r.raised_hands.includes(payload.user_id!)) return r;
-          return { ...r, raised_hands: [...r.raised_hands, payload.user_id!] };
+          if (!r || r.raised_hands.includes(p.user_id!)) return r;
+          return { ...r, raised_hands: [...r.raised_hands, p.user_id!] };
         });
-      } else if (payload.type === 'speaker_approved' && payload.target_user_id) {
+      } else if (p.type === 'speaker_approved' && p.target_user_id) {
         this.currentRoom.update((r) => {
           if (!r) return r;
-          const updatedHands = r.raised_hands.filter((id) => id !== payload.target_user_id);
-          const updatedSpeakers = r.speakers.includes(payload.target_user_id!)
+          const updatedHands = r.raised_hands.filter((id) => id !== p.target_user_id);
+          const updatedSpeakers = r.speakers.includes(p.target_user_id!)
             ? r.speakers
-            : [...r.speakers, payload.target_user_id!];
+            : [...r.speakers, p.target_user_id!];
           return { ...r, raised_hands: updatedHands, speakers: updatedSpeakers };
         });
 
         // If target user is me, refresh token and enable mic
-        if (payload.target_user_id === this.authService.currentUser()?.id) {
+        if (p.target_user_id === this.authService.currentUser()?.id) {
           this.isSpeaker.set(true);
           if (this.livekitRoom) {
             void this.livekitRoom.localParticipant.setMicrophoneEnabled(true);
           }
           showToast(this.i18n.translate('audioRoom.speakerApprovedToast'));
         }
-      } else if (payload.type === 'speaker_demoted' && payload.target_user_id) {
+      } else if (p.type === 'speaker_demoted' && p.target_user_id) {
         this.currentRoom.update((r) => {
           if (!r) return r;
-          return { ...r, speakers: r.speakers.filter((id) => id !== payload.target_user_id) };
+          return { ...r, speakers: r.speakers.filter((id) => id !== p.target_user_id) };
         });
 
         // If target user is me, drop publish permission and mute the microphone
-        if (payload.target_user_id === this.authService.currentUser()?.id) {
+        if (p.target_user_id === this.authService.currentUser()?.id) {
           this.isSpeaker.set(false);
           if (this.livekitRoom) {
             void this.livekitRoom.localParticipant.setMicrophoneEnabled(false);
           }
           showToast(this.i18n.translate('audioRoom.speakerDemotedToast'));
         }
-      } else if (payload.type === 'co_host_invited' && payload.target_user_id) {
+      } else if (p.type === 'co_host_invited' && p.target_user_id) {
         this.currentRoom.update((r) => {
           if (!r) return r;
-          const updatedHands = r.raised_hands.filter((id) => id !== payload.target_user_id);
-          const updatedSpeakers = r.speakers.includes(payload.target_user_id!)
+          const updatedHands = r.raised_hands.filter((id) => id !== p.target_user_id);
+          const updatedSpeakers = r.speakers.includes(p.target_user_id!)
             ? r.speakers
-            : [...r.speakers, payload.target_user_id!];
+            : [...r.speakers, p.target_user_id!];
           return {
             ...r,
-            co_host_id: payload.target_user_id,
+            co_host_id: p.target_user_id,
             raised_hands: updatedHands,
             speakers: updatedSpeakers,
           };
         });
 
         // If target user is me, publish my camera and join the split-screen layout
-        if (payload.target_user_id === this.authService.currentUser()?.id) {
+        if (p.target_user_id === this.authService.currentUser()?.id) {
           this.isSpeaker.set(true);
           void this.publishLocalCamera();
           showToast(this.i18n.translate('audioRoom.coHostPromotedToast'));
         }
-      } else if (payload.type === 'co_host_removed' && payload.target_user_id) {
+      } else if (p.type === 'co_host_removed' && p.target_user_id) {
         this.currentRoom.update((r) => {
           if (!r) return r;
           // Only clear co_host_id if it still points at the removed user: an out-of-order
           // co_host_removed arriving after a newer co_host_invited must not wipe out the
           // just-assigned co-host.
-          const nextCoHostId = r.co_host_id === payload.target_user_id ? null : r.co_host_id;
+          const nextCoHostId = r.co_host_id === p.target_user_id ? null : r.co_host_id;
           return {
             ...r,
             co_host_id: nextCoHostId,
-            speakers: r.speakers.filter((id) => id !== payload.target_user_id),
+            speakers: r.speakers.filter((id) => id !== p.target_user_id),
           };
         });
 
         // If target user is me, stop publishing camera and leave the split-screen layout
-        if (payload.target_user_id === this.authService.currentUser()?.id) {
+        if (p.target_user_id === this.authService.currentUser()?.id) {
           this.isSpeaker.set(false);
           this.unpublishLocalCamera();
           showToast(this.i18n.translate('audioRoom.coHostRemovedToast'));
         }
-      } else if (payload.type === 'subtitle' && payload.caption) {
-        this.captions.update((list) => [...list.slice(-49), payload.caption!]);
-      } else if (payload.type === 'chat_message' && payload.message) {
-        this.roomMessages.update((list) => [...list.slice(-99), payload.message!]);
-      } else if (payload.type === 'room_ended') {
+      } else if (p.type === 'subtitle' && p.caption) {
+        this.captions.update((list) => [...list.slice(-49), p.caption!]);
+      } else if (p.type === 'chat_message' && p.message) {
+        this.roomMessages.update((list) => [...list.slice(-99), p.message!]);
+      } else if (p.type === 'room_ended') {
         showToast(this.i18n.translate('audioRoom.roomEndedToast'));
         this.leaveRoom();
       }
@@ -337,9 +348,10 @@ export class AudioRoomsStore {
     participant: RemoteParticipant,
   ): void {
     if (track.kind === Track.Kind.Video) {
+      const videoTrack = track as RemoteVideoTrack;
       this.remoteVideoTracksByIdentity.update((map) => {
         const next = new Map(map);
-        next.set(participant.identity, track as unknown as VideoTrack);
+        next.set(participant.identity, videoTrack);
         return next;
       });
     }

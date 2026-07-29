@@ -1,14 +1,16 @@
 import { Component, inject } from '@angular/core';
 
 import { AuthService } from '../../services/auth.service';
+import { StudyStreakWidgetComponent } from '../../components/study-streak-widget/study-streak-widget.component';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-home',
-  imports: [],
+  imports: [StudyStreakWidgetComponent, TranslatePipe],
   template: `
-    <div class="min-h-screen bg-gray-900 text-white">
+    <div class="min-h-screen bg-[#121212] text-white">
       <header class="p-4 border-b border-gray-700 flex items-center justify-between">
-        <h1 class="text-xl font-bold">HelloTalk</h1>
+        <h1 class="text-xl font-bold">{{ 'home.title' | t }}</h1>
         <div class="flex items-center gap-4">
           <span class="text-sm text-gray-400">
             {{ authService.currentUser()?.email }}
@@ -16,8 +18,8 @@ import { AuthService } from '../../services/auth.service';
         </div>
       </header>
 
-      <main class="p-4">
-        <p class="text-gray-300">Welcome to the home page.</p>
+      <main class="p-4 space-y-4">
+        <app-study-streak-widget></app-study-streak-widget>
       </main>
     </div>
   `,

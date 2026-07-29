@@ -3,7 +3,13 @@ import { DiscoveryComponent } from './components/discovery/discovery.component';
 import { adminGuard } from './guards/admin.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'discovery', pathMatch: 'full' },
+  { path: '', redirectTo: 'home', pathMatch: 'full' },
+  {
+    path: 'home',
+    loadComponent: () =>
+      import('./pages/home/home.component').then((m) => m.HomeComponent),
+    title: 'Home - HelloTalk',
+  },
   { path: 'discovery', component: DiscoveryComponent },
   {
     path: 'moments',

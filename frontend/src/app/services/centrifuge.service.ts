@@ -100,9 +100,8 @@ export class CentrifugeService {
       }
     } else if (this.centrifuge) {
       try {
-        await (
-          this.centrifuge as unknown as { publish: (ch: string, d: unknown) => Promise<void> }
-        ).publish(channel, data);
+        // The Centrifuge client has a native publish method on the instance.
+        await this.centrifuge.publish(channel, data);
       } catch (e) {
         console.error('Centrifuge publish error:', e);
       }

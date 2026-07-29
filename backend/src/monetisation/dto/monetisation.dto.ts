@@ -35,7 +35,8 @@ export class AppleReceiptValidationDto {
 export class CreateCheckoutSessionDto {
   @IsString()
   @IsNotEmpty()
-  planId!: string;
+  @IsIn(['consumer_8_ukp_10_usd', 'consumer_50_ukp_63_usd'])
+  planId!: 'consumer_8_ukp_10_usd' | 'consumer_50_ukp_63_usd';
 
   @IsString()
   @IsIn(['month', 'year'])

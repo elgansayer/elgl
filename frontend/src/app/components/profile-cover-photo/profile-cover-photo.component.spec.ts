@@ -2,6 +2,13 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ProfileCoverPhotoComponent } from './profile-cover-photo.component';
 import { CoverPhotoService } from '../../services/cover-photo.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { PipeTransform } from '@angular/core';
+
+class MockTranslatePipe implements PipeTransform {
+  transform(value: string): string {
+    return value;
+  }
+}
 
 describe('ProfileCoverPhotoComponent', () => {
   let component: ProfileCoverPhotoComponent;
@@ -16,7 +23,7 @@ describe('ProfileCoverPhotoComponent', () => {
       imports: [ProfileCoverPhotoComponent],
       providers: [
         { provide: CoverPhotoService, useValue: coverPhotoServiceSpy },
-        { provide: TranslatePipe, useValue: jasmine.createSpyObj('TranslatePipe', ['transform']) },
+        { provide: TranslatePipe, useClass: MockTranslatePipe },
       ],
     }).compileComponents();
 
@@ -32,10 +39,16 @@ describe('ProfileCoverPhotoComponent', () => {
   it('should emit coverUpdated on successful save', async () => {
     // Simulate a file selection
     const file = new File([''], 'test.webp', { type: 'image/webp' });
-    const event = { target: { files: [file] } } as unknown as Event;
-    component.onFileSelected(event);
-    // We cannot fully test cropper initialisation, but we can test that save succeeds.
-    // After file selected, the previewUrl should be set.
-    expect(component.previewUrl()).toBeTruthy();
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+    const inputEl = fixture.nativeElement.querySelector('#cover-file-input') as HTMLInputElement;
+    inputEl.files = dataTransfer.files;
+    inputEl.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    // Trigger save
+    component['selectedFile'] = file;
+    await component['save']?.();
+    expect(coverPhotoServiceSpy.upload).toHaveBeenCalled();
   });
 });

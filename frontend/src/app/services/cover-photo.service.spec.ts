@@ -27,11 +27,11 @@ describe('CoverPhotoService', () => {
 
     const req = httpMock.expectOne('/api/users/cover-photo');
     expect(req.request.method).toBe('POST');
-    expect(req.request.body.has('cover')).toBeTrue();
+    expect(req.request.body.has('cover')).toBe(true);
 
     req.flush({ url: expectedUrl });
 
-    await expectAsync(uploadPromise).toBeResolvedTo(expectedUrl);
+    await expect(uploadPromise).resolves.toBe(expectedUrl);
   });
 
   it('should reject on network error', async () => {
@@ -41,6 +41,6 @@ describe('CoverPhotoService', () => {
     const req = httpMock.expectOne('/api/users/cover-photo');
     req.error(new ProgressEvent('Network error'));
 
-    await expectAsync(uploadPromise).toBeRejected();
+    await expect(uploadPromise).rejects.toThrow();
   });
 });

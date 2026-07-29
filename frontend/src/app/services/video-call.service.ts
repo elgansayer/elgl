@@ -169,12 +169,7 @@ export class VideoCallService {
   async switchCamera(): Promise<void> {
     if (!this.room) return;
 
-    const videoPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
-    if (videoPublication?.track && 'restartTrack' in videoPublication.track) {
-      await (
-        videoPublication.track as unknown as { restartTrack: () => Promise<void> }
-      ).restartTrack();
-    }
+    await this.room.switchActiveDevice('videoinput');
   }
 
   private setupRoomListeners(): void {

@@ -84,7 +84,10 @@ export class MomentsStore {
             headers: this.getHeaders(),
             params,
           })
-          .pipe(catchError(() => of(MOCK_MOMENTS as MomentRecord[]))),
+          .pipe(catchError(() => {
+            const mockFeed: MomentRecord[] = MOCK_MOMENTS;
+            return of(mockFeed);
+          })),
       );
       this.feed.set(list);
     } catch (e) {

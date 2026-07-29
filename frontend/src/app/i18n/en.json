@@ -1,0 +1,10 @@
+{
+  "home": {
+    "title": "Home"
+  },
+  "studyStreak": {
+    "daily": "Daily Study Streak",
+    "day": "day",
+    "days": "days"
+  }
+}

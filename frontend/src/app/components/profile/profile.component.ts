@@ -88,10 +88,19 @@ export class ProfileComponent implements OnInit {
       this.isEditing.set(false);
       this.successMessage.set(this.i18n.translate('profile.successUpdate'));
     } catch (e: unknown) {
-      const err = e as { message?: string; error?: { message?: string } };
-      this.errorMessage.set(
-        err.error?.message || err.message || this.i18n.translate('profile.updateError'),
-      );
+      let errorMsg = this.i18n.translate('profile.updateError');
+      if (e && typeof e === 'object') {
+        const obj: Record<string, unknown> = e;
+        if (typeof obj['error'] === 'object' && obj['error'] !== null) {
+          const errObj: Record<string, unknown> = obj['error'];
+          if (typeof errObj['message'] === 'string') {
+            errorMsg = errObj['message'];
+          }
+        } else if (typeof obj['message'] === 'string') {
+          errorMsg = obj['message'];
+        }
+      }
+      this.errorMessage.set(errorMsg);
     }
   }
 

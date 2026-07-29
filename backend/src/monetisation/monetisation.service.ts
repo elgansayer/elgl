@@ -104,26 +104,35 @@ export class MonetisationService {
     return this.updateVipStatus(userId, isVip, vipTier);
   }
 
-  async createCheckoutSession(
-    userId: string,
-    planId: string,
+  private getPriceIdForPlan(
+    planId: 'consumer_8_ukp_10_usd' | 'consumer_50_ukp_63_usd',
     interval: 'month' | 'year',
-  ): Promise<{ sessionUrl: string; sessionId: string }> {
-    const validPlans = ['consumer_monthly', 'consumer_yearly'];
-    if (!validPlans.includes(planId)) {
-      throw new NotFoundException(`Plan "${planId}" not found`);
+  ): string {
+    if (planId === 'consumer_50_ukp_63_usd') {
+      const priceId = this.configService.get<string>('STRIPE_YEARLY_PRICE_ID');
+      if (!priceId) {
+        throw new BadRequestException(
+          `Stripe price ID for plan "${planId}" (interval: ${interval}) is not configured. Ensure STRIPE_YEARLY_PRICE_ID environment variable is set.`,
+        );
+      }
+      return priceId;
     }
-
-    const priceId =
-      planId === 'consumer_yearly'
-        ? this.configService.get<string>('STRIPE_YEARLY_PRICE_ID')
-        : this.configService.get<string>('STRIPE_MONTHLY_PRICE_ID');
-
+    // planId === 'consumer_8_ukp_10_usd'
+    const priceId = this.configService.get<string>('STRIPE_MONTHLY_PRICE_ID');
     if (!priceId) {
       throw new BadRequestException(
-        `Stripe price ID for plan "${planId}" (interval: ${interval}) is not configured. Ensure STRIPE_MONTHLY_PRICE_ID and STRIPE_YEARLY_PRICE_ID environment variables are set.`,
+        `Stripe price ID for plan "${planId}" (interval: ${interval}) is not configured. Ensure STRIPE_MONTHLY_PRICE_ID environment variable is set.`,
       );
     }
+    return priceId;
+  }
+
+  async createCheckoutSession(
+    userId: string,
+    planId: 'consumer_8_ukp_10_usd' | 'consumer_50_ukp_63_usd',
+    interval: 'month' | 'year',
+  ): Promise<{ sessionUrl: string; sessionId: string }> {
+    const priceId = this.getPriceIdForPlan(planId, interval);
 
     const session = await this.stripe.checkout.sessions.create({
       mode: 'subscription',

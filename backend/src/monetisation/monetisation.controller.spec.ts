@@ -219,7 +219,7 @@ describe('MonetisationController', () => {
       expect(monetisationService.createCheckoutSession).not.toHaveBeenCalled();
     });
 
-    it('should call service.createCheckoutSession with correct parameters', async () => {
+    it('should call service.createCheckoutSession with correct parameters for monthly plan', async () => {
       const dto = {
         planId: 'consumer_8_ukp_10_usd',
         interval: 'month' as const,
@@ -245,9 +245,9 @@ describe('MonetisationController', () => {
       expect(result).toEqual(mockResponse);
     });
 
-    it('should handle yearly interval', async () => {
+    it('should call service.createCheckoutSession with correct parameters for yearly plan', async () => {
       const dto = {
-        planId: 'consumer_8_ukp_10_usd',
+        planId: 'consumer_50_ukp_63_usd',
         interval: 'year' as const,
       };
       const mockResponse = {
@@ -265,7 +265,7 @@ describe('MonetisationController', () => {
 
       expect(monetisationService.createCheckoutSession).toHaveBeenCalledWith(
         'user-1',
-        'consumer_8_ukp_10_usd',
+        'consumer_50_ukp_63_usd',
         'year',
       );
       expect(result).toEqual(mockResponse);
