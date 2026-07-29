@@ -188,4 +188,10 @@ export const routes: Routes = [
       import('./pages/help-centre/help-centre.component').then((m) => m.HelpCentreComponent),
     title: 'Help Centre - HelloTalk',
   },
+  {
+    path: 'onboarding',
+    loadComponent: () =>
+      import('./components/onboarding/onboarding-wizard.component').then((m) => m.OnboardingWizardComponent),
+    title: 'Onboarding - HelloTalk',
+  },
 ];
