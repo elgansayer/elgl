@@ -268,3 +268,88 @@ test.describe('Chat / Video adversarial', () => {
     expect(boundingBox!.height).toBeGreaterThan(0);
   });
 });
+import { test, expect } from '@playwright/test';
+
+test('Aggressive adversarial: chat + video systems', async ({ page }) => {
+  const baseUrl = 'http://localhost:4200';
+
+  // Login (adjust credentials to your test user)
+  await page.goto(`${baseUrl}/login`);
+  await page.fill('#username', 'automated_test_adversarial');
+  await page.fill('#password', 'AdversarialTest!@#');
+  await page.click('button[type="submit"]');
+  await page.waitForURL('**/chat/**', { timeout: 10000 }).catch(() => {});
+
+  // Navigate to a specific conversation
+  await page.goto(`${baseUrl}/chat/test-user-1`);
+  await page.waitForSelector('.message-input', { timeout: 10000 });
+
+  // 1. Flood with many rapid messages containing script payloads
+  const floodCount = 50;
+  for (let i = 0; i < floodCount; i++) {
+    await page.fill('.message-input', `Rapid message #${i} <script>alert('xss')</script>`);
+    await page.keyboard.press('Enter');
+  }
+
+  // Wait for UI to settle and verify input is still interactive
+  await expect(page.locator('.message-input')).toBeVisible();
+
+  // 2. Empty message attempt
+  await page.fill('.message-input', '');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.message-input')).toBeEnabled();
+
+  // 3. Extremely long message
+  await page.fill('.message-input', 'x'.repeat(50000));
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.message-input')).toBeEnabled();
+
+  // 4. Video / audio room stress
+  await page.goto(`${baseUrl}/audio-rooms`);
+  await page.waitForSelector('.room-card', { timeout: 5000 }).catch(() => {});
+  const firstRoom = page.locator('.room-card').first();
+  if (await firstRoom.isVisible()) {
+    await firstRoom.click();
+    await page.waitForTimeout(2000);
+
+    // Try to join (button text may vary)
+    const joinButton = page.locator('button:has-text("Join")');
+    if (await joinButton.isVisible()) {
+      await joinButton.click();
+    }
+
+    // Rapidly toggle microphone (if visible)
+    const micToggle = page.locator('button[aria-label="Toggle microphone"]');
+    if (await micToggle.isVisible()) {
+      for (let j = 0; j < 10; j++) {
+        await micToggle.click();
+      }
+    }
+  }
+
+  // 5. Rapid “Raise Hand”
+  const raiseHand = page.locator('button:has-text("Raise Hand")');
+  if (await raiseHand.isVisible()) {
+    for (let k = 0; k < 20; k++) {
+      await raiseHand.click();
+      await page.waitForTimeout(50);
+    }
+  }
+
+  // 6. Navigate quickly between different chats
+  for (let i = 0; i < 10; i++) {
+    await page.goto(`${baseUrl}/chat/test-user-${i % 5 + 1}`, { waitUntil: 'domcontentloaded' });
+    await page.fill('.message-input', `Navigated message ${i}`);
+    await page.keyboard.press('Enter');
+  }
+
+  // Catch any unhandled page errors (this will fail the test report)
+  page.on('pageerror', (err) => {
+    test.fail(true, `Uncaught exception: ${err.message}`);
+  });
+
+  // Final sanity check – the page must still be functional
+  await page.goto(`${baseUrl}/chat/test-user-1`);
+  await expect(page.locator('.message-input')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('body')).toBeVisible();
+});
