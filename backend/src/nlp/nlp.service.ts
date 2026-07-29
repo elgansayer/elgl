@@ -1,7 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Language } from 'node-nlp';
-import { Langfuse } from 'langfuse';
 import { SupabaseService } from '../supabase/supabase.service';
 import { GrammarCheckDto } from './dto/grammar-check.dto';
 import { PronunciationScoreDto } from './dto/pronunciation-score.dto';
@@ -18,20 +17,11 @@ import {
 @Injectable()
 export class NlpService {
   private nlpLanguage = new Language();
-  private langfuse: Langfuse;
 
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
-  ) {
-    this.langfuse = new Langfuse({
-      publicKey: this.configService.get<string>('LANGFUSE_PUBLIC_KEY'),
-      secretKey: this.configService.get<string>('LANGFUSE_SECRET_KEY'),
-      baseUrl:
-        this.configService.get<string>('LANGFUSE_BASE_URL') ||
-        'https://cloud.langfuse.com',
-    });
-  }
+  ) {}
 
   detectLanguage(text: string): { language: string; confidence: number } {
     const guesses = this.nlpLanguage.guess(text, undefined, 3);
@@ -72,13 +62,6 @@ export class NlpService {
     isVip: boolean,
     dto: TranslateDto,
   ): Promise<TranslationResult> {
-    const trace = this.langfuse.trace({
-      name: 'translate-text',
-      userId: userId,
-      input: { text: dto.text, target: dto.target_language }, // Masking PII if any, just keeping inputs
-      tags: [isVip ? 'VIP' : 'Free', 'feature:translation'],
-    });
-
     try {
       await this.checkRateLimit(userId, isVip);
 
@@ -180,15 +163,9 @@ export class NlpService {
         pronunciation_url: `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(translatedText)}&tl=${dto.target_language}`,
       };
 
-      trace.update({ output: finalResult });
-      await this.langfuse.flushAsync();
       return finalResult;
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      trace.update({
-        metadata: { level: 'ERROR', statusMessage: msg || 'Unknown error' },
-      });
-      await this.langfuse.flushAsync();
       throw error;
     }
   }
@@ -198,13 +175,6 @@ export class NlpService {
     isVip: boolean,
     dto: GrammarCheckDto,
   ): Promise<GrammarCheckResult> {
-    const trace = this.langfuse.trace({
-      name: 'grammar-check',
-      userId: userId,
-      input: { text: dto.text },
-      tags: [isVip ? 'VIP' : 'Free', 'feature:grammar'],
-    });
-
     try {
       await this.checkRateLimit(userId, isVip);
       const orig = dto.text.trim();
@@ -301,15 +271,10 @@ export class NlpService {
         explanation: explanation,
         errors_found: errorsFound,
       };
-      trace.update({ output: finalResult });
-      await this.langfuse.flushAsync();
+
       return finalResult;
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      trace.update({
-        metadata: { level: 'ERROR', statusMessage: msg || 'Unknown error' },
-      });
-      await this.langfuse.flushAsync();
       throw error;
     }
   }
