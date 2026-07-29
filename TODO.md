@@ -40,7 +40,7 @@
 
 ## Phase 8: Audit Remediation & Security Lockdown
 
-- [ ] Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azure AI API calls.
+- [STUCK] Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azure AI API calls.
 
 ## Phase 9: Internationalisation (i18n) Foundation
 
