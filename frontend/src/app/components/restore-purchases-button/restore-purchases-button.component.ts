@@ -2,10 +2,11 @@ import { Component, inject } from '@angular/core';
 
 import { RestorePurchasesService } from '../../services/restore-purchases.service';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-restore-purchases-button',
-  imports: [AppButtonSecondaryComponent],
+  imports: [AppButtonSecondaryComponent, TranslatePipe],
   template: `
     <app-button-secondary
       [disabled]="restoreService.isRestoring()"
@@ -35,10 +36,10 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             ></path>
           </svg>
-          Restoring...
+          {{ 'restoring' | t }}
         </span>
       } @else {
-        Restore Purchases
+        {{ 'restore_purchases' | t }}
       }
     </app-button-secondary>
   `,
