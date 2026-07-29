@@ -6,8 +6,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=dev
-WorkingDirectory=/home/dev/hellotalk
-ExecStart=/home/dev/hellotalk/scripts/watchdog.sh
+User=%u
+WorkingDirectory=%h/hellotalk
+ExecStart=%h/hellotalk/scripts/watchdog.sh
 StandardOutput=journal
 StandardError=journal

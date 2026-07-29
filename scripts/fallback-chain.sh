@@ -23,6 +23,10 @@ git_locked() {
 
 # AI API rate limiter — prevents all 3 swarm agents from calling external
 # AI APIs simultaneously (credit burn). Uses file-lock via mkdir (atomic).
+# Also sources swarm-env.sh for configurable timeouts.
+FALLBACK_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+# shellcheck source=scripts/swarm-env.sh
+source "$FALLBACK_DIR/swarm-env.sh"
 # shellcheck source=scripts/rate-limiter.sh
 source "$FALLBACK_DIR/rate-limiter.sh"
 
@@ -46,7 +50,7 @@ run_antigravity_cli() {
 
     # Rate-limit shared across all agents
     acquire_ai_slot || { echo "Antigravity: rate limiter timed out."; return 1; }
-    output=$(timeout --foreground -s KILL 300 "$AGY_BIN" -p --dangerously-skip-permissions "$MESSAGE" 2>&1)
+    output=$(run_with_liveness "$ANTIGRAVITY_TIMEOUT" "$ANTIGRAVITY_STUCK_TIMEOUT" "$AGY_BIN" -p --dangerously-skip-permissions "$MESSAGE")
     exit_code=$?
     release_ai_slot
 
@@ -98,7 +102,6 @@ PLAYWRIGHT_STUB
     echo "Running Aider (GitHub Copilot Pro, code-editing mode)..."
     local output
     local exit_code
-    local aider_timeout=600
 
     export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
     export PLAYWRIGHT_SKIP_BROWSER_GC=1
@@ -106,9 +109,9 @@ PLAYWRIGHT_STUB
     export DEBIAN_FRONTEND=noninteractive
 
     acquire_ai_slot || { echo "Aider/Copilot: rate limiter timed out."; rm -rf "$aid_stub_dir"; return 1; }
-    output=$(PATH="$aid_stub_dir:$PATH" timeout --foreground -s KILL "$aider_timeout" \
+    output=$(PATH="$aid_stub_dir:$PATH" run_with_liveness "$AIDER_TIMEOUT" "$AIDER_STUCK_TIMEOUT" \
         aider --model openai/gpt-4o --openai-api-base "$COPILOT_BASE" \
-              --message "$MESSAGE" --no-auto-commits --no-git 2>&1)
+              --message "$MESSAGE" --no-auto-commits --no-git)
     exit_code=$?
     release_ai_slot
     rm -rf "$aid_stub_dir"
@@ -163,7 +166,6 @@ PLAYWRIGHT_STUB
     echo "Running Aider (deepseek/deepseek-reasoner, code-editing mode)..."
     local output
     local exit_code
-    local aider_timeout=600
 
     # Block every path Aider might use to launch playwright.
     export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
@@ -173,7 +175,7 @@ PLAYWRIGHT_STUB
 
     # Rate-limit: only one AI API call across all swarm agents at a time.
     acquire_ai_slot || { echo "Aider: rate limiter timed out."; rm -rf "$aid_stub_dir"; return 1; }
-    output=$(PATH="$aid_stub_dir:$PATH" timeout --foreground -s KILL "$aider_timeout" aider --message "$MESSAGE" --no-auto-commits --no-git 2>&1)
+    output=$(PATH="$aid_stub_dir:$PATH" run_with_liveness "$AIDER_TIMEOUT" "$AIDER_STUCK_TIMEOUT" aider --message "$MESSAGE" --no-auto-commits --no-git)
     exit_code=$?
     release_ai_slot
     rm -rf "$aid_stub_dir"

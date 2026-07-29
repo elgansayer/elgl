@@ -30,10 +30,12 @@ mkdir -p ~/.ssh
 ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts 2>/dev/null || true
 
 # ---- 2. Clone repo ----
-WORKSPACE="$HOME/hellotalk"
+REPO_OWNER="${SWARM_REPO_OWNER:-elgansayer}"
+REPO_NAME="${SWARM_REPO_NAME:-hellotalk}"
+WORKSPACE="$HOME/$REPO_NAME"
 if [ ! -d "$WORKSPACE" ]; then
     echo "Cloning repository..."
-    git clone git@github.com:elgansayer/hellotalk.git "$WORKSPACE"
+    git clone "git@github.com:${REPO_OWNER}/${REPO_NAME}.git" "$WORKSPACE"
 else
     echo "Repository exists, pulling latest..."
     (cd "$WORKSPACE" && git pull origin main 2>/dev/null || true)

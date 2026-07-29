@@ -13,12 +13,11 @@
 #
 # Notifications: Telegram only (see scripts/watchdog.sh). Discord disabled.
 
-set -a
-source .env 2>/dev/null || true
-set +a
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$SCRIPT_DIR"
+export SWARM_ROOT="$REPO_DIR"
+
+source "$SWARM_ROOT/scripts/swarm-env.sh"
 
 echo "🧹 Shutting down existing agents and terminals..."
 

@@ -1,17 +1,15 @@
 #!/bin/bash
 # qa-loop.sh (Adversarial QA Agent)
 export PATH="$HOME/.local/bin:$PATH"
-set -a
-source .env 2>/dev/null || true
-set +a
+
+source "$(dirname "$(realpath "$0")")/scripts/swarm-env.sh"
+
 export LITELLM_NUM_RETRIES=0
 
-# shellcheck source=scripts/preflight-models.sh
-source "$(dirname "$0")/scripts/preflight-models.sh"
 # shellcheck source=scripts/claude-pro.sh
-source "$(dirname "$0")/scripts/claude-pro.sh"
+source "$SWARM_SCRIPTS/claude-pro.sh"
 # shellcheck source=scripts/fallback-chain.sh
-source "$(dirname "$0")/scripts/fallback-chain.sh"
+source "$SWARM_SCRIPTS/fallback-chain.sh"
 
 echo "Starting 24/7 Adversarial QA Swarm..."
 

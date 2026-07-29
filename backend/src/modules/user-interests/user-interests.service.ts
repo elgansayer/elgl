@@ -1,6 +1,24 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 
+interface UserInterestTagRow {
+  tag: string;
+}
+
+interface VocabularyRow {
+  interest_tag: string;
+  vocab_word: string;
+  translation: string | null;
+  srs_level: number;
+}
+
+export interface VocabularyEntry {
+  interestTag: string;
+  vocabWord: string;
+  translation: string | null;
+  srsLevel: number;
+}
+
 @Injectable()
 export class UserInterestsService {
   constructor(
@@ -11,9 +29,10 @@ export class UserInterestsService {
     const { data, error } = await this.supabase
       .from('user_interests')
       .select('tag')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .returns<UserInterestTagRow[]>();
     if (error) throw error;
-    return data.map((r) => r.tag);
+    return (data ?? []).map((r) => r.tag);
   }
 
   async updateUserInterests(userId: string, tags: string[]): Promise<void> {
@@ -28,21 +47,15 @@ export class UserInterestsService {
   async getVocabularyForInterests(
     tags: string[],
     language: string,
-  ): Promise<
-    {
-      interestTag: string;
-      vocabWord: string;
-      translation: string | null;
-      srsLevel: number;
-    }[]
-  > {
+  ): Promise<VocabularyEntry[]> {
     const { data, error } = await this.supabase
       .from('interest_vocabulary')
       .select('interest_tag, vocab_word, translation, srs_level')
       .in('interest_tag', tags)
-      .eq('language', language);
+      .eq('language', language)
+      .returns<VocabularyRow[]>();
     if (error) throw error;
-    return data.map((r) => ({
+    return (data ?? []).map((r) => ({
       interestTag: r.interest_tag,
       vocabWord: r.vocab_word,
       translation: r.translation,

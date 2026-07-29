@@ -62,112 +62,107 @@ export class NlpService {
     isVip: boolean,
     dto: TranslateDto,
   ): Promise<TranslationResult> {
+    await this.checkRateLimit(userId, isVip);
+
+    const detected =
+      dto.source_language || this.detectLanguage(dto.text).language;
+    const cleanWord = dto.text.trim();
+
+    const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
+    if (!deepLKey) {
+      throw new BadRequestException('DeepL API key not configured');
+    }
+
+    const res = await fetch('https://api-free.deepl.com/v2/translate', {
+      method: 'POST',
+      headers: {
+        Authorization: `DeepL-Auth-Key ${deepLKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: [cleanWord],
+        target_lang: dto.target_language.toUpperCase(),
+        source_lang: detected.toUpperCase(),
+        tag_handling: 'xml',
+      }),
+    });
+
+    if (!res.ok) {
+      const errorBody = await res.text();
+      throw new BadRequestException(
+        `DeepL API error: ${res.status} ${errorBody}`,
+      );
+    }
+
+    const jsonResponse = (await res.json()) as unknown as {
+      translations: Array<{ text: string }>;
+    };
+    if (
+      !jsonResponse ||
+      !jsonResponse.translations ||
+      jsonResponse.translations.length === 0
+    ) {
+      throw new BadRequestException('DeepL returned no translations');
+    }
+    const translatedText = jsonResponse.translations[0].text;
+
+    // Get glossary/definition via DeepL glossary lookup (if available) or fallback
+    let definition = '';
     try {
-      await this.checkRateLimit(userId, isVip);
-
-      const detected =
-        dto.source_language || this.detectLanguage(dto.text).language;
-      const cleanWord = dto.text.trim();
-
-      const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
-      if (!deepLKey) {
-        throw new BadRequestException('DeepL API key not configured');
-      }
-
-      const res = await fetch('https://api-free.deepl.com/v2/translate', {
-        method: 'POST',
-        headers: {
-          Authorization: `DeepL-Auth-Key ${deepLKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: [cleanWord],
-          target_lang: dto.target_language.toUpperCase(),
-          source_lang: detected.toUpperCase(),
-          tag_handling: 'xml',
-        }),
-      });
-
-      if (!res.ok) {
-        const errorBody = await res.text();
-        throw new BadRequestException(
-          `DeepL API error: ${res.status} ${errorBody}`,
-        );
-      }
-
-      const jsonResponse = (await res.json()) as unknown as {
-        translations: Array<{ text: string }>;
-      };
-      if (
-        !jsonResponse ||
-        !jsonResponse.translations ||
-        jsonResponse.translations.length === 0
-      ) {
-        throw new BadRequestException('DeepL returned no translations');
-      }
-      const translatedText = jsonResponse.translations[0].text;
-
-      // Get glossary/definition via DeepL glossary lookup (if available) or fallback
-      let definition = '';
-      try {
-        const glossaryRes = await fetch(
-          `https://api-free.deepl.com/v2/glossary-language-pairs`,
-          {
-            headers: {
-              Authorization: `DeepL-Auth-Key ${deepLKey}`,
-            },
+      const glossaryRes = await fetch(
+        `https://api-free.deepl.com/v2/glossary-language-pairs`,
+        {
+          headers: {
+            Authorization: `DeepL-Auth-Key ${deepLKey}`,
           },
-        );
-        if (glossaryRes.ok) {
-          // DeepL doesn't provide definitions directly, so we use a simple heuristic
-          definition = `Translation of "${cleanWord}" in ${dto.target_language}`;
-        }
-      } catch {
+        },
+      );
+      if (glossaryRes.ok) {
+        // DeepL doesn't provide definitions directly, so we use a simple heuristic
         definition = `Translation of "${cleanWord}" in ${dto.target_language}`;
       }
-
-      // Generate transliteration using DeepL's source language detection
-      let transliteration = '';
-      try {
-        const translitRes = await fetch(
-          'https://api-free.deepl.com/v2/translate',
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `DeepL-Auth-Key ${deepLKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              text: [translatedText],
-              target_lang: 'EN',
-              source_lang: dto.target_language.toUpperCase(),
-            }),
-          },
-        );
-        if (translitRes.ok) {
-          const translitData = (await translitRes.json()) as {
-            translations: Array<{ text: string }>;
-          };
-          transliteration = translitData.translations[0].text;
-        }
-      } catch {
-        transliteration = translatedText;
-      }
-
-      const finalResult = {
-        original_text: cleanWord,
-        translated_text: translatedText,
-        detected_language: detected,
-        transliteration: transliteration,
-        definition: definition,
-        pronunciation_url: `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(translatedText)}&tl=${dto.target_language}`,
-      };
-
-      return finalResult;
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      throw error;
+    } catch {
+      definition = `Translation of "${cleanWord}" in ${dto.target_language}`;
     }
+
+    // Generate transliteration using DeepL's source language detection
+    let transliteration = '';
+    try {
+      const translitRes = await fetch(
+        'https://api-free.deepl.com/v2/translate',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `DeepL-Auth-Key ${deepLKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: [translatedText],
+            target_lang: 'EN',
+            source_lang: dto.target_language.toUpperCase(),
+          }),
+        },
+      );
+      if (translitRes.ok) {
+        const translitData = (await translitRes.json()) as {
+          translations: Array<{ text: string }>;
+        };
+        transliteration = translitData.translations[0].text;
+      }
+    } catch {
+      transliteration = translatedText;
+    }
+
+    const finalResult = {
+      original_text: cleanWord,
+      translated_text: translatedText,
+      detected_language: detected,
+      transliteration: transliteration,
+      definition: definition,
+      pronunciation_url: `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(translatedText)}&tl=${dto.target_language}`,
+    };
+
+    return finalResult;
   }
 
   async grammarCheck(
@@ -175,108 +170,103 @@ export class NlpService {
     isVip: boolean,
     dto: GrammarCheckDto,
   ): Promise<GrammarCheckResult> {
-    try {
-      await this.checkRateLimit(userId, isVip);
-      const orig = dto.text.trim();
+    await this.checkRateLimit(userId, isVip);
+    const orig = dto.text.trim();
 
-      const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
-      if (!azureKey) {
-        throw new BadRequestException(
-          'Azure Translator API key not configured',
-        );
-      }
-
-      // Use Azure AI Translator's grammar checking via the "breakSentence" and "translate" endpoints
-      // First, detect the language
-      const detectRes = await fetch(
-        'https://api.cognitive.microsofttranslator.com/detect?api-version=3.0',
-        {
-          method: 'POST',
-          headers: {
-            'Ocp-Apim-Subscription-Key': azureKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify([{ Text: orig }]),
-        },
+    const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
+    if (!azureKey) {
+      throw new BadRequestException(
+        'Azure Translator API key not configured',
       );
-
-      if (!detectRes.ok) {
-        const errorBody = await detectRes.text();
-        throw new BadRequestException(
-          `Azure Detect API error: ${detectRes.status} ${errorBody}`,
-        );
-      }
-
-      const detectData = (await detectRes.json()) as unknown as Array<{
-        language: string;
-      }>;
-      const detectedLang = detectData?.[0]?.language || 'en';
-
-      // Use Azure's dictionary lookup for grammar correction (works best for common languages)
-      const dictRes = await fetch(
-        `https://api.cognitive.microsofttranslator.com/dictionary/lookup?api-version=3.0&from=${detectedLang}&to=en`,
-        {
-          method: 'POST',
-          headers: {
-            'Ocp-Apim-Subscription-Key': azureKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify([{ Text: orig }]),
-        },
-      );
-
-      if (!dictRes.ok) {
-        const errorBody = await dictRes.text();
-        throw new BadRequestException(
-          `Azure Dictionary API error: ${dictRes.status} ${errorBody}`,
-        );
-      }
-
-      const dictData = (await dictRes.json()) as unknown as Array<{
-        displayTarget?: string;
-      }>;
-      const correctedText = dictData?.[0]?.displayTarget || orig;
-      const errorsFound = orig === correctedText ? 0 : 1;
-
-      // Generate explanation using Azure's translation with "to" parameter
-      let explanation = '';
-      try {
-        const explainRes = await fetch(
-          `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=${detectedLang}&to=en&textType=html`,
-          {
-            method: 'POST',
-            headers: {
-              'Ocp-Apim-Subscription-Key': azureKey,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify([
-              { Text: `Grammar correction: "${orig}" → "${correctedText}"` },
-            ]),
-          },
-        );
-        if (explainRes.ok) {
-          const explainData = (await explainRes.json()) as Array<{
-            translations: Array<{ text: string }>;
-          }>;
-          explanation =
-            explainData[0]?.translations[0]?.text || 'Corrected via Azure AI';
-        }
-      } catch {
-        explanation = 'Corrected via Azure AI';
-      }
-
-      const finalResult = {
-        original: orig,
-        corrected: correctedText,
-        explanation: explanation,
-        errors_found: errorsFound,
-      };
-
-      return finalResult;
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      throw error;
     }
+
+    // Use Azure AI Translator's grammar checking via the "breakSentence" and "translate" endpoints
+    // First, detect the language
+    const detectRes = await fetch(
+      'https://api.cognitive.microsofttranslator.com/detect?api-version=3.0',
+      {
+        method: 'POST',
+        headers: {
+          'Ocp-Apim-Subscription-Key': azureKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify([{ Text: orig }]),
+      },
+    );
+
+    if (!detectRes.ok) {
+      const errorBody = await detectRes.text();
+      throw new BadRequestException(
+        `Azure Detect API error: ${detectRes.status} ${errorBody}`,
+      );
+    }
+
+    const detectData = (await detectRes.json()) as unknown as Array<{
+      language: string;
+    }>;
+    const detectedLang = detectData?.[0]?.language || 'en';
+
+    // Use Azure's dictionary lookup for grammar correction (works best for common languages)
+    const dictRes = await fetch(
+      `https://api.cognitive.microsofttranslator.com/dictionary/lookup?api-version=3.0&from=${detectedLang}&to=en`,
+      {
+        method: 'POST',
+        headers: {
+          'Ocp-Apim-Subscription-Key': azureKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify([{ Text: orig }]),
+      },
+    );
+
+    if (!dictRes.ok) {
+      const errorBody = await dictRes.text();
+      throw new BadRequestException(
+        `Azure Dictionary API error: ${dictRes.status} ${errorBody}`,
+      );
+    }
+
+    const dictData = (await dictRes.json()) as unknown as Array<{
+      displayTarget?: string;
+    }>;
+    const correctedText = dictData?.[0]?.displayTarget || orig;
+    const errorsFound = orig === correctedText ? 0 : 1;
+
+    // Generate explanation using Azure's translation with "to" parameter
+    let explanation = '';
+    try {
+      const explainRes = await fetch(
+        `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=${detectedLang}&to=en&textType=html`,
+        {
+          method: 'POST',
+          headers: {
+            'Ocp-Apim-Subscription-Key': azureKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify([
+            { Text: `Grammar correction: "${orig}" → "${correctedText}"` },
+          ]),
+        },
+      );
+      if (explainRes.ok) {
+        const explainData = (await explainRes.json()) as Array<{
+          translations: Array<{ text: string }>;
+        }>;
+        explanation =
+          explainData[0]?.translations[0]?.text || 'Corrected via Azure AI';
+      }
+    } catch {
+      explanation = 'Corrected via Azure AI';
+    }
+
+    const finalResult = {
+      original: orig,
+      corrected: correctedText,
+      explanation: explanation,
+      errors_found: errorsFound,
+    };
+
+    return finalResult;
   }
 
   async pronunciationScore(

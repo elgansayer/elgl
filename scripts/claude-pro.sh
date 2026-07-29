@@ -11,6 +11,8 @@
 
 # Source rate limiter shared with fallback-chain.sh
 FALLBACK_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+# shellcheck source=scripts/swarm-env.sh
+source "$FALLBACK_DIR/swarm-env.sh"
 # shellcheck source=scripts/rate-limiter.sh
 source "$FALLBACK_DIR/rate-limiter.sh"
 
@@ -32,7 +34,7 @@ run_claude_code() {
     # human to drive it inside the tmux pane and exits immediately with code 1 every
     # time. --dangerously-skip-permissions avoids it blocking on a permission prompt
     # that nothing here can answer.
-    output=$(claude -p --dangerously-skip-permissions "$message" 2>&1)
+    output=$(run_with_liveness "$CLAUDE_TIMEOUT" "$CLAUDE_STUCK_TIMEOUT" claude -p --dangerously-skip-permissions "$message")
     local exit_code=$?
     release_ai_slot
 
