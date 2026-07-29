@@ -5,7 +5,7 @@ test.describe('Adversarial Chat / Video System Breakage', () => {
   test('send empty message does not break UI', async ({ page }) => {
     // navigate to a chat page – the specific URL may need adjustment
     await page.goto('/chat?user=testuser');
-    const input = page.locator('[data-testid="message-input"], textarea, .chat-input');
+    const input = page.locator('[data-testid="chat-message-input"], textarea, .chat-input');
     await input.fill('');
     await page.keyboard.press('Enter');
     // wait a moment to let any error toast appear
@@ -16,7 +16,7 @@ test.describe('Adversarial Chat / Video System Breakage', () => {
 
   test('send very long message (50 000 chars) not crash', async ({ page }) => {
     await page.goto('/chat?user=testuser');
-    const input = page.locator('[data-testid="message-input"], textarea, .chat-input');
+    const input = page.locator('[data-testid="chat-message-input"], textarea, .chat-input');
     const longText = 'a'.repeat(50000);
     await input.fill(longText);
     await page.keyboard.press('Enter');
@@ -30,7 +30,7 @@ test.describe('Adversarial Chat / Video System Breakage', () => {
 
   test('send dozens rapid messages', async ({ page }) => {
     await page.goto('/chat?user=testuser');
-    const input = page.locator('[data-testid="message-input"], textarea, .chat-input');
+    const input = page.locator('[data-testid="chat-message-input"], textarea, .chat-input');
     const messageCount = 50;
     for (let i = 0; i < messageCount; i++) {
       await input.fill(`message ${i}`);
@@ -55,7 +55,7 @@ test.describe('Adversarial Chat / Video System Breakage', () => {
 
   test('simulate network offline while sending a message', async ({ page }) => {
     await page.goto('/chat?user=testuser');
-    const input = page.locator('[data-testid="message-input"], textarea, .chat-input');
+    const input = page.locator('[data-testid="chat-message-input"], textarea, .chat-input');
     // go offline
     await page.context().setOffline(true);
     await input.fill('offline message');

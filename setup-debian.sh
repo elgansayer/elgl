@@ -10,6 +10,26 @@
 #   6. Configures sudo askpass for non-interactive apt installs
 #   7. Installs watchdog (cron + systemd timer + logrotate)
 #
+# VPS Bootstrap Checklist (what this script does NOT automate):
+#   1. Git clone the repo:   git clone git@github.com:elgansayer/hellotalk.git
+#   2. Create .env file:     cp backend/.env.example .env && nano .env
+#      (fill in TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, DEEPSEEK_API_KEY
+#       and all backend secrets from backend/.env.example)
+#   3. Set up SSH for GitHub: ssh-keygen && cat ~/.ssh/id_ed25519.pub
+#      (add to GitHub Settings -> SSH Keys so the swarm can push commits)
+#   4. Git config:           git config user.name "AI Swarm" && git config user.email "swarm@hellotalk.local"
+#   5. Install Docker:       curl -fsSL https://get.docker.com | sh
+#      (needed for docker-compose app services: api, web, redis, centrifugo, livekit)
+#   6. Run this script:      ./setup-debian.sh
+#   7. Launch the swarm:     ./kickoff.sh
+#   8. (Optional) Install the systemd watchdog timer:
+#      sudo cp config/systemd/swarm-watchdog.service /etc/systemd/system/
+#      sudo cp config/systemd/swarm-watchdog.timer /etc/systemd/system/
+#      sudo sed -i "s|User=%u|User=$(whoami)|g" /etc/systemd/system/swarm-watchdog.service
+#      sudo sed -i "s|%h/hellotalk|$(pwd)|g" /etc/systemd/system/swarm-watchdog.service
+#      sudo systemctl daemon-reload && sudo systemctl enable --now swarm-watchdog.timer
+#   9. (Optional) Install logrotate: sudo cp config/logrotate/ai-swarm /etc/logrotate.d/
+#
 # Usage: ./setup-debian.sh
 set -eo pipefail
 
