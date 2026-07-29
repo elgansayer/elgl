@@ -6,6 +6,7 @@ import { json, urlencoded, Request, Response } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
+  app.setGlobalPrefix('api');
 
   // Ensure raw body is preserved for Stripe webhook
   app.use(

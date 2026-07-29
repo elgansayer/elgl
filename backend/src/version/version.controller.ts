@@ -1,7 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-@Controller('api/config')
+@Controller('config')
 export class VersionController {
   constructor(private readonly configService: ConfigService) {}
 
