@@ -307,3 +307,17 @@
 [2026-07-29T23:44:43Z]   FAIL  backend lint
 [2026-07-29T23:45:15Z]   OK    backend test
 [2026-07-29T23:45:15Z] Tests have failures (pre-existing). Committing anyway.
+[2026-07-29T23:45:17Z] Committed: e6cf8513 — feat: Build Notification Preferences UI with granular category toggles.
+[2026-07-29T23:45:17Z] COMPLETED: Build Notification Preferences UI with granular category toggles.
+[2026-07-29T23:45:17Z] Cooldown 15s...
+[2026-07-29T23:45:32Z] Task: Implement Blocklist system hiding blocked accounts across chat, feed, and search
+[2026-07-29T23:45:32Z] Queue: 201 pending, 11 done, 0 stuck
+[2026-07-29T23:45:32Z] Attempt 1/3
+[2026-07-29T23:45:32Z] Aider pass 1 (discover)...
+[2026-07-29T23:47:02Z] Pass 1: discovered 10 files
+[2026-07-29T23:47:02Z] Aider pass 2 round 1: 10 files in context
+[2026-07-29T23:47:58Z] Pass 2 round 1: produced 3 file changes
+[2026-07-29T23:48:07Z]   FAIL  frontend lint
+[2026-07-29T23:48:44Z]   FAIL  backend lint
+[2026-07-29T23:49:16Z]   OK    backend test
+[2026-07-29T23:49:16Z] Tests have failures (pre-existing). Committing anyway.

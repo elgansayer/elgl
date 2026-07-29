@@ -123,6 +123,12 @@ export class ChatService {
       if (receiverBlockedIds.includes(senderId)) {
         throw new Error('You cannot send messages to this user.');
       }
+      // Check if the sender has blocked the receiver
+      const senderBlockedIds =
+        await this.safetyService.getBlockedAndBlockerIds(senderId);
+      if (senderBlockedIds.includes(receiverId)) {
+        throw new Error('You cannot send messages to this user.');
+      }
     }
 
     const insertResponse = await supabase

@@ -58,14 +58,23 @@ export class DiscoveryService {
           .limit(10);
 
         if (matches && matches.length > 0) {
-          const matchIds = (matches as Array<{ id: string }>).map((m) => m.id);
-          // Cache recommendations in Redis for 24 hours (86400 seconds)
-          await redis.set(
-            `daily_recommendations:${user.id}`,
-            JSON.stringify(matchIds),
-            'EX',
-            86400,
+          let matchIds = (matches as Array<{ id: string }>).map((m) => m.id);
+          // Exclude blocked users
+          const blockedIds = await this.safetyService.getBlockedAndBlockerIds(
+            user.id,
           );
+          if (blockedIds.length > 0) {
+            matchIds = matchIds.filter((id) => !blockedIds.includes(id));
+          }
+          if (matchIds.length > 0) {
+            // Cache recommendations in Redis for 24 hours (86400 seconds)
+            await redis.set(
+              `daily_recommendations:${user.id}`,
+              JSON.stringify(matchIds),
+              'EX',
+              86400,
+            );
+          }
         }
       }
       this.logger.log('Finished daily partner recommendations calculation.');

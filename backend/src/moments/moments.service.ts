@@ -310,8 +310,16 @@ export class MomentsService {
     }
   }
 
-  async getMomentLikes(momentId: string): Promise<any[]> {
+  async getMomentLikes(
+    momentId: string,
+    currentUserId?: string,
+  ): Promise<any[]> {
     const supabase = this.supabaseService.getClient();
+
+    const blockedIds = currentUserId
+      ? await this.safetyService.getBlockedAndBlockerIds(currentUserId)
+      : [];
+
     const { data, error } = await supabase
       .from('moment_likes')
       .select(
@@ -335,8 +343,14 @@ export class MomentsService {
     }
 
     // Extract the joined user profiles
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
-    return data.map((row: any) => row.users).filter(Boolean);
+    const fullUsers = data.map((row: any) => row.users).filter(Boolean);
+
+    // Filter out blocked users
+    if (blockedIds.length > 0) {
+      return fullUsers.filter((user: any) => !blockedIds.includes(user.id));
+    }
+
+    return fullUsers;
   }
 
   async addComment(
@@ -472,8 +486,16 @@ export class MomentsService {
     return comment;
   }
 
-  async getComments(momentId: string): Promise<MomentComment[]> {
+  async getComments(
+    momentId: string,
+    currentUserId?: string,
+  ): Promise<MomentComment[]> {
     const supabase = this.supabaseService.getClient();
+
+    const blockedIds = currentUserId
+      ? await this.safetyService.getBlockedAndBlockerIds(currentUserId)
+      : [];
+
     const { data } = await supabase
       .from('moment_comments')
       .select('*')
@@ -482,7 +504,13 @@ export class MomentsService {
 
     if (!data || data.length === 0) return [];
 
-    const commentRows = data as MomentCommentRow[];
+    let commentRows = data as MomentCommentRow[];
+
+    // Filter out comments from blocked users
+    if (blockedIds.length > 0) {
+      commentRows = commentRows.filter((c) => !blockedIds.includes(c.user_id));
+    }
+
     const authorIds = Array.from(new Set(commentRows.map((c) => c.user_id)));
     const profilesResponse = await supabase
       .from('users')
