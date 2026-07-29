@@ -6,9 +6,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=%u
-WorkingDirectory=%h/hellotalk
-ExecStart=%h/hellotalk/scripts/watchdog.sh
-StandardOutput=append:/tmp/watchdog.log
-StandardError=append:/tmp/watchdog.log
-NoNewPrivileges=yes
+User=dev
+WorkingDirectory=/home/dev/hellotalk
+ExecStart=/home/dev/hellotalk/scripts/watchdog.sh
+StandardOutput=journal
+StandardError=journal
