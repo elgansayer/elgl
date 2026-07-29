@@ -1,22 +1,22 @@
-# .aider.conf.yml
-# Pinned explicitly: DEEPSEEK_API_KEY is the paid-for account for aider. GEMINI_API_KEY
-# is reserved for the Antigravity CLI (Gemini Pro plan) and must never be picked up here,
-# since Gemini API usage from aider bills per-token on top of the flat Gemini Pro plan.
+# .aider.conf.yml — Aider configuration for the HelloTalk swarm.
 model: deepseek/deepseek-reasoner
 
 read:
   - SPEC.md
   - AGENTS.md
 
-# Silence model proxy warnings globally
 show-model-warnings: false
-
-# Prevent Aider from stopping to ask human permission
 yes-always: true
 
-# Native Linting & Testing hooks
+# Enable repository map so Aider can discover files on its own.
+map-tokens: 2000
+
+# Let Aider auto-lint after changes (catches issues early).
 auto-lint: true
 lint-cmd:
-  - "cd frontend && npm run lint"
-  - "cd backend && npm run lint"
-test-cmd: "cd backend && npm test && cd ../frontend && npm test"
+  - "cd frontend && npm run lint 2>&1 | tail -20"
+  - "cd backend && npm run lint 2>&1 | tail -20"
+
+# Auto-test after changes.
+auto-test: true
+test-cmd: "cd backend && npm test -- --forceExit 2>&1 | tail -30 && cd ../frontend && npm test -- --watch=false 2>&1 | tail -30"

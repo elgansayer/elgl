@@ -15,20 +15,19 @@ import {
   Room,
   RoomEvent,
   RemoteTrack,
-  VideoTrack,
   LocalVideoTrack,
   LocalAudioTrack,
-  createLocalVideoTrack,
-  createLocalAudioTrack,
+  createLocalTracks,
   Track,
 } from 'livekit-client';
 import { LivekitService } from '../../services/livekit.service';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { AppGradientButtonComponent } from '../primitives/gradient-button/gradient-button.component';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-video-call',
-  imports: [AppButtonSecondaryComponent, AppGradientButtonComponent],
+  imports: [AppButtonSecondaryComponent, AppGradientButtonComponent, TranslatePipe],
   template: `
     <div class="fixed inset-0 z-50 bg-black flex flex-col">
       <!-- Remote Video (full screen background) -->
@@ -41,7 +40,7 @@ import { AppGradientButtonComponent } from '../primitives/gradient-button/gradie
               <div class="text-6xl mb-4">
                 {{ otherUserInitials() }}
               </div>
-              <p class="text-xl">Waiting for {{ otherUserName() }}...</p>
+              <p class="text-xl">{{ 'video_call.waiting_for' | t : { name: otherUserName() } }}</p>
             </div>
           </div>
         }
@@ -217,7 +216,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   private localVideo: LocalVideoTrack | null = null;
   private localAudio: LocalAudioTrack | null = null;
 
-  readonly remoteVideoTrack = signal<VideoTrack | null>(null);
+  readonly remoteVideoTrack = signal<RemoteTrack | null>(null);
   readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
   readonly isAudioMuted = signal(false);
   readonly isVideoMuted = signal(false);
@@ -244,12 +243,11 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     });
   }
 
+  // Integration with LiveKit requires imperative setup; exception permitted per AGENTS.md 5.3
   async ngOnInit(): Promise<void> {
     try {
-      // Get token from backend
       const token = await this.livekitService.getToken(this.roomName(), this.otherUserId());
 
-      // Create room and connect
       this.room = new Room({
         adaptiveStream: true,
         dynacast: true,
@@ -258,24 +256,26 @@ export class VideoCallComponent implements OnInit, OnDestroy {
         },
       });
 
-      // Set up event listeners
       this.room
         .on(RoomEvent.TrackSubscribed, this.onTrackSubscribed.bind(this))
         .on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribed.bind(this))
         .on(RoomEvent.ParticipantDisconnected, this.onParticipantDisconnected.bind(this))
         .on(RoomEvent.Disconnected, this.onDisconnected.bind(this));
 
-      // Connect to LiveKit
       await this.room.connect(this.livekitService.getLiveKitUrl(), token);
 
-      // Publish local tracks
-      this.localVideo = await createLocalVideoTrack();
-      this.localAudio = await createLocalAudioTrack();
-
-      await this.room.localParticipant.publishTrack(this.localVideo);
-      await this.room.localParticipant.publishTrack(this.localAudio);
-
-      this.localVideoTrack.set(this.localVideo);
+      // Create and publish local tracks using createLocalTracks
+      const tracks = await createLocalTracks({ audio: true, video: true });
+      for (const track of tracks) {
+        if (track instanceof LocalVideoTrack) {
+          this.localVideo = track;
+          this.localVideoTrack.set(track);
+          await this.room.localParticipant.publishTrack(track);
+        } else if (track instanceof LocalAudioTrack) {
+          this.localAudio = track;
+          await this.room.localParticipant.publishTrack(track);
+        }
+      }
 
       // Start call duration timer
       this.callStartTime = Date.now();
@@ -299,7 +299,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
 
   private onTrackSubscribed(track: RemoteTrack): void {
     if (track.kind === Track.Kind.Video) {
-      this.remoteVideoTrack.set(track as unknown as VideoTrack);
+      this.remoteVideoTrack.set(track);
     }
   }
 

@@ -150,9 +150,8 @@ def _aider_binary() -> str | None:
 
 def run_aider(task: str, attempt: int = 0) -> dict:
     """
-    2-pass Aider workflow:
-      Pass 1: Ask which files need changing (fast, cheap).
-      Pass 2: Provide those files + context and request the actual edits.
+    Run Aider with repo-map enabled (configured in .aider.conf.yml).
+    Repo-map lets Aider discover and add files on its own.
     """
     aider = _aider_binary()
     if not aider:
@@ -165,53 +164,17 @@ def run_aider(task: str, attempt: int = 0) -> dict:
 
     before = set(_git_porcelain())
 
-    # --- Pass 1: discover files ---
-    discover_msg = (
-        f"For this task: '{task}', list ONLY the source file paths "
-        f"(one per line, e.g. frontend/src/app/...) that need to be "
-        f"changed. Do NOT write any code. Just the file paths. "
-        f"Read SPEC.md and AGENTS.md for project context."
-    )
-
-    log(f"Aider pass 1 (discover): task={task[:60]}...")
-
-    files_to_edit = []
-    try:
-        r1 = subprocess.run(
-            [aider, '--message', discover_msg,
-             '--read', 'SPEC.md', '--read', 'AGENTS.md',
-             '--no-auto-commits', '--yes', '--no-suggest-shell-commands',
-             '--model', CFG['model']],
-            capture_output=True, text=True, timeout=120,
-            start_new_session=True
-        )
-        # Extract file paths from response
-        for line in r1.stdout.split('\n'):
-            for m in re.finditer(r'(frontend|backend)/[\w./-]+\.(ts|html|scss|css)', line):
-                fp = m.group(0)
-                if Path(fp).exists() and fp not in files_to_edit:
-                    files_to_edit.append(fp)
-        log(f"Pass 1: discovered {len(files_to_edit)} files: {files_to_edit[:5]}...")
-    except Exception as e:
-        log(f"Pass 1 failed: {e}")
-
-    # Fallback: if no files discovered, use recent source files
-    if not files_to_edit:
-        files_to_edit = _recent_source_files(limit=15)
-        log(f"Pass 1 fallback: using {len(files_to_edit)} recent files")
-
-    if not files_to_edit:
-        files_to_edit = ['SPEC.md']
-
-    # --- Pass 2: make edits ---
     cmd = [aider, '--message', task,
-           '--read', 'SPEC.md', '--read', 'AGENTS.md',
-           '--no-auto-commits', '--yes', '--no-suggest-shell-commands',
+           '--no-auto-commits',
            '--model', CFG['model']]
-    for f in files_to_edit[:20]:
-        cmd.extend(['--file', f])
 
-    log(f"Aider pass 2 (edit): {len(files_to_edit)} files, task={task[:60]}...")
+    # On retries, add recently modified files to help Aider focus
+    if attempt > 0:
+        recent = _recent_source_files(limit=10)
+        for f in recent:
+            cmd.extend(['--read', f])
+
+    log(f"Aider: task={task[:60]}... (attempt {attempt+1})")
 
     proc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -247,9 +210,6 @@ def run_aider(task: str, attempt: int = 0) -> dict:
         if now_porcelain != before:
             last_change_ts = time.time()
             before = now_porcelain
-
-        if last_output_ts > start:
-            pass  # output produced = alive
 
         stuck_dur = time.time() - max(last_output_ts, last_change_ts)
         if stuck_dur >= CFG['aider_stuck']:
