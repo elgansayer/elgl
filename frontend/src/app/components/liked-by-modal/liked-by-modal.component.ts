@@ -95,9 +95,9 @@ export class LikedByModalComponent {
 
   private http = inject(HttpClient);
 
-  protected readonly likedUsers = resource({
-    request: () => this.momentId(),
-    loader: ({ request: momentId }) =>
+  readonly likedUsers = resource({
+    params: () => this.momentId(),
+    loader: ({ params: momentId }) =>
       firstValueFrom(this.http.get<LikedUser[]>(`/api/moments/${momentId}/likes`)),
   });
 }

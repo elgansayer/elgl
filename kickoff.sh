@@ -19,9 +19,10 @@ pkill -9 -f "playwright" 2>/dev/null || true
 sleep 1
 
 # Pre-install Playwright browsers to prevent Aider/e2e from triggering installs.
-# Node.js Playwright (for e2e tests):
+# Node.js Playwright (for e2e tests) - skip system deps to avoid sudo:
 echo "📦 Ensuring Playwright browsers are installed (Node.js)..."
-(cd e2e && npx playwright install --with-deps chromium 2>&1) || true
+export SUDO_ASKPASS="/home/dev/hellotalk/scripts/sudo-askpass.sh"
+(cd e2e && npx playwright install chromium 2>&1) || echo "Playwright install skipped (browser may already exist)"
 
 # Python Playwright (shipped inside Aider):
 echo "📦 Ensuring Playwright browsers are installed (Python/Aider)..."
