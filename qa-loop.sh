@@ -1,5 +1,6 @@
 #!/bin/bash
 # qa-loop.sh (Adversarial QA Agent)
+export PATH="$HOME/.local/bin:$PATH"
 set -a
 source .env 2>/dev/null || true
 set +a

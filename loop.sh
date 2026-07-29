@@ -1,6 +1,9 @@
 #!/bin/bash
 # loop.sh (5-Stage Waterfall Architecture with Global Rate Limit Watcher & Bash Context)
 
+# Ensure ~/.local/bin is in PATH (Aider, agy, etc. installed there)
+export PATH="$HOME/.local/bin:$PATH"
+
 # Load credentials. Without this the whole waterfall fails on auth and the pipeline
 # happily commits the resulting log churn as if it were progress.
 set -a
