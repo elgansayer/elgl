@@ -80,6 +80,11 @@ acquire_ai_slot() {
         sleep 1
         waited=$((waited + 1))
         if [ "$waited" -ge "$AI_RATE_LOCK_TIMEOUT" ]; then
+            # On timeout, try one last forced clear (holder may have died).
+            rmdir "$AI_RATE_LOCK" 2>/dev/null && {
+                echo "[RATE-LIMIT] Forcibly cleared lock after ${AI_RATE_LOCK_TIMEOUT}s wait."
+                continue
+            }
             echo "[RATE-LIMIT] Timed out waiting for AI API slot after ${AI_RATE_LOCK_TIMEOUT}s."
             return 1
         fi

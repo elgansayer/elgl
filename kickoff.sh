@@ -77,6 +77,9 @@ fi
 tmux kill-session -t ai_swarm 2>/dev/null || true
 sleep 2
 
+# Clear any orphaned rate limiter locks from previous dead processes.
+rm -rf /tmp/ai_swarm_ratelimit/api.lock 2>/dev/null || true
+
 pkill -9 -f "loop.sh" 2>/dev/null || true
 pkill -9 -f "qa-loop.sh" 2>/dev/null || true
 pkill -9 -f "pm-loop.sh" 2>/dev/null || true
