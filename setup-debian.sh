@@ -132,8 +132,7 @@ if command -v systemctl &> /dev/null && [ -d /etc/systemd/system ]; then
         sudo cp "$SCRIPT_DIR/config/systemd/swarm-watchdog.service" /etc/systemd/system/
         sudo cp "$SCRIPT_DIR/config/systemd/swarm-watchdog.timer" /etc/systemd/system/
         sudo sed -i "s|User=%u|User=$(whoami)|g" /etc/systemd/system/swarm-watchdog.service
-        sudo sed -i "s|WorkingDirectory=/home/dev/hellotalk|WorkingDirectory=$SCRIPT_DIR|g" /etc/systemd/system/swarm-watchdog.service
-        sudo sed -i "s|ExecStart=/home/dev/hellotalk/scripts/watchdog.sh|ExecStart=$SCRIPT_DIR/scripts/watchdog.sh|g" /etc/systemd/system/swarm-watchdog.service
+        sudo sed -i "s|%h/hellotalk|$SCRIPT_DIR|g" /etc/systemd/system/swarm-watchdog.service
         sudo systemctl daemon-reload
         sudo systemctl enable --now swarm-watchdog.timer
         echo "   Systemd watchdog timer installed and started."

@@ -316,10 +316,34 @@ MEM_TOTAL=$(awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || echo 1)
 MEM_AVAIL=$(awk '/MemAvailable/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)
 if [ "$MEM_TOTAL" -gt 0 ]; then
     MEM_PCT=$((100 - (MEM_AVAIL * 100 / MEM_TOTAL)))
-    if [ "$MEM_PCT" -ge 90 ]; then
-        local_log "Memory pressure: ${MEM_PCT}% used (${MEM_AVAIL}KB available)"
+    if [ "$MEM_PCT" -ge 85 ]; then
+        local_log "Memory pressure: ${MEM_PCT}% used (${MEM_AVAIL}KB available) - cleaning up leaked processes"
+
+        # Kill leaked Playwright/Chromium browsers (biggest offenders)
         pkill -9 -f "playwright" 2>/dev/null || true
         pkill -9 -f "chromium" 2>/dev/null || true
+        pkill -9 -f "chrome" 2>/dev/null || true
+
+        if [ "$MEM_PCT" -ge 90 ]; then
+            # Aggressive: kill stale Antigravity, Aider, and dev servers
+            pkill -9 -f "agy" 2>/dev/null || true
+            pkill -9 -f "antigravity" 2>/dev/null || true
+            pkill -9 -f "aider" 2>/dev/null || true
+            # Kill stale node build watches (ng serve, nest start --watch)
+            pkill -f "ng serve" 2>/dev/null || true
+            pkill -f "nest start.*watch" 2>/dev/null || true
+            # Drop filesystem caches (safe, kernel reclaims as needed)
+            echo 1 > /proc/sys/vm/drop_caches 2>/dev/null || true
+            # Rotate and truncate large log files that may be filling disk
+            find /tmp -name "*.log" -size +100M -exec truncate -s 0 {} \; 2>/dev/null || true
+        fi
+
+        if [ "$MEM_PCT" -ge 95 ]; then
+            # Critical: Telegram alert
+            alert "memory_critical" \
+                "CRITICAL: Memory at ${MEM_PCT}%" \
+                "Only ${MEM_AVAIL}KB available. Killed all non-essential processes.\nSwap: $(free -h | grep Swap | awk '{print $3"/"$2}')."
+        fi
     fi
 fi
 
