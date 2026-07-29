@@ -1,0 +1,23 @@
+[Unit]
+Description=HelloTalk AI Swarm Watchdog
+Documentation=https://github.com/elgansayer/hellotalk
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=%u
+WorkingDirectory=/home/dev/hellotalk
+ExecStart=/home/dev/hellotalk/scripts/watchdog.sh
+StandardOutput=append:/tmp/watchdog.log
+StandardError=append:/tmp/watchdog.log
+
+# Security hardening
+NoNewPrivileges=yes
+PrivateTmp=no
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/tmp
+ReadWritePaths=/home/dev/hellotalk
+ReadWritePaths=%h/.cache/ai_swarm_watchdog
+ReadOnlyPaths=/etc /usr /boot /opt

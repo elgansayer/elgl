@@ -9,6 +9,11 @@
 #       through to the next tool on any non-zero return, so callers here do not
 #       need to distinguish failure reasons.
 
+# Source rate limiter shared with fallback-chain.sh
+FALLBACK_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+# shellcheck source=scripts/rate-limiter.sh
+source "$FALLBACK_DIR/rate-limiter.sh"
+
 run_claude_code() {
     local message="$1"
 
@@ -18,6 +23,9 @@ run_claude_code() {
     fi
 
     echo "Running Claude CLI..."
+
+    # Rate-limit: only one AI API call across all swarm agents at a time.
+    acquire_ai_slot || { echo "Claude: rate limiter timed out."; return 1; }
     local output
     # -p/--print puts the CLI in one-shot non-interactive mode; without it, a prompt
     # given as a positional argument still starts an interactive session, which has no
@@ -26,6 +34,7 @@ run_claude_code() {
     # that nothing here can answer.
     output=$(claude -p --dangerously-skip-permissions "$message" 2>&1)
     local exit_code=$?
+    release_ai_slot
 
     if [ $exit_code -ne 0 ]; then
         echo "Claude CLI failed with exit code $exit_code:"
