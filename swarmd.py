@@ -500,11 +500,23 @@ def supervisor():
     last_api_call = 0.0
 
     while not _shutdown:
-        heartbeat()
-        state_patch(current_stage='stage1_select',
-                    uptime_seconds=int(time.time() - CFG['start_ts']))
+        try:
+            _run_one_cycle()
+        except Exception as e:
+            log(f"CRASH in main loop: {e}")
+            import traceback
+            log(traceback.format_exc()[-500:])
+            state_patch(last_error=f'Crash: {e}', current_stage='recovering')
+            time.sleep(30)
+            continue
 
-        task, taskfile = task_next()
+def _run_one_cycle():
+    global task, taskfile
+    heartbeat()
+    state_patch(current_stage='stage1_select',
+                uptime_seconds=int(time.time() - CFG['start_ts']))
+
+    task, taskfile = task_next()
         if not task:
             log(f"No pending tasks. Sleeping {CFG['idle_sleep']}s.")
             state_patch(current_stage='idle')

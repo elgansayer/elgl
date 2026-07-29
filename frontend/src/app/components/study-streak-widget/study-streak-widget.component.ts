@@ -1,6 +1,7 @@
 import { Component, inject, computed, resource, signal, isDevMode } from '@angular/core';
 import { firstValueFrom, map } from 'rxjs';
 import { StudyStreakService } from '../../services/study-streak.service';
+import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
@@ -48,6 +49,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 })
 export class StudyStreakWidgetComponent {
   private streakService = inject(StudyStreakService);
+  private i18nService = inject(I18nService);
   private refreshTrigger = signal(0);
 
   private streakResource = resource({
