@@ -6,17 +6,20 @@ import {
 } from '../../services/subscription-plans.service';
 import { AppButtonPrimaryComponent } from '../../components/primitives/button-primary/button-primary.component';
 import { AppGradientButtonComponent } from '../../components/primitives/gradient-button/gradient-button.component';
+import { I18nService } from '../../services/i18n.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 const EMPTY_PLANS: SubscriptionPlan[] = [];
 
 @Component({
   selector: 'app-vip-subscription',
-  imports: [RouterLink, AppButtonPrimaryComponent, AppGradientButtonComponent],
+  imports: [RouterLink, AppButtonPrimaryComponent, AppGradientButtonComponent, TranslatePipe],
   templateUrl: './vip-subscription.component.html',
   styleUrls: ['./vip-subscription.component.scss'],
 })
 export class VipSubscriptionComponent {
   private subscriptionPlansService = inject(SubscriptionPlansService);
+  private i18n = inject(I18nService);
 
   readonly plans = signal<SubscriptionPlan[]>([]);
   readonly loading = signal(true);
@@ -41,7 +44,7 @@ export class VipSubscriptionComponent {
         return plans;
       } catch (err) {
         console.error('Failed to load subscription plans:', err);
-        this.error.set('Failed to load subscription plans. Please try again later.');
+        this.error.set(this.i18n.translate('vip.failedLoad'));
         return EMPTY_PLANS;
       } finally {
         this.loading.set(false);
@@ -56,7 +59,7 @@ export class VipSubscriptionComponent {
 
   getPriceDisplay(plan: SubscriptionPlan): string {
     if (plan.price_usd === 0) {
-      return 'Free';
+      return this.i18n.translate('vip.freePrice');
     }
     return `$${plan.price_usd}/mo`;
   }

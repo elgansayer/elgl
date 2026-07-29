@@ -114,8 +114,8 @@ export const routes: Routes = [
   {
     path: 'vip',
     loadComponent: () =>
-      import('./pages/vip-subscription/vip-subscription.component').then(
-        (m) => m.VipSubscriptionComponent,
+      import('./pages/vip/vip.component').then(
+        (m) => m.VipComponent,
       ),
     title: 'VIP Subscription - HelloTalk',
   },

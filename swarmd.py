@@ -30,6 +30,11 @@ from pathlib import Path
 # ── paths ─────────────────────────────────────────────────────────────
 ROOT = Path(__file__).resolve().parent
 os.chdir(ROOT)
+
+# Ensure ~/.local/bin is in PATH for Aider, agy, etc.
+_local_bin = os.path.expanduser('~/.local/bin')
+if _local_bin not in os.environ.get('PATH', ''):
+    os.environ['PATH'] = f"{_local_bin}:{os.environ.get('PATH', '')}"
 TASKS_DIR    = ROOT / '.tasks'
 STATE_FILE   = Path(os.environ.get('SWARM_STATE_FILE', '/tmp/ai_swarm_state.json'))
 LOG_FILE     = ROOT / 'logs' / 'swarmd.log'
@@ -141,17 +146,14 @@ def task_stats() -> dict:
 # ── Aider runner ───────────────────────────────────────────────────────
 def _aider_binary() -> str | None:
     for p in ['aider', os.path.expanduser('~/.local/bin/aider')]:
-        try:
-            subprocess.run([p, '--version'], capture_output=True, timeout=5)
+        if os.path.isfile(p) and os.access(p, os.X_OK):
             return p
-        except Exception:
-            continue
     return None
 
 def run_aider(task: str, attempt: int = 0) -> dict:
     """
-    Run Aider with repo-map enabled (configured in .aider.conf.yml).
-    Repo-map lets Aider discover and add files on its own.
+    Retry loop: run Aider with --message. If it asks for files, add them and retry.
+    Uses repo-map (configured in .aider.conf.yml) for file discovery.
     """
     aider = _aider_binary()
     if not aider:
@@ -163,94 +165,136 @@ def run_aider(task: str, attempt: int = 0) -> dict:
     heartbeat()
 
     before = set(_git_porcelain())
+    all_files = set()
+    best_result = {'ok': False, 'files_changed': 0, 'output': '', 'exit_code': 0,
+                   'killed': False, 'reason': ''}
 
-    cmd = [aider, '--message', task,
-           '--no-auto-commits',
-           '--model', CFG['model']]
+    for round_num in range(5):  # up to 5 retries per attempt
+        if round_num > 0:
+            log(f"Aider round {round_num + 1}: {len(all_files)} files in context")
 
-    # On retries, add recently modified files to help Aider focus
-    if attempt > 0:
-        recent = _recent_source_files(limit=10)
-        for f in recent:
-            cmd.extend(['--read', f])
+        cmd = [aider, '--yes']
+        for f in sorted(all_files)[:30]:
+            cmd.extend(['--file', f])
+        cmd.extend(['--message', task, '--no-auto-commits', '--model', CFG['model']])
 
-    log(f"Aider: task={task[:60]}... (attempt {attempt+1})")
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, bufsize=1, start_new_session=True
+        )
 
-    proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        text=True, bufsize=1, start_new_session=True
-    )
+        output_chunks = []
+        output_lock = threading.Lock()
+        last_output_ts = time.time()
+        last_change_ts = time.time()
+        killed = False
+        kill_reason = ''
 
-    output_chunks = []
-    output_lock = threading.Lock()
-    last_output_ts = time.time()
-    last_change_ts = time.time()
-    killed = False
-    kill_reason = ''
+        def reader():
+            nonlocal last_output_ts
+            try:
+                for line in proc.stdout:
+                    with output_lock:
+                        output_chunks.append(line)
+                    last_output_ts = time.time()
+            except Exception:
+                pass
 
-    def reader():
-        nonlocal last_output_ts
-        try:
-            for line in proc.stdout:
-                with output_lock:
-                    output_chunks.append(line)
-                last_output_ts = time.time()
-        except Exception:
-            pass
+        t = threading.Thread(target=reader, daemon=True)
+        t.start()
+        start = time.time()
 
-    t = threading.Thread(target=reader, daemon=True)
-    t.start()
-    start = time.time()
+        while proc.poll() is None:
+            time.sleep(5)
+            elapsed = time.time() - start
 
-    while proc.poll() is None:
-        time.sleep(5)
-        elapsed = time.time() - start
+            now_porcelain = set(_git_porcelain())
+            if now_porcelain != before:
+                last_change_ts = time.time()
+                before = now_porcelain
 
-        now_porcelain = set(_git_porcelain())
-        if now_porcelain != before:
-            last_change_ts = time.time()
-            before = now_porcelain
+            stuck_dur = time.time() - max(last_output_ts, last_change_ts)
+            if stuck_dur >= CFG['aider_stuck']:
+                killed = True
+                kill_reason = 'stuck'
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                break
 
-        stuck_dur = time.time() - max(last_output_ts, last_change_ts)
-        if stuck_dur >= CFG['aider_stuck']:
-            log(f"Aider STUCK ({stuck_dur:.0f}s). Killing.")
-            killed = True
-            kill_reason = 'stuck'
-            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            if elapsed >= CFG['aider_timeout']:
+                killed = True
+                kill_reason = 'timeout'
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                break
+
+            heartbeat()
+
+        proc.wait(timeout=10)
+        t.join(timeout=5)
+
+        with output_lock:
+            output = ''.join(output_chunks)
+
+        after = set(_git_porcelain())
+        changed = after - before
+        real_changes = {f for f in changed
+                        if not any(f.endswith(x) for x in ['.log', 'TODO.md', 'STUCK_LOG.md'])
+                        and not f.startswith('.aider')}
+
+        if len(real_changes) > 0:
+            log(f"Aider round {round_num + 1}: produced {len(real_changes)} file changes")
+            return {
+                'ok': True,
+                'files_changed': len(real_changes),
+                'output': output[-3000:] if len(output) > 3000 else output,
+                'exit_code': proc.returncode or 0,
+                'killed': killed,
+                'reason': kill_reason,
+            }
+
+        # Parse Aider's response for file requests
+        requested = _parse_file_requests(output)
+        new_files = [f for f in requested if f not in all_files]
+
+        if new_files:
+            log(f"Aider round {round_num + 1}: requested {len(new_files)} new files")
+            for f in new_files[:10]:
+                if Path(f).exists():
+                    all_files.add(f)
+            # Retry with new files
+            continue
+
+        if killed:
+            best_result = {'ok': False, 'files_changed': 0, 'output': output[-2000:],
+                          'exit_code': proc.returncode or 0, 'killed': True,
+                          'reason': kill_reason}
             break
 
-        if elapsed >= CFG['aider_timeout']:
-            log(f"Aider TIMEOUT ({elapsed:.0f}s). Killing.")
-            killed = True
-            kill_reason = 'timeout'
-            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-            break
+        # No changes and no file requests — Aider can't help
+        log(f"Aider round {round_num + 1}: no changes, no file requests. Giving up.")
+        best_result = {'ok': False, 'files_changed': 0, 'output': output[-2000:],
+                      'exit_code': proc.returncode or 0, 'killed': False,
+                      'reason': 'no_changes'}
+        break
 
-        heartbeat()
+    return best_result
 
-    proc.wait(timeout=10)
-    t.join(timeout=5)
 
-    with output_lock:
-        output = ''.join(output_chunks)
-
-    after = set(_git_porcelain())
-    changed = after - before
-    real_changes = {f for f in changed
-                    if not any(f.endswith(x) for x in ['.log', 'TODO.md', 'STUCK_LOG.md'])
-                    and not f.startswith('.aider')}
-
-    log(f"Aider done: ok={len(real_changes) > 0} changed={len(real_changes)} "
-        f"killed={killed} exit={proc.returncode}")
-
-    return {
-        'ok': len(real_changes) > 0,
-        'files_changed': len(real_changes),
-        'output': output[-3000:] if len(output) > 3000 else output,
-        'exit_code': proc.returncode or 0,
-        'killed': killed,
-        'reason': kill_reason,
-    }
+def _parse_file_requests(output: str) -> list[str]:
+    """Extract file paths that Aider is requesting to add to the chat."""
+    requested = set()
+    patterns = [
+        r'Please add (?:the )?(?:file|files)?\s*`?([^\s`]+)`?\s*(?:to the chat)?',
+        r'add (?:the )?(?:file|files)?\s*`?([^\s`]+)`?\s*(?:to the chat)?',
+        r'I need (?:to see |)(?:the )?(?:file|files)?\s*`?([^\s`]+)`?',
+        r'`([\w./-]+\.(?:ts|html|scss|css|json|js|md))`',
+    ]
+    for line in output.split('\n'):
+        for pattern in patterns:
+            for m in re.finditer(pattern, line, re.IGNORECASE):
+                fp = m.group(1).strip('`').strip()
+                if re.match(r'^[\w./-]+\.(ts|html|scss|css|json|js|md)$', fp):
+                    requested.add(fp)
+    return sorted(requested)
 
 def _recent_source_files(limit: int = 10) -> list[str]:
     """Return recently modified source files (not logs, not node_modules)."""

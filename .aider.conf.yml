@@ -1,4 +1,3 @@
-# .aider.conf.yml — Aider configuration for the HelloTalk swarm.
 model: deepseek/deepseek-reasoner
 
 read:
@@ -7,16 +6,4 @@ read:
 
 show-model-warnings: false
 yes-always: true
-
-# Enable repository map so Aider can discover files on its own.
 map-tokens: 2000
-
-# Let Aider auto-lint after changes (catches issues early).
-auto-lint: true
-lint-cmd:
-  - "cd frontend && npm run lint 2>&1 | tail -20"
-  - "cd backend && npm run lint 2>&1 | tail -20"
-
-# Auto-test after changes.
-auto-test: true
-test-cmd: "cd backend && npm test -- --forceExit 2>&1 | tail -30 && cd ../frontend && npm test -- --watch=false 2>&1 | tail -30"

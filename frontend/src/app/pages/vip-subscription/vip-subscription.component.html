@@ -11,10 +11,10 @@
     <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 lg:py-32">
       <div class="text-center">
         <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-4">
-          Unlock Your Language Learning Potential
+          {{ 'vip.heroTitle' | t }}
         </h1>
         <p class="text-xl sm:text-2xl text-purple-200 max-w-3xl mx-auto mb-8">
-          Choose the plan that fits your learning journey. From free basics to premium power tools.
+          {{ 'vip.heroSubtitle' | t }}
         </p>
         <div class="flex flex-wrap justify-center gap-4">
           <app-gradient-button
@@ -22,14 +22,14 @@
             customClass="text-lg px-8 py-4"
             (clicked)="scrollToPlans()"
           >
-            See Plans
+            {{ 'vip.seePlans' | t }}
           </app-gradient-button>
           <app-button-primary
             size="md"
             customClass="bg-white text-purple-700 hover:bg-purple-50 px-8 py-4 text-lg"
             [routerLink]="['/discovery']"
           >
-            Start Free
+            {{ 'vip.startFree' | t }}
           </app-button-primary>
         </div>
       </div>
@@ -54,7 +54,7 @@
           (click)="loadPlans()"
           class="mt-3 px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded transition-colors"
         >
-          Try Again
+          {{ 'vip.tryAgain' | t }}
         </button>
       </div>
     </div>
@@ -67,7 +67,7 @@
       @if (freePlan(); as plan) {
         <div class="mb-16">
           <h2 class="text-3xl font-bold text-center mb-8 text-gray-900 dark:text-white">
-            Start Free, Upgrade Anytime
+            {{ 'vip.freeUpgrade' | t }}
           </h2>
           <div class="max-w-lg mx-auto">
             <div
@@ -104,7 +104,7 @@
                 }
               </ul>
               <app-button-primary size="md" customClass="w-full" [routerLink]="['/discovery']">
-                Get Started Free
+                {{ 'vip.getStartedFree' | t }}
               </app-button-primary>
             </div>
           </div>
@@ -113,9 +113,11 @@
 
       <!-- Premium Plans -->
       <div class="mb-12 text-center">
-        <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Premium Plans</h2>
+        <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+          {{ 'vip.premiumPlans' | t }}
+        </h2>
         <p class="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-          Unlock advanced features and accelerate your language learning journey
+          {{ 'vip.premiumSubtitle' | t }}
         </p>
       </div>
 
@@ -134,7 +136,7 @@
                 <span
                   class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-1.5 rounded-full text-sm font-semibold shadow-lg"
                 >
-                  Most Popular
+                  {{ 'vip.mostPopular' | t }}
                 </span>
               </div>
             }
@@ -168,7 +170,7 @@
                   {{ getPriceDisplay(plan) }}
                 </span>
                 @if (plan.price_usd > 0) {
-                  <span class="text-gray-500 dark:text-gray-400 ms-2">billed monthly</span>
+                  <span class="text-gray-500 dark:text-gray-400 ms-2">{{ 'vip.billedMonthly' | t }}</span>
                 }
               </div>
 
@@ -178,7 +180,7 @@
                   <h4
                     class="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-3 uppercase tracking-wide"
                   >
-                    Key Benefits
+                    {{ 'vip.keyBenefits' | t }}
                   </h4>
                   <ul class="space-y-2">
                     @for (benefit of plan.highlighted_benefits; track benefit) {
@@ -208,7 +210,7 @@
                 <h4
                   class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide"
                 >
-                  All Features
+                  {{ 'vip.allFeatures' | t }}
                 </h4>
                 <ul class="space-y-3">
                   @for (feature of plan.features; track feature) {
@@ -239,7 +241,7 @@
                   customClass="w-full text-base py-3"
                   (clicked)="onSubscribe(plan.id)"
                 >
-                  Subscribe Now
+                  {{ 'vip.subscribeNow' | t }}
                 </app-gradient-button>
               } @else {
                 <app-button-primary
@@ -247,7 +249,7 @@
                   customClass="w-full text-base py-3"
                   (clicked)="onSubscribe(plan.id)"
                 >
-                  Choose {{ plan.name }}
+                  {{ 'vip.choosePlan' | t : {name: plan.name} }}
                 </app-button-primary>
               }
             </div>
@@ -260,13 +262,13 @@
     <section class="bg-gray-50 dark:bg-gray-900/50 py-16">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h2 class="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white">
-          Compare All Features
+          {{ 'vip.compareAllFeatures' | t }}
         </h2>
         <div class="overflow-x-auto">
           <table class="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
             <thead>
               <tr class="border-b border-gray-200 dark:border-gray-700">
-                <th class="text-start p-4 font-semibold text-gray-900 dark:text-white">Feature</th>
+                <th class="text-start p-4 font-semibold text-gray-900 dark:text-white">{{ 'vip.featureTableHeader' | t }}</th>
                 @for (plan of plans(); track plan.id) {
                   <th class="p-4 text-center font-semibold">
                     <span class="text-gray-900 dark:text-white">{{ plan.name }}</span>
@@ -315,41 +317,39 @@
     <!-- FAQ Section -->
     <section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <h2 class="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white">
-        Frequently Asked Questions
+        {{ 'vip.faqTitle' | t }}
       </h2>
       <div class="space-y-6">
         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            Can I switch plans anytime?
+            {{ 'vip.faqSwitchQ' | t }}
           </h3>
           <p class="text-gray-600 dark:text-gray-400">
-            Yes! You can upgrade or downgrade your plan at any time. Changes take effect
-            immediately.
+            {{ 'vip.faqSwitchA' | t }}
           </p>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            Is there a free trial for premium plans?
+            {{ 'vip.faqTrialQ' | t }}
           </h3>
           <p class="text-gray-600 dark:text-gray-400">
-            We offer a 7-day free trial for our Consumer VIP plan. No credit card required to start.
+            {{ 'vip.faqTrialA' | t }}
           </p>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            What payment methods do you accept?
+            {{ 'vip.faqPaymentQ' | t }}
           </h3>
           <p class="text-gray-600 dark:text-gray-400">
-            We accept all major credit cards, PayPal, and in-app purchases on iOS and Android.
+            {{ 'vip.faqPaymentA' | t }}
           </p>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            Can I cancel my subscription?
+            {{ 'vip.faqCancelQ' | t }}
           </h3>
           <p class="text-gray-600 dark:text-gray-400">
-            Absolutely. You can cancel anytime from your account settings. Your benefits continue
-            until the end of the billing period.
+            {{ 'vip.faqCancelA' | t }}
           </p>
         </div>
       </div>
@@ -358,10 +358,11 @@
     <!-- CTA Section -->
     <section class="bg-gradient-to-r from-purple-600 to-indigo-700 text-white py-16">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <h2 class="text-3xl sm:text-4xl font-bold mb-4">Ready to Accelerate Your Learning?</h2>
+        <h2 class="text-3xl sm:text-4xl font-bold mb-4">
+          {{ 'vip.ctaTitle' | t }}
+        </h2>
         <p class="text-xl text-purple-200 mb-8 max-w-2xl mx-auto">
-          Join thousands of language learners who have unlocked their full potential with HelloTalk
-          Premium.
+          {{ 'vip.ctaSubtitle' | t }}
         </p>
         <div class="flex flex-wrap justify-center gap-4">
           <app-gradient-button
@@ -369,14 +370,14 @@
             customClass="text-lg px-8 py-4 bg-white text-purple-700 hover:bg-purple-50"
             (clicked)="scrollToPlans()"
           >
-            View Plans
+            {{ 'vip.viewPlans' | t }}
           </app-gradient-button>
           <app-button-primary
             size="md"
             customClass="bg-transparent border-2 border-white text-white hover:bg-white/10 px-8 py-4 text-lg"
             [routerLink]="['/discovery']"
           >
-            Continue Free
+            {{ 'vip.continueFree' | t }}
           </app-button-primary>
         </div>
       </div>

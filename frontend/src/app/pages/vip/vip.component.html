@@ -1,0 +1,108 @@
+<div class="min-h-screen bg-surface-300 text-text-primary">
+  <!-- Hero Section -->
+  <section class="relative overflow-hidden bg-gradient-to-br from-primary/20 via-surface-200 to-surface-300 pt-16 pb-20 ps-4 pe-4 md:ps-8 md:pe-8">
+    <div class="max-w-4xl mx-auto text-center">
+      <h1 class="text-4xl md:text-5xl font-extrabold mb-4">{{ 'vip.heroTitle' | t }}</h1>
+      <p class="text-lg md:text-xl text-text-secondary mb-8 max-w-2xl mx-auto">{{ 'vip.heroSubtitle' | t }}</p>
+      <div class="flex flex-wrap justify-center gap-4">
+        <app-button variant="primary" size="lg" (buttonAction)="scrollToPlans()">
+          {{ 'vip.seePlans' | t }}
+        </app-button>
+        <app-button variant="outline" size="lg" (buttonAction)="onStartFree()">
+          {{ 'vip.startFree' | t }}
+        </app-button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Plans Section -->
+  <section id="plans" class="py-16 ps-4 pe-4 md:ps-8 md:pe-8">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl font-bold mb-2">{{ 'vip.premiumPlans' | t }}</h2>
+        <p class="text-text-secondary">{{ 'vip.premiumSubtitle' | t }}</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        @for (plan of plans(); track plan.id) {
+          <app-card
+            [variant]="plan.isPopular ? 'elevated' : 'default'"
+            [customClass]="plan.isPopular ? 'ring-2 ring-primary relative' : ''"
+          >
+            @if (plan.isPopular) {
+              <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+                <app-pill colour="primary" size="sm" [label]="'vip.mostPopular' | t" />
+              </div>
+            }
+            <div class="text-center pt-4">
+              <h3 class="text-xl font-bold mb-2">{{ plan.nameKey | t }}</h3>
+              <p class="text-3xl font-extrabold text-primary mb-4">{{ plan.price }}</p>
+              <p class="text-xs text-text-secondary mb-6">{{ 'vip.billedMonthly' | t }}</p>
+              <ul class="text-start space-y-2 mb-6">
+                @for (feature of plan.features; track feature) {
+                  <li class="flex items-start gap-2">
+                    <span class="text-primary mt-0.5">✓</span>
+                    <span>{{ feature | t }}</span>
+                  </li>
+                }
+              </ul>
+              <app-button
+                variant="primary"
+                size="md"
+                [customClass]="'w-full'"
+                (buttonAction)="onSubscribe(plan.id)"
+              >
+                {{ plan.ctaKey | t }}
+              </app-button>
+            </div>
+          </app-card>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section class="py-16 bg-surface-200 ps-4 pe-4 md:ps-8 md:pe-8">
+    <div class="max-w-3xl mx-auto">
+      <h2 class="text-3xl font-bold text-center mb-8">{{ 'vip.faqTitle' | t }}</h2>
+      <div class="space-y-4">
+        @for (faq of faqItems(); track $index; let idx = $index) {
+          <app-card variant="outlined" padding="sm">
+            <button
+              type="button"
+              class="w-full text-start flex justify-between items-center ps-4 pe-4 pt-3 pb-3 focus:outline-none"
+              (click)="toggleFaq(idx)"
+              [attr.aria-expanded]="openFaqIndex() === idx"
+            >
+              <span class="font-medium">{{ faq.questionKey | t }}</span>
+              <span class="text-primary transition-transform duration-200" [class.rotate-180]="openFaqIndex() === idx">
+                ▼
+              </span>
+            </button>
+            @if (openFaqIndex() === idx) {
+              <div class="ps-4 pe-4 pb-4 text-text-secondary text-sm">
+                {{ faq.answerKey | t }}
+              </div>
+            }
+          </app-card>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="py-16 bg-gradient-to-r from-primary/10 to-primary/5 ps-4 pe-4 md:ps-8 md:pe-8">
+    <div class="max-w-4xl mx-auto text-center">
+      <h2 class="text-3xl font-bold mb-4">{{ 'vip.ctaTitle' | t }}</h2>
+      <p class="text-lg text-text-secondary mb-8">{{ 'vip.ctaSubtitle' | t }}</p>
+      <div class="flex flex-wrap justify-center gap-4">
+        <app-button variant="primary" size="lg" (buttonAction)="scrollToPlans()">
+          {{ 'vip.viewPlans' | t }}
+        </app-button>
+        <app-button variant="outline" size="lg" (buttonAction)="onContinueFree()">
+          {{ 'vip.continueFree' | t }}
+        </app-button>
+      </div>
+    </div>
+  </section>
+</div>
