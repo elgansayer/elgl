@@ -175,9 +175,7 @@ export class NlpService {
 
     const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
     if (!azureKey) {
-      throw new BadRequestException(
-        'Azure Translator API key not configured',
-      );
+      throw new BadRequestException('Azure Translator API key not configured');
     }
 
     // Use Azure AI Translator's grammar checking via the "breakSentence" and "translate" endpoints

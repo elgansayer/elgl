@@ -55,7 +55,7 @@
 
 ## Phase 16: Live Chat Micro-Interactions
 
-- [ ] Add long-press context menu on mobile to copy, favourite, or report messages.
+- [x] Add long-press context menu on mobile to copy, favourite, or report messages.
 
 ## Phase 17: Audio & Video Calling (WebRTC / LiveKit)
 

@@ -20,6 +20,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         [roomId]="message().room_id"
         (copyMessage)="onCopy($event)"
         (favourite)="onFavourite($event)"
+        (report)="onReport($event)"
       >
         <div
           class="flex"
@@ -132,5 +133,20 @@ export class ChatMessageComponent {
 
   onFavourite(event: { messageId: string; content: string; messageType: string }): void {
     this.favouriteService.addFavourite({ message_id: event.messageId }).catch(() => {});
+  }
+
+  onReport(event: { messageId: string; senderId: string }): void {
+    const confirmed = window.confirm('Are you sure you want to report this message?');
+    if (!confirmed) return;
+    this.safetyService
+      .reportUser({
+        reported_id: event.senderId,
+        reason_category: 'other',
+        description: 'Reported from message context menu',
+        context_url: window.location.href,
+      })
+      .catch((err: unknown) => {
+        console.error('Report failed', err);
+      });
   }
 }
