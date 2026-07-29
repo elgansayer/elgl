@@ -50,7 +50,7 @@
 
 ## Phase 15: Advanced User Profiles
 
-- [ ] Implement dynamic Hobbies & Interests tags mapped to target vocabulary.
+- [x] Implement dynamic Hobbies & Interests tags mapped to target vocabulary.
 - [ ] Build Profile Cover Photo uploader with client-side cropping.
 
 ## Phase 16: Live Chat Micro-Interactions
