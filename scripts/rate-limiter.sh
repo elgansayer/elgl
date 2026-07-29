@@ -141,7 +141,7 @@ run_with_liveness() {
     local cmd_pid=$!
     echo "$cmd_pid" > "$pidfile"
 
-    # Background watcher: polls every 10 s for output growth or file diffs.
+    # Background watcher: polls every 5 s for output growth or file diffs.
     (
         local last_progress_ts
         last_progress_ts=$(date +%s)
@@ -149,7 +149,7 @@ run_with_liveness() {
         local prev_porc="$prev_porcelain"
 
         while kill -0 "$cmd_pid" 2>/dev/null; do
-            sleep 10
+            sleep 5
             local now_ts
             now_ts=$(date +%s)
 

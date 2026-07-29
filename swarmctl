@@ -38,7 +38,9 @@ case "$cmd" in
         ;;
     restart)
         echo "Restarting AI Swarm..."
-        exec bash "$0" stop && sleep 2 && exec bash "$0" start
+        bash "$0" stop
+        sleep 2
+        bash "$0" start
         ;;
     status)
         echo "============================================"
