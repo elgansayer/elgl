@@ -51,7 +51,7 @@
 ## Phase 15: Advanced User Profiles
 
 - [x] Implement dynamic Hobbies & Interests tags mapped to target vocabulary.
-- [ ] Build Profile Cover Photo uploader with client-side cropping.
+- [x] Build Profile Cover Photo uploader with client-side cropping.
 
 ## Phase 16: Live Chat Micro-Interactions
 
@@ -431,7 +431,7 @@
 
 ### Multimedia & Introductions
 
-- [ ] Build Profile Cover Photo upload and positioning.
+
 - [ ] Implement Text Bio section with inline translation support.
 - [ ] Build 30-second Audio Introduction recording and playback widget.
 - [ ] Add selectable Hobbies and Interests tags.
