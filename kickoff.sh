@@ -7,7 +7,9 @@
 #   - Install @reboot cron so swarm restarts after VPS reboot
 #   - Ensure the sudo askpass helper exists
 #   - Pre-install Playwright browsers to prevent pipeline hangs
-#   - Kill stale processes, then spawn the 3-agent swarm in tmux
+#   - Kill stale processes, then spawn the 2-agent swarm in tmux
+#     (Main_Swarm + PM_Swarm; QA agent disabled - resource-heavy/raises
+#      false positives more than real bugs)
 #
 # Notifications: Telegram only (see scripts/watchdog.sh). Discord disabled.
 
@@ -100,9 +102,9 @@ echo "🚀 Spawning new isolated terminals for the swarms..."
 tmux new-session -d -s ai_swarm -n "Main_Swarm" \
     "cd $REPO_DIR && bash -c './loop.sh; exec bash'"
 
-# QA Swarm: adversarial E2E testing
-tmux new-window -t ai_swarm -n "QA_Swarm" \
-    "cd $REPO_DIR && bash -c './qa-loop.sh; exec bash'"
+# QA Swarm: adversarial E2E testing (DISABLED - resource-heavy, false positives)
+# tmux new-window -t ai_swarm -n "QA_Swarm" \
+#     "cd $REPO_DIR && bash -c './qa-loop.sh; exec bash'"
 
 # PM Swarm: GitHub issue sync
 tmux new-window -t ai_swarm -n "PM_Swarm" \
@@ -110,8 +112,7 @@ tmux new-window -t ai_swarm -n "PM_Swarm" \
 
 echo ""
 echo "✅ All agents are now running autonomously in the background!"
-echo "   -> Window 0: Main_Swarm  (executor → lint/test → commit)"
-echo "   -> Window 1: QA_Swarm    (adversarial E2E → bug triage)"
+echo "   -> Window 0: Main_Swarm  (executor -> lint/test -> commit)"
 echo "   -> Window 2: PM_Swarm    (GitHub issue sync)"
 echo ""
 echo "👀 View:     tmux attach -t ai_swarm"
