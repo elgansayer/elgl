@@ -1,10 +1,15 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
 import { SafetyService } from '../safety/safety.service';
 import { LinkPreviewService } from '../link-preview/link-preview.service';
 import { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
+import { SpamDetectionService } from '../spam-detection/spam-detection.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import {
@@ -23,6 +28,7 @@ export class ChatService {
     private readonly eventEmitter: EventEmitter2,
     private readonly safetyService: SafetyService,
     private readonly linkPreviewService: LinkPreviewService,
+    private readonly spamDetectionService: SpamDetectionService,
     private readonly systemMessageService: SystemMessageService,
   ) {}
 
@@ -128,6 +134,16 @@ export class ChatService {
         await this.safetyService.getBlockedAndBlockerIds(senderId);
       if (senderBlockedIds.includes(receiverId)) {
         throw new Error('You cannot send messages to this user.');
+      }
+    }
+
+    // Spam detection for text messages
+    if (dto.message_type === 'text' && dto.text_content) {
+      const isSpam = this.spamDetectionService.isSpam(dto.text_content);
+      if (isSpam) {
+        throw new BadRequestException(
+          'Your message appears to be a duplicate or spam content.',
+        );
       }
     }
 
