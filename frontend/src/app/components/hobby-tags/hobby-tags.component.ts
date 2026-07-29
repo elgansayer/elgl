@@ -1,4 +1,5 @@
 import { Component, computed, signal, inject, resource } from '@angular/core';
+import { TitleCasePipe } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
 import {
@@ -12,7 +13,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
 
 @Component({
   selector: 'app-hobby-tags',
-  imports: [FormsModule, AppCardComponent, AppPillComponent, TranslatePipe],
+  imports: [FormsModule, AppCardComponent, AppPillComponent, TranslatePipe, TitleCasePipe],
   template: `
     <div class="space-y-6">
       <div class="flex items-center justify-between">

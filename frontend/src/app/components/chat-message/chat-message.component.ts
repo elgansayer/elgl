@@ -13,11 +13,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
   template: `
     @if (!isBlocked()) {
       <app-long-press-context-menu
-        [messageId]="message.id"
-        [messageContent]="message.text_content ?? ''"
-        [messageType]="message.message_type"
-        [senderId]="message.sender_id"
-        [roomId]="message.room_id"
+        [messageId]="message().id"
+        [messageContent]="message().text_content ?? ''"
+        [messageType]="message().message_type"
+        [senderId]="message().sender_id"
+        [roomId]="message().room_id"
         (copyMessage)="onCopy($event)"
         (favourite)="onFavourite($event)"
       >
@@ -32,11 +32,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
             [class.text-white]="isOwnMessage()"
             [class.bg-surface-300]="!isOwnMessage()"
           >
-            @if (message.message_type === 'text') {
-              <p class="text-sm">{{ message.text_content }}</p>
+            @if (message().message_type === 'text') {
+              <p class="text-sm">{{ message().text_content }}</p>
             }
 
-            @if (message.message_type === 'voice') {
+            @if (message().message_type === 'voice') {
               <div class="flex items-center gap-2">
                 <button (click)="playVoice()" class="p-2 rounded-full hover:bg-black/10">
                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -49,23 +49,23 @@ import { TranslatePipe } from '../../services/translate.pipe';
               </div>
             }
 
-            @if (message.message_type === 'correction' && message.correction_payload) {
+            @if (message().message_type === 'correction' && message().correction_payload) {
               <div class="space-y-1">
                 <p class="text-sm line-through opacity-75">
-                  {{ message.correction_payload.original }}
+                  {{ message().correction_payload!.original }}
                 </p>
-                <p class="text-sm font-medium">{{ message.correction_payload.corrected }}</p>
-                @if (message.correction_payload.explanation) {
+                <p class="text-sm font-medium">{{ message().correction_payload!.corrected }}</p>
+                @if (message().correction_payload!.explanation) {
                   <p class="text-xs opacity-75 mt-1">
-                    {{ message.correction_payload.explanation }}
+                    {{ message().correction_payload!.explanation }}
                   </p>
                 }
               </div>
             }
 
-            @if (message.message_type === 'doodle' && message.media_url) {
+            @if (message().message_type === 'doodle' && message().media_url) {
               <img
-                [src]="message.media_url"
+                [src]="message().media_url"
                 class="max-w-full rounded"
                 alt="Doodle"
                 loading="lazy"
@@ -73,7 +73,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             }
 
             <p class="text-xs mt-1 opacity-60 text-end">
-              {{ message.created_at | date: 'shortTime' }}
+              {{ message().created_at | date: 'shortTime' }}
             </p>
           </div>
         </div>

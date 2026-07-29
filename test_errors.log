@@ -25,52 +25,16 @@ RTL logical class check passed.
 > backend@0.0.1 test
 > NODE_OPTIONS='--experimental-vm-modules' jest
 
-(node:976080) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(node:1004969) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
-PASS src/nlp/nlp.controller.spec.ts
-PASS src/chat/chat.controller.spec.ts
-PASS src/nlp/nlp.service.spec.ts
-[31m[Nest] 976080  - [39m07/28/2026, 9:02:21 PM [31m  ERROR[39m [38;5;3m[LinkPreviewService] [39m[31mFailed to fetch link preview for https://example.com/data.json: URL does not point to an HTML resource[39m
-[31m[Nest] 976080  - [39m07/28/2026, 9:02:21 PM [31m  ERROR[39m [38;5;3m[LinkPreviewService] [39m[31mFailed to fetch link preview for https://unreachable.example.com: timeout[39m
-PASS src/link-preview/link-preview.service.spec.ts
-PASS src/chat/centrifugo.service.spec.ts
-PASS src/users/users.controller.spec.ts
-PASS src/audio-rooms/audio-rooms.controller.spec.ts
-PASS src/media/media.controller.spec.ts
-PASS src/monetisation/monetisation.controller.spec.ts
-PASS src/chat/chat.service.spec.ts
-PASS src/moments/moments.service.spec.ts
-PASS src/audio-rooms/audio-rooms.service.spec.ts
-PASS src/admin/admin.controller.spec.ts
-PASS src/monetisation/monetisation.service.spec.ts
-PASS src/safety/safety.controller.spec.ts
-PASS src/profile-visits/profile-visits.controller.spec.ts
-PASS src/flashcards/flashcards.controller.spec.ts
-PASS src/moments/moments.controller.spec.ts
-PASS src/flashcards/flashcards.service.spec.ts
-PASS src/economy/economy.service.spec.ts
-PASS src/economy/economy.controller.spec.ts
-PASS src/supabase/supabase.service.spec.ts
-PASS src/discovery/discovery.controller.spec.ts
-PASS src/users/users.service.spec.ts
-PASS src/media/media.service.spec.ts
-PASS src/auth/supabase-auth.guard.spec.ts
-PASS src/admin/admin.service.spec.ts
-PASS src/profile-visits/profile-visits.service.spec.ts
-PASS src/notifications/notifications.service.spec.ts
-PASS src/notifications/notifications.controller.spec.ts
-PASS src/safety/safety.service.spec.ts
-PASS src/discovery/discovery.service.spec.ts
-PASS src/moments/timeline.worker.spec.ts
-PASS src/streak/streak.service.spec.ts
-PASS src/admin/guards/admin.guard.spec.ts
-PASS src/app.service.spec.ts
-PASS src/app.controller.spec.ts
+[31m[Nest] 1004969  - [39m07/29/2026, 1:07:32 AM [31m  ERROR[39m [38;5;3m[LinkPreviewService] [39m[31mFailed to fetch link preview for https://example.com/data.json: URL does not point to an HTML resource[39m
+[31m[Nest] 1004969  - [39m07/29/2026, 1:07:32 AM [31m  ERROR[39m [38;5;3m[LinkPreviewService] [39m[31mFailed to fetch link preview for https://unreachable.example.com: timeout[39m
+[31m[Nest] 1004969  - [39m07/29/2026, 1:07:36 AM [31m  ERROR[39m [38;5;3m[MonetisationService] [39m[31mWebhook signature verification failed: No signatures found matching the expected signature for payload[39m
 
 Test Suites: 37 passed, 37 total
-Tests:       357 passed, 357 total
+Tests:       361 passed, 361 total
 Snapshots:   0 total
-Time:        34.074 s, estimated 35 s
+Time:        40.99 s, estimated 61 s
 Ran all test suites.
 
 > frontend@0.0.0 test
@@ -78,87 +42,16 @@ Ran all test suites.
 
 ❯ Building...
 ✔ Building...
-Application bundle generation complete. [28.634 seconds] - 2026-07-28T21:03:18.836Z
+Application bundle generation complete. [24.452 seconds] - 2026-07-29T01:08:23.532Z
 
 
 [1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90m/home/dev/hellotalk/frontend[39m
 
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts [2m([22m[2m16 tests[22m[2m | [22m[33m1 skipped[39m[2m)[22m[33m 518[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/voip-call/voip-call.component.spec.ts [2m([22m[2m15 tests[22m[2m | [22m[33m3 skipped[39m[2m)[22m[32m 193[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/settings/settings.component.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 149[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/audio-sync-reader/audio-sync-reader.component.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 137[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/correction-modal/correction-modal.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 137[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/language-picker/language-picker.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 92[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/app.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 51[2mms[22m[39m
-[90mstderr[2m | src/app/components/chat-list/chat-list.component.spec.ts[2m > [22m[2mChatListComponent[2m > [22m[2mshould create
-[22m[39mGoTrueClient@sb-mock-auth-token:1 (2.110.8) 2026-07-28T21:03:24.898Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
-
-[90mstderr[2m | src/app/components/chat-list/chat-list.component.spec.ts[2m > [22m[2mChatListComponent[2m > [22m[2mnotImplemented should show toast
-[22m[39mGoTrueClient@sb-mock-auth-token:2 (2.110.8) 2026-07-28T21:03:24.950Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
-
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/chat-list/chat-list.component.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 96[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/chip/chip.component.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 110[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/video-room/video-room.component.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 106[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/textarea/textarea.component.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 52[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/button-primary/button-primary.component.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 51[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/notifications-inbox/notifications-inbox.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 127[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/pill/pill.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 60[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/input/input.component.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 51[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/services/admin.service.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 27[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/services/i18n.service.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 46[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/empty-state/empty-state.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 72[2mms[22m[39m
 Not implemented: HTMLMediaElement's play() method
 Not implemented: HTMLMediaElement's pause() method
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/incoming-call/incoming-call.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 58[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/services/vocabulary.store.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 64[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/language-selector/language-selector.component.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 65[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/button-secondary/button-secondary.component.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 50[2mms[22m[39m
-[90mstderr[2m | src/app/components/discovery/discovery.component.spec.ts[2m > [22m[2mDiscoveryComponent[2m > [22m[2mshould create
-[22m[39mGoTrueClient@sb-mock-auth-token:3 (2.110.8) 2026-07-28T21:03:26.698Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
-
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/discovery/discovery.component.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 29[2mms[22m[39m
-[90mstderr[2m | src/app/components/primitives/card/card.component.spec.ts
-[22m[39mCould not load blocked user IDs HttpErrorResponse {
-  headers: HttpHeaders {
-    headers: Map(0) {},
-    normalizedNames: Map(0) {},
-    lazyInit: [90mundefined[39m,
-    lazyUpdate: [1mnull[22m
-  },
-  status: [33m0[39m,
-  statusText: [32m'Unknown Error'[39m,
-  url: [32m'http://localhost:3000/api/safety/blocked-ids'[39m,
-  ok: [33mfalse[39m,
-  type: [90mundefined[39m,
-  redirected: [90mundefined[39m,
-  responseType: [90mundefined[39m,
-  name: [32m'HttpErrorResponse'[39m,
-  message: [32m'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined'[39m,
-  error: TypeError: fetch failed
-  [90m    at node:internal/deps/undici/undici:15141:13[39m
-  [90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m {
-    [cause]: AggregateError: 
-    [90m    at internalConnectMultiple (node:net:1135:18)[39m
-    [90m    at afterConnectMultiple (node:net:1716:7)[39m {
-      code: [32m'ECONNREFUSED'[39m,
-      [errors]: [36m[Array][39m
-    }
-  }
-}
-
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/card/card.component.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 25[2mms[22m[39m
-[90mstderr[2m | src/app/components/user-detail/user-detail.component.spec.ts[2m > [22m[2mUserDetailComponent[2m > [22m[2mshould create
-[22m[39mGoTrueClient@sb-mock-auth-token:4 (2.110.8) 2026-07-28T21:03:26.853Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
-
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/user-detail/user-detail.component.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 21[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/message-reaction-bar/message-reaction-bar.component.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/components/primitives/toast/toast.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 10[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/guards/admin.guard.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 14[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/services/translate.pipe.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 10[2mms[22m[39m
- [32m✓[39m [30m[43m frontend [49m[39m src/app/services/media-upload.service.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 1[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m30 passed[39m[22m[90m (30)[39m
 [2m      Tests [22m [1m[32m126 passed[39m[22m[2m | [22m[33m4 skipped[39m[90m (130)[39m
-[2m   Start at [22m 21:03:19
-[2m   Duration [22m 7.42s[2m (transform 1.72s, setup 903ms, import 2.32s, tests 2.43s, environment 1.25s)[22m
+[2m   Start at [22m 01:08:24
+[2m   Duration [22m 8.61s[2m (transform 1.59s, setup 961ms, import 2.35s, tests 2.45s, environment 2.22s)[22m
 

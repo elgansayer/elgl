@@ -1,9 +1,10 @@
 import { Component, signal, inject, resource } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { ModerationService, ModerationItem } from '../../services/moderation.service';
 
 @Component({
   selector: 'app-moderation-queue',
-  imports: [],
+  imports: [DatePipe],
   templateUrl: './moderation-queue.component.html',
   styleUrls: ['./moderation-queue.component.scss'],
 })

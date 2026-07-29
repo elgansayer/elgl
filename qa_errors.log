@@ -1,0 +1,2997 @@
+[WebServer] ▲ [WARNING] NG8113: All imports are unused [plugin angular-compiler]
+[WebServer] 
+[WebServer]     src/app/components/daily-login-modal/daily-login-modal.component.ts:6:2:
+[WebServer]       6 │   imports: [TranslatePipe],
+[WebServer]         ╵   ~~~~~~~
+[WebServer] 
+[WebServer] 
+[WebServer] ▲ [WARNING] NG8109: NG8109: coins is a function and should be invoked: coins()}. Find more at https://v22.angular.dev/extended-diagnostics/NG8109 [plugin angular-compiler]
+[WebServer] 
+[WebServer]     src/app/components/daily-login-modal/daily-login-modal.component.ts:15:65:
+[WebServer]       15 │ ...ss="font-bold text-amber-500">{{ coins }} coins</span> for logging
+[WebServer]          ╵                                     ~~~~~
+[WebServer] 
+[WebServer] 
+[WebServer] ▲ [WARNING] NG8117: NG8117: Function in text interpolation should be invoked: coins(). Find more at https://v22.angular.dev/extended-diagnostics/NG8117 [plugin angular-compiler]
+[WebServer] 
+[WebServer]     src/app/components/daily-login-modal/daily-login-modal.component.ts:15:65:
+[WebServer]       15 │ ...ss="font-bold text-amber-500">{{ coins }} coins</span> for logging
+[WebServer]          ╵                                     ~~~~~
+[WebServer] 
+[WebServer] 
+[WebServer] ▲ [WARNING] NG8109: NG8109: storeUrl is a function and should be invoked: storeUrl()}. Find more at https://v22.angular.dev/extended-diagnostics/NG8109 [plugin angular-compiler]
+[WebServer] 
+[WebServer]     src/app/components/forced-update-modal/forced-update-modal.component.ts:30:18:
+[WebServer]       30 │           [href]="storeUrl"
+[WebServer]          ╵                   ~~~~~~~~
+[WebServer] 
+[WebServer] 
+[WebServer] ▲ [WARNING] NG8113: LikedByModalComponent is not used within the template of MomentsFeedComponent [plugin angular-compiler]
+[WebServer] 
+[WebServer]     src/app/components/moments-feed/moments-feed.component.ts:32:4:
+[WebServer]       32 │     LikedByModalComponent,
+[WebServer]          ╵     ~~~~~~~~~~~~~~~~~~~~~
+[WebServer] 
+[WebServer] 
+[WebServer] ▲ [WARNING] NG8109: NG8109: targetName is a function and should be invoked: targetName()}. Find more at https://v22.angular.dev/extended-diagnostics/NG8109 [plugin angular-compiler]
+[WebServer] 
+[WebServer]     src/app/components/trust-safety-modal/trust-safety-modal.component.ts:21:33:
+[WebServer]       21 │ ...        Report or block {{ targetName }} to keep our community ...
+[WebServer]          ╵                               ~~~~~~~~~~
+[WebServer] 
+[WebServer] 
+[WebServer] ▲ [WARNING] NG8117: NG8117: Function in text interpolation should be invoked: targetName(). Find more at https://v22.angular.dev/extended-diagnostics/NG8117 [plugin angular-compiler]
+[WebServer] 
+[WebServer]     src/app/components/trust-safety-modal/trust-safety-modal.component.ts:21:33:
+[WebServer]       21 │ ...        Report or block {{ targetName }} to keep our community ...
+[WebServer]          ╵                               ~~~~~~~~~~
+[WebServer] 
+[WebServer] 
+[WebServer] ▲ [WARNING] NG8109: NG8109: targetName is a function and should be invoked: targetName()}. Find more at https://v22.angular.dev/extended-diagnostics/NG8109 [plugin angular-compiler]
+[WebServer] 
+[WebServer]     src/app/components/trust-safety-modal/trust-safety-modal.component.ts:89:49:
+[WebServer]       89 │ ...       >⚠️ What happens when you block {{ targetName }}:</span
+[WebServer]          ╵                                          ~~~~~~~~~~
+[WebServer] 
+[WebServer] 
+[WebServer] ▲ [WARNING] NG8117: NG8117: Function in text interpolation should be invoked: targetName(). Find more at https://v22.angular.dev/extended-diagnostics/NG8117 [plugin angular-compiler]
+[WebServer] 
+[WebServer]     src/app/components/trust-safety-modal/trust-safety-modal.component.ts:89:49:
+[WebServer]       89 │ ...       >⚠️ What happens when you block {{ targetName }}:</span
+[WebServer]          ╵                                          ~~~~~~~~~~
+[WebServer] 
+[WebServer] 
+[WebServer] ▲ [WARNING] NG8109: NG8109: message is a function and should be invoked: message()}. Find more at https://v22.angular.dev/extended-diagnostics/NG8109 [plugin angular-compiler]
+[WebServer] 
+[WebServer]     src/app/components/update-modal/update-modal.component.ts:21:50:
+[WebServer]       21 │         <p class="text-sm text-text-secondary">{{ message }}</p>
+[WebServer]          ╵                                                   ~~~~~~~
+[WebServer] 
+[WebServer] 
+[WebServer] ▲ [WARNING] NG8117: NG8117: Function in text interpolation should be invoked: message(). Find more at https://v22.angular.dev/extended-diagnostics/NG8117 [plugin angular-compiler]
+[WebServer] 
+[WebServer]     src/app/components/update-modal/update-modal.component.ts:21:50:
+[WebServer]       21 │         <p class="text-sm text-text-secondary">{{ message }}</p>
+[WebServer]          ╵                                                   ~~~~~~~
+[WebServer] 
+[WebServer] 
+[WebServer] ▲ [WARNING] NG8109: NG8109: receiverName is a function and should be invoked: receiverName()}. Find more at https://v22.angular.dev/extended-diagnostics/NG8109 [plugin angular-compiler]
+[WebServer] 
+[WebServer]     src/app/components/virtual-gift-modal/virtual-gift-modal.component.ts:130:49:
+[WebServer]       130 │ ...        >Select virtual gift to send to {{ receiverName }}:</span
+[WebServer]           ╵                                               ~~~~~~~~~~~~
+[WebServer] 
+[WebServer] 
+[WebServer] ▲ [WARNING] NG8117: NG8117: Function in text interpolation should be invoked: receiverName(). Find more at https://v22.angular.dev/extended-diagnostics/NG8117 [plugin angular-compiler]
+[WebServer] 
+[WebServer]     src/app/components/virtual-gift-modal/virtual-gift-modal.component.ts:130:49:
+[WebServer]       130 │ ...        >Select virtual gift to send to {{ receiverName }}:</span
+[WebServer]           ╵                                               ~~~~~~~~~~~~
+[WebServer] 
+[WebServer] 
+
+[WebServer] Error loading economy/safety data: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/catalog',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/catalog: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked user IDs HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Could not load blocked user IDs HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Daily check-in error: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/daily-check-in',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/daily-check-in: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Partner search failed: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-and-blocker-ids/mock-user-123',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-and-blocker-ids/mock-user-123: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+
+Running 192 tests using 1 worker
+
+[1/192] [desktop-english] › tests/adversarial/audio-room-host-self-demote-adversarial.spec.ts:120:7 › Adversarial: spoofed speaker_demoted event targets the room host › a speaker_demoted event naming the host silently locks the host out of their own room
+[WebServer] Error loading economy/safety data: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/catalog',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/catalog: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked user IDs HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Daily check-in error: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/daily-check-in',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/daily-check-in: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load active audio rooms: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/audio-rooms/list',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/audio-rooms/list: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[2/192] [desktop-english] › tests/adversarial/audio-video-cohost-chat-adversarial.spec.ts:139:7 › Adversarial: audio/video room co-host and chat › a spoofed self co-host realtime event duplicates the host into a fake split-screen participant
+[WebServer] Error loading economy/safety data: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/catalog',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/catalog: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load active audio rooms: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/audio-rooms/list',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/audio-rooms/list: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+[WebServer] Failed to load blocked user IDs HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Daily check-in error: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/daily-check-in',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/daily-check-in: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[3/192] [desktop-english] › tests/adversarial/audio-video-cohost-chat-adversarial.spec.ts:170:7 › Adversarial: audio/video room co-host and chat › a sent room chat message vanishes forever when its own realtime echo never arrives
+[WebServer] Error loading economy/safety data: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/catalog',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/catalog: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load active audio rooms: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/audio-rooms/list',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/audio-rooms/list: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked user IDs HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Daily check-in error: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/daily-check-in',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/daily-check-in: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[4/192] [desktop-english] › tests/adversarial/audio-video-cohost-chat-adversarial.spec.ts:208:7 › Adversarial: audio/video room co-host and chat › rapid chat spam and co-host invite-picker toggling do not crash the room or leak raw markup
+[WebServer] Error loading economy/safety data: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/catalog',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/catalog: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load active audio rooms: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/audio-rooms/list',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/audio-rooms/list: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked user IDs HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Daily check-in error: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/daily-check-in',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/daily-check-in: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[5/192] [desktop-english] › tests/adversarial/chat-chaos-adversarial.spec.ts:66:5 › should survive concurrent massive payloads, rapid clicks, and garbage websocket data
+[WebServer] Error loading economy/safety data: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/catalog',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/catalog: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked user IDs HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Daily check-in error: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/daily-check-in',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/daily-check-in: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load room details: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/rooms',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/rooms: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked users: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load chat history: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/messages/room_chaos_999',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/messages/room_chaos_999: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+  1) [desktop-english] › tests/adversarial/chat-chaos-adversarial.spec.ts:66:5 › should survive concurrent massive payloads, rapid clicks, and garbage websocket data 
+
+    SyntaxError: Unexpected non-whitespace character after JSON at position 59 (line 2 column 1)
+
+      41 |     wsConnection = ws;
+      42 |     ws.onMessage((message) => {
+    > 43 |       const data = JSON.parse(message as string);
+         |                         ^
+      44 |       if (data.connect) {
+      45 |         ws.send(JSON.stringify({ id: data.id, connect: { client: 'chaos-client-id' } }));
+      46 |       }
+        at WebSocketRoute._onPageMessage (/home/dev/hellotalk/e2e/tests/adversarial/chat-chaos-adversarial.spec.ts:43:25)
+
+    Error: page.waitForTimeout: Test ended.
+
+      107 |       for (let i = 0; i < 3; i++) {
+      108 |         await page.context().setOffline(true);
+    > 109 |         await page.waitForTimeout(50);
+          |                    ^
+      110 |         await page.context().setOffline(false);
+      111 |         await page.waitForTimeout(50);
+      112 |       }
+        at /home/dev/hellotalk/e2e/tests/adversarial/chat-chaos-adversarial.spec.ts:109:20
+        at /home/dev/hellotalk/e2e/tests/adversarial/chat-chaos-adversarial.spec.ts:88:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/adversarial-chat-chaos-adv-8858d--and-garbage-websocket-data-desktop-english/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/adversarial-chat-chaos-adv-8858d--and-garbage-websocket-data-desktop-english/error-context.md
+
+
+[6/192] [desktop-english] › tests/adversarial/chat-list-blocked-user-leak-adversarial.spec.ts:120:7 › Adversarial: blocked user chat room leaks onto the chat list › a blocked user's chat thread and last-message preview keep showing on the main chat list
+[WebServer] Error loading economy/safety data: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/catalog',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/catalog: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked user IDs HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Daily check-in error: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/daily-check-in',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/daily-check-in: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load chat rooms: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/rooms',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/rooms: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+  2) [desktop-english] › tests/adversarial/chat-list-blocked-user-leak-adversarial.spec.ts:120:7 › Adversarial: blocked user chat room leaks onto the chat list › a blocked user's chat thread and last-message preview keep showing on the main chat list 
+
+    ReferenceError: LEAKED_LAST_MESSAGE is not defined
+
+      140 |     // open the app.
+      141 |     await expect(page.getByText(BLOCKED_ROOM_TITLE, { exact: true })).toBeVisible();
+    > 142 |     await expect(page.getByText(LEAKED_LAST_MESSAGE, { exact: false })).toBeVisible();
+          |                                 ^
+      143 |
+      144 |     expect(
+      145 |       pageErrors,
+        at /home/dev/hellotalk/e2e/tests/adversarial/chat-list-blocked-user-leak-adversarial.spec.ts:142:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/adversarial-chat-list-bloc-c986a-owing-on-the-main-chat-list-desktop-english/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/adversarial-chat-list-bloc-c986a-owing-on-the-main-chat-list-desktop-english/error-context.md
+
+
+[7/192] [desktop-english] › tests/adversarial/chat-network-adversarial.spec.ts:40:7 › Adversarial Network & Concurrency Tests › should not crash when network drops while sending a message
+[WebServer] Error loading economy/safety data: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/catalog',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/catalog: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load room details: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/rooms',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/rooms: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked user IDs HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked users: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Daily check-in error: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/daily-check-in',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/daily-check-in: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load chat history: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/messages/room_network_test',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/messages/room_network_test: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+  3) [desktop-english] › tests/adversarial/chat-network-adversarial.spec.ts:40:7 › Adversarial Network & Concurrency Tests › should not crash when network drops while sending a message 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('textarea[name="chat-input"], input[name="chat-input"], [data-testid="chat-input"]').first()
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 10000ms
+      - waiting for locator('textarea[name="chat-input"], input[name="chat-input"], [data-testid="chat-input"]').first()
+
+
+      44 |     const sendButton = page.locator('button[type="submit"], [data-testid="send-button"]');
+      45 |
+    > 46 |     await expect(inputField.first()).toBeVisible({ timeout: 10000 });
+         |                                      ^
+      47 |
+      48 |     // Type a message
+      49 |     await inputField.first().fill('Message before offline');
+        at /home/dev/hellotalk/e2e/tests/adversarial/chat-network-adversarial.spec.ts:46:38
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/adversarial-chat-network-a-f89f5-ops-while-sending-a-message-desktop-english/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/adversarial-chat-network-a-f89f5-ops-while-sending-a-message-desktop-english/error-context.md
+
+
+[8/192] [desktop-english] › tests/adversarial/chat-network-adversarial.spec.ts:72:7 › Adversarial Network & Concurrency Tests › should handle delayed API responses without duplicating messages on rapid clicks
+[WebServer] Error loading economy/safety data: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/catalog',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/catalog: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load room details: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/rooms',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/rooms: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked user IDs HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked users: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Daily check-in error: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/daily-check-in',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/daily-check-in: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load chat history: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/messages/room_network_test',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/messages/room_network_test: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+  4) [desktop-english] › tests/adversarial/chat-network-adversarial.spec.ts:72:7 › Adversarial Network & Concurrency Tests › should handle delayed API responses without duplicating messages on rapid clicks 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('textarea[name="chat-input"], input[name="chat-input"], [data-testid="chat-input"]').first()
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 10000ms
+      - waiting for locator('textarea[name="chat-input"], input[name="chat-input"], [data-testid="chat-input"]').first()
+
+
+      78 |     const sendButton = page.locator('button[type="submit"], [data-testid="send-button"]');
+      79 |
+    > 80 |     await expect(inputField.first()).toBeVisible({ timeout: 10000 });
+         |                                      ^
+      81 |
+      82 |     // Override the message route to have a massive artificial delay
+      83 |     await page.route('**/chat/messages', async (route) => {
+        at /home/dev/hellotalk/e2e/tests/adversarial/chat-network-adversarial.spec.ts:80:38
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/adversarial-chat-network-a-a25c1-ng-messages-on-rapid-clicks-desktop-english/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/adversarial-chat-network-a-a25c1-ng-messages-on-rapid-clicks-desktop-english/error-context.md
+
+
+[9/192] [desktop-english] › tests/adversarial/chat-payload-adversarial.spec.ts:45:7 › Adversarial Chat Payload & Injection Tests › should safely handle basic XSS injection attempts without executing scripts
+[WebServer] Error loading economy/safety data: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/catalog',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/catalog: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load room details: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/rooms',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/rooms: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked user IDs HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked users: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+[WebServer] Daily check-in error: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/daily-check-in',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/daily-check-in: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load chat history: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/messages/room_payload_test',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/messages/room_payload_test: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+  5) [desktop-english] › tests/adversarial/chat-payload-adversarial.spec.ts:45:7 › Adversarial Chat Payload & Injection Tests › should safely handle basic XSS injection attempts without executing scripts 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('textarea[name="chat-input"], input[name="chat-input"], [data-testid="chat-input"]').first()
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 10000ms
+      - waiting for locator('textarea[name="chat-input"], input[name="chat-input"], [data-testid="chat-input"]').first()
+
+
+      51 |     const sendButton = page.locator('button[type="submit"], [data-testid="send-button"]');
+      52 |
+    > 53 |     await expect(inputField.first()).toBeVisible({ timeout: 10000 });
+         |                                      ^
+      54 |
+      55 |     const xssPayloads = [
+      56 |       '<script>alert("xss")</script>',
+        at /home/dev/hellotalk/e2e/tests/adversarial/chat-payload-adversarial.spec.ts:53:38
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/adversarial-chat-payload-a-5ca97-s-without-executing-scripts-desktop-english/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/adversarial-chat-payload-a-5ca97-s-without-executing-scripts-desktop-english/error-context.md
+
+
+[10/192] [desktop-english] › tests/adversarial/chat-payload-adversarial.spec.ts:75:7 › Adversarial Chat Payload & Injection Tests › should not break layout with extremely long unbroken strings
+[WebServer] Error loading economy/safety data: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/catalog',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/catalog: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load room details: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/rooms',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/rooms: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked user IDs HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked users: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Daily check-in error: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/daily-check-in',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/daily-check-in: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load chat history: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/messages/room_payload_test',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/messages/room_payload_test: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+  6) [desktop-english] › tests/adversarial/chat-payload-adversarial.spec.ts:75:7 › Adversarial Chat Payload & Injection Tests › should not break layout with extremely long unbroken strings 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('textarea[name="chat-input"], input[name="chat-input"], [data-testid="chat-input"]').first()
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 10000ms
+      - waiting for locator('textarea[name="chat-input"], input[name="chat-input"], [data-testid="chat-input"]').first()
+
+
+      79 |     const sendButton = page.locator('button[type="submit"], [data-testid="send-button"]');
+      80 |
+    > 81 |     await expect(inputField.first()).toBeVisible({ timeout: 10000 });
+         |                                      ^
+      82 |
+      83 |     // Generate a 5000 character string with no spaces
+      84 |     const longWord = 'W'.repeat(5000);
+        at /home/dev/hellotalk/e2e/tests/adversarial/chat-payload-adversarial.spec.ts:81:38
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/adversarial-chat-payload-a-e4a42-emely-long-unbroken-strings-desktop-english/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/adversarial-chat-payload-a-e4a42-emely-long-unbroken-strings-desktop-english/error-context.md
+
+
+[11/192] [desktop-english] › tests/adversarial/chat-payload-adversarial.spec.ts:102:7 › Adversarial Chat Payload & Injection Tests › should handle zero-width characters and RTL overrides gracefully
+[WebServer] Error loading economy/safety data: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/catalog',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/catalog: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+[WebServer] Failed to load room details: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/rooms',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/rooms: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked user IDs HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked users: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Daily check-in error: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/daily-check-in',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/daily-check-in: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load chat history: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/messages/room_payload_test',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/messages/room_payload_test: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+  7) [desktop-english] › tests/adversarial/chat-payload-adversarial.spec.ts:102:7 › Adversarial Chat Payload & Injection Tests › should handle zero-width characters and RTL overrides gracefully 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('textarea[name="chat-input"], input[name="chat-input"], [data-testid="chat-input"]').first()
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 10000ms
+      - waiting for locator('textarea[name="chat-input"], input[name="chat-input"], [data-testid="chat-input"]').first()
+
+
+      106 |     const sendButton = page.locator('button[type="submit"], [data-testid="send-button"]');
+      107 |
+    > 108 |     await expect(inputField.first()).toBeVisible({ timeout: 10000 });
+          |                                      ^
+      109 |
+      110 |     // Payload with Zero-width joiners, non-joiners, and Right-to-Left Override (U+202E)
+      111 |     const zalgoAndRtl = 'T\u200De\u200Cs\u202Et\u0336\u0347\u0359';
+        at /home/dev/hellotalk/e2e/tests/adversarial/chat-payload-adversarial.spec.ts:108:38
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/adversarial-chat-payload-a-7affb-nd-RTL-overrides-gracefully-desktop-english/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/adversarial-chat-payload-a-7affb-nd-RTL-overrides-gracefully-desktop-english/error-context.md
+
+
+[12/192] [desktop-english] › tests/adversarial/chat-send-failure-silent-loss-adversarial.spec.ts:91:7 › Adversarial: chat message send failure is silently swallowed › a failed text message send vanishes with zero user feedback, then recovers once the API is healthy
+[WebServer] Error loading economy/safety data: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/catalog',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/catalog: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load room details: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/rooms',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/rooms: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked user IDs HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked users: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Daily check-in error: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/daily-check-in',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/daily-check-in: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load chat history: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/messages/room-silent-loss-e2e',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/messages/room-silent-loss-e2e: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+  8) [desktop-english] › tests/adversarial/chat-send-failure-silent-loss-adversarial.spec.ts:91:7 › Adversarial: chat message send failure is silently swallowed › a failed text message send vanishes with zero user feedback, then recovers once the API is healthy 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('Recovered message 1785287543192')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByText('Recovered message 1785287543192')
+
+
+      138 |     await input.fill(recoveredMessage);
+      139 |     await sendButton.click();
+    > 140 |     await expect(page.getByText(recoveredMessage)).toBeVisible({ timeout: 5000 });
+          |                                                    ^
+      141 |
+      142 |     expect(
+      143 |       pageErrors,
+        at /home/dev/hellotalk/e2e/tests/adversarial/chat-send-failure-silent-loss-adversarial.spec.ts:140:52
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/adversarial-chat-send-fail-b9950-ers-once-the-API-is-healthy-desktop-english/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/adversarial-chat-send-fail-b9950-ers-once-the-API-is-healthy-desktop-english/error-context.md
+
+
+[13/192] [desktop-english] › tests/adversarial/chat-spam-adversarial.spec.ts:40:7 › Adversarial Chat & Video UI Stress Tests › should survive rapid-fire message spamming without crashing
+[WebServer] Error loading economy/safety data: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/catalog',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/catalog: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load room details: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/rooms',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/rooms: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked user IDs HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load blocked users: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/safety/blocked-ids',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/safety/blocked-ids: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Daily check-in error: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/economy/daily-check-in',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/economy/daily-check-in: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to load chat history: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/messages/room_123',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/messages/room_123: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+
+[WebServer] Failed to initialize Centrifugo: HttpErrorResponse {
+[WebServer]   headers: _HttpHeaders {
+[WebServer]     headers: Map(0) {},
+[WebServer]     normalizedNames: Map(0) {},
+[WebServer]     lazyInit: undefined,
+[WebServer]     lazyUpdate: null
+[WebServer]   },
+[WebServer]   status: 0,
+[WebServer]   statusText: 'Unknown Error',
+[WebServer]   url: 'http://localhost:3000/api/chat/token',
+[WebServer]   ok: false,
+[WebServer]   type: undefined,
+[WebServer]   redirected: undefined,
+[WebServer]   responseType: undefined,
+[WebServer]   name: 'HttpErrorResponse',
+[WebServer]   message: 'Http failure response for http://localhost:3000/api/chat/token: 0 undefined',
+[WebServer]   error: TypeError: fetch failed
+[WebServer]       at node:internal/deps/undici/undici:15141:13
+[WebServer]       at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+[WebServer]     [cause]: AggregateError [ECONNREFUSED]: 
+[WebServer]         at internalConnectMultiple (node:net:1135:18)
+[WebServer]         at afterConnectMultiple (node:net:1716:7) {
+[WebServer]       code: 'ECONNREFUSED',
+[WebServer]       [errors]: [Array]
+[WebServer]     }
+[WebServer]   }
+[WebServer] }
+

@@ -16,7 +16,7 @@ import { CommonModule } from '@angular/common';
         class="absolute top-0 start-0 end-0 p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/60 to-transparent"
       >
         <span class="text-white font-medium text-sm tracking-widest">
-          {{ currentIndex + 1 }} / {{ images.length }}
+          {{ currentIndex + 1 }} / {{ images().length }}
         </span>
         <button
           (click)="close()"
@@ -41,7 +41,7 @@ import { CommonModule } from '@angular/common';
       </div>
 
       <!-- Previous Button -->
-      @if (images.length > 1) {
+      @if (images().length > 1) {
         <button
           (click)="prev($event)"
           class="absolute start-4 top-1/2 -translate-y-1/2 p-3 text-white/50 hover:text-white bg-black/20 hover:bg-black/60 rounded-full transition-all z-10 hidden md:block"
@@ -73,19 +73,19 @@ import { CommonModule } from '@angular/common';
         (touchend)="onTouchEnd($event)"
       >
         <img
-          [src]="images[currentIndex]"
+          [src]="images()[currentIndex]"
           alt="Fullscreen moment media"
           class="max-w-full max-h-full object-contain select-none transition-transform duration-300"
         />
       </div>
 
       <!-- Next Button -->
-      @if (images.length > 1) {
+      @if (images().length > 1) {
         <button
           (click)="next($event)"
           class="absolute end-4 top-1/2 -translate-y-1/2 p-3 text-white/50 hover:text-white bg-black/20 hover:bg-black/60 rounded-full transition-all z-10 hidden md:block"
-          [class.opacity-0]="currentIndex === images.length - 1"
-          [disabled]="currentIndex === images.length - 1"
+          [class.opacity-0]="currentIndex === images().length - 1"
+          [disabled]="currentIndex === images().length - 1"
           aria-label="Next image"
         >
           <svg

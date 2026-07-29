@@ -15,7 +15,7 @@ import { FormsModule } from '@angular/forms';
         @for (msg of filteredMessages(); track msg) {
           <app-chat-message
             [message]="msg"
-            [currentUserId]="currentUserId"
+            [currentUserId]="effectiveUserId()"
             (messageBlocked)="onMessageBlocked($event)"
           ></app-chat-message>
         }
