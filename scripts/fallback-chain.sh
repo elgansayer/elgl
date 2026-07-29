@@ -49,7 +49,7 @@ run_copilot_cli() {
     return 1
 }
 
-# Advisory only: always returns 1. Produces text suggestions but cannot edit files.
+# Returns 0 if Antigravity produced real file changes, 1 otherwise.
 run_antigravity_cli() {
     local MESSAGE="$1"
 
@@ -59,15 +59,38 @@ run_antigravity_cli() {
     elif command -v antigravity &> /dev/null; then
         AGY_BIN="antigravity"
     else
-        echo "Antigravity CLI (agy/antigravity) not found - advisory skip."
+        echo "Antigravity CLI (agy/antigravity) not found."
         return 1
     fi
 
-    echo "Running Antigravity CLI ($AGY_BIN) (advisory, will fall through)..."
-    timeout --foreground -s KILL 120 "$AGY_BIN" "$MESSAGE" 2>&1 || true
+    echo "Running Antigravity CLI ($AGY_BIN) with Gemini (code-editing mode)..."
+    local output
+    local exit_code
+
+    # Rate-limit shared across all agents
+    acquire_ai_slot || { echo "Antigravity: rate limiter timed out."; return 1; }
+    output=$(timeout --foreground -s KILL 300 "$AGY_BIN" -p --dangerously-skip-permissions "$MESSAGE" 2>&1)
+    exit_code=$?
+    release_ai_slot
+
     pkill -9 -f "$AGY_BIN" 2>/dev/null || true
-    echo "Antigravity advisory run complete. Falling through to next tool."
-    return 1
+
+    # Verify Antigravity actually produced file changes.
+    if git diff --quiet && git diff --cached --quiet; then
+        if [ $exit_code -ne 0 ]; then
+            echo "Antigravity failed (exit $exit_code) and made no file changes."
+        else
+            echo "Antigravity exited 0 but made no file changes. Treating as failure."
+        fi
+        return 1
+    fi
+
+    if [ $exit_code -ne 0 ]; then
+        echo "Antigravity was killed (exit $exit_code) but produced file changes. Accepting partial work."
+    fi
+
+    echo "$output"
+    return 0
 }
 
 # Returns 0 on success, non-zero on any failure
@@ -160,28 +183,33 @@ run_deepseek_api() {
 
 # Entry point every pipeline stage should call.
 # Usage: run_task_with_fallback "message" ["additional context or files"]
-# Tries tools in order: Claude CLI -> GitHub Copilot CLI -> Antigravity CLI -> DeepSeek API -> Aider (DeepSeek)
-# Only Claude Code and Aider can actually write code files. Copilot, Antigravity, and raw
-# DeepSeek are advisory-only (always fall through to ensure Aider gets a chance).
-# Returns 0 as soon as Claude or Aider succeeds with real code changes, or 2 once every
+# Tries tools in order: Claude CLI -> Antigravity (Gemini) -> Aider (DeepSeek)
+# Copilot and raw DeepSeek are advisory-only (always fall through).
+# Claude, Antigravity, and Aider can write code files.
+# Returns 0 as soon as any code-writing tool succeeds, or 2 once every
 # tool in the chain has been exhausted.
 run_task_with_fallback() {
     local MESSAGE="$1"
     local EXTRA_CONTEXT="${2:-}"
     local FULL_MESSAGE="$MESSAGE"
-    [ -n "$EXTRA_CONTEXT" ] && FULL_MESSAGE="$MESSAGE — context files: $EXTRA_CONTEXT"
+    [ -n "$EXTRA_CONTEXT" ] && FULL_MESSAGE="$MESSAGE -- context files: $EXTRA_CONTEXT"
 
     echo "Attempting Claude CLI..."
     run_claude_code "$FULL_MESSAGE"
     if [ $? -eq 0 ]; then
         return 0
     fi
-    echo "Claude CLI unavailable. Falling through advisory chain."
+    echo "Claude CLI unavailable. Trying Antigravity (Gemini)..."
+
+    echo "--- Antigravity CLI (Gemini, code-editing) ---"
+    run_antigravity_cli "$FULL_MESSAGE"
+    if [ $? -eq 0 ]; then
+        return 0
+    fi
+    echo "Antigravity unavailable or no changes. Falling through."
 
     echo "--- GitHub Copilot CLI (advisory) ---"
     run_copilot_cli "$FULL_MESSAGE"
-    echo "--- Antigravity CLI (advisory) ---"
-    run_antigravity_cli "$FULL_MESSAGE"
     echo "--- DeepSeek API (advisory) ---"
     run_deepseek_api "$FULL_MESSAGE"
 
