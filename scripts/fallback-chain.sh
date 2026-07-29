@@ -2,18 +2,15 @@
 # fallback-chain.sh - Shared multi-tool CLI fallback chain
 #
 # Provides run_claude_code(), run_antigravity_cli(), run_aider_copilot(),
-# run_aider(), run_deepseek_api() and run_task_with_fallback() used by
-# run_task_with_fallback() used by loop.sh and qa-loop.sh. Previously each script
-# carried its own copy of these functions, which let the two definitions drift.
+# run_aider() and run_task_with_fallback() used by loop.sh and qa-loop.sh.
+# Previously each script carried its own copy of these functions.
 #
 # Fallback contract: each run_* function returns 0 on success, non-zero on any
 # failure. run_task_with_fallback treats ANY non-zero exit code as a reason to fall
-# through to the next tool (a real quota/rate-limit error is just one instance of a
-# non-zero exit; it is not the only one, so it must not be the only thing that
-# triggers fallthrough). Only exhausting every tool in the chain is a hard failure.
+# through to the next tool.
 #
-# DeepSeek API is the only advisory-only tool (always returns 1, for debug output).
-# Claude, Antigravity (Gemini), and Aider (DeepSeek) can write code and return 0.
+# Claude, Antigravity (Gemini), Aider/Copilot, and Aider (DeepSeek) can all
+# write code. Falls through on rate limit, capacity, or no-changes.
 
 FALLBACK_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 
@@ -201,34 +198,12 @@ PLAYWRIGHT_STUB
     return 0
 }
 
-# Advisory only: always returns 1. Echoes raw API JSON but cannot edit files.
-run_deepseek_api() {
-    local MESSAGE="$1"
-
-    if [ -z "$DEEPSEEK_API_KEY" ]; then
-        echo "DEEPSEEK_API_KEY not set - advisory skip."
-        return 1
-    fi
-
-    echo "Running DeepSeek API (advisory, will fall through)..."
-    acquire_ai_slot || { echo "DeepSeek API: rate limiter timed out."; return 1; }
-    timeout 60 curl -sf -X POST "https://api.deepseek.com/v1/chat/completions" \
-        -H "Content-Type: application/json" \
-        -H "Authorization: Bearer $DEEPSEEK_API_KEY" \
-        -d "{\"model\":\"deepseek-chat\",\"messages\":[{\"role\":\"user\",\"content\":\"$MESSAGE\"}]}" 2>&1 || true
-    release_ai_slot
-    echo "DeepSeek API advisory run complete. Falling through to next tool."
-    return 1
-}
-
 # Entry point every pipeline stage should call.
 # Usage: run_task_with_fallback "message" ["additional context or files"]
 # Tries tools in order:
 #   Claude CLI -> Antigravity (Gemini) -> Aider/Copilot -> Aider (DeepSeek)
-# Raw DeepSeek API is advisory-only (always falls through, for debugging).
-# All four can write code files; falls through on rate limit/failure.
-# Returns 0 as soon as any code-writing tool succeeds, or 2 once every
-# tool in the chain has been exhausted.
+# All four can write code; falls through on rate limit/failure.
+# Returns 0 as soon as any tool succeeds, or 2 if all exhausted.
 run_task_with_fallback() {
     local MESSAGE="$1"
     local EXTRA_CONTEXT="${2:-}"
@@ -254,10 +229,7 @@ run_task_with_fallback() {
     if [ $? -eq 0 ]; then
         return 0
     fi
-    echo "Copilot unavailable. Falling through to advisory + Aider/DeepSeek."
-
-    echo "--- DeepSeek API (advisory) ---"
-    run_deepseek_api "$FULL_MESSAGE"
+    echo "Copilot unavailable. Falling through to Aider/DeepSeek."
 
     echo "Attempting Aider (DeepSeek)..."
     run_aider "$FULL_MESSAGE"
