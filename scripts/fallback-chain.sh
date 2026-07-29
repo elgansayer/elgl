@@ -1,7 +1,8 @@
 #!/bin/bash
 # fallback-chain.sh - Shared multi-tool CLI fallback chain
 #
-# Provides run_claude_code(), run_antigravity_cli(), run_aider(), run_deepseek_api() and
+# Provides run_claude_code(), run_antigravity_cli(), run_aider_copilot(),
+# run_aider(), run_deepseek_api() and run_task_with_fallback() used by
 # run_task_with_fallback() used by loop.sh and qa-loop.sh. Previously each script
 # carried its own copy of these functions, which let the two definitions drift.
 #
@@ -66,6 +67,66 @@ run_antigravity_cli() {
 
     if [ $exit_code -ne 0 ]; then
         echo "Antigravity was killed (exit $exit_code) but produced file changes. Accepting partial work."
+    fi
+
+    echo "$output"
+    return 0
+}
+
+# Runs Aider with GitHub Copilot Pro API (OpenAI-compatible endpoint).
+# Returns 0 on success (file changes produced), 1 on failure.
+run_aider_copilot() {
+    local MESSAGE="$1"
+
+    if ! command -v aider &> /dev/null; then
+        echo "Aider not found."
+        return 1
+    fi
+
+    if [ -z "$OPENAI_API_KEY" ]; then
+        echo "OPENAI_API_KEY not set (needed for Copilot API)."
+        return 1
+    fi
+
+    local COPILOT_BASE="${OPENAI_API_BASE:-https://api.githubcopilot.com}"
+
+    local aid_stub_dir
+    aid_stub_dir=$(mktemp -d)
+    cat > "$aid_stub_dir/playwright" << 'PLAYWRIGHT_STUB'
+#!/bin/bash
+exit 0
+PLAYWRIGHT_STUB
+    chmod +x "$aid_stub_dir/playwright"
+
+    echo "Running Aider (GitHub Copilot Pro, code-editing mode)..."
+    local output
+    local exit_code
+    local aider_timeout=600
+
+    export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+    export PLAYWRIGHT_SKIP_BROWSER_GC=1
+    export SUDO_ASKPASS="${FALLBACK_DIR}/sudo-askpass.sh"
+    export DEBIAN_FRONTEND=noninteractive
+
+    acquire_ai_slot || { echo "Aider/Copilot: rate limiter timed out."; rm -rf "$aid_stub_dir"; return 1; }
+    output=$(PATH="$aid_stub_dir:$PATH" timeout --foreground -s KILL "$aider_timeout" \
+        aider --model openai/gpt-4o --openai-api-base "$COPILOT_BASE" \
+              --message "$MESSAGE" --no-auto-commits --no-git 2>&1)
+    exit_code=$?
+    release_ai_slot
+    rm -rf "$aid_stub_dir"
+
+    if git diff --quiet && git diff --cached --quiet; then
+        if [ $exit_code -ne 0 ]; then
+            echo "Aider/Copilot failed (exit $exit_code) and made no file changes."
+        else
+            echo "Aider/Copilot exited 0 but made no file changes. Treating as failure."
+        fi
+        return 1
+    fi
+
+    if [ $exit_code -ne 0 ]; then
+        echo "Aider/Copilot was killed (exit $exit_code) but produced file changes. Accepting partial work."
     fi
 
     echo "$output"
@@ -162,9 +223,10 @@ run_deepseek_api() {
 
 # Entry point every pipeline stage should call.
 # Usage: run_task_with_fallback "message" ["additional context or files"]
-# Tries tools in order: Claude CLI -> Antigravity (Gemini) -> Aider (DeepSeek)
-# DeepSeek API is advisory-only (always falls through, for debugging).
-# Claude, Antigravity, and Aider can write code files.
+# Tries tools in order:
+#   Claude CLI -> Antigravity (Gemini) -> Aider/Copilot -> Aider (DeepSeek)
+# Raw DeepSeek API is advisory-only (always falls through, for debugging).
+# All four can write code files; falls through on rate limit/failure.
 # Returns 0 as soon as any code-writing tool succeeds, or 2 once every
 # tool in the chain has been exhausted.
 run_task_with_fallback() {
@@ -185,12 +247,19 @@ run_task_with_fallback() {
     if [ $? -eq 0 ]; then
         return 0
     fi
-    echo "Antigravity unavailable or no changes. Falling through."
+    echo "Antigravity unavailable. Trying Aider/Copilot..."
+
+    echo "--- Aider (GitHub Copilot Pro) ---"
+    run_aider_copilot "$FULL_MESSAGE"
+    if [ $? -eq 0 ]; then
+        return 0
+    fi
+    echo "Copilot unavailable. Falling through to advisory + Aider/DeepSeek."
 
     echo "--- DeepSeek API (advisory) ---"
     run_deepseek_api "$FULL_MESSAGE"
 
-    echo "Advisory tools complete. Attempting Aider for real code changes..."
+    echo "Attempting Aider (DeepSeek)..."
     run_aider "$FULL_MESSAGE"
     if [ $? -eq 0 ]; then
         return 0
