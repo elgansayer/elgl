@@ -122,7 +122,9 @@ while true; do
         # Commit partial work BEFORE stashing so it's never lost.
         if [ -n "$(git status --porcelain)" ]; then
             git_locked add -A
-            git_locked commit -m "ci: WIP before marking task stuck - $CURRENT_TASK" || true
+            echo "wip: ${CURRENT_TASK} (before marking stuck)" > /tmp/swarm_commit_msg
+            git_locked commit -F /tmp/swarm_commit_msg || true
+            rm -f /tmp/swarm_commit_msg
             echo "Partial work committed as WIP before STUCK."
         fi
 
@@ -135,7 +137,9 @@ while true; do
 
         echo "## [STUCK] $(date) - $CURRENT_TASK" >> STUCK_LOG.md
         git_locked add -A
-        git_locked commit -m "ci: mark task as stuck" || true
+        echo "stuck: ${CURRENT_TASK}" > /tmp/swarm_commit_msg
+        git_locked commit -F /tmp/swarm_commit_msg || true
+        rm -f /tmp/swarm_commit_msg
         git_locked push "$SWARM_GIT_REMOTE" "$CURRENT_BRANCH" || true
 
         COMPLETED_TASKS=$(( $(swarm_state_get "tasks_stuck") + 1 ))
@@ -260,7 +264,9 @@ while true; do
 
     if has_substantive_changes; then
         git_locked add -A
-        git_locked commit -m "ci: automated pipeline cycle complete" || true
+        echo "feat: ${CURRENT_TASK}" > /tmp/swarm_commit_msg
+        git_locked commit -F /tmp/swarm_commit_msg || true
+        rm -f /tmp/swarm_commit_msg
         git_locked push "$SWARM_GIT_REMOTE" "$CURRENT_BRANCH" || true
 
         last_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")

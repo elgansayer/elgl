@@ -123,17 +123,34 @@ export class IncomingCallComponent implements OnDestroy {
   private ringtoneUrl = '/assets/audio/ringtone.mp3';
 
   private unsubscribeCentrifugo: (() => void) | null = null;
+  private fallbackAudioContext: AudioContext | null = null;
 
   constructor() {
-    effect(() => {
+    effect((onCleanup) => {
       const user = this.authService.currentUser();
       const userId = user?.id;
       if (!userId) return;
 
-      this.centrifugoService.subscribe(`user_${userId}`, (data: unknown) => {
-        const event = data as { type: string; callInfo: IncomingCallInfo };
-        if (event.type === 'incoming_call' && event.callInfo) {
-          this.handleIncomingCall(event.callInfo);
+      // Unsubscribe previous subscription if user changed
+      if (this.unsubscribeCentrifugo) {
+        this.unsubscribeCentrifugo();
+        this.unsubscribeCentrifugo = null;
+      }
+
+      this.unsubscribeCentrifugo = this.centrifugoService.subscribe(
+        `user_${userId}`,
+        (data: unknown) => {
+          const event = data as { type: string; callInfo: IncomingCallInfo };
+          if (event.type === 'incoming_call' && event.callInfo) {
+            this.handleIncomingCall(event.callInfo);
+          }
+        },
+      );
+
+      onCleanup(() => {
+        if (this.unsubscribeCentrifugo) {
+          this.unsubscribeCentrifugo();
+          this.unsubscribeCentrifugo = null;
         }
       });
     });
@@ -194,8 +211,6 @@ export class IncomingCallComponent implements OnDestroy {
       // Silently fail if fallback also doesn't work
     }
   }
-
-  private fallbackAudioContext: AudioContext | null = null;
 
   private stopRingtone(): void {
     if (this.ringtoneAudio) {
