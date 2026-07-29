@@ -1,4 +1,6 @@
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsNumber,
@@ -25,13 +27,17 @@ export class UpdateProfileDto {
   display_name?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(10)
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayMinSize(1)
+  @ArrayMaxSize(5)
   native_languages?: string[];
 
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
+  @ArrayMinSize(1)
+  @ArrayMaxSize(3)
   target_languages?: string[];
 
   @IsOptional()

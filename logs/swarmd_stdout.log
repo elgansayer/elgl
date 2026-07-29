@@ -181,3 +181,28 @@ To github.com:elgansayer/hellotalk.git
 [2026-07-29T23:55:53Z]   FAIL  backend lint
 [2026-07-29T23:56:24Z]   FAIL  backend test
 [2026-07-29T23:56:24Z] Tests have failures (pre-existing). Committing anyway.
+[main 7304de7e] feat: Build multi-step Angular onboarding wizard.
+ 6 files changed, 238 insertions(+)
+ rename .tasks/{pending => completed}/0000-014-build-multi-step-angular-onboarding-wizard.task (100%)
+ create mode 100644 frontend/src/app/components/onboarding/onboarding-wizard.component.ts
+ create mode 100644 frontend/src/app/services/onboarding.service.ts
+remote: 
+remote: GitHub found 11 vulnerabilities on elgansayer/hellotalk's default branch (6 high, 5 moderate). To find out more, visit:        
+remote:      https://github.com/elgansayer/hellotalk/security/dependabot        
+remote: 
+To github.com:elgansayer/hellotalk.git
+   85177534..7304de7e  main -> main
+[2026-07-29T23:56:26Z] Committed: 7304de7e — feat: Build multi-step Angular onboarding wizard.
+[2026-07-29T23:56:26Z] COMPLETED: Build multi-step Angular onboarding wizard.
+[2026-07-29T23:56:26Z] Cooldown 15s...
+[2026-07-29T23:56:41Z] Task: Step 1: Native Language and Target Language selection.
+[2026-07-29T23:56:41Z] Queue: 198 pending, 14 done, 0 stuck
+[2026-07-29T23:56:41Z] Attempt 1/3
+[2026-07-29T23:56:41Z] Aider pass 1 (discover)...
+[2026-07-29T23:57:12Z] Pass 1: discovered 3 files
+[2026-07-29T23:57:12Z] Aider pass 2 round 1: 3 files in context
+[2026-07-29T23:57:52Z] Pass 2 round 1: produced 1 file changes
+[2026-07-29T23:58:01Z]   FAIL  frontend lint
+[2026-07-29T23:58:35Z]   FAIL  backend lint
+[2026-07-29T23:59:07Z]   FAIL  backend test
+[2026-07-29T23:59:07Z] Tests have failures (pre-existing). Committing anyway.
