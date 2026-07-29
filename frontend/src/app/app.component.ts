@@ -105,6 +105,7 @@ export class AppComponent implements OnInit {
 
       // Request notification permission after user is authenticated
       await this.fcmService.requestPermission();
+      await this.fcmService.persistFcmToken(user.id);
     }
   }
 

@@ -28,6 +28,7 @@
     "@angular/platform-server": "^22.0.8",
     "@angular/router": "^22.0.8",
     "@angular/service-worker": "^22.0.8",
+    "firebase": "^11.3.2",
     "@angular/ssr": "^22.0.8",
     "@supabase/supabase-js": "^2.110.8",
     "centrifuge": "^5.7.0",
