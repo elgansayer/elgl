@@ -9,7 +9,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
   imports: [StudyStreakWidgetComponent, TranslatePipe],
   template: `
     <div class="min-h-screen bg-[#121212] text-white">
-      <header class="p-4 border-b border-gray-700 flex items-center justify-between">
+      <header class="py-4 ps-4 pe-4 border-b border-gray-700 flex items-center justify-between">
         <h1 class="text-xl font-bold">{{ 'home.title' | t }}</h1>
         <div class="flex items-center gap-4">
           <span class="text-sm text-gray-400">
@@ -18,7 +18,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         </div>
       </header>
 
-      <main class="p-4 space-y-4">
+      <main class="py-4 ps-4 pe-4 space-y-4">
         <app-study-streak-widget></app-study-streak-widget>
       </main>
     </div>

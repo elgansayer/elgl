@@ -1,7 +1,6 @@
 import { Component, inject, computed, resource, signal, isDevMode } from '@angular/core';
-import { firstValueFrom, map } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { StudyStreakService } from '../../services/study-streak.service';
-import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
@@ -33,7 +32,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
       </div>
       <button
         (click)="checkIn()"
-        class="ms-auto bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-white font-semibold py-2 px-4 rounded-full text-sm transition-all duration-200 shadow-lg"
+        class="ms-auto bg-gradient-to-e from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-white font-semibold py-2 ps-4 pe-4 rounded-full text-sm transition-all duration-200 shadow-lg"
       >
         {{ 'studyStreak.checkin' | t }}
       </button>
@@ -49,21 +48,18 @@ import { TranslatePipe } from '../../services/translate.pipe';
 })
 export class StudyStreakWidgetComponent {
   private streakService = inject(StudyStreakService);
-  private i18nService = inject(I18nService);
   private refreshTrigger = signal(0);
 
   private streakResource = resource({
     request: () => ({ refresh: this.refreshTrigger() }),
     loader: () =>
-      firstValueFrom(
-        this.streakService.getStreak().pipe(map((res) => res.streak)),
-      ),
+      firstValueFrom(this.streakService.getStreak()).then(res => res.streak),
   });
 
-  readonly streakLoading = computed(() => this.streakResource.isLoading());
-  readonly streakError = computed(() => this.streakResource.error());
+  readonly streakLoading = computed(() => this.streakResource.isLoading);
+  readonly streakError = computed(() => this.streakResource.error);
 
-  readonly streakValue = computed(() => this.streakResource.value() ?? 0);
+  readonly streakValue = computed(() => this.streakResource.value ?? 0);
 
   /** Fallback for development and offline scenarios (Fake Data First) */
   readonly fallbackStreak = computed(() => (isDevMode() ? 7 : 0));

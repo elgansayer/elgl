@@ -34,6 +34,7 @@ import { AdminModule } from './admin/admin.module';
 import { HelpModule } from './help/help.module';
 import { VersionModule } from './version/version.module';
 import { StudyStreakModule } from './study-streak/study-streak.module';
+import { StreakCronModule } from './streak-cron/streak-cron.module';
 import { validationSchema } from './config/validation.schema';
 
 @Module({
@@ -86,6 +87,7 @@ import { validationSchema } from './config/validation.schema';
     HelpModule,
     VersionModule,
     StudyStreakModule,
+    StreakCronModule,
   ],
   controllers: [AppController],
   providers: [

@@ -400,6 +400,7 @@ def run_tests() -> tuple[bool, str]:
         ('frontend lint', 'frontend', ['npm', 'run', 'lint']),
         ('backend lint',  'backend',  ['npm', 'run', 'lint']),
         ('backend test',  'backend',  ['npm', 'test']),
+        ('frontend test', 'frontend', ['npm', 'test', '--', '--watch=false']),
     ]
 
     for name, cwd, args in checks:
@@ -552,19 +553,42 @@ def supervisor():
                     state_patch(last_error='No code changes after max retries')
                     break
 
-            # Changes made — run tests (informational only, don't block commit)
+            # Changes made — run tests
             passed, test_errors = run_tests()
-            if not passed:
-                log(f"Tests have failures (pre-existing). Committing anyway.")
 
-            if taskfile and taskfile.exists():
-                taskfile = task_move(taskfile, 'completed')
-            git_commit(f"feat: {task}")
-            s = state_load()
-            state_save({**s, 'tasks_completed': s.get('tasks_completed', 0) + 1})
-            log(f"COMPLETED: {task[:80]}")
-            success = True
-            break
+            if not passed and attempt < CFG['max_retries'] - 1:
+                log("Tests failed. Asking Aider to fix...")
+                if run_test_fix(test_errors):
+                    log("Fix applied. Re-running tests...")
+                    passed, _ = run_tests()
+
+            if passed:
+                if taskfile and taskfile.exists():
+                    taskfile = task_move(taskfile, 'completed')
+                git_commit(f"feat: {task}")
+                s = state_load()
+                state_save({**s, 'tasks_completed': s.get('tasks_completed', 0) + 1})
+                log(f"COMPLETED: {task[:80]}")
+                success = True
+                break
+            elif attempt >= CFG['max_retries'] - 1:
+                # Last attempt — mark stuck
+                log("Tests still failing on final attempt.")
+                state_patch(last_error=test_errors[:500])
+                if _has_changes():
+                    git_commit(f"wip: {task}")
+                if taskfile and taskfile.exists():
+                    task_move(taskfile, 'stuck')
+                s = state_load()
+                state_save({**s, 'tasks_stuck': s.get('tasks_stuck', 0) + 1})
+                log(f"STUCK: Tests failing after {CFG['max_retries']} attempts")
+                break
+            else:
+                # Not last attempt — retry the whole cycle
+                log(f"Tests failed. Retrying full cycle (attempt {attempt + 1})...")
+                state_patch(last_error=test_errors[:500])
+                time.sleep(CFG['cooldown'])
+                continue
 
         if not success and taskfile and taskfile.exists():
             state_patch(last_error='All attempts exhausted')
