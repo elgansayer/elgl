@@ -24,6 +24,11 @@ git_locked() {
     flock -w 120 "$GIT_LOCK" git "$@"
 }
 
+# AI API rate limiter — prevents all 3 swarm agents from calling external
+# AI APIs simultaneously (credit burn). Uses file-lock via mkdir (atomic).
+# shellcheck source=scripts/rate-limiter.sh
+source "$FALLBACK_DIR/rate-limiter.sh"
+
 # Advisory only: always returns 1. Produces text suggestions but cannot edit files.
 run_copilot_cli() {
     local MESSAGE="$1"
@@ -106,8 +111,11 @@ PLAYWRIGHT_STUB
     export SUDO_ASKPASS="${FALLBACK_DIR}/sudo-askpass.sh"
     export DEBIAN_FRONTEND=noninteractive
 
+    # Rate-limit: only one AI API call across all swarm agents at a time.
+    acquire_ai_slot || { echo "Aider: rate limiter timed out."; rm -rf "$aid_stub_dir"; return 1; }
     output=$(PATH="$aid_stub_dir:$PATH" timeout --foreground -s KILL "$aider_timeout" aider --message "$MESSAGE" --no-auto-commits --no-git 2>&1)
     exit_code=$?
+    release_ai_slot
     rm -rf "$aid_stub_dir"
 
     # Verify Aider actually produced changes. Accept partial work even when
@@ -140,10 +148,12 @@ run_deepseek_api() {
     fi
 
     echo "Running DeepSeek API (advisory, will fall through)..."
+    acquire_ai_slot || { echo "DeepSeek API: rate limiter timed out."; return 1; }
     timeout 60 curl -sf -X POST "https://api.deepseek.com/v1/chat/completions" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $DEEPSEEK_API_KEY" \
         -d "{\"model\":\"deepseek-chat\",\"messages\":[{\"role\":\"user\",\"content\":\"$MESSAGE\"}]}" 2>&1 || true
+    release_ai_slot
     echo "DeepSeek API advisory run complete. Falling through to next tool."
     return 1
 }
