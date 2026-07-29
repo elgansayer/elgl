@@ -50,9 +50,10 @@ STUCK_LOG.md
 e2e/ux-snapshots/
 e2e/test-results/
 e2e/playwright-report/
-Let's*
-I'll*
-Now*
-That's*
-We*
+
+# Swarm log noise (never commit these - they grow unbounded)
+qa_errors.log
+qa_aider.log
+test_errors.log
+ux_capture.log
 

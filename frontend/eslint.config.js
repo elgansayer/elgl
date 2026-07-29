@@ -12,6 +12,8 @@ export default tseslint.config(
     ],
     processor: angular.processInlineTemplates,
     rules: {
+      'no-console': ['error', { allow: ['warn', 'error'] }],
+      '@typescript-eslint/no-explicit-any': 'error',
       '@angular-eslint/directive-selector': [
         'error',
         {
@@ -29,6 +31,27 @@ export default tseslint.config(
         },
       ],
       '@angular-eslint/prefer-host-metadata-property': 'error',
+    },
+  },
+  {
+    files: ['**/*.spec.ts', '**/*.e2e-spec.ts'],
+    rules: {
+      'no-restricted-syntax': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+  {
+    files: ['**/*.ts'],
+    ignores: ['**/*.spec.ts', '**/*.e2e-spec.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'TSAsExpression',
+          message:
+            'Type assertions (as) are banned in production code. Use type narrowing, type guards, or schema validation instead.',
+        },
+      ],
     },
   },
   {

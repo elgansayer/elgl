@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { CentrifugeService } from './centrifuge.service';
+import { I18nService } from './i18n.service';
 
 export interface VirtualGift {
   id: string;
@@ -13,6 +14,14 @@ export interface VirtualGift {
   cost_coins: number;
   animation_type: string;
   animationUrl?: string;
+}
+
+export interface CoinPackage {
+  id: string;
+  name: string;
+  coins: number;
+  price_ukp: number;
+  price_usd: number;
 }
 
 export interface DeveloperAnalytics {
@@ -52,12 +61,14 @@ export class EconomyStore {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private centrifugeService = inject(CentrifugeService);
+  private i18n = inject(I18nService);
   private baseUrl = `${environment.apiUrl}/economy`;
   private monetisationUrl = `${environment.apiUrl}/monetisation`;
   private safetyUrl = `${environment.apiUrl}/safety`;
 
   readonly coinsBalance = signal<number>(50);
   readonly catalog = signal<VirtualGift[]>([]);
+  readonly coinPackages = signal<CoinPackage[]>([]);
   readonly developerStats = signal<DeveloperAnalytics | null>(null);
   readonly activeGiftAnimation = signal<ActiveGiftOverlay | null>(null);
   readonly blockedUserIds = signal<Set<string>>(new Set());
@@ -121,22 +132,66 @@ export class EconomyStore {
     }
   }
 
-  async purchaseCoins(packageId: string, amount: number): Promise<void> {
+  async loadCoinPackages(): Promise<void> {
+    try {
+      const packages = await firstValueFrom(
+        this.http.get<CoinPackage[]>(`${this.baseUrl}/packages`, {
+          headers: this.getHeaders(),
+        }),
+      );
+      this.coinPackages.set(packages);
+    } catch (e) {
+      console.error('Load coin packages error:', e);
+    }
+  }
+
+  /**
+   * Starts a real Stripe Checkout session for the chosen coin package and
+   * redirects the browser there. Coins are never granted here: the balance
+   * only ever moves once the user returns from Stripe and
+   * `confirmCoinPurchase` submits the session ID for server-side receipt
+   * verification.
+   */
+  async buyCoins(packageId: string): Promise<void> {
     try {
       const res = await firstValueFrom(
-        this.http.post<{ coins_balance: number; package_id: string }>(
-          `${this.baseUrl}/purchase-coins`,
-          { package_id: packageId, amount },
+        this.http.post<{ sessionUrl: string; sessionId: string }>(
+          `${this.baseUrl}/create-checkout-session`,
+          { package_id: packageId },
           { headers: this.getHeaders() },
         ),
       );
-      this.coinsBalance.set(res.coins_balance);
-      showToast(
-        `🎉 Successfully purchased ${amount} coins! Your new balance is ${res.coins_balance} coins.`,
-      );
+      if (!res.sessionUrl) {
+        throw new Error('Checkout session missing redirect URL');
+      }
+      window.location.href = res.sessionUrl;
     } catch (e) {
-      console.error('Coin purchase error:', e);
-      showToast('Could not process coin purchase right now.');
+      console.error('Coin checkout error:', e);
+      showToast(this.i18n.translate('economy.buyCoinsError'));
+    }
+  }
+
+  async confirmCoinPurchase(sessionId: string): Promise<boolean> {
+    try {
+      const res = await firstValueFrom(
+        this.http.post<{ coins: number; newBalance: number }>(
+          `${this.baseUrl}/purchase-coins`,
+          { receipt_token: `stripe_${sessionId}`, platform: 'web' },
+          { headers: this.getHeaders() },
+        ),
+      );
+      this.coinsBalance.set(res.newBalance);
+      showToast(
+        this.i18n.translate('economy.purchaseSuccessToast', {
+          coins: res.coins,
+          newBalance: res.newBalance,
+        }),
+      );
+      return true;
+    } catch (e) {
+      console.error('Coin purchase confirmation error:', e);
+      showToast(this.i18n.translate('economy.purchaseConfirmError'));
+      return false;
     }
   }
 

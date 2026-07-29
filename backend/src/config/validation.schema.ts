@@ -36,4 +36,11 @@ export const validationSchema = Joi.object({
   APPLE_VERIFICATION_URL: Joi.string()
     .uri()
     .default('https://sandbox.itunes.apple.com/verifyReceipt'),
+  GOOGLE_PLAY_PACKAGE_NAME: Joi.string().optional(),
+  GOOGLE_PLAY_ACCESS_TOKEN: Joi.string().optional(),
+  // Identity of the Cloud Pub/Sub push subscription that delivers Google Play
+  // RTDN webhooks, used to verify the OIDC bearer token Google attaches to
+  // every push request (see GooglePlayNotificationService#verifyPubSubAuthorization).
+  GOOGLE_PUBSUB_AUDIENCE: Joi.string().uri().required(),
+  GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL: Joi.string().email().required(),
 });

@@ -107,15 +107,11 @@ export class AppComponent implements OnInit {
   }
 
   onAcceptCall(callData: IncomingCallData): void {
-    // Navigate to the call room or start the call
-    console.log('Call accepted:', callData.roomName);
     this.incomingCallData.set(null);
     // TODO: Navigate to call room or start LiveKit session
   }
 
   onDeclineCall(callData: IncomingCallData): void {
-    // Notify the caller that the call was declined
-    console.log('Call declined:', callData.callerName);
     this.incomingCallData.set(null);
     // TODO: Send decline notification via Centrifugo
   }

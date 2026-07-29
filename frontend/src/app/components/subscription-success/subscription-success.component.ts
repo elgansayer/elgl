@@ -36,9 +36,7 @@ export class SubscriptionSuccessComponent {
   private async init(): Promise<void> {
     const params = await firstValueFrom(this.route.queryParams);
     const sessionId = params['session_id'];
-    if (sessionId) {
-      console.log('Session ID:', sessionId);
-    }
+    // Session ID available for verification if needed
   }
 
   goToDashboard(): void {

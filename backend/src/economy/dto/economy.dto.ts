@@ -11,6 +11,12 @@ export class PurchaseCoinsDto {
   platform?: 'ios' | 'android' | 'web';
 }
 
+export class CreateCoinCheckoutSessionDto {
+  @IsString()
+  @IsNotEmpty()
+  package_id!: string;
+}
+
 export class UnlockStickerPackDto {
   @IsString()
   @IsNotEmpty()

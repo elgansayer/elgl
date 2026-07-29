@@ -97,8 +97,10 @@ Limited exceptions for `ngOnInit`/`ngOnDestroy`: ONLY allowed when integrating w
 ### 5.8 TypeScript
 
 - Strict type checking: avoid `any`, use `unknown` when uncertain.
+- **NEVER use the `any` type** -- this is a hard ban with zero exceptions. Use `unknown` when uncertain.
+- **NEVER use type assertions (casting) via `as`** -- this is a hard ban in production code. Use proper type narrowing, type guards, or schema validation (Zod) instead. Type assertions are ONLY permitted in test files (`*.spec.ts`, `*.e2e-spec.ts`) for mock setup stubs.
+- **NEVER use `console.log`** -- this is a hard ban. Use a proper logging service or structured error reporting mechanism. `console.error` and `console.warn` are permitted for critical system-error reporting only.
 - Prefer type inference where obvious. Do not annotate types the compiler can infer.
-- Use `as` for type assertions, never `<Type>variable` angle-bracket syntax.
 
 ### 5.9 Accessibility
 

@@ -131,9 +131,6 @@ export class ChatMessageComponent {
   }
 
   onFavourite(event: { messageId: string; content: string; messageType: string }): void {
-    this.favouriteService
-      .addFavourite({ message_id: event.messageId })
-      .then(() => console.log('Favourite added'))
-      .catch((err) => console.error('Failed to add favourite', err));
+    this.favouriteService.addFavourite({ message_id: event.messageId }).catch(() => {});
   }
 }

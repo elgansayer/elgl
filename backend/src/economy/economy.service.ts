@@ -9,6 +9,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import Stripe from 'stripe';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
@@ -42,6 +43,8 @@ export interface CoinPackage {
   name: string;
   coins: number;
   price: number;
+  price_ukp: number;
+  price_usd: number;
   platform_product_id: {
     ios?: string;
     android?: string;
@@ -62,6 +65,8 @@ export const COIN_PACKAGES: CoinPackage[] = [
     name: 'Small Coin Pack',
     coins: 100,
     price: 499,
+    price_ukp: 4,
+    price_usd: 4.99,
     platform_product_id: {
       ios: 'com.linguaexchange.coins.small',
       android: 'coins_small',
@@ -73,6 +78,8 @@ export const COIN_PACKAGES: CoinPackage[] = [
     name: 'Medium Coin Pack',
     coins: 500,
     price: 1999,
+    price_ukp: 16,
+    price_usd: 19.99,
     platform_product_id: {
       ios: 'com.linguaexchange.coins.medium',
       android: 'coins_medium',
@@ -84,6 +91,8 @@ export const COIN_PACKAGES: CoinPackage[] = [
     name: 'Large Coin Pack',
     coins: 1200,
     price: 3999,
+    price_ukp: 32,
+    price_usd: 39.99,
     platform_product_id: {
       ios: 'com.linguaexchange.coins.large',
       android: 'coins_large',
@@ -95,6 +104,8 @@ export const COIN_PACKAGES: CoinPackage[] = [
     name: 'Mega Coin Pack',
     coins: 3000,
     price: 7999,
+    price_ukp: 64,
+    price_usd: 79.99,
     platform_product_id: {
       ios: 'com.linguaexchange.coins.mega',
       android: 'coins_mega',
@@ -106,6 +117,7 @@ export const COIN_PACKAGES: CoinPackage[] = [
 @Injectable()
 export class EconomyService {
   private readonly logger = new Logger(EconomyService.name);
+  private readonly stripe: Stripe;
 
   constructor(
     private readonly supabaseService: SupabaseService,
@@ -113,7 +125,14 @@ export class EconomyService {
     private readonly centrifugoService: CentrifugoService,
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
-  ) {}
+  ) {
+    this.stripe = new Stripe(
+      this.configService.get<string>('STRIPE_SECRET_KEY') || '',
+      {
+        apiVersion: '2023-10-16',
+      },
+    );
+  }
 
   async getCatalog(): Promise<VirtualGiftRow[]> {
     const supabase = this.supabaseService.getClient();
@@ -126,6 +145,58 @@ export class EconomyService {
 
   getPackages(): CoinPackage[] {
     return COIN_PACKAGES;
+  }
+
+  /**
+   * Starts a real Stripe Checkout session for a coin package. The balance is
+   * never credited here: `purchaseCoins` re-verifies the resulting session
+   * with Stripe's API once the client returns with the session ID as a
+   * receipt token, so a client can never grant itself coins by lying about
+   * payment success.
+   */
+  async createCheckoutSession(
+    userId: string,
+    packageId: string,
+  ): Promise<{ sessionUrl: string; sessionId: string }> {
+    const coinPackage = COIN_PACKAGES.find((pkg) => pkg.id === packageId);
+    if (!coinPackage) {
+      throw new NotFoundException(`Coin package "${packageId}" not found`);
+    }
+
+    const productId = coinPackage.platform_product_id.web;
+    if (!productId) {
+      throw new BadRequestException(
+        `Coin package "${packageId}" is not available for web purchase`,
+      );
+    }
+
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4200';
+
+    const session = await this.stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: { name: coinPackage.name },
+            unit_amount: coinPackage.price,
+          },
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        userId,
+        product_id: productId,
+      },
+      success_url: `${frontendUrl}/coins/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${frontendUrl}/coins/cancel`,
+    });
+
+    return {
+      sessionUrl: session.url || '',
+      sessionId: session.id,
+    };
   }
 
   async getBalance(userId: string): Promise<{ coins_balance: number }> {
@@ -196,6 +267,7 @@ export class EconomyService {
     const verifiedReceipt = await this.verifyReceipt(
       dto.receipt_token,
       platform,
+      userId,
     );
 
     if (!verifiedReceipt.valid) {
@@ -329,6 +401,7 @@ export class EconomyService {
   private async verifyReceipt(
     receiptToken: string,
     platform: string,
+    userId: string,
   ): Promise<VerifiedReceipt> {
     switch (platform) {
       case 'ios':
@@ -336,7 +409,7 @@ export class EconomyService {
       case 'android':
         return this.verifyGooglePlayReceipt(receiptToken);
       default:
-        return this.verifyStripeReceipt(receiptToken);
+        return this.verifyStripeReceipt(receiptToken, userId);
     }
   }
 
@@ -445,6 +518,7 @@ export class EconomyService {
 
   private async verifyStripeReceipt(
     receiptToken: string,
+    userId: string,
   ): Promise<VerifiedReceipt> {
     // For Stripe, the receipt token is the Stripe Checkout session ID
     const stripeSecretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
@@ -474,6 +548,12 @@ export class EconomyService {
 
     if (session.payment_status !== 'paid') {
       throw new BadRequestException('Stripe payment not completed');
+    }
+
+    if (session.metadata?.userId !== userId) {
+      throw new BadRequestException(
+        'This Stripe checkout session does not belong to the requesting user',
+      );
     }
 
     const productId = session.metadata?.product_id;
@@ -508,45 +588,6 @@ export class EconomyService {
         pkg.platform_product_id.android === productId ||
         pkg.platform_product_id.web === productId,
     );
-  }
-
-  private async recordPurchase(
-    userId: string,
-    coinPackage: CoinPackage,
-    receiptToken: string,
-    platform: string,
-    transactionId: string,
-  ): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-
-    const { error } = await supabase.from('coin_purchases').insert({
-      user_id: userId,
-      package_id: coinPackage.id,
-      coins_added: coinPackage.coins,
-      amount_paid: coinPackage.price,
-      currency: 'usd',
-      receipt_token: receiptToken,
-      platform: platform || 'web',
-      transaction_id: transactionId,
-      status: 'completed',
-    });
-
-    if (!error) {
-      return;
-    }
-
-    // Postgres unique_violation: this receipt/transaction was already
-    // consumed by a prior (possibly concurrent) request.
-    if (error.code === '23505') {
-      throw new ConflictException(
-        'This transaction has already been processed',
-      );
-    }
-
-    this.logger.error(
-      `Failed to record purchase for user ${userId}: ${error.message}`,
-    );
-    throw new InternalServerErrorException('Failed to record purchase');
   }
 
   async sendGift(

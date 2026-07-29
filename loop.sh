@@ -71,6 +71,7 @@ has_substantive_changes() {
 }
 
 while true; do
+    touch /tmp/ai_swarm_watchdog/heartbeat 2>/dev/null || true
     echo "========================================"
     echo "STAGE 1: PRE-MANAGEMENT (Planning)"
     echo "========================================"

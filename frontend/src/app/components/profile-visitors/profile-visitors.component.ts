@@ -2,7 +2,7 @@ import { Component, inject, signal, computed, effect } from '@angular/core';
 import { DatePipe, UpperCasePipe, CommonModule } from '@angular/common';
 import { UserService, ProfileVisitor } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
@@ -126,6 +126,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 export class ProfileVisitorsComponent {
   private userService = inject(UserService);
   private authService = inject(AuthService);
+  private router = inject(Router);
 
   readonly visitors = signal<ProfileVisitor[]>([]);
   readonly isLoading = signal(true);
@@ -161,7 +162,7 @@ export class ProfileVisitorsComponent {
   }
 
   onUpgradeClick(): void {
-    // Navigate to subscription/pricing page
-    console.log('Upgrade clicked - navigate to pricing');
+    // TODO: Navigate to subscription/pricing page
+    this.router.navigate(['/pricing']);
   }
 }

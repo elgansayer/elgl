@@ -4,7 +4,9 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 
 - Use strict type checking
 - Prefer type inference when the type is obvious
-- Avoid the `any` type; use `unknown` when type is uncertain
+- **NEVER use the `any` type** -- this is a hard ban. Use `unknown` when type is uncertain.
+- **NEVER use type assertions (casting) via `as`** -- this is a hard ban in production code. Use proper type narrowing, type guards, or Zod/schema validation instead. Casting is only permitted in test files (`*.spec.ts`) for mock setup.
+- **NEVER use `console.log`** -- this is a hard ban. Use a proper logging service or error reporting mechanism. `console.error` and `console.warn` are permitted for critical error reporting only.
 
 ## Angular Best Practices
 

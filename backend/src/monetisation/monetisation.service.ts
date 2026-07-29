@@ -213,9 +213,13 @@ export class MonetisationService {
 
   async handleGoogleWebhook(
     payload: any,
+    authorizationHeader?: string,
   ): Promise<{ received: boolean; status: string }> {
     this.logger.log('Received Google Play Developer Notification');
-    return await this.googlePlayNotificationService.handleNotification(payload);
+    return await this.googlePlayNotificationService.handleNotification(
+      payload,
+      authorizationHeader,
+    );
   }
 
   async generateApiKey(

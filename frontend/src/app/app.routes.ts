@@ -144,6 +144,22 @@ export const routes: Routes = [
     title: 'Subscription Cancelled - HelloTalk',
   },
   {
+    path: 'coins/success',
+    loadComponent: () =>
+      import('./components/coins-success/coins-success.component').then(
+        (m) => m.CoinsSuccessComponent,
+      ),
+    title: 'Coin Purchase - HelloTalk',
+  },
+  {
+    path: 'coins/cancel',
+    loadComponent: () =>
+      import('./components/coins-cancel/coins-cancel.component').then(
+        (m) => m.CoinsCancelComponent,
+      ),
+    title: 'Coin Purchase Cancelled - HelloTalk',
+  },
+  {
     path: 'preview/room/:id',
     loadComponent: () =>
       import('./pages/voiceroom-preview/voiceroom-preview.component').then(

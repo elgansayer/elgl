@@ -3,6 +3,7 @@ import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
+  CreateCoinCheckoutSessionDto,
   PurchaseCoinsDto,
   SendGiftDto,
   UnlockStickerPackDto,
@@ -34,6 +35,18 @@ export class EconomyController {
   async claimDailyCheckIn(@CurrentUser() user: User | null) {
     if (!user) return null;
     return await this.economyService.claimDailyCheckIn(user.id);
+  }
+
+  @Post('create-checkout-session')
+  async createCheckoutSession(
+    @CurrentUser() user: User | null,
+    @Body() dto: CreateCoinCheckoutSessionDto,
+  ) {
+    if (!user) return null;
+    return await this.economyService.createCheckoutSession(
+      user.id,
+      dto.package_id,
+    );
   }
 
   @Post('purchase-coins')

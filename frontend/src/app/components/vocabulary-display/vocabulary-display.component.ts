@@ -90,6 +90,6 @@ export class VocabularyDisplayComponent {
   }
 
   addToFlashcards(item: { word: string; translation: string; hobbyTagName: string }): void {
-    console.log('Add to flashcards:', item);
+    // TODO: Implement flashcard functionality
   }
 }

@@ -67,6 +67,7 @@ describe('EconomyService', () => {
           useValue: {
             get: jest.fn().mockImplementation((key) => {
               if (key === 'APPLE_SHARED_SECRET') return 'secret';
+              if (key === 'STRIPE_SECRET_KEY') return 'sk_test_123';
               return null;
             }),
           },
@@ -231,6 +232,65 @@ describe('EconomyService', () => {
       ).rejects.toThrow('This transaction has already been processed');
 
       // Balance must never be touched when the transaction is a replay.
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+    });
+
+    it('should credit coins for a Stripe session whose metadata.userId matches the caller', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-1', coins_balance: 100 },
+        error: null,
+      });
+
+      jest.spyOn(service['httpService'], 'get').mockReturnValue(
+        of({
+          data: {
+            payment_status: 'paid',
+            payment_intent: 'pi_123',
+            metadata: {
+              userId: 'user-1',
+              product_id: 'coins_medium_web',
+            },
+          },
+        }),
+      );
+
+      mockQueryBuilder.maybeSingle.mockResolvedValue({
+        data: null,
+        error: null,
+      });
+
+      const result = await service.purchaseCoins('user-1', {
+        receipt_token: 'stripe_sess_123',
+        platform: 'web',
+      });
+
+      expect(result).toEqual({ coins: 500, newBalance: 600 });
+    });
+
+    it('should reject a Stripe session belonging to a different user', async () => {
+      jest.spyOn(service['httpService'], 'get').mockReturnValue(
+        of({
+          data: {
+            payment_status: 'paid',
+            payment_intent: 'pi_123',
+            metadata: {
+              userId: 'other-user',
+              product_id: 'coins_medium_web',
+            },
+          },
+        }),
+      );
+
+      await expect(
+        service.purchaseCoins('user-1', {
+          receipt_token: 'stripe_sess_123',
+          platform: 'web',
+        }),
+      ).rejects.toThrow(
+        'This Stripe checkout session does not belong to the requesting user',
+      );
+
+      expect(mockQueryBuilder.insert).not.toHaveBeenCalled();
       expect(mockQueryBuilder.update).not.toHaveBeenCalled();
     });
   });

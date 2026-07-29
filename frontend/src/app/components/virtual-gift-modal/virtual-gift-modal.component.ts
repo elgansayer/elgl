@@ -14,10 +14,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">
           <div>
             <h3 class="text-xl font-black text-text-primary flex items-center gap-2">
-              <span>🎁 Send virtual gift to host</span>
+              <span>{{ 'giftModal.title' | t }}</span>
             </h3>
             <p class="text-xs text-text-secondary">
-              Support language partners with animated tokens
+              {{ 'giftModal.subtitle' | t }}
             </p>
           </div>
           <button
@@ -34,101 +34,62 @@ import { TranslatePipe } from '../../services/translate.pipe';
           <div class="flex items-center gap-2">
             <span class="text-2xl">💰</span>
             <div>
-              <span class="text-[10px] uppercase font-black text-amber-400 block"
-                >Your coin balance:</span
-              >
-              <span class="text-lg font-extrabold text-amber-950"
-                >{{ economyStore.coinsBalance() }} coins</span
-              >
+              <span class="text-[10px] uppercase font-black text-amber-400 block">{{
+                'giftModal.balanceLabel' | t
+              }}</span>
+              <span class="text-lg font-extrabold text-amber-950">{{
+                'giftModal.coinsValue' | t: { coins: economyStore.coinsBalance() }
+              }}</span>
             </div>
           </div>
 
           <button
-            (click)="showCoinPackages = !showCoinPackages"
+            (click)="toggleCoinPackages()"
             class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow"
           >
-            {{ showCoinPackages ? 'Back to gifts' : '+ Buy coins' }}
+            {{ (showCoinPackages ? 'giftModal.backToGiftsBtn' : 'giftModal.buyCoinsBtn') | t }}
           </button>
         </div>
 
         @if (showCoinPackages) {
           <div class="space-y-3 animate-fadeIn">
-            <span class="text-xs font-bold text-text-primary block"
-              >Select a coin bundle to recharge:</span
-            >
+            <span class="text-xs font-bold text-text-primary block">{{
+              'giftModal.bundlePrompt' | t
+            }}</span>
             <div class="grid grid-cols-1 gap-2.5">
-              <div
-                class="p-3.5 rounded-2xl border border-surface-100 bg-surface-300 flex items-center justify-between"
-              >
-                <div class="flex items-center gap-3">
-                  <span class="text-2xl">🪙</span>
-                  <div>
-                    <span class="font-black text-sm text-text-primary"
-                      >Starter Pouch (100 Coins)</span
-                    >
-                    <span class="text-xs text-text-secondary block"
-                      >Great for sending roses and coffees</span
-                    >
-                  </div>
-                </div>
-                <button
-                  (click)="buyCoins('small', 100)"
-                  class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs shadow"
+              @for (pkg of economyStore.coinPackages(); track pkg.id) {
+                <div
+                  class="p-3.5 rounded-2xl border border-surface-100 bg-surface-300 flex items-center justify-between"
                 >
-                  2 UKP / $2.60 USD
-                </button>
-              </div>
-              <div
-                class="p-3.5 rounded-2xl border-2 border-amber-400 bg-amber-500/10/30 flex items-center justify-between"
-              >
-                <div class="flex items-center gap-3">
-                  <span class="text-2xl">💰</span>
-                  <div>
-                    <span class="font-black text-sm text-text-primary"
-                      >Popular Chest (500 Coins)</span
-                    >
-                    <span class="text-xs text-amber-600 font-bold block"
-                      >🔥 Most Popular Bundle</span
-                    >
+                  <div class="flex items-center gap-3">
+                    <span class="text-2xl">🪙</span>
+                    <div>
+                      <span class="font-black text-sm text-text-primary">{{
+                        'giftModal.package.' + pkg.id + '.title'
+                          | t: { coins: pkg.coins, name: pkg.name }
+                      }}</span>
+                      <span class="text-xs text-text-secondary block">{{
+                        'giftModal.package.' + pkg.id + '.desc' | t
+                      }}</span>
+                    </div>
                   </div>
+                  <button
+                    (click)="buyCoins(pkg.id)"
+                    class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs shadow"
+                  >
+                    {{ 'giftModal.priceLabel' | t: { ukp: pkg.price_ukp, usd: pkg.price_usd } }}
+                  </button>
                 </div>
-                <button
-                  (click)="buyCoins('medium', 500)"
-                  class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-extrabold rounded-xl text-xs shadow"
-                >
-                  8 UKP / $10 USD
-                </button>
-              </div>
-              <div
-                class="p-3.5 rounded-2xl border border-surface-100 bg-surface-300 flex items-center justify-between"
-              >
-                <div class="flex items-center gap-3">
-                  <span class="text-2xl">💎</span>
-                  <div>
-                    <span class="font-black text-sm text-text-primary"
-                      >Royal Vault (2,000 Coins)</span
-                    >
-                    <span class="text-xs text-text-secondary block"
-                      >Unlock crowns and rocket boosts</span
-                    >
-                  </div>
-                </div>
-                <button
-                  (click)="buyCoins('large', 2000)"
-                  class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-extrabold rounded-xl text-xs shadow"
-                >
-                  25 UKP / $32 USD
-                </button>
-              </div>
+              }
             </div>
           </div>
         }
 
         @if (!showCoinPackages) {
           <div class="space-y-3">
-            <span class="text-xs font-bold text-text-primary block"
-              >Select virtual gift to send to {{ receiverName }}:</span
-            >
+            <span class="text-xs font-bold text-text-primary block">{{
+              'giftModal.selectPrompt' | t: { name: receiverName() }
+            }}</span>
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
               @for (gift of economyStore.catalog(); track gift.id) {
                 <button
@@ -145,9 +106,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   <span class="font-bold text-xs text-text-primary block truncate w-full">{{
                     gift.name
                   }}</span>
-                  <span class="text-[11px] font-extrabold text-amber-600"
-                    >🪙 {{ gift.cost_coins }} Coins</span
-                  >
+                  <span class="text-[11px] font-extrabold text-amber-600">{{
+                    'giftModal.giftCost' | t: { cost: gift.cost_coins }
+                  }}</span>
                 </button>
               }
             </div>
@@ -169,10 +130,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
             >
               {{
                 isSending
-                  ? 'Sending...'
+                  ? ('giftModal.sendingBtn' | t)
                   : selectedGift
-                    ? '🎁 Send ' + selectedGift.icon + ' (' + selectedGift.cost_coins + ' coins)'
-                    : 'Select a gift'
+                    ? ('giftModal.sendBtnText'
+                      | t: { icon: selectedGift.icon, cost: selectedGift.cost_coins })
+                    : ('giftModal.selectGift' | t)
               }}
             </button>
           }
@@ -198,8 +160,15 @@ export class VirtualGiftModalComponent implements OnInit {
     }
   }
 
-  async buyCoins(packageId: string, amount: number): Promise<void> {
-    await this.economyStore.purchaseCoins(packageId, amount);
+  async toggleCoinPackages(): Promise<void> {
+    this.showCoinPackages = !this.showCoinPackages;
+    if (this.showCoinPackages && this.economyStore.coinPackages().length === 0) {
+      await this.economyStore.loadCoinPackages();
+    }
+  }
+
+  async buyCoins(packageId: string): Promise<void> {
+    await this.economyStore.buyCoins(packageId);
   }
 
   async confirmSend(): Promise<void> {

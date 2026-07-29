@@ -205,6 +205,8 @@ export class I18nService {
     'moments.correctionSentAlert': 'Correction published to timeline.',
     'common.optional': 'optional',
     'common.cancel': 'Cancel',
+    'common.close': 'Close',
+    'common.loadError': 'Failed to load data',
     'moments.showMore': 'Show more',
     'moments.showLess': 'Show less',
     'moments.translate': 'Translate',
@@ -226,6 +228,8 @@ export class I18nService {
     'moments.copiedAlert': 'Moment text copied.',
     'moments.copyErrorAlert': 'Could not copy text right now.',
     'moments.transError': 'Could not fetch translation right now.',
+    'moments.likedBy': 'Liked by',
+    'moments.noLikesYet': 'No likes yet',
 
     // Audio Room Component
     'audioRoom.liveSfuBadge': '🔴 Live SFU room',
@@ -597,21 +601,39 @@ export class I18nService {
     'giftModal.backToGiftsBtn': 'Back to gifts',
     'giftModal.buyCoinsBtn': '+ Buy coins',
     'giftModal.bundlePrompt': 'Select a coin bundle to recharge:',
-    'giftModal.starterTitle': 'Starter Pouch (100 Coins)',
-    'giftModal.starterDesc': 'Great for sending roses and coffees',
-    'giftModal.starterPrice': '2 UKP / $2.60 USD',
-    'giftModal.popularTitle': 'Popular Chest (500 Coins)',
-    'giftModal.popularBadge': '🔥 Most Popular Bundle',
-    'giftModal.popularPrice': '8 UKP / $10 USD',
-    'giftModal.royalTitle': 'Royal Vault (2,000 Coins)',
-    'giftModal.royalDesc': 'Unlock crowns and rocket boosts',
-    'giftModal.royalPrice': '25 UKP / $32 USD',
+    'giftModal.package.coins_small.title': 'Starter Pouch ({{coins}} Coins)',
+    'giftModal.package.coins_small.desc': 'Great for sending roses and coffees',
+    'giftModal.package.coins_medium.title': 'Popular Chest ({{coins}} Coins)',
+    'giftModal.package.coins_medium.desc': '🔥 Most popular bundle',
+    'giftModal.package.coins_large.title': 'Royal Vault ({{coins}} Coins)',
+    'giftModal.package.coins_large.desc': 'Unlock crowns and rocket boosts',
+    'giftModal.package.coins_mega.title': 'Mega Hoard ({{coins}} Coins)',
+    'giftModal.package.coins_mega.desc': 'Best value for top gifters',
+    'giftModal.priceLabel': '{{ukp}} UKP / ${{usd}} USD',
     'giftModal.selectPrompt': 'Select virtual gift to send to {{name}}:',
     'giftModal.giftCost': '🪙 {{cost}} Coins',
     'giftModal.cancelBtn': 'Cancel',
     'giftModal.sendingBtn': 'Sending...',
     'giftModal.sendBtnText': '🎁 Send {{icon}} ({{cost}} coins)',
     'giftModal.selectGift': 'Select a gift',
+
+    // Coin Purchase Success / Cancel
+    'coinsSuccess.title': '🎉 Coins added!',
+    'coinsSuccess.failureTitle': 'Purchase could not be confirmed',
+    'coinsSuccess.message': 'Thank you. Your coins have been credited to your balance.',
+    'coinsSuccess.pending': 'Confirming your purchase with our payment provider...',
+    'coinsSuccess.failureMessage':
+      'We could not verify this purchase. If you were charged, please contact support.',
+    'coinsSuccess.dashboardBtn': 'Go to Dashboard',
+    'coinsCancel.title': 'Checkout Cancelled',
+    'coinsCancel.message':
+      'Your checkout was cancelled. No charges were made. You can try again anytime.',
+    'coinsCancel.backBtn': 'Back to Dashboard',
+    'economy.buyCoinsError': 'Could not start coin checkout right now.',
+    'economy.purchaseSuccessToast':
+      '🎉 Successfully purchased {{coins}} coins! Your new balance is {{newBalance}} coins.',
+    'economy.purchaseConfirmError':
+      'Could not confirm coin purchase. Please contact support if you were charged.',
 
     // Room Chat
     'roomChat.title': '💬 Synchronised room chat and subtitles',

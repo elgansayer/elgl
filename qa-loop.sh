@@ -63,7 +63,15 @@ while true; do
     # back to scanning src/, pick up the Vitest unit specs there, and die with
     # "ReferenceError: describe is not defined" on every cycle. That non-zero exit
     # was misreported as "BUG FOUND!" 48 times running; it was never a real bug.
-    (cd e2e && npx playwright test) >> qa_errors.log 2>&1
+    local BACKEND_UP=1
+    curl -sf --connect-timeout 5 http://localhost:3000/api/health 2>/dev/null && BACKEND_UP=0 || true
+    if [ $BACKEND_UP -ne 0 ]; then
+        echo "Backend not reachable on localhost:3000 — skipping E2E Playwright run (no server to test against)." >> qa_errors.log
+        echo "Backend not reachable — skipping E2E tests this cycle."
+        sleep 300
+        continue
+    fi
+    (cd e2e && timeout --foreground -s KILL 600 npx playwright test) >> qa_errors.log 2>&1
     TEST_EXIT=$?
     
     if [ $TEST_EXIT -ne 0 ]; then

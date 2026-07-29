@@ -426,9 +426,10 @@ export class NlpService {
       };
     }
 
+    const redis = this.supabaseService.getRedisClient();
+    const cacheKey = `ui_dict:${targetLang}`;
+
     try {
-      const redis = this.supabaseService.getRedisClient();
-      const cacheKey = `ui_dict:${targetLang}`;
       const cachedDict = await redis.get(cacheKey);
       if (cachedDict) {
         const parsed = JSON.parse(cachedDict) as Record<string, string>;
@@ -442,120 +443,46 @@ export class NlpService {
       // Redis fallback if offline or unavailable during tests
     }
 
-    // High-fidelity pre-compiled AI dictionaries for major world languages
-    const builtInDicts: Record<string, Record<string, string>> = {
-      es: {
-        'app.title': 'Clon de HelloTalk',
-        'nav.discover': '🌍 Descubrir',
-        'nav.moments': '🌐 Momentos',
-        'nav.liveRooms': '🎙️ Salas en Vivo',
-        'nav.chatRoom': '💬 Sala de Chat',
-        'nav.lingqReader': '📚 Lector LingQ',
-        'nav.favourites': '⭐ Favoritos',
-        'nav.developerApi': '⚡ API Desarrollador',
-        'nav.profile': '👤 Perfil',
-        'common.coins': 'Monedas',
-        'common.signOut': 'Cerrar sesión',
-        'common.demoActive': 'Demo / Mock Auth Activo',
-        'common.vipDev': '20 UKP / $26 USD Dev VIP',
-        'common.vipStd': '8 UKP / $10 USD VIP',
-      },
-      fr: {
-        'app.title': 'Clone de HelloTalk',
-        'nav.discover': '🌍 Découvrir',
-        'nav.moments': '🌐 Moments',
-        'nav.liveRooms': '🎙️ Salons Audio',
-        'nav.chatRoom': '💬 Salon de Chat',
-        'nav.lingqReader': '📚 Lecteur LingQ',
-        'nav.favourites': '⭐ Favoris',
-        'nav.developerApi': '⚡ API Développeur',
-        'nav.profile': '👤 Profil',
-        'common.coins': 'Pièces',
-        'common.signOut': 'Déconnexion',
-        'common.demoActive': 'Démo / Auth Simulé',
-        'common.vipDev': '20 UKP / $26 USD Dev VIP',
-        'common.vipStd': '8 UKP / $10 USD VIP',
-      },
-      ar: {
-        'app.title': 'نسخة هيلوتوك',
-        'nav.discover': '🌍 اكتشف',
-        'nav.moments': '🌐 اللحظات',
-        'nav.liveRooms': '🎙️ غرف صوتية حية',
-        'nav.chatRoom': '💬 غرفة الدردشة',
-        'nav.lingqReader': '📚 قارئ LingQ',
-        'nav.favourites': '⭐ المفضلة',
-        'nav.developerApi': '⚡ واجهة المبرمجين',
-        'nav.profile': '👤 الملف الشخصي',
-        'common.coins': 'عملات',
-        'common.signOut': 'تسجيل الخروج',
-        'common.demoActive': 'تجريبي / محاكاة نشطة',
-        'common.vipDev': '20 UKP / $26 USD Dev VIP',
-        'common.vipStd': '8 UKP / $10 USD VIP',
-      },
-      ja: {
-        'app.title': 'HelloTalk クローン',
-        'nav.discover': '🌍 発見',
-        'nav.moments': '🌐 モーメンツ',
-        'nav.liveRooms': '🎙️ ライブ音声ルーム',
-        'nav.chatRoom': '💬 チャットルーム',
-        'nav.lingqReader': '📚 LingQリーダー',
-        'nav.favourites': '⭐ お気に入り',
-        'nav.developerApi': '⚡ 開発者API',
-        'nav.profile': '👤 プロフィール',
-        'common.coins': 'コイン',
-        'common.signOut': 'サインアウト',
-        'common.demoActive': 'デモ / モック認証中',
-        'common.vipDev': '20 UKP / $26 USD Dev VIP',
-        'common.vipStd': '8 UKP / $10 USD VIP',
-      },
-      zh: {
-        'app.title': 'HelloTalk 克隆版',
-        'nav.discover': '🌍 探索',
-        'nav.moments': '🌐 动态',
-        'nav.liveRooms': '🎙️ 语聊房',
-        'nav.chatRoom': '💬 聊天室',
-        'nav.lingqReader': '📚 LingQ阅读器',
-        'nav.favourites': '⭐ 收藏夹',
-        'nav.developerApi': '⚡ 开发者API',
-        'nav.profile': '👤 个人中心',
-        'common.coins': '金币',
-        'common.signOut': '退出登录',
-        'common.demoActive': '演示 / 模拟登录 active',
-        'common.vipDev': '20 UKP / $26 USD Dev VIP',
-        'common.vipStd': '8 UKP / $10 USD VIP',
-      },
-      he: {
-        'app.title': 'שכפול HelloTalk',
-        'nav.discover': '🌍 גלה',
-        'nav.moments': '🌐 רגעים',
-        'nav.liveRooms': '🎙️ חדרי שמע בשידור חי',
-        'nav.chatRoom': "💬 חדר צ'אט",
-        'nav.lingqReader': '📚 קורא LingQ',
-        'nav.favourites': '⭐ מועדפים',
-        'nav.developerApi': '⚡ API מפתחים',
-        'nav.profile': '👤 פרופיל',
-        'common.coins': 'מטבעות',
-        'common.signOut': 'התנתק',
-        'common.demoActive': 'דמו / אימות מדומה פעיל',
-        'common.vipDev': '20 UKP / $26 USD Dev VIP',
-        'common.vipStd': '8 UKP / $10 USD VIP',
-      },
-    };
-
-    let translatedDict: Record<string, string> = { ...dto.dictionary };
-
-    if (builtInDicts[targetLang]) {
-      translatedDict = { ...dto.dictionary, ...builtInDicts[targetLang] };
-    } else {
-      // Dynamic AI/NLP generation fallback for ANY language requested across the world
-      for (const [key, value] of Object.entries(dto.dictionary)) {
-        translatedDict[key] = `[${targetLang.toUpperCase()}] ${value}`;
-      }
+    // No cache hit, so translate the full dictionary via DeepL. This supports
+    // ANY target language dynamically, with 0 hard-coded UI strings.
+    const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
+    if (!deepLKey) {
+      throw new BadRequestException('DeepL API key not configured');
     }
 
+    const keys = Object.keys(dto.dictionary);
+    const values = keys.map((key) => dto.dictionary[key]);
+
+    const res = await fetch('https://api-free.deepl.com/v2/translate', {
+      method: 'POST',
+      headers: {
+        Authorization: `DeepL-Auth-Key ${deepLKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: values,
+        target_lang: targetLang.toUpperCase(),
+      }),
+    });
+
+    if (!res.ok) {
+      const errorBody = await res.text();
+      throw new BadRequestException(
+        `DeepL API error: ${res.status} ${errorBody}`,
+      );
+    }
+
+    const jsonResponse = (await res.json()) as {
+      translations: Array<{ text: string }>;
+    };
+
+    const translatedDict: Record<string, string> = {};
+    keys.forEach((key, index) => {
+      translatedDict[key] =
+        jsonResponse.translations?.[index]?.text ?? dto.dictionary[key];
+    });
+
     try {
-      const redis = this.supabaseService.getRedisClient();
-      const cacheKey = `ui_dict:${targetLang}`;
       await redis.set(cacheKey, JSON.stringify(translatedDict));
       await redis.expire(cacheKey, 604800); // 7 days cache
     } catch {
@@ -564,7 +491,7 @@ export class NlpService {
 
     return {
       target_language: targetLang,
-      translations: translatedDict,
+      translations: { ...dto.dictionary, ...translatedDict },
       cached: false,
     };
   }

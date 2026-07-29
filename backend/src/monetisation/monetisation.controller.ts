@@ -57,8 +57,14 @@ export class MonetisationController {
 
   @Post('webhooks/google')
   @HttpCode(200)
-  async handleGoogleWebhook(@Body() payload: any) {
-    return await this.monetisationService.handleGoogleWebhook(payload);
+  async handleGoogleWebhook(
+    @Body() payload: any,
+    @Headers('authorization') authorization?: string,
+  ) {
+    return await this.monetisationService.handleGoogleWebhook(
+      payload,
+      authorization,
+    );
   }
 
   @Post('generate-api-key')

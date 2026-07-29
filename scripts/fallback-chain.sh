@@ -15,6 +15,8 @@
 # stop the chain. They produce debug output but cannot edit files. Only Claude Code
 # and Aider can actually write code and return 0 to satisfy the chain.
 
+FALLBACK_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+
 # Advisory only: always returns 1. Produces text suggestions but cannot edit files.
 run_copilot_cli() {
     local MESSAGE="$1"
@@ -70,11 +72,36 @@ run_aider() {
         return 1
     fi
 
+    # Create a stub playwright binary that silently exits 0.
+    # Aider (Python) ships its own playwright and may call
+    #   python -m playwright install --with-deps chromium
+    # regardless of PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD (a Node.js-only env var).
+    # The --with-deps flag runs 'sudo apt-get install' which hangs the entire
+    # pipeline on a password prompt. Replacing playwright with a no-op binary
+    # before the Aider call prevents this permanently.
+    local aid_stub_dir
+    aid_stub_dir=$(mktemp -d)
+    cat > "$aid_stub_dir/playwright" << 'PLAYWRIGHT_STUB'
+#!/bin/bash
+# Stub: blocks Aider's playwright install from running and hanging on sudo.
+exit 0
+PLAYWRIGHT_STUB
+    chmod +x "$aid_stub_dir/playwright"
+
     echo "Running Aider (deepseek/deepseek-reasoner, code-editing mode)..."
     local output
+    local exit_code
+    local aider_timeout=600
+
+    # Block every path Aider might use to launch playwright.
     export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-    output=$(aider --message "$MESSAGE" --no-auto-commits --no-git 2>&1)
-    local exit_code=$?
+    export PLAYWRIGHT_SKIP_BROWSER_GC=1
+    export SUDO_ASKPASS="${FALLBACK_DIR}/sudo-askpass.sh"
+    export DEBIAN_FRONTEND=noninteractive
+
+    output=$(PATH="$aid_stub_dir:$PATH" timeout --foreground -s KILL "$aider_timeout" aider --message "$MESSAGE" --no-auto-commits --no-git 2>&1)
+    exit_code=$?
+    rm -rf "$aid_stub_dir"
 
     # Verify Aider actually produced changes. Accept partial work even when
     # timeout killed the process. It can also exit 0 while doing nothing.

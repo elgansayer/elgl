@@ -28,6 +28,8 @@ describe('NlpService', () => {
   let service: NlpService;
   let mockRedisClient: any;
 
+  let mockConfigService: { get: jest.Mock };
+
   beforeEach(async () => {
     mockGuess.mockClear();
     mockRedisClient = {
@@ -37,19 +39,21 @@ describe('NlpService', () => {
       set: jest.fn().mockResolvedValue('OK'),
     };
 
+    mockConfigService = {
+      get: jest.fn((key: string) => {
+        if (key === 'DEEPL_API_KEY') return 'mock-deepl-key';
+        if (key === 'AZURE_TRANSLATOR_KEY') return 'mock-azure-key';
+        if (key === 'AZURE_SPEECH_REGION') return 'mock-region';
+        return null;
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NlpService,
         {
           provide: ConfigService,
-          useValue: {
-            get: jest.fn((key: string) => {
-              if (key === 'DEEPL_API_KEY') return 'mock-deepl-key';
-              if (key === 'AZURE_TRANSLATOR_KEY') return 'mock-azure-key';
-              if (key === 'AZURE_SPEECH_REGION') return 'mock-region';
-              return null;
-            }),
-          },
+          useValue: mockConfigService,
         },
         {
           provide: SupabaseService,
@@ -380,24 +384,48 @@ describe('NlpService', () => {
       });
     });
 
-    it('should use built-in dictionary and save to Redis when not cached (es)', async () => {
+    it('should call DeepL and save the result to Redis when not cached', async () => {
       mockRedisClient.get.mockResolvedValueOnce(null);
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          translations: [{ text: 'App de Prueba' }],
+        }),
+      });
 
       const dto = {
         target_language: 'es',
-        dictionary: { 'app.title': 'App' },
+        dictionary: { 'app.title': 'Test App' },
       };
 
       const result = await service.translateUi(dto);
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://api-free.deepl.com/v2/translate',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            text: ['Test App'],
+            target_lang: 'ES',
+          }),
+        }),
+      );
       expect(result.cached).toBe(false);
-      expect(result.translations['nav.discover']).toBe('🌍 Descubrir');
-      expect(result.translations['common.vipStd']).toBe('8 UKP / $10 USD VIP');
-      expect(mockRedisClient.set).toHaveBeenCalled();
+      expect(result.translations['app.title']).toBe('App de Prueba');
+      expect(mockRedisClient.set).toHaveBeenCalledWith(
+        'ui_dict:es',
+        JSON.stringify({ 'app.title': 'App de Prueba' }),
+      );
       expect(mockRedisClient.expire).toHaveBeenCalledWith('ui_dict:es', 604800);
     });
 
-    it('should dynamically prefix keys when built-in dictionary does not exist (de)', async () => {
+    it('should translate dictionaries for any target language dynamically (de)', async () => {
       mockRedisClient.get.mockResolvedValueOnce(null);
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          translations: [{ text: 'Willkommen' }, { text: 'Startseite' }],
+        }),
+      });
 
       const dto = {
         target_language: 'de',
@@ -407,14 +435,56 @@ describe('NlpService', () => {
       const result = await service.translateUi(dto);
       expect(result.cached).toBe(false);
       expect(result.translations).toEqual({
-        'app.title': '[DE] Welcome',
-        'nav.home': '[DE] Home',
+        'app.title': 'Willkommen',
+        'nav.home': 'Startseite',
       });
+    });
+
+    it('should throw BadRequestException when DeepL API key is not configured', async () => {
+      mockRedisClient.get.mockResolvedValueOnce(null);
+      (mockConfigService.get as jest.Mock).mockImplementation((key: string) => {
+        if (key === 'AZURE_TRANSLATOR_KEY') return 'mock-azure-key';
+        if (key === 'AZURE_SPEECH_REGION') return 'mock-region';
+        return null;
+      });
+
+      const dto = {
+        target_language: 'es',
+        dictionary: { 'app.title': 'App' },
+      };
+
+      await expect(service.translateUi(dto)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw BadRequestException when DeepL API call fails', async () => {
+      mockRedisClient.get.mockResolvedValueOnce(null);
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        text: async () => 'Internal Server Error',
+      });
+
+      const dto = {
+        target_language: 'es',
+        dictionary: { 'app.title': 'App' },
+      };
+
+      await expect(service.translateUi(dto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should catch Redis errors during get and set gracefully without crashing', async () => {
       mockRedisClient.get.mockRejectedValueOnce(new Error('Redis get fail'));
       mockRedisClient.set.mockRejectedValueOnce(new Error('Redis set fail'));
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          translations: [{ text: 'Clon de HelloTalk' }],
+        }),
+      });
 
       const dto = {
         target_language: 'es',
