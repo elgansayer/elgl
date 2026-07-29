@@ -19,7 +19,7 @@ export class LeaderboardService {
     const { data, error } = await supabase
       .from('users')
       .select(
-        'id, display_name, avatar_url, correction_ratio, study_streak_days, is_serious_learner',
+        'id, display_name, avatar_url, correction_ratio, study_streak_days',
       )
       .order('correction_ratio', { ascending: false })
       .limit(limit);
@@ -28,6 +28,10 @@ export class LeaderboardService {
       throw new Error(`Failed to fetch top correctors: ${error.message}`);
     }
 
-    return data ?? [];
+    return (data ?? []).map((user) => ({
+      ...user,
+      is_serious_learner:
+        user.study_streak_days > 7 && (user.correction_ratio ?? 0) >= 0.8,
+    }));
   }
 }

@@ -805,6 +805,14 @@ export class I18nService {
 
     // Report confirm
     'report.confirmMessage': 'Are you sure you want to report this message?',
+
+    // Leaderboard
+    'leaderboard.top_correctors': 'Top Correctors',
+    'leaderboard.ratio': 'Correction Ratio',
+    'leaderboard.serious': 'Serious Learner',
+    'leaderboard.days': 'days',
+    'leaderboard.empty': 'No correctors yet.',
+    'common.error': 'Error',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });
