@@ -109,19 +109,19 @@ export class MonetisationService {
     planId: string,
     interval: 'month' | 'year',
   ): Promise<{ sessionUrl: string; sessionId: string }> {
-    const plan = this.subscriptionPlansService.getPlanById(planId);
-    if (!plan) {
+    const validPlans = ['consumer_monthly', 'consumer_yearly'];
+    if (!validPlans.includes(planId)) {
       throw new NotFoundException(`Plan "${planId}" not found`);
     }
 
     const priceId =
-      interval === 'year' && plan.stripe_price_id_yearly
-        ? plan.stripe_price_id_yearly
-        : plan.stripe_price_id;
+      planId === 'consumer_yearly'
+        ? this.configService.get<string>('STRIPE_YEARLY_PRICE_ID')
+        : this.configService.get<string>('STRIPE_MONTHLY_PRICE_ID');
 
     if (!priceId) {
       throw new BadRequestException(
-        `No Stripe price ID configured for plan "${planId}" (interval: ${interval})`,
+        `Stripe price ID for plan "${planId}" (interval: ${interval}) is not configured. Ensure STRIPE_MONTHLY_PRICE_ID and STRIPE_YEARLY_PRICE_ID environment variables are set.`,
       );
     }
 
@@ -137,6 +137,7 @@ export class MonetisationService {
         userId,
         planId,
         interval,
+        tier: 'consumer',
       },
       success_url: `${this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4200'}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4200'}/subscription/cancel`,
