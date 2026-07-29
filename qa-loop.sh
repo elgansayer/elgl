@@ -37,7 +37,7 @@ purge_phantom_paths() {
 
         if [ $phantom -eq 1 ]; then
             echo "PHANTOM PATH removed: $entry"
-            git rm -r -q --cached --ignore-unmatch -- "$entry" 2>/dev/null || true
+            git_locked rm -r -q --cached --ignore-unmatch -- "$entry" 2>/dev/null || true
             rm -rf -- "$entry"
             FOUND=1
         fi
@@ -81,7 +81,7 @@ while true; do
         TRIAGE_TASK="The QA tests just failed with this error: $BUG_REPORT. Add a new task to the VERY TOP of TODO.md to fix this specific bug."
         run_task_with_fallback "$TRIAGE_TASK" "TODO.md"
         if ! git diff --quiet HEAD; then
-            git commit -am "ci: qa agent discovered a bug and added it to TODO.md"
+            git_locked commit -am "ci: qa agent discovered a bug and added it to TODO.md"
         else
             echo "Triage produced no changes. Skipping commit."
         fi
@@ -92,8 +92,8 @@ while true; do
         # destroying any uncommitted work from the concurrently running main loop
         # (or anyone else editing the repo) every time this branch ran, roughly every
         # 5 minutes.
-        git checkout -- e2e/ 2>/dev/null || true
-        git clean -fd -- e2e/tests/adversarial/ 2>/dev/null || true
+        git_locked checkout -- e2e/ 2>/dev/null || true
+        git_locked clean -fd -- e2e/tests/adversarial/ 2>/dev/null || true
     fi
     
     echo "Sleeping before next QA attack..."

@@ -48,7 +48,7 @@ purge_phantom_paths() {
 
         if [ $phantom -eq 1 ]; then
             echo "PHANTOM PATH removed: $entry"
-            git rm -r -q --cached --ignore-unmatch -- "$entry" 2>/dev/null || true
+            git_locked rm -r -q --cached --ignore-unmatch -- "$entry" 2>/dev/null || true
             rm -rf -- "$entry"
             FOUND=1
         fi
@@ -70,8 +70,28 @@ has_substantive_changes() {
     [ -n "$changed" ]
 }
 
+# Auto-archive completed tasks from TODO.md when they accumulate too many lines.
+# Prevents the file growing unbounded (currently 857+ lines).
+archive_completed_todos() {
+    local todo="TODO.md"
+    local archive="COMPLETED.md"
+    local completed
+    completed=$(grep -c '^- \[x\]' "$todo" 2>/dev/null || echo 0)
+    if [ "$completed" -lt 100 ]; then
+        return 0
+    fi
+    echo "Archiving $completed completed tasks (TODO.md has grown large)..."
+    echo "## Archived $(date -u)" >> "$archive"
+    echo "" >> "$archive"
+    grep '^- \[x\]' "$todo" | sed 's/^- \[x\] /* /' >> "$archive"
+    echo "" >> "$archive"
+    sed -i '/^- \[x\]/d' "$todo"
+    echo "Archived. TODO.md trimmed."
+}
+
 while true; do
     touch /tmp/ai_swarm_watchdog/heartbeat 2>/dev/null || true
+    archive_completed_todos
     echo "========================================"
     echo "STAGE 1: PRE-MANAGEMENT (Planning)"
     echo "========================================"
@@ -96,13 +116,13 @@ while true; do
         # "reset --hard". Three failed retries used to bin every edit the models made.
         purge_phantom_paths
         if [ -n "$(git status --porcelain)" ]; then
-            git stash push -u -m "stuck: $CURRENT_TASK" && \
+            git_locked stash push -u -m "stuck: $CURRENT_TASK" && \
                 echo "Incomplete work parked in stash, recover with: git stash list"
         fi
         sed -i "0,/\[ \]/s/\[ \]/\[STUCK\]/" TODO.md
         echo "## [STUCK] $(date) - $CURRENT_TASK" >> STUCK_LOG.md
-        git commit -am "ci: mark task as stuck"
-        git push origin "$CURRENT_BRANCH"
+        git_locked commit -am "ci: mark task as stuck"
+        git_locked push origin "$CURRENT_BRANCH"
         RETRY_COUNT=0
         continue
     fi
@@ -201,12 +221,12 @@ while true; do
     # Only claim a completed cycle when source actually moved. Committing log churn made
     # 40+ consecutive cycles look productive while no code was written at all.
     if has_substantive_changes; then
-        git add -A
-        git commit -m "ci: automated pipeline cycle complete" || true
-        git push origin "$CURRENT_BRANCH" || true
+        git_locked add -A
+        git_locked commit -m "ci: automated pipeline cycle complete" || true
+        git_locked push origin "$CURRENT_BRANCH" || true
     else
         echo "No source changes this cycle, only logs. Nothing to commit."
-        git checkout -- '*.log' 2>/dev/null || true
+        git_locked checkout -- '*.log' 2>/dev/null || true
     fi
     
     echo "Cycle complete. Cooling down for 15 seconds..."

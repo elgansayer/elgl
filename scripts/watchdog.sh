@@ -85,4 +85,10 @@ else
     touch "$HEARTBEAT"
 fi
 
+# --- Check 6: disk space ---
+DISK_PCT=$(df -h . | awk 'NR==2 {gsub(/%/,""); print $5}')
+if [ "${DISK_PCT:-100}" -ge 90 ]; then
+    log_stall "Disk at ${DISK_PCT}% — write failures imminent"
+fi
+
 echo "[WATCHDOG] Check complete at $(date -u)"

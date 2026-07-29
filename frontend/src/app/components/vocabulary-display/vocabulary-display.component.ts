@@ -89,7 +89,7 @@ export class VocabularyDisplayComponent {
     return this.tagIconMap().get(tagName) || '🏷️';
   }
 
-  addToFlashcards(item: { word: string; translation: string; hobbyTagName: string }): void {
+  addToFlashcards(_item: { word: string; translation: string; hobbyTagName: string }): void {
     // TODO: Implement flashcard functionality
   }
 }

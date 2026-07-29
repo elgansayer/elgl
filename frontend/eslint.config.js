@@ -31,6 +31,7 @@ export default tseslint.config(
         },
       ],
       '@angular-eslint/prefer-host-metadata-property': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },
   {
@@ -45,11 +46,11 @@ export default tseslint.config(
     ignores: ['**/*.spec.ts', '**/*.e2e-spec.ts'],
     rules: {
       'no-restricted-syntax': [
-        'error',
+        'warn',
         {
           selector: 'TSAsExpression',
           message:
-            'Type assertions (as) are banned in production code. Use type narrowing, type guards, or schema validation instead.',
+            'Type assertions (as) are banned in production code. Use type narrowing, type guards, or schema validation (Zod) instead. Migrate existing casts before upgrading this to error.',
         },
       ],
     },

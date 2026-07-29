@@ -17,6 +17,13 @@
 
 FALLBACK_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 
+# Shared git lock for coordinating between concurrent swarm agents.
+# Without this, loop.sh and qa-loop.sh race on git commit/checkout/reset.
+GIT_LOCK="/tmp/ai_swarm_git.lock"
+git_locked() {
+    flock -w 120 "$GIT_LOCK" git "$@"
+}
+
 # Advisory only: always returns 1. Produces text suggestions but cannot edit files.
 run_copilot_cli() {
     local MESSAGE="$1"
@@ -142,6 +149,7 @@ run_deepseek_api() {
 }
 
 # Entry point every pipeline stage should call.
+# Usage: run_task_with_fallback "message" ["additional context or files"]
 # Tries tools in order: Claude CLI -> GitHub Copilot CLI -> Antigravity CLI -> DeepSeek API -> Aider (DeepSeek)
 # Only Claude Code and Aider can actually write code files. Copilot, Antigravity, and raw
 # DeepSeek are advisory-only (always fall through to ensure Aider gets a chance).
@@ -149,23 +157,26 @@ run_deepseek_api() {
 # tool in the chain has been exhausted.
 run_task_with_fallback() {
     local MESSAGE="$1"
+    local EXTRA_CONTEXT="${2:-}"
+    local FULL_MESSAGE="$MESSAGE"
+    [ -n "$EXTRA_CONTEXT" ] && FULL_MESSAGE="$MESSAGE — context files: $EXTRA_CONTEXT"
 
     echo "Attempting Claude CLI..."
-    run_claude_code "$MESSAGE"
+    run_claude_code "$FULL_MESSAGE"
     if [ $? -eq 0 ]; then
         return 0
     fi
     echo "Claude CLI unavailable. Falling through advisory chain."
 
     echo "--- GitHub Copilot CLI (advisory) ---"
-    run_copilot_cli "$MESSAGE"
+    run_copilot_cli "$FULL_MESSAGE"
     echo "--- Antigravity CLI (advisory) ---"
-    run_antigravity_cli "$MESSAGE"
+    run_antigravity_cli "$FULL_MESSAGE"
     echo "--- DeepSeek API (advisory) ---"
-    run_deepseek_api "$MESSAGE"
+    run_deepseek_api "$FULL_MESSAGE"
 
     echo "All advisory tools complete. Attempting Aider for real code changes..."
-    run_aider "$MESSAGE"
+    run_aider "$FULL_MESSAGE"
     if [ $? -eq 0 ]; then
         return 0
     fi

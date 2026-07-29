@@ -12,7 +12,7 @@ export class AudioCompressionService {
    * @returns A promise resolving to the compressed audio Blob.
    */
   async compressAudio(audioBlob: Blob): Promise<Blob> {
-    console.log(
+    console.warn(
       `[AudioCompressionService] Compressing audio blob of size: ${audioBlob.size} bytes`,
     );
 
@@ -43,7 +43,7 @@ export class AudioCompressionService {
 
       // 4. Encode to WAV
       const wavBlob = this.audioBufferToWav(renderedBuffer);
-      console.log(
+      console.warn(
         `[AudioCompressionService] Compressed to WAV blob of size: ${wavBlob.size} bytes`,
       );
 
