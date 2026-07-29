@@ -1,37 +1,42 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationsService } from '../notifications.service';
-import { SupabaseService } from '../../supabase/supabase.service';
-import { ProfileViewEvent } from '../events/notification.events';
+import { NotificationPreferencesService } from '../notification-preferences.service';
 
 @Injectable()
 export class ProfileViewNotificationListener {
   constructor(
     private readonly notificationsService: NotificationsService,
-    private readonly supabaseService: SupabaseService,
+    private readonly notificationPreferencesService: NotificationPreferencesService,
   ) {}
 
-  @OnEvent('profile.view')
-  async handleProfileView(event: ProfileViewEvent): Promise<void> {
-    if (event.viewerId === event.viewedUserId) return;
-
+  @OnEvent('profile.visit')
+  async handleProfileVisit(payload: {
+    userId: string;
+    title: string;
+    body: string;
+    data?: Record<string, string>;
+  }): Promise<void> {
     try {
-      const supabase = this.supabaseService.getClient();
-      const { data: viewer } = await supabase
-        .from('users')
-        .select('display_name, avatar_url')
-        .eq('id', event.viewerId)
-        .single();
-
-      if (!viewer) return;
-
-      await this.notificationsService.createNotification(
-        event.viewedUserId,
-        event.viewerId,
-        'profile_visit',
+      const prefs = await this.notificationPreferencesService.getPreferences(
+        payload.userId,
       );
+      const category = prefs?.profile_view;
+      if (category && category.push === false) {
+        return;
+      }
     } catch (err) {
-      console.error('Profile view notification listener error:', err);
+      console.error(
+        `Failed to check notification preferences for user ${payload.userId}:`,
+        err,
+      );
     }
+
+    await this.notificationsService.sendPushNotification(payload.userId, {
+      type: 'profile_visit',
+      title: payload.title || 'Profile Visit',
+      body: payload.body,
+      data: { ...(payload.data || {}) },
+    });
   }
 }

@@ -1,70 +1,42 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationsService } from '../notifications.service';
-import { SupabaseService } from '../../supabase/supabase.service';
-import { MomentCommentEvent } from '../events/notification.events';
+import { NotificationPreferencesService } from '../notification-preferences.service';
 
 @Injectable()
 export class CommentNotificationListener {
   constructor(
     private readonly notificationsService: NotificationsService,
-    private readonly supabaseService: SupabaseService,
+    private readonly notificationPreferencesService: NotificationPreferencesService,
   ) {}
 
-  @OnEvent('moment.comment')
-  async handleMomentComment(event: MomentCommentEvent): Promise<void> {
+  @OnEvent('comment.moment')
+  async handleCommentMoment(payload: {
+    userId: string;
+    title: string;
+    body: string;
+    data?: Record<string, string>;
+  }): Promise<void> {
     try {
-      const supabase = this.supabaseService.getClient();
-      const { data: commenter } = await supabase
-        .from('users')
-        .select('display_name, avatar_url')
-        .eq('id', event.commenterId)
-        .single();
-
-      if (!commenter) return;
-
-      const preview = event.commentPreview
-        ? event.commentPreview.substring(0, 100)
-        : '';
-
-      if (event.replyToUserId && event.replyToUserId !== event.commenterId) {
-        await this.notificationsService.createNotification(
-          event.replyToUserId,
-          event.commenterId,
-          'reply_comment',
-          event.momentId,
-          preview,
-        );
-      }
-
-      if (
-        event.momentAuthorId !== event.commenterId &&
-        event.momentAuthorId !== event.replyToUserId
-      ) {
-        await this.notificationsService.createNotification(
-          event.momentAuthorId,
-          event.commenterId,
-          'comment_moment',
-          event.momentId,
-          preview,
-        );
-      }
-
-      if (event.mentionedUserIds && event.mentionedUserIds.length > 0) {
-        for (const mentionedUserId of event.mentionedUserIds) {
-          if (mentionedUserId === event.commenterId) continue;
-
-          await this.notificationsService.createNotification(
-            mentionedUserId,
-            event.commenterId,
-            'mention_comment',
-            event.momentId,
-            preview,
-          );
-        }
+      const prefs = await this.notificationPreferencesService.getPreferences(
+        payload.userId,
+      );
+      const category = prefs?.moment_comment;
+      if (category && category.push === false) {
+        return;
       }
     } catch (err) {
-      console.error('Comment notification listener error:', err);
+      console.error(
+        `Failed to check notification preferences for user ${payload.userId}:`,
+        err,
+      );
     }
+
+    await this.notificationsService.sendPushNotification(payload.userId, {
+      type: 'comment_moment',
+      title: payload.title || 'New Comment',
+      body: payload.body,
+      data: { ...(payload.data || {}) },
+    });
   }
 }
