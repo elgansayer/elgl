@@ -260,4 +260,12 @@ export const routes: Routes = [
       ),
     title: 'Help & About - HelloTalk',
   },
+  {
+    path: 'ai-conversation',
+    loadComponent: () =>
+      import('./ai-conversation/ai-conversation.component').then(
+        (m) => m.AiConversationComponent,
+      ),
+    title: 'AI Conversation - HelloTalk',
+  },
 ];
