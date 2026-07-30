@@ -165,6 +165,7 @@ export class ChatService {
         reply_to_id: dto.reply_to_id ?? null,
         correction_request_payload: dto.correction_request_payload ?? null,
         status_reply_payload: dto.status_reply_payload ?? null,
+        is_view_once: dto.message_type === 'view_once_media' ? true : false,
       })
       .select(
         `
@@ -359,7 +360,16 @@ export class ChatService {
       }
       return mockMessages;
     }
-    return response.data as ChatMessage[];
+    const messages = response.data as ChatMessage[];
+
+    // Exclude media_url for view-once media that has already been viewed
+    for (const msg of messages) {
+      if (msg.is_view_once && msg.viewed_at) {
+        msg.media_url = undefined;
+      }
+    }
+
+    return messages;
   }
 
   async addFavourite(userId: string, dto: AddFavouriteDto): Promise<void> {
@@ -664,5 +674,50 @@ export class ChatService {
   ): Promise<{ response: string }> {
     const result = await this.llmProxyService.proxyMessage(messageText);
     return { response: result.response };
+  }
+
+  async viewMessageMedia(userId: string, messageId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+
+    // Fetch message with media
+    const { data: msg, error: fetchError } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('id', messageId)
+      .single();
+
+    if (fetchError || !msg) {
+      throw new Error('Message not found');
+    }
+
+    if (!msg.is_view_once || msg.viewed_at) {
+      // Already viewed or not a view-once message; nothing to do
+      return;
+    }
+
+    // Verify the user is a member of the room
+    const { data: membership } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', msg.room_id)
+      .eq('user_id', userId)
+      .single();
+
+    if (!membership) {
+      throw new Error('Access denied');
+    }
+
+    // Mark as viewed
+    const { error: updateError } = await supabase
+      .from('chat_messages')
+      .update({ viewed_at: new Date().toISOString() })
+      .eq('id', messageId);
+
+    if (updateError) {
+      throw new Error('Failed to mark message as viewed');
+    }
+
+    // For future releases, delete the actual media from storage here
+    // e.g., await this.viewOnceMediaService.deleteMedia(msg.media_url);
   }
 }

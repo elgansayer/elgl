@@ -20,6 +20,7 @@ export class SendMessageDto {
     'sticker',
     'correction_request',
     'status_reply',
+    'view_once_media',
   ])
   message_type!: string;
 

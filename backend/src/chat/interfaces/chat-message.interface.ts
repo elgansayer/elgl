@@ -22,7 +22,8 @@ export interface ChatMessage {
     | 'doodle'
     | 'sticker'
     | 'system'
-    | 'status_reply';
+    | 'status_reply'
+    | 'view_once_media';
   text_content?: string;
   media_url?: string;
   correction_payload?: CorrectionPayload;
@@ -55,6 +56,12 @@ export interface ChatMessage {
     status_update_id: string;
     status_text: string;
   };
+
+  /** Whether the media in this message disappears after opening */
+  is_view_once?: boolean;
+
+  /** Timestamp when the view‑once media was first accessed (null = not yet opened) */
+  viewed_at?: string | null;
 }
 
 export interface FavouriteRecord {

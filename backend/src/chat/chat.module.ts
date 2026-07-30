@@ -12,6 +12,7 @@ import { GroupsService } from './groups.service';
 import { SystemMessageService } from './services/system-message.service';
 import { ChatSettingsController } from './chat-settings.controller';
 import { ChatSettingsService } from './chat-settings.service';
+import { ViewOnceMediaService } from './services/view-once-media.service';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ChatSettingsService } from './chat-settings.service';
     GroupsService,
     SystemMessageService,
     ChatSettingsService,
+    ViewOnceMediaService,
   ],
   exports: [
     CentrifugoService,

@@ -148,6 +148,16 @@ export class ChatController {
     return await this.chatService.replyToStatusUpdate(user.id, dto);
   }
 
+  @Post('messages/:messageId/view')
+  async viewMessageMedia(
+    @CurrentUser() user: User | null,
+    @Param('messageId') messageId: string,
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.chatService.viewMessageMedia(user.id, messageId);
+    return { success: true };
+  }
+
   @Get('rooms/:roomId/members')
   async getRoomMembers(
     @Param('roomId') roomId: string,
