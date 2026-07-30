@@ -14,11 +14,13 @@ import {
 
 import { Optional } from '@nestjs/common';
 import { NotificationsService } from '../notifications/notifications.service';
+import { XpService } from '../xp/xp.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     private readonly supabaseService: SupabaseService,
+    private readonly xpService: XpService,
     @Optional() private readonly notificationsService?: NotificationsService,
   ) {}
 
@@ -188,6 +190,7 @@ export class UsersService {
       privacy_hide_gender: false,
       created_at: new Date().toISOString(),
       scheduled_for_deletion_at: undefined,
+      xp_total: 100,
     };
   }
 

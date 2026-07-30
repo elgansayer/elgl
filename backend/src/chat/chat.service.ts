@@ -21,6 +21,7 @@ import {
 } from './interfaces/chat-message.interface';
 import { ChatMessageEvent } from '../notifications/events/notification.events';
 import { SystemMessageService } from './services/system-message.service';
+import { XpService } from '../xp/xp.service';
 
 @Injectable()
 export class ChatService {
@@ -33,6 +34,7 @@ export class ChatService {
     private readonly spamDetectionService: SpamDetectionService,
     private readonly llmProxyService: LlmProxyService,
     private readonly systemMessageService: SystemMessageService,
+    private readonly xpService: XpService,
   ) {}
 
   generateConnectionToken(userId: string): { token: string } {
@@ -178,6 +180,9 @@ export class ChatService {
     }
 
     const savedMessage = insertResponse.data as ChatMessage;
+
+    // Award XP for sending a message
+    void this.xpService.awardXpForActivity(senderId, 'send_message');
 
     // ---------- Link preview scraping ----------
     let linkPreview: LinkPreview | null = null;

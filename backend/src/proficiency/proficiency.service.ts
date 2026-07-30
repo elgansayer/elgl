@@ -4,9 +4,12 @@ import {
   AssessmentResult,
   ProficiencyLevel,
 } from './interfaces/proficiency.interface';
+import { XpService } from '../xp/xp.service';
 
 @Injectable()
 export class ProficiencyService {
+  constructor(private readonly xpService: XpService) {}
+
   assess(assessment: AssessmentResultDto): AssessmentResult {
     const scores: number[] = [];
     if (assessment.grammarScore !== undefined)
@@ -22,7 +25,7 @@ export class ProficiencyService {
     const overallScore = Math.round(avgScore * 10) / 10;
     const level = this.mapScoreToLevel(overallScore);
 
-    return {
+    const result: AssessmentResult = {
       level,
       overallScore,
       grammarScore: assessment.grammarScore ?? 0,
@@ -30,6 +33,13 @@ export class ProficiencyService {
       pronunciationScore: assessment.pronunciationScore ?? 0,
       testedAt: new Date().toISOString(),
     };
+
+    void this.xpService.awardXpForActivity(
+      assessment.userId,
+      'complete_assessment',
+    );
+
+    return result;
   }
 
   private mapScoreToLevel(score: number): ProficiencyLevel {

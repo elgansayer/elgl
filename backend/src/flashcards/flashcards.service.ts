@@ -2,10 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard } from './interfaces/flashcard.interface';
+import { XpService } from '../xp/xp.service';
 
 @Injectable()
 export class FlashcardsService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly xpService: XpService,
+  ) {}
 
   async createOrUpdateFlashcard(
     userId: string,
@@ -34,6 +38,9 @@ export class FlashcardsService {
       const msg = response.error?.message ?? 'Unknown error';
       throw new Error(`Failed to create/update flashcard: ${msg}`);
     }
+
+    // Award XP for creating a flashcard
+    void this.xpService.awardXpForActivity(userId, 'create_flashcard');
 
     return response.data as Flashcard;
   }
@@ -70,6 +77,9 @@ export class FlashcardsService {
       const msg = response.error?.message ?? 'Unknown error';
       throw new Error(`Failed to update SRS review level: ${msg}`);
     }
+
+    // Award XP for reviewing a flashcard
+    void this.xpService.awardXpForActivity(userId, 'review_flashcard');
 
     return response.data as Flashcard;
   }
