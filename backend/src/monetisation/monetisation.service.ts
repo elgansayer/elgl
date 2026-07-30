@@ -370,11 +370,75 @@ export class MonetisationService {
       }
       return { received: true, status: 'no_valid_subscription' };
     } else if (platform === 'android') {
-      // Android restore purchases not fully implemented yet
-      this.logger.warn(
-        `Android restore purchases not fully implemented for user ${userId}`,
-      );
-      return { received: true, status: 'not_implemented' };
+      if (!receiptData) {
+        throw new BadRequestException('Receipt data is required for Android');
+      }
+      let purchaseToken: string;
+      let productId: string | undefined;
+      try {
+        const parsed = JSON.parse(receiptData);
+        purchaseToken = parsed.purchaseToken;
+        productId = parsed.productId;
+      } catch {
+        // fallback: treat receiptData as raw purchase token
+        purchaseToken = receiptData;
+        productId = undefined;
+      }
+      if (!productId) {
+        throw new BadRequestException(
+          'productId must be provided in receipt_data JSON',
+        );
+      }
+
+      const purchaseDetails =
+        await this.googlePlayNotificationService.getSubscriptionPurchaseDetails(
+          productId,
+          purchaseToken,
+        );
+
+      if (!purchaseDetails) {
+        this.logger.warn(
+          `Android restore: no purchase details for token ${purchaseToken}`,
+        );
+        return { received: true, status: 'no_valid_subscription' };
+      }
+
+      const expiryMillis = Number(purchaseDetails.expiryTimeMillis);
+      const isCurrentlyEntitled =
+        Number.isFinite(expiryMillis) && expiryMillis > Date.now();
+
+      if (!isCurrentlyEntitled) {
+        this.logger.warn(
+          `Android restore: purchase not currently entitled for token ${purchaseToken}`,
+        );
+        return { received: true, status: 'no_valid_subscription' };
+      }
+
+      // Determine which user this token belongs to
+      const existingUserId =
+        await this.googlePlayNotificationService.getUserIdByPurchaseToken(
+          purchaseToken,
+        );
+      if (!existingUserId) {
+        // Store the purchase under the calling user's id
+        await this.googlePlayNotificationService.storePurchaseToken(
+          userId,
+          purchaseToken,
+          productId,
+        );
+      } else if (existingUserId !== userId) {
+        this.logger.warn(
+          `Purchase token ${purchaseToken} already belongs to user ${existingUserId}, but restore called for user ${userId}`,
+        );
+      }
+
+      const tier = this.subscriptionPlansService.getTierByProductId(productId);
+      if (tier) {
+        await this.updateVipStatusFromWebhook(userId, true, tier);
+        return { received: true, status: 'restored' };
+      }
+
+      return { received: true, status: 'no_valid_subscription' };
     }
     throw new BadRequestException('Invalid platform');
   }

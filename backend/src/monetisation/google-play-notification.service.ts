@@ -325,7 +325,7 @@ export class GooglePlayNotificationService {
     );
   }
 
-  private async getSubscriptionPurchaseDetails(
+  public async getSubscriptionPurchaseDetails(
     subscriptionId: string,
     purchaseToken: string,
   ): Promise<GooglePlaySubscriptionPurchase | null> {
@@ -361,7 +361,7 @@ export class GooglePlayNotificationService {
     }
   }
 
-  private async getUserIdByPurchaseToken(
+  public async getUserIdByPurchaseToken(
     purchaseToken: string,
   ): Promise<string | null> {
     const supabase = this.supabaseService.getClient();
@@ -376,7 +376,7 @@ export class GooglePlayNotificationService {
     return row?.user_id || null;
   }
 
-  private async storePurchaseToken(
+  public async storePurchaseToken(
     userId: string,
     purchaseToken: string,
     subscriptionId: string,
