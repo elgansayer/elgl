@@ -5,6 +5,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { SearchQueryDto } from './dto/search-query.dto';
+import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
 import { MOCK_USERS } from '../mock-data';
 
 @Injectable()
@@ -429,6 +430,121 @@ export class DiscoveryService {
     if (blockedIds.length > 0) {
       results = results.filter((u) => !blockedIds.includes(u.id));
     }
+    return results;
+  }
+
+  async findByLanguagePair(
+    currentUserId: string,
+    query: LanguagePairQueryDto,
+  ): Promise<UserProfile[]> {
+    const supabase = this.supabaseService.getClient();
+    const redis = this.supabaseService.getRedisClient();
+    const blockedIds =
+      await this.safetyService.getBlockedAndBlockerIds(currentUserId);
+
+    const {
+      native_language,
+      target_language,
+      page = 0,
+      limit = 50,
+      sort = 'best_match',
+    } = query;
+    const offset = page * limit;
+
+    let queryBuilder = supabase
+      .from('users')
+      .select(
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        { count: 'exact', head: false },
+      )
+      .neq('id', currentUserId)
+      .eq('privacy_hide_from_search', false);
+
+    if (blockedIds.length > 0) {
+      queryBuilder = queryBuilder.not('id', 'in', blockedIds);
+    }
+
+    const nativeLang = native_language;
+    const targetLang = target_language;
+
+    if (nativeLang && targetLang) {
+      queryBuilder = queryBuilder
+        .contains('native_languages', [targetLang])
+        .contains('target_languages', [nativeLang]);
+    } else if (nativeLang) {
+      queryBuilder = queryBuilder.contains('native_languages', [nativeLang]);
+    } else if (targetLang) {
+      queryBuilder = queryBuilder.contains('target_languages', [targetLang]);
+    }
+
+    // Apply ordering based on sort parameter
+    if (sort === 'newest') {
+      queryBuilder = queryBuilder.order('created_at', { ascending: false });
+    } else {
+      // best_match (default) and fallback: high streak days first, then correction ratio
+      queryBuilder = queryBuilder
+        .order('study_streak_days', { ascending: false })
+        .order('correction_ratio', { ascending: false });
+    }
+
+    queryBuilder = queryBuilder.range(offset, offset + limit - 1);
+
+    const response = await queryBuilder;
+    if (response.error || !response.data) {
+      // Fallback to mock data if query fails
+      const mockSearch: Partial<SearchQueryDto> = {
+        native_languages: nativeLang,
+        target_language: targetLang,
+        serious_learner_only: undefined,
+        age_min: undefined,
+        age_max: undefined,
+        level: undefined,
+        interests: undefined,
+        latitude: undefined,
+        longitude: undefined,
+        radius_metres: undefined,
+        sort: sort,
+        voice_room_active: undefined,
+      };
+      const mock = this.getMockDiscoveryData(mockSearch, blockedIds);
+      return mock.slice(offset, offset + limit);
+    }
+
+    let results = response.data as UserProfile[];
+    if (blockedIds.length > 0) {
+      results = results.filter((u) => !blockedIds.includes(u.id));
+    }
+
+    // Attach Partner of the Week flag
+    const rawPoW = await redis.get('partner_of_week_ids');
+    let partnerSet = new Set<string>();
+    if (rawPoW) {
+      try {
+        partnerSet = new Set(JSON.parse(rawPoW));
+      } catch {
+        /* ignore */
+      }
+    }
+    results = results.map((u) => ({
+      ...u,
+      is_partner_of_week: partnerSet.has(u.id),
+    }));
+
+    // For best_match, promote partner of week first, then maintain db order
+    if (sort === 'best_match') {
+      results.sort((a, b) => {
+        const aPoW = (a as any).is_partner_of_week ? 1 : 0;
+        const bPoW = (b as any).is_partner_of_week ? 1 : 0;
+        if (aPoW !== bPoW) return bPoW - aPoW;
+        const streakA = a.study_streak_days ?? 0;
+        const streakB = b.study_streak_days ?? 0;
+        if (streakB !== streakA) return streakB - streakA;
+        const ratioA = a.correction_ratio ?? 0;
+        const ratioB = b.correction_ratio ?? 0;
+        return ratioB - ratioA;
+      });
+    }
+
     return results;
   }
 

@@ -5,6 +5,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { UsersService } from '../users/users.service';
 import { SearchQueryDto } from './dto/search-query.dto';
+import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
 import { DiscoveryService } from './discovery.service';
 
 @Controller('discovery')
@@ -38,5 +39,14 @@ export class DiscoveryController {
     if (!user) return [];
     const profile = await this.usersService.getProfile(user.id);
     return this.discoveryService.getAudioIntros(user.id, profile, query);
+  }
+
+  @Get('language-pair')
+  async findByLanguagePair(
+    @CurrentUser() user: User | null,
+    @Query() query: LanguagePairQueryDto,
+  ): Promise<UserProfile[]> {
+    if (!user) return [];
+    return this.discoveryService.findByLanguagePair(user.id, query);
   }
 }

@@ -129,6 +129,34 @@ export class DiscoveryService {
     return filtered;
   }
 
+  async findByLanguagePair(
+    nativeLanguage?: string,
+    targetLanguage?: string,
+  ): Promise<UserProfile[]> {
+    let params = new HttpParams();
+    if (nativeLanguage) params = params.set('native_language', nativeLanguage);
+    if (targetLanguage) params = params.set('target_language', targetLanguage);
+    const users = await firstValueFrom(
+      this.http
+        .get<UserProfile[]>(`${this.baseUrl}/language-pair`, {
+          headers: this.getHeaders(),
+          params,
+        })
+        .pipe(catchError(() => of([] as UserProfile[]))),
+    );
+    const currentUser = this.authService.currentUser();
+    let filtered = users;
+    if (currentUser?.id) {
+      const blockedIds = await this.safetyService
+        .getBlockedAndBlockerIds(currentUser.id)
+        .catch((): string[] => []);
+      if (blockedIds.length > 0) {
+        filtered = filtered.filter((user) => !blockedIds.includes(user.id));
+      }
+    }
+    return filtered;
+  }
+
   async translateBio(bioText: string): Promise<string> {
     const currentUser = this.authService.currentUser();
     const targetLanguage = currentUser?.native_languages?.[0] ?? 'en';
