@@ -51,6 +51,8 @@ export class DiscoveryComponent implements OnInit {
   readonly selectedGender = signal<string>('');
   readonly seriousLearnerOnly = signal<boolean>(false);
   readonly seriousLearnerMode = signal<boolean>(false);
+  readonly availableTimeStart = signal<string>('');
+  readonly availableTimeEnd = signal<string>('');
   private readonly authService = inject(AuthService);
   readonly isVip = computed(() => this.authService.currentUser()?.is_vip ?? false);
 
@@ -150,6 +152,10 @@ export class DiscoveryComponent implements OnInit {
         age_min: this.ageRangeMin(),
         age_max: this.ageRangeMax(),
         serious_learner_mode: this.seriousLearnerMode(),
+        available_time_start:
+          this.availableTimeStart() || undefined,
+        available_time_end:
+          this.availableTimeEnd() || undefined,
       });
       // Filter out blocked users
       const blocked = this.blockedUserIds();
@@ -196,6 +202,8 @@ export class DiscoveryComponent implements OnInit {
     this.seriousLearnerMode.set(false);
     this.ageRangeMin.set(18);
     this.ageRangeMax.set(100);
+    this.availableTimeStart.set('');
+    this.availableTimeEnd.set('');
     void this.searchPartners();
   }
 }

@@ -25,6 +25,13 @@ export interface SearchFilterParams {
   country?: string;
   city?: string;
   serious_learner_mode?: boolean;
+  learning_goals?: string;
+  learning_goals_mode?: string;
+  availability_morning?: boolean;
+  availability_afternoon?: boolean;
+  availability_evening?: boolean;
+  available_time_start?: string;
+  available_time_end?: string;
 }
 
 @Injectable({
@@ -101,6 +108,26 @@ export class DiscoveryService {
 
     if (filters.serious_learner_mode !== undefined)
       params = params.set('serious_learner_mode', filters.serious_learner_mode.toString());
+
+    if (filters.learning_goals !== undefined)
+      params = params.set('learning_goals', filters.learning_goals);
+
+    if (filters.learning_goals_mode !== undefined)
+      params = params.set('learning_goals_mode', filters.learning_goals_mode);
+
+    if (filters.availability_morning !== undefined)
+      params = params.set('availability_morning', filters.availability_morning.toString());
+
+    if (filters.availability_afternoon !== undefined)
+      params = params.set('availability_afternoon', filters.availability_afternoon.toString());
+
+    if (filters.availability_evening !== undefined)
+      params = params.set('availability_evening', filters.availability_evening.toString());
+
+    if (filters.available_time_start !== undefined)
+      params = params.set('available_time_start', filters.available_time_start);
+    if (filters.available_time_end !== undefined)
+      params = params.set('available_time_end', filters.available_time_end);
 
     const users = await firstValueFrom(
       this.http

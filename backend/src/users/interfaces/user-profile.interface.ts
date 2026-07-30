@@ -49,6 +49,11 @@ export interface UserProfile {
   proficiency_level?: string;
   learning_goals?: string;
   interests?: string[];
+  availability_morning?: boolean;
+  availability_afternoon?: boolean;
+  availability_evening?: boolean;
+  available_time_start?: string;
+  available_time_end?: string;
   is_admin?: boolean;
   created_at: string;
   last_active_at?: string;

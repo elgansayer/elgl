@@ -113,4 +113,47 @@ export class SearchQueryDto {
   )
   @IsBoolean()
   serious_learner_mode?: boolean;
+
+  @IsOptional()
+  @IsString()
+  learning_goals?: string;
+
+  @IsOptional()
+  @IsString()
+  learning_goals_mode?: string;
+
+  @IsOptional()
+  @Transform(
+    ({ value }: { value: unknown }) => value === 'true' || value === true,
+  )
+  @IsBoolean()
+  availability_morning?: boolean;
+
+  @IsOptional()
+  @Transform(
+    ({ value }: { value: unknown }) => value === 'true' || value === true,
+  )
+  @IsBoolean()
+  availability_afternoon?: boolean;
+
+  @IsOptional()
+  @Transform(
+    ({ value }: { value: unknown }) => value === 'true' || value === true,
+  )
+  @IsBoolean()
+  availability_evening?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{2}:\d{2}$/, {
+    message: 'available_time_start must be in HH:mm format',
+  })
+  available_time_start?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{2}:\d{2}$/, {
+    message: 'available_time_end must be in HH:mm format',
+  })
+  available_time_end?: string;
 }

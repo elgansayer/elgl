@@ -247,6 +247,16 @@ export class DiscoveryService {
 
     // Function that enriches and sorts results with Partner of the Week flag
     const enrich = async (users: UserProfile[]): Promise<UserProfile[]> => {
+      let filtered = users;
+      // Apply advanced filters (learning_goals, availability)
+      if (
+        query.learning_goals !== undefined ||
+        query.availability_morning !== undefined ||
+        query.availability_afternoon !== undefined ||
+        query.availability_evening !== undefined
+      ) {
+        filtered = this.applyAdvancedFilters(filtered, query);
+      }
       const raw = await this.supabaseService
         .getRedisClient()
         .get('partner_of_week_ids');
@@ -259,7 +269,7 @@ export class DiscoveryService {
         }
       }
       const partnerSet = new Set(partnerIds);
-      const enriched = users.map((u) => ({
+      const enriched = filtered.map((u) => ({
         ...u,
         is_partner_of_week: partnerSet.has(u.id),
       }));
@@ -802,6 +812,60 @@ export class DiscoveryService {
     }
 
     return filtered.slice(0, 50) as unknown as UserProfile[];
+  }
+
+  private applyAdvancedFilters(
+    users: UserProfile[],
+    query: SearchQueryDto,
+  ): UserProfile[] {
+    let result = users;
+
+    if (query.learning_goals) {
+      const goalList = query.learning_goals
+        .split(',')
+        .map((g) => g.trim().toLowerCase());
+      result = result.filter((u) => {
+        const userGoals: string[] = (u as any).learning_goals ?? [];
+        const lowerUserGoals = userGoals.map((g) => g.toLowerCase());
+        return goalList.some((g) => lowerUserGoals.includes(g));
+      });
+    }
+
+    const checkAvailability = (
+      field:
+        | 'availability_morning'
+        | 'availability_afternoon'
+        | 'availability_evening',
+    ): boolean => query[field] ?? false;
+
+    if (checkAvailability('availability_morning')) {
+      result = result.filter((u) => (u as any).availability_morning === true);
+    }
+    if (checkAvailability('availability_afternoon')) {
+      result = result.filter((u) => (u as any).availability_afternoon === true);
+    }
+    if (checkAvailability('availability_evening')) {
+      result = result.filter((u) => (u as any).availability_evening === true);
+    }
+
+    // Exact availability time overlap filtering (Tandem‑style)
+    if (query.available_time_start && query.available_time_end) {
+      const qStart = query.available_time_start; // HH:mm
+      const qEnd = query.available_time_end;
+
+      result = result.filter((u) => {
+        const uStart: string | undefined = (u as any).available_time_start;
+        const uEnd: string | undefined = (u as any).available_time_end;
+        if (!uStart || !uEnd) {
+          // user has no exact times set – treat as always available
+          return true;
+        }
+        // Overlap test: start1 <= end2 && start2 <= end1
+        return uStart <= qEnd && uEnd >= qStart;
+      });
+    }
+
+    return result;
   }
 
   private sortUsers(
