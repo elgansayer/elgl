@@ -14,10 +14,17 @@ import { GroupsService } from './groups.service';
 import { AddMemberDto } from './dto/add-member.dto';
 import { RemoveMemberDto } from './dto/remove-member.dto';
 import { UpdateGroupSettingsDto } from './dto/update-group-settings.dto';
+import { CreateGroupDto } from './dto/create-group.dto';
 
 @Controller('groups')
 export class GroupsController {
   constructor(private readonly groupsService: GroupsService) {}
+
+  @Post()
+  async create(@Body() dto: CreateGroupDto, @Req() req: any) {
+    const ownerId = req.user.id;
+    return this.groupsService.createGroup(ownerId, dto.name, dto.community_id);
+  }
 
   @Post(':groupId/add-member')
   @UseGuards(AuthGuard('jwt'))

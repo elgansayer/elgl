@@ -16,8 +16,12 @@ export class GroupsService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/groups`;
 
-  createGroup(name: string): Promise<ChatGroup> {
-    return firstValueFrom(this.http.post<ChatGroup>(this.apiUrl, { name }));
+  createGroup(name: string, communityId?: string): Promise<ChatGroup> {
+    const body: Record<string, unknown> = { name };
+    if (communityId) {
+      body['community_id'] = communityId;
+    }
+    return firstValueFrom(this.http.post<ChatGroup>(this.apiUrl, body));
   }
 
   renameGroup(groupId: string, name: string): Promise<ChatGroup> {

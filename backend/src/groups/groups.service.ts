@@ -44,6 +44,28 @@ export class GroupsService {
     }
   }
 
+  async createGroup(
+    ownerId: string,
+    name: string,
+    communityId?: string,
+  ): Promise<any> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('groups')
+      .insert({
+        name,
+        owner_id: ownerId,
+        community_id: communityId ?? null,
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      throw new NotFoundException('Failed to create group');
+    }
+    return data;
+  }
+
   async updateSettings(
     groupId: string,
     dto: UpdateGroupSettingsDto,
@@ -105,5 +127,31 @@ export class GroupsService {
       throw new NotFoundException('Group not found');
     }
     return data;
+  }
+
+  async setCommunityId(
+    groupId: string,
+    communityId: string | null,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('groups')
+      .update({ community_id: communityId })
+      .eq('id', groupId);
+    if (error) {
+      throw new NotFoundException('Failed to assign group to community');
+    }
+  }
+
+  async getGroupsByCommunity(communityId: string): Promise<any[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('groups')
+      .select('*')
+      .eq('community_id', communityId);
+    if (error) {
+      throw new NotFoundException('Failed to fetch groups');
+    }
+    return data || [];
   }
 }
