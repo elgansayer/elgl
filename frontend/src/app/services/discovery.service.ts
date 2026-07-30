@@ -5,7 +5,8 @@ import { MOCK_PARTNERS } from './mock-data';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { SafetyService } from './safety.service';
-import { UserProfile } from './user.service';
+import { UserProfile, UserService } from './user.service';
+import { ChatService, ChatMessage, ChatRoom } from './chat.service';
 
 export interface SearchFilterParams {
   latitude?: number;
@@ -32,6 +33,8 @@ export class DiscoveryService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private safetyService = inject(SafetyService);
+  private chatService = inject(ChatService);
+  private userService = inject(UserService);
   private baseUrl = `${environment.apiUrl}/discovery`;
 
   private getHeaders() {
@@ -210,5 +213,21 @@ export class DiscoveryService {
     } catch {
       return bioText;
     }
+  }
+
+  async sendMessageToPartner(partnerId: string, message: string): Promise<ChatMessage> {
+    const currentUser = this.authService.currentUser();
+    if (!currentUser?.id) throw new Error('Not authenticated');
+    // Create a 1-on-1 private room with the partner
+    const newRoom = await this.chatService.createGroup('', [partnerId]);
+    return this.chatService.sendMessage({
+      room_id: newRoom.id,
+      message_type: 'text',
+      text_content: message,
+    });
+  }
+
+  async followPartner(partnerId: string): Promise<void> {
+    return this.userService.followUser(partnerId);
   }
 }
