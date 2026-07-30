@@ -14,7 +14,7 @@ export interface SearchFilterParams {
   native_languages?: string;
   target_language?: string;
   serious_learner_only?: boolean;
-  level?: string;
+  proficiency_level?: string;
   gender?: string;
   age_min?: number;
   age_max?: number;
@@ -37,6 +37,12 @@ export class DiscoveryService {
       Authorization: `Bearer ${token ?? ''}`,
     };
   }
+
+  private readonly PROFICIENCY_LEVEL_MAP: Record<string, string> = {
+    beginner: 'A1',
+    intermediate: 'B1',
+    advanced: 'C1',
+  };
 
   private async getPartnerOfWeekIds(): Promise<string[]> {
     try {
@@ -62,7 +68,10 @@ export class DiscoveryService {
     if (filters.target_language) params = params.set('target_language', filters.target_language);
     if (filters.serious_learner_only !== undefined)
       params = params.set('serious_learner_only', filters.serious_learner_only.toString());
-    if (filters.level) params = params.set('level', filters.level);
+    if (filters.proficiency_level) {
+      const mappedLevel = this.PROFICIENCY_LEVEL_MAP[filters.proficiency_level.toLowerCase()] ?? filters.proficiency_level;
+      params = params.set('level', mappedLevel);
+    }
     if (filters.gender) params = params.set('gender', filters.gender);
     if (filters.age_min !== undefined)
       params = params.set('age_min', filters.age_min.toString());
@@ -113,6 +122,10 @@ export class DiscoveryService {
     let params = new HttpParams();
     if (filters?.native_languages) params = params.set('native_languages', filters.native_languages);
     if (filters?.target_language) params = params.set('target_language', filters.target_language);
+    if (filters?.proficiency_level) {
+      const mappedLevel = this.PROFICIENCY_LEVEL_MAP[filters.proficiency_level.toLowerCase()] ?? filters.proficiency_level;
+      params = params.set('level', mappedLevel);
+    }
     const users = await firstValueFrom(
       this.http
         .get<UserProfile[]>(`${this.baseUrl}/audio-intros`, {
