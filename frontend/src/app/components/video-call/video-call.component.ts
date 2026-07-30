@@ -19,6 +19,7 @@ import {
   LocalVideoTrack,
   LocalAudioTrack,
   createLocalTracks,
+  createLocalVideoTrack,
   Track,
 } from 'livekit-client';
 import { LivekitService } from '../../services/livekit.service';
@@ -164,6 +165,29 @@ import { TranslatePipe } from '../../services/translate.pipe';
           }
         </app-button-secondary>
 
+        <!-- Screen Share -->
+        <app-button-secondary
+          [customClass]="
+            isScreenSharing()
+              ? 'bg-green-500 hover:bg-green-600 rounded-full w-14 h-14'
+              : 'bg-white/20 hover:bg-white/30 rounded-full w-14 h-14'
+          "
+          (clicked)="toggleScreenShare()"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-6 w-6 text-white"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <rect x="2" y="3" width="20" height="14" rx="2" />
+            <line x1="8" y1="21" x2="16" y2="21" />
+            <line x1="12" y1="17" x2="12" y2="21" />
+          </svg>
+        </app-button-secondary>
+
         @if (pipAvailable()) {
           <app-button-secondary
             [customClass]="
@@ -248,6 +272,8 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   readonly callDuration = signal('00:00');
   readonly isInPip = signal(false);
   readonly pipAvailable = computed(() => typeof document !== 'undefined' && document.pictureInPictureEnabled);
+  readonly isScreenSharing = signal(false);
+  private screenTrack: LocalVideoTrack | null = null;
   private callStartTime: number = 0;
   private durationInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -381,6 +407,43 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     }
   }
 
+  async toggleScreenShare(): Promise<void> {
+    if (this.isScreenSharing()) {
+      // Stop screen share
+      if (this.screenTrack) {
+        this.room?.localParticipant.unpublishTrack(this.screenTrack);
+        this.screenTrack.stop();
+        this.screenTrack = null;
+      }
+      this.isScreenSharing.set(false);
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const track = stream.getVideoTracks()[0];
+      if (!track) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      const screenTrack = await createLocalVideoTrack(track);
+      await this.room?.localParticipant.publishTrack(screenTrack);
+      this.screenTrack = screenTrack;
+      this.isScreenSharing.set(true);
+      // When user stops sharing via browser UI, detect and adjust state
+      track.onended = () => {
+        if (this.screenTrack) {
+          this.room?.localParticipant.unpublishTrack(this.screenTrack);
+          this.screenTrack.stop();
+          this.screenTrack = null;
+        }
+        this.isScreenSharing.set(false);
+      };
+    } catch {
+      // User cancelled or error
+      this.isScreenSharing.set(false);
+    }
+  }
+
   endCall(): void {
     this.cleanup();
     this.callEnded.emit();
@@ -415,6 +478,11 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     if (this.localAudio) {
       this.localAudio.stop();
       this.localAudio = null;
+    }
+
+    if (this.screenTrack) {
+      this.screenTrack.stop();
+      this.screenTrack = null;
     }
 
     if (this.room) {
