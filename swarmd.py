@@ -487,6 +487,9 @@ def generate_review_task():
         "Audit for @Input() / @Output() decorators that should be signal inputs",
         "Audit for *ngIf / *ngFor that should be @if / @for",
         "Audit for console.log calls that should use proper logging service",
+        "Deep code review of the AI swarm (swarmd.py) and fix issues, ensure stability, and harden the system.",
+        "Do a full regression test of the entire codebase, evaluate, ensure, analyse, test, and fix any failing features.",
+        "Audit and harden the entire system, looking for edge cases, memory leaks, or unhandled exceptions."
     ]
     idx = int(time.time() / 3600) % len(areas)
     task_add(f"Periodic audit: {areas[idx]}")
@@ -510,6 +513,8 @@ def _run_process_live(cmd: list[str], before: set) -> dict:
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         text=True, bufsize=1, start_new_session=True
     )
+    global _child_procs
+    _child_procs.append(proc)
 
     output_chunks = []
     output_lock = threading.Lock()
@@ -577,6 +582,9 @@ def _run_process_live(cmd: list[str], before: set) -> dict:
 
     t.join(timeout=5)
 
+    if proc in _child_procs:
+        _child_procs.remove(proc)
+
     with output_lock:
         output = ''.join(output_chunks)
 
@@ -615,8 +623,8 @@ def run_claude(task: str) -> dict:
     r = _run_process_live(
         [claude, '-p', '--dangerously-skip-permissions', task], before)
 
-    if r['changes'] > 0:
-        log(f"Claude: produced {r['changes']} file changes")
+    if r['changes'] > 0 or (r['exit_code'] == 0 and not r['killed'] and 'audit' in task.lower()):
+        log(f"Claude: produced {r['changes']} file changes (or completed audit)")
         if r['killed']:
             log(f"Claude was killed ({r['reason']}) but produced file changes. Accepting partial work.")
         return {'ok': True, 'model': 'claude', **r}
@@ -636,8 +644,8 @@ def run_antigravity(task: str) -> dict:
     r = _run_process_live(
         [agy, '-p', '--dangerously-skip-permissions', task], before)
 
-    if r['changes'] > 0:
-        log(f"Antigravity: produced {r['changes']} file changes")
+    if r['changes'] > 0 or (r['exit_code'] == 0 and not r['killed'] and 'audit' in task.lower()):
+        log(f"Antigravity: produced {r['changes']} file changes (or completed audit)")
         if r['killed']:
             log(f"Antigravity was killed ({r['reason']}) but produced file changes. Accepting partial work.")
         return {'ok': True, 'model': 'antigravity', **r}
@@ -678,6 +686,8 @@ def run_copilot(task: str) -> dict:
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         text=True, bufsize=1, start_new_session=True, env=env
     )
+    global _child_procs
+    _child_procs.append(proc)
 
     output_chunks = []
     output_lock = threading.Lock()
@@ -730,6 +740,9 @@ def run_copilot(task: str) -> dict:
 
     rt.join(timeout=5)
 
+    if proc in _child_procs:
+        _child_procs.remove(proc)
+
     with output_lock:
         output_text = ''.join(output_chunks)
 
@@ -742,8 +755,8 @@ def run_copilot(task: str) -> dict:
     except Exception:
         pass
 
-    if changes > 0:
-        log(f"Copilot: produced {changes} file changes")
+    if changes > 0 or (proc.returncode == 0 and not killed and 'audit' in task.lower()):
+        log(f"Copilot: produced {changes} file changes (or completed audit)")
         if killed:
             log(f"Copilot was killed but produced file changes. Accepting partial work.")
         return {'ok': True, 'model': 'copilot', 'changes': changes,
@@ -828,6 +841,8 @@ def run_deepseek(task: str) -> dict:
             cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, bufsize=1, start_new_session=True, env=env
         )
+        global _child_procs
+        _child_procs.append(proc)
 
         output_chunks = []
         output_lock = threading.Lock()
@@ -880,14 +895,17 @@ def run_deepseek(task: str) -> dict:
 
         rt.join(timeout=5)
 
+        if proc in _child_procs:
+            _child_procs.remove(proc)
+
         with output_lock:
             output_text = ''.join(output_chunks)
 
         after = set(_git_porcelain())
         changes = _git_real_changes(before, after)
 
-        if changes > 0:
-            log(f"Pass 2 round {round_num + 1}: produced {changes} file changes")
+        if changes > 0 or (proc.returncode == 0 and not killed and 'audit' in task.lower()):
+            log(f"Pass 2 round {round_num + 1}: produced {changes} file changes (or completed audit)")
             try:
                 import shutil
                 shutil.rmtree(stub_dir, ignore_errors=True)
@@ -995,9 +1013,14 @@ def run_tests() -> tuple[bool, str]:
     errors = []
 
     checks = [
+        ('swarmd syntax', '.',        ['python3', '-m', 'py_compile', 'swarmd.py']),
         ('frontend lint', 'frontend', ['npm', 'run', 'lint']),
         ('backend lint',  'backend',  ['npm', 'run', 'lint']),
-        ('backend test',  'backend',  ['npm', 'test']),
+        ('frontend test', 'frontend', ['npm', 'run', 'test']),
+        ('backend test',  'backend',  ['npm', 'run', 'test']),
+        ('backend e2e',   'backend',  ['npm', 'run', 'test:e2e']),
+        ('frontend build', 'frontend', ['npm', 'run', 'build']),
+        ('backend build',  'backend',  ['npm', 'run', 'build']),
     ]
 
     for name, cwd, args in checks:
@@ -1024,9 +1047,9 @@ def run_tests() -> tuple[bool, str]:
     heartbeat()
     return len(errors) == 0, '\n\n'.join(errors)
 
-def run_test_fix(errors: str) -> bool:
-    broken = re.findall(r'(frontend|backend)/[\w./-]+\.(ts|html|scss)', errors)
-    files = list({f'{a}/{b}' for a, b in broken})[:25]
+def run_test_fix(errors: str, cycle: int = 0) -> bool:
+    broken = re.findall(r'((?:frontend|backend)/[\w./-]+\.(?:ts|html|scss))', errors)
+    files = list(set(broken))[:25]
     files_str = ' '.join(files) if files else '(unknown)'
     task = (
         "The automated lint and test suite failed. Fix the codebase so "
@@ -1034,7 +1057,7 @@ def run_test_fix(errors: str) -> bool:
         f"errors shown below. Files likely in scope: {files_str}\n\n"
         f"Error output:\n{errors[:5000]}"
     )
-    return run_task_with_fallback(task).get('ok', False)
+    return run_task_with_fallback(task, attempt=0, cycle=cycle).get('ok', False)
 
 def _has_changes() -> bool:
     before = set()
@@ -1153,12 +1176,18 @@ def supervisor():
                 except Exception as e:
                     log(f"Idle GitHub sync error: {e}")
 
-            log(f"No pending tasks. Sleeping {CFG['idle_sleep']}s.")
-            state_patch(current_stage='idle')
-            for _ in range(CFG['idle_sleep']):
-                if _shutdown:
-                    break
-                time.sleep(1)
+            log(f"No pending tasks. Running background regression tests and evaluations (24/7 operation)...")
+            state_patch(current_stage='evaluating')
+            passed, test_errors = run_tests()
+            if not passed:
+                log(f"Background regression tests failed! Creating fix task.")
+                task_add(f"Background tests failed. Please fix them. Errors:\n{test_errors[:3000]}")
+            else:
+                log(f"Background tests passed. Generating deep code review task to ensure 24/7 improvement...")
+                generate_review_task()
+            
+            # Brief sleep before picking up the newly generated task
+            time.sleep(5)
             continue
 
         if taskfile and '/pending/' in str(taskfile):
@@ -1220,7 +1249,7 @@ def supervisor():
                     log(f"Tests have failures. Committing anyway (--relaxed-tests mode).")
                 else:
                     log(f"Tests have failures after {model_used}. Attempting AI fix...")
-                    fix_ok = run_test_fix(test_errors)
+                    fix_ok = run_test_fix(test_errors, cycle_count)
                     if fix_ok:
                         # Re-run tests after AI fix
                         passed2, err2 = run_tests()
