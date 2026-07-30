@@ -260,6 +260,8 @@ export class UsersService {
       privacy_hide_location: false,
       privacy_hide_from_search: false,
       privacy_hide_gender: false,
+      privacy_hide_online_status: false,
+      privacy_hide_vip_status: false,
       silence_unknown_callers: false,
       status_visibility: 'public',
       corrector_score: 0,
@@ -477,6 +479,8 @@ export class UsersService {
         (profile as any)?.privacy_profile_photo ?? 'everyone',
       privacy_about_info: (profile as any)?.privacy_about_info ?? 'everyone',
       privacy_status: (profile as any)?.privacy_status ?? 'everyone',
+      privacy_hide_vip_status:
+        (profile as any)?.privacy_hide_vip_status ?? false,
     };
   }
 
@@ -656,6 +660,7 @@ export class UsersService {
       privacy_about_info?: string;
       privacy_status?: string;
       incognito_visits?: boolean;
+      privacy_hide_vip_status?: boolean;
     },
   ): Promise<UserProfile> {
     const supabase = this.supabaseService.getClient();
@@ -671,6 +676,8 @@ export class UsersService {
       updatePayload.privacy_status = settings.privacy_status;
     if (settings.incognito_visits !== undefined)
       updatePayload.incognito_visits = settings.incognito_visits;
+    if (settings.privacy_hide_vip_status !== undefined)
+      updatePayload.privacy_hide_vip_status = settings.privacy_hide_vip_status;
 
     const response = await supabase
       .from('users')

@@ -34,6 +34,7 @@ export interface UserProfile {
   privacy_hide_gender: boolean;
   privacy_hide_exact_location?: boolean;
   privacy_hide_online_status?: boolean;
+  privacy_hide_vip_status?: boolean;
   incognito_visits?: boolean;
   silence_unknown_callers?: boolean;
   status_visibility?: string;
@@ -339,6 +340,7 @@ export class UserService {
     privacy_status?: string;
     privacy_hide_exact_location: boolean;
     privacy_hide_online_status: boolean;
+    privacy_hide_vip_status: boolean;
   }> {
     return firstValueFrom(
       this.http
@@ -368,6 +370,7 @@ export class UserService {
               privacy_status: (profile as any)?.privacy_status ?? 'everyone',
               privacy_hide_exact_location: profile.privacy_hide_exact_location ?? false,
               privacy_hide_online_status: profile.privacy_hide_online_status ?? false,
+              privacy_hide_vip_status: profile.privacy_hide_vip_status ?? false,
             });
           }),
         ),

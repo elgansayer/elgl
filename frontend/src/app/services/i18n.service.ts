@@ -930,6 +930,8 @@ export class I18nService {
     'culturalGuide.korean': 'In Korea, bowing is common; use two hands when giving or receiving something. Respect elders.',
     'culturalGuide.russian': 'In Russia, it is customary to bring a gift when visiting someone’s home and remove shoes at the door.',
     'culturalGuide.italian': 'In Italy, greetings are enthusiastic; expect gestures during conversation. Use "ciao" for informal.',
+    'settings.hideOnlineStatus': 'Hide online status',
+    'settings.hideVipStatus': 'Hide VIP status',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });

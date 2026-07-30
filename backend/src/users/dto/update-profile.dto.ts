@@ -14,6 +14,7 @@ import {
   Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { Type } from 'class-transformer';
 
 export class CoordinatesDto {
   @IsNumber()
@@ -164,6 +165,10 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsBoolean()
   privacy_hide_online_status?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  privacy_hide_vip_status?: boolean;
 
   @IsOptional()
   @IsString()
