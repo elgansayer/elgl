@@ -268,4 +268,12 @@ export const routes: Routes = [
       ),
     title: 'AI Conversation - HelloTalk',
   },
+  {
+    path: 'quests',
+    loadComponent: () =>
+      import('./components/quests/quests.component').then(
+        (m) => m.QuestsComponent,
+      ),
+    title: 'Quests - HelloTalk',
+  },
 ];

@@ -8,6 +8,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { SafetyService } from '../safety/safety.service';
 import { XpService } from '../xp/xp.service';
+import { QuestsService } from '../quests/quests.service';
 import { CreateCommentDto, CreateMomentDto } from './dto/moment.dto';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { TimelineWorker } from './timeline.worker';
@@ -53,6 +54,7 @@ export class MomentsService {
     private readonly supabaseService: SupabaseService,
     private readonly usersService: UsersService,
     private readonly xpService: XpService,
+    private readonly questsService: QuestsService,
     private readonly timelineWorker: TimelineWorker,
     private readonly eventEmitter: EventEmitter2,
     private readonly safetyService: SafetyService,
@@ -90,6 +92,8 @@ export class MomentsService {
     const moment = response.data as MomentRecord;
     // Award XP for creating a Moment
     void this.xpService.awardXpForActivity(userId, 'create_moment');
+    // Award quest progress for posting a Moment
+    void this.questsService.incrementProgress(userId, 'post_moment', 1);
     // Asynchronous fan-out via Redis timeline queue
     void this.timelineWorker.fanOutMoment(moment.id, userId);
 
@@ -405,6 +409,11 @@ export class MomentsService {
 
     // Award XP for adding a comment
     void this.xpService.awardXpForActivity(userId, 'add_comment');
+
+    // Award quest progress when the comment contains a correction payload
+    if (dto.correction_payload) {
+      void this.questsService.incrementProgress(userId, 'correct_moments', 1);
+    }
 
     const result = await supabase
       .from('moments')

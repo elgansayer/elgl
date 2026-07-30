@@ -358,6 +358,26 @@ export class UsersService {
     };
   }
 
+  async awardCoins(userId: string, amount: number): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase.rpc('increment_coins', {
+      user_id: userId,
+      amount,
+    });
+    if (error) {
+      const { data: cur } = await supabase
+        .from('users')
+        .select('coins_balance')
+        .eq('id', userId)
+        .single();
+      const current = (cur?.coins_balance ?? 0) + amount;
+      await supabase
+        .from('users')
+        .update({ coins_balance: current })
+        .eq('id', userId);
+    }
+  }
+
   async getMessageFilters(userId: string): Promise<{
     ageMin?: number;
     ageMax?: number;
