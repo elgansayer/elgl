@@ -48,6 +48,18 @@ export class GroupsService {
     );
   }
 
+  sendAnnouncement(groupId: string, message: string): Promise<{ success: boolean }> {
+    return firstValueFrom(
+      this.http.post<{ success: boolean }>(`${this.apiUrl}/${groupId}/announcement`, { message }),
+    );
+  }
+
+  getAnnouncements(groupId: string): Promise<any[]> {
+    return firstValueFrom(
+      this.http.get<any[]>(`${this.apiUrl}/${groupId}/announcements`),
+    );
+  }
+
   joinByInviteCode(code: string): Promise<{ success: boolean }> {
     return firstValueFrom(
       this.http.post<{ success: boolean }>(`${this.apiUrl}/join-by-code`, { code }),

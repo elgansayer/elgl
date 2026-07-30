@@ -7,7 +7,6 @@ import {
   UseGuards,
   Req,
   UnauthorizedException,
-  NotFoundException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { GroupsService } from './groups.service';
@@ -15,6 +14,7 @@ import { AddMemberDto } from './dto/add-member.dto';
 import { RemoveMemberDto } from './dto/remove-member.dto';
 import { UpdateGroupSettingsDto } from './dto/update-group-settings.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
+import { SendAnnouncementDto } from './dto/send-announcement.dto';
 
 @Controller('groups')
 export class GroupsController {
@@ -72,6 +72,26 @@ export class GroupsController {
     return this.groupsService.updateSettings(groupId, dto);
   }
 
+  @Post(':groupId/announcement')
+  @UseGuards(AuthGuard('jwt'))
+  async sendAnnouncement(
+    @Param('groupId') groupId: string,
+    @Body() dto: SendAnnouncementDto,
+    @Req() req: any,
+  ): Promise<{ success: boolean }> {
+    const requesterId = req.user.id;
+    const isAdmin = await this.groupsService.isAdmin(requesterId, groupId);
+    if (!isAdmin)
+      throw new UnauthorizedException(
+        'Only group admins can send announcements',
+      );
+    return this.groupsService.sendAnnouncement(
+      groupId,
+      dto.message,
+      requesterId,
+    );
+  }
+
   @Get(':groupId/members')
   @UseGuards(AuthGuard('jwt'))
   async getMembers(@Param('groupId') groupId: string) {
@@ -82,5 +102,11 @@ export class GroupsController {
   @UseGuards(AuthGuard('jwt'))
   async getSettings(@Param('groupId') groupId: string) {
     return this.groupsService.getSettings(groupId);
+  }
+
+  @Get(':groupId/announcements')
+  @UseGuards(AuthGuard('jwt'))
+  async getAnnouncements(@Param('groupId') groupId: string) {
+    return this.groupsService.getAnnouncements(groupId);
   }
 }

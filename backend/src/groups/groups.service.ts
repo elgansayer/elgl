@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { CentrifugoService } from '../centrifugo/centrifugo.service';
 import { AddMemberDto } from './dto/add-member.dto';
 import { RemoveMemberDto } from './dto/remove-member.dto';
 import { UpdateGroupSettingsDto } from './dto/update-group-settings.dto';
 
 @Injectable()
 export class GroupsService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly centrifugoService: CentrifugoService,
+  ) {}
 
   async isAdmin(userId: string, groupId: string): Promise<boolean> {
     const supabase = this.supabaseService.getClient();
@@ -127,6 +131,44 @@ export class GroupsService {
       throw new NotFoundException('Group not found');
     }
     return data;
+  }
+
+  async sendAnnouncement(
+    groupId: string,
+    message: string,
+    senderId: string,
+  ): Promise<{ success: boolean }> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase.from('group_announcements').insert({
+      group_id: groupId,
+      sender_id: senderId,
+      message,
+    });
+    if (error) {
+      throw new NotFoundException('Failed to send announcement');
+    }
+    // Broadcast via Centrifugo so active members receive it instantly
+    const channel = `group_announcements:${groupId}`;
+    await this.centrifugoService.publish(channel, {
+      type: 'announcement',
+      message,
+      senderId,
+    });
+    return { success: true };
+  }
+
+  async getAnnouncements(groupId: string): Promise<any[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('group_announcements')
+      .select('*')
+      .eq('group_id', groupId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new NotFoundException('Failed to fetch announcements');
+    }
+    return data || [];
   }
 
   async setCommunityId(
