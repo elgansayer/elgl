@@ -21,6 +21,8 @@ export interface SearchFilterParams {
   interests?: string;
   sort?: string;
   has_audio_intro?: boolean;
+  country?: string;
+  city?: string;
 }
 
 @Injectable({
@@ -87,6 +89,12 @@ export class DiscoveryService {
     if (filters.has_audio_intro !== undefined)
       params = params.set('has_audio_intro', filters.has_audio_intro.toString());
 
+    if (filters.country !== undefined)
+      params = params.set('country', filters.country);
+
+    if (filters.city !== undefined)
+      params = params.set('city', filters.city);
+
     const users = await firstValueFrom(
       this.http
         .get<UserProfile[]>(`${this.baseUrl}/partners`, { headers: this.getHeaders(), params })
@@ -130,6 +138,10 @@ export class DiscoveryService {
       const mappedLevel = this.PROFICIENCY_LEVEL_MAP[filters.proficiency_level.toLowerCase()] ?? filters.proficiency_level;
       params = params.set('level', mappedLevel);
     }
+    if (filters?.country !== undefined)
+      params = params.set('country', filters.country);
+    if (filters?.city !== undefined)
+      params = params.set('city', filters.city);
     const users = await firstValueFrom(
       this.http
         .get<UserProfile[]>(`${this.baseUrl}/audio-intros`, {
@@ -154,10 +166,14 @@ export class DiscoveryService {
   async findByLanguagePair(
     nativeLanguage?: string,
     targetLanguage?: string,
+    country?: string,
+    city?: string,
   ): Promise<UserProfile[]> {
     let params = new HttpParams();
     if (nativeLanguage) params = params.set('native_language', nativeLanguage);
     if (targetLanguage) params = params.set('target_language', targetLanguage);
+    if (country) params = params.set('country', country);
+    if (city) params = params.set('city', city);
     const users = await firstValueFrom(
       this.http
         .get<UserProfile[]>(`${this.baseUrl}/language-pair`, {

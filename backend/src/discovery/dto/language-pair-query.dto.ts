@@ -38,4 +38,12 @@ export class LanguagePairQueryDto {
   )
   @IsBoolean()
   has_audio_intro?: boolean;
+
+  @IsOptional()
+  @IsString()
+  country?: string;
+
+  @IsOptional()
+  @IsString()
+  city?: string;
 }

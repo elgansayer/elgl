@@ -210,6 +210,13 @@ export class DiscoveryService {
       queryBuilder = queryBuilder.lte('age', query.age_max);
     }
 
+    if (query.country) {
+      queryBuilder = queryBuilder.eq('country', query.country);
+    }
+    if (query.city) {
+      queryBuilder = queryBuilder.eq('city', query.city);
+    }
+
     // Function that enriches and sorts results with Partner of the Week flag
     const enrich = async (users: UserProfile[]): Promise<UserProfile[]> => {
       const raw = await this.supabaseService
@@ -447,6 +454,13 @@ export class DiscoveryService {
       queryBuilder = queryBuilder.lte('age', query.age_max);
     }
 
+    if (query.country) {
+      queryBuilder = queryBuilder.eq('country', query.country);
+    }
+    if (query.city) {
+      queryBuilder = queryBuilder.eq('city', query.city);
+    }
+
     const response = await queryBuilder.limit(50);
     if (response.error || !response.data) {
       return [];
@@ -495,6 +509,13 @@ export class DiscoveryService {
         .neq('audio_intro_url', '');
     }
 
+    if (query.country) {
+      queryBuilder = queryBuilder.eq('country', query.country);
+    }
+    if (query.city) {
+      queryBuilder = queryBuilder.eq('city', query.city);
+    }
+
     const nativeLang = native_language;
     const targetLang = target_language;
 
@@ -536,6 +557,8 @@ export class DiscoveryService {
         radius_metres: undefined,
         sort: sort,
         voice_room_active: undefined,
+        country: query.country,
+        city: query.city,
       };
       const mock = this.getMockDiscoveryData(mockSearch, blockedIds);
       return mock.slice(offset, offset + limit);
@@ -639,6 +662,13 @@ export class DiscoveryService {
       filtered = filtered.filter(
         (u: any) => u.audio_intro_url && u.audio_intro_url !== '',
       );
+    }
+
+    if (query.country) {
+      filtered = filtered.filter((u: any) => u.country === query.country);
+    }
+    if (query.city) {
+      filtered = filtered.filter((u: any) => u.city === query.city);
     }
 
     return filtered.slice(0, 50) as unknown as UserProfile[];
