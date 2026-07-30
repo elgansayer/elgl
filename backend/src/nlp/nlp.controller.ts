@@ -7,6 +7,7 @@ import { GrammarCheckDto } from './dto/grammar-check.dto';
 import { PronunciationScoreDto } from './dto/pronunciation-score.dto';
 import { TranslateDto } from './dto/translate.dto';
 import { TranslateUiDto } from './dto/translate-ui.dto';
+import { ExplainGrammarDto } from './dto/explain-grammar.dto';
 import {
   GrammarCheckResult,
   PronunciationScoreResult,
@@ -58,6 +59,24 @@ export class NlpController {
     if (!user) return null;
     const profile = await this.usersService.getProfile(user.id);
     return await this.nlpService.grammarCheck(
+      user.id,
+      profile?.is_vip ?? false,
+      dto,
+    );
+  }
+
+  @Post('explain-grammar')
+  async explainGrammar(
+    @CurrentUser() user: User | null,
+    @Body() dto: ExplainGrammarDto,
+  ): Promise<{
+    original: string;
+    corrected: string;
+    explanation: string;
+  } | null> {
+    if (!user) return null;
+    const profile = await this.usersService.getProfile(user.id);
+    return await this.nlpService.explainGrammar(
       user.id,
       profile?.is_vip ?? false,
       dto,

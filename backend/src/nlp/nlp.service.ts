@@ -13,6 +13,7 @@ import {
   TranslateUiResult,
   WordBreakdownItem,
 } from './interfaces/nlp-results.interface';
+import { ExplainGrammarDto } from './dto/explain-grammar.dto';
 
 @Injectable()
 export class NlpService {
@@ -265,6 +266,51 @@ export class NlpService {
     };
 
     return finalResult;
+  }
+
+  async explainGrammar(
+    userId: string,
+    isVip: boolean,
+    dto: ExplainGrammarDto,
+  ): Promise<{ original: string; corrected: string; explanation: string }> {
+    await this.checkRateLimit(userId, isVip);
+
+    const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
+    if (!deepLKey) {
+      throw new BadRequestException('DeepL API key not configured');
+    }
+
+    const prompt = `Explain the grammar difference between the original sentence and the corrected sentence. Original: "${dto.original}" Corrected: "${dto.corrected}". Provide a brief explanation in English.`;
+    const res = await fetch('https://api-free.deepl.com/v2/translate', {
+      method: 'POST',
+      headers: {
+        Authorization: `DeepL-Auth-Key ${deepLKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: [prompt],
+        target_lang: 'EN',
+      }),
+    });
+    if (!res.ok) {
+      const errorBody = await res.text();
+      throw new BadRequestException(
+        `DeepL API error: ${res.status} ${errorBody}`,
+      );
+    }
+    const json = (await res.json()) as {
+      translations: Array<{ text: string }>;
+    };
+    if (!json?.translations?.length) {
+      throw new BadRequestException('DeepL returned no translations');
+    }
+    const explanation = json.translations[0].text;
+
+    return {
+      original: dto.original,
+      corrected: dto.corrected,
+      explanation,
+    };
   }
 
   async pronunciationScore(
