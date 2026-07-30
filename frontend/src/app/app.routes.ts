@@ -276,4 +276,12 @@ export const routes: Routes = [
       ),
     title: 'Quests - HelloTalk',
   },
+  {
+    path: 'lessons',
+    loadComponent: () =>
+      import('./pages/lessons/lessons.component').then(
+        (m) => m.LessonsComponent,
+      ),
+    title: 'Lessons - HelloTalk',
+  },
 ];
