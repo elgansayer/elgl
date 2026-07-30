@@ -33,8 +33,10 @@ import {
   CaptionRecord,
   RoomTokenResponse,
 } from './interfaces/audio-room.interface';
+import { CallLogRecord } from './interfaces/call-log.interface';
 import { VoiceRoomNote } from './interfaces/voice-room-note.interface';
 import { CreateVoiceRoomNoteDto } from './dto/voice-room-note.dto';
+import { GetCallLogsQueryDto } from './dto/get-call-logs-query.dto';
 
 @Controller('audio-rooms')
 @UseGuards(SupabaseAuthGuard)
@@ -179,6 +181,15 @@ export class AudioRoomsController {
     vocabulary: string[];
   }> {
     return this.audioRoomsService.getTranscript(roomId);
+  }
+
+  @Get('call-logs')
+  async getCallLogs(
+    @CurrentUser() user: User | null,
+    @Query() query: GetCallLogsQueryDto,
+  ): Promise<CallLogRecord[]> {
+    if (!user) return [];
+    return this.audioRoomsService.getCallLogs(user.id, query);
   }
 
   @Post(':roomId/polls')

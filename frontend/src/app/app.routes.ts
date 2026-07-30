@@ -301,4 +301,12 @@ export const routes: Routes = [
       ),
     title: 'Voice Room Notes - HelloTalk',
   },
+  {
+    path: 'call-logs',
+    loadComponent: () =>
+      import('./pages/call-logs/call-logs.component').then(
+        (m) => m.CallLogsComponent,
+      ),
+    title: 'Call Logs - HelloTalk',
+  },
 ];

@@ -10,6 +10,8 @@ import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { CreateVoiceRoomNoteDto } from './dto/voice-room-note.dto';
 import { VoiceRoomNote } from './interfaces/voice-room-note.interface';
+import { GetCallLogsQueryDto } from './dto/get-call-logs-query.dto';
+import { CallLogRecord } from './interfaces/call-log.interface';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { TranscriptEgressService } from './transcript-egress.service';
@@ -885,6 +887,30 @@ export class AudioRoomsService implements OnModuleInit {
     if (room.co_host_id === userId) return true;
     if (room.speakers && room.speakers.includes(userId)) return true;
     return false;
+  }
+
+  async getCallLogs(
+    userId: string,
+    query: GetCallLogsQueryDto,
+  ): Promise<CallLogRecord[]> {
+    const supabase = this.supabaseService.getClient();
+    let supabaseQuery = supabase
+      .from('call_logs')
+      .select('*')
+      .or(`caller_id.eq.${userId},receiver_id.eq.${userId}`)
+      .order('started_at', { ascending: false })
+      .range(query.offset ?? 0, (query.offset ?? 0) + (query.limit ?? 20) - 1);
+
+    if (query.callType) {
+      supabaseQuery = supabaseQuery.eq('call_type', query.callType);
+    }
+
+    const { data, error } = await supabaseQuery;
+    if (error) {
+      this.logger.warn('Failed to fetch call logs', error);
+      return [];
+    }
+    return (data ?? []) as CallLogRecord[];
   }
 
   private readonly soundboardSounds = [
