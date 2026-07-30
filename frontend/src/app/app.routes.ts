@@ -246,4 +246,12 @@ export const routes: Routes = [
       ),
     title: 'Data & Storage - HelloTalk',
   },
+  {
+    path: 'help-about',
+    loadComponent: () =>
+      import('./pages/help-about/help-about.component').then(
+        (m) => m.HelpAboutComponent,
+      ),
+    title: 'Help & About - HelloTalk',
+  },
 ];

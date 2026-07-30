@@ -860,6 +860,12 @@ export class I18nService {
     'languageSettings.selectLabel': 'Select interface language',
     'languageSettings.applyBtn': 'Apply',
     'languageSettings.currentLang': 'Current: {{name}}',
+
+    // Help & About
+    'helpAbout.title': 'Help & About',
+    'helpAbout.appVersion': 'App Version',
+    'helpAbout.buildNumber': 'Build Number',
+    'helpAbout.openSourceLicences': 'Open Source Licences',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });
