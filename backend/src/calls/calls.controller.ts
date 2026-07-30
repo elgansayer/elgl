@@ -1,5 +1,6 @@
 import { Controller, Post, Body, Request } from '@nestjs/common';
 import { CallsService } from './calls.service';
+import { CreateGroupCallDto } from './dto/create-group-call.dto';
 
 interface RequestWithUser {
   user?: {
@@ -20,5 +21,16 @@ export class CallsController {
     // Fallback to a dummy user ID if req.user is not populated in this mock
     const callerId = req.user?.id || 'dummy_caller_id';
     return this.callsService.initiateCall(callerId, calleeId, isVideo);
+  }
+
+  @Post('group')
+  async createGroupCall(
+    @Request() req: RequestWithUser,
+    @Body() dto: CreateGroupCallDto,
+  ) {
+    const callerId = req.user?.id || 'dummy_caller_id';
+    const participantIds = dto.participant_ids;
+    const limit = dto.participant_limit;
+    return this.callsService.createGroupCall(callerId, participantIds, limit);
   }
 }

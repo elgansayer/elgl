@@ -1,12 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AccessToken } from 'livekit-server-sdk';
+import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
 
 @Injectable()
 export class CallsService {
-  constructor(private configService: ConfigService) {}
+  private livekitHost: string;
+
+  constructor(private configService: ConfigService) {
+    this.livekitHost =
+      this.configService.get<string>('LIVEKIT_URL') || 'http://localhost:7880';
+  }
 
   async initiateCall(
     callerId: string,
@@ -50,6 +55,72 @@ export class CallsService {
       e2ee_key: e2eeKey,
       is_video: isVideo,
       call_id: uuidv4(),
+    };
+  }
+
+  async createGroupCall(
+    callerId: string,
+    participantIds: string[],
+    participantLimit: number,
+  ) {
+    if (!participantIds.includes(callerId)) {
+      participantIds.unshift(callerId);
+    }
+
+    if (participantIds.length > participantLimit) {
+      throw new BadRequestException(
+        `Number of participants (${participantIds.length}) exceeds the limit (${participantLimit})`,
+      );
+    }
+
+    const roomName = `group_${uuidv4()}`;
+    const apiKey =
+      this.configService.get<string>('LIVEKIT_API_KEY') || 'devkey';
+    const apiSecret =
+      this.configService.get<string>('LIVEKIT_SECRET') || 'secret';
+
+    // Create the room with a maximum participant limit
+    const roomService = new RoomServiceClient(
+      this.livekitHost,
+      apiKey,
+      apiSecret,
+    );
+    await roomService.createRoom({
+      name: roomName,
+      maxParticipants: participantLimit,
+    });
+
+    const e2eeKey = crypto.randomBytes(32).toString('base64');
+    const metadata = JSON.stringify({
+      e2eeKey,
+      isVideo: true,
+      isGroup: true,
+      participantLimit,
+    });
+
+    const generateToken = async (identity: string): Promise<string> => {
+      const at = new AccessToken(apiKey, apiSecret, {
+        identity,
+        metadata,
+      });
+      at.addGrant({
+        roomJoin: true,
+        room: roomName,
+        canPublish: true,
+        canSubscribe: true,
+      });
+      return await at.toJwt();
+    };
+
+    const tokens = await Promise.all(participantIds.map(generateToken));
+
+    return {
+      room_name: roomName,
+      tokens,
+      e2ee_key: e2eeKey,
+      is_video: true,
+      call_id: uuidv4(),
+      participant_limit: participantLimit,
     };
   }
 }
