@@ -5,6 +5,7 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { SafetyService } from './safety.service';
 import { OfflineQueueService } from './offline-queue.service';
+import { HapticFeedbackService } from './haptic-feedback.service';
 
 export interface CorrectionPayload {
   original: string;
@@ -70,6 +71,7 @@ export class ChatService {
   private authService = inject(AuthService);
   private safetyService = inject(SafetyService);
   private offlineQueue = inject(OfflineQueueService);
+  private hapticFeedback = inject(HapticFeedbackService);
   private baseUrl = `${environment.apiUrl}/chat`;
 
   // Blocked user list is loaded on demand, never in the constructor,
@@ -154,14 +156,17 @@ export class ChatService {
         created_at: new Date().toISOString(),
       };
       await this.offlineQueue.enqueueMessage(queuedMsg);
+      this.hapticFeedback.tap();
       return queuedMsg;
     }
 
-    return firstValueFrom(
+    const message = await firstValueFrom(
       this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, {
         headers: this.getHeaders(),
       }),
     );
+    this.hapticFeedback.tap();
+    return message;
   }
 
   private async syncOfflineMessages(): Promise<void> {

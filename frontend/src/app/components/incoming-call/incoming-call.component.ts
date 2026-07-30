@@ -6,6 +6,7 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 import { CentrifugoService } from '../../services/centrifugo.service';
 import { AuthService } from '../../services/auth.service';
 import { LivekitService } from '../../services/livekit.service';
+import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 
 export interface IncomingCallInfo {
   callerId: string;
@@ -112,6 +113,7 @@ export class IncomingCallComponent implements OnDestroy {
   private centrifugoService = inject(CentrifugoService);
   private authService = inject(AuthService);
   private livekitService = inject(LivekitService);
+  private hapticFeedback = inject(HapticFeedbackService);
 
   readonly callAccepted = output<IncomingCallInfo>();
   readonly callRejected = output<IncomingCallInfo>();
@@ -230,6 +232,7 @@ export class IncomingCallComponent implements OnDestroy {
 
     this.stopRingtone();
     this.showCallModal.set(false);
+    this.hapticFeedback.tap();
 
     try {
       // Join the LiveKit room with E2EE key if provided
@@ -249,6 +252,7 @@ export class IncomingCallComponent implements OnDestroy {
         },
       });
 
+      this.hapticFeedback.success();
       this.callAccepted.emit(info);
     } catch (error) {
       console.error('Failed to accept call:', error);
@@ -265,6 +269,7 @@ export class IncomingCallComponent implements OnDestroy {
 
     this.stopRingtone();
     this.showCallModal.set(false);
+    this.hapticFeedback.tap();
 
     // Notify the caller that the call was rejected
     this.centrifugoService.publish(`user_${info.callerId}`, {
