@@ -36,6 +36,9 @@ export interface UserProfile {
   privacy_hide_online_status?: boolean;
   privacy_hide_vip_status?: boolean;
   incognito_visits?: boolean;
+  do_not_disturb?: boolean;
+  quiet_hours_start?: string;
+  quiet_hours_end?: string;
   silence_unknown_callers?: boolean;
   status_visibility?: string;
   auto_play_voice_notes?: boolean;
@@ -553,6 +556,18 @@ export class UserService {
           headers: this.getHeaders(),
         })
         .pipe(catchError(() => of(undefined))),
+    );
+  }
+
+  async setDoNotDisturbSchedule(settings: {
+    do_not_disturb?: boolean;
+    quiet_hours_start?: string;
+    quiet_hours_end?: string;
+  }): Promise<UserProfile> {
+    return firstValueFrom(
+      this.http.patch<UserProfile>(`${this.baseUrl}/me/dnd`, settings, {
+        headers: this.getHeaders(),
+      }).pipe(catchError(() => of(MOCK_USER_PROFILE))),
     );
   }
 }

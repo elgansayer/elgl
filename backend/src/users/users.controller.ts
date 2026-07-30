@@ -18,6 +18,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { TwoFactorGuard } from '../two-factor/two-factor.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { PrivacySettingsDto } from './dto/privacy-settings.dto';
+import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
 import {
   UserProfile,
   ProfileVisitor,
@@ -250,5 +251,14 @@ export class UsersController {
   ): Promise<UserProfile | null> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.updatePrivacySettings(user.id, dto);
+  }
+
+  @Patch('me/dnd')
+  async setDoNotDisturb(
+    @CurrentUser() user: User | null,
+    @Body() dto: DoNotDisturbDto,
+  ): Promise<UserProfile | null> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.updateDoNotDisturbSettings(user.id, dto);
   }
 }

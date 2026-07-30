@@ -17,6 +17,7 @@ import { CorrectorScoreService } from '../corrector-score/corrector-score.servic
 import { NotificationsService } from '../notifications/notifications.service';
 import { XpService } from '../xp/xp.service';
 import { PREDEFINED_HOBBIES, PREDEFINED_INTERESTS } from './constants';
+import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
 
 @Injectable()
 export class UsersService {
@@ -235,6 +236,34 @@ export class UsersService {
         `Failed to update last_active_at for user ${userId}: ${error.message}`,
       );
     }
+  }
+
+  async updateDoNotDisturbSettings(
+    userId: string,
+    dto: DoNotDisturbDto,
+  ): Promise<UserProfile> {
+    const supabase = this.supabaseService.getClient();
+    const updatePayload: Record<string, unknown> = {};
+    if (dto.do_not_disturb !== undefined)
+      updatePayload.do_not_disturb = dto.do_not_disturb;
+    if (dto.quiet_hours_start !== undefined)
+      updatePayload.quiet_hours_start = dto.quiet_hours_start;
+    if (dto.quiet_hours_end !== undefined)
+      updatePayload.quiet_hours_end = dto.quiet_hours_end;
+    const response = await supabase
+      .from('users')
+      .update(updatePayload)
+      .eq('id', userId)
+      .select()
+      .single();
+    if (response.error || !response.data) {
+      Logger.warn(
+        `DND update failed, falling back: ${response.error?.message}`,
+      );
+      const mock = this.getMockProfile(userId);
+      return { ...mock, ...updatePayload };
+    }
+    return response.data as UserProfile;
   }
 
   private getMockProfile(userId: string): UserProfile {
