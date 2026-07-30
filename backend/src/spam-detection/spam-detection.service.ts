@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Language } from 'node-nlp';
 
 interface SpamRecord {
   timestamps: number[];
@@ -22,6 +23,10 @@ export class SpamDetectionService {
     process.env.SPAM_SIMILARITY_THRESHOLD ?? '0.75',
   );
 
+  private readonly languageDetector = new Language();
+
+  private readonly CJK_LANGUAGES = new Set(['ja', 'ko', 'zh', 'th']);
+
   isSpam(content: string): boolean {
     if (!content) return false;
 
@@ -36,8 +41,11 @@ export class SpamDetectionService {
       }
     }
 
+    // Determine appropriate n-gram size based on detected language
+    const trigramN = this.getTrigramSize(normalized);
+
     // Compute trigram set for the incoming message
-    const incomingTrigrams = this.trigramSet(normalized);
+    const incomingTrigrams = this.trigramSet(normalized, trigramN);
 
     // Count how many existing messages are similar enough
     let nearDuplicateCount = 0;
@@ -82,11 +90,11 @@ export class SpamDetectionService {
     record.trigrams = trigrams;
   }
 
-  /** Generate a set of character trigrams */
-  private trigramSet(content: string): Set<string> {
+  /** Generate a set of character n‑grams */
+  private trigramSet(content: string, n: number = this.TRIGRAM_N): Set<string> {
     const set = new Set<string>();
-    for (let i = 0; i <= content.length - this.TRIGRAM_N; i++) {
-      set.add(content.substring(i, i + this.TRIGRAM_N));
+    for (let i = 0; i <= content.length - n; i++) {
+      set.add(content.substring(i, i + n));
     }
     // For very short content, use the entire string as a single token
     if (set.size === 0) {
@@ -101,5 +109,25 @@ export class SpamDetectionService {
     const intersection = new Set([...a].filter((x) => b.has(x)));
     const union = new Set([...a, ...b]);
     return intersection.size / union.size;
+  }
+
+  /**
+   * Detect the language of the given text and return an appropriate
+   * n‑gram size. For CJK languages we use bigrams (n=2); otherwise
+   * we fall back to the default trigram (n=3).
+   */
+  private getTrigramSize(text: string): number {
+    try {
+      const guesses = this.languageDetector.guess(text, undefined, 1);
+      if (guesses && guesses.length > 0) {
+        const lang = guesses[0].alpha2;
+        if (this.CJK_LANGUAGES.has(lang)) {
+          return 2;
+        }
+      }
+    } catch {
+      // If language detection fails, just use the configured default
+    }
+    return this.TRIGRAM_N;
   }
 }

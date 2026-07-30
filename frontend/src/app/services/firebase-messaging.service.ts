@@ -15,7 +15,7 @@ export class FirebaseMessagingService {
   }
 
   /** Send the current FCM token to your backend for later push targeting. */
-  async persistFcmToken(userId: string): Promise<void> {
+  async persistFcmToken(_userId: string): Promise<void> {
     // Stub – no real Firebase integration in this build.
   }
 }

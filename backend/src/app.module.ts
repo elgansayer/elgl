@@ -55,6 +55,7 @@ import { StatsModule } from './stats/stats.module';
 import { ScheduledDeletionModule } from './scheduled-deletion/scheduled-deletion.module';
 import { EventsModule } from './events/events.module';
 import { WordOfTheDayModule } from './word-of-the-day/word-of-the-day.module';
+import { SpamDetectionModule } from './spam-detection/spam-detection.module';
 import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
 import { validationSchema } from './config/validation.schema';
 
@@ -131,6 +132,7 @@ import { validationSchema } from './config/validation.schema';
     NotificationPreferencesModule,
     ModerationModule,
     WordOfTheDayModule,
+    SpamDetectionModule,
   ],
   controllers: [AppController],
   providers: [

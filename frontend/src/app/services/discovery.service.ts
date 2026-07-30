@@ -6,7 +6,7 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { SafetyService } from './safety.service';
 import { UserProfile, UserService } from './user.service';
-import { ChatService, ChatMessage, ChatRoom } from './chat.service';
+import { ChatService, ChatMessage } from './chat.service';
 
 export interface SearchFilterParams {
   latitude?: number;
@@ -132,7 +132,7 @@ export class DiscoveryService {
     const users = await firstValueFrom(
       this.http
         .get<UserProfile[]>(`${this.baseUrl}/partners`, { headers: this.getHeaders(), params })
-        .pipe(catchError(() => of(MOCK_PARTNERS))),
+        .pipe(catchError(() => of<UserProfile[]>(MOCK_PARTNERS))),
     );
 
     // Filter out blocked users client-side
@@ -157,7 +157,10 @@ export class DiscoveryService {
 
     // Apply serious_learner_only filter if requested
     if (filters.serious_learner_only) {
-      enriched = enriched.filter((user) => (user as any).is_serious_learner === true);
+      function hasSeriousLearner(user: UserProfile): user is UserProfile & { is_serious_learner: boolean } {
+        return 'is_serious_learner' in user;
+      }
+      enriched = enriched.filter((user) => hasSeriousLearner(user) && user.is_serious_learner);
     }
 
     // Return enriched array, but keep the same UserProfile type (extra property is allowed in structural typing)
@@ -182,7 +185,7 @@ export class DiscoveryService {
           headers: this.getHeaders(),
           params,
         })
-        .pipe(catchError(() => of([] as UserProfile[]))),
+        .pipe(catchError(() => of<UserProfile[]>([]))),
     );
     const currentUser = this.authService.currentUser();
     let filtered = users;
@@ -203,7 +206,7 @@ export class DiscoveryService {
         .get<UserProfile[]>(`${this.baseUrl}/recent-native-speakers`, {
           headers: this.getHeaders(),
         })
-        .pipe(catchError(() => of([] as UserProfile[]))),
+        .pipe(catchError(() => of<UserProfile[]>([]))),
     );
     const currentUser = this.authService.currentUser();
     let filtered = users;
@@ -225,7 +228,7 @@ export class DiscoveryService {
           .get<UserProfile[]>(`${this.baseUrl}/spotlight`, {
             headers: this.getHeaders(),
           })
-          .pipe(catchError(() => of([] as UserProfile[]))),
+          .pipe(catchError(() => of<UserProfile[]>([]))),
       );
       const currentUser = this.authService.currentUser();
       let filtered = users;
@@ -260,7 +263,7 @@ export class DiscoveryService {
           headers: this.getHeaders(),
           params,
         })
-        .pipe(catchError(() => of([] as UserProfile[]))),
+        .pipe(catchError(() => of<UserProfile[]>([]))),
     );
     const currentUser = this.authService.currentUser();
     let filtered = users;
