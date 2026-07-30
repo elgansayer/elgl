@@ -2,12 +2,14 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Param,
   Body,
   Query,
   UseGuards,
   Req,
   UnauthorizedException,
+  HttpCode,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { GroupsService } from './groups.service';
@@ -145,5 +147,27 @@ export class GroupsController {
   async joinGroup(@Param('groupId') groupId: string, @Req() req: any) {
     const userId = req.user.id;
     return this.groupsService.joinGroup(groupId, userId);
+  }
+
+  @Get(':groupId/resources')
+  @UseGuards(AuthGuard('jwt'))
+  async getGroupResources(@Param('groupId') groupId: string) {
+    return this.groupsService.getGroupResources(groupId);
+  }
+
+  @Delete(':groupId/resources/:resourceId')
+  @UseGuards(AuthGuard('jwt'))
+  @HttpCode(204)
+  async deleteGroupResource(
+    @Param('groupId') groupId: string,
+    @Param('resourceId') resourceId: string,
+    @Req() req: any,
+  ): Promise<void> {
+    const requesterId = req.user.id;
+    return this.groupsService.deleteGroupResource(
+      groupId,
+      resourceId,
+      requesterId,
+    );
   }
 }

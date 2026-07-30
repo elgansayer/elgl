@@ -368,4 +368,38 @@ export class GroupsService {
 
     return { success: true };
   }
+
+  async getGroupResources(groupId: string): Promise<any[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('group_resources')
+      .select('*')
+      .eq('group_id', groupId);
+
+    if (error) {
+      throw new NotFoundException('Failed to fetch group resources');
+    }
+    return data || [];
+  }
+
+  async deleteGroupResource(
+    groupId: string,
+    resourceId: string,
+    requesterId: string,
+  ): Promise<void> {
+    const isAdmin = await this.isAdmin(requesterId, groupId);
+    if (!isAdmin) {
+      throw new ForbiddenException('Only group admin can delete resources');
+    }
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('group_resources')
+      .delete()
+      .eq('id', resourceId)
+      .eq('group_id', groupId);
+
+    if (error) {
+      throw new NotFoundException('Failed to delete resource');
+    }
+  }
 }
