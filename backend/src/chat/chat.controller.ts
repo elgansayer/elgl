@@ -1,10 +1,8 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   Param,
-  Patch,
   Post,
   Query,
   UseGuards,
@@ -101,57 +99,6 @@ export class ChatController {
   ): Promise<{ response: string } | null> {
     if (!user) return null;
     return await this.chatService.llmProxy(user.id, dto.messageText);
-  }
-
-  @Post('groups')
-  async createGroup(
-    @CurrentUser() user: User | null,
-    @Body() dto: { name: string; memberIds: string[] },
-  ): Promise<ChatRoomRecord | null> {
-    if (!user) return null;
-    return await this.chatService.createGroup(user.id, dto.name, dto.memberIds);
-  }
-
-  @Patch('groups/:roomId/rename')
-  async renameGroup(
-    @CurrentUser() user: User | null,
-    @Param('roomId') roomId: string,
-    @Body() dto: { name: string },
-  ): Promise<{ success: boolean } | null> {
-    if (!user) return null;
-    await this.chatService.renameGroup(user.id, roomId, dto.name);
-    return { success: true };
-  }
-
-  @Post('groups/:roomId/members')
-  async addGroupMembers(
-    @CurrentUser() user: User | null,
-    @Param('roomId') roomId: string,
-    @Body() dto: { memberIds: string[] },
-  ): Promise<{ success: boolean } | null> {
-    if (!user) return null;
-    await this.chatService.addGroupMembers(user.id, roomId, dto.memberIds);
-    return { success: true };
-  }
-
-  @Delete('groups/:roomId/members/:memberId')
-  async removeGroupMember(
-    @CurrentUser() user: User | null,
-    @Param('roomId') roomId: string,
-    @Param('memberId') memberId: string,
-  ): Promise<{ success: boolean } | null> {
-    if (!user) return null;
-    await this.chatService.removeGroupMember(user.id, roomId, memberId);
-    return { success: true };
-  }
-
-  @Get('groups/:roomId/members')
-  async getGroupMembers(
-    @CurrentUser() user: User | null,
-    @Param('roomId') roomId: string,
-  ): Promise<any[]> {
-    if (!user) return [];
-    return await this.chatService.getGroupMembers(roomId);
   }
 
   @Post('suggested-replies')

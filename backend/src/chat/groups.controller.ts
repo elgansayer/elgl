@@ -1,20 +1,20 @@
 import {
-  Controller,
-  Post,
-  Put,
-  Delete,
   Body,
+  Controller,
+  Delete,
+  Get,
   Param,
+  Patch,
+  Post,
   UseGuards,
-  Request,
 } from '@nestjs/common';
+import { User } from '@supabase/supabase-js';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { CreateGroupDto } from './dto/create-group.dto';
+import { AddMemberDto } from './dto/add-member.dto';
 import { GroupsService } from './groups.service';
-import {
-  CreateGroupDto,
-  RenameGroupDto,
-  GroupMemberDto,
-} from './dto/group.dto';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { ChatRoomRecord } from './interfaces/chat-message.interface';
 
 @UseGuards(SupabaseAuthGuard)
 @Controller('groups')
@@ -22,37 +22,57 @@ export class GroupsController {
   constructor(private readonly groupsService: GroupsService) {}
 
   @Post()
-  createGroup(
-    @Request() req: { user: { id: string } },
+  async createGroup(
+    @CurrentUser() user: User | null,
     @Body() dto: CreateGroupDto,
-  ) {
-    return this.groupsService.createGroup(req.user.id, dto.name);
+  ): Promise<ChatRoomRecord | null> {
+    if (!user) return null;
+    return await this.groupsService.createGroup(
+      user.id,
+      dto.name,
+      dto.memberIds,
+    );
   }
 
-  @Put(':id/rename')
-  renameGroup(
-    @Request() req: { user: { id: string } },
-    @Param('id') id: string,
-    @Body() dto: RenameGroupDto,
-  ) {
-    return this.groupsService.renameGroup(req.user.id, id, dto.name);
+  @Patch(':roomId/rename')
+  async renameGroup(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+    @Body() dto: { name: string },
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.groupsService.renameGroup(user.id, roomId, dto.name);
+    return { success: true };
   }
 
-  @Post(':id/members')
-  addMember(
-    @Request() req: { user: { id: string } },
-    @Param('id') id: string,
-    @Body() dto: GroupMemberDto,
-  ) {
-    return this.groupsService.addMember(req.user.id, id, dto.user_id);
+  @Post(':roomId/members')
+  async addGroupMembers(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+    @Body() dto: AddMemberDto,
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.groupsService.addGroupMembers(user.id, roomId, dto.memberIds);
+    return { success: true };
   }
 
-  @Delete(':id/members/:userId')
-  removeMember(
-    @Request() req: { user: { id: string } },
-    @Param('id') id: string,
-    @Param('userId') userId: string,
-  ) {
-    return this.groupsService.removeMember(req.user.id, id, userId);
+  @Delete(':roomId/members/:memberId')
+  async removeGroupMember(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+    @Param('memberId') memberId: string,
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.groupsService.removeGroupMember(user.id, roomId, memberId);
+    return { success: true };
+  }
+
+  @Get(':roomId/members')
+  async getGroupMembers(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+  ): Promise<any[]> {
+    if (!user) return [];
+    return await this.groupsService.getGroupMembers(roomId);
   }
 }
