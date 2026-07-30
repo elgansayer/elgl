@@ -1,0 +1,100 @@
+import { Component, output, signal, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { UserService } from '../../services/user.service';
+
+@Component({
+  selector: 'app-audio-intro-recorder',
+  standalone: true,
+  imports: [CommonModule, TranslatePipe],
+  templateUrl: './audio-intro-recorder.component.html',
+  styleUrls: ['./audio-intro-recorder.component.scss'],
+})
+export class AudioIntroRecorderComponent {
+  private userService = inject(UserService);
+
+  // Outputs
+  recordingComplete = output<string>();
+
+  // State
+  isRecording = signal(false);
+  isPlaying = signal(false);
+  hasRecording = signal(false);
+  recordingBlob = signal<Blob | null>(null);
+  recordingUrl = signal<string>('');
+  duration = signal(0);
+  maxDuration = 30; // seconds
+  private mediaRecorder: MediaRecorder | null = null;
+  private chunks: Blob[] = [];
+  private timer: ReturnType<typeof setInterval> | null = null;
+
+  async startRecording(): Promise<void> {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus',
+      });
+      this.chunks = [];
+      this.mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) this.chunks.push(e.data);
+      };
+      this.mediaRecorder.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(this.chunks, { type: 'audio/webm;codecs=opus' });
+        this.recordingBlob.set(blob);
+        this.hasRecording.set(true);
+        this.recordingUrl.set(URL.createObjectURL(blob));
+        this.isRecording.set(false);
+        this.recordingComplete.emit(this.recordingUrl());
+      };
+      this.mediaRecorder.start();
+      this.isRecording.set(true);
+      this.timer = setInterval(() => {
+        this.duration.update((d) => d + 1);
+        if (this.duration() >= this.maxDuration) {
+          this.stopRecording();
+        }
+      }, 1000);
+    } catch (err) {
+      console.error('Failed to start recording', err);
+    }
+  }
+
+  stopRecording(): void {
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+    }
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+  }
+
+  async uploadRecording(): Promise<void> {
+    const blob = this.recordingBlob();
+    if (!blob) return;
+    const file = new File([blob], 'intro.webm', { type: blob.type });
+    const { uploadUrl, mediaUrl } = await this.userService.getPresignedUploadUrl(
+      file.name,
+      blob.type,
+      'audio-intro',
+    );
+    const resp = await fetch(uploadUrl, {
+      method: 'PUT',
+      body: blob,
+      headers: { 'Content-Type': blob.type },
+    });
+    if (!resp.ok) throw new Error('Upload failed');
+    await this.userService.updateMyProfile({ audio_intro_url: mediaUrl });
+    this.recordingComplete.emit(mediaUrl);
+  }
+
+  playPreview(): void {
+    if (!this.recordingUrl()) return;
+    const audio = new Audio(this.recordingUrl());
+    audio.play().then(() => {
+      this.isPlaying.set(true);
+      audio.onended = () => this.isPlaying.set(false);
+    });
+  }
+}

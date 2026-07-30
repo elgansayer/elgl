@@ -1,0 +1,35 @@
+<div class="flex flex-col items-start gap-4 p-4 bg-surface">
+  <button
+    class="px-4 py-2 rounded bg-primary text-on-primary"
+    (click)="isRecording() ? stopRecording() : startRecording()"
+  >
+    {{ isRecording() ? ('stop_recording' | t) : ('start_recording' | t) }}
+  </button>
+
+  @if (isRecording()) {
+    <div class="flex items-center gap-2 text-xs text-danger">
+      <span class="inline-block w-2 h-2 rounded-full bg-danger animate-pulse"></span>
+      {{ duration() }} / {{ maxDuration }} {{ 'seconds' | t }}
+    </div>
+  }
+
+  @if (hasRecording()) {
+    @if (recordingUrl()) {
+    <audio controls [src]="recordingUrl()" class="w-full max-w-xs"></audio>
+
+    <button
+      class="px-4 py-2 rounded bg-secondary text-on-secondary"
+      (click)="playPreview()"
+    >
+      {{ isPlaying() ? ('playing' | t) : ('play_preview' | t) }}
+    </button>
+
+    <button
+      class="px-4 py-2 rounded bg-accent text-on-accent"
+      (click)="uploadRecording()"
+    >
+      {{ 'upload' | t }}
+    </button>
+    }
+  }
+</div>
