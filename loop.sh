@@ -7,6 +7,12 @@
 
 export PATH="$HOME/.local/bin:$PATH"
 
+# Coordination lock: refuse to run if swarmd.py is already active
+if pgrep -f "swarmd\.py" >/dev/null 2>&1; then
+    echo "ERROR: swarmd.py daemon is already running. Stop it first or run only one swarm."
+    exit 1
+fi
+
 source "$(dirname "$(realpath "$0")")/scripts/swarm-env.sh" --validate
 source "$SWARM_SCRIPTS/claude-pro.sh"
 source "$SWARM_SCRIPTS/fallback-chain.sh"
