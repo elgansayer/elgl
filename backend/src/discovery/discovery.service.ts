@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { UserProfile } from '../users/interfaces/user-profile.interface';
@@ -11,6 +12,7 @@ export class DiscoveryService {
   private readonly logger = new Logger(DiscoveryService.name);
 
   constructor(
+    private readonly audioRoomsService: AudioRoomsService,
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
   ) {}
@@ -175,7 +177,11 @@ export class DiscoveryService {
           !fallbackRes.data ||
           fallbackRes.data.length === 0
         ) {
-          return this.getMockDiscoveryData(query, blockedIds);
+          const mockData = this.getMockDiscoveryData(query, blockedIds);
+          return this.filterByVoiceRoomActive(
+            mockData,
+            query.voice_room_active === true,
+          );
         }
         // Filter fallback results for blocked users
         let fallbackResults = fallbackRes.data as UserProfile[];
@@ -195,7 +201,10 @@ export class DiscoveryService {
             (u) => (u as any).age <= query.age_max,
           );
         }
-        return fallbackResults;
+        return this.filterByVoiceRoomActive(
+          fallbackResults,
+          query.voice_room_active === true,
+        );
       }
       // Filter RPC results for blocked users
       let rpcResults = response.data as UserProfile[];
@@ -214,15 +223,23 @@ export class DiscoveryService {
       if (query.age_max !== undefined) {
         rpcResults = rpcResults.filter((u) => (u as any).age <= query.age_max);
       }
-      return rpcResults;
+      return this.filterByVoiceRoomActive(
+        rpcResults,
+        query.voice_room_active === true,
+      );
     }
 
     const response = await queryBuilder.limit(50);
     if (response.error || !response.data || response.data.length === 0) {
-      return this.getMockDiscoveryData(query, blockedIds);
+      const mockData = this.getMockDiscoveryData(query, blockedIds);
+      return this.filterByVoiceRoomActive(
+        mockData,
+        query.voice_room_active === true,
+      );
     }
     // Filter results for blocked users
     let results = response.data as UserProfile[];
+    // Voice room active filter (if requested)
     if (blockedIds.length > 0) {
       results = results.filter((u) => !blockedIds.includes(u.id));
     }
@@ -233,7 +250,19 @@ export class DiscoveryService {
     if (query.age_max !== undefined) {
       results = results.filter((u) => (u as any).age <= query.age_max);
     }
-    return results;
+    return this.filterByVoiceRoomActive(
+      results,
+      query.voice_room_active === true,
+    );
+  }
+
+  private async filterByVoiceRoomActive(
+    users: UserProfile[],
+    voiceRoomActive: boolean,
+  ): Promise<UserProfile[]> {
+    if (!voiceRoomActive) return users;
+    const activeHostIds = await this.audioRoomsService.getActiveHostIds();
+    return users.filter((u) => activeHostIds.includes(u.id));
   }
 
   private getMockDiscoveryData(

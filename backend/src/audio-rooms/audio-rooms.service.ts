@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
+import { ConfigService } from '@nestjs/config';
+import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
@@ -579,5 +581,19 @@ export class AudioRoomsService implements OnModuleInit {
     });
 
     return this.getRoom(room.id);
+  }
+
+  async getActiveHostIds(): Promise<string[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('audio_rooms')
+      .select('host_id')
+      .eq('is_active', true);
+    if (error || !data) {
+      this.logger.warn('Could not fetch active host IDs', error);
+      return [];
+    }
+    const rows = data as Array<{ host_id: string }>;
+    return [...new Set(rows.map((r) => r.host_id))];
   }
 }

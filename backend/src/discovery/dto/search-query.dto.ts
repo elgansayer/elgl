@@ -76,4 +76,11 @@ export class SearchQueryDto {
   @Min(1)
   @Max(120)
   age_max?: number;
+
+  @IsOptional()
+  @Transform(
+    ({ value }: { value: unknown }) => value === 'true' || value === true,
+  )
+  @IsBoolean()
+  voice_room_active?: boolean;
 }
