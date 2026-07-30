@@ -529,4 +529,143 @@ export class NlpService {
       cached: false,
     };
   }
+
+  async generateSessionSummary(
+    text: string,
+  ): Promise<{ summary: string; vocabulary: string[] }> {
+    if (!text || text.trim().length === 0) {
+      return { summary: 'No transcript available.', vocabulary: [] };
+    }
+    const sentences = text.match(/[^.!?]+[.!?]/g) || [text];
+    const cleanSentences = sentences
+      .map((s) => s.trim())
+      .filter((s) => s.length > 10);
+    // pick the three longest sentences as key topics
+    const keySentences = [...cleanSentences]
+      .sort((a, b) => b.length - a.length)
+      .slice(0, 3);
+    const summary =
+      keySentences.length > 0
+        ? `Key topics covered:\n${keySentences.join('\n')}`
+        : 'No summary available.';
+
+    const words = text.toLowerCase().match(/\b[a-z']{3,}\b/g) || [];
+    const stopWords = new Set([
+      'the',
+      'a',
+      'an',
+      'in',
+      'on',
+      'at',
+      'to',
+      'for',
+      'of',
+      'and',
+      'or',
+      'but',
+      'is',
+      'are',
+      'was',
+      'were',
+      'be',
+      'been',
+      'being',
+      'have',
+      'has',
+      'had',
+      'do',
+      'does',
+      'did',
+      'will',
+      'would',
+      'could',
+      'should',
+      'may',
+      'might',
+      'can',
+      'shall',
+      'with',
+      'by',
+      'as',
+      'it',
+      'its',
+      'this',
+      'that',
+      'these',
+      'those',
+      'i',
+      'we',
+      'you',
+      'he',
+      'she',
+      'they',
+      'my',
+      'our',
+      'your',
+      'his',
+      'her',
+      'their',
+      'me',
+      'us',
+      'him',
+      'them',
+      'from',
+      'about',
+      'up',
+      'out',
+      'if',
+      'so',
+      'no',
+      'not',
+      'just',
+      'very',
+      'too',
+      'also',
+      'some',
+      'any',
+      'each',
+      'every',
+      'all',
+      'both',
+      'more',
+      'most',
+      'other',
+      'such',
+      'only',
+      'own',
+      'same',
+      'into',
+      'over',
+      'after',
+      'before',
+      'between',
+      'under',
+      'again',
+      'further',
+      'then',
+      'once',
+      'here',
+      'there',
+      'when',
+      'where',
+      'why',
+      'how',
+      'what',
+      'which',
+      'who',
+      'whom',
+    ]);
+    const freqMap = new Map<string, number>();
+    for (const w of words) {
+      if (!stopWords.has(w)) {
+        freqMap.set(w, (freqMap.get(w) || 0) + 1);
+      }
+    }
+    const sorted = [...freqMap.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map((e) => e[0]);
+    const vocabulary = sorted.slice(0, 10);
+
+    return { summary, vocabulary };
+  }
 }

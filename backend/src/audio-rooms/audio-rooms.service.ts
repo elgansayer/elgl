@@ -13,6 +13,7 @@ import { VoiceRoomNote } from './interfaces/voice-room-note.interface';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { TranscriptEgressService } from './transcript-egress.service';
+import { NlpService } from '../nlp/nlp.service';
 import {
   ApproveSpeakerDto,
   ArchiveRoomDto,
@@ -69,6 +70,7 @@ export class AudioRoomsService implements OnModuleInit {
     private readonly usersService: UsersService,
     private readonly centrifugoService: CentrifugoService,
     private readonly transcriptEgress: TranscriptEgressService,
+    private readonly nlpService: NlpService,
   ) {}
 
   onModuleInit() {
@@ -590,8 +592,29 @@ export class AudioRoomsService implements OnModuleInit {
       `https://r2.hellotalk.mock/archive/${room.room_name}.webm`;
 
     // Generate full transcript using speech‑to‑text (implemented via LiveKit egress or external STT)
-    const transcriptText =
+    let transcriptText =
       await this.transcriptEgress.generateTranscriptFromAudioUrl(recordingUrl);
+
+    if (!transcriptText) {
+      // fallback: build transcript from sent captions if egress not available
+      const { data: captionRows } = await supabase
+        .from('audio_room_captions')
+        .select('text_content')
+        .eq('room_id', room.id)
+        .order('created_at', { ascending: true });
+      if (
+        captionRows &&
+        (captionRows as { text_content: string }[]).length > 0
+      ) {
+        transcriptText = (captionRows as { text_content: string }[])
+          .map((c) => c.text_content)
+          .join(' ');
+      }
+    }
+
+    const sessionSummary = transcriptText
+      ? await this.nlpService.generateSessionSummary(transcriptText)
+      : { summary: 'No transcript available.', vocabulary: [] };
 
     await supabase
       .from('audio_rooms')
@@ -604,6 +627,8 @@ export class AudioRoomsService implements OnModuleInit {
         room_id: room.id,
         recording_url: recordingUrl,
         transcript_text: transcriptText,
+        session_summary: sessionSummary.summary,
+        vocabulary_list: sessionSummary.vocabulary,
       },
       { onConflict: 'room_id' },
     );
@@ -718,25 +743,37 @@ export class AudioRoomsService implements OnModuleInit {
   /**
    * Returns the recording_url and optionally the transcript_text for a completed room.
    */
-  async getTranscript(
-    roomId: string,
-  ): Promise<{ recording_url: string | null; transcript_text: string | null }> {
+  async getTranscript(roomId: string): Promise<{
+    recording_url: string | null;
+    transcript_text: string | null;
+    session_summary: string | null;
+    vocabulary: string[];
+  }> {
     const supabase = this.supabaseService.getClient();
     const { data } = await supabase
       .from('audio_room_transcripts')
-      .select('recording_url, transcript_text')
+      .select(
+        'recording_url, transcript_text, session_summary, vocabulary_list',
+      )
       .eq('room_id', roomId)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (!data) {
-      return { recording_url: null, transcript_text: null };
+      return {
+        recording_url: null,
+        transcript_text: null,
+        session_summary: null,
+        vocabulary: [],
+      };
     }
+    const row = data;
     return {
-      recording_url: (data as { recording_url: string }).recording_url,
-      transcript_text: (data as { transcript_text: string | null })
-        .transcript_text,
+      recording_url: row.recording_url,
+      transcript_text: row.transcript_text,
+      session_summary: row.session_summary,
+      vocabulary: row.vocabulary_list ?? [],
     };
   }
 

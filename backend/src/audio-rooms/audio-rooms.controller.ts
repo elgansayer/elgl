@@ -165,13 +165,16 @@ export class AudioRoomsController {
 
   /**
    * Retrieve the recorded transcript for a completed audio room session.
-   * Returns { recording_url, transcript_text } if available.
+   * Returns { recording_url, transcript_text, session_summary, vocabulary } if available.
    */
   @Get(':id/transcript')
   @HttpCode(HttpStatus.OK)
-  async getTranscript(
-    @Param('id') roomId: string,
-  ): Promise<{ recording_url: string | null; transcript_text: string | null }> {
+  async getTranscript(@Param('id') roomId: string): Promise<{
+    recording_url: string | null;
+    transcript_text: string | null;
+    session_summary: string | null;
+    vocabulary: string[];
+  }> {
     return this.audioRoomsService.getTranscript(roomId);
   }
 }
