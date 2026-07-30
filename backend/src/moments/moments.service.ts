@@ -537,8 +537,30 @@ export class MomentsService {
     const profileMap = new Map<string, UserProfileRow>();
     profileRows.forEach((p) => profileMap.set(p.id, p));
 
+    // Fetch vote data for these comments
+    const commentIds = commentRows.map((c) => c.id);
+    const { data: votesData } = await supabase
+      .from('moment_comment_votes')
+      .select('comment_id, user_id, vote')
+      .in('comment_id', commentIds);
+
+    const votesMap = new Map<string, { up: number; down: number }>();
+    const myVotesMap = new Map<string, string>();
+
+    for (const row of votesData ?? []) {
+      const r = row;
+      const entry = votesMap.get(r.comment_id) ?? { up: 0, down: 0 };
+      if (r.vote === 'up') entry.up++;
+      else if (r.vote === 'down') entry.down++;
+      votesMap.set(r.comment_id, entry);
+      if (currentUserId && r.user_id === currentUserId) {
+        myVotesMap.set(r.comment_id, r.vote);
+      }
+    }
+
     return commentRows.map((c) => {
       const p = profileMap.get(c.user_id);
+      const v = votesMap.get(c.id) ?? { up: 0, down: 0 };
       return {
         id: c.id,
         moment_id: c.moment_id,
@@ -546,6 +568,9 @@ export class MomentsService {
         text_content: c.text_content,
         correction_payload: c.correction_payload,
         created_at: c.created_at,
+        upVotes: v.up,
+        downVotes: v.down,
+        userVote: currentUserId ? (myVotesMap.get(c.id) ?? null) : undefined,
         author: {
           id: p?.id ?? c.user_id,
           display_name: p?.display_name ?? 'Language Partner',
@@ -596,5 +621,91 @@ export class MomentsService {
     }
 
     return response.data as MomentRecord;
+  }
+
+  async voteOnCorrection(
+    userId: string,
+    commentId: string,
+    vote: 'up' | 'down',
+  ): Promise<{
+    commentId: string;
+    vote: string;
+    upVotes: number;
+    downVotes: number;
+    userVote: string | null;
+  }> {
+    const supabase = this.supabaseService.getClient();
+
+    // Verify comment exists
+    const { data: commentData, error: commentErr } = await supabase
+      .from('moment_comments')
+      .select('id, user_id')
+      .eq('id', commentId)
+      .single();
+
+    if (commentErr || !commentData) {
+      throw new Error('Comment not found');
+    }
+
+    // Fetch existing vote from this user
+    const { data: existingVote } = await supabase
+      .from('moment_comment_votes')
+      .select('id, vote')
+      .eq('comment_id', commentId)
+      .eq('user_id', userId)
+      .single();
+
+    if (existingVote) {
+      const currentVoteValue = existingVote.vote as 'up' | 'down';
+      if (currentVoteValue === vote) {
+        // Same vote: remove (toggle off)
+        await supabase
+          .from('moment_comment_votes')
+          .delete()
+          .eq('id', existingVote.id);
+      } else {
+        // Opposite vote: update
+        await supabase
+          .from('moment_comment_votes')
+          .update({ vote })
+          .eq('id', existingVote.id);
+      }
+    } else {
+      // No previous vote: insert
+      await supabase.from('moment_comment_votes').insert({
+        comment_id: commentId,
+        user_id: userId,
+        vote,
+      });
+    }
+
+    // Count votes for this comment
+    const { data: votes } = await supabase
+      .from('moment_comment_votes')
+      .select('vote')
+      .eq('comment_id', commentId);
+
+    const upVotes = (votes ?? []).filter((v: any) => v.vote === 'up').length;
+    const downVotes = (votes ?? []).filter(
+      (v: any) => v.vote === 'down',
+    ).length;
+
+    // Determine current user's vote after toggle
+    const { data: myVote } = await supabase
+      .from('moment_comment_votes')
+      .select('vote')
+      .eq('comment_id', commentId)
+      .eq('user_id', userId)
+      .single();
+
+    const userVote: string | null = myVote?.vote ?? null;
+
+    return {
+      commentId,
+      vote: userVote ?? '',
+      upVotes,
+      downVotes,
+      userVote,
+    };
   }
 }

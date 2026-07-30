@@ -13,6 +13,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { UsersService } from '../users/users.service';
 import { CreateCommentDto, CreateMomentDto } from './dto/moment.dto';
+import { VoteCorrectionDto } from './dto/vote-correction.dto';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { MomentsService } from './moments.service';
 
@@ -68,9 +69,33 @@ export class MomentsController {
     return await this.momentsService.addComment(user.id, id, dto);
   }
 
+  @Post(':id/comments/:commentId/vote')
+  async voteOnCorrection(
+    @CurrentUser() user: User | null,
+    @Param('id') momentId: string,
+    @Param('commentId') commentId: string,
+    @Body() dto: VoteCorrectionDto,
+  ): Promise<{
+    commentId: string;
+    vote: string;
+    upVotes: number;
+    downVotes: number;
+    userVote: string | null;
+  } | null> {
+    if (!user) return null;
+    return await this.momentsService.voteOnCorrection(
+      user.id,
+      commentId,
+      dto.vote,
+    );
+  }
+
   @Get(':id/comments')
-  async getComments(@Param('id') id: string): Promise<MomentComment[]> {
-    return await this.momentsService.getComments(id);
+  async getComments(
+    @CurrentUser() user: User | null,
+    @Param('id') id: string,
+  ): Promise<MomentComment[]> {
+    return await this.momentsService.getComments(id, user?.id);
   }
 
   @Patch(':id/pin')

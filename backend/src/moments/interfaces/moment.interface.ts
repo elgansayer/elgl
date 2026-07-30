@@ -9,6 +9,9 @@ export interface MomentComment {
     explanation?: string;
   };
   created_at: string;
+  upVotes?: number;
+  downVotes?: number;
+  userVote?: string | null;
   author?: {
     id: string;
     display_name?: string;
