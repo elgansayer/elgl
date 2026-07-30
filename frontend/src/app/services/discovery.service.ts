@@ -95,10 +95,15 @@ export class DiscoveryService {
     // Attach is_partner_of_week flag using separate endpoint
     const partnerIds = await this.getPartnerOfWeekIds();
     const partnerSet = new Set(partnerIds);
-    const enriched = filtered.map((user) => ({
+    let enriched = filtered.map((user) => ({
       ...user,
       is_partner_of_week: partnerSet.has(user.id),
     }));
+
+    // Apply serious_learner_only filter if requested
+    if (filters.serious_learner_only) {
+      enriched = enriched.filter((user) => (user as any).is_serious_learner === true);
+    }
 
     // Return enriched array, but keep the same UserProfile type (extra property is allowed in structural typing)
     return enriched;

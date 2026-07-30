@@ -44,15 +44,37 @@ export class SupabaseService implements OnModuleInit {
 
   async updateLastActivity(userId: string): Promise<void> {
     const supabase = this.getClient();
-    const { error } = await supabase
+    // Fetch current study_streak_days and correction_ratio to compute is_serious_learner
+    const { data, error: fetchError } = await supabase
       .from('users')
-      .update({ last_active_at: new Date().toISOString() })
+      .select('study_streak_days, correction_ratio')
+      .eq('id', userId)
+      .single();
+
+    if (fetchError) {
+      console.error(
+        `Failed to fetch user data for userId ${userId}:`,
+        fetchError.message,
+      );
+      return;
+    }
+
+    const isSeriousLearner =
+      (data?.study_streak_days ?? 0) > 7 &&
+      (data?.correction_ratio ?? 0) >= 0.8;
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        last_active_at: new Date().toISOString(),
+        is_serious_learner: isSeriousLearner,
+      })
       .eq('id', userId);
 
-    if (error) {
+    if (updateError) {
       console.error(
         `Failed to update last_active_at for user ${userId}:`,
-        error.message,
+        updateError.message,
       );
     }
   }
