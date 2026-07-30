@@ -53,6 +53,7 @@
   <nav class="fixed bottom-0 inset-x-0 z-50 bg-surface-200 border-t border-surface-100 pb-safe">
     <div class="flex justify-around items-center h-[60px]">
       <a
+        [joyrideStep]="'step-chat'"
         routerLink="/chat"
         routerLinkActive="text-primary"
         [routerLinkActiveOptions]="{ exact: false }"
@@ -72,6 +73,7 @@
       </a>
 
       <a
+        [joyrideStep]="'step-moments'"
         routerLink="/moments"
         routerLinkActive="text-primary"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
@@ -81,6 +83,7 @@
       </a>
 
       <a
+        [joyrideStep]="'step-discovery'"
         routerLink="/discovery"
         routerLinkActive="text-primary"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
@@ -90,6 +93,7 @@
       </a>
 
       <a
+        [joyrideStep]="'step-audio-rooms'"
         routerLink="/audio-rooms"
         routerLinkActive="text-primary"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
@@ -99,6 +103,7 @@
       </a>
 
       <a
+        [joyrideStep]="'step-profile'"
         routerLink="/profile"
         routerLinkActive="text-primary"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
@@ -129,4 +134,5 @@
       (closed)="showDailyRewardModal.set(false)"
     />
   }
+  <ngx-joyride></ngx-joyride>
 </div>

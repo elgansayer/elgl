@@ -21,6 +21,8 @@ import { VersionCheckService } from './services/version-check.service';
 import { ThemeSelectorComponent } from './components/theme-selector/theme-selector.component';
 import { FontScaleSliderComponent } from './components/font-scale-slider/font-scale-slider.component';
 import { FontScaleService } from './services/font-scale.service';
+import { JoyrideModule, JoyrideService } from 'ngx-joyride';
+import { I18nService } from './services/i18n.service';
 
 @Component({
   selector: 'app-root',
@@ -36,6 +38,7 @@ import { FontScaleService } from './services/font-scale.service';
     ConfirmDialogComponent,
     ThemeSelectorComponent,
     FontScaleSliderComponent,
+    JoyrideModule,
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
@@ -52,6 +55,8 @@ export class AppComponent implements OnInit {
   readonly unreadCounter = inject(UnreadCounterService);
   private versionCheckService = inject(VersionCheckService);
   readonly fontScaleService = inject(FontScaleService);
+  private joyrideService = inject(JoyrideService);
+  private i18n = inject(I18nService);
   readonly totalUnread = computed(() => this.unreadCounter.totalUnread());
 
   readonly unreadDisplayValue = computed(() =>
@@ -125,6 +130,24 @@ export class AppComponent implements OnInit {
       // Request notification permission after user is authenticated
       await this.fcmService.requestPermission();
       await this.fcmService.persistFcmToken(user.id);
+
+      // Start onboarding tour for brand new users
+      if (!localStorage.getItem('onboarding_done')) {
+        setTimeout(() => {
+          this.joyrideService.startTour({
+            steps: [
+              { id: 'step-chat', title: this.i18n.translate('joyride.chat.title'), text: this.i18n.translate('joyride.chat.text') },
+              { id: 'step-moments', title: this.i18n.translate('joyride.moments.title'), text: this.i18n.translate('joyride.moments.text') },
+              { id: 'step-discovery', title: this.i18n.translate('joyride.discovery.title'), text: this.i18n.translate('joyride.discovery.text') },
+              { id: 'step-audio-rooms', title: this.i18n.translate('joyride.audioRooms.title'), text: this.i18n.translate('joyride.audioRooms.text') },
+              { id: 'step-profile', title: this.i18n.translate('joyride.profile.title'), text: this.i18n.translate('joyride.profile.text') },
+            ],
+            stepDefaultPosition: 'bottom',
+          }).then(() => {
+            localStorage.setItem('onboarding_done', 'true');
+          });
+        }, 1500);
+      }
     }
   }
 
