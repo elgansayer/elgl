@@ -137,6 +137,10 @@ export class MomentsService {
         media_urls: dto.media_urls ?? [],
         media_type: dto.media_type ?? 'none',
         target_language: dto.target_language,
+        post_type: dto.post_type ?? 'moment',
+        question_text: dto.question_text ?? null,
+        question_options: dto.question_options ?? [],
+        correct_answer: dto.correct_answer ?? null,
         voice_note_url: dto.voice_note_url ?? null,
       })
       .select()
@@ -319,6 +323,107 @@ export class MomentsService {
     const myLikes = likesResponse.data as MomentLikeRow[] | null;
     const likeRows = myLikes ?? [];
     const likedSet = new Set<string>(likeRows.map((l) => l.moment_id));
+
+    return moments.map((m) => {
+      const p = profileMap.get(m.user_id);
+      return {
+        ...m,
+        author: {
+          id: p?.id ?? m.user_id,
+          display_name: p?.display_name ?? 'Language Partner',
+          avatar_url: p?.avatar_url ?? null,
+        },
+        is_liked_by_me: likedSet.has(m.id),
+      };
+    });
+  }
+
+  async getQuestions(
+    userId: string,
+    targetLang?: string,
+  ): Promise<MomentRecord[]> {
+    const supabase = this.supabaseService.getClient();
+    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
+
+    let query = supabase
+      .from('moments')
+      .select('*')
+      .eq('post_type', 'question')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (targetLang) {
+      query = query.eq('target_language', targetLang);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new Error(`Failed to fetch questions: ${error.message}`);
+    }
+
+    let moments: MomentRecord[] = (data ?? []) as MomentRecord[];
+
+    if (blockedIds.length > 0) {
+      moments = moments.filter((m) => !blockedIds.includes(m.user_id));
+    }
+
+    if (moments.length === 0) {
+      const generated: MomentRecord[] = [];
+      const eligibleUsers = MOCK_USERS.filter(
+        (u) => !blockedIds.includes(u.id),
+      );
+      for (let i = 0; i < Math.min(eligibleUsers.length, 50); i++) {
+        const u = eligibleUsers[i];
+        generated.push({
+          id: `mock-question-${i}`,
+          user_id: u.id,
+          text_content: null,
+          media_urls: [],
+          media_type: 'none',
+          target_language: targetLang ?? u.target_languages[0],
+          post_type: 'question',
+          question_text: `What does "${['bonjour', 'gracias', 'danke', 'arigato'][i % 4]}" mean? Can anyone help?`,
+          question_options: ['Option A', 'Option B', 'Option C', 'Option D'],
+          correct_answer: 'Option A',
+          likes_count: Math.floor(Math.random() * 50),
+          comments_count: Math.floor(Math.random() * 15),
+          is_pinned: false,
+          created_at: new Date(
+            Date.now() - Math.random() * 86400000 * 3,
+          ).toISOString(),
+          author: {
+            id: u.id,
+            display_name: u.display_name,
+            avatar_url: u.avatar_url,
+          },
+          is_liked_by_me: Math.random() > 0.8,
+        });
+      }
+      return generated.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+    }
+
+    const authorIds = Array.from(new Set(moments.map((m) => m.user_id)));
+    const momentIdsList = moments.map((m) => m.id);
+
+    const profilesResponse = await supabase
+      .from('users')
+      .select('id, display_name, avatar_url')
+      .in('id', authorIds);
+    const profiles = profilesResponse.data as UserProfileRow[] | null;
+    const profileMap = new Map<string, UserProfileRow>();
+    (profiles ?? []).forEach((p) => profileMap.set(p.id, p));
+
+    const likesResponse = await supabase
+      .from('moment_likes')
+      .select('moment_id')
+      .eq('user_id', userId)
+      .in('moment_id', momentIdsList);
+    const myLikes = likesResponse.data as MomentLikeRow[] | null;
+    const likedSet = new Set<string>((myLikes ?? []).map((l) => l.moment_id));
 
     return moments.map((m) => {
       const p = profileMap.get(m.user_id);

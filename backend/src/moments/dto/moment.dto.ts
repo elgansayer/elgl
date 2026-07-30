@@ -27,6 +27,24 @@ export class CreateMomentDto {
   target_language!: string;
 
   @IsOptional()
+  @IsEnum(['moment', 'question'])
+  post_type?: 'moment' | 'question';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  question_text?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  question_options?: string[];
+
+  @IsOptional()
+  @IsString()
+  correct_answer?: string;
+
+  @IsOptional()
   @IsString()
   voice_note_url?: string;
 }

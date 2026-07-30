@@ -26,6 +26,10 @@ export interface MomentRecord {
   media_urls?: string[];
   media_type: 'none' | 'images' | 'audio';
   target_language: string;
+  post_type?: 'moment' | 'question';
+  question_text?: string;
+  question_options?: string[];
+  correct_answer?: string;
   is_pinned: boolean;
   likes_count: number;
   comments_count: number;

@@ -83,6 +83,15 @@ export class MomentsController {
     return await this.momentsService.getFeed(user.id, activeFilter, lang);
   }
 
+  @Get('questions')
+  async getQuestions(
+    @CurrentUser() user: User | null,
+    @Query('lang') lang?: string,
+  ): Promise<MomentRecord[]> {
+    if (!user) return [];
+    return await this.momentsService.getQuestions(user.id, lang);
+  }
+
   @Post(':id/like')
   async likeMoment(
     @CurrentUser() user: User | null,
