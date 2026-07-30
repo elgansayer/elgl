@@ -99,4 +99,29 @@ export class DiscoveryService {
     // Return enriched array, but keep the same UserProfile type (extra property is allowed in structural typing)
     return enriched;
   }
+
+  async getAudioIntros(filters?: SearchFilterParams): Promise<UserProfile[]> {
+    let params = new HttpParams();
+    if (filters?.native_languages) params = params.set('native_languages', filters.native_languages);
+    if (filters?.target_language) params = params.set('target_language', filters.target_language);
+    const users = await firstValueFrom(
+      this.http
+        .get<UserProfile[]>(`${this.baseUrl}/audio-intros`, {
+          headers: this.getHeaders(),
+          params,
+        })
+        .pipe(catchError(() => of([] as UserProfile[]))),
+    );
+    const currentUser = this.authService.currentUser();
+    let filtered = users;
+    if (currentUser?.id) {
+      const blockedIds = await this.safetyService
+        .getBlockedAndBlockerIds(currentUser.id)
+        .catch((): string[] => []);
+      if (blockedIds.length > 0) {
+        filtered = filtered.filter((user) => !blockedIds.includes(user.id));
+      }
+    }
+    return filtered;
+  }
 }

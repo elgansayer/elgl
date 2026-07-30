@@ -374,6 +374,69 @@ export class DiscoveryService {
     return enrich(filtered);
   }
 
+  async getAudioIntros(
+    currentUserId: string,
+    currentUserProfile: UserProfile | null,
+    query: SearchQueryDto,
+  ): Promise<UserProfile[]> {
+    const supabase = this.supabaseService.getClient();
+    const blockedIds =
+      await this.safetyService.getBlockedAndBlockerIds(currentUserId);
+
+    let queryBuilder = supabase
+      .from('users')
+      .select(
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at',
+      )
+      .neq('id', currentUserId)
+      .eq('privacy_hide_from_search', false)
+      .not('audio_intro_url', 'is', null)
+      .neq('audio_intro_url', '');
+
+    if (blockedIds.length > 0) {
+      queryBuilder = queryBuilder.not('id', 'in', blockedIds);
+    }
+
+    if (query.native_languages) {
+      queryBuilder = queryBuilder.contains('native_languages', [
+        query.native_languages,
+      ]);
+    }
+
+    if (query.target_language) {
+      queryBuilder = queryBuilder.contains('target_languages', [
+        query.target_language,
+      ]);
+    }
+
+    if (query.serious_learner_only) {
+      queryBuilder = queryBuilder
+        .gt('study_streak_days', 7)
+        .gte('correction_ratio', 0.8);
+    }
+
+    if (query.level) {
+      queryBuilder = queryBuilder.eq('proficiency_level', query.level);
+    }
+
+    if (query.age_min !== undefined) {
+      queryBuilder = queryBuilder.gte('age', query.age_min);
+    }
+    if (query.age_max !== undefined) {
+      queryBuilder = queryBuilder.lte('age', query.age_max);
+    }
+
+    const response = await queryBuilder.limit(50);
+    if (response.error || !response.data) {
+      return [];
+    }
+    let results = response.data as UserProfile[];
+    if (blockedIds.length > 0) {
+      results = results.filter((u) => !blockedIds.includes(u.id));
+    }
+    return results;
+  }
+
   private async filterByVoiceRoomActive(
     users: UserProfile[],
     voiceRoomActive: boolean,

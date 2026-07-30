@@ -29,4 +29,14 @@ export class DiscoveryController {
   async getPartnerOfWeek(): Promise<string[]> {
     return this.discoveryService.getPartnerOfWeekIds();
   }
+
+  @Get('audio-intros')
+  async getAudioIntros(
+    @CurrentUser() user: User | null,
+    @Query() query: SearchQueryDto,
+  ): Promise<UserProfile[]> {
+    if (!user) return [];
+    const profile = await this.usersService.getProfile(user.id);
+    return this.discoveryService.getAudioIntros(user.id, profile, query);
+  }
 }
