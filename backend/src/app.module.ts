@@ -48,6 +48,8 @@ import { CulturalModule } from './cultural/cultural.module';
 import { DailyTipModule } from './daily-tip/daily-tip.module';
 import { LanguageChallengesModule } from './language-challenges/language-challenges.module';
 import { PronunciationModule } from './pronunciation/pronunciation.module';
+import { MilestonesModule } from './milestones/milestones.module';
+import { StudyBuddiesModule } from './study-buddies/study-buddies.module';
 import { validationSchema } from './config/validation.schema';
 
 @Module({
@@ -114,6 +116,8 @@ import { validationSchema } from './config/validation.schema';
     PronunciationModule,
     GroupsModule,
     ShoppingModule,
+    MilestonesModule,
+    StudyBuddiesModule,
   ],
   controllers: [AppController],
   providers: [

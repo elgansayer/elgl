@@ -1,6 +1,8 @@
 import { Routes } from '@angular/router';
 import { DiscoveryComponent } from './components/discovery/discovery.component';
 import { adminGuard } from './guards/admin.guard';
+import { MilestoneComponent } from './components/milestone/milestone.component';
+import { StudyBuddyComponent } from './components/study-buddy/study-buddy.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -336,5 +338,15 @@ export const routes: Routes = [
         (m) => m.DeviceTransferComponent,
       ),
     title: 'Device Transfer - HelloTalk',
+  },
+  {
+    path: 'milestones',
+    component: MilestoneComponent,
+    title: 'Milestones - HelloTalk',
+  },
+  {
+    path: 'study-buddy',
+    component: StudyBuddyComponent,
+    title: 'Study Buddy Matching - HelloTalk',
   },
 ];
