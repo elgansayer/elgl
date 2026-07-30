@@ -47,6 +47,7 @@ import { AchievementsModule } from './achievements/achievements.module';
 import { CulturalModule } from './cultural/cultural.module';
 import { DailyTipModule } from './daily-tip/daily-tip.module';
 import { LanguageChallengesModule } from './language-challenges/language-challenges.module';
+import { PronunciationModule } from './pronunciation/pronunciation.module';
 import { validationSchema } from './config/validation.schema';
 
 @Module({
@@ -110,6 +111,7 @@ import { validationSchema } from './config/validation.schema';
     DailyTipModule,
     CorrectorScoreModule,
     LanguageChallengesModule,
+    PronunciationModule,
     GroupsModule,
     ShoppingModule,
   ],
