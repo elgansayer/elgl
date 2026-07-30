@@ -36,6 +36,14 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'notification-preferences',
+    loadComponent: () =>
+      import('./components/notification-preferences/notification-preferences.component').then(
+        (m) => m.NotificationPreferencesComponent,
+      ),
+    title: 'Notification Preferences - HelloTalk',
+  },
+  {
     path: 'audio-rooms',
     loadComponent: () =>
       import('./components/audio-room/audio-room.component').then((m) => m.AudioRoomComponent),

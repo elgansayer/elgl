@@ -1,4 +1,4 @@
-import { Injectable, isDevMode } from '@angular/core';
+import { Injectable } from '@angular/core';
 
 export type HapticIntensity = 'light' | 'medium' | 'heavy' | 'selection';
 

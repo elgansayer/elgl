@@ -1,9 +1,13 @@
-import { Directive, HostListener, inject, input, ElementRef } from '@angular/core';
+import { Directive, inject, input, ElementRef } from '@angular/core';
 import { FlashcardService } from './flashcard.service';
 
 @Directive({
   selector: '[appFlashcardContextMenu]',
   standalone: true,
+  host: {
+    '(contextmenu)': 'onContextMenu($event)',
+    '(touchstart)': 'onTouchStart($event)',
+  },
 })
 export class FlashcardContextMenuDirective {
   /** Source language of the selected text (could be read from a data attribute or input). */
@@ -14,7 +18,6 @@ export class FlashcardContextMenuDirective {
 
   private overlay: HTMLElement | null = null;
 
-  @HostListener('contextmenu', ['$event'])
   onContextMenu(event: MouseEvent): void {
     event.preventDefault();
     this.removeOverlay();
@@ -34,7 +37,6 @@ export class FlashcardContextMenuDirective {
     this.showOverlay(event.clientX, event.clientY, selectedText, contextText, lang);
   }
 
-  @HostListener('touchstart', ['$event'])
   onTouchStart(_event: TouchEvent): void {
     /* long-press detection could be added later */
   }
@@ -65,8 +67,11 @@ export class FlashcardContextMenuDirective {
     document.body.appendChild(div);
 
     const closeHandler: EventListener = (e: Event) => {
-      const clickTarget = e.target as Node;
-      if (!div.contains(clickTarget)) {
+      const target = e.target;
+      if (!target || !(target instanceof Node)) {
+        return;
+      }
+      if (!div.contains(target)) {
         document.removeEventListener('click', closeHandler);
         this.removeOverlay();
       }

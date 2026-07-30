@@ -1,207 +1,240 @@
 import { Component, inject, signal, resource } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { NgOptimizedImage } from '@angular/common';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
 import {
   NotificationPreferencesService,
   NotificationPreferences,
+  CategoryPreference,
   NotificationCategory,
   NotificationChannel,
 } from '../../services/notification-preferences.service';
-import { showToast } from '../../services/toast.service';
-
-interface CategoryInfo {
-  key: NotificationCategory;
-  label: string;
-  description: string;
-  icon: string;
-}
 
 @Component({
   selector: 'app-notification-preferences',
-  imports: [FormsModule],
-  templateUrl: './notification-preferences.component.html',
-  styleUrls: ['./notification-preferences.component.scss'],
+  standalone: true,
+  imports: [NgOptimizedImage, TranslatePipe],
+  template: `
+    <div class="surface p-4 rounded-lg max-w-2xl mx-auto">
+      <h2 class="text-xl font-bold mb-4">{{ 'notification_preferences.title' | t }}</h2>
+
+      @if (loading()) {
+        <div class="text-center py-8">{{ 'common.loading' | t }}</div>
+      } @else if (error()) {
+        <div class="text-red-400">{{ 'common.error_generic' | t }}</div>
+      } @else {
+        @for (cat of categories(); track cat) {
+          <div class="flex items-center justify-between py-3 border-b border-slate-700">
+            <span class="text-sm font-medium">{{ categoryLabel(cat) | t }}</span>
+            <div class="flex gap-4">
+              @for (ch of channels; track ch) {
+                <label class="flex items-center gap-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    [checked]="channelEnabled(cat, ch)"
+                    (change)="toggle(cat, ch)"
+                    class="form-checkbox"
+                  />
+                  <span class="text-xs">{{ channelLabel(ch) | t }}</span>
+                </label>
+              }
+            </div>
+          </div>
+        }
+
+        <div class="mt-6 pt-4 border-t border-slate-700">
+          <label class="flex items-center gap-2 mb-4">
+            <input
+              type="checkbox"
+              [checked]="doNotDisturb()"
+              (change)="toggleDnd()"
+              class="form-checkbox"
+            />
+            <span>{{ 'notification_preferences.do_not_disturb' | t }}</span>
+          </label>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs mb-1">{{ 'notification_preferences.quiet_hours_start' | t }}</label>
+              <input
+                type="time"
+                [value]="quietStart()"
+                (input)="updateQuietStart($event)"
+                class="input w-full"
+              />
+            </div>
+            <div>
+              <label class="block text-xs mb-1">{{ 'notification_preferences.quiet_hours_end' | t }}</label>
+              <input
+                type="time"
+                [value]="quietEnd()"
+                (input)="updateQuietEnd($event)"
+                class="input w-full"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 flex gap-3">
+          <button type="button" (click)="reset()" class="btn-secondary px-4 py-2">
+            {{ 'common.reset' | t }}
+          </button>
+          <button type="button" (click)="save()" class="btn-primary px-4 py-2">
+            {{ 'common.save' | t }}
+          </button>
+        </div>
+      }
+    </div>
+  `,
 })
 export class NotificationPreferencesComponent {
-  private readonly prefsService = inject(NotificationPreferencesService);
+  private service = inject(NotificationPreferencesService);
+  private i18n = inject(I18nService);
 
-  readonly preferences = signal<NotificationPreferences | null>(null);
+  readonly channels: NotificationChannel[] = ['push', 'email', 'in_app'];
+
+  private prefs = signal<NotificationPreferences | null>(null);
   readonly loading = signal(true);
-  readonly saving = signal(false);
-  readonly quietHoursStart = signal<string>('22:00');
-  readonly quietHoursEnd = signal<string>('08:00');
+  readonly error = signal<string | null>(null);
 
-  readonly categories: CategoryInfo[] = [
-    {
-      key: 'new_message',
-      label: 'New Messages',
-      description: 'When someone sends you a direct message',
-      icon: '💬',
-    },
-    {
-      key: 'call_invite',
-      label: 'Call Invites',
-      description: 'When someone invites you to a voice or video call',
-      icon: '📞',
-    },
-    {
-      key: 'moment_like',
-      label: 'Moment Likes',
-      description: 'When someone likes your moments',
-      icon: '❤️',
-    },
-    {
-      key: 'moment_comment',
-      label: 'Moment Comments',
-      description: 'When someone comments on your moments',
-      icon: '💭',
-    },
-    {
-      key: 'correction',
-      label: 'Corrections',
-      description: 'When someone corrects your language',
-      icon: '✏️',
-    },
-    {
-      key: 'gift',
-      label: 'Virtual Gifts',
-      description: 'When someone sends you a virtual gift',
-      icon: '🎁',
-    },
-    {
-      key: 'profile_view',
-      label: 'Profile Views',
-      description: 'When someone views your profile',
-      icon: '👁️',
-    },
-    {
-      key: 'study_reminder',
-      label: 'Study Reminders',
-      description: 'Daily reminders to practice your languages',
-      icon: '📚',
-    },
-    {
-      key: 'friend_request',
-      label: 'Friend Requests',
-      description: 'When someone sends you a friend request',
-      icon: '🤝',
-    },
-    {
-      key: 'audio_room_invite',
-      label: 'Audio Room Invites',
-      description: 'When you are invited to join an audio room',
-      icon: '🎙️',
-    },
-  ];
+  readonly categories = signal<NotificationCategory[]>([
+    'new_message',
+    'call_invite',
+    'moment_like',
+    'moment_comment',
+    'correction',
+    'gift',
+    'profile_view',
+    'study_reminder',
+    'friend_request',
+    'audio_room_invite',
+    'new_follower',
+  ]);
 
-  readonly channels: { key: NotificationChannel; label: string }[] = [
-    { key: 'push', label: 'Push' },
-    { key: 'email', label: 'Email' },
-    { key: 'in_app', label: 'In-App' },
-  ];
+  readonly doNotDisturb = signal(false);
+  readonly quietStart = signal('');
+  readonly quietEnd = signal('');
 
-  private prefsLoader = resource({
+  private readonly prefsResource = resource({
     loader: async () => {
       this.loading.set(true);
+      this.error.set(null);
       try {
-        const prefs = await this.prefsService.getPreferences();
-        this.preferences.set(prefs);
-        if (prefs.quiet_hours_start) this.quietHoursStart.set(prefs.quiet_hours_start);
-        if (prefs.quiet_hours_end) this.quietHoursEnd.set(prefs.quiet_hours_end);
-        return prefs;
-      } catch (err) {
-        console.error('Failed to load notification preferences', err);
-        showToast('Failed to load notification preferences', 'error', 3000);
-        return null;
+        const prefs = await this.service.getPreferences();
+        this.prefs.set(prefs);
+        this.doNotDisturb.set(prefs.do_not_disturb);
+        this.quietStart.set(prefs.quiet_hours_start ?? '');
+        this.quietEnd.set(prefs.quiet_hours_end ?? '');
+      } catch {
+        this.error.set(this.i18n.translate('common.error_generic'));
       } finally {
         this.loading.set(false);
       }
+      return this.prefs();
     },
   });
 
-  async toggleChannel(category: NotificationCategory, channel: NotificationChannel): Promise<void> {
-    const prefs = this.preferences();
-    if (!prefs) return;
+  constructor() {
+    this.prefsResource.reload();
+  }
 
-    const currentValue = prefs[category][channel];
-    this.saving.set(true);
-
-    try {
-      const updated = await this.prefsService.toggleCategoryChannel(
-        category,
-        channel,
-        !currentValue,
-        prefs,
-      );
-      this.preferences.set(updated);
-    } catch (err) {
-      console.error('Failed to update preference', err);
-      showToast('Failed to update notification preference', 'error', 3000);
-    } finally {
-      this.saving.set(false);
+  private categoryPref(cat: NotificationCategory): CategoryPreference | undefined {
+    const p = this.prefs();
+    if (!p) return undefined;
+    // explicit switch to avoid any / type assertion
+    switch (cat) {
+      case 'new_message': return p.new_message;
+      case 'call_invite': return p.call_invite;
+      case 'moment_like': return p.moment_like;
+      case 'moment_comment': return p.moment_comment;
+      case 'correction': return p.correction;
+      case 'gift': return p.gift;
+      case 'profile_view': return p.profile_view;
+      case 'study_reminder': return p.study_reminder;
+      case 'friend_request': return p.friend_request;
+      case 'audio_room_invite': return p.audio_room_invite;
+      case 'new_follower': return p.new_follower;
+      default: return undefined;
     }
   }
 
-  async toggleDoNotDisturb(): Promise<void> {
-    const prefs = this.preferences();
-    if (!prefs) return;
+  channelEnabled(cat: NotificationCategory, ch: NotificationChannel): boolean {
+    const cp = this.categoryPref(cat);
+    if (!cp) return false;
+    return cp[ch];
+  }
 
-    const newValue = !prefs.do_not_disturb;
-    this.saving.set(true);
+  categoryLabel(cat: NotificationCategory): string {
+    return `notification_preferences.category.${cat}`;
+  }
 
-    try {
-      const updated = await this.prefsService.toggleDoNotDisturb(
-        newValue,
-        newValue ? this.quietHoursStart() : undefined,
-        newValue ? this.quietHoursEnd() : undefined,
-      );
-      this.preferences.set(updated);
-      showToast(newValue ? 'Do Not Disturb enabled' : 'Do Not Disturb disabled', 'success', 2000);
-    } catch (err) {
-      console.error('Failed to update Do Not Disturb', err);
-      showToast('Failed to update Do Not Disturb setting', 'error', 3000);
-    } finally {
-      this.saving.set(false);
+  channelLabel(ch: NotificationChannel): string {
+    return `notification_preferences.channel.${ch}`;
+  }
+
+  toggle(cat: NotificationCategory, ch: NotificationChannel): void {
+    const cp = this.categoryPref(cat);
+    if (!cp) return;
+    const newVal = !cp[ch];
+    this.service.toggleCategoryChannel(cat, ch, newVal, this.prefs()!).then((updated) => {
+      this.prefs.set(updated);
+      this.doNotDisturb.set(updated.do_not_disturb);
+      this.quietStart.set(updated.quiet_hours_start ?? '');
+      this.quietEnd.set(updated.quiet_hours_end ?? '');
+    }).catch(() => {
+      this.error.set(this.i18n.translate('common.error_generic'));
+    });
+  }
+
+  toggleDnd(): void {
+    const p = this.prefs();
+    if (!p) return;
+    const newVal = !p.do_not_disturb;
+    this.service.toggleDoNotDisturb(newVal, this.quietStart(), this.quietEnd()).then((updated) => {
+      this.prefs.set(updated);
+      this.doNotDisturb.set(updated.do_not_disturb);
+      this.quietStart.set(updated.quiet_hours_start ?? '');
+      this.quietEnd.set(updated.quiet_hours_end ?? '');
+    }).catch(() => {
+      this.error.set(this.i18n.translate('common.error_generic'));
+    });
+  }
+
+  updateQuietStart(event: Event): void {
+    const target = event.target;
+    if (target instanceof HTMLInputElement) {
+      this.quietStart.set(target.value);
     }
   }
 
-  async updateQuietHours(): Promise<void> {
-    const prefs = this.preferences();
-    if (!prefs || !prefs.do_not_disturb) return;
-
-    this.saving.set(true);
-    try {
-      const updated = await this.prefsService.toggleDoNotDisturb(
-        true,
-        this.quietHoursStart(),
-        this.quietHoursEnd(),
-      );
-      this.preferences.set(updated);
-      showToast('Quiet hours updated', 'success', 2000);
-    } catch (err) {
-      console.error('Failed to update quiet hours', err);
-      showToast('Failed to update quiet hours', 'error', 3000);
-    } finally {
-      this.saving.set(false);
+  updateQuietEnd(event: Event): void {
+    const target = event.target;
+    if (target instanceof HTMLInputElement) {
+      this.quietEnd.set(target.value);
     }
   }
 
-  async resetToDefaults(): Promise<void> {
-    this.saving.set(true);
-    try {
-      const prefs = await this.prefsService.resetToDefaults();
-      this.preferences.set(prefs);
-      showToast('Notification preferences reset to defaults', 'success', 2000);
-    } catch (err) {
-      console.error('Failed to reset preferences', err);
-      showToast('Failed to reset preferences', 'error', 3000);
-    } finally {
-      this.saving.set(false);
-    }
+  reset(): void {
+    this.service.resetToDefaults().then((updated) => {
+      this.prefs.set(updated);
+      this.doNotDisturb.set(updated.do_not_disturb);
+      this.quietStart.set(updated.quiet_hours_start ?? '');
+      this.quietEnd.set(updated.quiet_hours_end ?? '');
+    }).catch(() => {
+      this.error.set(this.i18n.translate('common.error_generic'));
+    });
   }
 
-  isChannelEnabled(category: NotificationCategory, channel: NotificationChannel): boolean {
-    const prefs = this.preferences();
-    if (!prefs) return false;
-    return prefs[category][channel];
+  save(): void {
+    const p = this.prefs();
+    if (!p) return;
+    this.service.updatePreferences(p).then((updated) => {
+      this.prefs.set(updated);
+      this.doNotDisturb.set(updated.do_not_disturb);
+      this.quietStart.set(updated.quiet_hours_start ?? '');
+      this.quietEnd.set(updated.quiet_hours_end ?? '');
+    }).catch(() => {
+      this.error.set(this.i18n.translate('common.error_generic'));
+    });
   }
 }

@@ -1,0 +1,69 @@
+import { Injectable } from '@nestjs/common';
+import { SupabaseService } from '../supabase/supabase.service';
+import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
+
+@Injectable()
+export class NotificationPreferencesService {
+  private readonly table = 'notification_preferences';
+
+  constructor(private readonly supabaseService: SupabaseService) {}
+
+  async getPreferences(userId: string): Promise<any> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from(this.table)
+      .select('*')
+      .eq('userId', userId)
+      .single();
+    // Not found case
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+    if (!data) {
+      return this.getDefaultPreferences(userId);
+    }
+    return data;
+  }
+
+  async updatePreferences(
+    userId: string,
+    dto: UpdateNotificationPreferencesDto,
+  ): Promise<any> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from(this.table)
+      .upsert({ userId, ...dto, updatedAt: new Date().toISOString() })
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  async resetToDefaults(userId: string): Promise<any> {
+    const defaults = this.getDefaultPreferences(userId);
+    return this.updatePreferences(userId, defaults);
+  }
+
+  private getDefaultPreferences(userId: string) {
+    const defaultCategory = { push: false, email: false, in_app: true };
+    return {
+      userId,
+      new_message: { ...defaultCategory },
+      call_invite: { ...defaultCategory },
+      moment_like: { ...defaultCategory },
+      moment_comment: { ...defaultCategory },
+      correction: { ...defaultCategory },
+      gift: { ...defaultCategory },
+      profile_view: { ...defaultCategory },
+      study_reminder: { ...defaultCategory },
+      friend_request: { ...defaultCategory },
+      audio_room_invite: { ...defaultCategory },
+      new_follower: { ...defaultCategory },
+      quiet_hours_start: null,
+      quiet_hours_end: null,
+      do_not_disturb: false,
+      customToneUrl: null,
+      vibrationPattern: null,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+}

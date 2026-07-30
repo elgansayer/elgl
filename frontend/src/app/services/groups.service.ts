@@ -54,9 +54,9 @@ export class GroupsService {
     );
   }
 
-  getAnnouncements(groupId: string): Promise<any[]> {
+  getAnnouncements(groupId: string): Promise<unknown[]> {
     return firstValueFrom(
-      this.http.get<any[]>(`${this.apiUrl}/${groupId}/announcements`),
+      this.http.get<unknown[]>(`${this.apiUrl}/${groupId}/announcements`),
     );
   }
 

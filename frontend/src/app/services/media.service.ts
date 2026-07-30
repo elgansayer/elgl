@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -11,9 +11,8 @@ export interface AvatarUploadResponse {
   providedIn: 'root',
 })
 export class MediaService {
+  private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiUrl}/media`;
-
-  constructor(private readonly http: HttpClient) {}
 
   async uploadAvatar(file: File): Promise<AvatarUploadResponse> {
     const formData = new FormData();

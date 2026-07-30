@@ -55,6 +55,7 @@ import { StatsModule } from './stats/stats.module';
 import { ScheduledDeletionModule } from './scheduled-deletion/scheduled-deletion.module';
 import { EventsModule } from './events/events.module';
 import { WordOfTheDayModule } from './word-of-the-day/word-of-the-day.module';
+import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
 import { validationSchema } from './config/validation.schema';
 
 @Module({
@@ -127,6 +128,7 @@ import { validationSchema } from './config/validation.schema';
     StatsModule,
     ScheduledDeletionModule,
     EventsModule,
+    NotificationPreferencesModule,
     ModerationModule,
     WordOfTheDayModule,
   ],
