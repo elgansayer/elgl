@@ -57,3 +57,5 @@ qa_aider.log
 test_errors.log
 ux_capture.log
 
+
+node_modules
