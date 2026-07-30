@@ -44,7 +44,9 @@
 
   <!-- Main Content Area (padding-bottom to account for bottom nav) -->
   <main class="flex-1 pb-[72px]">
-    <router-outlet></router-outlet>
+    <div [@routeAnimations]="prepareRoute()">
+      <router-outlet />
+    </div>
   </main>
 
   <!-- Mobile Bottom Navigation Bar -->
@@ -62,7 +64,7 @@
             <span
               class="absolute -top-1 -end-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
             >
-              {{ totalUnread() > 99 ? '99+' : totalUnread() }}
+              {{ unreadDisplayValue() }}
             </span>
           }
         </div>

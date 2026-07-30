@@ -6,6 +6,7 @@ import { CentrifugeService } from './services/centrifuge.service';
 import { FcmService } from './services/fcm.service';
 import { SafetyService } from './services/safety.service';
 import { TranslatePipe } from './services/translate.pipe';
+import { routeAnimations } from './animations/route.animations';
 import {
   IncomingCallModalComponent,
   IncomingCallData,
@@ -38,6 +39,7 @@ import { FontScaleService } from './services/font-scale.service';
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
+  animations: [routeAnimations],
 })
 export class AppComponent implements OnInit {
   title = 'HelloTalk Clone';
@@ -51,6 +53,16 @@ export class AppComponent implements OnInit {
   private versionCheckService = inject(VersionCheckService);
   readonly fontScaleService = inject(FontScaleService);
   readonly totalUnread = computed(() => this.unreadCounter.totalUnread());
+
+  readonly unreadDisplayValue = computed(() =>
+    this.totalUnread() > 99 ? '99+' : String(this.totalUnread()),
+  );
+
+  private routerOutlet = viewChild.required(RouterOutlet);
+
+  protected prepareRoute(): string {
+    return this.routerOutlet()?.activatedRouteData?.['animation'] ?? 'default';
+  }
 
   // Incoming call state
   readonly incomingCallData = signal<IncomingCallData | null>(null);
