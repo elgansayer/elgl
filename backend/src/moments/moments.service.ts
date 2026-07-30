@@ -176,6 +176,10 @@ export class MomentsService {
     // 1) Get blocked+blocker user IDs (bidirectional)
     const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
 
+    // 2) Get current user's native language for targeted visibility routing
+    const profile = await this.usersService.getProfile(userId);
+    const userNativeLang = profile?.native_languages?.[0] ?? null;
+
     let moments: MomentRecord[] = [];
 
     if (filter === 'Following') {
@@ -226,6 +230,14 @@ export class MomentsService {
       if (data) moments = data as MomentRecord[];
     }
 
+    // Apply targeted visibility for non-Classmates filters: only show moments
+    // whose target_language matches the current user's native language.
+    if (filter !== 'Classmates' && userNativeLang) {
+      moments = moments.filter(
+        (m) => !m.target_language || m.target_language === userNativeLang,
+      );
+    }
+
     // Filter out blocked users
     if (blockedIds.length > 0) {
       moments = moments.filter((m) => !blockedIds.includes(m.user_id));
@@ -266,6 +278,18 @@ export class MomentsService {
       // Filter the generated mock data same as DB query
       if (filter === 'Classmates' && targetLang) {
         return generated.filter((m) => m.target_language === targetLang);
+      }
+      // Targeted visibility for 'All' filter
+      if (filter === 'All' && userNativeLang) {
+        generated = generated.filter(
+          (m) => !m.target_language || m.target_language === userNativeLang,
+        );
+      }
+      // Targeted visibility for 'Following' filter
+      if (filter === 'Following' && userNativeLang) {
+        generated = generated.filter(
+          (m) => !m.target_language || m.target_language === userNativeLang,
+        );
       }
       return generated.sort(
         (a, b) =>
