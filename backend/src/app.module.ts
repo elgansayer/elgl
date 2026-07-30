@@ -44,6 +44,7 @@ import { CorrectorScoreModule } from './corrector-score/corrector-score.module';
 import { AchievementsModule } from './achievements/achievements.module';
 import { CulturalModule } from './cultural/cultural.module';
 import { DailyTipModule } from './daily-tip/daily-tip.module';
+import { LanguageChallengesModule } from './language-challenges/language-challenges.module';
 import { validationSchema } from './config/validation.schema';
 
 @Module({
@@ -106,6 +107,7 @@ import { validationSchema } from './config/validation.schema';
     CulturalModule,
     DailyTipModule,
     CorrectorScoreModule,
+    LanguageChallengesModule,
   ],
   controllers: [AppController],
   providers: [

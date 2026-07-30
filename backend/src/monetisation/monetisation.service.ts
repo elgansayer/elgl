@@ -436,4 +436,31 @@ export class MonetisationService {
     const balance = user.coins_balance ?? 0;
     return balance;
   }
+
+  async addCoins(userId: string, amount: number): Promise<number> {
+    const supabase = this.supabaseService.getClient();
+    const { data: user, error: fetchError } = await supabase
+      .from('users')
+      .select('coins_balance')
+      .eq('id', userId)
+      .single();
+    if (fetchError || !user) {
+      throw new Error(
+        `Failed to fetch user balance: ${fetchError?.message ?? 'user not found'}`,
+      );
+    }
+    const currentBalance = user.coins_balance ?? 0;
+    const newBalance = currentBalance + amount;
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ coins_balance: newBalance })
+      .eq('id', userId);
+    if (updateError) {
+      throw new Error(`Failed to add coins: ${updateError.message}`);
+    }
+    this.logger.log(
+      `Added ${amount} coins to user ${userId}, new balance ${newBalance}`,
+    );
+    return newBalance;
+  }
 }
