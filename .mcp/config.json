@@ -13,9 +13,9 @@
       "args": [
         "-y",
         "@modelcontextprotocol/server-filesystem",
-        "/home/elgan/dev/hellotalk/frontend",
-        "/home/elgan/dev/hellotalk/backend",
-        "/home/elgan/dev/hellotalk/supabase"
+        "/home/dev/hellotalk/frontend",
+        "/home/dev/hellotalk/backend",
+        "/home/dev/hellotalk/supabase"
       ]
     },
     "git": {
@@ -24,7 +24,7 @@
         "-y",
         "@modelcontextprotocol/server-git",
         "--repository",
-        "/home/elgan/dev/hellotalk"
+        "/home/dev/hellotalk"
       ]
     },
     "flyonui": {

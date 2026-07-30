@@ -57,7 +57,7 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 
 ## Engineering Constitution & Project Mandates
 
-In addition to the Angular and TypeScript best practices above, you must adhere to the global Engineering Constitution located at `/home/elgan/dev/hellotalk/AGENTS.md` (or parent directory `../AGENTS.md`):
+In addition to the Angular and TypeScript best practices above, you must adhere to the global Engineering Constitution located at `AGENTS.md` (in the project root):
 
 - **British English:** Always use British English spelling (`colour`, `favourite`, `monetisation`, `tokenise`, etc.).
 - **Banned Punctuation:** Never use an em dash in code, comments, or documentation. Use standard hyphens or colons instead.

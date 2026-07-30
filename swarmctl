@@ -2,13 +2,20 @@
 # swarmctl - Unified CLI for the HelloTalk AI Swarm.
 #
 # Usage:
-#   ./swarmctl start    - Launch the swarm (kill stale processes, spawn tmux)
-#   ./swarmctl stop     - Gracefully stop all swarm agents
-#   ./swarmctl restart  - Stop then start
-#   ./swarmctl status   - Show swarm health, current task, git status
-#   ./swarmctl logs     - Tail the main loop output (last 50 lines)
-#   ./swarmctl attach   - Attach to the tmux session
-#   ./swarmctl migrate  - Migrate TODO.md tasks to .tasks/ directory
+#   ./swarmctl start           Launch the legacy bash swarm (kickoff.sh)
+#   ./swarmctl stop            Gracefully stop ALL swarm agents (bash + python)
+#   ./swarmctl restart         Stop then start
+#   ./swarmctl status          Show swarm health, current task, git status
+#   ./swarmctl logs            Tail the main loop output (last 50 lines)
+#   ./swarmctl attach          Attach to the tmux session
+#   ./swarmctl migrate         Migrate TODO.md tasks to .tasks/ directory
+#
+#   ./swarmctl daemon-start    Launch swarmd.py as a background daemon
+#   ./swarmctl daemon-stop     Stop the swarmd.py daemon
+#   ./swarmctl daemon-status   Show swarmd.py daemon status
+#   ./swarmctl daemon-logs     Tail swarmd.py daemon logs
+#
+#   ./swarmctl health          Run full health check on all providers/models
 
 export PATH="$HOME/.local/bin:$PATH"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -26,15 +33,22 @@ case "$cmd" in
         exec bash "$SWARM_ROOT/kickoff.sh"
         ;;
     stop)
-        echo "Stopping AI Swarm..."
+        echo "Stopping ALL swarm agents (bash + python)..."
+        # Stop bash swarm (tmux)
         tmux kill-session -t ai_swarm 2>/dev/null || true
         pkill -9 -f "loop.sh" 2>/dev/null || true
         pkill -9 -f "qa-loop.sh" 2>/dev/null || true
         pkill -9 -f "pm-loop.sh" 2>/dev/null || true
         pkill -9 -f "aider" 2>/dev/null || true
         pkill -9 -f "claude" 2>/dev/null || true
+        # Stop python daemon (swarmd.py)
+        pkill -TERM -f "swarmd.py" 2>/dev/null || true
+        sleep 1
+        pkill -9 -f "swarmd.py" 2>/dev/null || true
+        # Clean up coordination lock
+        rm -f /tmp/ai_swarm_coordination.lock
         rm -f /tmp/ai_swarm_state.json
-        echo "Swarm stopped."
+        echo "All swarms stopped. Coordination lock cleared."
         ;;
     restart)
         echo "Restarting AI Swarm..."
@@ -78,6 +92,18 @@ case "$cmd" in
         echo "Last commit:   $(git log -1 --format='%ai %s' 2>/dev/null || echo 'N/A')"
         echo ""
 
+        # Swarmd.py daemon
+        echo ""
+        if pgrep -f "swarmd\.py" >/dev/null 2>&1; then
+            echo "Swarmd daemon:  RUNNING (PID: $(pgrep -f 'swarmd\.py' | head -1))"
+            if [ -f "$SWARM_ROOT/logs/swarmd.log" ]; then
+                echo "  Last log:    $(tail -1 "$SWARM_ROOT/logs/swarmd.log" 2>/dev/null | cut -c1-120)"
+            fi
+        else
+            echo "Swarmd daemon:  STOPPED"
+        fi
+        echo ""
+
         # Disk
         echo "Disk:          $(df -h . 2>/dev/null | awk 'NR==2 {print $3"/"$2" ("$5")"}')"
         echo "Memory:        $(free -h 2>/dev/null | grep Mem | awk '{print $3"/"$2}')"
@@ -102,16 +128,102 @@ case "$cmd" in
         echo "Done. Tasks are now in .tasks/pending/"
         echo "TODO.md is preserved as a human-readable reference."
         ;;
-    *)
-        echo "Usage: $0 {start|stop|restart|status|logs|attach|migrate}"
+    daemon-start)
+        echo "Starting swarmd.py daemon..."
+        if pgrep -f "swarmd\.py" >/dev/null 2>&1; then
+            echo "swarmd.py is already running (PID: $(pgrep -f 'swarmd\.py' | head -1))"
+            exit 1
+        fi
+        mkdir -p "$SWARM_ROOT/logs"
+        nohup python3 "$SWARM_ROOT/swarmd.py" >> "$SWARM_ROOT/logs/swarmd.log" 2>&1 &
+        echo "swarmd.py started (PID: $!)"
+        ;;
+    daemon-stop)
+        echo "Stopping swarmd.py daemon..."
+        pkill -TERM -f "swarmd\.py" 2>/dev/null || true
+        sleep 2
+        pkill -9 -f "swarmd\.py" 2>/dev/null || true
+        rm -f /tmp/ai_swarm_coordination.lock
+        echo "swarmd.py stopped."
+        ;;
+    daemon-status)
+        if pgrep -f "swarmd\.py" >/dev/null 2>&1; then
+            echo "swarmd.py is RUNNING (PID: $(pgrep -f 'swarmd\.py' | head -1))"
+            if [ -f "$SWARM_ROOT/logs/swarmd.log" ]; then
+                echo "--- last 20 log lines ---"
+                tail -20 "$SWARM_ROOT/logs/swarmd.log"
+            fi
+        else
+            echo "swarmd.py is STOPPED"
+        fi
+        ;;
+    daemon-logs)
+        if [ -f "$SWARM_ROOT/logs/swarmd.log" ]; then
+            tail -f "$SWARM_ROOT/logs/swarmd.log"
+        else
+            echo "No swarmd.py logs found."
+        fi
+        ;;
+    health)
+        echo "============================================"
+        echo " AI Swarm Health Check"
+        echo "============================================"
         echo ""
-        echo "  start    Launch the swarm (kill stale processes, spawn tmux)"
-        echo "  stop     Gracefully stop all swarm agents"
-        echo "  restart  Stop then start"
-        echo "  status   Show swarm health, current task, git status"
-        echo "  logs     Tail the main loop output (last 50 lines)"
-        echo "  attach   Attach to the tmux session"
-        echo "  migrate  Migrate TODO.md tasks to .tasks/ directory"
+
+        echo "--- Model Availability ---"
+        for cmd in aider claude agy antigravity; do
+            if command -v "$cmd" &>/dev/null; then
+                echo "  $cmd: FOUND ($(which "$cmd"))"
+            else
+                echo "  $cmd: MISSING"
+            fi
+        done
+
+        echo ""
+        echo "--- API Keys ---"
+        for key in DEEPSEEK_API_KEY OPENAI_API_KEY GEMINI_API_KEY; do
+            if [ -n "${!key:-}" ]; then
+                echo "  $key: SET (${!key:0:8}...)"
+            else
+                echo "  $key: NOT SET"
+            fi
+        done
+
+        echo ""
+        echo "--- Process Status ---"
+        if pgrep -f "swarmd\.py" >/dev/null 2>&1; then
+            echo "  swarmd.py: RUNNING"
+        fi
+        if tmux has-session -t ai_swarm 2>/dev/null; then
+            echo "  bash swarm: RUNNING (tmux)"
+        fi
+        if ! pgrep -f "swarmd\.py" >/dev/null 2>&1 && ! tmux has-session -t ai_swarm 2>/dev/null; then
+            echo "  NO SWARM RUNNING"
+        fi
+
+        echo ""
+        echo "--- Git ---"
+        echo "  Branch: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'N/A')"
+        echo "  Last commit: $(git log -1 --format='%ai %s' 2>/dev/null || echo 'N/A')"
+        echo "  Dirty: $(git status --porcelain 2>/dev/null | wc -l) files"
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status|logs|attach|migrate|daemon-start|daemon-stop|daemon-status|daemon-logs|health}"
+        echo ""
+        echo "  start          Launch the legacy bash swarm (tmux-based)"
+        echo "  stop           Stop ALL swarm agents (bash + python)"
+        echo "  restart        Stop then start"
+        echo "  status         Show full swarm health, task queue, git status"
+        echo "  logs           Tail main loop output (last 50 lines)"
+        echo "  attach         Attach to the tmux session"
+        echo "  migrate        Migrate TODO.md tasks to .tasks/ directory"
+        echo ""
+        echo "  daemon-start   Launch swarmd.py as a background daemon"
+        echo "  daemon-stop    Stop the swarmd.py daemon"
+        echo "  daemon-status  Show swarmd.py daemon status and recent logs"
+        echo "  daemon-logs    Tail swarmd.py daemon logs (follow mode)"
+        echo ""
+        echo "  health         Run full health check on all providers/models"
         exit 1
         ;;
 esac

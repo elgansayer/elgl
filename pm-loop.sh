@@ -1,8 +1,8 @@
 #!/bin/bash
 # pm-loop.sh - GitHub Issue Sync Agent
 #
-# Polls GitHub Issues API and imports new issues into TODO.md.
-# Uses jq for reliable JSON parsing and flock for atomic TODO.md writes.
+# Polls GitHub Issues API and imports new issues into .tasks/pending/.
+# Uses jq for reliable JSON parsing and flock for atomic .tasks/ writes.
 #
 # Env vars: SWARM_REPO_OWNER, SWARM_REPO_NAME, PM_SYNC_INTERVAL, GITHUB_TOKEN
 
@@ -45,7 +45,8 @@ while true; do
     while IFS= read -r title; do
         [ -z "$title" ] && continue
 
-        if grep -qF "$title" TODO.md 2>/dev/null; then
+        # Check .tasks/ for existing task with same title (avoid duplicates)
+        if grep -rqF "$title" "$SWARM_ROOT/.tasks/pending/" "$SWARM_ROOT/.tasks/active/" "$SWARM_ROOT/.tasks/completed/" 2>/dev/null; then
             continue
         fi
 

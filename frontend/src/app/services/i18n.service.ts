@@ -867,6 +867,8 @@ export class I18nService {
     'vip.developerFeature3': '600 RPM rate limit',
     'vip.developerFeature4': 'Advanced analytics',
     'vip.developerFeature5': 'Sandbox environment',
+    'vip.included': 'Included',
+    'vip.notIncluded': 'Not included',
 
     // Report confirm
     'report.confirmMessage': 'Are you sure you want to report this message?',

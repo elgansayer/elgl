@@ -21,6 +21,14 @@ source "$SWARM_ROOT/scripts/swarm-env.sh"
 
 echo "🧹 Shutting down existing agents and terminals..."
 
+# --- Coordination lock: refuse to start if swarmd.py is running ---
+if pgrep -f "swarmd\.py" >/dev/null 2>&1; then
+    echo "ERROR: swarmd.py daemon is already running. Stop it first with:"
+    echo "  ./swarmctl daemon-stop"
+    echo "Or run only one swarm at a time to avoid race conditions."
+    exit 1
+fi
+
 # --- Bootstrap: create directories and cache files ---
 mkdir -p /tmp/ai_swarm_watchdog
 touch /tmp/ai_swarm_watchdog/heartbeat
@@ -104,9 +112,11 @@ echo "🚀 Spawning new isolated terminals for the swarms..."
 tmux new-session -d -s ai_swarm -n "Main_Swarm" \
     "cd $REPO_DIR && bash -c './loop.sh; exec bash'"
 
-# QA Swarm: adversarial E2E testing (DISABLED - resource-heavy, false positives)
-# tmux new-window -t ai_swarm -n "QA_Swarm" \
-#     "cd $REPO_DIR && bash -c './qa-loop.sh; exec bash'"
+# QA Swarm: adversarial E2E testing (runs every QA_SYNC_INTERVAL seconds)
+QA_SYNC_INTERVAL="${QA_SYNC_INTERVAL:-7200}"
+echo "🐛 QA Swarm E2E testing enabled (every ${QA_SYNC_INTERVAL}s)"
+tmux new-window -t ai_swarm -n "QA_Swarm" \
+    "cd $REPO_DIR && bash -c './qa-loop.sh; exec bash'"
 
 # PM Swarm: GitHub issue sync
 tmux new-window -t ai_swarm -n "PM_Swarm" \
