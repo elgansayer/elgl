@@ -56,6 +56,12 @@ export class GroupsService {
     if (dto.can_edit_info !== undefined) {
       updates.can_edit_info = dto.can_edit_info;
     }
+    if (dto.description !== undefined) {
+      updates.description = dto.description;
+    }
+    if (dto.rules !== undefined) {
+      updates.rules = dto.rules;
+    }
     const { error } = await supabase
       .from('groups')
       .update(updates)
@@ -91,7 +97,7 @@ export class GroupsService {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('groups')
-      .select('can_send_messages, can_edit_info')
+      .select('can_send_messages, can_edit_info, description, rules')
       .eq('id', groupId)
       .single();
 

@@ -1633,3 +1633,17 @@
 [2026-07-30T05:47:13Z]   FAIL  backend lint
 [2026-07-30T05:47:48Z]   FAIL  backend test
 [2026-07-30T05:47:48Z] Tests have failures (pre-existing). Committing anyway.
+[2026-07-30T05:47:50Z] Committed: b0f6fbed — feat: Mentioning participants (@mentions).
+[2026-07-30T05:47:50Z] COMPLETED: Mentioning participants (@mentions).
+[2026-07-30T05:47:50Z] Cooldown 15s...
+[2026-07-30T05:48:05Z] Task: Group descriptions and rules.
+[2026-07-30T05:48:05Z] Queue: 108 pending, 104 done, 0 stuck
+[2026-07-30T05:48:05Z] Attempt 1/3
+[2026-07-30T05:48:05Z] Aider pass 1 (discover)...
+[2026-07-30T05:49:05Z] Pass 1: discovered 3 files
+[2026-07-30T05:49:05Z] Aider pass 2 round 1: 3 files in context
+[2026-07-30T05:49:36Z] Pass 2 round 1: produced 2 file changes
+[2026-07-30T05:49:46Z]   FAIL  frontend lint
+[2026-07-30T05:50:28Z]   FAIL  backend lint
+[2026-07-30T05:51:05Z]   FAIL  backend test
+[2026-07-30T05:51:05Z] Tests have failures (pre-existing). Committing anyway.
