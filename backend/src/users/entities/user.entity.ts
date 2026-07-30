@@ -50,6 +50,12 @@ export class User {
   })
   mock_location!: unknown;
 
+  @Column({ type: 'text', nullable: true })
+  mock_country!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  mock_city!: string | null;
+
   @Column({ type: 'boolean', default: false })
   @Index()
   is_vip!: boolean;

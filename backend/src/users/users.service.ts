@@ -299,6 +299,8 @@ export class UsersService {
       incognito_visits: false,
       created_at: new Date().toISOString(),
       scheduled_for_deletion_at: undefined,
+      mock_country: undefined,
+      mock_city: undefined,
       xp_total: 100,
       business_name: 'My Mock Shop',
       business_hours: 'Mon-Fri 9AM-5PM',
@@ -368,6 +370,9 @@ export class UsersService {
       updatePayload.learning_goals = dto.learning_goals;
     if (dto.status_text !== undefined)
       updatePayload.status_text = dto.status_text;
+    if (dto.mock_country !== undefined)
+      updatePayload.mock_country = dto.mock_country;
+    if (dto.mock_city !== undefined) updatePayload.mock_city = dto.mock_city;
 
     if (dto.greeting_message !== undefined)
       updatePayload.greeting_message = dto.greeting_message;

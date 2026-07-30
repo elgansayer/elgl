@@ -15,7 +15,9 @@ export interface UserProfile {
   interests?: string[];
   hobbies?: string[];
   location?: string;
-  mock_location?: string;
+  mock_location?: unknown;
+  mock_country?: string;
+  mock_city?: string;
   message_filters?: {
     age_min?: number;
     age_max?: number;

@@ -181,6 +181,16 @@ export class UpdateProfileDto {
   region?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  mock_country?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  mock_city?: string;
+
+  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(150)

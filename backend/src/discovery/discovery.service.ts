@@ -143,16 +143,36 @@ export class DiscoveryService {
     let searchLat = query.latitude;
     let searchLon = query.longitude;
 
-    const mockLocation = _currentUserProfile?.mock_location as
-      { coordinates?: number[] } | undefined;
-    if (
-      _currentUserProfile?.is_vip &&
-      mockLocation?.coordinates &&
-      Array.isArray(mockLocation.coordinates)
-    ) {
-      const coords = mockLocation.coordinates;
-      searchLon = coords[0];
-      searchLat = coords[1];
+    // Apply VIP location spoofing – override query coordinates with the user’s mock location
+    const profile = _currentUserProfile;
+    if (profile?.is_vip) {
+      const mock: unknown = profile.mock_location;
+      if (
+        mock &&
+        typeof mock === 'object' &&
+        'type' in mock &&
+        'coordinates' in mock
+      ) {
+        const mockObj = mock as { type: string; coordinates: unknown };
+        if (
+          mockObj.type === 'Point' &&
+          Array.isArray(mockObj.coordinates) &&
+          mockObj.coordinates.length === 2
+        ) {
+          const coords = mockObj.coordinates as [number, number];
+          if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+            searchLon = coords[0];
+            searchLat = coords[1];
+          }
+        }
+      }
+      // Apply VIP country/city spoofing
+      if (profile.mock_country) {
+        query.country = profile.mock_country;
+      }
+      if (profile.mock_city) {
+        query.city = profile.mock_city;
+      }
     }
 
     let queryBuilder = supabase
@@ -410,6 +430,16 @@ export class DiscoveryService {
     const supabase = this.supabaseService.getClient();
     const blockedIds =
       await this.safetyService.getBlockedAndBlockerIds(currentUserId);
+
+    // Apply VIP country/city spoofing
+    if (currentUserProfile?.is_vip) {
+      if (currentUserProfile.mock_country) {
+        query.country = currentUserProfile.mock_country;
+      }
+      if (currentUserProfile.mock_city) {
+        query.city = currentUserProfile.mock_city;
+      }
+    }
 
     let queryBuilder = supabase
       .from('users')
