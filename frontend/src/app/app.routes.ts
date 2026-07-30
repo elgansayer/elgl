@@ -424,4 +424,10 @@ export const routes: Routes = [
       import('./components/events-feed/events-feed.component').then((m) => m.EventsFeedComponent),
     title: 'Events - HelloTalk',
   },
+  {
+    path: 'events/calendar',
+    loadComponent: () =>
+      import('./components/events-calendar/events-calendar.component').then((m) => m.EventsCalendarComponent),
+    title: 'Event Calendar - HelloTalk',
+  },
 ];

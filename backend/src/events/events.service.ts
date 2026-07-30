@@ -202,6 +202,47 @@ export class EventsService implements OnModuleInit {
     }));
   }
 
+  async getUserEvents(
+    userId: string,
+    status?: 'upcoming' | 'past',
+  ): Promise<any[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data: rsvps, error: rsvpErr } = await supabase
+      .from('event_rsvps')
+      .select('event_id')
+      .eq('user_id', userId);
+    if (rsvpErr) {
+      this.logger.error('Failed to fetch user RSVPs', rsvpErr);
+      throw rsvpErr;
+    }
+    if (!rsvps || rsvps.length === 0) return [];
+
+    const eventIds = rsvps.map((r: any) => r.event_id);
+    let q = supabase
+      .from('events')
+      .select('*, host:host_id(display_name, avatar_url)')
+      .in('id', eventIds)
+      .order('date_time', { ascending: true });
+
+    const now = new Date().toISOString();
+    if (status === 'past') {
+      q = q.lt('date_time', now);
+    } else {
+      q = q.gte('date_time', now);
+    }
+
+    const { data, error } = await q;
+    if (error) {
+      this.logger.error('Failed to fetch user events', error);
+      throw error;
+    }
+    return (data ?? []).map((ev: any) => ({
+      ...ev,
+      host_name: ev.host?.display_name ?? null,
+      host_avatar_url: ev.host?.avatar_url ?? null,
+    }));
+  }
+
   async getEvent(eventId: string) {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase

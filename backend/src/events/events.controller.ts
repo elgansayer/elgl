@@ -70,4 +70,11 @@ export class EventsController {
     const userId = req.user?.id;
     return this.eventsService.removeRsvp(userId, eventId);
   }
+
+  @UseGuards(SupabaseAuthGuard)
+  @Get('my')
+  async getMyEvents(@Req() req: Request, @Query('status') status?: string) {
+    const userId = req.user?.id;
+    return this.eventsService.getUserEvents(userId, status as any);
+  }
 }

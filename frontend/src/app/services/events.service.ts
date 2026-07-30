@@ -66,4 +66,10 @@ export class EventsService {
   getCategories(): Observable<string[]> {
     return this.http.get<string[]>(`${environment.apiUrl}/events/categories`);
   }
+
+  getMyEvents(status?: string) {
+    const params: Record<string, string> = {};
+    if (status) params['status'] = status;
+    return this.http.get<Event[]>(`${environment.apiUrl}/events/my`, { params });
+  }
 }
