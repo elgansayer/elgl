@@ -2,6 +2,7 @@ import {
   Component,
   OnInit,
   OnDestroy,
+  computed,
   input,
   output,
   signal,
@@ -163,6 +164,30 @@ import { TranslatePipe } from '../../services/translate.pipe';
           }
         </app-button-secondary>
 
+        @if (pipAvailable()) {
+          <app-button-secondary
+            [customClass]="
+              isInPip()
+                ? 'bg-blue-500 hover:bg-blue-600 rounded-full w-14 h-14'
+                : 'bg-white/20 hover:bg-white/30 rounded-full w-14 h-14'
+            "
+            (clicked)="togglePip()"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M15 3h6v6" />
+              <path d="M10 14l11-11" />
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+            </svg>
+          </app-button-secondary>
+        }
+
         <!-- End Call -->
         <app-gradient-button
           size="md"
@@ -221,6 +246,8 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   readonly isAudioMuted = signal(false);
   readonly isVideoMuted = signal(false);
   readonly callDuration = signal('00:00');
+  readonly isInPip = signal(false);
+  readonly pipAvailable = computed(() => typeof document !== 'undefined' && document.pictureInPictureEnabled);
   private callStartTime: number = 0;
   private durationInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -240,6 +267,20 @@ export class VideoCallComponent implements OnInit, OnDestroy {
       if (track && videoEl) {
         track.attach(videoEl);
       }
+    });
+
+    // Listen for Picture‑in‑Picture events on the remote video element
+    effect((onCleanup) => {
+      const videoEl = this.remoteVideoRef()?.nativeElement;
+      if (!videoEl) return;
+      const handleEnter = () => this.isInPip.set(true);
+      const handleLeave = () => this.isInPip.set(false);
+      videoEl.addEventListener('enterpictureinpicture', handleEnter);
+      videoEl.addEventListener('leavepictureinpicture', handleLeave);
+      onCleanup(() => {
+        videoEl.removeEventListener('enterpictureinpicture', handleEnter);
+        videoEl.removeEventListener('leavepictureinpicture', handleLeave);
+      });
     });
   }
 
@@ -345,6 +386,21 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     this.callEnded.emit();
   }
 
+  async togglePip(): Promise<void> {
+    if (!document.pictureInPictureEnabled) return;
+    const videoEl = this.remoteVideoRef()?.nativeElement;
+    if (!videoEl) return;
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else {
+        await videoEl.requestPictureInPicture();
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   private cleanup(): void {
     if (this.durationInterval) {
       clearInterval(this.durationInterval);
@@ -364,6 +420,11 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     if (this.room) {
       this.room.disconnect();
       this.room = null;
+    }
+
+    // Exit Picture‑in‑Picture if active
+    if (document.pictureInPictureElement) {
+      document.exitPictureInPicture().catch(() => {});
     }
 
     this.localVideoTrack.set(null);
