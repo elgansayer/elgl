@@ -23,6 +23,8 @@ export interface NotificationPreferences {
   quiet_hours_start?: string;
   quiet_hours_end?: string;
   do_not_disturb: boolean;
+  customToneUrl?: string;
+  vibrationPattern?: string;
   updatedAt: string;
 }
 

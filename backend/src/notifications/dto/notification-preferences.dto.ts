@@ -82,4 +82,12 @@ export class NotificationPreferencesDto {
   @IsBoolean()
   @IsOptional()
   do_not_disturb?: boolean;
+
+  @IsOptional()
+  @IsString()
+  customToneUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  vibrationPattern?: string;
 }

@@ -24,6 +24,8 @@ interface DbNotificationPreferences {
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
   do_not_disturb: boolean;
+  custom_tone_url: string | null;
+  vibration_pattern: string | null;
   updated_at: string;
 }
 
@@ -55,6 +57,8 @@ export class NotificationPreferencesService {
     quiet_hours_start: undefined,
     quiet_hours_end: undefined,
     do_not_disturb: false,
+    customToneUrl: undefined,
+    vibrationPattern: undefined,
   };
 
   constructor(private readonly supabaseService: SupabaseService) {}
@@ -222,6 +226,14 @@ export class NotificationPreferencesService {
       merged.do_not_disturb = dto.do_not_disturb;
     }
 
+    if (dto.customToneUrl !== undefined) {
+      merged.customToneUrl = dto.customToneUrl;
+    }
+
+    if (dto.vibrationPattern !== undefined) {
+      merged.vibrationPattern = dto.vibrationPattern;
+    }
+
     merged.updatedAt = new Date().toISOString();
     return merged as unknown as NotificationPreferences;
   }
@@ -244,6 +256,8 @@ export class NotificationPreferencesService {
       quiet_hours_start: data.quiet_hours_start ?? undefined,
       quiet_hours_end: data.quiet_hours_end ?? undefined,
       do_not_disturb: data.do_not_disturb,
+      customToneUrl: data.custom_tone_url ?? undefined,
+      vibrationPattern: data.vibration_pattern ?? undefined,
       updatedAt: data.updated_at,
     };
   }
@@ -267,6 +281,8 @@ export class NotificationPreferencesService {
       quiet_hours_start: prefs.quiet_hours_start ?? null,
       quiet_hours_end: prefs.quiet_hours_end ?? null,
       do_not_disturb: prefs.do_not_disturb,
+      custom_tone_url: prefs.customToneUrl ?? null,
+      vibration_pattern: prefs.vibrationPattern ?? null,
       updated_at: new Date().toISOString(),
     };
   }
