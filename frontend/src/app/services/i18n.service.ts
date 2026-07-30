@@ -305,6 +305,20 @@ export class I18nService {
       'This audio/video room has ended and been archived to Cloudflare R2.',
     'audioRoom.raiseHandToast':
       '✋ Hand raised! The host has been notified of your request to speak on stage.',
+    'quickPoll.title': 'Quick Poll',
+    'quickPoll.createBtn': 'Create Poll',
+    'quickPoll.questionPlaceholder': 'Enter your question...',
+    'quickPoll.optionPlaceholder': 'Option',
+    'quickPoll.addOption': '+ Add option',
+    'quickPoll.removeOption': 'Remove',
+    'quickPoll.submitPoll': 'Create Poll',
+    'quickPoll.vote': 'Vote',
+    'quickPoll.resultsTitle': 'Poll Results',
+    'quickPoll.totalVotes': '{{count}} vote(s)',
+    'quickPoll.alreadyVoted': 'You have already voted on this poll.',
+    'quickPoll.noPolls': 'No active polls in this room.',
+    'quickPoll.closePoll': 'Close Poll',
+    'quickPoll.yourVote': 'Your vote',
 
     // Video Room Component (split-screen co-host video layout)
     'videoRoom.hostBadge': 'Host',

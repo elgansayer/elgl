@@ -14,6 +14,8 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { TranscriptEgressService } from './transcript-egress.service';
 import { NlpService } from '../nlp/nlp.service';
+import { CreatePollDto } from './dto/create-poll.dto';
+import { SubmitVoteDto } from './dto/submit-vote.dto';
 import {
   ApproveSpeakerDto,
   ArchiveRoomDto,
@@ -654,6 +656,106 @@ export class AudioRoomsService implements OnModuleInit {
     }
     const rows = data as Array<{ host_id: string }>;
     return [...new Set(rows.map((r) => r.host_id))];
+  }
+
+  async createPoll(
+    hostId: string,
+    roomId: string,
+    dto: CreatePollDto,
+  ): Promise<{ poll_id: string }> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('quick_polls')
+      .insert({
+        room_id: roomId,
+        host_id: hostId,
+        question: dto.question,
+        options: dto.options,
+      })
+      .select('id')
+      .single();
+    if (error || !data) {
+      throw new Error(`Failed to create poll: ${error?.message ?? 'Unknown'}`);
+    }
+    void this.centrifugoService.publish(`room_${roomId}`, {
+      type: 'poll_opened',
+      poll_id: data.id,
+      question: dto.question,
+      options: dto.options,
+    });
+    return { poll_id: data.id };
+  }
+
+  async submitVote(userId: string, dto: SubmitVoteDto): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { data: poll, error: pollError } = await supabase
+      .from('quick_polls')
+      .select('id, is_active, options')
+      .eq('id', dto.pollId)
+      .single();
+    if (pollError || !poll) {
+      throw new Error('Poll not found');
+    }
+    if (!poll.is_active) {
+      throw new Error('Poll is no longer active');
+    }
+    if (dto.optionIndex < 0 || dto.optionIndex >= poll.options.length) {
+      throw new Error('Invalid option index');
+    }
+    const { error: insertError } = await supabase.from('poll_votes').insert({
+      poll_id: dto.pollId,
+      user_id: userId,
+      option_index: dto.optionIndex,
+    });
+    if (insertError) {
+      throw new Error('You have already voted on this poll');
+    }
+    void this.centrifugoService.publish(`room_${poll.room_id}`, {
+      type: 'vote_cast',
+      poll_id: dto.pollId,
+      option_index: dto.optionIndex,
+    });
+  }
+
+  async getPollResults(
+    roomId: string,
+    pollId: string,
+  ): Promise<{
+    question: string;
+    options: string[];
+    votes: number[];
+    totalVotes: number;
+  }> {
+    const supabase = this.supabaseService.getClient();
+    const { data: poll, error: pollError } = await supabase
+      .from('quick_polls')
+      .select('id, question, options')
+      .eq('id', pollId)
+      .single();
+    if (pollError || !poll) {
+      throw new Error('Poll not found');
+    }
+    const { data: voteRows } = await supabase
+      .from('poll_votes')
+      .select('option_index')
+      .eq('poll_id', pollId);
+    const optionCount = poll.options.length;
+    const votes = Array(optionCount).fill(0) as number[];
+    let totalVotes = 0;
+    if (voteRows) {
+      for (const row of voteRows as Array<{ option_index: number }>) {
+        if (row.option_index >= 0 && row.option_index < optionCount) {
+          votes[row.option_index]++;
+          totalVotes++;
+        }
+      }
+    }
+    return {
+      question: poll.question,
+      options: poll.options,
+      votes,
+      totalVotes,
+    };
   }
 
   async addNote(

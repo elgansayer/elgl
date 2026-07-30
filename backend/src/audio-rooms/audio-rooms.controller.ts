@@ -13,6 +13,8 @@ import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { AudioRoomsService } from './audio-rooms.service';
+import { CreatePollDto } from './dto/create-poll.dto';
+import { SubmitVoteDto } from './dto/submit-vote.dto';
 import { TranscriptEgressService } from './transcript-egress.service';
 import {
   ApproveSpeakerDto,
@@ -176,5 +178,37 @@ export class AudioRoomsController {
     vocabulary: string[];
   }> {
     return this.audioRoomsService.getTranscript(roomId);
+  }
+
+  @Post(':roomId/polls')
+  async createPoll(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+    @Body() dto: CreatePollDto,
+  ): Promise<{ poll_id: string } | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.createPoll(user.id, roomId, dto);
+  }
+
+  @Post('polls/vote')
+  async submitVote(
+    @CurrentUser() user: User | null,
+    @Body() dto: SubmitVoteDto,
+  ): Promise<void> {
+    if (!user) return;
+    return await this.audioRoomsService.submitVote(user.id, dto);
+  }
+
+  @Get(':roomId/polls/:pollId')
+  async getPollResults(
+    @Param('roomId') _roomId: string,
+    @Param('pollId') pollId: string,
+  ): Promise<{
+    question: string;
+    options: string[];
+    votes: number[];
+    totalVotes: number;
+  }> {
+    return this.audioRoomsService.getPollResults(_roomId, pollId);
   }
 }

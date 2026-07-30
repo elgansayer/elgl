@@ -6,6 +6,7 @@ import { I18nService } from '../../services/i18n.service';
 import { ConfirmService } from '../../services/confirm.service';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
+import { QuickPollService } from '../../services/quick-poll.service';
 import { RoomChatComponent } from '../room-chat/room-chat.component';
 import { VideoRoomComponent } from '../video-room/video-room.component';
 import { AudioEqualizerComponent } from '../primitives/audio-equalizer/audio-equalizer.component';
@@ -39,6 +40,15 @@ export class AudioRoomComponent implements OnInit {
   readonly showCreateModal = signal<boolean>(false);
   readonly showGiftModal = signal<boolean>(false);
   readonly showSafetyModal = signal<boolean>(false);
+  readonly showPollFormModal = signal<boolean>(false);
+  readonly showPollResultsModal = signal<boolean>(false);
+  readonly currentPollId = signal<string | null>(null);
+  readonly pollResults = signal<{
+    question: string;
+    options: string[];
+    votes: number[];
+    totalVotes: number;
+  } | null>(null);
 
   async ngOnInit(): Promise<void> {
     await this.store.loadActiveRooms();
@@ -95,5 +105,53 @@ export class AudioRoomComponent implements OnInit {
     );
     if (!confirmed) return;
     await this.store.archiveRoom();
+  }
+
+  readonly quickPollService = inject(QuickPollService);
+
+  async openPollForm(): Promise<void> {
+    this.showPollFormModal.set(true);
+  }
+
+  async closePollForm(): Promise<void> {
+    this.showPollFormModal.set(false);
+  }
+
+  async submitPollForm(question: string, options: string[]): Promise<void> {
+    const roomId = this.store.currentRoom()?.id;
+    if (!roomId) return;
+    try {
+      const result = await this.quickPollService.createPoll(roomId, question, options);
+      this.currentPollId.set(result.poll_id);
+      this.showPollFormModal.set(false);
+    } catch {
+      showToast(this.i18n.translate('common.error'));
+    }
+  }
+
+  async viewPollResults(pollId: string): Promise<void> {
+    const roomId = this.store.currentRoom()?.id;
+    if (!roomId) return;
+    try {
+      const results = await this.quickPollService.getPollResults(roomId, pollId);
+      this.pollResults.set(results);
+      this.currentPollId.set(pollId);
+      this.showPollResultsModal.set(true);
+    } catch {
+      showToast(this.i18n.translate('common.error'));
+    }
+  }
+
+  async voteInPoll(pollId: string, optionIndex: number): Promise<void> {
+    try {
+      await this.quickPollService.submitVote(pollId, optionIndex);
+      showToast(this.i18n.translate('quickPoll.yourVote'));
+    } catch (e: unknown) {
+      const msg =
+        e instanceof Error && e.message === 'You have already voted on this poll'
+          ? this.i18n.translate('quickPoll.alreadyVoted')
+          : this.i18n.translate('common.error');
+      showToast(msg);
+    }
   }
 }
