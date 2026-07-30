@@ -42,6 +42,7 @@ export class ProfileComponent implements OnInit {
   targetLanguages: string[] = ['es'];
   avatarUrl = '';
   bioText = '';
+  profileVisibility = signal<'everyone' | 'vips_only' | 'hidden'>('everyone');
 
   async ngOnInit(): Promise<void> {
     await this.loadProfile();
@@ -58,6 +59,7 @@ export class ProfileComponent implements OnInit {
         this.targetLanguages = data.target_languages || [];
         this.avatarUrl = data.avatar_url || '';
         this.bioText = data.bio_text || '';
+        this.profileVisibility.set(data.profile_visibility || 'everyone');
       }
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
@@ -73,6 +75,10 @@ export class ProfileComponent implements OnInit {
     this.successMessage.set('');
   }
 
+  async onVisibilityChange(value: string): Promise<void> {
+    this.profileVisibility.set(value as 'everyone' | 'vips_only' | 'hidden');
+  }
+
   async saveProfile(): Promise<void> {
     this.errorMessage.set('');
     this.successMessage.set('');
@@ -83,6 +89,7 @@ export class ProfileComponent implements OnInit {
         target_languages: this.targetLanguages,
         avatar_url: this.avatarUrl,
         bio_text: this.bioText,
+        profile_visibility: this.profileVisibility(),
       });
       this.profile.set(updated);
       this.isEditing.set(false);

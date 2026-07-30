@@ -94,4 +94,8 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsBoolean()
   privacy_hide_gender?: boolean;
+
+  @IsOptional()
+  @IsString()
+  profile_visibility?: string;
 }

@@ -3,7 +3,7 @@
     <div class="app-empty-state text-text-secondary">{{ 'profile.loading' | t }}</div>
   }
 
-  @if (!isLoading() && profile()) {
+  @if (!isLoading() && profile() !== null) {
     <app-cover-photo-uploader
       [currentCoverUrl]="profile()?.cover_photo_url || ''"
       (coverPhotoUploaded)="onCoverUploaded($event)"
@@ -232,6 +232,50 @@
                   (languageSelected)="addTargetLanguage($event)"
                 ></app-language-picker>
               </div>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{
+              'profile.visibilityLabel' | t
+            }}</label>
+            <div class="flex gap-2" role="radiogroup">
+              <button
+                type="button"
+                class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
+                [class.bg-primary]="profileVisibility() === 'everyone'"
+                [class.text-white]="profileVisibility() === 'everyone'"
+                [class.border-primary]="profileVisibility() === 'everyone'"
+                [class.text-text-primary]="profileVisibility() !== 'everyone'"
+                [class.border-surface-300]="profileVisibility() !== 'everyone'"
+                (click)="onVisibilityChange('everyone')"
+              >
+                {{ 'profile.visibility.everyone' | t }}
+              </button>
+              <button
+                type="button"
+                class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
+                [class.bg-primary]="profileVisibility() === 'vips_only'"
+                [class.text-white]="profileVisibility() === 'vips_only'"
+                [class.border-primary]="profileVisibility() === 'vips_only'"
+                [class.text-text-primary]="profileVisibility() !== 'vips_only'"
+                [class.border-surface-300]="profileVisibility() !== 'vips_only'"
+                (click)="onVisibilityChange('vips_only')"
+              >
+                {{ 'profile.visibility.vipsOnly' | t }}
+              </button>
+              <button
+                type="button"
+                class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
+                [class.bg-primary]="profileVisibility() === 'hidden'"
+                [class.text-white]="profileVisibility() === 'hidden'"
+                [class.border-primary]="profileVisibility() === 'hidden'"
+                [class.text-text-primary]="profileVisibility() !== 'hidden'"
+                [class.border-surface-300]="profileVisibility() !== 'hidden'"
+                (click)="onVisibilityChange('hidden')"
+              >
+                {{ 'profile.visibility.hidden' | t }}
+              </button>
             </div>
           </div>
 

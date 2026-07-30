@@ -29,6 +29,7 @@ export interface UserProfile {
   auto_play_voice_notes?: boolean;
   distance_metres?: number;
   is_admin?: boolean;
+  profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
   created_at: string;
   is_followed_by_me?: boolean;
   is_liked_by_me?: boolean;

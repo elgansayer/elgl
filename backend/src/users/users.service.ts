@@ -235,6 +235,8 @@ export class UsersService {
     if (dto.privacy_hide_gender !== undefined)
       updatePayload.privacy_hide_gender = dto.privacy_hide_gender;
     if (dto.gender !== undefined) updatePayload.gender = dto.gender;
+    if (dto.profile_visibility !== undefined)
+      updatePayload.profile_visibility = dto.profile_visibility;
 
     if (dto.location) {
       updatePayload.location = `POINT(${dto.location.longitude} ${dto.location.latitude})`;
