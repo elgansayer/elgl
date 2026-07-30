@@ -366,3 +366,11 @@
     </section>
   }
 </div>
+
+@if (showConfetti()) {
+  <app-celebration-overlay
+    [milestone]="milestoneForConfetti()"
+    [visible]="showConfetti()"
+    (dismissed)="showConfetti.set(false)"
+  />
+}

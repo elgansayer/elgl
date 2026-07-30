@@ -345,4 +345,11 @@ export class UserService {
         .pipe(catchError(() => of(undefined))),
     );
   }
+
+  getMilestoneForStreak(streakDays: number): number | null {
+    if (streakDays >= 100) return 100;
+    if (streakDays >= 30) return 30;
+    if (streakDays >= 7) return 7;
+    return null;
+  }
 }

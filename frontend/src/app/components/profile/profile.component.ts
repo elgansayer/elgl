@@ -12,6 +12,7 @@ import {
   LanguagePickerComponent,
   getLanguageFlag,
 } from '../primitives/language-picker/language-picker.component';
+import { CelebrationOverlayComponent } from '../celebration-overlay/celebration-overlay.component';
 
 @Component({
   selector: 'app-profile',
@@ -24,6 +25,7 @@ import {
     CoverPhotoUploaderComponent,
     HobbyTagsComponent,
     LanguagePickerComponent,
+    CelebrationOverlayComponent,
   ],
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.scss'],
@@ -48,6 +50,11 @@ export class ProfileComponent implements OnInit {
   learningGoals = signal<string>('');
   profileVisibility = signal<'everyone' | 'vips_only' | 'hidden'>('everyone');
 
+  // Celebration state
+  readonly showConfetti = signal<boolean>(false);
+  readonly milestoneForConfetti = signal<number>(7);
+  private readonly milestoneTriggered = new Set<number>();
+
   async ngOnInit(): Promise<void> {
     await this.loadProfile();
   }
@@ -66,12 +73,26 @@ export class ProfileComponent implements OnInit {
         this.profileVisibility.set(data.profile_visibility || 'everyone');
         this.proficiencyLevel.set(data.proficiency_level || 'B1');
         this.learningGoals.set(data.learning_goals || '');
+        this.checkMilestone();
       }
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
       this.errorMessage.set(message || this.i18n.translate('profile.loadError'));
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  private checkMilestone(): void {
+    const streak = this.profile()?.study_streak_days ?? 0;
+    const milestones: Array<7 | 30 | 100> = [100, 30, 7];
+    for (const ms of milestones) {
+      if (streak >= ms && !this.milestoneTriggered.has(ms)) {
+        this.milestoneTriggered.add(ms);
+        this.milestoneForConfetti.set(ms);
+        this.showConfetti.set(true);
+        return;
+      }
     }
   }
 
