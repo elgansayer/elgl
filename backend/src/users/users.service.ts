@@ -350,6 +350,45 @@ export class UsersService {
     };
   }
 
+  async getMessageFilters(userId: string): Promise<{
+    ageMin?: number;
+    ageMax?: number;
+    allowedNativeLanguages?: string[];
+  }> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('message_filters')
+      .eq('id', userId)
+      .single();
+
+    if (error || !data) {
+      return {};
+    }
+    return data.message_filters ?? {};
+  }
+
+  async setMessageFilters(
+    userId: string,
+    filters: {
+      ageMin?: number;
+      ageMax?: number;
+      allowedNativeLanguages?: string[];
+    },
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('users')
+      .update({ message_filters: filters })
+      .eq('id', userId);
+
+    if (error) {
+      throw new InternalServerErrorException(
+        `Failed to update message filters: ${error.message}`,
+      );
+    }
+  }
+
   async getUserStats(userId: string): Promise<Partial<UserProfile>> {
     const supabase = this.supabaseService.getClient();
 

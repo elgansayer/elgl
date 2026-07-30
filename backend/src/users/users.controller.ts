@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Delete,
   UseGuards,
   UnauthorizedException,
@@ -158,5 +159,29 @@ export class UsersController {
   }> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.getPrivacySettings(user.id);
+  }
+
+  @Get('me/message-filters')
+  async getMyMessageFilters(@CurrentUser() user: User | null): Promise<{
+    ageMin?: number;
+    ageMax?: number;
+    allowedNativeLanguages?: string[];
+  }> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.getMessageFilters(user.id);
+  }
+
+  @Put('me/message-filters')
+  async setMyMessageFilters(
+    @CurrentUser() user: User | null,
+    @Body()
+    filters: {
+      ageMin?: number;
+      ageMax?: number;
+      allowedNativeLanguages?: string[];
+    },
+  ): Promise<void> {
+    if (!user) throw new UnauthorizedException();
+    await this.usersService.setMessageFilters(user.id, filters);
   }
 }
