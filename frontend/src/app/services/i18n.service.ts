@@ -817,6 +817,19 @@ export class I18nService {
     'leaderboard.days': 'days',
     'leaderboard.empty': 'No correctors yet.',
     'common.error': 'Error',
+
+    // Password Policy & Reset
+    'password.resetTitle': 'Reset Password',
+    'password.newPassword': 'New Password',
+    'password.confirmPassword': 'Confirm Password',
+    'password.minLength': 'At least 8 characters',
+    'password.hasNumber': 'Contains a number',
+    'password.hasSymbol': 'Contains a symbol',
+    'password.passwordsMatch': 'Passwords match',
+    'password.resetSuccess': 'Password has been reset successfully.',
+    'password.resetError': 'Failed to reset password. Please try again.',
+    'password.resetBtn': 'Reset Password',
+    'password.sendResetLink': 'Send Reset Link',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });
