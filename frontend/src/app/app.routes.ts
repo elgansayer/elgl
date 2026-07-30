@@ -214,4 +214,12 @@ export const routes: Routes = [
       import('./components/host-dashboard/host-dashboard.component').then((m) => m.HostDashboardComponent),
     title: 'Host Dashboard - HelloTalk',
   },
+  {
+    path: 'language',
+    loadComponent: () =>
+      import('./pages/language-settings/language-settings.component').then(
+        (m) => m.LanguageSettingsComponent,
+      ),
+    title: 'Language Settings - HelloTalk',
+  },
 ];

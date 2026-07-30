@@ -835,6 +835,13 @@ export class I18nService {
     'appearance.title': 'Appearance',
     'appearance.themeLabel': 'Theme',
     'appearance.languageLabel': 'Language',
+
+    // Language Settings Page
+    'languageSettings.title': 'Language Settings',
+    'languageSettings.description': 'Choose the UI language independently of your study target.',
+    'languageSettings.selectLabel': 'Select interface language',
+    'languageSettings.applyBtn': 'Apply',
+    'languageSettings.currentLang': 'Current: {{name}}',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });
