@@ -55,6 +55,11 @@ export class I18nService {
   private readonly baseDictionary: Record<string, string> = {
     // Top App Navigation & Header
     'app.title': 'HelloTalk',
+    'shop.title': 'Shop',
+    'shop.subtitle': 'Browse virtual gifts and premium items',
+    'cart.title': 'Shopping Cart',
+    'cart.empty': 'Your cart is empty',
+    'cart.checkout': 'Checkout',
     'app.badgeOpenCore': 'Community clone',
     'notifications.title': 'Notifications',
     'notifications.markAllRead': 'Mark all read',

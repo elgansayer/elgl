@@ -256,6 +256,18 @@ export const routes: Routes = [
     title: 'Data & Storage - HelloTalk',
   },
   {
+    path: 'shop',
+    loadComponent: () =>
+      import('./components/shop/shop.component').then((m) => m.ShopComponent),
+    title: 'Shop - HelloTalk',
+  },
+  {
+    path: 'cart',
+    loadComponent: () =>
+      import('./components/cart/cart.component').then((m) => m.CartComponent),
+    title: 'Shopping Cart - HelloTalk',
+  },
+  {
     path: 'gdpr',
     loadComponent: () =>
       import('./components/gdpr/gdpr.component').then((m) => m.GdprComponent),
