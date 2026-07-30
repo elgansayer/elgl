@@ -24,4 +24,9 @@ export class DiscoveryController {
     const profile = await this.usersService.getProfile(user.id);
     return this.discoveryService.searchPartners(user.id, profile, query);
   }
+
+  @Get('partner-of-week')
+  async getPartnerOfWeek(): Promise<string[]> {
+    return this.discoveryService.getPartnerOfWeekIds();
+  }
 }

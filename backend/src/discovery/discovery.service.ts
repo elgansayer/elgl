@@ -17,6 +17,44 @@ export class DiscoveryService {
     private readonly safetyService: SafetyService,
   ) {}
 
+  // Weekly computation of Partner of the Week (every Sunday at midnight)
+  @Cron('0 0 * * 0')
+  async calculatePartnerOfWeek(): Promise<void> {
+    this.logger.log('Starting Partner of the Week calculation...');
+    const supabase = this.supabaseService.getClient();
+    const redis = this.supabaseService.getRedisClient();
+
+    try {
+      const { data: topUsers, error } = await supabase
+        .from('users')
+        .select('id')
+        .gt('correction_ratio', 0.5)
+        .order('correction_ratio', { ascending: false })
+        .order('study_streak_days', { ascending: false })
+        .limit(10);
+
+      if (error || !topUsers || topUsers.length === 0) {
+        this.logger.warn(
+          'No users qualified for Partner of the Week',
+          error?.message,
+        );
+        return;
+      }
+
+      const partnerIds = topUsers.map((u) => u.id);
+      await redis.set(
+        'partner_of_week_ids',
+        JSON.stringify(partnerIds),
+        'EX',
+        604800,
+      );
+      this.logger.log(`Partner of the Week set for ${partnerIds.length} users`);
+    } catch (err) {
+      this.logger.error('Error calculating Partner of the Week', err);
+    }
+  }
+
+  // Daily calculation (existing functionality)
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async calculateDailyRecommendations() {
     this.logger.log('Starting daily partner recommendations calculation...');
@@ -24,8 +62,6 @@ export class DiscoveryService {
     const redis = this.supabaseService.getRedisClient();
 
     try {
-      // Fetch active users to generate recommendations for
-      // In a production app with millions of users, this would be batched/paginated
       const { data: users, error } = await supabase
         .from('users')
         .select('id, native_languages, target_languages')
@@ -47,8 +83,6 @@ export class DiscoveryService {
           continue;
         }
 
-        // Find users who speak this user's target language natively
-        // and are learning this user's native language (Language Exchange Match)
         const { data: matches } = await supabase
           .from('users')
           .select('id')
@@ -61,7 +95,6 @@ export class DiscoveryService {
 
         if (matches && matches.length > 0) {
           let matchIds = (matches as Array<{ id: string }>).map((m) => m.id);
-          // Exclude blocked users
           const blockedIds = await this.safetyService.getBlockedAndBlockerIds(
             user.id,
           );
@@ -69,7 +102,6 @@ export class DiscoveryService {
             matchIds = matchIds.filter((id) => !blockedIds.includes(id));
           }
           if (matchIds.length > 0) {
-            // Cache recommendations in Redis for 24 hours (86400 seconds)
             await redis.set(
               `daily_recommendations:${user.id}`,
               JSON.stringify(matchIds),
@@ -85,6 +117,18 @@ export class DiscoveryService {
     }
   }
 
+  // Expose the current Partner of the Week IDs
+  async getPartnerOfWeekIds(): Promise<string[]> {
+    const redis = this.supabaseService.getRedisClient();
+    const raw = await redis.get('partner_of_week_ids');
+    if (!raw) return [];
+    try {
+      return JSON.parse(raw) as string[];
+    } catch {
+      return [];
+    }
+  }
+
   async searchPartners(
     currentUserId: string,
     _currentUserProfile: UserProfile | null,
@@ -92,14 +136,12 @@ export class DiscoveryService {
   ): Promise<UserProfile[]> {
     const supabase = this.supabaseService.getClient();
 
-    // Get blocked user IDs to exclude from search
     const blockedIds =
       await this.safetyService.getBlockedAndBlockerIds(currentUserId);
 
     let searchLat = query.latitude;
     let searchLon = query.longitude;
 
-    // Use mock location if user is VIP and has it set
     const mockLocation = _currentUserProfile?.mock_location as
       { coordinates?: number[] } | undefined;
     if (
@@ -120,7 +162,6 @@ export class DiscoveryService {
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false);
 
-    // Exclude blocked users
     if (blockedIds.length > 0) {
       queryBuilder = queryBuilder.not('id', 'in', blockedIds);
     }
@@ -155,13 +196,38 @@ export class DiscoveryService {
       queryBuilder = queryBuilder.overlaps('interests', [query.interests]);
     }
 
-    // Age range filter
     if (query.age_min !== undefined) {
       queryBuilder = queryBuilder.gte('age', query.age_min);
     }
     if (query.age_max !== undefined) {
       queryBuilder = queryBuilder.lte('age', query.age_max);
     }
+
+    // Function that enriches and sorts results with Partner of the Week flag
+    const enrich = async (users: UserProfile[]): Promise<UserProfile[]> => {
+      const raw = await this.supabaseService
+        .getRedisClient()
+        .get('partner_of_week_ids');
+      let partnerIds: string[] = [];
+      if (raw) {
+        try {
+          partnerIds = JSON.parse(raw);
+        } catch {
+          /* ignore */
+        }
+      }
+      const partnerSet = new Set(partnerIds);
+      const enriched = users.map((u) => ({
+        ...u,
+        is_partner_of_week: partnerSet.has(u.id),
+      }));
+      enriched.sort((a, b) => {
+        if (a.is_partner_of_week && !b.is_partner_of_week) return -1;
+        if (!a.is_partner_of_week && b.is_partner_of_week) return 1;
+        return 0;
+      });
+      return enriched;
+    };
 
     if (searchLat !== undefined && searchLon !== undefined) {
       const response = await supabase.rpc('search_nearby_users', {
@@ -186,25 +252,23 @@ export class DiscoveryService {
           fallbackRes.data.length === 0
         ) {
           const mockData = this.getMockDiscoveryData(query, blockedIds);
-          return this.filterByVoiceRoomActive(
+          const filtered = await this.filterByVoiceRoomActive(
             mockData,
             query.voice_room_active === true,
           );
+          return enrich(filtered);
         }
-        // Filter fallback results for blocked users
         let fallbackResults = fallbackRes.data as UserProfile[];
         if (blockedIds.length > 0) {
           fallbackResults = fallbackResults.filter(
             (u) => !blockedIds.includes(u.id),
           );
         }
-        // Filter by proficiency level
         if (query.level) {
           fallbackResults = fallbackResults.filter(
             (u: any) => u.proficiency_level === query.level,
           );
         }
-        // Age range filter for fallback results
         if (query.age_min !== undefined) {
           fallbackResults = fallbackResults.filter(
             (u) => (u as any).age >= query.age_min,
@@ -215,19 +279,17 @@ export class DiscoveryService {
             (u) => (u as any).age <= query.age_max,
           );
         }
-        return this.filterByVoiceRoomActive(
+        const filtered = await this.filterByVoiceRoomActive(
           fallbackResults,
           query.voice_room_active === true,
         );
+        return enrich(filtered);
       }
-      // Filter RPC results for blocked users
       let rpcResults = response.data as UserProfile[];
       if (blockedIds.length > 0) {
         rpcResults = rpcResults.filter((u) => !blockedIds.includes(u.id));
       }
-      // Filter by proficiency level
       if (query.level) {
-        // RPC results may not include proficiency_level, fetch explicitly
         if (rpcResults.length > 0) {
           const { data: levelData } = await supabase
             .from('users')
@@ -249,7 +311,6 @@ export class DiscoveryService {
         }
       }
       if (query.interests) {
-        // Fetch interests column and filter client‑side
         if (rpcResults.length > 0) {
           const { data: interestData } = await supabase
             .from('users')
@@ -264,8 +325,6 @@ export class DiscoveryService {
           rpcResults = rpcResults.filter((u) =>
             interestMap.get(u.id)?.includes(query.interests!),
           );
-        } else {
-          // rpcResults empty after level filter, nothing to do
         }
       }
       if (_currentUserProfile?.is_vip && query.gender) {
@@ -273,48 +332,46 @@ export class DiscoveryService {
           (u) => (u as any).gender === query.gender,
         );
       }
-      // Age range filter for RPC results
       if (query.age_min !== undefined) {
         rpcResults = rpcResults.filter((u) => (u as any).age >= query.age_min);
       }
       if (query.age_max !== undefined) {
         rpcResults = rpcResults.filter((u) => (u as any).age <= query.age_max);
       }
-      return this.filterByVoiceRoomActive(
+      const filtered = await this.filterByVoiceRoomActive(
         rpcResults,
         query.voice_room_active === true,
       );
+      return enrich(filtered);
     }
 
     const response = await queryBuilder.limit(50);
     if (response.error || !response.data || response.data.length === 0) {
       const mockData = this.getMockDiscoveryData(query, blockedIds);
-      return this.filterByVoiceRoomActive(
+      const filtered = await this.filterByVoiceRoomActive(
         mockData,
         query.voice_room_active === true,
       );
+      return enrich(filtered);
     }
-    // Filter results for blocked users
     let results = response.data as UserProfile[];
-    // Voice room active filter (if requested)
     if (blockedIds.length > 0) {
       results = results.filter((u) => !blockedIds.includes(u.id));
     }
-    // Filter by proficiency level
     if (query.level) {
       results = results.filter((u: any) => u.proficiency_level === query.level);
     }
-    // Age range filter for query results
     if (query.age_min !== undefined) {
       results = results.filter((u) => (u as any).age >= query.age_min);
     }
     if (query.age_max !== undefined) {
       results = results.filter((u) => (u as any).age <= query.age_max);
     }
-    return this.filterByVoiceRoomActive(
+    const filtered = await this.filterByVoiceRoomActive(
       results,
       query.voice_room_active === true,
     );
+    return enrich(filtered);
   }
 
   private async filterByVoiceRoomActive(
@@ -332,7 +389,6 @@ export class DiscoveryService {
   ): UserProfile[] {
     let filtered = MOCK_USERS;
 
-    // Filter out blocked users
     if (blockedIds.length > 0) {
       filtered = filtered.filter((u) => !blockedIds.includes(u.id));
     }
@@ -355,7 +411,6 @@ export class DiscoveryService {
       );
     }
 
-    // Age range filter for mock data
     if (query.age_min !== undefined) {
       filtered = filtered.filter((u) => (u as any).age >= query.age_min);
     }
@@ -363,21 +418,18 @@ export class DiscoveryService {
       filtered = filtered.filter((u) => (u as any).age <= query.age_max);
     }
 
-    // Filter by proficiency level
     if (query.level) {
       filtered = filtered.filter(
         (u: any) => u.proficiency_level === query.level,
       );
     }
 
-    // Filter by interests
     if (query.interests) {
       filtered = filtered.filter((u: any) =>
         u.interests?.includes(query.interests),
       );
     }
 
-    // Limit to 50
     return filtered.slice(0, 50) as unknown as UserProfile[];
   }
 }

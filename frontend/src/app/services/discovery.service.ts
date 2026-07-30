@@ -37,6 +37,18 @@ export class DiscoveryService {
     };
   }
 
+  private async getPartnerOfWeekIds(): Promise<string[]> {
+    try {
+      return await firstValueFrom(
+        this.http.get<string[]>(`${this.baseUrl}/partner-of-week`, {
+          headers: this.getHeaders(),
+        }),
+      );
+    } catch {
+      return [];
+    }
+  }
+
   async findPartners(filters: SearchFilterParams): Promise<UserProfile[]> {
     let params = new HttpParams();
     if (filters.latitude !== undefined)
@@ -66,15 +78,25 @@ export class DiscoveryService {
 
     // Filter out blocked users client-side
     const currentUser = this.authService.currentUser();
+    let filtered = users;
     if (currentUser?.id) {
       const blockedIds = await this.safetyService
         .getBlockedAndBlockerIds(currentUser.id)
         .catch((): string[] => []);
       if (blockedIds.length > 0) {
-        return users.filter((user) => !blockedIds.includes(user.id));
+        filtered = filtered.filter((user) => !blockedIds.includes(user.id));
       }
     }
 
-    return users;
+    // Attach is_partner_of_week flag using separate endpoint
+    const partnerIds = await this.getPartnerOfWeekIds();
+    const partnerSet = new Set(partnerIds);
+    const enriched = filtered.map((user) => ({
+      ...user,
+      is_partner_of_week: partnerSet.has(user.id),
+    }));
+
+    // Return enriched array, but keep the same UserProfile type (extra property is allowed in structural typing)
+    return enriched;
   }
 }
