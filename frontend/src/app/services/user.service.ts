@@ -144,6 +144,7 @@ export class UserService {
   }
 
   async getMyProfile(): Promise<UserProfile | null> {
+    void of;
     const fallbackProfile: UserProfile = {
       ...MOCK_USER_PROFILE,
       status_text: 'Learning new languages!',
@@ -438,7 +439,7 @@ export class UserService {
   async getStudyStreak(): Promise<number> {
     const stats = await firstValueFrom(
       this.http.get<Partial<UserProfile>>(`${this.baseUrl}/me/stats`, { headers: this.getHeaders() })
-        .pipe(catchError(() => of({} as Partial<UserProfile>)))
+        .pipe(catchError(() => of<Partial<UserProfile>>({})))
     );
     return stats?.study_streak_days ?? 0;
   }

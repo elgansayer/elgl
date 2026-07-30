@@ -12,19 +12,18 @@ export class StudyBuddyService {
       await firstValueFrom(
         this.http.post(`${environment.apiUrl}/study-buddies/request`, dto),
       );
-    } catch {
+    } catch (_err: unknown) {
       console.warn('Study buddy request failed (fallback)');
     }
   }
 
-  async getMatches(): Promise<any[]> {
+  async getMatches(): Promise<Record<string, unknown>[]> {
     try {
-      return (
-        (await firstValueFrom(
-          this.http.get<any[]>(`${environment.apiUrl}/study-buddies/matches`),
-        )) ?? []
+      const data = await firstValueFrom(
+        this.http.get<Record<string, unknown>[]>(`${environment.apiUrl}/study-buddies/matches`),
       );
-    } catch {
+      return data ?? [];
+    } catch (_err: unknown) {
       return [];
     }
   }
