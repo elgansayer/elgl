@@ -33,6 +33,12 @@ export class EventsController {
   }
 
   @UseGuards(SupabaseAuthGuard)
+  @Get('categories')
+  async getCategories() {
+    return this.eventsService.getCategories();
+  }
+
+  @UseGuards(SupabaseAuthGuard)
   @Get(':id')
   async getById(@Param('id') id: string) {
     return this.eventsService.getEvent(id);

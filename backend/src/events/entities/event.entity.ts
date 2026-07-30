@@ -2,6 +2,7 @@ export interface Event {
   id: string;
   title: string;
   description?: string;
+  category?: string;
   date_time: string;
   location?: string;
   host_id: string;

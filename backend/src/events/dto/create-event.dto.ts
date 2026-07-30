@@ -5,6 +5,7 @@ import {
   IsInt,
   Min,
   Max,
+  IsIn,
 } from 'class-validator';
 
 export class CreateEventDto {
@@ -14,6 +15,16 @@ export class CreateEventDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn([
+    'audio_room',
+    'learning_seminar',
+    'in_person_meetup',
+    'cultural_exchange',
+  ])
+  category?: string;
 
   @IsISO8601()
   date_time!: string;

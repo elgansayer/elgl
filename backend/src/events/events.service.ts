@@ -16,6 +16,7 @@ export class EventsService {
       .insert({
         title: dto.title,
         description: dto.description ?? null,
+        category: dto.category ?? null,
         date_time: dto.date_time,
         location: dto.location ?? null,
         language_pair: dto.language_pair ?? null,
@@ -54,6 +55,9 @@ export class EventsService {
     if (query.language_pair) {
       q = q.eq('language_pair', query.language_pair);
     }
+    if (query.category) {
+      q = q.eq('category', query.category);
+    }
     if (query.from_date) {
       q = q.gte('date_time', query.from_date);
     }
@@ -89,5 +93,14 @@ export class EventsService {
       host_name: data.host?.display_name ?? null,
       host_avatar_url: data.host?.avatar_url ?? null,
     };
+  }
+
+  async getCategories(): Promise<string[]> {
+    return [
+      'audio_room',
+      'learning_seminar',
+      'in_person_meetup',
+      'cultural_exchange',
+    ];
   }
 }

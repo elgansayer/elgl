@@ -1,10 +1,27 @@
-import { IsOptional, IsString, IsISO8601, IsInt, Min } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsISO8601,
+  IsInt,
+  Min,
+  IsIn,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class EventsQueryDto {
   @IsOptional()
   @IsString()
   language_pair?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn([
+    'audio_room',
+    'learning_seminar',
+    'in_person_meetup',
+    'cultural_exchange',
+  ])
+  category?: string;
 
   @IsOptional()
   @IsString()
