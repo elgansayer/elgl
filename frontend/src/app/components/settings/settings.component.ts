@@ -38,6 +38,7 @@ export class SettingsComponent implements OnInit {
   privacyHideAge = false;
   privacyHideGender = false;
   autoPlayVoiceNotes = false;
+  autoDownloadMedia = false;
 
   readonly linkedAccounts = signal<LinkedAccount[]>([]);
 
@@ -55,6 +56,7 @@ export class SettingsComponent implements OnInit {
         this.privacyHideAge = Boolean(profile.privacy_hide_age);
         this.privacyHideGender = Boolean(profile.privacy_hide_gender);
         this.autoPlayVoiceNotes = Boolean(profile.auto_play_voice_notes);
+        this.autoDownloadMedia = Boolean(profile.auto_download_media);
         this.interests.set(profile.interests ?? []);
       }
       // Load linked accounts
@@ -148,6 +150,7 @@ export class SettingsComponent implements OnInit {
         privacy_hide_age: this.privacyHideAge,
         privacy_hide_gender: this.privacyHideGender,
         auto_play_voice_notes: this.autoPlayVoiceNotes,
+        auto_download_media: this.autoDownloadMedia,
         primary_accent_color: this.primaryAccentColor() ?? undefined,
         interests: this.interests(),
       });

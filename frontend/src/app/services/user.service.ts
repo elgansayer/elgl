@@ -31,6 +31,7 @@ export interface UserProfile {
   silence_unknown_callers?: boolean;
   status_visibility?: string;
   auto_play_voice_notes?: boolean;
+  auto_download_media?: boolean;
   distance_metres?: number;
   is_admin?: boolean;
   profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
