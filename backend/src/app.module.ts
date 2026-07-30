@@ -32,6 +32,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { RecommendationsModule } from './recommendations/recommendations.module';
 import { AdminModule } from './admin/admin.module';
 import { HelpModule } from './help/help.module';
+import { ProficiencyModule } from './proficiency/proficiency.module';
 import { VersionModule } from './version/version.module';
 import { StudyStreakModule } from './study-streak/study-streak.module';
 import { StreakCronModule } from './streak-cron/streak-cron.module';
@@ -85,6 +86,7 @@ import { validationSchema } from './config/validation.schema';
     RecommendationsModule,
     AdminModule,
     HelpModule,
+    ProficiencyModule,
     VersionModule,
     StudyStreakModule,
     StreakCronModule,

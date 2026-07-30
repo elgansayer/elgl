@@ -12,6 +12,14 @@ export const routes: Routes = [
   },
   { path: 'discovery', component: DiscoveryComponent },
   {
+    path: 'proficiency',
+    loadComponent: () =>
+      import('./components/proficiency-assessment/proficiency-assessment.component').then(
+        (m) => m.ProficiencyAssessmentComponent,
+      ),
+    title: 'Proficiency Assessment - HelloTalk',
+  },
+  {
     path: 'moments',
     loadComponent: () =>
       import('./components/moments-feed/moments-feed.component').then(
