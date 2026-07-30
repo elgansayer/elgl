@@ -502,6 +502,98 @@ export class DiscoveryService {
     return results;
   }
 
+  async getRecentNativeSpeakers(currentUserId: string): Promise<UserProfile[]> {
+    const supabase = this.supabaseService.getClient();
+    const blockedIds =
+      await this.safetyService.getBlockedAndBlockerIds(currentUserId);
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const { data, error } = await supabase
+      .from('users')
+      .select(
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+      )
+      .gt('created_at', sevenDaysAgo.toISOString())
+      .neq('id', currentUserId)
+      .eq('privacy_hide_from_search', false)
+      .not('native_languages', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (error || !data) {
+      return [];
+    }
+    let results = data as UserProfile[];
+    if (blockedIds.length > 0) {
+      results = results.filter((u) => !blockedIds.includes(u.id));
+    }
+
+    // Attach Partner of the Week flag
+    const rawPoW = await this.supabaseService
+      .getRedisClient()
+      .get('partner_of_week_ids');
+    let partnerSet = new Set<string>();
+    if (rawPoW) {
+      try {
+        partnerSet = new Set(JSON.parse(rawPoW));
+      } catch {
+        /* ignore */
+      }
+    }
+    results = results.map((u) => ({
+      ...u,
+      is_partner_of_week: partnerSet.has(u.id),
+    }));
+
+    return results;
+  }
+
+  async getSpotlightUsers(currentUserId: string): Promise<UserProfile[]> {
+    const supabase = this.supabaseService.getClient();
+    const blockedIds =
+      await this.safetyService.getBlockedAndBlockerIds(currentUserId);
+
+    const { data, error } = await supabase
+      .from('users')
+      .select(
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+      )
+      .neq('id', currentUserId)
+      .eq('privacy_hide_from_search', false)
+      .not('native_languages', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (error || !data) {
+      return [];
+    }
+    let results = data as UserProfile[];
+    if (blockedIds.length > 0) {
+      results = results.filter((u) => !blockedIds.includes(u.id));
+    }
+
+    // Attach Partner of the Week flag
+    const rawPoW = await this.supabaseService
+      .getRedisClient()
+      .get('partner_of_week_ids');
+    let partnerSet = new Set<string>();
+    if (rawPoW) {
+      try {
+        partnerSet = new Set(JSON.parse(rawPoW));
+      } catch {
+        /* ignore */
+      }
+    }
+    results = results.map((u) => ({
+      ...u,
+      is_partner_of_week: partnerSet.has(u.id),
+    }));
+
+    return results;
+  }
+
   async findByLanguagePair(
     currentUserId: string,
     query: LanguagePairQueryDto,

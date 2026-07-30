@@ -41,6 +41,20 @@ export class DiscoveryController {
     return this.discoveryService.getAudioIntros(user.id, profile, query);
   }
 
+  @Get('recent-native-speakers')
+  async getRecentNativeSpeakers(
+    @CurrentUser() user: User | null,
+  ): Promise<UserProfile[]> {
+    if (!user) return [];
+    return this.discoveryService.getRecentNativeSpeakers(user.id);
+  }
+
+  @Get('spotlight')
+  async getSpotlight(@CurrentUser() user: User | null): Promise<UserProfile[]> {
+    if (!user) return [];
+    return this.discoveryService.getSpotlightUsers(user.id);
+  }
+
   @Get('language-pair')
   async findByLanguagePair(
     @CurrentUser() user: User | null,

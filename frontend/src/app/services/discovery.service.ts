@@ -166,6 +166,52 @@ export class DiscoveryService {
     return filtered;
   }
 
+  async getRecentNativeSpeakers(): Promise<UserProfile[]> {
+    const users = await firstValueFrom(
+      this.http
+        .get<UserProfile[]>(`${this.baseUrl}/recent-native-speakers`, {
+          headers: this.getHeaders(),
+        })
+        .pipe(catchError(() => of([] as UserProfile[]))),
+    );
+    const currentUser = this.authService.currentUser();
+    let filtered = users;
+    if (currentUser?.id) {
+      const blockedIds = await this.safetyService
+        .getBlockedAndBlockerIds(currentUser.id)
+        .catch((): string[] => []);
+      if (blockedIds.length > 0) {
+        filtered = filtered.filter((user) => !blockedIds.includes(user.id));
+      }
+    }
+    return filtered;
+  }
+
+  async getSpotlightUsers(): Promise<UserProfile[]> {
+    try {
+      const users = await firstValueFrom(
+        this.http
+          .get<UserProfile[]>(`${this.baseUrl}/spotlight`, {
+            headers: this.getHeaders(),
+          })
+          .pipe(catchError(() => of([] as UserProfile[]))),
+      );
+      const currentUser = this.authService.currentUser();
+      let filtered = users;
+      if (currentUser?.id) {
+        const blockedIds = await this.safetyService
+          .getBlockedAndBlockerIds(currentUser.id)
+          .catch((): string[] => []);
+        if (blockedIds.length > 0) {
+          filtered = filtered.filter((user) => !blockedIds.includes(user.id));
+        }
+      }
+      return filtered;
+    } catch {
+      return [];
+    }
+  }
+
   async findByLanguagePair(
     nativeLanguage?: string,
     targetLanguage?: string,
