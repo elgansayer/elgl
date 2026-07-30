@@ -1,4 +1,4 @@
-import { Component, signal, computed, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -16,10 +16,10 @@ import { I18nService } from '../../services/i18n.service';
 
       <!-- step progress indicators -->
       <div class="mt-4 flex gap-2">
-        @for (step of steps(); track $index) {
+        @for (step of onboardingService.steps; track $index) {
           <div
             class="flex items-center gap-2 p-2 rounded"
-            [class.bg-accent/20]="currentStep() === $index"
+            [class.bg-accent/20]="onboardingService.currentStep() === $index"
           >
             <span class="w-6 h-6 flex items-center justify-center rounded-full bg-surface-variant text-sm">
               {{ $index + 1 }}
@@ -30,12 +30,12 @@ import { I18nService } from '../../services/i18n.service';
       </div>
 
       <!-- step content -->
-      @if (currentStep() === 0) {
+      @if (onboardingService.currentStep() === 0) {
         <div class="mt-4">
           <label class="block text-sm mb-1">{{ 'onboarding.step1.label' | t }}</label>
           <select
             class="w-full bg-surface-variant text-on-surface p-2 rounded"
-            [value]="nativeLanguage()"
+            [value]="onboardingService.nativeLanguage()"
             (change)="onNativeLanguageChange($event)"
           >
             <option value="">{{ 'onboarding.step1.placeholder' | t }}</option>
@@ -46,7 +46,7 @@ import { I18nService } from '../../services/i18n.service';
         </div>
       }
 
-      @if (currentStep() === 1) {
+      @if (onboardingService.currentStep() === 1) {
         <div class="mt-4">
           <label class="block text-sm mb-1">{{ 'onboarding.step2.label' | t }}</label>
           <div class="grid grid-cols-1 gap-2">
@@ -54,8 +54,8 @@ import { I18nService } from '../../services/i18n.service';
               <label class="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  [checked]="targetLanguages().has(lang.code)"
-                  (change)="toggleTargetLanguage(lang.code)"
+                  [checked]="onboardingService.targetLanguages().has(lang.code)"
+                  (change)="onboardingService.toggleTargetLanguage(lang.code)"
                 />
                 <span>{{ lang.flag }} {{ lang.nativeName }}</span>
               </label>
@@ -64,12 +64,12 @@ import { I18nService } from '../../services/i18n.service';
         </div>
       }
 
-      @if (currentStep() === 2) {
+      @if (onboardingService.currentStep() === 2) {
         <div class="mt-4">
           <label class="block text-sm mb-1">{{ 'onboarding.step3.label' | t }}</label>
           <input
             class="w-full bg-surface-variant text-on-surface p-2 rounded"
-            [value]="displayName()"
+            [value]="onboardingService.displayName()"
             (input)="onDisplayNameInput($event)"
             placeholder="{{ 'onboarding.step3.placeholder' | t }}"
           />
@@ -81,19 +81,19 @@ import { I18nService } from '../../services/i18n.service';
         <button
           type="button"
           class="app-button-secondary"
-          [disabled]="currentStep() === 0"
-          (click)="prevStep()"
+          [disabled]="onboardingService.currentStep() === 0"
+          (click)="onboardingService.prevStep()"
         >
           {{ 'common.back' | t }}
         </button>
         <button
           type="button"
           class="app-button-primary"
-          [disabled]="!canGoNext()"
-          (click)="nextStep()"
+          [disabled]="!onboardingService.canGoNext()"
+          (click)="handleNext()"
         >
           {{
-            currentStep() === steps().length - 1
+            onboardingService.currentStep() === onboardingService.steps.length - 1
               ? ('common.finish' | t)
               : ('common.next' | t)
           }}
@@ -105,74 +105,30 @@ import { I18nService } from '../../services/i18n.service';
 })
 export class OnboardingWizardComponent {
   private readonly router = inject(Router);
-  private readonly onboardingService = inject(OnboardingService);
+  readonly onboardingService = inject(OnboardingService);
   readonly i18n = inject(I18nService);
 
-  readonly steps = signal([
-    { label: 'onboarding.step1' },
-    { label: 'onboarding.step2' },
-    { label: 'onboarding.step3' },
-  ]);
-
-  readonly currentStep = signal(0);
-  readonly nativeLanguage = signal<string>('');
-  readonly targetLanguages = signal<Set<string>>(new Set());
-  readonly displayName = signal<string>('');
-
-  readonly canGoNext = computed(() => {
-    if (this.currentStep() === 0) {
-      return this.nativeLanguage() !== '';
-    }
-    if (this.currentStep() === 1) {
-      return this.targetLanguages().size > 0;
-    }
-    // last step: display name required
-    return this.displayName().trim().length > 0;
-  });
+  /** Local computed to decide navigation – delegating to service. */
+  readonly canGoNext = computed(() => this.onboardingService.canGoNext());
 
   onNativeLanguageChange(event: Event): void {
     if (!(event.target instanceof HTMLSelectElement)) {
       return;
     }
-    this.nativeLanguage.set(event.target.value);
-  }
-
-  toggleTargetLanguage(code: string): void {
-    this.targetLanguages.update((set) => {
-      const newSet = new Set(set);
-      if (newSet.has(code)) {
-        newSet.delete(code);
-      } else {
-        newSet.add(code);
-      }
-      return newSet;
-    });
+    this.onboardingService.setNativeLanguage(event.target.value);
   }
 
   onDisplayNameInput(event: Event): void {
     if (!(event.target instanceof HTMLInputElement)) {
       return;
     }
-    this.displayName.set(event.target.value);
+    this.onboardingService.setDisplayName(event.target.value);
   }
 
-  nextStep(): void {
-    if (this.currentStep() < this.steps().length - 1) {
-      this.currentStep.update((val) => val + 1);
-    } else {
-      this.finish();
+  handleNext(): void {
+    this.onboardingService.nextStep();
+    if (this.onboardingService.isOnboardingComplete()) {
+      this.router.navigate(['/']);
     }
-  }
-
-  prevStep(): void {
-    if (this.currentStep() > 0) {
-      this.currentStep.update((val) => val - 1);
-    }
-  }
-
-  finish(): void {
-    // persist user choices if needed (future)
-    this.onboardingService.completeOnboarding();
-    this.router.navigate(['/home']);
   }
 }

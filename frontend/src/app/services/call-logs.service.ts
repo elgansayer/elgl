@@ -40,6 +40,11 @@ export class CallLogsService {
       query = query.eq('call_type', options.callType);
     }
 
-    return from(query).pipe(map(({ data }) => (data ?? []) as CallLogRecord[]));
+    return from(query).pipe(
+      map(({ data }): CallLogRecord[] => {
+        const arr = data ?? [];
+        return Array.isArray(arr) ? arr : [];
+      }),
+    );
   }
 }

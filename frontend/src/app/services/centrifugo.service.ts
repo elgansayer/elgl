@@ -82,13 +82,28 @@ export class CentrifugoService {
    */
   subscribeVoiceRoom(
     roomId: string,
-    callback: (data: { original_text: string; translated_text: string; detected_language: string } & Record<string, unknown>) => void,
+    callback: (
+      data: {
+        original_text: string;
+        translated_text: string;
+        detected_language: string;
+      } & Record<string, unknown>,
+    ) => void,
   ): void {
     this.subscribe(`room_${roomId}`, (data: unknown) => {
-      const payload = data as Record<string, unknown>;
-      if (typeof payload['original_text'] === 'string') {
-        callback(payload as any);
+      if (this.isVoiceRoomPayload(data)) {
+        callback(data);
       }
     });
+  }
+
+  private isVoiceRoomPayload(
+    data: unknown,
+  ): data is {
+    original_text: string;
+    translated_text: string;
+    detected_language: string;
+  } {
+    return typeof data === 'object' && data !== null && 'original_text' in data;
   }
 }

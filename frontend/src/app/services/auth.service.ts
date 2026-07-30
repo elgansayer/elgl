@@ -1,7 +1,6 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
-import { DOCUMENT } from '@angular/common';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { SupabaseService } from './supabase.service';
 import { FcmService } from './fcm.service';
