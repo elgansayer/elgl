@@ -1,0 +1,59 @@
+<div class="p-4">
+  <h2 class="text-xl font-bold mb-4">{{ 'admin.lessons.title' | t }}</h2>
+
+  <button class="btn btn-primary mb-4" (click)="startCreate()">{{ 'admin.lessons.create' | t }}</button>
+
+  @if (lessons().length) {
+    <table class="table-auto w-full border-collapse">
+      <thead>
+        <tr>
+          <th class="border p-2 text-start">{{ 'admin.lessons.title' | t }}</th>
+          <th class="border p-2 text-start">{{ 'admin.lessons.language' | t }}</th>
+          <th class="border p-2 text-start">{{ 'admin.lessons.difficulty' | t }}</th>
+          <th class="border p-2 text-start">{{ 'admin.lessons.actions' | t }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (lesson of lessons(); track lesson.id) {
+          <tr>
+            <td class="border p-2">{{ lesson.title }}</td>
+            <td class="border p-2">{{ lesson.language_code }}</td>
+            <td class="border p-2">{{ lesson.difficulty_level ?? '-' }}</td>
+            <td class="border p-2">
+              <button class="btn btn-sm" (click)="startEdit(lesson)">{{ 'admin.lessons.edit' | t }}</button>
+              <button class="btn btn-danger btn-sm ms-2" (click)="delete(lesson)">{{ 'admin.lessons.delete' | t }}</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (editLesson() || isNew()) {
+    <div class="mt-4 border p-4">
+      <h3>{{ isNew() ? 'Create' : 'Edit' }} {{ 'admin.lessons.lesson' | t }}</h3>
+      <div class="mb-2">
+        <label>{{ 'admin.lessons.title' | t }}</label>
+        <input [(ngModel)]="form.title" class="input" />
+      </div>
+      <div class="mb-2">
+        <label>{{ 'admin.lessons.description' | t }}</label>
+        <textarea [(ngModel)]="form.description" class="input"></textarea>
+      </div>
+      <div class="mb-2">
+        <label>{{ 'admin.lessons.language' | t }}</label>
+        <input [(ngModel)]="form.language_code" class="input" />
+      </div>
+      <div class="mb-2">
+        <label>{{ 'admin.lessons.difficulty' | t }}</label>
+        <input type="number" [(ngModel)]="form.difficulty_level" class="input" />
+      </div>
+      <div class="mb-2">
+        <label>{{ 'admin.lessons.content' | t }}</label>
+        <textarea [(ngModel)]="form.content_json" class="input font-mono h-24"></textarea>
+      </div>
+      <button class="btn btn-primary" (click)="save()">{{ 'admin.lessons.save' | t }}</button>
+      <button class="btn btn-secondary ms-2" (click)="cancelEdit()">{{ 'admin.lessons.cancel' | t }}</button>
+    </div>
+  }
+</div>

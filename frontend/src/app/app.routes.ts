@@ -111,6 +111,15 @@ export const routes: Routes = [
     title: 'Admin Portal - HelloTalk',
   },
   {
+    path: 'admin/lessons',
+    loadComponent: () =>
+      import('./components/lesson-manager/lesson-manager.component').then(
+        (m) => m.LessonManagerComponent,
+      ),
+    canActivate: [adminGuard],
+    title: 'Lesson Management - HelloTalk',
+  },
+  {
     path: 'video-call',
     loadComponent: () =>
       import('./components/video-call/video-call.component').then((m) => m.VideoCallComponent),
