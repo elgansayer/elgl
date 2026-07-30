@@ -1,0 +1,1 @@
+Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints.

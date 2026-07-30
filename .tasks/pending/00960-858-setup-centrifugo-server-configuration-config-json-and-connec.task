@@ -1,0 +1,1 @@
+Setup Centrifugo server configuration (`config.json`) and connect to Redis instance for pub/sub.

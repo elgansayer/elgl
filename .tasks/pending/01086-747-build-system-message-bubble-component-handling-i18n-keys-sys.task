@@ -1,0 +1,1 @@
+Build `system-message-bubble` component handling i18n keys system.profileUpdated, system.missedCall and wire to Centrifugo events.

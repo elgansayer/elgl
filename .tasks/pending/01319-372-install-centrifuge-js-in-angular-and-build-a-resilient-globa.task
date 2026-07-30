@@ -1,0 +1,1 @@
+Install `centrifuge-js` in Angular and build a resilient global `CentrifugeService` with reconnection and connection state signals.

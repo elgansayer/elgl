@@ -51,6 +51,10 @@ CFG = {
     'rate_cooldown':  int(os.environ.get('AI_RATE_COOLDOWN_SECONDS', 15)),
     'model':          os.environ.get('AIDER_MODEL', 'deepseek/deepseek-reasoner'),
     'start_ts':       time.time(),
+    'repo_owner':     os.environ.get('SWARM_REPO_OWNER', 'elgansayer'),
+    'repo_name':      os.environ.get('SWARM_REPO_NAME', 'hellotalk'),
+    'gh_sync_cycles': int(os.environ.get('SWARM_GH_SYNC_CYCLES', 20)),
+    'review_cycles':  int(os.environ.get('SWARM_REVIEW_CYCLES', 5)),
 }
 
 # ── logging ───────────────────────────────────────────────────────────
@@ -176,6 +180,228 @@ def git_commit(message: str) -> str:
         log(f"Git commit failed: {e}")
         state_patch(last_error=f'git: {e}')
         return ''
+
+# ── GitHub sync (bidirectional) ───────────────────────────────────────
+_gh_token_cache = None
+
+def _gh_token() -> str:
+    global _gh_token_cache
+    if _gh_token_cache:
+        return _gh_token_cache
+    try:
+        r = subprocess.run(['gh', 'auth', 'token'], capture_output=True, text=True, timeout=5)
+        if r.returncode == 0:
+            _gh_token_cache = r.stdout.strip()
+            return _gh_token_cache
+    except Exception:
+        pass
+    return ''
+
+def _issue_number_from_file(f: Path) -> int | None:
+    """Extract GitHub issue number from task filename (e.g. 01610-001-slug.task)."""
+    m = re.match(r'^(\d{4,6})-', f.name)
+    if m:
+        n = int(m.group(1))
+        if n > 0:
+            return n
+    return None
+
+def _gh_api(method: str, path: str, data: dict | None = None) -> dict | list | None:
+    """Call GitHub REST API."""
+    token = _gh_token()
+    if not token:
+        log("GitHub sync: no token available")
+        return None
+    url = f'https://api.github.com{path}'
+    try:
+        args = ['curl', '-sf', '-X', method,
+                '-H', f'Authorization: Bearer {token}',
+                '-H', 'Accept: application/vnd.github+json',
+                '-H', 'X-GitHub-Api-Version: 2022-11-28']
+        if data:
+            args.extend(['-H', 'Content-Type: application/json',
+                        '-d', json.dumps(data)])
+        args.append(url)
+        r = subprocess.run(args, capture_output=True, text=True, timeout=15)
+        if r.returncode == 0 and r.stdout.strip():
+            return json.loads(r.stdout)
+    except Exception as e:
+        log(f"GitHub API error: {e}")
+    return None
+
+def close_github_issue(taskfile: Path) -> bool:
+    """Close the GitHub issue linked to a completed task."""
+    num = _issue_number_from_file(taskfile)
+    if not num:
+        return False
+    result = _gh_api('PATCH', f'/repos/{CFG.get("repo_owner", "elgansayer")}/{CFG.get("repo_name", "hellotalk")}/issues/{num}',
+                     {'state': 'closed'})
+    if result:
+        log(f"Closed GitHub issue #{num}")
+        return True
+    return False
+
+def sync_github_issues() -> tuple[int, int]:
+    """
+    Bidirectional sync: GitHub issues ↔ .tasks/pending/
+    Returns (imported, closed_synced).
+    """
+    token = _gh_token()
+    if not token:
+        return 0, 0
+
+    owner = CFG.get('repo_owner', 'elgansayer')
+    repo  = CFG.get('repo_name', 'hellotalk')
+
+    # Build maps of existing tasks in all subdirs
+    existing = {}     # title → (subdir, Path)
+    issue_map = {}    # issue_number → (subdir, Path)
+    for subdir in ['pending', 'active', 'stuck', 'completed']:
+        d = TASKS_DIR / subdir
+        if d.exists():
+            for f in d.glob('*.task'):
+                try:
+                    title = f.read_text().strip()
+                    existing.setdefault(title, (subdir, f))
+                    num = _issue_number_from_file(f)
+                    if num:
+                        issue_map.setdefault(num, (subdir, f))
+                except Exception:
+                    pass
+
+    imported = 0
+    closed_synced = 0
+    page = 1
+
+    while True:
+        issues = _gh_api('GET',
+            f'/repos/{owner}/{repo}/issues?state=all&per_page=100&page={page}&sort=updated&direction=desc')
+        if not issues or not isinstance(issues, list) or len(issues) == 0:
+            break
+
+        for issue in issues:
+            if isinstance(issue, dict) and 'pull_request' in issue:
+                continue
+
+            title = issue.get('title', '').strip()
+            num   = issue.get('number', 0)
+            state = issue.get('state', 'open')  # 'open' or 'closed'
+
+            if not title or not num:
+                continue
+
+            # Case 1: Issue closed on GitHub but our task is still pending/active/stuck → move to completed
+            if state == 'closed' and num in issue_map:
+                subdir, f = issue_map[num]
+                if subdir in ('pending', 'active', 'stuck'):
+                    task_move(f, 'completed')
+                    closed_synced += 1
+                    log(f"Sync: closed GitHub issue #{num} → moved task to completed")
+                continue
+
+            # Case 2: Issue reopened on GitHub but our task is in completed → move back to pending
+            if state == 'open' and num in issue_map:
+                subdir, f = issue_map[num]
+                if subdir == 'completed':
+                    task_move(f, 'pending')
+                    imported += 1
+                    log(f"Sync: reopened GitHub issue #{num} → moved task to pending")
+                continue
+
+            # Case 3: Open issue not yet in .tasks/ → import
+            if state == 'open' and title not in existing:
+                slug = re.sub(r'[^a-z0-9]', '-', title.lower())
+                slug = re.sub(r'--+', '-', slug).strip('-')[:60] or 'task'
+                existing_count = len(list((TASKS_DIR / 'pending').glob('*.task')))
+                fname = f"{num:05d}-{existing_count + 1:03d}-{slug}.task"
+                f = TASKS_DIR / 'pending' / fname
+                f.write_text(title)
+                existing[title] = ('pending', f)
+                issue_map[num] = ('pending', f)
+                imported += 1
+
+        if len(issues) < 100:
+            break
+        page += 1
+
+    return imported, closed_synced
+
+# ── Self-review & continuous improvement ──────────────────────────────
+
+def _get_diff_for_commit(sha: str) -> str:
+    try:
+        r = subprocess.run(['git', 'diff', f'{sha}~1', sha, '--', ':!*.log', ':!TODO.md', ':!STUCK_LOG.md',
+                           ':!.tasks/', ':!.aider*'],
+                          capture_output=True, text=True, timeout=10)
+        return r.stdout
+    except Exception:
+        return ''
+
+def self_review(sha: str, task_desc: str):
+    """Analyse recent commit and generate improvement tasks."""
+    if not sha or sha == 'unknown':
+        return
+
+    diff = _get_diff_for_commit(sha)
+    if not diff:
+        return
+
+    findings = []
+
+    # Check for new files without corresponding test files
+    new_files = re.findall(r'^\+\+\+ b/([^\t\n]+)\.(?:ts|tsx)$', diff, re.MULTILINE)
+    for f in new_files:
+        if not f.endswith('.spec') and not 'spec/' in f and not f.endswith('.test'):
+            test_file = f.replace('/src/', '/src/').replace('.ts', '.spec.ts')
+            if not Path(test_file).exists() and not Path(f.replace('.ts', '.spec.ts')).exists():
+                findings.append(f"Add unit tests for {f}")
+
+    # Check for 'any' type usage (banned per constitution)
+    any_count = len(re.findall(r'^\+\s*.*\bany\b', diff, re.MULTILINE))
+    if any_count > 0:
+        findings.append(f"Replace {any_count} usage(s) of 'any' type with proper types in recent commit")
+
+    # Check for 'as' type assertions (banned per constitution)
+    as_count = len(re.findall(r'^\+\s*.*\bas\s+\w+', diff, re.MULTILINE))
+    if as_count > 0:
+        findings.append(f"Replace {as_count} 'as' type assertion(s) with proper type narrowing in recent commit")
+
+    # Check for hardcoded strings in templates (not piped through TranslatePipe)
+    hardcoded = len(re.findall(r'\+.*(?:\btext\b|\btitle\b|\blabel\b|\bplaceholder\b|\balt\b)\s*=\s*"[A-Z][^"]*"', diff))
+    if hardcoded > 0:
+        findings.append(f"Replace {hardcoded} hardcoded UI string(s) with TranslatePipe in recent commit")
+
+    # Check for physical CSS directions instead of logical properties
+    physical = len(re.findall(r'\+\s*.*\b(pl-[0-9]+|pr-[0-9]+|ml-[0-9]+|mr-[0-9]+|left-[0-9]+|right-[0-9]+|border-l-|border-r-|text-left|text-right)\b', diff))
+    if physical > 0:
+        findings.append(f"Replace {physical} physical CSS direction(s) with logical properties in recent commit")
+
+    # Create tasks for findings
+    for finding in findings:
+        task_add(f"Code review finding: {finding} (from commit {sha[:8]}: {task_desc[:50]})")
+
+    if findings:
+        log(f"Self-review: created {len(findings)} improvement tasks from commit {sha[:8]}")
+
+def generate_review_task():
+    """Periodically generate a broad code review task."""
+    # Pick a random area to review
+    areas = [
+        "Run npm run check:control-flow and fix any violations",
+        "Run npm run check:rtl-logical and fix any violations",
+        "Audit backend controllers for missing authorization guards",
+        "Audit frontend components for missing i18n translation keys",
+        "Audit for hardcoded data that should come from backend API",
+        "Check for dead buttons (no click handler or routerLink)",
+        "Run npm run lint on frontend and fix all warnings",
+        "Run npm run lint on backend and fix all warnings",
+        "Review supabase migrations for missing indexes on foreign keys",
+        "Audit for @Input() / @Output() decorators that should be signal inputs",
+        "Audit for *ngIf / *ngFor that should be @if / @for",
+        "Audit for console.log calls that should use proper logging service",
+    ]
+    idx = int(time.time() / 3600) % len(areas)
+    task_add(f"Periodic audit: {areas[idx]}")
 
 # ── Aider runner ───────────────────────────────────────────────────────
 def _aider_binary() -> str | None:
@@ -496,15 +722,46 @@ def supervisor():
         'uptime_seconds': 0,
     })
 
+    # Initial GitHub sync on startup
+    try:
+        imported, closed_synced = sync_github_issues()
+        if imported or closed_synced:
+            log(f"Startup GitHub sync: +{imported} imported, {closed_synced} closed")
+    except Exception as e:
+        log(f"Startup GitHub sync error: {e}")
+
     last_api_call = 0.0
+    cycle_count = 0
+    last_gh_sync = 0.0
 
     while not _shutdown:
         heartbeat()
         state_patch(current_stage='stage1_select',
                     uptime_seconds=int(time.time() - CFG['start_ts']))
 
+        # Periodic bidirectional GitHub sync
+        if time.time() - last_gh_sync > CFG['gh_sync_cycles'] * 60:
+            try:
+                imported, closed_synced = sync_github_issues()
+                if imported or closed_synced:
+                    log(f"GitHub sync: +{imported} imported, {closed_synced} closed")
+            except Exception as e:
+                log(f"GitHub sync error: {e}")
+            last_gh_sync = time.time()
+
         task, taskfile = task_next()
         if not task:
+            # Periodic GitHub sync during idle too
+            if time.time() - last_gh_sync > CFG['gh_sync_cycles'] * 60:
+                try:
+                    imported, closed_synced = sync_github_issues()
+                    if imported or closed_synced:
+                        log(f"Idle GitHub sync: +{imported} imported, {closed_synced} closed")
+                        last_gh_sync = time.time()
+                        continue  # re-check for tasks
+                except Exception as e:
+                    log(f"Idle GitHub sync error: {e}")
+
             log(f"No pending tasks. Sleeping {CFG['idle_sleep']}s.")
             state_patch(current_stage='idle')
             for _ in range(CFG['idle_sleep']):
@@ -571,10 +828,24 @@ def supervisor():
 
             if taskfile and taskfile.exists():
                 taskfile = task_move(taskfile, 'completed')
-            git_commit(f"feat: {task}")
+            sha = git_commit(f"feat: {task}")
             s = state_load()
             state_save({**s, 'tasks_completed': s.get('tasks_completed', 0) + 1})
             log(f"COMPLETED: {task[:80]}")
+
+            # Close corresponding GitHub issue (bidirectional sync)
+            if taskfile and _issue_number_from_file(taskfile):
+                close_github_issue(taskfile)
+
+            # Self-review: analyse commit and create improvement tasks
+            if sha:
+                self_review(sha, task)
+
+            cycle_count += 1
+            if cycle_count % CFG['review_cycles'] == 0:
+                generate_review_task()
+                log(f"Periodic review task created (cycle {cycle_count})")
+
             success = True
             break
 

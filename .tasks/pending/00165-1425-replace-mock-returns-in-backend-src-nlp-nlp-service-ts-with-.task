@@ -1,0 +1,1 @@
+Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azure AI API calls.

@@ -1,0 +1,1 @@
+Fix QA test failure: `ReferenceError: describe is not defined` (recurred again during latest QA run). Root cause of the _recurrence_ was not the original bug reappearing: `qa-loop.sh` already correctly runs `(cd e2e && npx playwright test)`, verified clean (`npx playwright test --list` finds 100 tests across 14 files, no describe/vitest errors). The real bug was in

@@ -8,6 +8,7 @@ import {
   RemoteTrack,
   RoomOptions,
   ExternalE2EEKeyProvider,
+  createLocalTracks,
 } from 'livekit-client';
 
 @Injectable({
@@ -16,6 +17,11 @@ import {
 export class LivekitService {
   private http = inject(HttpClient);
   onTrackSubscribed?: (track: RemoteTrack, publication: unknown) => void;
+
+  private room: Room | null = null;
+  private _localAudioTrack: LocalTrack | null = null;
+  private _muted = false;
+  private _speakerphone = false;
 
   /**
    * Get a LiveKit access token from the backend.
@@ -43,6 +49,7 @@ export class LivekitService {
     _isVideoCall: boolean,
     e2eeKey?: string,
   ): Promise<Room> {
+    const token = await this.getToken(roomName, userId);
     let roomOptions: RoomOptions = {};
 
     if (e2eeKey) {
@@ -59,14 +66,46 @@ export class LivekitService {
     }
 
     const room = new Room(roomOptions);
+    this.room = room;
+    await room.connect(this.getLiveKitUrl(), token);
     return room;
   }
 
   async publishTracks(): Promise<{ audioTrack: LocalTrack | null; videoTrack: LocalTrack | null }> {
-    return { audioTrack: null, videoTrack: null };
+    const tracks = await createLocalTracks({ audio: true, video: false });
+    const audioTrack = tracks.find(t => t.kind === 'audio') ?? null;
+    if (audioTrack && this.room) {
+      await this.room.localParticipant.publishTrack(audioTrack);
+      this._localAudioTrack = audioTrack;
+    }
+    return { audioTrack, videoTrack: null };
+  }
+
+  /** Toggle the local audio track's mute state and return the new state. */
+  toggleMute(): boolean {
+    if (this._localAudioTrack) {
+      this._localAudioTrack.muted = !this._localAudioTrack.muted;
+      this._muted = this._localAudioTrack.muted;
+    } else {
+      this._muted = !this._muted;
+    }
+    return this._muted;
+  }
+
+  /** Toggle the speakerphone (loudspeaker) state and return the new state. */
+  toggleSpeakerphone(): boolean {
+    this._speakerphone = !this._speakerphone;
+    // In a production app we would also ask the user to select an audio
+    // output device via navigator.mediaDevices.enumerateDevices(), but
+    // for now we simply keep an internal flag so the UI can reflect it.
+    return this._speakerphone;
   }
 
   leaveRoom(): void {
-    // stub
+    if (this.room) {
+      this.room.disconnect();
+      this.room = null;
+    }
+    this._localAudioTrack = null;
   }
 }

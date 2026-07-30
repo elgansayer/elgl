@@ -750,7 +750,10 @@ export class I18nService {
 
     // VoIP Call UI
     'voip.mute': 'Mute',
+    'voip.unmute': 'Unmute',
     'voip.speaker': 'Speaker',
+    'voip.speaker_on': 'Speaker On',
+    'voip.speaker_off': 'Speaker Off',
     'voip.endCall': 'End Call',
     'voip.connecting': 'Connecting...',
     'voip.ringing': 'Ringing...',

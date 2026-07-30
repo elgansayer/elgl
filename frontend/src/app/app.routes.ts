@@ -338,6 +338,14 @@ export const routes: Routes = [
     title: 'Call Logs - HelloTalk',
   },
   {
+    path: 'active-call',
+    loadComponent: () =>
+      import('./components/active-call/active-call.component').then(
+        (m) => m.ActiveCallComponent,
+      ),
+    title: 'Active Call - HelloTalk',
+  },
+  {
     path: 'pronunciation-feedback',
     loadComponent: () =>
       import('./components/pronunciation-feedback/pronunciation-feedback.component').then(

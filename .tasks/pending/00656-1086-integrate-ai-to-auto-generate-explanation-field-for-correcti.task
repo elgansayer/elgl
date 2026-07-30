@@ -1,0 +1,1 @@
+Integrate AI to auto-generate `explanation` field for `correction` payloads in chat if the human corrector leaves it blank.

@@ -1,0 +1,1 @@
+Rework `POST /economy/purchase-coins` to verify purchase receipt records server-side before updating balances.
