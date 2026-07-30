@@ -12,7 +12,14 @@ export class SendMessageDto {
   room_id!: string;
 
   @IsString()
-  @IsIn(['text', 'voice', 'correction', 'doodle', 'sticker'])
+  @IsIn([
+    'text',
+    'voice',
+    'correction',
+    'doodle',
+    'sticker',
+    'correction_request',
+  ])
   message_type!: string;
 
   @IsOptional()
@@ -34,4 +41,11 @@ export class SendMessageDto {
   @IsOptional()
   @IsString()
   reply_to_id?: string;
+
+  @IsOptional()
+  @IsObject()
+  correction_request_payload?: {
+    original_text: string;
+    target_language?: string;
+  };
 }

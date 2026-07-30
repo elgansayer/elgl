@@ -257,7 +257,9 @@ export class ChatService {
             ? '📝 Correction'
             : dto.message_type === 'doodle'
               ? '🎨 Doodle'
-              : '';
+              : dto.message_type === 'correction_request'
+                ? '✏️ Correction request'
+                : '';
 
       this.eventEmitter.emit(
         'chat.message',

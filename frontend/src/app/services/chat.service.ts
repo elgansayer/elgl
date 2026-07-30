@@ -17,10 +17,14 @@ export interface ChatMessage {
   id: string;
   room_id: string;
   sender_id: string;
-  message_type: 'text' | 'voice' | 'correction' | 'doodle' | 'sticker' | 'system';
+  message_type: 'text' | 'voice' | 'correction' | 'doodle' | 'sticker' | 'system' | 'correction_request';
   text_content?: string;
   media_url?: string;
   correction_payload?: CorrectionPayload;
+  correction_request_payload?: {
+    original_text: string;
+    target_language?: string;
+  };
   system_event?: {
     type: string;
     [param: string]: unknown;
@@ -127,10 +131,14 @@ export class ChatService {
 
   async sendMessage(payload: {
     room_id: string;
-    message_type: 'text' | 'voice' | 'correction' | 'doodle' | 'sticker';
+    message_type: 'text' | 'voice' | 'correction' | 'doodle' | 'sticker' | 'correction_request';
     text_content?: string;
     media_url?: string;
     correction_payload?: CorrectionPayload;
+    correction_request_payload?: {
+      original_text: string;
+      target_language?: string;
+    };
     reply_to_id?: string;
   }): Promise<ChatMessage> {
     // Check if the receiver is blocked before sending
@@ -162,6 +170,7 @@ export class ChatService {
         text_content: payload.text_content,
         media_url: payload.media_url,
         correction_payload: payload.correction_payload,
+        correction_request_payload: payload.correction_request_payload,
         reply_to_id: payload.reply_to_id,
         is_read: false,
         created_at: new Date().toISOString(),
@@ -190,6 +199,7 @@ export class ChatService {
           text_content: msg.text_content,
           media_url: msg.media_url,
           correction_payload: msg.correction_payload,
+          correction_request_payload: msg.correction_request_payload,
           reply_to_id: msg.reply_to_id,
         };
 
