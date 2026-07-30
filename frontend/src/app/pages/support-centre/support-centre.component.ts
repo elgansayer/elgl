@@ -1,5 +1,5 @@
 import { Component, inject, signal, resource } from '@angular/core';
-import { HelpFaqService, FAQItem, FAQResponse } from '../../services/help-faq.service';
+import { HelpFaqService, FAQResponse } from '../../services/help-faq.service';
 import { I18nService } from '../../services/i18n.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';

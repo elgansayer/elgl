@@ -479,6 +479,19 @@ export class UserService {
     );
   }
 
+  async assessProficiency(score: number): Promise<string> {
+    const result = await firstValueFrom(
+      this.http
+        .post<{ level: string }>(
+          `${this.baseUrl}/me/assess-proficiency`,
+          { score },
+          { headers: this.getHeaders() },
+        )
+        .pipe(catchError(() => of({ level: 'A1' }))),
+    );
+    return result.level;
+  }
+
   async getOverviewStats(): Promise<{
     translations_count: number;
     corrections_count: number;

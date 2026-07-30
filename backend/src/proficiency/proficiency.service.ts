@@ -15,7 +15,10 @@ export class ProficiencyService {
     private readonly supabaseService: SupabaseService,
   ) {}
 
-  assess(assessment: AssessmentResultDto): AssessmentResult {
+  async assess(
+    assessment: AssessmentResultDto,
+    userId: string,
+  ): Promise<AssessmentResult> {
     const scores: number[] = [];
     if (assessment.grammarScore !== undefined)
       scores.push(assessment.grammarScore);
@@ -30,6 +33,20 @@ export class ProficiencyService {
     const overallScore = Math.round(avgScore * 10) / 10;
     const level = this.mapScoreToLevel(overallScore);
 
+    // Persist proficiency level in database
+    const supabase = this.supabaseService.getClient();
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ proficiency_level: level })
+      .eq('id', userId);
+    if (updateError) {
+      throw new Error(
+        `Failed to save proficiency level: ${updateError.message}`,
+      );
+    }
+
+    await this.xpService.awardXpForActivity(userId, 'complete_assessment');
+
     const result: AssessmentResult = {
       level,
       overallScore,
@@ -38,11 +55,6 @@ export class ProficiencyService {
       pronunciationScore: assessment.pronunciationScore ?? 0,
       testedAt: new Date().toISOString(),
     };
-
-    void this.xpService.awardXpForActivity(
-      assessment.userId,
-      'complete_assessment',
-    );
 
     return result;
   }
@@ -61,7 +73,7 @@ export class ProficiencyService {
     const { error } = await supabase
       .from('users')
       .update({
-        native_language: dto.nativeLanguage,
+        native_languages: [dto.nativeLanguage],
         target_languages: languageCodes,
         language_levels: languageLevels,
       })

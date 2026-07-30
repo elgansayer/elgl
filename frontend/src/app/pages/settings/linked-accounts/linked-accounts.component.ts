@@ -2,7 +2,6 @@ import { Component, inject, resource, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   LinkedAccountsService,
-  LinkedAccount,
 } from '../../../services/linked-accounts.service';
 import { TranslatePipe } from '../../../services/translate.pipe';
 

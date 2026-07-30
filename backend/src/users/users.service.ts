@@ -28,6 +28,38 @@ export class UsersService {
     @Optional() private readonly correctorScoreService?: CorrectorScoreService,
   ) {}
 
+  async proficiencyAssessment(userId: string, score: number): Promise<string> {
+    // Simple score‑based mapping to CEFR levels
+    let level: string;
+    if (score >= 90) {
+      level = 'C2';
+    } else if (score >= 75) {
+      level = 'C1';
+    } else if (score >= 60) {
+      level = 'B2';
+    } else if (score >= 45) {
+      level = 'B1';
+    } else if (score >= 30) {
+      level = 'A2';
+    } else {
+      level = 'A1';
+    }
+
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('users')
+      .update({ proficiency_level: level })
+      .eq('id', userId);
+
+    if (error) {
+      Logger.warn(
+        `Failed to update proficiency_level for ${userId}: ${error.message}`,
+      );
+    }
+
+    return level;
+  }
+
   async getProfile(userId: string): Promise<UserProfile> {
     const supabase = this.supabaseService.getClient();
     const response = await supabase

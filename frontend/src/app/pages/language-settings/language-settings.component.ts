@@ -16,9 +16,12 @@ import { TranslatePipe } from '../../services/translate.pipe';
       <ul class="space-y-2">
         @for (lang of langs; track lang.code) {
           <li
+            role="button"
+            tabindex="0"
             class="flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors"
             [class.selected]="currentLang() === lang.code"
             (click)="selectLang(lang.code)"
+            (keydown.enter)="selectLang(lang.code)"
           >
             <span class="flex items-center gap-2">
               <span class="text-xl">{{ lang.flag }}</span>

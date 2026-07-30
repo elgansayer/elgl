@@ -142,10 +142,14 @@ export class MySubscriptionComponent {
 
   protected changePlan(planId: string, interval: string): void {
     if (this.changingPlanId() === planId) return;
+    if (interval !== 'month' && interval !== 'year') {
+      this.changingPlanId.set(null);
+      return;
+    }
     this.changingPlanId.set(planId);
 
     this.monetisationService
-      .createCheckoutSession(planId, interval as 'month' | 'year')
+      .createCheckoutSession(planId, interval)
       .then((resp) => {
         if (resp.sessionUrl) {
           window.location.href = resp.sessionUrl;

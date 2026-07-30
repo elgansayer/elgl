@@ -1,7 +1,6 @@
 import { Component, inject, signal, resource } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { HelpFaqService, FAQItem } from '../../services/help-faq.service';
+import { HelpFaqService } from '../../services/help-faq.service';
 import { FormsModule } from '@angular/forms';
 
 @Component({

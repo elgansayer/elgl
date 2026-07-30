@@ -76,6 +76,19 @@ export class UsersController {
     return this.usersService.getUserStats(user.id);
   }
 
+  @Post('me/assess-proficiency')
+  async assessProficiency(
+    @CurrentUser() user: User | null,
+    @Body('score') score: number,
+  ): Promise<{ level: string }> {
+    if (!user) throw new UnauthorizedException();
+    if (typeof score !== 'number' || score < 0 || score > 100) {
+      throw new BadRequestException('Score must be a number between 0 and 100');
+    }
+    const level = await this.usersService.proficiencyAssessment(user.id, score);
+    return { level };
+  }
+
   @UseGuards(TwoFactorGuard)
   @Patch('me')
   async updateMyProfile(
