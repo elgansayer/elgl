@@ -92,21 +92,23 @@ export class HelpCentreComponent {
       const cats = await this.helpService.getCategories();
       return cats ?? [];
     },
+    defaultValue: [],
   });
 
   protected articlesResource = resource({
-    request: () => ({
+    params: () => ({
       search: this.searchText(),
       category: this.selectedCategory(),
     }),
-    loader: async ({ request }) => {
+    loader: async ({ params }) => {
       const res = await this.helpService.getFAQs(
-        request.category,
+        params.category,
       );
       return (
         res ?? { items: [], total: 0, page: 1, limit: 50 }
       );
     },
+    defaultValue: { items: [], total: 0, page: 1, limit: 50 },
   });
 
   protected selectCategory(cat: string): void {

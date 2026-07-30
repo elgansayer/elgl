@@ -1,17 +1,15 @@
-import { Global, Injectable, OnModuleInit } from '@nestjs/common';
+import { Global, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import Redis from 'ioredis';
 
 @Global()
 @Injectable()
-export class SupabaseService implements OnModuleInit {
-  private client!: SupabaseClient<any, any, any>;
-  private redisClient!: Redis;
+export class SupabaseService {
+  private readonly client: SupabaseClient<any, any, any>;
+  private readonly redisClient: Redis;
 
-  constructor(private readonly configService: ConfigService) {}
-
-  onModuleInit() {
+  constructor(private readonly configService: ConfigService) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
     const supabaseKey = this.configService.get<string>(
       'SUPABASE_SERVICE_ROLE_KEY',

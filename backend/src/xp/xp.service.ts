@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
-@Injectable({ providedIn: 'root' })
+@Injectable()
 export class XpService {
   private readonly logger = new Logger(XpService.name);
 

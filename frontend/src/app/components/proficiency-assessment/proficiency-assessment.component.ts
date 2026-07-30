@@ -1,5 +1,6 @@
 import { Component, input, output, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { ProficiencyService, AssessmentResult, AssessmentResultDto } from '../../services/proficiency.service';
 
 @Component({
@@ -54,7 +55,7 @@ export class ProficiencyAssessmentComponent {
       pronunciationScore: this.pronunciationScore,
     };
     try {
-      const res = await this.proficiencyService.assess(dto).toPromise();
+      const res = await firstValueFrom(this.proficiencyService.assess(dto));
       this.result.set(res);
       this.assessedLevel.emit(res.level);
     } catch (err) {

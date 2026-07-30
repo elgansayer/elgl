@@ -97,7 +97,7 @@ export class GlobalSearchComponent {
     this.searchFilters.emit({
       native_languages: this.nativeLanguages() || undefined,
       target_language: this.targetLanguage() || undefined,
-      level: this.level() || undefined,
+      proficiency_level: this.level() || undefined,
     });
   }
 }

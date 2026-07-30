@@ -13,7 +13,7 @@ import { I18nService } from '../../services/i18n.service';
         <input
           type="password"
           [value]="newPassword()"
-          (input)="newPassword.set(($event.target as HTMLInputElement).value)"
+          (input)="newPassword.set($any($event.target).value)"
         />
       </div>
 
@@ -37,7 +37,7 @@ import { I18nService } from '../../services/i18n.service';
         <input
           type="password"
           [value]="confirmPassword()"
-          (input)="confirmPassword.set(($event.target as HTMLInputElement).value)"
+          (input)="confirmPassword.set($any($event.target).value)"
         />
       </div>
 
@@ -148,7 +148,7 @@ import { I18nService } from '../../services/i18n.service';
   `],
 })
 export class PasswordPolicyResetComponent {
-  private i18n = inject(I18nService);
+  protected readonly i18n = inject(I18nService);
 
   readonly newPassword = signal('');
   readonly confirmPassword = signal('');

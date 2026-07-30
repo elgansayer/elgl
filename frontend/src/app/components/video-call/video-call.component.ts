@@ -19,7 +19,6 @@ import {
   LocalVideoTrack,
   LocalAudioTrack,
   createLocalTracks,
-  createLocalVideoTrack,
   Track,
 } from 'livekit-client';
 import { LivekitService } from '../../services/livekit.service';
@@ -425,7 +424,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
         stream.getTracks().forEach((t) => t.stop());
         return;
       }
-      const screenTrack = await createLocalVideoTrack(track);
+      const screenTrack = new LocalVideoTrack(track);
       await this.room?.localParticipant.publishTrack(screenTrack);
       this.screenTrack = screenTrack;
       this.isScreenSharing.set(true);

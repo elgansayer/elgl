@@ -82,4 +82,5 @@ export interface ChatRoomRecord {
   is_pinned: boolean;
   created_at: string;
   labels?: string[];
+  wallpaper_url?: string | null;
 }

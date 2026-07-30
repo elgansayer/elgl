@@ -216,10 +216,7 @@ export class DiscoveryService {
     }
 
     // When the user has serious_learner_mode enabled, force serious learner filter
-    if (
-      _currentUserProfile?.serious_learner_mode ||
-      query.serious_learner_mode
-    ) {
+    if (_currentUserProfile?.is_serious_learner || query.serious_learner_mode) {
       query.serious_learner_only = true;
     }
 
@@ -322,13 +319,15 @@ export class DiscoveryService {
           );
         }
         if (query.age_min !== undefined) {
+          const ageMin = query.age_min;
           fallbackResults = fallbackResults.filter(
-            (u) => (u as any).age >= query.age_min,
+            (u) => (u as any).age >= ageMin,
           );
         }
         if (query.age_max !== undefined) {
+          const ageMax = query.age_max;
           fallbackResults = fallbackResults.filter(
-            (u) => (u as any).age <= query.age_max,
+            (u) => (u as any).age <= ageMax,
           );
         }
         const filtered = await this.filterByVoiceRoomActive(
@@ -390,10 +389,12 @@ export class DiscoveryService {
         );
       }
       if (query.age_min !== undefined) {
-        rpcResults = rpcResults.filter((u) => (u as any).age >= query.age_min);
+        const ageMin = query.age_min;
+        rpcResults = rpcResults.filter((u) => (u as any).age >= ageMin);
       }
       if (query.age_max !== undefined) {
-        rpcResults = rpcResults.filter((u) => (u as any).age <= query.age_max);
+        const ageMax = query.age_max;
+        rpcResults = rpcResults.filter((u) => (u as any).age <= ageMax);
       }
 
       if (query.has_audio_intro) {
@@ -428,10 +429,12 @@ export class DiscoveryService {
       results = results.filter((u: any) => u.proficiency_level === query.level);
     }
     if (query.age_min !== undefined) {
-      results = results.filter((u) => (u as any).age >= query.age_min);
+      const ageMin = query.age_min;
+      results = results.filter((u) => (u as any).age >= ageMin);
     }
     if (query.age_max !== undefined) {
-      results = results.filter((u) => (u as any).age <= query.age_max);
+      const ageMax = query.age_max;
+      results = results.filter((u) => (u as any).age <= ageMax);
     }
     const filtered = await this.filterByVoiceRoomActive(
       results,
@@ -470,7 +473,7 @@ export class DiscoveryService {
       .neq('audio_intro_url', '');
 
     if (blockedIds.length > 0) {
-      queryBuilder = queryBuilder.not('id', 'in', blockedIds);
+      queryBuilder = (queryBuilder as any).not('id', 'in', blockedIds);
     }
 
     if (query.native_languages) {
@@ -780,10 +783,12 @@ export class DiscoveryService {
     }
 
     if (query.age_min !== undefined) {
-      filtered = filtered.filter((u) => (u as any).age >= query.age_min);
+      const ageMin = query.age_min;
+      filtered = filtered.filter((u) => (u as any).age >= ageMin);
     }
     if (query.age_max !== undefined) {
-      filtered = filtered.filter((u) => (u as any).age <= query.age_max);
+      const ageMax = query.age_max;
+      filtered = filtered.filter((u) => (u as any).age <= ageMax);
     }
 
     if (query.level) {

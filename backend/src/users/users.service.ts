@@ -291,6 +291,7 @@ export class UsersService {
       privacy_hide_location: false,
       privacy_hide_from_search: false,
       privacy_hide_gender: false,
+      privacy_hide_exact_location: false,
       privacy_hide_online_status: false,
       privacy_hide_vip_status: false,
       silence_unknown_callers: false,
@@ -516,6 +517,7 @@ export class UsersService {
     privacy_profile_photo?: string;
     privacy_about_info?: string;
     privacy_status?: string;
+    privacy_hide_vip_status?: boolean;
   }> {
     const profile = await this.getProfile(userId);
     return {
@@ -748,7 +750,15 @@ export class UsersService {
     return response.data as UserProfile;
   }
 
-  async getUserStats(userId: string): Promise<Partial<UserProfile>> {
+  async getUserStats(userId: string): Promise<
+    Partial<UserProfile> & {
+      momentsCount: number;
+      commentsCount: number;
+      followersCount: number;
+      followingCount: number;
+      profileVisitsCount: number;
+    }
+  > {
     const supabase = this.supabaseService.getClient();
 
     const [

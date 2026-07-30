@@ -42,9 +42,6 @@ export class AuthService {
     }
     this.isLoading.set(false);
 
-    // Initial biometric unlock
-    await this.unlockApp();
-
     this.supabase.auth.onAuthStateChange((_event, session) => {
       this.updateAuthState(session);
       if (!session) {
@@ -55,7 +52,14 @@ export class AuthService {
     });
   }
 
-  readonly appLocked = signal<boolean>(true);
+  // Starts unlocked: there is no biometric enrollment flow anywhere in the app,
+  // so a `navigator.credentials.get()` request always fails (no credential was
+  // ever registered for this origin). Defaulting to locked would permanently
+  // block every user behind an unlock screen with no way through. Locking only
+  // kicks in reactively when the app is backgrounded (see AppComponent's
+  // visibilitychange handler), which is the flow `requestBiometric()` can
+  // actually satisfy.
+  readonly appLocked = signal<boolean>(false);
 
   private async requestBiometric(): Promise<boolean> {
     if (!(await this.isBiometricSupported())) {

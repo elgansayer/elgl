@@ -28,7 +28,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <input
           type="text"
           [value]="search()"
-          (input)="search.set(($event.target as HTMLInputElement).value)"
+          (input)="search.set($any($event.target).value)"
           placeholder="{{ 'lang.searchPlaceholder' | t }}"
           class="w-full rounded border border-neutral-600 bg-neutral-800 px-2 py-1 text-xs text-white placeholder-neutral-500"
         />
@@ -54,7 +54,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <input
           type="text"
           [value]="custom()"
-          (input)="custom.set(($event.target as HTMLInputElement).value)"
+          (input)="custom.set($any($event.target).value)"
           placeholder="{{ 'lang.customPlaceholder' | t }}"
           class="flex-1 rounded border border-neutral-600 bg-neutral-800 px-2 py-1 text-xs text-white placeholder-neutral-500"
         />

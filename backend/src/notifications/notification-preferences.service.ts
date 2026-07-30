@@ -21,6 +21,7 @@ interface DbNotificationPreferences {
   study_reminder: CategoryPreference;
   friend_request: CategoryPreference;
   audio_room_invite: CategoryPreference;
+  new_follower: CategoryPreference;
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
   do_not_disturb: boolean;

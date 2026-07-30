@@ -22,7 +22,6 @@ import { VersionCheckService } from './services/version-check.service';
 import { ThemeSelectorComponent } from './components/theme-selector/theme-selector.component';
 import { FontScaleSliderComponent } from './components/font-scale-slider/font-scale-slider.component';
 import { FontScaleService } from './services/font-scale.service';
-import { JoyrideModule, JoyrideService } from 'ngx-joyride';
 import { I18nService } from './services/i18n.service';
 import { AppLanguageSelectorComponent } from './components/app-language-selector/app-language-selector.component';
 
@@ -41,50 +40,8 @@ import { AppLanguageSelectorComponent } from './components/app-language-selector
     ThemeSelectorComponent,
     FontScaleSliderComponent,
     AppLanguageSelectorComponent,
-    JoyrideModule,
   ],
-  template: `
-    @if (authService.appLocked()) {
-      <div
-        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90"
-        (click)="authService.unlockApp()"
-      >
-        <div class="text-center text-white">
-          <p class="mb-4 text-lg font-medium">{{ 'app_lock.title' | t }}</p>
-          <p class="mb-6 text-sm opacity-70">{{ 'app_lock.subtitle' | t }}</p>
-          <button
-            class="rounded-full bg-indigo-600 px-8 py-3 text-sm font-semibold shadow-xl hover:bg-indigo-500"
-            (click)="authService.unlockApp()"
-          >
-            {{ 'app_lock.unlock_btn' | t }}
-          </button>
-        </div>
-      </div>
-    }
-    <router-outlet />
-    <!-- Language selector button -->
-    <app-app-language-selector />
-    <app-toast />
-    <app-incoming-call-modal
-      [callData]="incomingCallData()"
-      (accept)="onAcceptCall($event)"
-      (decline)="onDeclineCall($event)"
-    />
-    <app-report-user-modal #reportModal />
-    <app-daily-login-modal
-      [show]="showDailyRewardModal()"
-      [coinsRewarded]="dailyRewardCoins()"
-      (close)="showDailyRewardModal.set(false)"
-    />
-    <app-confirm-dialog />
-    <app-theme-selector />
-    @if (fontScaleService.isOpen()) {
-      <app-font-scale-slider
-        [scale]="fontScaleService.currentScale()"
-        (scaleChange)="fontScaleService.setScale($event)"
-      />
-    }
-  `,
+  templateUrl: './app.component.html',
   host: {
     '[class.app-locked]': 'authService.appLocked()',
   },
@@ -102,7 +59,6 @@ export class AppComponent implements OnInit {
   readonly unreadCounter = inject(UnreadCounterService);
   private versionCheckService = inject(VersionCheckService);
   readonly fontScaleService = inject(FontScaleService);
-  private joyrideService = inject(JoyrideService);
   readonly i18n = inject(I18nService);
   private document = inject(DOCUMENT);
   private destroyRef = inject(DestroyRef);
@@ -113,7 +69,6 @@ export class AppComponent implements OnInit {
   );
 
   private routerOutlet = viewChild.required(RouterOutlet);
-  readonly authService = inject(AuthService);
 
   protected prepareRoute(): string {
     return this.routerOutlet()?.activatedRouteData?.['animation'] ?? 'default';
@@ -193,24 +148,6 @@ export class AppComponent implements OnInit {
       // Request notification permission after user is authenticated
       await this.fcmService.requestPermission();
       await this.fcmService.persistFcmToken(user.id);
-
-      // Start onboarding tour for brand new users
-      if (!localStorage.getItem('onboarding_done')) {
-        setTimeout(() => {
-          this.joyrideService.startTour({
-            steps: [
-              { id: 'step-chat', title: this.i18n.translate('joyride.chat.title'), text: this.i18n.translate('joyride.chat.text') },
-              { id: 'step-moments', title: this.i18n.translate('joyride.moments.title'), text: this.i18n.translate('joyride.moments.text') },
-              { id: 'step-discovery', title: this.i18n.translate('joyride.discovery.title'), text: this.i18n.translate('joyride.discovery.text') },
-              { id: 'step-audio-rooms', title: this.i18n.translate('joyride.audioRooms.title'), text: this.i18n.translate('joyride.audioRooms.text') },
-              { id: 'step-profile', title: this.i18n.translate('joyride.profile.title'), text: this.i18n.translate('joyride.profile.text') },
-            ],
-            stepDefaultPosition: 'bottom',
-          }).then(() => {
-            localStorage.setItem('onboarding_done', 'true');
-          });
-        }, 1500);
-      }
     }
   }
 

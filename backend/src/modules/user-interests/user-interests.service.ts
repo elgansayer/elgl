@@ -1,5 +1,6 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseService } from '../../supabase/supabase.service';
 
 interface UserInterestTagRow {
   tag: string;
@@ -21,9 +22,11 @@ export interface VocabularyEntry {
 
 @Injectable()
 export class UserInterestsService {
-  constructor(
-    @Inject('SUPABASE_CLIENT') private readonly supabase: SupabaseClient,
-  ) {}
+  constructor(private readonly supabaseService: SupabaseService) {}
+
+  private get supabase(): SupabaseClient {
+    return this.supabaseService.getClient();
+  }
 
   async getUserInterests(userId: string): Promise<string[]> {
     const { data, error } = await this.supabase

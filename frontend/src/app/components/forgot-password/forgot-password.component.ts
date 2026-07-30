@@ -4,7 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs/operators';
-import { TranslatePipe } from '../services/translate.pipe';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { environment } from '../../../environments/environment';
 
 @Component({

@@ -22,6 +22,10 @@ export class CreateLanguagePartyDto {
   is_video_stream?: boolean;
 
   @IsOptional()
+  @IsString()
+  level?: string;
+
+  @IsOptional()
   @IsNumber()
   @Min(2)
   max_speakers?: number;

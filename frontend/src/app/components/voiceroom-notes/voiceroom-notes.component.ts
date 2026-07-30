@@ -93,11 +93,12 @@ export class VoiceroomNotesComponent {
   isPosting = signal(false);
 
   readonly notesResource = resource({
-    request: () => ({ roomId: this.roomId() }),
-    loader: ({ request }) =>
+    params: () => ({ roomId: this.roomId() }),
+    loader: ({ params }) =>
       firstValueFrom(
-        this.http.get<VoiceRoomNote[]>(`/audio-rooms/${request.roomId}/notes`)
+        this.http.get<VoiceRoomNote[]>(`/audio-rooms/${params.roomId}/notes`)
       ),
+    defaultValue: [],
   });
 
   async addNote(): Promise<void> {

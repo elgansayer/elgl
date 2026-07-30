@@ -52,7 +52,7 @@ export class SettingsComponent implements OnInit {
 
   readonly linkedAccounts = signal<LinkedAccount[]>([]);
   protected chatEnterToSend = false;
-  protected chatTextSize = 'medium';
+  protected chatTextSize: 'small' | 'medium' | 'large' = 'medium';
 
   /** Providers we support linking */
   readonly supportedProviders = ['google', 'facebook', 'twitter', 'apple'] as const;

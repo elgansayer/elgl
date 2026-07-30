@@ -249,7 +249,7 @@ export class MomentsService {
     }
 
     if (moments.length === 0) {
-      const generated: MomentRecord[] = [];
+      let generated: MomentRecord[] = [];
       const eligibleUsers = MOCK_USERS.filter(
         (u) => !blockedIds.includes(u.id),
       );
@@ -378,7 +378,7 @@ export class MomentsService {
         generated.push({
           id: `mock-question-${i}`,
           user_id: u.id,
-          text_content: null,
+          text_content: undefined,
           media_urls: [],
           media_type: 'none',
           target_language: targetLang ?? u.target_languages[0],

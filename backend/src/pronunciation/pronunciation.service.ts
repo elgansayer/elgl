@@ -29,7 +29,7 @@ export class PronunciationService {
           'Ocp-Apim-Subscription-Key': this.subscriptionKey,
           'Content-Type': 'audio/wav',
         },
-        body: audio.buffer,
+        body: audio.buffer as BodyInit,
       });
 
       const data: { DisplayText?: string; RecognitionStatus?: string } =

@@ -8,12 +8,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { StudyBuddiesService } from './study-buddies.service';
 import { StudyBuddyRequestDto } from './dto/study-buddy.dto';
 
 @Controller('study-buddies')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(SupabaseAuthGuard)
 export class StudyBuddiesController {
   constructor(private readonly sbService: StudyBuddiesService) {}
 

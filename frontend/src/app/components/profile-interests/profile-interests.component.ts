@@ -24,7 +24,7 @@ import { UserInterestsService } from '../../services/user-interests.service';
 })
 export class ProfileInterestsComponent {
   private readonly interestsService = inject(UserInterestsService);
-  private readonly currentLanguage = input.required<string>();
+  protected readonly currentLanguage = input.required<string>();
 
   readonly availableTags = resource({
     loader: () =>

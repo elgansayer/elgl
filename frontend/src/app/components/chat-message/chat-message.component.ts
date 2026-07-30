@@ -9,6 +9,7 @@ import { ConfirmService } from '../../services/confirm.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-chat-message',
@@ -193,7 +194,7 @@ export class ChatMessageComponent {
     this.simplifying.set(true);
     this.simplifiedText.set(null);
     try {
-      const res = await fetch('/api/nlp/simplify', {
+      const res = await fetch(`${environment.apiUrl}/nlp/simplify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),

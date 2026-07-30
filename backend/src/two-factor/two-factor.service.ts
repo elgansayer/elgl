@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import * as speakeasy from 'speakeasy';
 import * as qrcode from 'qrcode';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -14,7 +14,12 @@ export class TwoFactorService {
       name: `HelloTalk:${userId}`,
     });
 
-    const qrCodeUrl = await qrcode.toDataURL(secret.otpauth_url);
+    if (!secret.otpauth_url) {
+      throw new InternalServerErrorException(
+        'Failed to generate 2FA otpauth URL',
+      );
+    }
+    const qrCodeUrl: string = await qrcode.toDataURL(secret.otpauth_url);
 
     await this.supabaseService
       .getClient()

@@ -9,19 +9,25 @@ export class FontScaleService {
   private readonly storageKey = 'hellotalk_font_scale';
 
   constructor() {
-    const saved = localStorage.getItem(this.storageKey);
-    if (saved !== null) {
-      const parsed = parseFloat(saved);
-      if (!isNaN(parsed) && parsed >= 0.5 && parsed <= 2.0) {
-        this.scaleFactor.set(parsed);
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem(this.storageKey);
+      if (saved !== null) {
+        const parsed = parseFloat(saved);
+        if (!isNaN(parsed) && parsed >= 0.5 && parsed <= 2.0) {
+          this.scaleFactor.set(parsed);
+        }
       }
     }
 
     effect(() => {
       const factor = this.scaleFactor();
-      const basePx = 16 * factor;
-      document.documentElement.style.fontSize = `${basePx}px`;
-      localStorage.setItem(this.storageKey, factor.toString());
+      if (typeof document !== 'undefined') {
+        const basePx = 16 * factor;
+        document.documentElement.style.fontSize = `${basePx}px`;
+      }
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(this.storageKey, factor.toString());
+      }
     });
   }
 

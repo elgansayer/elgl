@@ -86,7 +86,7 @@ export class CentrifugoService {
   ): void {
     this.subscribe(`room_${roomId}`, (data: unknown) => {
       const payload = data as Record<string, unknown>;
-      if (typeof payload.original_text === 'string') {
+      if (typeof payload['original_text'] === 'string') {
         callback(payload as any);
       }
     });

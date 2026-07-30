@@ -27,7 +27,7 @@ Usage:
   ./swarmd.py --relaxed-tests          allow commits even when tests fail
 """
 
-import json, os, re, signal, subprocess, sys, threading, time, atexit
+import difflib, json, os, re, signal, subprocess, sys, threading, time, atexit
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -210,7 +210,48 @@ def task_move(f: Path, to_state: str) -> Path:
     f.rename(dest)
     return dest
 
-def task_add(description: str, phase: str = '0000') -> Path:
+def _all_task_titles() -> list[tuple[str, Path]]:
+    """(first-line title, path) for every task across every state dir."""
+    out = []
+    for state in ['pending', 'active', 'stuck', 'completed']:
+        d = TASKS_DIR / state
+        if not d.exists():
+            continue
+        for f in d.glob('*.task'):
+            try:
+                title = f.read_text().strip().split('\n')[0]
+                if title:
+                    out.append((title, f))
+            except Exception:
+                pass
+    return out
+
+def find_similar_task(description: str, threshold: float = 0.72) -> Path | None:
+    """
+    Fuzzy-match description against every existing task title (any state).
+    Catches near-duplicates like "Add a moment system" vs "Build the moments
+    feature" that exact-string matching misses, without needing an LLM call.
+    Returns the path of the closest match at or above threshold, else None.
+    """
+    title = description.strip().split('\n')[0].lower()
+    if not title:
+        return None
+    best_ratio = 0.0
+    best_path = None
+    for existing_title, path in _all_task_titles():
+        ratio = difflib.SequenceMatcher(None, title, existing_title.lower()).ratio()
+        if ratio > best_ratio:
+            best_ratio = ratio
+            best_path = path
+    if best_ratio >= threshold:
+        return best_path
+    return None
+
+def task_add(description: str, phase: str = '0000') -> Path | None:
+    dup = find_similar_task(description)
+    if dup:
+        log(f"Skipping duplicate task (matches {dup}): {description[:80]}")
+        return None
     slug = re.sub(r'[^a-z0-9]', '-', description.lower())
     slug = re.sub(r'--+', '-', slug).strip('-')[:60] or 'task'
     existing = len(list((TASKS_DIR / 'pending').glob('*.task')))
@@ -253,6 +294,30 @@ def _git_real_changes(before: set, after: set) -> int:
     return len([f for f in changed
                 if not any(f.endswith(x) for x in ['.log', 'TODO.md', 'STUCK_LOG.md'])
                 and not f.startswith('.aider')])
+
+def discard_working_tree_changes():
+    """
+    Revert to the last known-good commit and wipe any files the AI produced.
+    Used when a task's changes still fail tests/lint/build after the AI-fix
+    attempt: rather than committing (and pushing to main) a broken build,
+    the swarm throws the attempt away and the task goes to stuck/ for a
+    human (or a future retry) to look at.
+    """
+    try:
+        subprocess.run(['git', 'checkout', '--', '.'], check=True, timeout=30)
+        subprocess.run(
+            ['git', 'clean', '-fd',
+             '-e', 'node_modules', '-e', '*/node_modules',
+             '-e', 'dist', '-e', '*/dist',
+             '-e', '.angular', '-e', '*/.angular',
+             '-e', 'coverage', '-e', '*/coverage',
+             '-e', '.env', '-e', '*/.env',
+             '-e', '.tasks'],
+            check=True, timeout=30,
+        )
+        log("Discarded broken working tree changes (reverted to last known-good main).")
+    except Exception as e:
+        log(f"Failed to discard working tree changes: {e}")
 
 def git_commit(message: str) -> str:
     try:
@@ -396,7 +461,16 @@ def sync_github_issues() -> tuple[int, int]:
                     log(f"Sync: reopened GitHub issue #{num} → moved task to pending")
                 continue
 
-            # Case 3: Open issue not yet in .tasks/ → import
+            # Case 3: Open issue not yet in .tasks/ → import (fuzzy-dedup: skip
+            # near-duplicates like "Add a moment system" vs "Build moments
+            # feature" too, not just exact title matches).
+            is_near_dup = title not in existing and any(
+                difflib.SequenceMatcher(None, title.lower(), t.lower()).ratio() >= 0.72
+                for t in existing
+            )
+            if is_near_dup:
+                log(f"Sync: skipping near-duplicate issue #{num}: {title[:80]}")
+                continue
             if state == 'open' and title not in existing:
                 slug = re.sub(r'[^a-z0-9]', '-', title.lower())
                 slug = re.sub(r'--+', '-', slug).strip('-')[:60] or 'task'
@@ -1251,26 +1325,46 @@ def supervisor():
                     state_patch(last_error='No code changes after max retries')
                     break
 
-            # Changes made — run tests (block commit by default)
+            # Changes made — run tests. A task only reaches git_commit() if
+            # tests actually pass (or RELAXED_TESTS was explicitly requested
+            # on the CLI). Anything else gets its changes thrown away rather
+            # than pushed to main — see discard_working_tree_changes().
             passed, test_errors = run_tests()
-            if not passed:
-                if RELAXED_TESTS:
-                    log(f"Tests have failures. Committing anyway (--relaxed-tests mode).")
-                else:
-                    log(f"Tests have failures after {model_used}. Attempting AI fix...")
-                    fix_ok = run_test_fix(test_errors, cycle_count)
-                    if fix_ok:
-                        # Re-run tests after AI fix
-                        passed2, err2 = run_tests()
-                        if not passed2:
-                            if RELAXED_TESTS:
-                                log(f"Tests still failing after AI fix. Committing anyway (--relaxed-tests).")
-                            else:
-                                log(f"Tests still failing after AI fix. Committing anyway with warning.")
-                        else:
-                            log("Tests pass after AI fix.")
+            final_errors = test_errors
+            if not passed and not RELAXED_TESTS:
+                log(f"Tests have failures after {model_used}. Attempting AI fix...")
+                fix_ok = run_test_fix(test_errors, cycle_count)
+                if fix_ok:
+                    passed, final_errors = run_tests()
+                    if passed:
+                        log("Tests pass after AI fix.")
                     else:
-                        log(f"AI test fix failed for {model_used}. Committing with test failures noted.")
+                        log("Tests still failing after AI fix.")
+                else:
+                    log(f"AI test fix failed for {model_used}.")
+            elif not passed and RELAXED_TESTS:
+                log("Tests have failures. Committing anyway (--relaxed-tests mode).")
+
+            if not passed and not RELAXED_TESTS:
+                discard_working_tree_changes()
+                if attempt < CFG['max_retries'] - 1:
+                    log("Discarded failing attempt. Retrying task from a clean tree...")
+                    time.sleep(CFG['cooldown'])
+                    continue
+                log(f"STUCK: task still fails tests after {CFG['max_retries']} attempts. "
+                    f"Moving to stuck/ without committing.")
+                state_patch(last_error=f'Tests failing after all attempts: {final_errors[:500]}')
+                if taskfile and taskfile.exists():
+                    try:
+                        taskfile.write_text(
+                            taskfile.read_text().rstrip()
+                            + f"\n\n---\nSTUCK: tests still failing after {CFG['max_retries']} "
+                              f"attempts across all models. Last errors:\n{final_errors[:3000]}"
+                        )
+                    except Exception:
+                        pass
+                    taskfile = task_move(taskfile, 'stuck')
+                break
 
             if taskfile and taskfile.exists():
                 taskfile = task_move(taskfile, 'completed')

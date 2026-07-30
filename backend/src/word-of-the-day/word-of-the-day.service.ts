@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-interface WordOfTheDay {
+export interface WordOfTheDay {
   word: string;
   translation: string;
   language: string;

@@ -1,7 +1,8 @@
 import { Component, inject, signal, computed, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { DiscoveryService, UserProfile } from '../../services/discovery.service';
+import { DiscoveryService } from '../../services/discovery.service';
+import { UserProfile } from '../../services/user.service';
 import { resource } from '@angular/core';
 
 @Component({

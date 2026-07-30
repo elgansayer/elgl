@@ -6,7 +6,7 @@ import {
 import { ShoppingService } from './shopping.service';
 import { MonetisationService } from '../monetisation/monetisation.service';
 
-interface CartItem {
+export interface CartItem {
   itemId: string;
   name: string;
   quantity: number;

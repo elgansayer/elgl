@@ -8,7 +8,7 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CommunitiesService } from './communities.service';
 import { CreateCommunityDto } from './dto/create-community.dto';
 import { AddGroupDto } from './dto/add-group.dto';
@@ -18,27 +18,27 @@ export class CommunitiesController {
   constructor(private readonly communitiesService: CommunitiesService) {}
 
   @Post()
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async create(@Body() dto: CreateCommunityDto, @Req() req: any) {
     const ownerId = req.user.id;
     return this.communitiesService.create(ownerId, dto);
   }
 
   @Get(':communityId')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async find(@Param('communityId') communityId: string) {
     return this.communitiesService.findById(communityId);
   }
 
   @Get()
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async listMine(@Req() req: any) {
     const ownerId = req.user.id;
     return this.communitiesService.listByOwner(ownerId);
   }
 
   @Post(':communityId/groups')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async addGroup(
     @Param('communityId') communityId: string,
     @Body() dto: AddGroupDto,
@@ -47,7 +47,7 @@ export class CommunitiesController {
   }
 
   @Delete(':communityId/groups/:groupId')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async removeGroup(
     @Param('communityId') communityId: string,
     @Param('groupId') groupId: string,
@@ -56,7 +56,7 @@ export class CommunitiesController {
   }
 
   @Get(':communityId/groups')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async getGroups(@Param('communityId') communityId: string) {
     return this.communitiesService.getGroups(communityId);
   }

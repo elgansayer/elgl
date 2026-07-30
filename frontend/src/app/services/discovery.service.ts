@@ -276,8 +276,8 @@ export class DiscoveryService {
   }
 
   async translateBio(bioText: string): Promise<string> {
-    const currentUser = this.authService.currentUser();
-    const targetLanguage = currentUser?.native_languages?.[0] ?? 'en';
+    const currentProfile = await this.userService.getMyProfile();
+    const targetLanguage = currentProfile?.native_languages?.[0] ?? 'en';
     try {
       const result = await firstValueFrom(
         this.http.post<{ translatedText: string }>(

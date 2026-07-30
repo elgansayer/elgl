@@ -1,5 +1,6 @@
 import { Component, computed, resource } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { environment } from '../../../environments/environment';
 
 export interface WordOfTheDay {
   word: string;
@@ -29,7 +30,7 @@ export interface WordOfTheDay {
 export class WordOfTheDayComponent {
   private readonly wordOfTheDayResource = resource<WordOfTheDay, unknown>({
     loader: () =>
-      fetch('/api/word-of-the-day')
+      fetch(`${environment.apiUrl}/word-of-the-day`)
         .then((r) => {
           if (!r.ok) throw new Error('Failed to fetch word of the day');
           return r.json();

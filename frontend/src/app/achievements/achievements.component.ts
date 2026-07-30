@@ -65,11 +65,12 @@ export class AchievementsComponent {
   readonly userId = input.required<string>();
 
   readonly achievementsResource = resource({
-    request: () => ({ userId: this.userId() }),
-    loader: ({ request }) => {
+    params: () => ({ userId: this.userId() }),
+    loader: ({ params }) => {
       return firstValueFrom(
-        this.http.get<FullAchievementDto[]>(`/api/achievements/full/${request.userId}`)
+        this.http.get<FullAchievementDto[]>(`/api/achievements/full/${params.userId}`)
       );
     },
+    defaultValue: [],
   });
 }

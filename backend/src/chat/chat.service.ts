@@ -232,12 +232,11 @@ export class ChatService {
 
     if (
       savedMessage.correction_payload &&
-      !(savedMessage.correction_payload as Record<string, unknown>).explanation
+      !(savedMessage.correction_payload as unknown as Record<string, unknown>)
+        .explanation
     ) {
-      const correctionPayload = savedMessage.correction_payload as Record<
-        string,
-        unknown
-      >;
+      const correctionPayload =
+        savedMessage.correction_payload as unknown as Record<string, unknown>;
       const originalText = correctionPayload.original as string | undefined;
       const correctText = correctionPayload.corrected as string | undefined;
 

@@ -53,20 +53,22 @@ export class SafetyService {
 
   private readonly MUTED_WORDS_STORAGE_KEY = 'hellotalk_muted_words';
 
-  private _mutedWords = signal<string[]>(() => {
-    if (typeof localStorage !== 'undefined') {
-      const stored = localStorage.getItem(this.MUTED_WORDS_STORAGE_KEY);
-      if (stored) {
-        try {
-          const arr: string[] = JSON.parse(stored);
-          return Array.isArray(arr) ? arr : [];
-        } catch {
-          // ignore
+  private _mutedWords = signal<string[]>(
+    (() => {
+      if (typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem(this.MUTED_WORDS_STORAGE_KEY);
+        if (stored) {
+          try {
+            const arr: string[] = JSON.parse(stored);
+            return Array.isArray(arr) ? arr : [];
+          } catch {
+            // ignore
+          }
         }
       }
-    }
-    return [];
-  });
+      return [];
+    })(),
+  );
 
   readonly mutedWords = this._mutedWords.asReadonly();
 

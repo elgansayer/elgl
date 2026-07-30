@@ -3,9 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { SkeletonModule } from 'ngx-skeleton-loader';
+import { NgxSkeletonLoaderComponent } from 'ngx-skeleton-loader';
 import { I18nService } from '../../services/i18n.service';
-import { ProfileVisitsService } from '../../services/profile-visits.service';
 import { UserService, UserProfile, VisitorLog } from '../../services/user.service';
 import { CoverPhotoUploaderComponent } from '../cover-photo-uploader/cover-photo-uploader.component';
 import { HobbyTagsComponent } from '../hobby-tags/hobby-tags.component';
@@ -25,7 +24,7 @@ import { showToast } from '../../services/toast.service';
     FormsModule,
     RouterLink,
     TranslatePipe,
-    SkeletonModule,
+    NgxSkeletonLoaderComponent,
     CoverPhotoUploaderComponent,
     HobbyTagsComponent,
     LanguagePickerComponent,
@@ -37,7 +36,6 @@ import { showToast } from '../../services/toast.service';
 export class ProfileComponent implements OnInit {
   private userService = inject(UserService);
   private readonly i18n = inject(I18nService);
-  private profileVisitsService = inject(ProfileVisitsService);
   private safetyService = inject(SafetyService);
 
   readonly profile = signal<UserProfile | null>(null);
@@ -126,7 +124,7 @@ export class ProfileComponent implements OnInit {
     this.visitorsLoading.set(true);
     this.visitorsError.set('');
     try {
-      const visits = await this.profileVisitsService.getMyVisitors();
+      const visits = await this.userService.getMyVisitors();
       // Limit to 5 for display
       this.visitors.set(visits.slice(0, 5));
     } catch (e) {
@@ -228,9 +226,9 @@ export class ProfileComponent implements OnInit {
     } catch (e: unknown) {
       let errorMsg = this.i18n.translate('profile.updateError');
       if (e && typeof e === 'object') {
-        const obj: Record<string, unknown> = e;
+        const obj = e as Record<string, unknown>;
         if (typeof obj['error'] === 'object' && obj['error'] !== null) {
-          const errObj: Record<string, unknown> = obj['error'];
+          const errObj = obj['error'] as Record<string, unknown>;
           if (typeof errObj['message'] === 'string') {
             errorMsg = errObj['message'];
           }

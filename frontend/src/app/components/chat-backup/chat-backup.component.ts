@@ -1,9 +1,11 @@
 import { Component, input, inject } from '@angular/core';
 import { ChatBackupService } from '../../services/chat-backup.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-chat-backup',
   standalone: true,
+  imports: [TranslatePipe],
   template: `
     <div class="flex flex-col gap-4 p-4">
       <h2 class="text-lg font-bold">{{ 'chat_backup.title' | t }}</h2>

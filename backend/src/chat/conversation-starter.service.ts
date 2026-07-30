@@ -73,7 +73,7 @@ export class ConversationStarterService {
     const prompt = promptLines.join('\n');
 
     try {
-      const response = await this.llmProxyService.generateText(prompt);
+      const { response } = await this.llmProxyService.proxyMessage(prompt);
       const lines = response
         .split('\n')
         .map((l: string) => l.trim())

@@ -1,6 +1,5 @@
 import { Component, input, output, signal, inject } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { LongPressService } from './long-press.service'; // optional, not used now
 
 @Component({
   selector: 'app-long-press-context-menu',
@@ -51,6 +50,13 @@ import { LongPressService } from './long-press.service'; // optional, not used n
           </button>
 
           <button
+            class="w-full text-start text-red-400 font-medium py-2 px-3 rounded-lg hover:bg-white/10"
+            (click)="doBlockToggle()"
+          >
+            {{ (isBlocked() ? 'context_menu.unblock' : 'context_menu.block') | t }}
+          </button>
+
+          <button
             class="w-full text-center text-neutral-400 py-2 px-3 rounded-lg hover:bg-white/10 mt-1"
             (click)="closeMenu()"
           >
@@ -74,6 +80,7 @@ export class LongPressContextMenuComponent {
   readonly messageType = input<string>('text');
   readonly senderId = input.required<string>();
   readonly roomId = input.required<string>();
+  readonly isBlocked = input(false);
 
   readonly copyMessage = output<{ messageId: string; content: string }>();
   readonly favourite = output<{
@@ -82,6 +89,7 @@ export class LongPressContextMenuComponent {
     messageType: string;
   }>();
   readonly report = output<{ messageId: string; senderId: string }>();
+  readonly block = output<{ senderId: string; blocked: boolean }>();
 
   menuVisible = signal(false);
 
@@ -148,6 +156,11 @@ export class LongPressContextMenuComponent {
 
   doReport() {
     this.report.emit({ messageId: this.messageId(), senderId: this.senderId() });
+    this.closeMenu();
+  }
+
+  doBlockToggle() {
+    this.block.emit({ senderId: this.senderId(), blocked: !this.isBlocked() });
     this.closeMenu();
   }
 }

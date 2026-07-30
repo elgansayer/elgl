@@ -69,14 +69,15 @@ export class SupportCentreComponent {
   readonly selectedCategory = signal<string>('');
   readonly categories = signal<string[]>([]);
 
-  private readonly faqResource = resource<FAQResponse, { category?: string }>({
-    request: () => ({ category: this.selectedCategory() || undefined }),
-    loader: async ({ request }) => {
-      const res = await this.helpFaqService.getFAQs(request.category);
+  protected readonly faqResource = resource<FAQResponse, { category?: string }>({
+    params: () => ({ category: this.selectedCategory() || undefined }),
+    loader: async ({ params }) => {
+      const res = await this.helpFaqService.getFAQs(params.category);
       return (
         res ?? { items: [], total: 0, page: 1, limit: 50 }
       );
     },
+    defaultValue: { items: [], total: 0, page: 1, limit: 50 },
   });
 
   constructor() {

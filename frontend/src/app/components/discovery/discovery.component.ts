@@ -116,9 +116,9 @@ export class DiscoveryComponent implements OnInit {
           this.myTargetLangs.set(langs);
         }
         // Restore serious learner mode
-        if (profile.serious_learner_mode != null) {
-          this.seriousLearnerMode.set(profile.serious_learner_mode);
-          if (profile.serious_learner_mode) {
+        if (profile.is_serious_learner != null) {
+          this.seriousLearnerMode.set(profile.is_serious_learner);
+          if (profile.is_serious_learner) {
             this.seriousLearnerOnly.set(true);
             this.selectedFilter.set('serious');
           }
@@ -172,7 +172,7 @@ export class DiscoveryComponent implements OnInit {
   async toggleSeriousLearnerMode(): Promise<void> {
     const newMode = !this.seriousLearnerMode();
     try {
-      await this.userService.updateMyProfile({ serious_learner_mode: newMode });
+      await this.userService.updateMyProfile({ is_serious_learner: newMode });
       this.seriousLearnerMode.set(newMode);
       if (newMode) {
         this.seriousLearnerOnly.set(true);

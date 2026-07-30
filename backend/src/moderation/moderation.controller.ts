@@ -10,12 +10,12 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ModerationService } from './moderation.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ReportUserDto } from './dto/report-user.dto';
 import { ModerationActionDto } from './dto/moderation-action.dto';
 
 @Controller('moderation')
-@UseGuards(JwtAuthGuard)
+@UseGuards(SupabaseAuthGuard)
 export class ModerationController {
   constructor(private readonly moderationService: ModerationService) {}
 

@@ -1,5 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface ChatSettings {
@@ -20,7 +21,7 @@ export class ChatSettingsService {
 
   async loadSettings(): Promise<void> {
     try {
-      const result = await this.http.get<ChatSettings>(this.baseUrl).toPromise();
+      const result = await firstValueFrom(this.http.get<ChatSettings>(this.baseUrl));
       this.autoTranslate.set(result.autoTranslate);
       this.readReceipts.set(result.readReceipts);
       this.enterToSend.set(result.enterToSend);

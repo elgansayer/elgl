@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   EgressClient,
   EncodedFileOutput,
-  RoomCompositeEgressRequest,
+  EncodedFileType,
   S3Upload,
 } from 'livekit-server-sdk';
 
@@ -48,31 +48,28 @@ export class TranscriptEgressService {
     const r2Bucket =
       this.configService.get<string>('CLOUDFLARE_R2_BUCKET') || 'recordings';
 
-    const s3Upload: S3Upload = {
+    const s3Upload = new S3Upload({
       bucket: r2Bucket,
       region: 'auto',
       endpoint: r2Endpoint,
-      access_key: r2AccessKey,
+      accessKey: r2AccessKey,
       secret: r2Secret,
-      force_path_style: true,
-    };
+      forcePathStyle: true,
+    });
 
-    const fileOutput: EncodedFileOutput = {
-      file_type: 'mp4',
+    const fileOutput = new EncodedFileOutput({
+      fileType: EncodedFileType.MP4,
       filepath: `audio-rooms/${roomName}/${Date.now()}.mp4`,
-      s3: s3Upload,
-    };
-
-    const request: RoomCompositeEgressRequest = {
-      room_name: roomName,
-      file_outputs: [fileOutput],
-      // optional: audio_only  – set to true if you only want audio
-      audio_only: false,
-    };
+      output: { case: 's3', value: s3Upload },
+    });
 
     try {
-      const result = await this.egressClient.startRoomCompositeEgress(request);
-      const egressId = result.egress_id;
+      const result = await this.egressClient.startRoomCompositeEgress(
+        roomName,
+        fileOutput,
+        { audioOnly: false },
+      );
+      const egressId = result.egressId;
       this.egressMap.set(roomName, egressId);
       this.logger.log(
         `Egress started for room "${roomName}" – id: ${egressId}`,
@@ -100,12 +97,8 @@ export class TranscriptEgressService {
       const result = await this.egressClient.stopEgress(egressId);
       this.egressMap.delete(roomName);
 
-      // The payload differs between versions; fall back to a synthetic URL if not found.
-      if (result.file?.filename) {
-        return result.file.filename;
-      }
-      if (result.file_results?.[0]?.filename) {
-        return result.file_results[0].filename;
+      if (result.fileResults?.[0]?.filename) {
+        return result.fileResults[0].filename;
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

@@ -1,7 +1,15 @@
-import { Controller, Get, Post, Param, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Req,
+  UseGuards,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AchievementsService } from './achievements.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { AuthenticatedRequest } from '../auth/authenticated-request.interface';
+import type { AuthenticatedRequest } from '../auth/authenticated-request.interface';
 
 @Controller('achievements')
 @UseGuards(SupabaseAuthGuard)
@@ -25,12 +33,14 @@ export class AchievementsController {
 
   @Get('/my')
   async getMyAchievements(@Req() req: AuthenticatedRequest) {
+    if (!req.user) throw new UnauthorizedException();
     const userId = req.user.id;
     return this.achievementsService.getFullAchievements(userId);
   }
 
   @Post('/evaluate')
   async evaluateForCurrentUser(@Req() req: AuthenticatedRequest) {
+    if (!req.user) throw new UnauthorizedException();
     const userId = req.user.id;
     await this.achievementsService.evaluateAchievements(userId);
     return { evaluated: true };

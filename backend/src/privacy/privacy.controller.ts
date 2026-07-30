@@ -11,7 +11,7 @@ import { PrivacyService } from './privacy.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ArchiveRequestDto } from './dto/archive-request.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
-import { Request } from 'express';
+import type { Request } from 'express';
 
 @Controller('privacy')
 @UseGuards(SupabaseAuthGuard)

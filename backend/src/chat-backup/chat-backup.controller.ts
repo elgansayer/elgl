@@ -9,7 +9,7 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ChatBackupService } from './chat-backup.service';
 

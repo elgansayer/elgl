@@ -7,7 +7,7 @@ import {
 import { StudyBuddyRequestDto } from './dto/study-buddy.dto';
 import { SupabaseService } from '../supabase/supabase.service';
 
-interface BuddyRequest {
+export interface BuddyRequest {
   id: string;
   requesterId: string;
   partnerId: string;

@@ -7,12 +7,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { MilestonesService } from './milestones.service';
 import { CreateMilestoneDto } from './dto/create-milestone.dto';
 
 @Controller('milestones')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(SupabaseAuthGuard)
 export class MilestonesController {
   constructor(private readonly milestonesService: MilestonesService) {}
 

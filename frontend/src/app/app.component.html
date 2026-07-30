@@ -1,10 +1,30 @@
 <div
   class="min-h-[100dvh] flex flex-col bg-surface-500 text-text-primary font-sans relative overflow-x-hidden"
 >
+  @if (authService.appLocked()) {
+    <div
+      class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90"
+      (click)="authService.unlockApp()"
+    >
+      <div class="text-center text-white">
+        <p class="mb-4 text-lg font-medium">{{ 'app_lock.title' | t }}</p>
+        <p class="mb-6 text-sm opacity-70">{{ 'app_lock.subtitle' | t }}</p>
+        <button
+          class="rounded-full bg-indigo-600 px-8 py-3 text-sm font-semibold shadow-xl hover:bg-indigo-500"
+          (click)="authService.unlockApp()"
+        >
+          {{ 'app_lock.unlock_btn' | t }}
+        </button>
+      </div>
+    </div>
+  }
   <!-- Top Bar with Theme Selector -->
   <div class="flex items-center justify-between ps-4 pe-4 py-2 bg-surface-200 border-b border-surface-100">
-    <app-theme-selector />
-    <app-font-scale-slider />
+    <app-app-language-selector />
+    <div class="flex items-center gap-2">
+      <app-theme-selector />
+      <app-font-scale-slider />
+    </div>
   </div>
   <app-toast />
   <!-- Global Animated Virtual Gift Broadcast Overlay -->
@@ -53,7 +73,6 @@
   <nav class="fixed bottom-0 inset-x-0 z-50 bg-surface-200 border-t border-surface-100 pb-safe">
     <div class="flex justify-around items-center h-[60px]">
       <a
-        [joyrideStep]="'step-chat'"
         routerLink="/chat"
         routerLinkActive="text-primary"
         [routerLinkActiveOptions]="{ exact: false }"
@@ -73,7 +92,6 @@
       </a>
 
       <a
-        [joyrideStep]="'step-moments'"
         routerLink="/moments"
         routerLinkActive="text-primary"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
@@ -83,7 +101,6 @@
       </a>
 
       <a
-        [joyrideStep]="'step-discovery'"
         routerLink="/discovery"
         routerLinkActive="text-primary"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
@@ -93,7 +110,6 @@
       </a>
 
       <a
-        [joyrideStep]="'step-audio-rooms'"
         routerLink="/audio-rooms"
         routerLinkActive="text-primary"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
@@ -103,7 +119,6 @@
       </a>
 
       <a
-        [joyrideStep]="'step-profile'"
         routerLink="/profile"
         routerLinkActive="text-primary"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
@@ -134,5 +149,4 @@
       (closed)="showDailyRewardModal.set(false)"
     />
   }
-  <ngx-joyride></ngx-joyride>
 </div>

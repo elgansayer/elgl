@@ -3,7 +3,9 @@ import { SafetyModule } from '../safety/safety.module';
 import { LinkPreviewModule } from '../link-preview/link-preview.module';
 import { SpamDetectionModule } from '../spam-detection/spam-detection.module';
 import { LlmProxyModule } from '../llm-proxy/llm-proxy.module';
+import { XpModule } from '../xp/xp.module';
 import { CentrifugoService } from './centrifugo.service';
+import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
 import { ConversationStarterService } from './conversation-starter.service';
@@ -12,7 +14,6 @@ import { GroupsService } from './groups.service';
 import { SystemMessageService } from './services/system-message.service';
 import { ChatSettingsController } from './chat-settings.controller';
 import { ChatSettingsService } from './chat-settings.service';
-import { ViewOnceMediaService } from './services/view-once-media.service';
 
 @Module({
   imports: [
@@ -20,16 +21,17 @@ import { ViewOnceMediaService } from './services/view-once-media.service';
     LinkPreviewModule,
     SpamDetectionModule,
     LlmProxyModule,
+    XpModule,
   ],
   controllers: [ChatController, GroupsController, ChatSettingsController],
   providers: [
     CentrifugoService,
+    TranslationService,
     ChatService,
     ConversationStarterService,
     GroupsService,
     SystemMessageService,
     ChatSettingsService,
-    ViewOnceMediaService,
   ],
   exports: [
     CentrifugoService,

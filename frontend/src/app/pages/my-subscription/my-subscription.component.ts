@@ -57,7 +57,7 @@ import { SubscriptionPlansService, SubscriptionPlan } from '../../services/subsc
               </div>
               <div class="text-end me-3">
                 <div class="text-sm">
-                  {{ plan.price_ukp }} UKP / ${{ plan.price_usd }} USD
+                  {{ plan.price_ukp }} UKP / \${{ plan.price_usd }} USD
                 </div>
                 @if (plan.interval === 'year') {
                   <span class="text-xs text-emerald-400">{{ 'subscription.perYear' | t }}</span>

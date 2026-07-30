@@ -1,5 +1,6 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseService } from '../supabase/supabase.service';
 
 // Simple DTOs (no separate file)
 export interface InterestVocabularyDto {
@@ -34,10 +35,11 @@ interface VocabRow {
 
 @Injectable()
 export class InterestsService {
-  constructor(
-    @Inject('SUPABASE_CLIENT')
-    private readonly supabase: SupabaseClient,
-  ) {}
+  constructor(private readonly supabaseService: SupabaseService) {}
+
+  private get supabase(): SupabaseClient {
+    return this.supabaseService.getClient();
+  }
 
   async findAll(targetLanguage: string): Promise<InterestVocabularyDto[]> {
     const { data, error } = await this.supabase
@@ -59,7 +61,7 @@ export class InterestsService {
     }));
   }
 
-  async findById(id: string): Promise<InterestRow | null> {
+  async findById(id: string): Promise<Pick<InterestRow, 'id' | 'name'> | null> {
     const { data, error } = await this.supabase
       .from('interests')
       .select('id, name')

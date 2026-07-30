@@ -31,7 +31,13 @@ export interface NotificationPreferences {
 
 export type NotificationCategory = keyof Omit<
   NotificationPreferences,
-  'userId' | 'updatedAt' | 'quiet_hours_start' | 'quiet_hours_end' | 'do_not_disturb'
+  | 'userId'
+  | 'updatedAt'
+  | 'quiet_hours_start'
+  | 'quiet_hours_end'
+  | 'do_not_disturb'
+  | 'customToneUrl'
+  | 'vibrationPattern'
 >;
 
 export type NotificationChannel = 'push' | 'email' | 'in_app';

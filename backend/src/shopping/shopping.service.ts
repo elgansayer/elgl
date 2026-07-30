@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-interface CatalogItem {
+export interface CatalogItem {
   id: string;
   name: string;
   description: string;

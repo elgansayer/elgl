@@ -11,7 +11,7 @@ import {
   UnauthorizedException,
   HttpCode,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { GroupsService } from './groups.service';
 import { AddMemberDto } from './dto/add-member.dto';
 import { RemoveMemberDto } from './dto/remove-member.dto';
@@ -24,7 +24,7 @@ export class GroupsController {
   constructor(private readonly groupsService: GroupsService) {}
 
   @Post()
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async create(@Body() dto: CreateGroupDto, @Req() req: any) {
     const ownerId = req.user.id;
     return this.groupsService.createGroup(
@@ -37,40 +37,40 @@ export class GroupsController {
   }
 
   @Get()
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async getGroups(@Req() req: any, @Query('interestId') interestId?: string) {
     if (interestId) {
       return this.groupsService.getGroupsByInterest(interestId);
     }
-    return this.groupsService.getAllGroups();
+    return this.groupsService.getDiscoverableGroups(req.user.id);
   }
 
   @Get(':groupId/members')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async getMembers(@Param('groupId') groupId: string) {
     return this.groupsService.getGroupMembers(groupId);
   }
 
   @Get(':groupId/settings')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async getSettings(@Param('groupId') groupId: string) {
     return this.groupsService.getSettings(groupId);
   }
 
   @Get(':groupId/announcements')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async getAnnouncements(@Param('groupId') groupId: string) {
     return this.groupsService.getAnnouncements(groupId);
   }
 
   @Get(':groupId')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async getGroupInfo(@Param('groupId') groupId: string) {
     return this.groupsService.getGroupInfo(groupId);
   }
 
   @Post(':groupId/add-member')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async addMember(
     @Param('groupId') groupId: string,
     @Body() dto: AddMemberDto,
@@ -84,7 +84,7 @@ export class GroupsController {
   }
 
   @Post(':groupId/remove-member')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async removeMember(
     @Param('groupId') groupId: string,
     @Body() dto: RemoveMemberDto,
@@ -100,7 +100,7 @@ export class GroupsController {
   }
 
   @Post(':groupId/settings')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async updateSettings(
     @Param('groupId') groupId: string,
     @Body() dto: UpdateGroupSettingsDto,
@@ -116,7 +116,7 @@ export class GroupsController {
   }
 
   @Post(':groupId/announcement')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async sendAnnouncement(
     @Param('groupId') groupId: string,
     @Body() dto: SendAnnouncementDto,
@@ -136,27 +136,27 @@ export class GroupsController {
   }
 
   @Get('discoverable')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async getDiscoverableGroups(@Req() req: any) {
     const userId = req.user.id;
     return this.groupsService.getDiscoverableGroups(userId);
   }
 
   @Post(':groupId/join')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async joinGroup(@Param('groupId') groupId: string, @Req() req: any) {
     const userId = req.user.id;
     return this.groupsService.joinGroup(groupId, userId);
   }
 
   @Get(':groupId/resources')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   async getGroupResources(@Param('groupId') groupId: string) {
     return this.groupsService.getGroupResources(groupId);
   }
 
   @Delete(':groupId/resources/:resourceId')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(SupabaseAuthGuard)
   @HttpCode(204)
   async deleteGroupResource(
     @Param('groupId') groupId: string,

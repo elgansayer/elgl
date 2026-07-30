@@ -50,7 +50,7 @@ export class StreakCongratulationsComponent {
   readonly streakDays = input.required<number>();
   readonly dismiss = output<void>();
 
-  private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
 
   constructor() {
     afterNextRender(() => this.startConfetti());

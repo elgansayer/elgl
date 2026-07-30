@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface FAQItem {
   id: string;
@@ -23,20 +24,16 @@ export class HelpFaqService {
   getFAQs(category?: string): Promise<FAQResponse> {
     const params = new URLSearchParams();
     if (category) params.set('category', category);
-    return this.http
-      .get<FAQResponse>(`${environment.apiUrl}/help/articles?${params}`)
-      .toPromise()!;
+    return firstValueFrom(
+      this.http.get<FAQResponse>(`${environment.apiUrl}/help/articles?${params}`),
+    );
   }
 
   getCategories(): Promise<string[]> {
-    return this.http
-      .get<string[]>(`${environment.apiUrl}/help/categories`)
-      .toPromise()!;
+    return firstValueFrom(this.http.get<string[]>(`${environment.apiUrl}/help/categories`));
   }
 
   getQuickReplies(): Promise<string[]> {
-    return this.http
-      .get<string[]>(`${environment.apiUrl}/help/quick-replies`)
-      .toPromise()!;
+    return firstValueFrom(this.http.get<string[]>(`${environment.apiUrl}/help/quick-replies`));
   }
 }

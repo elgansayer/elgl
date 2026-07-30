@@ -11,7 +11,7 @@ export class AuthService {
     const { data, error } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email,
-      redirectTo: '',
+      options: { redirectTo: '' },
     });
 
     if (error || !data?.properties?.action_link) {

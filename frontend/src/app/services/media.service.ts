@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface AvatarUploadResponse {
   avatarUrl: string;
@@ -18,8 +19,8 @@ export class MediaService {
     const formData = new FormData();
     formData.append('file', file, file.name);
 
-    return this.http
-      .post<AvatarUploadResponse>(`${this.baseUrl}/avatar/upload`, formData)
-      .toPromise()!;
+    return firstValueFrom(
+      this.http.post<AvatarUploadResponse>(`${this.baseUrl}/avatar/upload`, formData),
+    );
   }
 }

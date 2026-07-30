@@ -393,6 +393,8 @@ export class EventsService implements OnModuleInit {
           event.host_id,
           {
             title: event.title,
+            target_language:
+              event.language_pair.split('-')[1] ?? event.language_pair,
             language_pair: event.language_pair,
             topic_tag: event.category ?? null,
             is_video_stream: false,

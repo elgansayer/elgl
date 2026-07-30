@@ -54,6 +54,7 @@ import { AudioIntroModule } from './audio-intro/audio-intro.module';
 import { StatsModule } from './stats/stats.module';
 import { ScheduledDeletionModule } from './scheduled-deletion/scheduled-deletion.module';
 import { EventsModule } from './events/events.module';
+import { WordOfTheDayModule } from './word-of-the-day/word-of-the-day.module';
 import { validationSchema } from './config/validation.schema';
 
 @Module({
@@ -127,6 +128,7 @@ import { validationSchema } from './config/validation.schema';
     ScheduledDeletionModule,
     EventsModule,
     ModerationModule,
+    WordOfTheDayModule,
   ],
   controllers: [AppController],
   providers: [

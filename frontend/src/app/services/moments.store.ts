@@ -85,7 +85,7 @@ export class MomentsStore {
             params,
           })
           .pipe(catchError(() => {
-            const mockFeed: MomentRecord[] = MOCK_MOMENTS;
+            const mockFeed = MOCK_MOMENTS as MomentRecord[];
             return of(mockFeed);
           })),
       );

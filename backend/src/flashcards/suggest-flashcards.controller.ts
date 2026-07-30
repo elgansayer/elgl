@@ -1,7 +1,7 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { SuggestFlashcardsService } from './suggest-flashcards.service';
 import { SuggestFlashcardsDto } from './dto/suggest-flashcards.dto';
-import { SupabaseAuthGuard } from '../../auth/guards/supabase-auth.guard';
+import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 
 @ApiTags('Flashcards / Suggest')

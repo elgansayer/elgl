@@ -1,4 +1,5 @@
 import { Injectable, signal, effect } from '@angular/core';
+import { environment } from '../../environments/environment';
 
 export interface LanguageInfo {
   code: string;
@@ -550,7 +551,6 @@ export class I18nService {
     'profile.reportReasonPrompt': 'Enter a reason for reporting',
     'profile.reportSuccess': 'User reported',
     'profile.reportError': 'Failed to report user',
-    'safety.confirmBlockBtn': 'Confirm block',
     'profile.displayNamePlaceholder': 'Display name',
     'profile.nativePlaceholder': 'Native language (ISO)',
     'profile.targetPlaceholder': 'Target languages (comma separated)',
@@ -1008,7 +1008,7 @@ export class I18nService {
 
     // Call backend dynamic ANY-language translation API
     try {
-      const response = await fetch('/api/nlp/translate-ui', {
+      const response = await fetch(`${environment.apiUrl}/nlp/translate-ui`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

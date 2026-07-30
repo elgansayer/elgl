@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { SupabaseService } from '../../supabase/supabase.service';
+import { SupabaseService } from '../supabase/supabase.service';
 import { ConfigService } from '@nestjs/config';
 import { SuggestFlashcardsDto } from './dto/suggest-flashcards.dto';
 

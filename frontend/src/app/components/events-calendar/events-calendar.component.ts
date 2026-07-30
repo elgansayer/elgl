@@ -106,10 +106,10 @@ export class EventsCalendarComponent {
   });
 
   private eventsResource = resource<Event[], { status: string }>({
-    request: () => ({ status: 'upcoming' }),
-    loader: async ({ request }) => {
+    params: () => ({ status: 'upcoming' }),
+    loader: async ({ params }) => {
       const events = await firstValueFrom(
-        this.eventsService.getMyEvents(request.status),
+        this.eventsService.getMyEvents(params.status),
       );
       return events ?? [];
     },

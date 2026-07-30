@@ -169,7 +169,12 @@ export class VideoCallService {
   async switchCamera(): Promise<void> {
     if (!this.room) return;
 
-    await this.room.switchActiveDevice('videoinput');
+    const devices = await Room.getLocalDevices('videoinput');
+    if (devices.length < 2) return;
+
+    const currentDeviceId = this.room.getActiveDevice('videoinput');
+    const nextDevice = devices.find((d) => d.deviceId !== currentDeviceId) ?? devices[0];
+    await this.room.switchActiveDevice('videoinput', nextDevice.deviceId);
   }
 
   private setupRoomListeners(): void {

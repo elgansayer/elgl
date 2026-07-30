@@ -6,7 +6,6 @@ import {
     effect,
     resource,
     DestroyRef,
-    takeUntilDestroyed,
 } from '@angular/core';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { Subject, interval } from 'rxjs';

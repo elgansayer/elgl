@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, UseGuards, Req } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { LinkedAccountsService } from './linked-accounts.service';
-import { Request } from 'express';
+import type { Request } from 'express';
 
 @Controller('users/me/linked-accounts')
 export class LinkedAccountsController {

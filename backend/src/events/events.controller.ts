@@ -8,13 +8,14 @@ import {
   Delete,
   UseGuards,
   Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventsQueryDto } from './dto/events-query.dto';
 import { RsvpDto } from './dto/rsvp.dto';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { Request } from 'express';
+import type { AuthenticatedRequest } from '../auth/authenticated-request.interface';
 
 @Controller('events')
 export class EventsController {
@@ -22,15 +23,17 @@ export class EventsController {
 
   @UseGuards(SupabaseAuthGuard)
   @Post()
-  async create(@Req() req: Request, @Body() dto: CreateEventDto) {
-    const userId = req.user?.id;
+  async create(@Req() req: AuthenticatedRequest, @Body() dto: CreateEventDto) {
+    if (!req.user) throw new UnauthorizedException();
+    const userId = req.user.id;
     return this.eventsService.createEvent(userId, dto);
   }
 
   @UseGuards(SupabaseAuthGuard)
   @Get()
-  async list(@Req() req: Request, @Query() query: EventsQueryDto) {
-    const userId = req.user?.id;
+  async list(@Req() req: AuthenticatedRequest, @Query() query: EventsQueryDto) {
+    if (!req.user) throw new UnauthorizedException();
+    const userId = req.user.id;
     return this.eventsService.listEvents(userId, query);
   }
 
@@ -48,33 +51,46 @@ export class EventsController {
 
   @UseGuards(SupabaseAuthGuard)
   @Get(':id/rsvp')
-  async getMyRsvp(@Req() req: Request, @Param('id') eventId: string) {
-    const userId = req.user?.id;
+  async getMyRsvp(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') eventId: string,
+  ) {
+    if (!req.user) throw new UnauthorizedException();
+    const userId = req.user.id;
     return this.eventsService.getUserRsvp(userId, eventId);
   }
 
   @UseGuards(SupabaseAuthGuard)
   @Post(':id/rsvp')
   async rsvp(
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
     @Param('id') eventId: string,
     @Body() dto: RsvpDto,
   ) {
-    const userId = req.user?.id;
+    if (!req.user) throw new UnauthorizedException();
+    const userId = req.user.id;
     return this.eventsService.createRsvp(userId, eventId, dto.status);
   }
 
   @UseGuards(SupabaseAuthGuard)
   @Delete(':id/rsvp')
-  async removeRsvp(@Req() req: Request, @Param('id') eventId: string) {
-    const userId = req.user?.id;
+  async removeRsvp(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') eventId: string,
+  ) {
+    if (!req.user) throw new UnauthorizedException();
+    const userId = req.user.id;
     return this.eventsService.removeRsvp(userId, eventId);
   }
 
   @UseGuards(SupabaseAuthGuard)
   @Get('my')
-  async getMyEvents(@Req() req: Request, @Query('status') status?: string) {
-    const userId = req.user?.id;
+  async getMyEvents(
+    @Req() req: AuthenticatedRequest,
+    @Query('status') status?: string,
+  ) {
+    if (!req.user) throw new UnauthorizedException();
+    const userId = req.user.id;
     return this.eventsService.getUserEvents(userId, status as any);
   }
 }

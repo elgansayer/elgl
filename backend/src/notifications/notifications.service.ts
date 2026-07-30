@@ -2,9 +2,23 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
-import { NotificationPreferences } from './interfaces/notification-preferences.interface';
 
 type FirebaseAdmin = any;
+
+export interface LegacyPreferenceChannel {
+  push: boolean;
+  badge: boolean;
+}
+
+export interface LegacyNotificationPreferences {
+  userId: string;
+  direct_messages: LegacyPreferenceChannel;
+  groups: LegacyPreferenceChannel;
+  likes: LegacyPreferenceChannel;
+  voice_rooms: LegacyPreferenceChannel;
+  do_not_disturb: boolean;
+  updatedAt: string;
+}
 
 @Injectable()
 export class NotificationsService {
@@ -13,7 +27,7 @@ export class NotificationsService {
     private readonly supabaseService: SupabaseService,
   ) {}
 
-  async getPreferences(userId: string): Promise<NotificationPreferences> {
+  async getPreferences(userId: string): Promise<LegacyNotificationPreferences> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('notification_preferences')
@@ -34,10 +48,10 @@ export class NotificationsService {
       };
     }
 
-    const prefs: NotificationPreferences = {
+    const prefs: LegacyNotificationPreferences = {
       userId,
       ...(data.preferences as Omit<
-        NotificationPreferences,
+        LegacyNotificationPreferences,
         'userId' | 'updatedAt'
       >),
       updatedAt: data.updated_at,
@@ -47,7 +61,9 @@ export class NotificationsService {
 
   async updatePreferences(
     userId: string,
-    preferences: Partial<Omit<NotificationPreferences, 'userId' | 'updatedAt'>>,
+    preferences: Partial<
+      Omit<LegacyNotificationPreferences, 'userId' | 'updatedAt'>
+    >,
   ): Promise<void> {
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase.from('notification_preferences').upsert(

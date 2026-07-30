@@ -48,7 +48,6 @@ export interface UserProfile {
   status_visibility?: string;
   proficiency_level?: string;
   learning_goals?: string;
-  interests?: string[];
   availability_morning?: boolean;
   availability_afternoon?: boolean;
   availability_evening?: boolean;
@@ -64,6 +63,17 @@ export interface UserProfile {
   business_hours?: string;
   website_url?: string;
   catalog?: BusinessCatalogItem[];
+  status_text?: string;
+  chat_enter_to_send?: boolean;
+  chat_text_size?: 'small' | 'medium' | 'large';
+  auto_download_wifi_only?: boolean;
+  silence_unknown_callers?: boolean;
+  corrector_score?: number;
+  xp_total?: number;
+  greeting_message?: string;
+  away_message?: string;
+  followers_count?: number;
+  following_count?: number;
 }
 
 export interface BusinessCatalogItem {

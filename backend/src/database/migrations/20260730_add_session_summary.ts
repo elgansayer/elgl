@@ -1,20 +1,21 @@
-import { MigrationBuilder } from 'node-pg-migrate';
-import { ColumnDefinitions } from 'node-pg-migrate';
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export const shorthands: ColumnDefinitions | undefined = undefined;
+export class AddSessionSummary20260730000002 implements MigrationInterface {
+  name = 'AddSessionSummary20260730000002';
 
-export async function up(pgm: MigrationBuilder): Promise<void> {
-  pgm.addColumn('audio_room_transcripts', {
-    session_summary: { type: 'text', notNull: false },
-    vocabulary_list: {
-      type: 'jsonb',
-      notNull: false,
-      default: '[]'::jsonb,
-    },
-  });
-}
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
+      ALTER TABLE "audio_room_transcripts"
+        ADD COLUMN IF NOT EXISTS "session_summary" text,
+        ADD COLUMN IF NOT EXISTS "vocabulary_list" jsonb DEFAULT '[]'::jsonb;
+    `);
+  }
 
-export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.dropColumn('audio_room_transcripts', 'session_summary');
-  pgm.dropColumn('audio_room_transcripts', 'vocabulary_list');
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
+      ALTER TABLE "audio_room_transcripts"
+        DROP COLUMN IF EXISTS "session_summary",
+        DROP COLUMN IF EXISTS "vocabulary_list";
+    `);
+  }
 }

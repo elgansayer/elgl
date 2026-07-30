@@ -29,7 +29,7 @@ export class AudioRecorderComponent implements OnDestroy {
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
   private timerInterval: ReturnType<typeof setInterval> | null = null;
-  @ViewChild('audioPlayer') audioPlayer!: HTMLAudioElement;
+  private readonly audioPlayer = viewChild<HTMLAudioElement>('audioPlayer');
   private audioStream: MediaStream | null = null;
 
   recording = false;

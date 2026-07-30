@@ -29,7 +29,6 @@ export class FirebaseMessagingService {
       storageBucket: environment.firebase.storageBucket,
       messagingSenderId: environment.firebase.messagingSenderId,
       appId: environment.firebase.appId,
-      vapidKey: environment.firebase.vapidKey,
     });
     this.messaging = getMessaging(app);
     this.messagingInitialized = true;

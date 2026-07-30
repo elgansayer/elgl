@@ -23,7 +23,7 @@ export class AudioCompressionService {
       // 2. Decode Audio Data
       const AudioContextClass = window.AudioContext;
       if (!AudioContextClass) {
-        const webkitAudio = (window as Record<string, unknown>)['webkitAudioContext'];
+        const webkitAudio = (window as unknown as Record<string, unknown>)['webkitAudioContext'];
         if (typeof webkitAudio !== 'function') {
           throw new Error('AudioContext is not available in this browser');
         }
@@ -31,7 +31,7 @@ export class AudioCompressionService {
         // We work around it by using a dynamic cast, but we cannot avoid because the type
         // of the property is unknown.
         const AudioContextWebKit = webkitAudio as unknown as typeof AudioContext;
-        (window as Record<string, unknown>)['AudioContext'] = AudioContextWebKit;
+        (window as unknown as Record<string, unknown>)['AudioContext'] = AudioContextWebKit;
       }
       const audioContext = new AudioContextClass();
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);

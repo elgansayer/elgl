@@ -25,7 +25,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 export class CulturalTipComponent {
   language = input.required<string>();
   private culturalGuideService = inject(CulturalGuideService);
-  private guide = this.culturalGuideService.guide.asReadonly();
+  protected guide = this.culturalGuideService.guide.asReadonly();
 
   constructor() {
     effect(() => {

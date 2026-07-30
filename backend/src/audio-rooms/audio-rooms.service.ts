@@ -284,6 +284,7 @@ export class AudioRoomsService implements OnModuleInit {
     // Reuse base room creation
     const room = await this.createRoom(hostId, {
       title: dto.title,
+      target_language: dto.target_language,
       language_pair: dto.language_pair,
       topic_tag: dto.topic_tag,
       is_video_stream: dto.is_video_stream ?? false,
@@ -923,7 +924,7 @@ export class AudioRoomsService implements OnModuleInit {
     const supabase = this.supabaseService.getClient();
     const { data: poll, error: pollError } = await supabase
       .from('quick_polls')
-      .select('id, is_active, options')
+      .select('id, room_id, is_active, options')
       .eq('id', dto.pollId)
       .single();
     if (pollError || !poll) {

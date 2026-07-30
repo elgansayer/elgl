@@ -43,7 +43,7 @@ export class StickerPickerComponent {
   readonly stickerSelected = output<Sticker>();
   readonly close = output<void>();
 
-  private readonly stickers = signal<Sticker[]>([
+  protected readonly stickers = signal<Sticker[]>([
     { id: 'grinning', emoji: '😀' },
     { id: 'heart_eyes', emoji: '😍' },
     { id: 'thumbs_up', emoji: '👍' },

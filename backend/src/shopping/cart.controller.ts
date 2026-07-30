@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, UseGuards, Req } from '@nestjs/common';
-import { Request } from 'express';
+import type { Request } from 'express';
 import { CartService } from './cart.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 

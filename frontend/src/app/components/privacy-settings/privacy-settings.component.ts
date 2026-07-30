@@ -69,7 +69,7 @@ import { resource } from '@angular/core';
           <label>{{ 'privacy.statusVisibility' | t }}</label>
           <select
             [value]="statusVisibility()"
-            (change)="statusVisibility.set($event.target.value)"
+            (change)="statusVisibility.set($any($event.target).value)"
             class="block w-full bg-surface border border-border rounded px-3 py-2 mt-1"
           >
             <option value="everyone">{{ 'privacy.statusEveryone' | t }}</option>

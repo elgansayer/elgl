@@ -126,7 +126,7 @@ export class IncomingCallComponent implements OnDestroy {
   private ringtoneAudio: HTMLAudioElement | null = null;
   private ringtoneUrl = '/assets/audio/ringtone.mp3';
 
-  private unsubscribeCentrifugo: (() => void) | null = null;
+  private subscribedChannel: string | null = null;
   private currentUserSilenceUnknown = signal<boolean>(false);
   private fallbackAudioContext: AudioContext | null = null;
 
@@ -137,27 +137,26 @@ export class IncomingCallComponent implements OnDestroy {
       if (!userId) return;
 
       // Unsubscribe previous subscription if user changed
-      if (this.unsubscribeCentrifugo) {
-        this.unsubscribeCentrifugo();
-        this.unsubscribeCentrifugo = null;
+      if (this.subscribedChannel) {
+        this.centrifugoService.unsubscribe(this.subscribedChannel);
+        this.subscribedChannel = null;
       }
 
       this.loadSilenceSetting(userId);
 
-      this.unsubscribeCentrifugo = this.centrifugoService.subscribe(
-        `user_${userId}`,
-        (data: unknown) => {
-          const event = data as { type: string; callInfo: IncomingCallInfo };
-          if (event.type === 'incoming_call' && event.callInfo) {
-            this.handleIncomingCall(event.callInfo);
-          }
-        },
-      );
+      const channel = `user_${userId}`;
+      this.centrifugoService.subscribe(channel, (data: unknown) => {
+        const event = data as { type: string; callInfo: IncomingCallInfo };
+        if (event.type === 'incoming_call' && event.callInfo) {
+          this.handleIncomingCall(event.callInfo);
+        }
+      });
+      this.subscribedChannel = channel;
 
       onCleanup(() => {
-        if (this.unsubscribeCentrifugo) {
-          this.unsubscribeCentrifugo();
-          this.unsubscribeCentrifugo = null;
+        if (this.subscribedChannel) {
+          this.centrifugoService.unsubscribe(this.subscribedChannel);
+          this.subscribedChannel = null;
         }
       });
     });
@@ -307,9 +306,9 @@ export class IncomingCallComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.stopRingtone();
-    if (this.unsubscribeCentrifugo) {
-      this.unsubscribeCentrifugo();
-      this.unsubscribeCentrifugo = null;
+    if (this.subscribedChannel) {
+      this.centrifugoService.unsubscribe(this.subscribedChannel);
+      this.subscribedChannel = null;
     }
   }
 }

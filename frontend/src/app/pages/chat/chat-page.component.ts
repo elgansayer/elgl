@@ -1,11 +1,12 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { DatePipe } from '@angular/common';
 import { ChatService, ChatMessage, ChatRoom } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-chat-page',
-  imports: [FormsModule],
+  imports: [FormsModule, DatePipe],
   template: `
     <div class="flex h-full">
       <!-- Room List -->
@@ -316,7 +317,7 @@ export class ChatPageComponent implements OnInit {
     this.correctionExplanation.set('');
   }
 
-  async openFix(msg: ChatMessage): void {
+  async openFix(msg: ChatMessage): Promise<void> {
     this.fixTargetMessage.set(msg);
     this.fixText.set(msg.text_content ?? '');
     this.fixExplanation.set('');

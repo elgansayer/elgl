@@ -34,7 +34,7 @@ export class AudioIntroService {
     const objectKey = `audio-intros/${Date.now()}_${filename}`;
     const { data, error } = await supabase.storage
       .from(bucket)
-      .createSignedUploadUrl(objectKey, { contentType });
+      .createSignedUploadUrl(objectKey);
     if (error) throw new Error(error.message);
     const publicUrlResp = supabase.storage.from(bucket).getPublicUrl(objectKey);
     const mediaUrl = publicUrlResp.data?.publicUrl ?? '';

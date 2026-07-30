@@ -123,7 +123,7 @@ export const MOCK_MOMENTS = [
     target_language: 'en',
     native_languages: ['ja'],
     media_urls: [],
-    media_type: null,
+    media_type: 'none',
     location_name: null,
     created_at: new Date().toISOString(),
     likes_count: 5,

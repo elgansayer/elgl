@@ -28,7 +28,7 @@ import { firstValueFrom } from 'rxjs';
 
       <select
         [value]="languagePair() ?? ''"
-        (change)="onLanguageChange(($event.target as HTMLSelectElement).value)"
+        (change)="onLanguageChange($any($event.target).value)"
         class="bg-surface border border-border rounded px-2 py-1 text-sm"
       >
         <option value="">{{ 'events.all_languages' | t }}</option>

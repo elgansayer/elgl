@@ -82,10 +82,14 @@ export class LivekitService {
   }
 
   /** Toggle the local audio track's mute state and return the new state. */
-  toggleMute(): boolean {
+  async toggleMute(): Promise<boolean> {
     if (this._localAudioTrack) {
-      this._localAudioTrack.muted = !this._localAudioTrack.muted;
-      this._muted = this._localAudioTrack.muted;
+      if (this._localAudioTrack.isMuted) {
+        await this._localAudioTrack.unmute();
+      } else {
+        await this._localAudioTrack.mute();
+      }
+      this._muted = this._localAudioTrack.isMuted;
     } else {
       this._muted = !this._muted;
     }
