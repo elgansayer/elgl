@@ -155,6 +155,16 @@ export class UsersController {
     return this.usersService.getStatusViewers(user.id);
   }
 
+  @Get('hobbies')
+  async getAvailableHobbies(): Promise<string[]> {
+    return this.usersService.getAvailableHobbies();
+  }
+
+  @Get('interests')
+  async getAvailableInterests(): Promise<string[]> {
+    return this.usersService.getAvailableInterests();
+  }
+
   @Get(':id')
   async getUserProfile(@Param('id') id: string): Promise<UserProfile> {
     return this.usersService.getProfile(id);

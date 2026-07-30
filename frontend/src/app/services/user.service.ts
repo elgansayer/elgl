@@ -17,6 +17,7 @@ export interface UserProfile {
   cover_photo_url?: string;
   primary_accent_color?: string;
   interests?: string[];
+  hobbies?: string[];
   is_vip: boolean;
   vip_tier: string;
   coins_balance: number;
@@ -387,6 +388,26 @@ export class UserService {
     if (streakDays >= 30) return 30;
     if (streakDays >= 7) return 7;
     return null;
+  }
+
+  async getAvailableHobbies(): Promise<string[]> {
+    return firstValueFrom(
+      this.http.get<string[]>(`${this.baseUrl}/hobbies`, { headers: this.getHeaders() })
+        .pipe(catchError(() => {
+          // fallback to mock
+          return of(['reading', 'travelling', 'gaming', 'cooking', 'sports', 'music', 'photography']);
+        })),
+    );
+  }
+
+  async getAvailableInterests(): Promise<string[]> {
+    return firstValueFrom(
+      this.http.get<string[]>(`${this.baseUrl}/interests`, { headers: this.getHeaders() })
+        .pipe(catchError(() => {
+          // fallback to mock
+          return of(['technology', 'fashion', 'food', 'travel', 'art', 'science', 'history', 'fitness']);
+        })),
+    );
   }
 
   async updatePrivacySettings(settings: {

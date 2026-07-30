@@ -16,6 +16,7 @@ import { Optional } from '@nestjs/common';
 import { CorrectorScoreService } from '../corrector-score/corrector-score.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { XpService } from '../xp/xp.service';
+import { PREDEFINED_HOBBIES, PREDEFINED_INTERESTS } from './constants';
 
 @Injectable()
 export class UsersService {
@@ -636,5 +637,13 @@ export class UsersService {
       followingCount,
       profileVisitsCount,
     };
+  }
+
+  async getAvailableHobbies(): Promise<string[]> {
+    return PREDEFINED_HOBBIES;
+  }
+
+  async getAvailableInterests(): Promise<string[]> {
+    return PREDEFINED_INTERESTS;
   }
 }

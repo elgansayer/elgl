@@ -75,6 +75,12 @@ export class UpdateProfileDto {
   interests?: string[];
 
   @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayMaxSize(20)
+  hobbies?: string[];
+
+  @IsOptional()
   @IsString()
   @MaxLength(1000)
   bio_text?: string;

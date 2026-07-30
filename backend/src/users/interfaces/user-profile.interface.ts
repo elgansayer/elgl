@@ -9,6 +9,7 @@ export interface UserProfile {
   cover_photo_url?: string;
   primary_accent_color?: string;
   interests?: string[];
+  hobbies?: string[];
   location?: string;
   mock_location?: string;
   is_vip: boolean;
