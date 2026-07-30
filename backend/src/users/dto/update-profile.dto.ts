@@ -157,6 +157,16 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(500)
+  greeting_message?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  away_message?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(100)
   business_name?: string;
 

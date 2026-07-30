@@ -209,4 +209,13 @@ export class ChatController {
     if (!user) return [];
     return await this.chatService.exportChatHistory(user.id, roomId);
   }
+
+  @Get('rooms/:roomId/greeting')
+  async getRoomGreeting(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+  ): Promise<{ greetingMessage?: string; awayMessage?: string }> {
+    if (!user) return {};
+    return await this.chatService.getRoomGreeting(roomId, user.id);
+  }
 }

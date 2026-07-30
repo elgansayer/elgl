@@ -249,6 +249,8 @@ export class UsersService {
       business_hours: 'Mon-Fri 9AM-5PM',
       website_url: 'https://mock.shop',
       catalog: [],
+      greeting_message: 'Hello! I am happy to practice languages with you.',
+      away_message: 'I am away right now. I will reply later.',
     };
   }
 
@@ -309,6 +311,11 @@ export class UsersService {
       updatePayload.learning_goals = dto.learning_goals;
     if (dto.status_text !== undefined)
       updatePayload.status_text = dto.status_text;
+
+    if (dto.greeting_message !== undefined)
+      updatePayload.greeting_message = dto.greeting_message;
+    if (dto.away_message !== undefined)
+      updatePayload.away_message = dto.away_message;
 
     if (dto.silence_unknown_callers !== undefined)
       updatePayload.silence_unknown_callers = dto.silence_unknown_callers;

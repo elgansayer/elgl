@@ -876,4 +876,44 @@ export class ChatService {
 
     return (data ?? []) as ChatMessage[];
   }
+
+  /**
+   * Returns the greeting and away messages set by the other participant(s) in the room.
+   * Used to display automated messages when a chat is first opened.
+   */
+  async getRoomGreeting(
+    roomId: string,
+    currentUserId: string,
+  ): Promise<{ greetingMessage?: string; awayMessage?: string }> {
+    const supabase = this.supabaseService.getClient();
+
+    // Find the other user in this private room (skip group chats for simplicity)
+    const { data: members } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', roomId)
+      .neq('user_id', currentUserId);
+
+    if (!members || members.length === 0) {
+      return {};
+    }
+
+    // We fetch the first other user's profile
+    const otherUserId = (members as { user_id: string }[])[0].user_id;
+
+    const { data: profile } = await supabase
+      .from('users')
+      .select('greeting_message, away_message')
+      .eq('id', otherUserId)
+      .single();
+
+    if (!profile) {
+      return {};
+    }
+
+    return {
+      greetingMessage: (profile as any).greeting_message ?? undefined,
+      awayMessage: (profile as any).away_message ?? undefined,
+    };
+  }
 }
