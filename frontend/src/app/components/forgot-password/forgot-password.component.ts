@@ -119,11 +119,15 @@ export class ForgotPasswordComponent {
     const { email } = this.emailForm.value as { email: string };
 
     this.http
-      .post<{ message: string }>(`${environment.apiUrl}/auth/request-password-reset`, { email })
+      .post<{ token: string }>(`${environment.apiUrl}/auth/request-password-reset`, { email })
       .subscribe({
-        next: () => {
+        next: (res) => {
           this.isSending.set(false);
           this.sendSuccess.set(true);
+          this.router.navigate([], {
+            queryParams: { token: res.token },
+            queryParamsHandling: 'merge',
+          });
         },
         error: (err) => {
           this.isSending.set(false);
