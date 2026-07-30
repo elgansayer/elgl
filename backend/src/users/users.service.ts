@@ -775,4 +775,47 @@ export class UsersService {
     }
     return badges;
   }
+
+  async permanentDeleteAccount(userId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+
+    // Delete related data from multiple tables
+    const deletions = [
+      supabase.from('moments').delete().eq('author_id', userId),
+      supabase.from('moment_comments').delete().eq('author_id', userId),
+      supabase.from('moment_likes').delete().eq('user_id', userId),
+      supabase.from('flashcards').delete().eq('user_id', userId),
+      supabase.from('chat_messages').delete().eq('sender_id', userId),
+      supabase.from('favourites').delete().eq('user_id', userId),
+      supabase.from('profile_visits').delete().eq('viewer_id', userId),
+      supabase.from('profile_visits').delete().eq('viewed_id', userId),
+      supabase.from('user_follows').delete().eq('follower_id', userId),
+      supabase.from('user_follows').delete().eq('following_id', userId),
+      supabase.from('user_profile_likes').delete().eq('liker_id', userId),
+      supabase.from('user_profile_likes').delete().eq('liked_id', userId),
+      supabase.from('status_views').delete().eq('viewer_id', userId),
+      supabase.from('status_views').delete().eq('status_owner_id', userId),
+    ];
+
+    const results = await Promise.all(deletions);
+    const errors = results.filter((r) => r.error).map((r) => r.error?.message);
+    if (errors.length > 0) {
+      Logger.warn(
+        `Some deletions failed for user ${userId}: ${errors.join(', ')}`,
+      );
+    }
+
+    // Finally delete the user profile
+    const { error: userError } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', userId);
+
+    if (userError) {
+      Logger.error(`Failed to delete user ${userId}: ${userError.message}`);
+      throw new InternalServerErrorException(
+        `Failed to delete account: ${userError.message}`,
+      );
+    }
+  }
 }

@@ -494,4 +494,27 @@ export class UserService {
         .pipe(catchError(() => of(undefined))),
     );
   }
+
+  async deleteMyAccount(): Promise<{ message: string; scheduled_for_deletion_at: string }> {
+    return firstValueFrom(
+      this.http
+        .delete<{ message: string; scheduled_for_deletion_at: string }>(
+          `${this.baseUrl}/me`,
+          { headers: this.getHeaders() },
+        )
+        .pipe(catchError(() => of({ message: '', scheduled_for_deletion_at: '' }))),
+    );
+  }
+
+  async restoreMyAccount(): Promise<{ message: string }> {
+    return firstValueFrom(
+      this.http
+        .post<{ message: string }>(
+          `${this.baseUrl}/me/restore`,
+          {},
+          { headers: this.getHeaders() },
+        )
+        .pipe(catchError(() => of({ message: '' }))),
+    );
+  }
 }

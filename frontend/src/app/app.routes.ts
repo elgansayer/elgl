@@ -365,4 +365,12 @@ export const routes: Routes = [
       ),
     title: 'Study Streak - HelloTalk',
   },
+  {
+    path: 'account/deletion',
+    loadComponent: () =>
+      import('./components/account-deletion/account-deletion.component').then(
+        (m) => m.AccountDeletionComponent,
+      ),
+    title: 'Account Deletion - HelloTalk',
+  },
 ];

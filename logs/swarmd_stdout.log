@@ -3808,3 +3808,29 @@ To github.com:elgansayer/hellotalk.git
 [2026-07-30T09:25:35Z]   FAIL  backend lint
 [2026-07-30T09:26:11Z]   FAIL  backend test
 [2026-07-30T09:26:11Z] Tests have failures (pre-existing). Committing anyway.
+[main e7af4830] feat: Implement Password reset and change workflows.
+ 8 files changed, 150 insertions(+), 4 deletions(-)
+ rename .tasks/{pending => completed}/0000-158-implement-password-reset-and-change-workflows.task (100%)
+ create mode 100644 backend/src/auth/auth.controller.ts
+ create mode 100644 backend/src/auth/auth.service.ts
+ create mode 100644 password_reset_changes.txt
+remote: 
+remote: GitHub found 11 vulnerabilities on elgansayer/hellotalk's default branch (6 high, 5 moderate). To find out more, visit:        
+remote:      https://github.com/elgansayer/hellotalk/security/dependabot        
+remote: 
+To github.com:elgansayer/hellotalk.git
+   71458f23..e7af4830  main -> main
+[2026-07-30T09:26:13Z] Committed: e7af4830 — feat: Implement Password reset and change workflows.
+[2026-07-30T09:26:13Z] COMPLETED: Implement Password reset and change workflows.
+[2026-07-30T09:26:13Z] Cooldown 15s...
+[2026-07-30T09:26:28Z] Task: Build Account Deletion and data export requests.
+[2026-07-30T09:26:28Z] Queue: 54 pending, 158 done, 0 stuck
+[2026-07-30T09:26:28Z] Attempt 1/3
+[2026-07-30T09:26:28Z] Aider pass 1 (discover)...
+[2026-07-30T09:27:54Z] Pass 1: discovered 11 files
+[2026-07-30T09:27:54Z] Aider pass 2 round 1: 11 files in context
+[2026-07-30T09:28:44Z] Pass 2 round 1: produced 9 file changes
+[2026-07-30T09:28:55Z]   FAIL  frontend lint
+[2026-07-30T09:29:44Z]   FAIL  backend lint
+[2026-07-30T09:30:22Z]   FAIL  backend test
+[2026-07-30T09:30:22Z] Tests have failures (pre-existing). Committing anyway.
