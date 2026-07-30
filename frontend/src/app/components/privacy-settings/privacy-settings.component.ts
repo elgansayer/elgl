@@ -13,7 +13,7 @@ import { resource } from '@angular/core';
       <h1 class="text-2xl font-bold mb-2">{{ 'privacy.title' | t }}</h1>
       <p class="text-muted mb-6">{{ 'privacy.subtitle' | t }}</p>
 
-      @if (settingsResource.error()) {
+      @if (profileResource.error()) {
         <div class="bg-red-500/20 text-red-300 p-3 rounded mb-4">
           {{ 'privacy.loadError' | t }}
         </div>
@@ -56,6 +56,19 @@ import { resource } from '@angular/core';
             class="toggle-checkbox"
           />
         </label>
+        <div class="space-y-2">
+          <label>{{ 'privacy.statusVisibility' | t }}</label>
+          <select
+            [value]="statusVisibility()"
+            (change)="statusVisibility.set($event.target.value)"
+            class="block w-full bg-surface border border-border rounded px-3 py-2 mt-1"
+          >
+            <option value="everyone">{{ 'privacy.statusEveryone' | t }}</option>
+            <option value="follower_only">{{ 'privacy.statusFollowers' | t }}</option>
+            <option value="vips_only">{{ 'privacy.statusVipsOnly' | t }}</option>
+            <option value="hidden">{{ 'privacy.statusHidden' | t }}</option>
+          </select>
+        </div>
       </div>
 
       <button
@@ -79,20 +92,22 @@ export class PrivacySettingsComponent {
   hideLocation = signal(false);
   hideFromSearch = signal(false);
   hideGender = signal(false);
+  statusVisibility = signal('everyone');
   isSaving = signal(false);
 
-  settingsResource = resource({
-    loader: () => this.userService.getMyPrivacySettings(),
+  profileResource = resource({
+    loader: () => this.userService.getMyProfile(),
   });
 
   constructor() {
     effect(() => {
-      const settings = this.settingsResource.value();
-      if (settings) {
-        this.hideAge.set(settings.privacy_hide_age);
-        this.hideLocation.set(settings.privacy_hide_location);
-        this.hideFromSearch.set(settings.privacy_hide_from_search);
-        this.hideGender.set(settings.privacy_hide_gender);
+      const profile = this.profileResource.value();
+      if (profile) {
+        this.hideAge.set(profile.privacy_hide_age);
+        this.hideLocation.set(profile.privacy_hide_location);
+        this.hideFromSearch.set(profile.privacy_hide_from_search);
+        this.hideGender.set(profile.privacy_hide_gender);
+        this.statusVisibility.set(profile.status_visibility ?? 'everyone');
       }
     });
   }
@@ -105,6 +120,7 @@ export class PrivacySettingsComponent {
         privacy_hide_location: this.hideLocation(),
         privacy_hide_from_search: this.hideFromSearch(),
         privacy_hide_gender: this.hideGender(),
+        status_visibility: this.statusVisibility(),
       });
     } catch {
       console.error('Failed to save privacy settings');

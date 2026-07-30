@@ -200,6 +200,7 @@ export class UsersService {
       privacy_hide_location: false,
       privacy_hide_from_search: false,
       privacy_hide_gender: false,
+      status_visibility: 'public',
       corrector_score: 0,
       created_at: new Date().toISOString(),
       scheduled_for_deletion_at: undefined,
@@ -257,6 +258,8 @@ export class UsersService {
     if (dto.gender !== undefined) updatePayload.gender = dto.gender;
     if (dto.profile_visibility !== undefined)
       updatePayload.profile_visibility = dto.profile_visibility;
+    if (dto.status_visibility !== undefined)
+      updatePayload.status_visibility = dto.status_visibility;
     if (dto.interests !== undefined) updatePayload.interests = dto.interests;
 
     if (dto.location) {

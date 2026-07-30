@@ -27,6 +27,7 @@ export interface UserProfile {
   privacy_hide_from_search: boolean;
   gender?: string;
   privacy_hide_gender: boolean;
+  status_visibility?: string;
   auto_play_voice_notes?: boolean;
   distance_metres?: number;
   is_admin?: boolean;

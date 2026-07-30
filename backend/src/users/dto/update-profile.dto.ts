@@ -107,6 +107,10 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
+  status_visibility?: string;
+
+  @IsOptional()
+  @IsString()
   @Matches(/^(A[12]|B[12]|C[12])$/, {
     message: 'proficiency_level must be one of A1, A2, B1, B2, C1, C2',
   })
