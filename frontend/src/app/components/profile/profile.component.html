@@ -1,9 +1,33 @@
 <div class="app-screen">
   @if (isLoading()) {
-    <div class="app-empty-state text-text-secondary">{{ 'profile.loading' | t }}</div>
+    <div class="p-4 space-y-4">
+      <!-- Cover photo skeleton -->
+      <ngx-skeleton-loader [theme]="{ 'height.px': 144, 'width.%': 100, 'border-radius.px': 12 }"></ngx-skeleton-loader>
+      <!-- Avatar + name skeleton -->
+      <div class="flex items-center gap-3">
+        <ngx-skeleton-loader
+          [theme]="{ 'height.px': 64, 'width.px': 64, 'border-radius.%': 50 }"
+        ></ngx-skeleton-loader>
+        <div class="flex-1">
+          <ngx-skeleton-loader [theme]="{ 'height.px': 18, 'width.%': 60 }"></ngx-skeleton-loader>
+          <ngx-skeleton-loader
+            [theme]="{ 'height.px': 12, 'width.%': 40 }"
+            class="mt-1"
+          ></ngx-skeleton-loader>
+        </div>
+      </div>
+      <!-- Stats skeleton -->
+      <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        @for (item of [1,2,3,4]; track item) {
+          <ngx-skeleton-loader [theme]="{ 'height.px': 48, 'width.%': 100 }"></ngx-skeleton-loader>
+        }
+      </div>
+      <!-- Bio skeleton -->
+      <ngx-skeleton-loader [theme]="{ 'height.px': 80, 'width.%': 100 }"></ngx-skeleton-loader>
+    </div>
   }
 
-  @if (!isLoading() && profile() !== null) {
+  @if (profile()) {
     <app-cover-photo-uploader
       [currentCoverUrl]="profile()?.cover_photo_url || ''"
       (coverPhotoUploaded)="onCoverUploaded($event)"

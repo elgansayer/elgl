@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { SkeletonModule } from 'ngx-skeleton-loader';
 import { I18nService } from '../../services/i18n.service';
 import { UserService, UserProfile } from '../../services/user.service';
 import { CoverPhotoUploaderComponent } from '../cover-photo-uploader/cover-photo-uploader.component';
@@ -19,6 +20,7 @@ import {
     FormsModule,
     RouterLink,
     TranslatePipe,
+    SkeletonModule,
     CoverPhotoUploaderComponent,
     HobbyTagsComponent,
     LanguagePickerComponent,
