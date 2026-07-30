@@ -7,13 +7,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
-import { ConfigService } from '@nestjs/config';
-import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { CreateVoiceRoomNoteDto } from './dto/voice-room-note.dto';
 import { VoiceRoomNote } from './interfaces/voice-room-note.interface';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
+import { TranscriptEgressService } from './transcript-egress.service';
 import {
   ApproveSpeakerDto,
   ArchiveRoomDto,
@@ -46,6 +45,7 @@ interface AudioRoomRow {
   raised_hands: string[];
   listeners_count: number;
   recording_url?: string | null;
+  egress_id?: string | null;
   created_at: string;
 }
 
@@ -68,6 +68,7 @@ export class AudioRoomsService implements OnModuleInit {
     private readonly supabaseService: SupabaseService,
     private readonly usersService: UsersService,
     private readonly centrifugoService: CentrifugoService,
+    private readonly transcriptEgress: TranscriptEgressService,
   ) {}
 
   onModuleInit() {
@@ -149,6 +150,16 @@ export class AudioRoomsService implements OnModuleInit {
     }
 
     const row = response.data as AudioRoomRow;
+
+    // Start recording via LiveKit Egress (non‑blocking)
+    const egressId = await this.transcriptEgress.startEgress(roomName);
+    if (egressId) {
+      await supabase
+        .from('audio_rooms')
+        .update({ egress_id: egressId })
+        .eq('id', row.id);
+    }
+
     const profile = await this.usersService.getProfile(hostId);
     return {
       ...row,
@@ -568,13 +579,34 @@ export class AudioRoomsService implements OnModuleInit {
       throw new ForbiddenException('Only the host can archive this room.');
     }
 
+    // Stop the LiveKit egress to obtain the recorded file URL
+    const egressRecordingUrl = await this.transcriptEgress.stopEgress(
+      room.room_name,
+    );
+
     const recordingUrl =
+      egressRecordingUrl ||
       dto.recording_url ||
       `https://r2.hellotalk.mock/archive/${room.room_name}.webm`;
+
+    // Generate full transcript using speech‑to‑text (implemented via LiveKit egress or external STT)
+    const transcriptText =
+      await this.transcriptEgress.generateTranscriptFromAudioUrl(recordingUrl);
+
     await supabase
       .from('audio_rooms')
       .update({ is_active: false, recording_url: recordingUrl })
       .eq('id', room.id);
+
+    // Upsert transcript row so participants can review the transcript
+    await supabase.from('audio_room_transcripts').upsert(
+      {
+        room_id: room.id,
+        recording_url: recordingUrl,
+        transcript_text: transcriptText,
+      },
+      { onConflict: 'room_id' },
+    );
 
     void this.centrifugoService.publish(`room_${room.id}`, {
       type: 'room_ended',
@@ -681,6 +713,31 @@ export class AudioRoomsService implements OnModuleInit {
       note_id: noteId,
       room_id: room.id,
     });
+  }
+
+  /**
+   * Returns the recording_url and optionally the transcript_text for a completed room.
+   */
+  async getTranscript(
+    roomId: string,
+  ): Promise<{ recording_url: string | null; transcript_text: string | null }> {
+    const supabase = this.supabaseService.getClient();
+    const { data } = await supabase
+      .from('audio_room_transcripts')
+      .select('recording_url, transcript_text')
+      .eq('room_id', roomId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!data) {
+      return { recording_url: null, transcript_text: null };
+    }
+    return {
+      recording_url: (data as { recording_url: string }).recording_url,
+      transcript_text: (data as { transcript_text: string | null })
+        .transcript_text,
+    };
   }
 
   private isAuthorizedInRoom(room: AudioRoomRecord, userId: string): boolean {

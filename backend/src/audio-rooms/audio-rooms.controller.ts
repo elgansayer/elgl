@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
   UseGuards,
@@ -11,6 +13,7 @@ import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { AudioRoomsService } from './audio-rooms.service';
+import { TranscriptEgressService } from './transcript-egress.service';
 import {
   ApproveSpeakerDto,
   ArchiveRoomDto,
@@ -158,5 +161,17 @@ export class AudioRoomsController {
   ): Promise<void> {
     if (!user) return;
     return await this.audioRoomsService.deleteNote(noteId, user.id);
+  }
+
+  /**
+   * Retrieve the recorded transcript for a completed audio room session.
+   * Returns { recording_url, transcript_text } if available.
+   */
+  @Get(':id/transcript')
+  @HttpCode(HttpStatus.OK)
+  async getTranscript(
+    @Param('id') roomId: string,
+  ): Promise<{ recording_url: string | null; transcript_text: string | null }> {
+    return this.audioRoomsService.getTranscript(roomId);
   }
 }
