@@ -24,6 +24,7 @@ import { ChatMessageEvent } from '../notifications/events/notification.events';
 import { SystemMessageService } from './services/system-message.service';
 import { XpService } from '../xp/xp.service';
 import { LockChatDto } from './dto/lock-chat.dto';
+import { SetWallpaperDto } from './dto/set-wallpaper.dto';
 
 @Injectable()
 export class ChatService {
@@ -53,7 +54,7 @@ export class ChatService {
     const response = await supabase
       .from('chat_rooms')
       .select(
-        'id, title, subtitle, avatar, is_online, is_pinned, created_at, admin_id',
+        'id, title, subtitle, avatar, is_online, is_pinned, created_at, admin_id, wallpaper_url',
       )
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: true });
@@ -68,6 +69,7 @@ export class ChatService {
           is_online: true,
           is_pinned: true,
           created_at: new Date().toISOString(),
+          wallpaper_url: null,
         },
         {
           id: 'mock-room-2',
@@ -77,6 +79,7 @@ export class ChatService {
           is_online: false,
           is_pinned: false,
           created_at: new Date(Date.now() - 3600000).toISOString(),
+          wallpaper_url: null,
         },
       ] as ChatRoomRecord[];
 
@@ -665,6 +668,51 @@ export class ChatService {
     }
 
     return (data ?? []).map((row: any) => row.room_id);
+  }
+
+  async setWallpaper(
+    userId: string,
+    roomId: string,
+    dto: SetWallpaperDto,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+
+    // Verify user is a member of the room
+    const { data: membership } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', roomId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this room');
+    }
+
+    const { error } = await supabase
+      .from('chat_rooms')
+      .update({ wallpaper_url: dto.wallpaperUrl })
+      .eq('id', roomId);
+
+    if (error) {
+      throw new Error(`Failed to set wallpaper: ${error.message}`);
+    }
+  }
+
+  async getWallpaper(roomId: string): Promise<string | null> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data, error } = await supabase
+      .from('chat_rooms')
+      .select('wallpaper_url')
+      .eq('id', roomId)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return data.wallpaper_url ?? null;
   }
 
   async replyToStatusUpdate(
