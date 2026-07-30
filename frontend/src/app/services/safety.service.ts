@@ -22,6 +22,19 @@ export interface ReportCategory {
   description?: string;
 }
 
+export interface MomentFeedItem {
+  id: string;
+  author_id: string;
+  content_text?: string | null;
+  media_urls?: string[];
+  voice_note_url?: string | null;
+  detected_language?: string | null;
+  is_pinned: boolean;
+  likes_count: number;
+  comments_count: number;
+  created_at: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -36,6 +49,70 @@ export class SafetyService {
   // Public read-only accessor (could be used for reactivity)
   get blockedUserIds(): ReadonlySet<string> {
     return this._blockedUserIds();
+  }
+
+  private readonly MUTED_WORDS_STORAGE_KEY = 'hellotalk_muted_words';
+
+  private _mutedWords = signal<string[]>(() => {
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem(this.MUTED_WORDS_STORAGE_KEY);
+      if (stored) {
+        try {
+          const arr: string[] = JSON.parse(stored);
+          return Array.isArray(arr) ? arr : [];
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return [];
+  });
+
+  readonly mutedWords = this._mutedWords.asReadonly();
+
+  private persistMutedWords(): void {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(this.MUTED_WORDS_STORAGE_KEY, JSON.stringify(this._mutedWords()));
+    }
+  }
+
+  addMutedWord(word: string): void {
+    const trimmed = word.trim().toLowerCase();
+    if (!trimmed) return;
+    this._mutedWords.update(prev => {
+      if (prev.includes(trimmed)) return prev;
+      return [...prev, trimmed];
+    });
+    this.persistMutedWords();
+  }
+
+  removeMutedWord(word: string): void {
+    const trimmed = word.trim().toLowerCase();
+    this._mutedWords.update(prev => prev.filter(w => w !== trimmed));
+    this.persistMutedWords();
+  }
+
+  isMutedWord(word: string): boolean {
+    return this._mutedWords().includes(word.trim().toLowerCase());
+  }
+
+  clearMutedWords(): void {
+    this._mutedWords.set([]);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(this.MUTED_WORDS_STORAGE_KEY);
+    }
+  }
+
+  /** Apply mute‑word filter to an array of moments. */
+  filterMomentsByMutedWords(moments: MomentFeedItem[]): MomentFeedItem[] {
+    if (!moments || moments.length === 0) return moments;
+    const muted = this._mutedWords();
+    if (muted.length === 0) return moments;
+    return moments.filter(moment => {
+      if (!moment.content_text) return true;
+      const text: string = moment.content_text.toLowerCase();
+      return !muted.some(word => text.includes(word));
+    });
   }
 
   /**
