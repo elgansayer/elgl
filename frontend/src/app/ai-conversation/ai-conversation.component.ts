@@ -1,0 +1,98 @@
+import { Component, signal, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { AiConversationService } from '../services/ai-conversation.service';
+
+interface ChatMessage {
+  from: 'user' | 'ai';
+  text: string;
+}
+
+@Component({
+  selector: 'app-ai-conversation',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  host: {
+    class: 'flex flex-col h-full bg-[#121212] text-white',
+  },
+  template: `
+    <div class="flex-1 overflow-y-auto p-4 space-y-3">
+      @for (msg of messages(); track msg.text) {
+        <div
+          class="flex"
+          [class.justify-end]="msg.from === 'user'"
+          [class.justify-start]="msg.from === 'ai'"
+        >
+          <div
+            class="max-w-[75%] px-3 py-2 rounded-xl"
+            [class.bg-neutral-700]="msg.from === 'user'"
+            [class.bg-neutral-800]="msg.from === 'ai'"
+            [class.text-white]="msg.from === 'user'"
+            [class.text-slate-200]="msg.from === 'ai'"
+          >
+            {{ msg.text }}
+          </div>
+        </div>
+      }
+      @if (isLoading()) {
+        <div class="flex justify-start">
+          <div class="bg-neutral-800 text-slate-400 px-3 py-2 rounded-xl animate-pulse">
+            Writing...
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="ps-4 pe-4 pb-4">
+      <div class="flex items-center gap-2 bg-neutral-800 rounded-full ps-4 pe-2 py-2">
+        <input
+          type="text"
+          class="flex-1 bg-transparent text-white placeholder-neutral-400 outline-none ps-0 pe-0"
+          placeholder="Type your message..."
+          [ngModel]="inputText()"
+          (ngModelChange)="inputText.set($event)"
+          (keydown.enter)="send()"
+          [disabled]="isLoading()"
+        />
+        <button
+          type="button"
+          (click)="send()"
+          [disabled]="isLoading() || !inputText().trim()"
+          class="ps-3 pe-3 py-2 rounded-full bg-green-600 text-white font-medium disabled:opacity-40"
+        >
+          Send
+        </button>
+      </div>
+    </div>
+  `,
+  styles: [],
+})
+export class AiConversationComponent {
+  private aiService = inject(AiConversationService);
+
+  readonly messages = signal<ChatMessage[]>([]);
+  readonly inputText = signal('');
+  readonly isLoading = signal(false);
+
+  async send(): Promise<void> {
+    const text = this.inputText().trim();
+    if (!text) return;
+    this.messages.update((msgs) => [...msgs, { from: 'user', text }]);
+    this.inputText.set('');
+    this.isLoading.set(true);
+    try {
+      const { reply } = await this.aiService.sendMessage(text);
+      this.messages.update((msgs) => [...msgs, { from: 'ai', text: reply }]);
+    } catch (error) {
+      this.messages.update((msgs) => [
+        ...msgs,
+        {
+          from: 'ai',
+          text: 'Sorry, I am having trouble responding. Please try again.',
+        },
+      ]);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+}
