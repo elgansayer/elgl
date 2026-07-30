@@ -335,18 +335,62 @@ export class UsersService {
 
   async getUserStats(userId: string): Promise<Partial<UserProfile>> {
     const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('users')
-      .select(
-        'coins_balance, study_streak_days, correction_ratio, is_serious_learner',
-      )
-      .eq('id', userId)
-      .single();
 
-    if (response.error || !response.data) {
+    const [
+      userRes,
+      momentsCountRes,
+      commentsCountRes,
+      followersCountRes,
+      followingCountRes,
+      visitsCountRes,
+    ] = await Promise.all([
+      supabase
+        .from('users')
+        .select(
+          'coins_balance, study_streak_days, correction_ratio, is_serious_learner, display_name, avatar_url, created_at',
+        )
+        .eq('id', userId)
+        .single(),
+      supabase
+        .from('moments')
+        .select('id', { count: 'exact', head: true })
+        .eq('author_id', userId),
+      supabase
+        .from('moment_comments')
+        .select('id', { count: 'exact', head: true })
+        .eq('author_id', userId),
+      supabase
+        .from('user_follows')
+        .select('id', { count: 'exact', head: true })
+        .eq('following_id', userId),
+      supabase
+        .from('user_follows')
+        .select('id', { count: 'exact', head: true })
+        .eq('follower_id', userId),
+      supabase
+        .from('profile_visits')
+        .select('id', { count: 'exact', head: true })
+        .eq('viewed_id', userId),
+    ]);
+
+    if (userRes.error || !userRes.data) {
       throw new NotFoundException(`User stats not found for user ${userId}`);
     }
 
-    return response.data;
+    const user = userRes.data as Partial<UserProfile>;
+    const momentsCount = momentsCountRes.count ?? 0;
+    const commentsCount = commentsCountRes.count ?? 0;
+    const followersCount = followersCountRes.count ?? 0;
+    const followingCount = followingCountRes.count ?? 0;
+    const profileVisitsCount = visitsCountRes.count ?? 0;
+
+    return {
+      ...user,
+      momentsCount,
+      commentsCount,
+      followersCount,
+      followingCount,
+      profileVisitsCount,
+    };
   }
 }

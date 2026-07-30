@@ -61,6 +61,14 @@ export class UsersController {
     return this.usersService.getProfile(user.id);
   }
 
+  @Get('me/stats')
+  async getMyStats(
+    @CurrentUser() user: User | null,
+  ): Promise<Partial<UserProfile>> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.getUserStats(user.id);
+  }
+
   @Patch('me')
   async updateMyProfile(
     @CurrentUser() user: User | null,
