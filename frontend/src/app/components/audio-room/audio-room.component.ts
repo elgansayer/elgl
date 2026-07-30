@@ -1,5 +1,7 @@
 import { showToast } from '../../services/toast.service';
 import { Component, inject, signal, OnInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -50,8 +52,26 @@ export class AudioRoomComponent implements OnInit {
     totalVotes: number;
   } | null>(null);
 
+  readonly httpClient = inject(HttpClient);
+
+  readonly exclusiveEmojis = signal<{emojiId:string;name:string;animationUrl:string}[]>([]);
+  readonly showExclusivePicker = signal<boolean>(false);
+
   async ngOnInit(): Promise<void> {
     await this.store.loadActiveRooms();
+    try {
+      const result = await firstValueFrom(
+        this.httpClient.get<{emojiId:string;name:string;animationUrl:string}[]>('/audio-rooms/exclusive-emojis')
+      );
+      this.exclusiveEmojis.set(result);
+    } catch {
+      // non-critical, picker will be empty
+    }
+  }
+
+  selectExclusiveEmoji(emojiId: string): void {
+    this.sendExclusiveReaction(emojiId);
+    this.showExclusivePicker.set(false);
   }
 
   async createRoom(payload: VoiceroomCreatePayload): Promise<void> {
@@ -126,6 +146,20 @@ export class AudioRoomComponent implements OnInit {
       this.showPollFormModal.set(false);
     } catch {
       showToast(this.i18n.translate('common.error'));
+    }
+  }
+
+  async sendExclusiveReaction(emojiId: string): Promise<void> {
+    const room = this.store.currentRoom();
+    if (!room) return;
+    try {
+      await firstValueFrom(
+        this.httpClient.post(`/audio-rooms/${room.id}/reactions`, { emojiId }),
+      );
+      showToast(this.i18n.translate('audioRoom.reactionSent'));
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : this.i18n.translate('common.error');
+      showToast(msg);
     }
   }
 

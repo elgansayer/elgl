@@ -46,6 +46,14 @@
           <button (click)="leave()" class="app-button-secondary ps-3.5 pe-3.5 pt-2 pb-2 text-xs">
             {{ 'audioRoom.leaveBtn' | t }}
           </button>
+          @if (authService.currentUser()?.is_vip) {
+            <button
+              (click)="showExclusivePicker.set(!showExclusivePicker())"
+              class="rounded-app bg-gradient-to-r from-pink-500 to-purple-600 ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-white"
+            >
+              {{ 'audioRoom.exclusiveEmojiBtn' | t }}
+            </button>
+          }
         </div>
       </div>
 
@@ -54,6 +62,20 @@
         <span class="app-chip">{{ 'audioRoom.chipQueue' | t }}</span>
         <span class="app-chip">{{ 'audioRoom.chipSubtitles' | t }}</span>
       </div>
+
+      @if (showExclusivePicker() && authService.currentUser()?.is_vip) {
+        <div class="flex flex-wrap gap-2 p-2 bg-surface-200 rounded-card">
+          @for (emoji of exclusiveEmojis(); track emoji.emojiId) {
+            <button
+              (click)="selectExclusiveEmoji(emoji.emojiId)"
+              class="flex flex-col items-center justify-center rounded-lg bg-purple-700/30 p-2 hover:bg-purple-700/50 transition-colors"
+              title="{{ emoji.name }}"
+            >
+              <span class="text-sm text-text-primary">{{ emoji.name }}</span>
+            </button>
+          }
+        </div>
+      }
 
       <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div class="lg:col-span-2 space-y-4">

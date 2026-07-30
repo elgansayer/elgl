@@ -40,6 +40,7 @@ import { CreateVoiceRoomNoteDto } from './dto/voice-room-note.dto';
 import { GetCallLogsQueryDto } from './dto/get-call-logs-query.dto';
 import { CreateLanguagePartyDto } from './dto/create-language-party.dto';
 import { CreatePrivatePartyDto } from './dto/create-private-party.dto';
+import { SendReactionDto } from './dto/send-reaction.dto';
 
 @Controller('audio-rooms')
 @UseGuards(SupabaseAuthGuard)
@@ -283,5 +284,22 @@ export class AudioRoomsController {
   ): Promise<{ success: boolean; soundUrl: string | null } | null> {
     if (!user) return null;
     return await this.audioRoomsService.playSound(user.id, dto);
+  }
+
+  @Post(':roomId/reactions')
+  async sendReaction(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+    @Body() dto: SendReactionDto,
+  ): Promise<{ emojiId: string; animationUrl: string } | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.sendReaction(user.id, roomId, dto);
+  }
+
+  @Get('exclusive-emojis')
+  async getExclusiveEmojis(): Promise<
+    { emojiId: string; name: string; animationUrl: string }[]
+  > {
+    return this.audioRoomsService.getExclusiveEmojis();
   }
 }

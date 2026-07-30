@@ -5,6 +5,7 @@ import {
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
+import { SendReactionDto } from './dto/send-reaction.dto';
 import { ConfigService } from '@nestjs/config';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { CentrifugoService } from '../chat/centrifugo.service';
@@ -1115,6 +1116,36 @@ export class AudioRoomsService implements OnModuleInit {
     return false;
   }
 
+  async sendReaction(
+    userId: string,
+    roomId: string,
+    dto: SendReactionDto,
+  ): Promise<{ emojiId: string; animationUrl: string }> {
+    const room = await this.getRoom(roomId);
+    const profile = await this.usersService.getProfile(userId);
+    if (!profile?.is_vip) {
+      throw new ForbiddenException(
+        'Only Pro members can send exclusive reactions.',
+      );
+    }
+    const emoji = this.getExclusiveEmojis().find(
+      (e) => e.emojiId === dto.emojiId,
+    );
+    if (!emoji) {
+      throw new NotFoundException(`Emoji '${dto.emojiId}' not found.`);
+    }
+    const reactionPayload = {
+      type: 'exclusive_reaction',
+      emojiId: dto.emojiId,
+      emojiName: emoji.name,
+      animationUrl: emoji.animationUrl,
+      userId,
+      timestamp: new Date().toISOString(),
+    };
+    await this.centrifugoService.publish(`room_${room.id}`, reactionPayload);
+    return { emojiId: dto.emojiId, animationUrl: emoji.animationUrl };
+  }
+
   async getCallLogs(
     userId: string,
     query: GetCallLogsQueryDto,
@@ -1171,6 +1202,41 @@ export class AudioRoomsService implements OnModuleInit {
       icon: '🔔',
     },
   ];
+
+  private readonly exclusiveEmojiList: {
+    emojiId: string;
+    name: string;
+    animationUrl: string;
+  }[] = [
+    {
+      emojiId: 'star',
+      name: '🌟 Star',
+      animationUrl: 'https://r2.hellotalk.mock/exclusive/star.json',
+    },
+    {
+      emojiId: 'diamond',
+      name: '💎 Diamond',
+      animationUrl: 'https://r2.hellotalk.mock/exclusive/diamond.json',
+    },
+    {
+      emojiId: 'unicorn',
+      name: '🦄 Unicorn',
+      animationUrl: 'https://r2.hellotalk.mock/exclusive/unicorn.json',
+    },
+    {
+      emojiId: 'fire',
+      name: '🔥 Fire',
+      animationUrl: 'https://r2.hellotalk.mock/exclusive/fire.json',
+    },
+  ];
+
+  getExclusiveEmojis(): {
+    emojiId: string;
+    name: string;
+    animationUrl: string;
+  }[] {
+    return this.exclusiveEmojiList;
+  }
 
   async getSoundboardSounds(): Promise<{ sounds: any[] }> {
     return { sounds: this.soundboardSounds };
