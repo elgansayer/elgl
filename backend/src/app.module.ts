@@ -38,6 +38,7 @@ import { VersionModule } from './version/version.module';
 import { StudyStreakModule } from './study-streak/study-streak.module';
 import { StreakCronModule } from './streak-cron/streak-cron.module';
 import { HostDashboardModule } from './host-dashboard/host-dashboard.module';
+import { PrivacyModule } from './privacy/privacy.module';
 import { validationSchema } from './config/validation.schema';
 
 @Module({
@@ -94,6 +95,7 @@ import { validationSchema } from './config/validation.schema';
     StudyStreakModule,
     StreakCronModule,
     HostDashboardModule,
+    PrivacyModule,
   ],
   controllers: [AppController],
   providers: [

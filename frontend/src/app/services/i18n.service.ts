@@ -866,6 +866,19 @@ export class I18nService {
     'helpAbout.appVersion': 'App Version',
     'helpAbout.buildNumber': 'Build Number',
     'helpAbout.openSourceLicences': 'Open Source Licences',
+
+    // GDPR / Privacy Hub
+    'gdpr.title': 'Personal Data & GDPR',
+    'gdpr.description': 'Manage your personal data and account settings according to GDPR.',
+    'gdpr.archiveSection': 'Request My Data Archive',
+    'gdpr.archiveInfo': 'Download a copy of all your data. This may include profile info, moments, chat history, and more.',
+    'gdpr.requestArchiveBtn': 'Request My Data Archive',
+    'gdpr.archiveSuccess': 'Your data archive request has been submitted. You will receive an email when ready.',
+    'gdpr.deleteSection': 'Delete My Account',
+    'gdpr.deleteInfo': 'Permanently delete your account and all associated data. This action is irreversible after a 30-day grace period.',
+    'gdpr.deleteConfirmLabel': 'I understand that this action is irreversible.',
+    'gdpr.deleteAccountBtn': 'Delete My Account',
+    'gdpr.deleteSuccess': 'Account deletion initiated. Check your email for confirmation.',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });

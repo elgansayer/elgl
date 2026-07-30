@@ -247,6 +247,12 @@ export const routes: Routes = [
     title: 'Data & Storage - HelloTalk',
   },
   {
+    path: 'gdpr',
+    loadComponent: () =>
+      import('./components/gdpr/gdpr.component').then((m) => m.GdprComponent),
+    title: 'Personal Data - HelloTalk',
+  },
+  {
     path: 'help-about',
     loadComponent: () =>
       import('./pages/help-about/help-about.component').then(
