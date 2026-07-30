@@ -30,6 +30,7 @@ export interface UserProfile {
   distance_metres?: number;
   is_admin?: boolean;
   profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
+  proficiency_level?: string;
   created_at: string;
   is_followed_by_me?: boolean;
   is_liked_by_me?: boolean;

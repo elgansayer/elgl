@@ -9,4 +9,5 @@ export interface User {
   confirmation_sent_at?: string;
   confirmed_at?: string;
   cover_photo_url?: string;
+  proficiency_level?: string;
 }

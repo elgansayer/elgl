@@ -86,6 +86,9 @@ export class User {
   @Column({ type: 'boolean', default: false })
   privacy_hide_from_search!: boolean;
 
+  @Column({ type: 'varchar', length: 2, nullable: true })
+  proficiency_level!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz', default: () => 'NOW()' })
   created_at!: Date;
 }

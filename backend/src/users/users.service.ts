@@ -171,6 +171,7 @@ export class UsersService {
       native_languages: ['en'],
       target_languages: ['es', 'ja'],
       bio_text: 'This is my mock profile. I love learning languages!',
+      proficiency_level: 'B1',
       avatar_url: `https://i.pravatar.cc/150?u=${userId}`,
       audio_intro_url: undefined,
       cover_photo_url: undefined,
@@ -226,6 +227,8 @@ export class UsersService {
       updatePayload.audio_intro_url = dto.audio_intro_url;
     if (dto.cover_photo_url !== undefined)
       updatePayload.cover_photo_url = dto.cover_photo_url;
+    if (dto.proficiency_level !== undefined)
+      updatePayload.proficiency_level = dto.proficiency_level;
     if (dto.privacy_hide_age !== undefined)
       updatePayload.privacy_hide_age = dto.privacy_hide_age;
     if (dto.privacy_hide_location !== undefined)

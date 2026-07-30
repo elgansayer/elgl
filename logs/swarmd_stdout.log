@@ -955,3 +955,33 @@ To github.com:elgansayer/hellotalk.git
 [2026-07-30T01:58:39Z]   FAIL  backend lint
 [2026-07-30T01:59:10Z]   FAIL  backend test
 [2026-07-30T01:59:10Z] Tests have failures (pre-existing). Committing anyway.
+[main 25a24a44] feat: Build "Personal Data Collection" GDPR hub with "Request My Data Archive" button and automated "Delete Account" workflow.
+ 13 files changed, 404 insertions(+)
+ rename .tasks/{pending => completed}/0000-045-build-personal-data-collection-gdpr-hub-with-request-my-data.task (100%)
+ create mode 100644 backend/src/privacy/dto/archive-request.dto.ts
+ create mode 100644 backend/src/privacy/dto/delete-account.dto.ts
+ create mode 100644 backend/src/privacy/privacy.controller.ts
+ create mode 100644 backend/src/privacy/privacy.module.ts
+ create mode 100644 backend/src/privacy/privacy.service.ts
+ create mode 100644 frontend/src/app/components/gdpr/gdpr.component.ts
+ create mode 100644 frontend/src/app/services/gdpr.service.ts
+remote: 
+remote: GitHub found 11 vulnerabilities on elgansayer/hellotalk's default branch (6 high, 5 moderate). To find out more, visit:        
+remote:      https://github.com/elgansayer/hellotalk/security/dependabot        
+remote: 
+To github.com:elgansayer/hellotalk.git
+   6aed4a3a..25a24a44  main -> main
+[2026-07-30T01:59:12Z] Committed: 25a24a44 — feat: Build "Personal Data Collection" GDPR hub with "Request My Data Archive" b
+[2026-07-30T01:59:12Z] COMPLETED: Build "Personal Data Collection" GDPR hub with "Request My Data Archive" button 
+[2026-07-30T01:59:12Z] Cooldown 15s...
+[2026-07-30T01:59:27Z] Task: Add `proficiency_level` (`'a1'` to `'c2'`) to `users` table schema and profile U
+[2026-07-30T01:59:27Z] Queue: 167 pending, 45 done, 0 stuck
+[2026-07-30T01:59:27Z] Attempt 1/3
+[2026-07-30T01:59:27Z] Aider pass 1 (discover)...
+[2026-07-30T02:01:17Z] Pass 1: discovered 10 files
+[2026-07-30T02:01:17Z] Aider pass 2 round 1: 10 files in context
+[2026-07-30T02:02:13Z] Pass 2 round 1: produced 9 file changes
+[2026-07-30T02:02:22Z]   FAIL  frontend lint
+[2026-07-30T02:02:57Z]   FAIL  backend lint
+[2026-07-30T02:03:28Z]   FAIL  backend test
+[2026-07-30T02:03:28Z] Tests have failures (pre-existing). Committing anyway.
