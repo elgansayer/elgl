@@ -22,4 +22,12 @@ export class CreateResourceDto {
   @IsString()
   @IsOptional()
   content?: string;
+
+  @IsString()
+  @IsOptional()
+  topic?: string;
+
+  @IsString()
+  @IsOptional()
+  difficulty?: string; // e.g., 'beginner', 'intermediate', 'advanced'
 }

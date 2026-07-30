@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
@@ -14,6 +14,8 @@ export interface ResourceItem {
   updatedAt: string;
   type?: string;
   content?: string;
+  topic?: string;
+  difficulty?: string; // e.g., 'beginner', 'intermediate', 'advanced'
 }
 
 export interface CreateResourcePayload {
@@ -23,6 +25,8 @@ export interface CreateResourcePayload {
   category?: string;
   type?: string;
   content?: string;
+  topic?: string;
+  difficulty?: string;
 }
 
 export interface UpdateResourcePayload {
@@ -32,6 +36,8 @@ export interface UpdateResourcePayload {
   category?: string;
   type?: string;
   content?: string;
+  topic?: string;
+  difficulty?: string;
 }
 
 @Injectable({
@@ -41,8 +47,13 @@ export class ResourceLibraryService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiUrl}/resource-library`;
 
-  async getAll(): Promise<ResourceItem[]> {
-    return firstValueFrom(this.http.get<ResourceItem[]>(this.baseUrl));
+  async getAll(topic?: string, difficulty?: string): Promise<ResourceItem[]> {
+    let params = new HttpParams();
+    if (topic) params = params.set('topic', topic);
+    if (difficulty) params = params.set('difficulty', difficulty);
+    return firstValueFrom(
+      this.http.get<ResourceItem[]>(this.baseUrl, { params }),
+    );
   }
 
   async getById(id: string): Promise<ResourceItem> {

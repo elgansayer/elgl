@@ -23,6 +23,8 @@ export class ResourceLibraryService {
         created_by: userId,
         ...(dto.type !== undefined && { type: dto.type }),
         ...(dto.content !== undefined && { content: dto.content }),
+        ...(dto.topic !== undefined && { topic: dto.topic }),
+        ...(dto.difficulty !== undefined && { difficulty: dto.difficulty }),
       })
       .select()
       .single();
@@ -31,11 +33,23 @@ export class ResourceLibraryService {
     return data;
   }
 
-  async findAll(userId: string): Promise<Resource[]> {
-    const { data, error } = await this.client
+  async findAll(
+    userId: string,
+    filter?: { topic?: string; difficulty?: string },
+  ): Promise<Resource[]> {
+    let query = this.client
       .from('resource_library')
       .select()
       .eq('created_by', userId);
+
+    if (filter?.topic) {
+      query = query.eq('topic', filter.topic);
+    }
+    if (filter?.difficulty) {
+      query = query.eq('difficulty', filter.difficulty);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return data ?? [];
@@ -63,6 +77,8 @@ export class ResourceLibraryService {
         ...(dto.category !== undefined && { category: dto.category }),
         ...(dto.type !== undefined && { type: dto.type }),
         ...(dto.content !== undefined && { content: dto.content }),
+        ...(dto.topic !== undefined && { topic: dto.topic }),
+        ...(dto.difficulty !== undefined && { difficulty: dto.difficulty }),
       })
       .eq('id', id)
       .select()

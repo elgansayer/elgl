@@ -7,6 +7,7 @@ import {
   Patch,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { ResourceLibraryService } from './resource-library.service';
 import { CreateResourceDto } from './dto/create-resource.dto';
@@ -25,8 +26,12 @@ export class ResourceLibraryController {
   }
 
   @Get()
-  findAll(@CurrentUser() user: any) {
-    return this.resourceService.findAll(user.id);
+  findAll(
+    @CurrentUser() user: any,
+    @Query('topic') topic?: string,
+    @Query('difficulty') difficulty?: string,
+  ) {
+    return this.resourceService.findAll(user.id, { topic, difficulty });
   }
 
   @Get(':id')

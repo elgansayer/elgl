@@ -9,4 +9,6 @@ export interface Resource {
   updatedAt: Date;
   type?: string;
   content?: string;
+  topic?: string;
+  difficulty?: string; // e.g., 'beginner', 'intermediate', 'advanced'
 }
