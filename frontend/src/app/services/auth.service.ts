@@ -284,5 +284,25 @@ export class AuthService {
     return { user: this.toAppUser(passwordData.user), error: null };
   }
 
+  /**
+   * Generate a one‑time magic link that the user can open on another device
+   * to be automatically signed in without keeping the current device online.
+   */
+  async generateDeviceLink(): Promise<string> {
+    const accessToken = this.currentSession()?.access_token;
+    const res = await lastValueFrom(
+      this.http.post<{ url: string }>(
+        `${this.apiUrl}/generate-device-link`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      ),
+    );
+    return res.url;
+  }
+
   private http = inject(HttpClient);
 }

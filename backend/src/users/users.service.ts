@@ -492,6 +492,33 @@ export class UsersService {
     }
   }
 
+  async generateDeviceLink(userId: string): Promise<string> {
+    const supabase = this.supabaseService.getClient();
+
+    // Retrieve the user's primary email from Supabase auth
+    const { data, error } = await supabase.auth.admin.getUserById(userId);
+    if (error || !data?.user?.email) {
+      throw new InternalServerErrorException(
+        'Unable to retrieve user email for device linking',
+      );
+    }
+    const email = data.user.email;
+
+    // Generate a one‑time magic link that the other device can use to sign in
+    const { data: linkData, error: linkError } =
+      await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email,
+      });
+    if (linkError || !linkData?.properties?.action_link) {
+      throw new InternalServerErrorException(
+        'Unable to generate device‑link URL',
+      );
+    }
+
+    return linkData.properties.action_link;
+  }
+
   async updatePrivacySettings(
     userId: string,
     settings: {

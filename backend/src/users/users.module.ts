@@ -18,7 +18,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     NotificationsModule,
     MediaModule,
   ],
-  controllers: [UsersController],
+  controllers: [UsersController, DeviceLinkController],
   providers: [
     UsersService,
     StreakResetCron,
