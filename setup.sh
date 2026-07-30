@@ -75,8 +75,7 @@ fi
 echo ""
 read -rp "Start the 24/7 AI swarm now? [Y/n]: " REPLY
 if [ "$REPLY" != "n" ] && [ "$REPLY" != "N" ]; then
-    tmux new-session -d -s ai_swarm "python3 $WORKSPACE/swarmd.py"
-    echo "Swarm started in tmux session 'ai_swarm'."
+    bash "$WORKSPACE/start-swarm.sh"
 fi
 
 echo ""
