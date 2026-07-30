@@ -197,14 +197,53 @@ export class ChatService {
       // ignore any error; just continue without preview
     }
 
-    const messageWithPreview: ChatMessage = linkPreview
+    // ---------- Auto‑generate explanation for correction if missing ----------
+    let messageForPublish: ChatMessage = linkPreview
       ? { ...savedMessage, link_preview: linkPreview }
       : savedMessage;
-    // -------------------------------------------
 
-    // Publish to Centrifugo channel (with preview attached)
+    if (
+      savedMessage.correction_payload &&
+      !(savedMessage.correction_payload as Record<string, unknown>).explanation
+    ) {
+      const correctionPayload = savedMessage.correction_payload as Record<
+        string,
+        unknown
+      >;
+      const originalText = correctionPayload.original as string | undefined;
+      const correctText = correctionPayload.corrected as string | undefined;
+
+      if (originalText && fixedText) {
+        const prompt = `Explain simply why the following sentence was corrected.\nOriginal: "${originalText}"\nCorrected: "${correctText}"\nProvide a short explanation.`;
+        try {
+          const { response } = await this.llmProxyService.proxyMessage(prompt);
+          if (response && response.trim().length > 0) {
+            const updatedPayload = {
+              ...correctionPayload,
+              explanation: response.trim(),
+            };
+            const { error: updateError } = await this.supabaseService
+              .getClient()
+              .from('chat_messages')
+              .update({ correction_payload: updatedPayload })
+              .eq('id', savedMessage.id);
+
+            if (!updateError) {
+              messageForPublish = {
+                ...messageForPublish,
+                correction_payload: updatedPayload,
+              } as ChatMessage;
+            }
+          }
+        } catch {
+          // Explanation generation failed; serve the message without it
+        }
+      }
+    }
+
+    // Publish to Centrifugo channel (with preview and possibly a generated explanation)
     await this.centrifugoService.publish(`chat:${dto.room_id}`, {
-      message: messageWithPreview,
+      message: messageForPublish,
     });
 
     // Emit push notification event
@@ -233,7 +272,7 @@ export class ChatService {
       );
     }
 
-    return messageWithPreview;
+    return messageForPublish;
   }
 
   async getMessages(
