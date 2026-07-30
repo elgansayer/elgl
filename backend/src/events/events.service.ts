@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventsQueryDto } from './dto/events-query.dto';
 
@@ -13,15 +14,21 @@ import { EventsQueryDto } from './dto/events-query.dto';
 export class EventsService implements OnModuleInit {
   private readonly logger = new Logger(EventsService.name);
   private intervalId: ReturnType<typeof setInterval> | null = null;
+  private intervalId2: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly notificationsService: NotificationsService,
+    private readonly audioRoomsService: AudioRoomsService,
   ) {}
 
   async onModuleInit() {
     // Start background job that checks for upcoming event reminders every 60 seconds
     this.intervalId = setInterval(() => this.checkReminders(), 60_000);
+
+    // Start background job that checks for events whose start time is happening now
+    // and spins up a LiveKit audio room for them.
+    this.intervalId2 = setInterval(() => this.checkStartEvents(), 10_000);
   }
 
   /**
@@ -299,5 +306,71 @@ export class EventsService implements OnModuleInit {
       throw error;
     }
     return { success: true };
+  }
+
+  private async checkStartEvents(): Promise<void> {
+    try {
+      const now = Date.now();
+      const tolerance = 5_000; // 5 seconds
+      const supabase = this.supabaseService.getClient();
+
+      const { data: events, error } = await supabase
+        .from('events')
+        .select('id, title, host_id, language_pair, category')
+        .not('language_pair', 'is', null)
+        .gte('date_time', new Date(now - tolerance).toISOString())
+        .lte('date_time', new Date(now + tolerance).toISOString());
+
+      if (error) {
+        this.logger.error('Failed to fetch events for room creation', error);
+        return;
+      }
+
+      if (!events || events.length === 0) return;
+
+      for (const event of events) {
+        const roomName = `language_party-${event.id}`;
+
+        // Check if a room already exists for this event
+        const { data: existingRoom, error: roomCheckErr } = await supabase
+          .from('audio_rooms')
+          .select('id')
+          .eq('room_name', roomName)
+          .maybeSingle();
+
+        if (roomCheckErr) {
+          this.logger.warn('Could not check existing room', roomCheckErr);
+          continue;
+        }
+        if (existingRoom) {
+          // Already created
+          continue;
+        }
+
+        // Create the LiveKit audio room via the dedicated service
+        const room = await this.audioRoomsService.createRoom(
+          event.host_id,
+          {
+            title: event.title,
+            language_pair: event.language_pair,
+            topic_tag: event.category ?? null,
+            is_video_stream: false,
+          },
+          roomName,
+        );
+
+        // Mark the room as a Language Party
+        await supabase
+          .from('audio_rooms')
+          .update({ party_type: 'language_party' })
+          .eq('id', room.id);
+
+        this.logger.log(
+          `Audio room created for event ${event.id} (${event.title})`,
+        );
+      }
+    } catch (err) {
+      this.logger.error('Unexpected error in checkStartEvents', err);
+    }
   }
 }

@@ -111,13 +111,14 @@ export class AudioRoomsService implements OnModuleInit {
   async createRoom(
     hostId: string,
     dto: CreateAudioRoomDto,
+    roomNameOverride?: string,
   ): Promise<AudioRoomRecord> {
     const supabase = this.supabaseService.getClient();
     const cleanTitle = dto.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
-    const roomName = `room-${cleanTitle}-${Date.now()}`;
+    const roomName = roomNameOverride ?? `room-${cleanTitle}-${Date.now()}`;
 
     // Try creating on LiveKit server if reachable
     if (this.roomServiceClient && !this.livekitUrl.includes('mock')) {
@@ -189,13 +190,15 @@ export class AudioRoomsService implements OnModuleInit {
   async createLanguageParty(
     hostId: string,
     dto: CreateLanguagePartyDto,
+    roomNameOverride?: string,
   ): Promise<AudioRoomRecord> {
     const supabase = this.supabaseService.getClient();
     const cleanTitle = dto.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
-    const roomName = `language-party-${cleanTitle}-${Date.now()}`;
+    const roomName =
+      roomNameOverride ?? `language-party-${cleanTitle}-${Date.now()}`;
 
     if (this.roomServiceClient && !this.livekitUrl.includes('mock')) {
       try {
