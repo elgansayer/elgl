@@ -276,4 +276,8 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   chat_text_size?: 'small' | 'medium' | 'large';
+
+  @IsOptional()
+  @IsBoolean()
+  serious_learner_mode?: boolean;
 }

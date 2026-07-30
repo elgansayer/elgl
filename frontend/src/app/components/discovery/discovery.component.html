@@ -63,6 +63,22 @@
           [initialMax]="ageRangeMax()"
         ></app-age-range-slider>
       </div>
+
+      <!-- Serious Learner Mode Toggle -->
+      <div class="flex items-center gap-3 px-4 mt-3 pb-3">
+        <span class="text-xs font-semibold text-text-secondary whitespace-nowrap">{{ 'discovery.seriousModeToggle' | t }}</span>
+        <div class="flex items-center">
+          <input
+            type="checkbox"
+            id="seriousModeCheckbox"
+            [checked]="seriousLearnerMode()"
+            (change)="toggleSeriousLearnerMode()"
+            class="h-4 w-4 text-accent-500 border-surface-300 rounded focus:ring-accent-400"
+          />
+          <label for="seriousModeCheckbox" class="sr-only">{{ 'discovery.seriousModeToggle' | t }}</label>
+        </div>
+        <span class="text-[10px] text-text-secondary leading-tight">{{ 'discovery.seriousModeDesc' | t }}</span>
+      </div>
   </header>
 
   <!-- Prominent Colourful Banner Ad -->

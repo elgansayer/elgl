@@ -24,6 +24,7 @@ export interface SearchFilterParams {
   has_audio_intro?: boolean;
   country?: string;
   city?: string;
+  serious_learner_mode?: boolean;
 }
 
 @Injectable({
@@ -62,7 +63,7 @@ export class DiscoveryService {
     }
   }
 
-  async findPartners(filters: SearchFilterParams): Promise<UserProfile[]> {
+  async findPartners(filters: SearchFilterParams & { serious_learner_mode?: boolean }): Promise<UserProfile[]> {
     let params = new HttpParams();
     if (filters.latitude !== undefined)
       params = params.set('latitude', filters.latitude.toString());
@@ -97,6 +98,9 @@ export class DiscoveryService {
 
     if (filters.city !== undefined)
       params = params.set('city', filters.city);
+
+    if (filters.serious_learner_mode !== undefined)
+      params = params.set('serious_learner_mode', filters.serious_learner_mode.toString());
 
     const users = await firstValueFrom(
       this.http

@@ -187,6 +187,7 @@ export class UserService {
     update: Partial<UserProfile> & {
       location?: { latitude: number; longitude: number };
       mock_location?: { latitude: number; longitude: number };
+      serious_learner_mode?: boolean;
     },
   ): Promise<UserProfile> {
     return firstValueFrom(

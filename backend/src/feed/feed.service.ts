@@ -38,6 +38,16 @@ export class FeedService {
   ): Promise<Moment[]> {
     const supabase = this.supabaseService.getClient();
 
+    // When serious_learner_mode is active, return empty feed immediately
+    const { data: profileData } = await supabase
+      .from('users')
+      .select('serious_learner_mode')
+      .eq('id', currentUserId)
+      .single();
+    if (profileData && (profileData as any).serious_learner_mode === true) {
+      return [];
+    }
+
     // Get blocked AND blocker user IDs to exclude from feed
     const blockedIds: string[] =
       await this.safetyService.getBlockedAndBlockerIds(currentUserId);

@@ -23,6 +23,11 @@ export class DiscoveryController {
   ): Promise<UserProfile[]> {
     if (!user) return [];
     const profile = await this.usersService.getProfile(user.id);
+    // If the authenticated user has serious_learner_mode enabled,
+    // automatically set the serious_learner_mode flag in the query
+    if (profile?.serious_learner_mode === true) {
+      query.serious_learner_mode = true;
+    }
     return this.discoveryService.searchPartners(user.id, profile, query);
   }
 

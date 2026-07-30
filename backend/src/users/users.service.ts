@@ -394,6 +394,9 @@ export class UsersService {
     if (dto.chat_text_size !== undefined)
       updatePayload.chat_text_size = dto.chat_text_size;
 
+    if (dto.serious_learner_mode !== undefined)
+      updatePayload.serious_learner_mode = dto.serious_learner_mode;
+
     if (dto.business_name !== undefined)
       updatePayload.business_name = dto.business_name;
     if (dto.business_hours !== undefined)

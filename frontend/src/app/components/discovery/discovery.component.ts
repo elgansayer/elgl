@@ -50,6 +50,7 @@ export class DiscoveryComponent implements OnInit {
   readonly selectedTargetLanguage = signal<string>('');
   readonly selectedGender = signal<string>('');
   readonly seriousLearnerOnly = signal<boolean>(false);
+  readonly seriousLearnerMode = signal<boolean>(false);
   private readonly authService = inject(AuthService);
   readonly isVip = computed(() => this.authService.currentUser()?.is_vip ?? false);
 
@@ -103,13 +104,23 @@ export class DiscoveryComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     try {
       const profile = await this.userService.getMyProfile();
-      if (profile && profile.target_languages) {
-        const langs = profile.target_languages.map((code) => ({
-          code,
-          flag: getLanguageFlag(code),
-          labelKey: `lang.${code.toLowerCase()}`,
-        }));
-        this.myTargetLangs.set(langs);
+      if (profile) {
+        if (profile.target_languages) {
+          const langs = profile.target_languages.map((code) => ({
+            code,
+            flag: getLanguageFlag(code),
+            labelKey: `lang.${code.toLowerCase()}`,
+          }));
+          this.myTargetLangs.set(langs);
+        }
+        // Restore serious learner mode
+        if (profile.serious_learner_mode != null) {
+          this.seriousLearnerMode.set(profile.serious_learner_mode);
+          if (profile.serious_learner_mode) {
+            this.seriousLearnerOnly.set(true);
+            this.selectedFilter.set('serious');
+          }
+        }
       }
     } catch (e) {
       console.warn('Could not load user profile for target languages', e);
@@ -138,6 +149,7 @@ export class DiscoveryComponent implements OnInit {
         gender: isVip ? genderVal : undefined,
         age_min: this.ageRangeMin(),
         age_max: this.ageRangeMax(),
+        serious_learner_mode: this.seriousLearnerMode(),
       });
       // Filter out blocked users
       const blocked = this.blockedUserIds();
@@ -148,6 +160,21 @@ export class DiscoveryComponent implements OnInit {
       console.error('Partner search failed:', e);
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  async toggleSeriousLearnerMode(): Promise<void> {
+    const newMode = !this.seriousLearnerMode();
+    try {
+      await this.userService.updateMyProfile({ serious_learner_mode: newMode });
+      this.seriousLearnerMode.set(newMode);
+      if (newMode) {
+        this.seriousLearnerOnly.set(true);
+        this.selectedFilter.set('serious');
+      }
+      await this.searchPartners();
+    } catch (e) {
+      console.error('Failed to update serious learner mode', e);
     }
   }
 
@@ -166,6 +193,7 @@ export class DiscoveryComponent implements OnInit {
     this.selectedNativeLanguage.set('');
     this.selectedTargetLanguage.set('');
     this.seriousLearnerOnly.set(false);
+    this.seriousLearnerMode.set(false);
     this.ageRangeMin.set(18);
     this.ageRangeMax.set(100);
     void this.searchPartners();

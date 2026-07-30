@@ -106,4 +106,11 @@ export class SearchQueryDto {
   @IsOptional()
   @IsString()
   city?: string;
+
+  @IsOptional()
+  @Transform(
+    ({ value }: { value: unknown }) => value === 'true' || value === true,
+  )
+  @IsBoolean()
+  serious_learner_mode?: boolean;
 }

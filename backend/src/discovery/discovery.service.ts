@@ -215,6 +215,14 @@ export class DiscoveryService {
       queryBuilder = queryBuilder.eq('proficiency_level', query.level);
     }
 
+    // When the user has serious_learner_mode enabled, force serious learner filter
+    if (
+      _currentUserProfile?.serious_learner_mode ||
+      query.serious_learner_mode
+    ) {
+      query.serious_learner_only = true;
+    }
+
     if (_currentUserProfile?.is_vip && query.gender) {
       queryBuilder = queryBuilder.eq('gender', query.gender);
     }
