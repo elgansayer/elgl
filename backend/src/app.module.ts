@@ -40,6 +40,7 @@ import { StreakCronModule } from './streak-cron/streak-cron.module';
 import { HostDashboardModule } from './host-dashboard/host-dashboard.module';
 import { PrivacyModule } from './privacy/privacy.module';
 import { AiConversationModule } from './ai-conversation/ai-conversation.module';
+import { AchievementsModule } from './achievements/achievements.module';
 import { validationSchema } from './config/validation.schema';
 
 @Module({
@@ -98,6 +99,7 @@ import { validationSchema } from './config/validation.schema';
     HostDashboardModule,
     PrivacyModule,
     AiConversationModule,
+    AchievementsModule,
   ],
   controllers: [AppController],
   providers: [
