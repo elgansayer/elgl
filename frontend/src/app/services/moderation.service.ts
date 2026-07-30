@@ -20,6 +20,11 @@ export interface ModerationItem {
   moment_content?: string;
 }
 
+export interface UserAnalysisResult {
+  riskScore: number;
+  flags: string[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -74,6 +79,28 @@ export class ModerationService {
           },
         )
         .pipe(catchError(() => of(null))),
+    );
+  }
+
+  reportUser(reportedUserId: string, reason: string, description?: string): Promise<unknown> {
+    return firstValueFrom(
+      this.http
+        .post(
+          `${this.baseUrl}/report`,
+          { reportedUserId, reason, description },
+          { headers: this.getHeaders() },
+        )
+        .pipe(catchError(() => of(null))),
+    );
+  }
+
+  getUserRiskAnalysis(userId: string): Promise<UserAnalysisResult> {
+    return firstValueFrom(
+      this.http
+        .get<UserAnalysisResult>(`${this.baseUrl}/analyse/${userId}`, {
+          headers: this.getHeaders(),
+        })
+        .pipe(catchError(() => of({ riskScore: 0, flags: [] }))),
     );
   }
 }

@@ -1,0 +1,67 @@
+<div class="p-4">
+  <h2 class="text-xl font-bold mb-4">{{ 'moderation.title' | t }}</h2>
+
+  <div class="mb-4 flex gap-2">
+    <button
+      class="px-3 py-1 rounded"
+      [class.bg-blue-600]="currentFilter() === 'moment'"
+      (click)="filterByType('moment')"
+    >
+      {{ 'moderation.moments' | t }}
+    </button>
+    <button
+      class="px-3 py-1 rounded"
+      [class.bg-blue-600]="currentFilter() === 'profile'"
+      (click)="filterByType('profile')"
+    >
+      {{ 'moderation.profiles' | t }}
+    </button>
+  </div>
+
+  @if (loading()) {
+    <p class="text-gray-400">{{ 'moderation.loading' | t }}</p>
+  } @else if (items().length === 0) {
+    <p class="text-gray-400">{{ 'moderation.noItems' | t }}</p>
+  } @else {
+    @for (item of items(); track item.id) {
+      <div class="border border-slate-700 rounded p-3 mb-3">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-sm">{{ 'moderation.reportedUser' | t }}: {{ item.reported_user?.name }}</p>
+            <p class="text-xs text-gray-400">{{ 'moderation.reason' | t }}: {{ item.reason }}</p>
+            <p class="text-xs text-gray-400">{{ 'moderation.date' | t }}: {{ item.created_at | date: 'short' }}</p>
+          </div>
+          <div class="flex gap-2">
+            <button
+              class="bg-green-600 px-3 py-1 rounded text-sm"
+              (click)="approve(item)"
+            >
+              {{ 'moderation.approve' | t }}
+            </button>
+            <button
+              class="bg-red-600 px-3 py-1 rounded text-sm"
+              (click)="reject(item)"
+            >
+              {{ 'moderation.reject' | t }}
+            </button>
+            <button
+              class="bg-yellow-600 px-3 py-1 rounded text-sm"
+              (click)="analyseUserProfile(item.reported_user?.id ?? '')"
+              [disabled]="analysing()"
+            >
+              {{ 'moderation.analyse' | t }}
+            </button>
+          </div>
+        </div>
+        @if (analysisResult(); as res) {
+          <div class="mt-2 p-2 bg-slate-800 rounded text-xs">
+            <p class="text-amber-300">{{ 'moderation.riskScore' | t }}: {{ res.riskScore }}%</p>
+            @if (res.flags.length) {
+              <p class="text-red-300 mt-1">{{ 'moderation.flags' | t }}: {{ res.flags.join(', ') }}</p>
+            }
+          </div>
+        }
+      </div>
+    }
+  }
+</div>

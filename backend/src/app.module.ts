@@ -25,6 +25,7 @@ import { VideoCallsModule } from './video-calls/video-calls.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { StreakModule } from './streak/streak.module';
 import { StreakMiddleware } from './streak/streak.middleware';
+import { ModerationModule } from './moderation/moderation.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CallsModule } from './calls/calls.module';
 import { QuizModule } from './quiz/quiz.module';
@@ -124,6 +125,7 @@ import { validationSchema } from './config/validation.schema';
     AudioIntroModule,
     StatsModule,
     ScheduledDeletionModule,
+    ModerationModule,
   ],
   controllers: [AppController],
   providers: [

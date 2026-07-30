@@ -346,6 +346,15 @@ export const routes: Routes = [
     title: 'Device Transfer - HelloTalk',
   },
   {
+    path: 'admin/moderation',
+    loadComponent: () =>
+      import('./components/moderation/moderation-panel.component').then(
+        (m) => m.ModerationPanelComponent,
+      ),
+    canActivate: [adminGuard],
+    title: 'Moderation - HelloTalk',
+  },
+  {
     path: 'milestones',
     component: MilestoneComponent,
     title: 'Milestones - HelloTalk',
