@@ -789,6 +789,117 @@ export class ChatService {
     return { response: result.response };
   }
 
+  async correctMessage(
+    userId: string,
+    messageId: string,
+    correctedText: string,
+    explanation?: string,
+  ): Promise<ChatMessage> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: originalMsg, error: fetchErr } = await supabase
+      .from('chat_messages')
+      .select('room_id, text_content, sender_id')
+      .eq('id', messageId)
+      .single();
+
+    if (fetchErr || !originalMsg) {
+      throw new Error('Original message not found');
+    }
+
+    const sendDto: SendMessageDto = {
+      room_id: (originalMsg as any).room_id,
+      message_type: 'correction',
+      text_content: undefined,
+      media_url: undefined,
+      correction_payload: {
+        original: (originalMsg as any).text_content ?? '',
+        corrected: correctedText,
+        explanation: explanation ?? undefined,
+      },
+      reply_to_id: messageId,
+      correction_request_payload: undefined,
+      status_reply_payload: undefined,
+    };
+
+    return await this.sendMessage(userId, sendDto);
+  }
+
+  async fixMessage(
+    userId: string,
+    messageId: string,
+    correctedText: string,
+    explanation?: string,
+  ): Promise<ChatMessage> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: originalMsg, error: fetchErr } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('id', messageId)
+      .single();
+
+    if (fetchErr || !originalMsg) {
+      throw new Error('Message not found');
+    }
+
+    const { data: membership } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', originalMsg.room_id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this room');
+    }
+
+    if (originalMsg.sender_id === userId) {
+      throw new ForbiddenException('You cannot fix your own message');
+    }
+
+    const currentPayload = originalMsg.correction_payload as Record<
+      string,
+      unknown
+    > | null;
+    const updatedPayload = {
+      original: currentPayload?.original ?? originalMsg.text_content ?? '',
+      corrected: correctedText,
+      explanation: explanation ?? currentPayload?.explanation ?? undefined,
+    };
+
+    const { data: updatedMsg, error: updateErr } = await supabase
+      .from('chat_messages')
+      .update({
+        text_content: correctedText,
+        correction_payload: updatedPayload,
+      })
+      .eq('id', messageId)
+      .select(
+        `
+        *,
+        sender:users!chat_messages_sender_id_fkey (
+          id,
+          display_name,
+          avatar_url
+        )
+      `,
+      )
+      .single();
+
+    if (updateErr || !updatedMsg) {
+      throw new Error(
+        `Failed to fix message: ${updateErr?.message ?? 'Unknown error'}`,
+      );
+    }
+
+    await this.centrifugoService.publish(`chat:${originalMsg.room_id}`, {
+      message: updatedMsg,
+    });
+
+    return updatedMsg as ChatMessage;
+  }
+
   async viewMessageMedia(userId: string, messageId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
 

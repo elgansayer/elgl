@@ -14,6 +14,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { UsersService } from '../users/users.service';
 import { CreateCommentDto, CreateMomentDto } from './dto/moment.dto';
 import { CreateStoryDto } from './dto/create-story.dto';
+import { EditTextDto } from './dto/edit-text.dto';
 import { VoteCorrectionDto } from './dto/vote-correction.dto';
 import { R2Service } from '../cloudflare-r2/r2.service';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
@@ -133,6 +134,16 @@ export class MomentsController {
     @Param('id') id: string,
   ): Promise<MomentComment[]> {
     return await this.momentsService.getComments(id, user?.id);
+  }
+
+  @Patch(':id/edit-text')
+  async editMomentText(
+    @CurrentUser() user: User | null,
+    @Param('id') id: string,
+    @Body() dto: EditTextDto,
+  ): Promise<MomentRecord | null> {
+    if (!user) return null;
+    return await this.momentsService.editMomentText(user.id, id, dto);
   }
 
   @Patch(':id/pin')

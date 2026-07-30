@@ -18,6 +18,7 @@ import { ReplyToStatusUpdateDto } from './dto/reply-to-status-update.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { AddLabelDto, RemoveLabelDto } from './dto/label.dto';
+import { FixMessageDto } from './dto/fix-message.dto';
 import {
   ChatMessage,
   ChatRoomRecord,
@@ -148,6 +149,36 @@ export class ChatController {
   ): Promise<ChatMessage | null> {
     if (!user) return null;
     return await this.chatService.replyToStatusUpdate(user.id, dto);
+  }
+
+  @Post('messages/:messageId/correct')
+  async correctMessage(
+    @CurrentUser() user: User | null,
+    @Param('messageId') messageId: string,
+    @Body() dto: { correctedText: string; explanation?: string },
+  ): Promise<ChatMessage | null> {
+    if (!user) return null;
+    return await this.chatService.correctMessage(
+      user.id,
+      messageId,
+      dto.correctedText,
+      dto.explanation,
+    );
+  }
+
+  @Patch('messages/:messageId/fix')
+  async fixMessage(
+    @CurrentUser() user: User | null,
+    @Param('messageId') messageId: string,
+    @Body() dto: FixMessageDto,
+  ): Promise<ChatMessage | null> {
+    if (!user) return null;
+    return await this.chatService.fixMessage(
+      user.id,
+      messageId,
+      dto.correctedText,
+      dto.explanation,
+    );
   }
 
   @Post('messages/:messageId/view')

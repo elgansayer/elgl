@@ -11,6 +11,7 @@ import { XpService } from '../xp/xp.service';
 import { QuestsService } from '../quests/quests.service';
 import { CreateCommentDto, CreateMomentDto } from './dto/moment.dto';
 import { CreateStoryDto } from './dto/create-story.dto';
+import { EditTextDto } from './dto/edit-text.dto';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { StoryResponse } from './interfaces/story.interface';
 import { TimelineWorker } from './timeline.worker';
@@ -681,6 +682,65 @@ export class MomentsService {
     contentType: string,
   ): Promise<{ uploadUrl: string; publicUrl: string }> {
     return await this.r2Service.generateUploadUrl(filename, contentType);
+  }
+
+  async editMomentText(
+    userId: string,
+    momentId: string,
+    dto: EditTextDto,
+  ): Promise<MomentRecord> {
+    const supabase = this.supabaseService.getClient();
+
+    // Retrieve the moment to verify existence and author
+    const { data: momentData, error: fetchErr } = await supabase
+      .from('moments')
+      .select('user_id, text_content')
+      .eq('id', momentId)
+      .single();
+
+    if (fetchErr || !momentData) {
+      throw new Error('Moment not found');
+    }
+
+    const momentAuthorId = (momentData as any).user_id;
+
+    // Check if the editor is blocked by the moment author
+    const blockedIds =
+      await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
+    if (blockedIds.includes(userId)) {
+      throw new Error('You cannot edit this moment.');
+    }
+
+    // Update the text content
+    const { error: updateErr } = await supabase
+      .from('moments')
+      .update({ text_content: dto.textContent })
+      .eq('id', momentId);
+
+    if (updateErr) {
+      throw new Error(`Failed to edit moment text: ${updateErr.message}`);
+    }
+
+    // Return the updated moment
+    const { data: updated, error: getErr } = await supabase
+      .from('moments')
+      .select('*')
+      .eq('id', momentId)
+      .single();
+
+    if (getErr || !updated) {
+      throw new Error('Failed to retrieve updated moment');
+    }
+
+    const momentRecord = updated as MomentRecord;
+    const profile = await this.usersService.getProfile(userId);
+    momentRecord.author = {
+      id: profile?.id ?? userId,
+      display_name: profile?.display_name ?? 'Language Partner',
+      avatar_url: profile?.avatar_url ?? null,
+    };
+    momentRecord.is_liked_by_me = false;
+    return momentRecord;
   }
 
   async pinMoment(
