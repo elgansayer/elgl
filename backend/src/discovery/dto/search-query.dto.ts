@@ -60,6 +60,10 @@ export class SearchQueryDto {
   gender?: string;
 
   @IsOptional()
+  @IsString()
+  interests?: string;
+
+  @IsOptional()
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? parseInt(value, 10) : value,
   )

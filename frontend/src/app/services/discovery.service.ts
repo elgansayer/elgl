@@ -18,6 +18,7 @@ export interface SearchFilterParams {
   gender?: string;
   age_min?: number;
   age_max?: number;
+  interests?: string;
 }
 
 @Injectable({
@@ -54,6 +55,8 @@ export class DiscoveryService {
       params = params.set('age_min', filters.age_min.toString());
     if (filters.age_max !== undefined)
       params = params.set('age_max', filters.age_max.toString());
+    if (filters.interests)
+      params = params.set('interests', filters.interests);
 
     const users = await firstValueFrom(
       this.http

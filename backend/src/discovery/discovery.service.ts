@@ -151,6 +151,10 @@ export class DiscoveryService {
       queryBuilder = queryBuilder.eq('gender', query.gender);
     }
 
+    if (query.interests) {
+      queryBuilder = queryBuilder.overlaps('interests', [query.interests]);
+    }
+
     // Age range filter
     if (query.age_min !== undefined) {
       queryBuilder = queryBuilder.gte('age', query.age_min);
@@ -242,6 +246,26 @@ export class DiscoveryService {
           rpcResults = rpcResults.filter(
             (u: any) => u.proficiency_level === query.level,
           );
+        }
+      }
+      if (query.interests) {
+        // Fetch interests column and filter client‑side
+        if (rpcResults.length > 0) {
+          const { data: interestData } = await supabase
+            .from('users')
+            .select('id, interests')
+            .in(
+              'id',
+              rpcResults.map((u: any) => u.id),
+            );
+          const interestMap = new Map<string, string[]>(
+            (interestData ?? []).map((u: any) => [u.id, u.interests ?? []]),
+          );
+          rpcResults = rpcResults.filter((u) =>
+            interestMap.get(u.id)?.includes(query.interests!),
+          );
+        } else {
+          // rpcResults empty after level filter, nothing to do
         }
       }
       if (_currentUserProfile?.is_vip && query.gender) {
@@ -343,6 +367,13 @@ export class DiscoveryService {
     if (query.level) {
       filtered = filtered.filter(
         (u: any) => u.proficiency_level === query.level,
+      );
+    }
+
+    // Filter by interests
+    if (query.interests) {
+      filtered = filtered.filter((u: any) =>
+        u.interests?.includes(query.interests),
       );
     }
 
