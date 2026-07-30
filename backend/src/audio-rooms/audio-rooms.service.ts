@@ -45,6 +45,7 @@ interface AudioRoomRow {
   target_language: string;
   language_pair: string;
   topic_tag: string;
+  level?: string;
   host_id: string;
   co_host_id?: string | null;
   is_video_stream: boolean;
@@ -141,6 +142,7 @@ export class AudioRoomsService implements OnModuleInit {
         target_language: targetLanguage,
         language_pair: dto.language_pair,
         topic_tag: dto.topic_tag,
+        level: dto.level ?? undefined,
         host_id: hostId,
         is_video_stream: dto.is_video_stream ?? false,
         co_host_id: null,
@@ -216,6 +218,7 @@ export class AudioRoomsService implements OnModuleInit {
       target_language: targetLanguage,
       language_pair: dto.language_pair,
       topic_tag: dto.topic_tag ?? 'General',
+      level: dto.level ?? undefined,
       host_id: hostId,
       is_video_stream: dto.is_video_stream ?? false,
       co_host_id: null,
@@ -317,12 +320,22 @@ export class AudioRoomsService implements OnModuleInit {
     };
   }
 
-  async listActiveRooms(partyType?: string): Promise<AudioRoomRecord[]> {
+  async listActiveRooms(
+    partyType?: string,
+    topic?: string,
+    level?: string,
+  ): Promise<AudioRoomRecord[]> {
     const supabase = this.supabaseService.getClient();
     let query = supabase.from('audio_rooms').select('*').eq('is_active', true);
 
     if (partyType) {
       query = query.eq('party_type', partyType);
+    }
+    if (topic) {
+      query = query.eq('topic_tag', topic);
+    }
+    if (level) {
+      query = query.eq('level', level);
     }
 
     const response = await query
@@ -729,6 +742,40 @@ export class AudioRoomsService implements OnModuleInit {
     });
 
     return this.getRoom(room.id);
+  }
+
+  async getDistinctTopics(): Promise<string[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('audio_rooms')
+      .select('topic_tag')
+      .eq('is_active', true);
+    if (error || !data) {
+      this.logger.warn('Could not fetch topics', error);
+      return [];
+    }
+    const tags = new Set(
+      (data as Array<{ topic_tag: string }>).map((r) => r.topic_tag),
+    );
+    return Array.from(tags).sort();
+  }
+
+  async getDistinctLevels(): Promise<string[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('audio_rooms')
+      .select('level')
+      .eq('is_active', true);
+    if (error || !data) {
+      this.logger.warn('Could not fetch levels', error);
+      return [];
+    }
+    const levels = new Set(
+      (data as Array<{ level: string | null }>)
+        .map((r) => r.level)
+        .filter((l): l is string => l !== null && l !== ''),
+    );
+    return Array.from(levels).sort();
   }
 
   async getActiveHostIds(): Promise<string[]> {

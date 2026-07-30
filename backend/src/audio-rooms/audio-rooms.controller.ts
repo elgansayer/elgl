@@ -66,8 +66,24 @@ export class AudioRoomsController {
   @Get('list')
   async listActiveRooms(
     @Query('type') partyType?: string,
+    @Query('topic') topic?: string,
+    @Query('level') level?: string,
   ): Promise<AudioRoomRecord[]> {
-    return await this.audioRoomsService.listActiveRooms(partyType);
+    return await this.audioRoomsService.listActiveRooms(
+      partyType,
+      topic,
+      level,
+    );
+  }
+
+  @Get('topics')
+  async getDistinctTopics(): Promise<string[]> {
+    return await this.audioRoomsService.getDistinctTopics();
+  }
+
+  @Get('levels')
+  async getDistinctLevels(): Promise<string[]> {
+    return await this.audioRoomsService.getDistinctLevels();
   }
 
   @Get(':id')

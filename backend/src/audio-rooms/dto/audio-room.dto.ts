@@ -27,6 +27,10 @@ export class CreateAudioRoomDto {
   @IsOptional()
   @IsBoolean()
   is_video_stream?: boolean;
+
+  @IsOptional()
+  @IsString()
+  level?: string;
 }
 
 export class JoinRoomDto {
