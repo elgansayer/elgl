@@ -32,7 +32,7 @@ export class AppButtonComponent {
 
   readonly hostClasses = computed(() => {
     const base =
-      'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2';
+      'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 transform-gpu hover:scale-[1.03] hover:shadow-md active:scale-95 active:shadow-inner focus:outline-none focus:ring-2 focus:ring-offset-2 focus-visible:ring-2 focus-visible:ring-offset-2';
 
     let sizeClass = '';
     switch (this.size()) {
