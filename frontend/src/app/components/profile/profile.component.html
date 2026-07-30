@@ -109,18 +109,18 @@
             <div class="flex flex-wrap gap-2">
               @for (visit of visitors(); track visit.id) {
                 <div class="flex items-center gap-2 rounded-full bg-surface-200 ps-2 pe-3 pt-1 pb-1 text-xs">
-                  @if (visit.visitor.avatar_url && visit.visitor.id !== 'hidden-vip-only') {
+                  @if (visit.visitor?.avatar_url && visit.visitor?.id !== 'hidden-vip-only') {
                     <img
-                      [src]="visit.visitor.avatar_url"
+                      [src]="visit.visitor?.avatar_url"
                       alt="avatar"
                       class="h-6 w-6 rounded-full object-cover"
                     />
                   } @else {
                     <div class="h-6 w-6 rounded-full bg-surface-300 flex items-center justify-center text-[8px] text-text-secondary">
-                      {{ visit.visitor.display_name?.charAt(0) || '?' }}
+                      {{ visit.visitor?.display_name?.charAt(0) || '?' }}
                     </div>
                   }
-                  <span>{{ visit.visitor.display_name || ('profile.anonymousVisitor' | t) }}</span>
+                  <span>{{ visit.visitor?.display_name || ('profile.anonymousVisitor' | t) }}</span>
                   <span class="text-text-secondary">{{ visit.created_at | date:'short' }}</span>
                 </div>
               }
@@ -267,6 +267,16 @@
 
         <div class="mt-8">
           <app-hobby-tags />
+        </div>
+
+        <!-- Block / Report buttons -->
+        <div class="mt-4 flex gap-2">
+          @if (isBlocked()) {
+            <button (click)="unblockProfile()" class="app-button-secondary text-xs">{{ 'profile.unblockUser' | t }}</button>
+          } @else {
+            <button (click)="blockProfile()" class="app-button-secondary text-xs text-red-400">{{ 'profile.blockUser' | t }}</button>
+          }
+          <button (click)="reportUser()" class="app-button-secondary text-xs">{{ 'profile.reportUser' | t }}</button>
         </div>
       }
 

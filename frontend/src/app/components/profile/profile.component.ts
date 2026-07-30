@@ -1,4 +1,4 @@
-import { Component, inject, signal, viewChild, OnInit } from '@angular/core';
+import { Component, inject, signal, viewChild, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -6,8 +6,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { SkeletonModule } from 'ngx-skeleton-loader';
 import { I18nService } from '../../services/i18n.service';
 import { ProfileVisitsService } from '../../services/profile-visits.service';
-import { ProfileVisit } from '../../interfaces/profile-visit.interface';
-import { UserService, UserProfile } from '../../services/user.service';
+import { UserService, UserProfile, VisitorLog } from '../../services/user.service';
 import { CoverPhotoUploaderComponent } from '../cover-photo-uploader/cover-photo-uploader.component';
 import { HobbyTagsComponent } from '../hobby-tags/hobby-tags.component';
 import {
@@ -15,6 +14,9 @@ import {
   getLanguageFlag,
 } from '../primitives/language-picker/language-picker.component';
 import { CelebrationOverlayComponent } from '../celebration-overlay/celebration-overlay.component';
+import { BlockService } from '../../services/block.service';
+import { SafetyService } from '../../services/safety.service';
+import { showToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-profile',
@@ -36,13 +38,19 @@ export class ProfileComponent implements OnInit {
   private userService = inject(UserService);
   private readonly i18n = inject(I18nService);
   private profileVisitsService = inject(ProfileVisitsService);
+  private safetyService = inject(SafetyService);
 
   readonly profile = signal<UserProfile | null>(null);
   readonly isLoading = signal<boolean>(true);
   readonly isEditing = signal<boolean>(false);
   readonly errorMessage = signal<string>('');
   readonly successMessage = signal<string>('');
-  readonly visitors = signal<ProfileVisit[]>([]);
+  readonly visitors = signal<VisitorLog[]>([]);
+  readonly isBlocked = computed(() => {
+    const prof = this.profile();
+    if (!prof) return false;
+    return this.safetyService.blockedUserIdsSignal().has(prof.id);
+  });
   readonly visitorsLoading = signal(false);
   readonly visitorsError = signal<string>('');
   readonly showVisitors = signal(false);
@@ -235,6 +243,43 @@ export class ProfileComponent implements OnInit {
     if (!url) return;
     const audio = new Audio(url);
     audio.play();
+  }
+
+  async blockProfile(): Promise<void> {
+    const user = this.profile();
+    if (!user) return;
+    const confirmed = confirm(this.i18n.translate('safety.confirmBlockBtn') || 'Are you sure you want to block this user?');
+    if (!confirmed) return;
+    try {
+      await this.userService.blockUser(user.id);
+      showToast(this.i18n.translate('profile.blockedSuccess') || 'User blocked', 'success', 4000);
+    } catch {
+      showToast(this.i18n.translate('profile.blockError') || 'Failed to block user', 'error', 4000);
+    }
+  }
+
+  async unblockProfile(): Promise<void> {
+    const user = this.profile();
+    if (!user) return;
+    try {
+      await this.userService.unblockUser(user.id);
+      showToast(this.i18n.translate('profile.unblockUser') || 'Unblocked', 'success', 4000);
+    } catch {
+      showToast(this.i18n.translate('profile.blockError') || 'Failed to unblock', 'error', 4000);
+    }
+  }
+
+  async reportUser(): Promise<void> {
+    const user = this.profile();
+    if (!user) return;
+    const reason = prompt(this.i18n.translate('profile.reportReasonPrompt') || 'Enter a reason for reporting');
+    if (!reason) return;
+    try {
+      await this.userService.reportUser(user.id, reason);
+      showToast(this.i18n.translate('profile.reportSuccess') || 'User reported', 'success', 4000);
+    } catch {
+      showToast(this.i18n.translate('profile.reportError') || 'Failed to report user', 'error', 4000);
+    }
   }
 
   onCoverUploaded(coverUrl: string): void {

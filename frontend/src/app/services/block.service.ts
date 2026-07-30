@@ -20,6 +20,10 @@ export class BlockService {
     return this.http.get<BlockedUser[]>(this.apiUrl);
   }
 
+  blockUser(blockedId: string): Observable<{ success: boolean }> {
+    return this.http.post<{ success: boolean }>(this.apiUrl, { blocked_id: blockedId });
+  }
+
   unblockUser(blockedId: string): Observable<{ success: boolean }> {
     return this.http.delete<{ success: boolean }>(`${this.apiUrl}/${blockedId}`);
   }
