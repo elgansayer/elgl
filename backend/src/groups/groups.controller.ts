@@ -4,6 +4,7 @@ import {
   Post,
   Param,
   Body,
+  Query,
   UseGuards,
   Req,
   UnauthorizedException,
@@ -21,9 +22,49 @@ export class GroupsController {
   constructor(private readonly groupsService: GroupsService) {}
 
   @Post()
+  @UseGuards(AuthGuard('jwt'))
   async create(@Body() dto: CreateGroupDto, @Req() req: any) {
     const ownerId = req.user.id;
-    return this.groupsService.createGroup(ownerId, dto.name, dto.community_id);
+    return this.groupsService.createGroup(
+      ownerId,
+      dto.name,
+      dto.community_id,
+      dto.interestId,
+      dto.maxMembers,
+    );
+  }
+
+  @Get()
+  @UseGuards(AuthGuard('jwt'))
+  async getGroups(@Req() req: any, @Query('interestId') interestId?: string) {
+    if (interestId) {
+      return this.groupsService.getGroupsByInterest(interestId);
+    }
+    return this.groupsService.getAllGroups();
+  }
+
+  @Get(':groupId/members')
+  @UseGuards(AuthGuard('jwt'))
+  async getMembers(@Param('groupId') groupId: string) {
+    return this.groupsService.getGroupMembers(groupId);
+  }
+
+  @Get(':groupId/settings')
+  @UseGuards(AuthGuard('jwt'))
+  async getSettings(@Param('groupId') groupId: string) {
+    return this.groupsService.getSettings(groupId);
+  }
+
+  @Get(':groupId/announcements')
+  @UseGuards(AuthGuard('jwt'))
+  async getAnnouncements(@Param('groupId') groupId: string) {
+    return this.groupsService.getAnnouncements(groupId);
+  }
+
+  @Get(':groupId')
+  @UseGuards(AuthGuard('jwt'))
+  async getGroupInfo(@Param('groupId') groupId: string) {
+    return this.groupsService.getGroupInfo(groupId);
   }
 
   @Post(':groupId/add-member')
@@ -90,23 +131,5 @@ export class GroupsController {
       dto.message,
       requesterId,
     );
-  }
-
-  @Get(':groupId/members')
-  @UseGuards(AuthGuard('jwt'))
-  async getMembers(@Param('groupId') groupId: string) {
-    return this.groupsService.getGroupMembers(groupId);
-  }
-
-  @Get(':groupId/settings')
-  @UseGuards(AuthGuard('jwt'))
-  async getSettings(@Param('groupId') groupId: string) {
-    return this.groupsService.getSettings(groupId);
-  }
-
-  @Get(':groupId/announcements')
-  @UseGuards(AuthGuard('jwt'))
-  async getAnnouncements(@Param('groupId') groupId: string) {
-    return this.groupsService.getAnnouncements(groupId);
   }
 }

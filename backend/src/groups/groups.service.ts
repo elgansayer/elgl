@@ -1,6 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from '../centrifugo/centrifugo.service';
+import { InterestsService } from '../interests/interests.service';
 import { AddMemberDto } from './dto/add-member.dto';
 import { RemoveMemberDto } from './dto/remove-member.dto';
 import { UpdateGroupSettingsDto } from './dto/update-group-settings.dto';
@@ -10,6 +15,7 @@ export class GroupsService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly centrifugoService: CentrifugoService,
+    private readonly interestsService: InterestsService,
   ) {}
 
   async isAdmin(userId: string, groupId: string): Promise<boolean> {
@@ -28,6 +34,30 @@ export class GroupsService {
 
   async addMember(groupId: string, memberId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
+
+    // fetch group to get max_members
+    const { data: group, error: groupError } = await supabase
+      .from('groups')
+      .select('max_members')
+      .eq('id', groupId)
+      .single();
+    if (groupError || !group) {
+      throw new NotFoundException('Group not found');
+    }
+
+    // count current members
+    const { count, error: countError } = await supabase
+      .from('group_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('group_id', groupId);
+    if (countError) {
+      throw new NotFoundException('Could not count members');
+    }
+
+    if (count !== null && count >= group.max_members) {
+      throw new ForbiddenException('Group is already full');
+    }
+
     const { error } = await supabase
       .from('group_members')
       .insert({ group_id: groupId, user_id: memberId });
@@ -52,7 +82,20 @@ export class GroupsService {
     ownerId: string,
     name: string,
     communityId?: string,
+    interestId?: string,
+    maxMembers?: number,
   ): Promise<any> {
+    if (interestId) {
+      const interest = await this.interestsService.findById(interestId);
+      if (!interest) {
+        throw new NotFoundException('Interest not found');
+      }
+    }
+
+    // enforce group size limits
+    if (maxMembers === undefined || maxMembers < 2) maxMembers = 2;
+    if (maxMembers > 19) maxMembers = 19;
+
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('groups')
@@ -60,6 +103,8 @@ export class GroupsService {
         name,
         owner_id: ownerId,
         community_id: communityId ?? null,
+        interest_id: interestId ?? null,
+        max_members: maxMembers,
       })
       .select()
       .single();
@@ -67,6 +112,16 @@ export class GroupsService {
     if (error || !data) {
       throw new NotFoundException('Failed to create group');
     }
+
+    // Add the owner as a member of the newly created group
+    const { error: memberError } = await supabase
+      .from('group_members')
+      .insert({ group_id: data.id, user_id: ownerId });
+
+    if (memberError) {
+      console.error('Failed to add owner as member:', memberError.message);
+    }
+
     return data;
   }
 
@@ -123,7 +178,9 @@ export class GroupsService {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('groups')
-      .select('can_send_messages, can_edit_info, description, rules')
+      .select(
+        'can_send_messages, can_edit_info, description, rules, interest_id, max_members',
+      )
       .eq('id', groupId)
       .single();
 
@@ -167,6 +224,39 @@ export class GroupsService {
 
     if (error) {
       throw new NotFoundException('Failed to fetch announcements');
+    }
+    return data || [];
+  }
+
+  async getGroupInfo(groupId: string): Promise<any> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('groups')
+      .select(
+        `id, name, owner_id, community_id, interest_id, max_members, created_at,
+        interest:interests(name)`,
+      )
+      .eq('id', groupId)
+      .single();
+
+    if (error || !data) {
+      throw new NotFoundException('Group not found');
+    }
+    return data;
+  }
+
+  async getGroupsByInterest(interestId: string): Promise<any[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('groups')
+      .select(
+        `id, name, owner_id, max_members,
+        interest:interests(name)`,
+      )
+      .eq('interest_id', interestId);
+
+    if (error) {
+      throw new NotFoundException('Failed to fetch groups');
     }
     return data || [];
   }

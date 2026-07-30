@@ -1,4 +1,12 @@
-import { IsOptional, IsBoolean, IsString } from 'class-validator';
+import {
+  IsOptional,
+  IsBoolean,
+  IsString,
+  IsUUID,
+  IsInt,
+  Min,
+  Max,
+} from 'class-validator';
 
 export class UpdateGroupSettingsDto {
   @IsOptional()
@@ -16,4 +24,14 @@ export class UpdateGroupSettingsDto {
   @IsOptional()
   @IsString()
   rules?: string;
+
+  @IsOptional()
+  @IsUUID()
+  interest_id?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(2)
+  @Max(19)
+  max_members?: number;
 }

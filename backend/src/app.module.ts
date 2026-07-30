@@ -20,6 +20,7 @@ import { MonetisationModule } from './monetisation/monetisation.module';
 import { EconomyModule } from './economy/economy.module';
 import { SafetyModule } from './safety/safety.module';
 import { HobbyTagsModule } from './hobby-tags/hobby-tags.module';
+import { InterestsModule } from './interests/interests.module';
 import { FavouritesModule } from './favourites/favourites.module';
 import { VideoCallsModule } from './video-calls/video-calls.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
@@ -94,6 +95,7 @@ import { validationSchema } from './config/validation.schema';
     EconomyModule,
     SafetyModule,
     HobbyTagsModule,
+    InterestsModule,
     FavouritesModule,
     VideoCallsModule,
     LeaderboardModule,

@@ -59,6 +59,18 @@ export class InterestsService {
     }));
   }
 
+  async findById(id: string): Promise<InterestRow | null> {
+    const { data, error } = await this.supabase
+      .from('interests')
+      .select('id, name')
+      .eq('id', id)
+      .single();
+    if (error || !data) {
+      return null;
+    }
+    return data;
+  }
+
   async setUserInterests(userId: string, interestIds: string[]): Promise<void> {
     // remove previous interests
     const { error: deleteError } = await this.supabase
