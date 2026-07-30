@@ -1,4 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { StudyBuddyRequestDto } from './dto/study-buddy.dto';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -62,5 +67,49 @@ export class StudyBuddiesService {
 
     const { data } = await query.limit(20);
     return (data ?? []) as any[];
+  }
+
+  async followUser(userId: string, targetUserId: string): Promise<void> {
+    if (userId === targetUserId) {
+      throw new BadRequestException('Cannot follow yourself');
+    }
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('follows')
+      .insert([
+        {
+          follower_id: userId,
+          following_id: targetUserId,
+        },
+      ])
+      .single();
+    if (error) {
+      if (error.code === '23505') {
+        // duplicate => already following, treat as success
+        return;
+      }
+      throw new InternalServerErrorException('Failed to follow user');
+    }
+  }
+
+  async unfollowUser(userId: string, targetUserId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('follows')
+      .delete()
+      .eq('follower_id', userId)
+      .eq('following_id', targetUserId);
+    if (error) {
+      throw new InternalServerErrorException('Failed to unfollow user');
+    }
+  }
+
+  async getOrCreateChannel(
+    userId: string,
+    otherUserId: string,
+  ): Promise<{ channel: string }> {
+    const ids = [userId, otherUserId].sort();
+    const channelName = `chat_${ids[0]}_${ids[1]}`;
+    return { channel: channelName };
   }
 }
