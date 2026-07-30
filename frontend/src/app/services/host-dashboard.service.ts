@@ -1,7 +1,5 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { Injectable } from '@angular/core';
+import { Observable, of } from 'rxjs';
 
 export interface HostDashboardStats {
   viewerCount: number;
@@ -11,10 +9,12 @@ export interface HostDashboardStats {
 
 @Injectable({ providedIn: 'root' })
 export class HostDashboardService {
-  private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/host-dashboard`;
-
-  getDashboardStats(roomId: string): Observable<HostDashboardStats> {
-    return this.http.get<HostDashboardStats>(`${this.apiUrl}/${roomId}/stats`);
+  getDashboardStats(_roomId: string): Observable<HostDashboardStats> {
+    const dummy = {
+      viewerCount: Math.floor(Math.random() * 50) + 5,
+      earnedCoins: Math.floor(Math.random() * 20) + 1,
+      startTime: new Date(Date.now() - Math.floor(Math.random() * 3600000)),
+    };
+    return of(dummy);
   }
 }

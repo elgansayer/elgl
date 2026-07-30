@@ -13,12 +13,12 @@ import { TranslatePipe } from '../../services/translate.pipe';
       <div>
         <label class="block text-sm font-medium mb-1">
           {{ 'pronunciation.sentence_label' | t }}
+          <input
+            [(ngModel)]="sentence"
+            class="w-full rounded-lg border border-slate-600 bg-surface-800 ps-3 pe-3 py-2 text-base outline-none"
+            placeholder="{{ 'pronunciation.sentence_placeholder' | t }}"
+          />
         </label>
-        <input
-          [(ngModel)]="sentence"
-          class="w-full rounded-lg border border-slate-600 bg-surface-800 ps-3 pe-3 py-2 text-base outline-none"
-          placeholder="{{ 'pronunciation.sentence_placeholder' | t }}"
-        />
       </div>
 
       <button

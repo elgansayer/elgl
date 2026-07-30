@@ -4,10 +4,11 @@ import { AppCardComponent } from '../primitives/card/card.component';
 import { interval, switchMap, startWith } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { HostDashboardService } from '../../services/host-dashboard.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-host-dashboard',
-  imports: [CommonModule, AppCardComponent],
+  imports: [CommonModule, AppCardComponent, TranslatePipe],
   template: `
     <app-card
       variant="elevated"
@@ -16,7 +17,7 @@ import { HostDashboardService } from '../../services/host-dashboard.service';
     >
       <!-- Viewer Count -->
       <div class="flex flex-col items-start">
-        <span class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Viewers</span>
+        <span class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">{{ 'host_dashboard.viewer_count' | t }}</span>
         <div class="flex items-center gap-2">
           <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
           <span class="text-xl font-bold">{{ viewerCount() }}</span>
@@ -25,9 +26,7 @@ import { HostDashboardService } from '../../services/host-dashboard.service';
 
       <!-- Earned Coins -->
       <div class="flex flex-col items-start border-s border-slate-700 ps-4">
-        <span class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1"
-          >Coins Earned</span
-        >
+        <span class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">{{ 'host_dashboard.coins_earned' | t }}</span>
         <div class="flex items-center gap-2">
           <span class="text-yellow-400 text-xl">🪙</span>
           <span class="text-xl font-bold text-yellow-400">{{ earnedCoins() }}</span>
@@ -36,7 +35,7 @@ import { HostDashboardService } from '../../services/host-dashboard.service';
 
       <!-- Uptime -->
       <div class="flex flex-col items-start border-s border-slate-700 ps-4">
-        <span class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Uptime</span>
+        <span class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">{{ 'host_dashboard.uptime' | t }}</span>
         <div class="flex items-center gap-2">
           <span class="text-xl font-mono font-bold text-emerald-400">{{ uptime() }}</span>
         </div>

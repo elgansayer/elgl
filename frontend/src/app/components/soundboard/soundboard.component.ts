@@ -4,12 +4,10 @@ import {
     input,
     signal,
     effect,
-    resource,
     DestroyRef,
 } from '@angular/core';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
-import { Subject, interval } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Subject } from 'rxjs';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -104,15 +102,22 @@ export class SoundboardComponent {
 
       const channel = `room_${room}`;
       this.centrifugoService.subscribe(channel, (data: unknown) => {
-        const event = data as {
-          type: string;
-          sound_url?: string;
-          sound_name?: string;
-          triggered_by?: string;
-        };
-        if (event?.type === 'soundboard_play' && event.sound_url) {
-          // Play the sound locally for all participants
-          this.playRemoteSound(event.sound_url);
+        if (
+          data &&
+          typeof data === 'object' &&
+          'type' in data &&
+          'sound_url' in data
+        ) {
+          const d = data;
+          const eventType = d['type'];
+          const soundUrl = d['sound_url'];
+          if (
+            typeof eventType === 'string' &&
+            eventType === 'soundboard_play' &&
+            typeof soundUrl === 'string'
+          ) {
+            this.playRemoteSound(soundUrl);
+          }
         }
       });
 
