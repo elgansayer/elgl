@@ -1,7 +1,7 @@
 <div class="flex flex-col h-full bg-[#121212] text-white">
   <!-- Header -->
   <div class="flex items-center ps-4 pe-4 py-3 border-b border-white/10">
-    <button class="text-lg me-2" (click)="goBack()">&larr;</button>
+    <button aria-label="Go back" class="text-lg me-2" (click)="goBack()">&larr;</button>
     <h1 class="flex-1 text-lg font-semibold">{{ 'notifications.title' | t }}</h1>
     @if (unreadCount() > 0) {
       <span class="bg-pink-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full me-2">

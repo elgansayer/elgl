@@ -2,7 +2,7 @@
   <!-- Top App Bar -->
   <header class="bg-surface-300 pt-12 pb-3 ps-4 pe-4 border-b border-surface-200">
     <div class="flex items-center justify-between mb-4">
-      <button (click)="notImplemented()" class="text-text-primary">
+      <button aria-label="Open menu" (click)="notImplemented()" class="text-text-primary">
         <span class="text-xl">≡</span>
       </button>
       <h1 class="text-base font-bold text-text-primary">{{ 'chatList.topTitle' | t }}</h1>
@@ -78,6 +78,7 @@
     <!-- Filter Pills -->
     <div class="flex items-center">
       <button
+        aria-label="Filter options"
         (click)="notImplemented()"
         class="bg-surface-200 text-text-secondary w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs ms-4"
       >
