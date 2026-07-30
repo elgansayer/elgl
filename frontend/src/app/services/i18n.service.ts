@@ -756,6 +756,20 @@ export class I18nService {
     'theme.light': 'Light',
     'theme.dark': 'Dark',
     'theme.system': 'System Default',
+
+    // Privacy Settings
+    'privacy.title': 'Privacy Settings',
+    'privacy.subtitle': 'Control your data visibility across HelloTalk.',
+    'privacy.hideAge': 'Hide my age',
+    'privacy.hideLocation': 'Hide my location',
+    'privacy.hideFromSearch': 'Hide my profile from search',
+    'privacy.hideGender': 'Hide my gender',
+    'privacy.saveBtn': 'Save Settings',
+    'privacy.saving': 'Saving...',
+    'privacy.success': 'Privacy settings updated.',
+    'privacy.error': 'Failed to update privacy settings.',
+    'privacy.loadError': 'Failed to load privacy settings.',
+
     // VIP Subscription page
     'vip.heroTitle': 'Unlock Your Language Learning Potential',
     'vip.heroSubtitle': 'Choose the plan that fits your learning journey. From free basics to premium power tools.',

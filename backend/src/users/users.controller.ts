@@ -148,4 +148,15 @@ export class UsersController {
   async getUserStats(@Param('id') id: string): Promise<Partial<UserProfile>> {
     return this.usersService.getUserStats(id);
   }
+
+  @Get('me/privacy-settings')
+  async getMyPrivacySettings(@CurrentUser() user: User | null): Promise<{
+    privacy_hide_age: boolean;
+    privacy_hide_location: boolean;
+    privacy_hide_from_search: boolean;
+    privacy_hide_gender: boolean;
+  }> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.getPrivacySettings(user.id);
+  }
 }

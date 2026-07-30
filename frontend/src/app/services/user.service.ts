@@ -279,6 +279,34 @@ export class UserService {
     );
   }
 
+  async getMyPrivacySettings(): Promise<{
+    privacy_hide_age: boolean;
+    privacy_hide_location: boolean;
+    privacy_hide_from_search: boolean;
+    privacy_hide_gender: boolean;
+  }> {
+    return firstValueFrom(
+      this.http
+        .get<{
+          privacy_hide_age: boolean;
+          privacy_hide_location: boolean;
+          privacy_hide_from_search: boolean;
+          privacy_hide_gender: boolean;
+        }>(`${this.baseUrl}/me/privacy-settings`, { headers: this.getHeaders() })
+        .pipe(
+          catchError(() => {
+            const profile = MOCK_USER_PROFILE;
+            return of({
+              privacy_hide_age: profile.privacy_hide_age ?? false,
+              privacy_hide_location: profile.privacy_hide_location ?? false,
+              privacy_hide_from_search: profile.privacy_hide_from_search ?? false,
+              privacy_hide_gender: profile.privacy_hide_gender ?? false,
+            });
+          }),
+        ),
+    );
+  }
+
   async linkAccount(provider: string): Promise<void> {
     return firstValueFrom(
       this.http

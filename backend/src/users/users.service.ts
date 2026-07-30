@@ -333,6 +333,21 @@ export class UsersService {
     };
   }
 
+  async getPrivacySettings(userId: string): Promise<{
+    privacy_hide_age: boolean;
+    privacy_hide_location: boolean;
+    privacy_hide_from_search: boolean;
+    privacy_hide_gender: boolean;
+  }> {
+    const profile = await this.getProfile(userId);
+    return {
+      privacy_hide_age: profile.privacy_hide_age ?? false,
+      privacy_hide_location: profile.privacy_hide_location ?? false,
+      privacy_hide_from_search: profile.privacy_hide_from_search ?? false,
+      privacy_hide_gender: (profile as any)?.privacy_hide_gender ?? false,
+    };
+  }
+
   async getUserStats(userId: string): Promise<Partial<UserProfile>> {
     const supabase = this.supabaseService.getClient();
 
