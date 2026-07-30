@@ -1,0 +1,463 @@
+Here are all the suggested `.tasks` files extracted from the previous analysis.
+
+**`.tasks/implement-srs-system.md`**
+
+```md
+---
+Priority: High Impact
+Description: Implement a robust Spaced Repetition System (SRS) engine (like SuperMemo or Anki) to manage user vocabulary and grammar retention. The system must dynamically adjust the review interval based on the user's demonstrated recall difficulty (Ease Factor) for specific words/concepts, rather than relying on fixed timelines.
+Technical Implementation: Introduce a `VocabularyReview` service that calculates and queues review cards/lessons based on the Leitner box principle or SM-2 algorithm, calling these services before the lesson generation pipeline.
+---
+
+```
+
+**`.tasks/advanced-gamification-and-streaks.md`**
+
+```md
+---
+Priority: High Impact
+Description: Enhance the gamification layer beyond basic point accumulation. Implement daily streak counters, loss mechanics (e.g., "dormancy penalty" or "streak freeze" purchasable items), and a structured XP/Level system linked directly to curriculum completion (e.g., "JLPT N4 Tier").
+Technical Implementation: Update the `User` model to include `streak_days`, `xp_level`, and integrate a nightly cron job or background worker to calculate and award XP upon completion of goals.
+---
+
+```
+
+**`.tasks/advanced-speech-recognition-feedback.md`**
+
+```md
+---
+Priority: High Impact
+Description: Upgrade speech recognition from simple transcription to advanced phonetic feedback. The system must calculate phonetic accuracy (identifying which phonemes were missed or substituted) and provide visual feedback (e.g., highlighting the incorrect sound or syllable) alongside native pronunciation models.
+Technical Implementation: Integrate an API gateway that routes audio files to a specialized speech analysis service (e.g., Google Cloud Speech-to-Text with phoneme level analysis) and update the `QuizResponse` model to store detailed phoneme metrics.
+---
+
+```
+
+**`.tasks/curriculum-mapping-and-assessment.md`**
+
+```md
+---
+Priority: Medium Impact
+Description: Formalize the learning path by integrating industry standards (CEFR or JLPT/HSK) into the content structure. Users must see a clear map showing which modules unlock higher proficiency levels, and the app must dynamically adjust required grammar/vocabulary checks to align with the target CEFR descriptor (e.g., "B1 Speaking Competency").
+Technical Implementation: Redesign the `Curriculum` model to include `required_proficiency_level` and implement a state machine logic in the lesson service to gate access to content based on successful completion milestones.
+---
+
+```
+
+**`.tasks/immersive-contextual-lessons.md`**
+
+```md
+---
+Priority: Medium Impact
+Description: Move beyond isolated vocabulary drills. Introduce scenario-based, context-aware mini-lessons that force users to construct full sentences using the target grammar and vocabulary within a realistic scenario (e.g., "Ordering coffee," "Asking for directions").
+Technical Implementation: Modify the lesson generation service to dynamically load a `ScenarioContext` object, which defines the inputs, available vocabulary pool, and required grammar structures for a mini-dialogue.
+---
+
+```
+
+**`.tasks/peer-to-peer-chat-and-correction-engine.md`**
+
+```md
+---
+Priority: High Impact
+Description: Implement a full, real-time, direct messaging system (text and audio) that facilitates peer-to-peer exchange. Crucially, this chat must include a robust, built-in "Correction" mode where users can tap a problematic word/phrase to receive automated suggestions, grammar explanations, and the source grammar rule.
+Technical Implementation: Integrate a WebSocket connection layer for real-time chat and build a microservice `CorrectionEngine` that utilizes NLP/LLM APIs to provide contextual corrections and explanations upon request.
+---
+
+```
+
+**`.tasks/user-matching-and-collaboration.md`**
+
+```md
+---
+Priority: Medium Impact
+Description: Develop sophisticated matching algorithms (similar to HelloTalk) that match users based not just on language interest, but on specific skill gaps (e.g., "Needs help with Japanese particles," "Good at casual English conversation"). Implement group exchange sessions.
+Technical Implementation: Refactor the `User` model to include detailed `skill_gaps` and `skill_strengths` vectors, and implement a matching algorithm (e.g., weighted cosine similarity) that suggests optimal pairs for mutual improvement.
+---
+
+```
+
+**`.tasks/community-forum-and-content-sharing.md`**
+
+```md
+---
+Priority: Low Impact
+Description: Add a dedicated, moderated community forum/feed where users can post native media (short video clips, articles, songs) and receive feedback from other users. This helps bridge the gap between structured lessons and real-world consumption.
+Technical Implementation: Implement a content management pipeline using a scalable database (like MongoDB) for non-structured posts, along with basic moderation tools and upvoting/commenting capabilities.
+---
+
+```
+
+**`.tasks/offline-lesson-caching-and-sync.md`**
+
+```md
+---
+Priority: Medium Impact
+Description: Enable core learning functions (vocabulary review, structured quizzes, basic dialogue practice) to operate fully offline. The application must robustly cache content and implement a reliable synchronization mechanism when connectivity is restored.
+Technical Implementation: Implement local database caching (e.g., using Realm or SQLite) for all necessary lesson data, audio pronunciations, and quiz parameters, and design a synchronization queue that resolves potential conflicts upon reconnection.
+---
+
+```
+
+**`.tasks/custom-review-sets-and-flashcards.md`**
+
+```md
+---
+Priority: Low Impact
+Description: Allow users the power to create, save, and share custom flashcard decks based on content they encounter outside the app (e.g., from a podcast transcript or an article). This increases user ownership of their learning content.
+Technical Implementation: Introduce a dedicated `UserContent` object that stores arbitrary text, definitions, and associated audio inputs, and build a dedicated UI/API endpoint for creation and sharing of these personal decks.
+---
+
+```
+
+**`.tasks/add-inline-correction-engine.md`**
+
+```md
+---
+Priority: High Impact
+Description: Implement a real-time, contextual inline correction feature within all chat methods (text/voice). When a user types or speaks a mistake, the system must visually highlight it and offer grammatically correct alternatives or explanations of the underlying error (e.g., particle usage).
+Technical Implementation: Integrate a sophisticated NLP/LLM API middleware that intercepts text and speech input streams, performs language validation against the target language rules, and triggers a user-facing correction overlay.
+---
+
+```
+
+**`.tasks/advanced-media-sharing-and-transliteration.md`**
+
+```md
+---
+Priority: High Impact
+Description: Enhance media communication by adding advanced transcription and transliteration tools. Users must be able to upload native audio/video clips (e.g., from a song or movie) and receive instant, accurate transcriptions and phonetic breakdowns.
+Technical Implementation: Implement a robust media processing pipeline that utilizes third-party Speech-to-Text services, allowing not only text output but also displaying the phonetic characters (e.g., IPA or specific alphabet transliteration) beneath the text.
+---
+
+```
+
+**`.tasks/goal-based-partner-matching-algorithm.md`**
+
+```md
+---
+Priority: High Impact
+Description: Develop a predictive matching algorithm that pairs users not just by language, but by specific learning goals and skill gaps. The system must suggest optimal partners based on mutual needs (e.g., "You need practice with formal Japanese; this user specializes in that").
+Technical Implementation: Refactor the user profile schema to incorporate quantifiable `skill_gap` and `skill_focus` vectors, feeding these vectors into a recommendation engine (e.g., collaborative filtering) to rank potential connections.
+---
+
+```
+
+**`.tasks/time-zone-optimized-availability-scheduling.md`**
+
+```md
+---
+Priority: Medium Impact
+Description: Implement a shared availability system that automatically calculates and displays overlapping time slots for two or more users, reducing scheduling friction and improving connection rates.
+Technical Implementation: Introduce a time zone service layer that stores and normalizes user availability windows, providing a dedicated UI component that displays the intersection of multiple users' free time slots.
+---
+
+```
+
+**`.tasks/community-grammar-and-pronunciation-QnA.md`**
+
+```md
+---
+Priority: High Impact
+Description: Build a dedicated Q&A forum structure where users can submit highly specific questions ("Is this phrase natural?", "How do I pronounce this sound?"). The answers must be structured and verified, allowing users to vote on the most accurate or natural-sounding response.
+Technical Implementation: Create a new `Question` entity model with nested `Answer` entities, implementing vote-counting and a verification/expert tagging system to boost the credibility of high-quality responses.
+---
+
+```
+
+**`.tasks/native-speaker-verification-badge-system.md`**
+
+```md
+---
+Priority: Medium Impact
+Description: Implement a trust and quality system. Introduce verification mechanisms (e.g., mandatory native speaker proof, academic credentials, or internal community auditing) to give users visible badges that correlate to their authenticity and knowledge depth, building trust among users.
+Technical Implementation: Update the `User` model with an `authentication_level` field and build a microservice responsible for vetting and issuing these badges based on external proof or community consensus.
+---
+
+```
+
+**`.tasks/live-group-voice-room-system.md`**
+
+```md
+---
+Priority: Medium Impact
+Description: Introduce structured, multi-person, topic-based voice chat rooms. These rooms should provide a defined topic/scenario, ensuring conversation remains focused and manageable for language learners, acting as a persistent virtual exchange group.
+Technical Implementation: Integrate advanced WebRTC capabilities to support multi-participant audio streaming, alongside a state manager that loads topic-specific vocabulary and conversation prompts into the active room session.
+---
+
+```
+
+**`.tasks/professional-tutor-booking-and-payment-gateway.md`**
+
+```md
+---
+Priority: High Impact
+Description: Fully onboard a paid professional tutor ecosystem. This requires dedicated profiles for tutors, a calendar system for booking 1-on-1 sessions, and integration with a reliable payment gateway (Stripe, PayPal) to facilitate secure payments and revenue splitting.
+Technical Implementation: Create a `Tutor` model and a `SessionBooking` service, integrating Stripe webhooks for payment handling and scheduling, while adding a dedicated premium user subscription tier.
+---
+
+```
+
+**`.tasks/cultural-moments-community-feed.md`**
+
+```md
+---
+Priority: Low Impact
+Description: Implement a global, unmoderated "Moments" feed. This feed is designed for cultural immersion, where users can post short audio recordings or videos about daily life, cultural observations, or local events in their native language.
+Technical Implementation: Build a scalable content feed service that accepts varied media types and implements basic filtering/tagging by country, culture, and topic, requiring minimal moderation overhead initially.
+---
+
+```
+
+**`.tasks/implement-responsive-grid-system.md`**
+
+```md
+---
+Priority: High Impact
+Description: Implement a mobile-first, adaptive grid system (using CSS Grid or Flexbox) that dictates how all components (cards, text blocks, sidebars) reflow gracefully and predictably across three primary breakpoints: Mobile (320px+), Tablet (768px+), and Desktop (>1200px).
+Technical Implementation: Adopt a utility-first CSS framework (like Tailwind or Bootstrap) and refactor all layout components to utilize media queries and flexible units (rem/em) as the primary layout mechanism.
+---
+
+```
+
+**`.tasks/design-system-component-library.md`**
+
+```md
+---
+Priority: High Impact
+Description: Build a centralized, reusable component library (e.g., Atomic Design approach) for all UI elements: buttons, input fields, navigation bars, modals, and state messages (loading/error/success). This ensures visual consistency across every single page and screen size.
+Technical Implementation: Implement a Storybook environment to document and test every foundational component, establishing a single source of truth for props, styling, and accessibility guidelines.
+---
+
+```
+
+**`.tasks/global-state-and-theme-management.md`**
+
+```md
+---
+Priority: Medium Impact
+Description: Implement a global state manager (e.g., Redux/Context API) to handle UI-related states, such as user theme (Dark/Light Mode), current user status, and global alerts, ensuring consistency without prop-drilling across components.
+Technical Implementation: Centralize all styling rules (colors, typography scales, spacing units) into a single Theme Provider context, allowing components to consume themes rather than hardcoding values.
+---
+
+```
+
+**`.tasks/mobile-optimized-dashboard-flow.md`**
+
+```md
+---
+Priority: High Impact
+Description: Redesign the primary dashboard/home screen with a clear, mobile-first flow. The layout must prioritize the most important action (e.g., "Start Lesson" or "Connect with Partner") and use digestible cards that adapt vertically on mobile but expand horizontally on desktop.
+Technical Implementation: Overhaul the main Dashboard component to use a vertical stack layout on mobile, transitioning to a dashboard grid on larger viewports, ensuring CTAs are always visible and thumb-friendly.
+---
+
+```
+
+**`.tasks/responsive-chat-interface-and-side-panel.md`**
+
+```md
+---
+Priority: High Impact
+Description: Redesign the messaging interface to handle multi-device views efficiently. On desktop, implement a persistent two-panel view (Chat window + Profile/Details/History); on mobile, use a modal or dedicated view stack.
+Technical Implementation: Use component logic (e.g., `isDesktopView`) within the Chat component to conditionally render the layout, maintaining a persistent header/sidebar regardless of screen size.
+---
+
+```
+
+**`.tasks/adaptive-quiz-and-lesson-flow.md`**
+
+```md
+---
+Priority: Medium Impact
+Description: Standardize the learning experience across all devices. The quiz interface must collapse complex controls (e.g., answer selection, input fields, grammar hints) into manageable, full-width elements on mobile, while exposing more side-by-side options on desktop.
+Technical Implementation: Encapsulate the quiz mechanism within a dedicated container component that abstracts the display logic, conditionally rendering the number of selectable options and the visual size of the feedback elements based on viewport size.
+---
+
+```
+
+**`.tasks/universal-loading-and-error-states.md`**
+
+```md
+---
+Priority: Medium Impact
+Description: Implement standardized, aesthetically pleasing UI states for all asynchronous operations. This includes skeleton loaders, global error banners, and progress indicators, providing immediate feedback to the user instead of blank screens or spinners.
+Technical Implementation: Create a global hook or wrapper component that wraps API calls and automatically displays the appropriate loading or error skeleton/banner in the relevant section of the UI stack.
+---
+
+```
+
+**`.tasks/accessibility-compliance-audit.md`**
+
+```md
+---
+Priority: Low Impact
+Description: Conduct a full audit and implementation of WCAG standards (Level AA) to ensure the application is fully accessible to users with visual, motor, or auditory impairments (e.g., proper alt tags, keyboard navigation focus management, color contrast ratios).
+Technical Implementation: Systematically pass all core components through automated accessibility testing tools (e.g., Axe) and enforce proper semantic HTML structure for all new and refactored elements.
+---
+
+```
+
+**`.tasks/ai-roleplaying-conversation-engine.md`**
+
+```md
+---
+Priority: High Impact
+Description: Introduce an advanced conversational partner powered by an LLM that can engage users in structured, adaptive role-playing scenarios (e.g., "Negotiating a salary," "Discussing philosophy"). The AI must remember previous conversation details, correct grammar contextually, and challenge the user's responses.
+Technical Implementation: Integrate a powerful LLM API and create a `ScenarioContext` service that manages session memory and guides the AI's tone and complexity level based on the user's current proficiency score.
+---
+
+```
+
+**`.tasks/personalized-grammar-weakness-detector.md`**
+
+```md
+---
+Priority: High Impact
+Description: Implement a background diagnostic system that analyzes all user-generated content (chat, quiz answers, voice transcriptions) to identify persistent grammar and vocabulary weaknesses. This system then automatically suggests hyper-focused "Micro-Lessons" to address these specific gaps.
+Technical Implementation: Build a machine learning model that runs asynchronously on user text/audio data, generating a prioritized list of grammatical rule IDs and vocabulary sets, which then feeds into the lesson generation pipeline.
+---
+
+```
+
+**`.tasks/micro-transaction-virtual-currency-system.md`**
+
+```md
+---
+Priority: High Impact
+Description: Introduce a virtual currency (e.g., "Lingos") that users can earn through streaks, completion, and community contributions, and spend on premium features (e.g., "boosts" for visibility, advanced analytics reports, or limited-time tutoring access).
+Technical Implementation: Implement a secure blockchain or micro-transaction ledger service to track virtual currency balances, creating an economic incentive layer across all platform features.
+---
+
+```
+
+**`.tasks/group-challenge-and-leaderboard-system.md`**
+
+```md
+---
+Priority: Medium Impact
+Description: Introduce formalized, time-bound competitive elements (e.g., "French Food Culture Challenge," "Japanese Business Language Week"). Users join global or local teams and compete in structured activities, with results posted on a visible leaderboard.
+Technical Implementation: Develop a time-series database for challenge data and a scoring service that aggregates performance metrics (correctness, speed, consistency) to rank teams and individuals, triggering rewards upon completion.
+---
+
+```
+
+**`.tasks/culture-specific-nuance-guide.md`**
+
+```md
+---
+Priority: Medium Impact
+Description: Supplement grammar lessons with dedicated modules explaining non-linguistic concepts, such as appropriate bowing in Japan, directness in German business communication, or acceptable gift-giving etiquette. These modules must be media-rich (video/diagrams).
+Technical Implementation: Create a new `CulturalContext` data model, linking these modules to specific language topics and embedding instructional video/media elements to provide deep, localized cultural immersion.
+---
+
+```
+
+**`.tasks/live-tutoring-feedback-recording-system.md`**
+
+```md
+---
+Priority: Medium Impact
+Description: When a paid tutor session concludes, automatically record, transcribe, and analyze the session. The platform must then generate a personalized, downloadable "Session Report" for the user, detailing pronunciation errors, grammatical repetitions, and high-value vocabulary learned.
+Technical Implementation: Integrate a cloud recording service (Zoom/WebRTC recording) and build a post-session worker that utilizes the NLP services to generate a structured JSON report consumed by the user dashboard.
+---
+
+```
+
+**`.tasks/daily-focus-topic-recommendation.md`**
+
+```md
+---
+Priority: Medium Impact
+Description: Instead of a generic "Lesson of the Day," provide a highly specific, contextually relevant daily topic (e.g., "Today: Discussing public transit options in Paris," or "Focus: Using the particle 'wa' vs 'ga'"). This anchors the user's learning intent for the day.
+Technical Implementation: Implement a daily scheduler that calls the `Personalized-Grammar-Weakness-Detector` to pull the top 3 recommended topics, presenting a dedicated, engaging landing card on the dashboard.
+---
+
+```
+
+**`.tasks/build-settings-model.md`**
+
+```md
+---
+Priority: High Impact
+Description: Define the master, immutable TypeScript `UserSettings` interface and accompanying ENUMs (LanguageLevel, Visibility). This single contract dictates the data structure for all client-side and backend settings interactions.
+Technical Implementation: Create the model file structure and generate boilerplate enums to enforce type safety across all modules, utilizing the Angular Type system to ensure consistency across the entire stack.
+---
+
+```
+
+**`.tasks/settings-service-and-signals-store.md`**
+
+```md
+---
+Priority: High Impact
+Description: Establish the central `SettingsService` utilizing an RxJS BehaviorSubject (or the new Signals service) to hold the canonical `UserSettings` object. This service must manage the read/write lifecycle, handling both API calls and triggering optimistic UI updates locally upon user interaction.
+Technical Implementation: Implement the service utilizing a pattern of `private settingsSubject` which exposes a `public readonly settings$: Signal<UserSettings>` observable for consumption by all child components.
+---
+
+```
+
+**`.tasks/settings-layout-router-and-view-container.md`**
+
+```md
+---
+Priority: High Impact
+Description: Build the main `SettingsComponent` as a container wrapper. Utilize Angular Router Guards to enforce mandatory steps (e.g., must confirm password before changing email) and implement a tabbed or side-panel navigation system to manage the flow between disparate settings sub-components.
+Technical Implementation: Implement the parent component using an `<router-outlet>` and a programmatic tab switcher (using Signals) that controls the active component's state, preventing the view from overwhelming the user.
+---
+
+```
+
+**`.tasks/profile-matching-form-and-validation.md`**
+
+```md
+---
+Priority: High Impact
+Description: Develop the Profile Settings component with a dedicated Reactive Form group. This must include sophisticated, cross-field validation (e.g., if the user sets max distance to 0, the matching status must change to "Local Search Only").
+Technical Implementation: Implement the component using `FormGroup` and `FormArray` structures, linking the form's `valueChanges` observable to the `SettingsService`'s update methods, ensuring all nested values are captured for the master state.
+---
+
+```
+
+**`.tasks/advanced-language-level-selector.md`**
+
+```md
+---
+Priority: Medium Impact
+Description: Build a highly interactive component for selecting and displaying language proficiency (A1-C2, JLPT levels). It must not be a simple dropdown but a visual selector that validates against established CEFR/JLPT criteria.
+Technical Implementation: Create a dedicated `LanguageSelectorComponent` utilizing a custom Directive that visually marks proficiency levels and handles the hierarchical selection/display logic within the `ProfileSettingsComponent`'s Reactive Form.
+---
+
+```
+
+**`.tasks/password-and-2fa-secure-flow.md`**
+
+```md
+---
+Priority: High Impact
+Description: Build the `AccountSettingsComponent`. This section must handle sensitive operations (password change, 2FA setup) by enforcing strict security guard patterns, requiring re-authentication (re-entering password/OTP) before submitting the form.
+Technical Implementation: Implement custom Angular Guard logic that intercepts the form submission event, triggering a modal step for secondary authentication (password confirmation or TOTP input) before allowing the API call to proceed.
+---
+
+```
+
+**`.tasks/granular-notification-toggle-system.md`**
+
+```md
+---
+Priority: Medium Impact
+Description: Build the `NotificationSettingsComponent` with a simple, yet powerful toggle array. Each toggle must trigger an immediate, optimistic UI update and queue an API command to the backend without requiring full form submission.
+Technical Implementation: Use individual `FormControl` components within a `FormGroup` that, on change detection, fire a small, dedicated `NotificationService.updateToggle(key, value)` call that updates the local state immediately via Signals.
+---
+
+```
+
+**`.tasks/theme-switcher-and-localization-utility.md`**
+
+```md
+---
+Priority: Medium Impact
+Description: Implement the application-wide theme and locale switcher. This component must demonstrate the power of Angular's dependency injection to provide context-aware styling and text translations across all settings sub-components.
+Technical Implementation: Use the Angular `InjectionToken` pattern to inject the current theme/locale into a global `ThemeProvider` directive, allowing child components to consume the current styling context without passing props.
+---
+
+```
