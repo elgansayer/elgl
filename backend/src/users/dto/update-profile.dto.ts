@@ -20,6 +20,31 @@ export class CoordinatesDto {
   longitude!: number;
 }
 
+export class BusinessCatalogItemDto {
+  @IsString()
+  @MaxLength(100)
+  name!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  price?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(3)
+  currency?: string;
+
+  @IsOptional()
+  @IsString()
+  image_url?: string;
+}
+
 export class UpdateProfileDto {
   @IsOptional()
   @IsString()
@@ -129,4 +154,25 @@ export class UpdateProfileDto {
   @IsString()
   @MaxLength(200)
   status_text?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  business_name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  business_hours?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  website_url?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BusinessCatalogItemDto)
+  catalog?: BusinessCatalogItemDto[];
 }

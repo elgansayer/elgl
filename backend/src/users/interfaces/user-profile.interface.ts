@@ -28,6 +28,20 @@ export interface UserProfile {
   is_admin?: boolean;
   created_at: string;
   scheduled_for_deletion_at?: string;
+  // Business profile fields
+  business_name?: string;
+  business_hours?: string;
+  website_url?: string;
+  catalog?: BusinessCatalogItem[];
+}
+
+export interface BusinessCatalogItem {
+  id?: string;
+  name: string;
+  description?: string;
+  price?: string;
+  currency?: string;
+  image_url?: string;
 }
 
 export interface ProfileVisitor {

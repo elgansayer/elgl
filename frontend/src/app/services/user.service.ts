@@ -45,6 +45,19 @@ export interface UserProfile {
   privacy_profile_photo?: string;
   privacy_about_info?: string;
   privacy_status?: string;
+  business_name?: string;
+  business_hours?: string;
+  website_url?: string;
+  catalog?: BusinessCatalogItem[];
+}
+
+export interface BusinessCatalogItem {
+  id?: string;
+  name: string;
+  description?: string;
+  price?: string;
+  currency?: string;
+  image_url?: string;
 }
 
 export interface VisitorLog {

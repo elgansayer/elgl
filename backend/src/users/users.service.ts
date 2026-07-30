@@ -245,6 +245,10 @@ export class UsersService {
       created_at: new Date().toISOString(),
       scheduled_for_deletion_at: undefined,
       xp_total: 100,
+      business_name: 'My Mock Shop',
+      business_hours: 'Mon-Fri 9AM-5PM',
+      website_url: 'https://mock.shop',
+      catalog: [],
     };
   }
 
@@ -308,6 +312,14 @@ export class UsersService {
 
     if (dto.silence_unknown_callers !== undefined)
       updatePayload.silence_unknown_callers = dto.silence_unknown_callers;
+
+    if (dto.business_name !== undefined)
+      updatePayload.business_name = dto.business_name;
+    if (dto.business_hours !== undefined)
+      updatePayload.business_hours = dto.business_hours;
+    if (dto.website_url !== undefined)
+      updatePayload.website_url = dto.website_url;
+    if (dto.catalog !== undefined) updatePayload.catalog = dto.catalog;
 
     if (dto.location) {
       updatePayload.location = `POINT(${dto.location.longitude} ${dto.location.latitude})`;

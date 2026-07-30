@@ -83,6 +83,38 @@ import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-c
             <option value="other">Other</option>
           </select>
         </div>
+
+        <!-- Business profile fields -->
+        <div>
+          <label for="businessNameInput" class="block text-sm font-medium text-text-secondary mb-1"
+            >Business Name</label
+          >
+          <input
+            id="businessNameInput"
+            [(ngModel)]="businessName"
+            class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          />
+        </div>
+        <div>
+          <label for="businessHoursInput" class="block text-sm font-medium text-text-secondary mb-1"
+            >Business Hours</label
+          >
+          <input
+            id="businessHoursInput"
+            [(ngModel)]="businessHours"
+            class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          />
+        </div>
+        <div>
+          <label for="websiteUrlInput" class="block text-sm font-medium text-text-secondary mb-1"
+            >Website URL</label
+          >
+          <input
+            id="websiteUrlInput"
+            [(ngModel)]="websiteUrl"
+            class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          />
+        </div>
       </div>
 
       <button
@@ -108,6 +140,9 @@ export class ProfileEditComponent {
   readonly profile = signal<UserProfile | null>(null);
   readonly displayName = signal('');
   readonly gender = signal('');
+  readonly businessName = signal('');
+  readonly businessHours = signal('');
+  readonly websiteUrl = signal('');
   readonly coverPhotoPreview = signal<string | null>(null);
   readonly showCropper = signal(false);
   readonly selectedFile = signal<File | null>(null);
@@ -123,6 +158,9 @@ export class ProfileEditComponent {
       this.profile.set(profile);
       this.displayName.set(profile.display_name || '');
       this.gender.set(profile.gender || '');
+      this.businessName.set(profile.business_name || '');
+      this.businessHours.set(profile.business_hours || '');
+      this.websiteUrl.set(profile.website_url || '');
     }
   }
 
@@ -179,6 +217,9 @@ export class ProfileEditComponent {
     await this.userService.updateMyProfile({
       display_name: this.displayName(),
       gender: this.gender(),
+      business_name: this.businessName() || undefined,
+      business_hours: this.businessHours() || undefined,
+      website_url: this.websiteUrl() || undefined,
     });
   }
 }
