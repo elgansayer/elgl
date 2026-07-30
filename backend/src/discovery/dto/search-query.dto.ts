@@ -58,4 +58,22 @@ export class SearchQueryDto {
   @IsOptional()
   @IsString()
   gender?: string;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? parseInt(value, 10) : value,
+  )
+  @IsNumber()
+  @Min(1)
+  @Max(120)
+  age_min?: number;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? parseInt(value, 10) : value,
+  )
+  @IsNumber()
+  @Min(1)
+  @Max(120)
+  age_max?: number;
 }

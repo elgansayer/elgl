@@ -145,6 +145,14 @@ export class DiscoveryService {
       queryBuilder = queryBuilder.eq('gender', query.gender);
     }
 
+    // Age range filter
+    if (query.age_min !== undefined) {
+      queryBuilder = queryBuilder.gte('age', query.age_min);
+    }
+    if (query.age_max !== undefined) {
+      queryBuilder = queryBuilder.lte('age', query.age_max);
+    }
+
     if (searchLat !== undefined && searchLon !== undefined) {
       const response = await supabase.rpc('search_nearby_users', {
         search_lat: searchLat,
@@ -176,6 +184,17 @@ export class DiscoveryService {
             (u) => !blockedIds.includes(u.id),
           );
         }
+        // Age range filter for fallback results
+        if (query.age_min !== undefined) {
+          fallbackResults = fallbackResults.filter(
+            (u) => (u as any).age >= query.age_min,
+          );
+        }
+        if (query.age_max !== undefined) {
+          fallbackResults = fallbackResults.filter(
+            (u) => (u as any).age <= query.age_max,
+          );
+        }
         return fallbackResults;
       }
       // Filter RPC results for blocked users
@@ -188,6 +207,13 @@ export class DiscoveryService {
           (u) => (u as any).gender === query.gender,
         );
       }
+      // Age range filter for RPC results
+      if (query.age_min !== undefined) {
+        rpcResults = rpcResults.filter((u) => (u as any).age >= query.age_min);
+      }
+      if (query.age_max !== undefined) {
+        rpcResults = rpcResults.filter((u) => (u as any).age <= query.age_max);
+      }
       return rpcResults;
     }
 
@@ -199,6 +225,13 @@ export class DiscoveryService {
     let results = response.data as UserProfile[];
     if (blockedIds.length > 0) {
       results = results.filter((u) => !blockedIds.includes(u.id));
+    }
+    // Age range filter for query results
+    if (query.age_min !== undefined) {
+      results = results.filter((u) => (u as any).age >= query.age_min);
+    }
+    if (query.age_max !== undefined) {
+      results = results.filter((u) => (u as any).age <= query.age_max);
     }
     return results;
   }
@@ -230,6 +263,14 @@ export class DiscoveryService {
       filtered = filtered.filter(
         (u) => u.study_streak_days > 7 && u.correction_ratio >= 0.8,
       );
+    }
+
+    // Age range filter for mock data
+    if (query.age_min !== undefined) {
+      filtered = filtered.filter((u) => (u as any).age >= query.age_min);
+    }
+    if (query.age_max !== undefined) {
+      filtered = filtered.filter((u) => (u as any).age <= query.age_max);
     }
 
     // Limit to 50

@@ -16,6 +16,8 @@ export interface SearchFilterParams {
   serious_learner_only?: boolean;
   level?: string;
   gender?: string;
+  age_min?: number;
+  age_max?: number;
 }
 
 @Injectable({
@@ -48,6 +50,10 @@ export class DiscoveryService {
       params = params.set('serious_learner_only', filters.serious_learner_only.toString());
     if (filters.level) params = params.set('level', filters.level);
     if (filters.gender) params = params.set('gender', filters.gender);
+    if (filters.age_min !== undefined)
+      params = params.set('age_min', filters.age_min.toString());
+    if (filters.age_max !== undefined)
+      params = params.set('age_max', filters.age_max.toString());
 
     const users = await firstValueFrom(
       this.http
