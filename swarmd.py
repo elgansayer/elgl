@@ -521,6 +521,18 @@ def supervisor():
         log(f"Queue: {stats['pending']} pending, {stats['completed']} done, "
             f"{stats['stuck']} stuck")
 
+        # Handle autonomous directive (do not run Aider)
+        if task and 'AUTONOMOUS DIRECTIVE' in task:
+            log("Autonomous directive: running codebase audit")
+            # Add placeholder audit tasks as pending
+            task_add("Audit: fix zero hardcoded strings across frontend ts/html files")
+            task_add("Audit: run lint and test suites ensuring pass, fix failures")
+            task_add("Audit: verify visual match against screenshots (manual)")
+            # Move the directive back to pending so it loops continuously
+            if taskfile and taskfile.exists():
+                taskfile = task_move(taskfile, 'pending')
+            continue
+
         # Rate limit: cooldown between API calls
         since_last = time.time() - last_api_call
         if since_last < CFG['rate_cooldown']:
