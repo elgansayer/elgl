@@ -1,6 +1,6 @@
 import { Injectable, inject, signal, effect } from '@angular/core';
 import { initializeApp } from 'firebase/app';
-import { getMessaging, getToken, onMessage, Messaging } from 'firebase/messaging';
+import { getMessaging, getToken, onMessage, Messaging, MessagePayload } from 'firebase/messaging';
 import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -55,12 +55,12 @@ export class FirebaseMessagingService {
             scope: '/',
           });
           await navigator.serviceWorker.ready;
-        } catch (err) {
+        } catch (err: unknown) {
           console.error('Failed to register firebase-messaging-sw', err);
         }
       }
 
-      const currentToken = await getToken(this.messaging, {
+      const currentToken = await getToken(this.messaging!, {
         vapidKey: environment.firebase.vapidKey,
         serviceWorkerRegistration: undefined,
       });
@@ -70,7 +70,7 @@ export class FirebaseMessagingService {
       } else {
         console.warn('No registration token available.');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('An error occurred while retrieving token.', err);
     }
   }
@@ -79,8 +79,8 @@ export class FirebaseMessagingService {
     if (!this.messaging) {
       return;
     }
-    onMessage(this.messaging, (payload) => {
-      console.log('Foreground message received:', payload);
+    onMessage(this.messaging!, (payload: MessagePayload) => {
+      console.warn('Foreground message received:', payload);
       // You can dispatch an event or show a custom toast via your own notification service.
     });
   }
@@ -100,7 +100,7 @@ export class FirebaseMessagingService {
       if (!response.ok) {
         console.error('Failed to persist FCM token');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error persisting FCM token', err);
     }
   }

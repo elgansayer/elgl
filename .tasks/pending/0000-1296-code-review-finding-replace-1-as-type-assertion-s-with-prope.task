@@ -1,0 +1,1 @@
+Code review finding: Replace 1 'as' type assertion(s) with proper type narrowing in recent commit (from commit 3301d6ea: Build Daily Study Streak counter widget on home sc)

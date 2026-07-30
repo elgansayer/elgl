@@ -33,7 +33,7 @@ export class SoundboardService {
     if (!response.ok) {
       throw new Error(`Failed to load sounds: ${response.statusText}`);
     }
-    return response.json() as Promise<SoundboardListResponse>;
+    return (await response.json()) as Promise<SoundboardListResponse>;
   }
 
   /**
@@ -56,6 +56,6 @@ export class SoundboardService {
     if (!response.ok) {
       throw new Error(`Failed to play sound: ${response.statusText}`);
     }
-    return response.json() as Promise<PlaySoundResponse>;
+    return (await response.json()) as Promise<PlaySoundResponse>;
   }
 }

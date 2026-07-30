@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationsService } from '../notifications.service';
 import { NotificationPreferencesService } from '../notification-preferences.service';
+import { ProfileViewEvent } from '../events/notification.events';
 
 @Injectable()
 export class ProfileViewNotificationListener {
@@ -11,32 +12,33 @@ export class ProfileViewNotificationListener {
   ) {}
 
   @OnEvent('profile.visit')
-  async handleProfileVisit(payload: {
-    userId: string;
-    title: string;
-    body: string;
-    data?: Record<string, string>;
-  }): Promise<void> {
+  async handleProfileVisit(payload: ProfileViewEvent): Promise<void> {
+    const recipientId = payload.viewedId;
+
     try {
-      const prefs = await this.notificationPreferencesService.getPreferences(
-        payload.userId,
-      );
-      const category = prefs?.profile_view;
-      if (category && category.push === false) {
+      const shouldSend =
+        await this.notificationPreferencesService.shouldSendNotification(
+          recipientId,
+          'profile_view',
+          'push',
+        );
+      if (!shouldSend) {
         return;
       }
     } catch (err) {
       console.error(
-        `Failed to check notification preferences for user ${payload.userId}:`,
+        `Failed to check notification preferences for user ${recipientId}:`,
         err,
       );
     }
 
-    await this.notificationsService.sendPushNotification(payload.userId, {
+    const title = 'Profile Visit';
+    const body = 'Someone viewed your profile';
+    await this.notificationsService.sendPushNotification(recipientId, {
       type: 'profile_visit',
-      title: payload.title || 'Profile Visit',
-      body: payload.body,
-      data: { ...(payload.data || {}) },
+      title,
+      body,
+      data: {},
     });
   }
 }

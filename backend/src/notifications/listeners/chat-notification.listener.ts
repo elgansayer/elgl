@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationsService } from '../notifications.service';
 import { NotificationPreferencesService } from '../notification-preferences.service';
+import { ChatMessageEvent } from '../events/notification.events';
 
 @Injectable()
 export class ChatNotificationListener {
@@ -11,32 +12,33 @@ export class ChatNotificationListener {
   ) {}
 
   @OnEvent('chat.message')
-  async handleChatMessage(payload: {
-    userId: string;
-    title: string;
-    body: string;
-    data?: Record<string, string>;
-  }): Promise<void> {
+  async handleChatMessage(payload: ChatMessageEvent): Promise<void> {
+    const recipientId = payload.receiverId;
+
     try {
-      const prefs = await this.notificationPreferencesService.getPreferences(
-        payload.userId,
-      );
-      const category = prefs?.new_message;
-      if (category && category.push === false) {
+      const shouldSend =
+        await this.notificationPreferencesService.shouldSendNotification(
+          recipientId,
+          'new_message',
+          'push',
+        );
+      if (!shouldSend) {
         return;
       }
     } catch (err) {
       console.error(
-        `Failed to check notification preferences for user ${payload.userId}:`,
+        `Failed to check notification preferences for user ${recipientId}:`,
         err,
       );
     }
 
-    await this.notificationsService.sendPushNotification(payload.userId, {
+    const title = 'New Message';
+    const body = payload.preview || '';
+    await this.notificationsService.sendPushNotification(recipientId, {
       type: 'chat_message',
-      title: payload.title || 'New Message',
-      body: payload.body,
-      data: { ...(payload.data || {}) },
+      title,
+      body,
+      data: {},
     });
   }
 }

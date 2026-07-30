@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { lastValueFrom } from 'rxjs';
@@ -11,9 +11,8 @@ export interface UploadResult {
   providedIn: 'root',
 })
 export class UploadService {
+  private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiUrl}/media`;
-
-  constructor(private readonly http: HttpClient) {}
 
   async uploadAvatar(file: Blob, filename: string): Promise<UploadResult> {
     const formData = new FormData();
