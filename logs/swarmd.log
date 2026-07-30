@@ -2081,3 +2081,17 @@
 [2026-07-30T07:54:30Z]   FAIL  backend lint
 [2026-07-30T07:55:07Z]   FAIL  backend test
 [2026-07-30T07:55:07Z] Tests have failures (pre-existing). Committing anyway.
+[2026-07-30T07:55:09Z] Committed: c2e42598 — feat: Build Language Questions post type.
+[2026-07-30T07:55:09Z] COMPLETED: Build Language Questions post type.
+[2026-07-30T07:55:09Z] Cooldown 15s...
+[2026-07-30T07:55:24Z] Task: Implement Cultural Insights tagging and filtering.
+[2026-07-30T07:55:24Z] Queue: 76 pending, 136 done, 0 stuck
+[2026-07-30T07:55:24Z] Attempt 1/3
+[2026-07-30T07:55:24Z] Aider pass 1 (discover)...
+[2026-07-30T07:55:49Z] Pass 1: discovered 0 files
+[2026-07-30T07:55:49Z] Aider pass 2 round 1: 0 files in context
+[2026-07-30T07:56:29Z] Pass 2 round 1: produced 6 file changes
+[2026-07-30T07:56:39Z]   FAIL  frontend lint
+[2026-07-30T07:57:24Z]   FAIL  backend lint
+[2026-07-30T07:57:59Z]   FAIL  backend test
+[2026-07-30T07:57:59Z] Tests have failures (pre-existing). Committing anyway.
