@@ -12,6 +12,7 @@ import { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
 import { SpamDetectionService } from '../spam-detection/spam-detection.service';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
+import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import {
   ChatMessage,
@@ -353,6 +354,54 @@ export class ChatService {
       return [];
     }
     return response.data as FavouriteRecord[];
+  }
+
+  async getSuggestedReplies(
+    userId: string,
+    dto: SuggestedRepliesRequestDto,
+  ): Promise<{ suggestions: string[] }> {
+    // Use the LLM proxy to generate context-aware suggestions
+    const recentMessages = dto.recent_messages ?? [];
+    const contextMessages = recentMessages.slice(-10);
+    if (contextMessages.length === 0) {
+      // fallback to static suggestions if no context is provided
+      return {
+        suggestions: [
+          'Sure, let’s talk about travel.',
+          'Could you help me with my pronunciation?',
+          'I enjoyed that conversation.',
+        ],
+      };
+    }
+    const contextLines = contextMessages
+      .map((m) => `${m.sender_id}: ${m.text}`)
+      .join('\n');
+    const prompt = `Based on this conversation:\n${contextLines}\n\nGenerate 3 suggested replies that the user could send next. Format each reply on a separate line, without numbers.`;
+    try {
+      const { response } = await this.llmProxyService.proxyMessage(prompt);
+      const lines = response
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
+      const suggestions = lines.slice(0, 3);
+      if (suggestions.length === 0) {
+        throw new Error('Empty response from LLM proxy');
+      }
+      return { suggestions };
+    } catch (error) {
+      console.error(
+        'Failed to generate suggestions, using fallback:',
+        (error as Error).message,
+      );
+      // fallback to static suggestions
+      return {
+        suggestions: [
+          'Sure, let’s talk about travel.',
+          'Could you help me with my pronunciation?',
+          'I enjoyed that conversation.',
+        ],
+      };
+    }
   }
 
   async createGroup(

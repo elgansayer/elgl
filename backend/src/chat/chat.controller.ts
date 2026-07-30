@@ -15,6 +15,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { SendMessageDto } from './dto/send-message.dto';
+import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import {
   ChatMessage,
   ChatRoomRecord,
@@ -144,5 +145,14 @@ export class ChatController {
   ): Promise<any[]> {
     if (!user) return [];
     return await this.chatService.getGroupMembers(roomId);
+  }
+
+  @Post('suggested-replies')
+  async getSuggestedReplies(
+    @CurrentUser() user: User | null,
+    @Body() dto: SuggestedRepliesRequestDto,
+  ): Promise<{ suggestions: string[] } | null> {
+    if (!user) return null;
+    return await this.chatService.getSuggestedReplies(user.id, dto);
   }
 }

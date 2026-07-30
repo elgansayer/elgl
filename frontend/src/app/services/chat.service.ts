@@ -344,4 +344,19 @@ export class ChatService {
       ),
     );
   }
+
+  async getSuggestedReplies(roomId: string, recentMessages?: ChatMessage[]): Promise<string[]> {
+    const body = {
+      room_id: roomId,
+      recent_messages: recentMessages
+        ? recentMessages.map((m) => ({ sender_id: m.sender_id, text: m.text_content }))
+        : undefined,
+    };
+    const response = await firstValueFrom(
+      this.http.post<{ suggestions: string[] }>(`${this.baseUrl}/suggested-replies`, body, {
+        headers: this.getHeaders(),
+      }),
+    );
+    return response.suggestions;
+  }
 }
