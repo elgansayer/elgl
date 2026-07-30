@@ -908,6 +908,10 @@ export class I18nService {
 
     // Help & About
     'helpAbout.title': 'Help & About',
+    'support.title': 'Support Centre',
+    'support.subtitle': 'Find answers to common questions and explore our help categories.',
+    'support.allCategories': 'All Categories',
+    'support.noResults': 'No results found.',
     'helpAbout.appVersion': 'App Version',
     'helpAbout.buildNumber': 'Build Number',
     'helpAbout.openSourceLicences': 'Open Source Licences',

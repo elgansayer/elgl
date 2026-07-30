@@ -208,6 +208,12 @@ export const routes: Routes = [
     title: 'Help Centre - HelloTalk',
   },
   {
+    path: 'support',
+    loadComponent: () =>
+      import('./pages/support-centre/support-centre.component').then((m) => m.SupportCentreComponent),
+    title: 'Support Centre - HelloTalk',
+  },
+  {
     path: 'onboarding',
     loadComponent: () =>
       import('./components/onboarding/onboarding-wizard.component').then((m) => m.OnboardingWizardComponent),

@@ -1,7 +1,7 @@
 import { Component, inject, signal, resource } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { HelpCentreService, FaqItem } from '../../services/help-centre.service';
+import { HelpFaqService, FAQItem } from '../../services/help-faq.service';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -83,13 +83,13 @@ import { FormsModule } from '@angular/forms';
   `,
 })
 export class HelpCentreComponent {
-  private helpService = inject(HelpCentreService);
+  private helpService = inject(HelpFaqService);
   protected searchText = signal<string>('');
   protected selectedCategory = signal<string | undefined>(undefined);
 
   protected categoriesResource = resource({
     loader: async () => {
-      const cats = await firstValueFrom(this.helpService.getCategories());
+      const cats = await this.helpService.getCategories();
       return cats ?? [];
     },
   });
@@ -100,15 +100,12 @@ export class HelpCentreComponent {
       category: this.selectedCategory(),
     }),
     loader: async ({ request }) => {
-      const res = await firstValueFrom(
-        this.helpService.getArticles(
-          request.category,
-          request.search || undefined,
-          1,
-          50,
-        ),
+      const res = await this.helpService.getFAQs(
+        request.category,
       );
-      return res ?? { items: [], total: 0, page: 1, limit: 50 };
+      return (
+        res ?? { items: [], total: 0, page: 1, limit: 50 }
+      );
     },
   });
 
