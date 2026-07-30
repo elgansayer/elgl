@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PostgrestError } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
+import { BlockedUserResponseDto } from './dto/blocked-user.dto';
 
 export const SAFETY_CATEGORIES = [
   {
@@ -214,5 +215,36 @@ export class SafetyService {
       this.getBlockerUserIds(userId),
     ]);
     return [...new Set([...blocked, ...blockers])];
+  }
+
+  async getBlockedUserDetails(
+    userId: string,
+  ): Promise<BlockedUserResponseDto[]> {
+    const supabase = this.supabaseService.getClient();
+    const blockedIds = await this.getBlockedUserIds(userId);
+    if (blockedIds.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, display_name, avatar_url, native_language, target_languages')
+      .in('id', blockedIds);
+
+    if (error || !data) {
+      this.logger.error(
+        `Failed to fetch blocked user details for ${userId}:`,
+        error,
+      );
+      return [];
+    }
+
+    return (data as any[]).map((u) => ({
+      id: u.id,
+      display_name: u.display_name,
+      avatar_url: u.avatar_url,
+      native_language: u.native_language,
+      target_language: u.target_languages?.[0],
+    }));
   }
 }

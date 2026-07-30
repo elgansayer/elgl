@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { BlockUserDto, ReportUserDto, UnblockUserDto } from './dto/safety.dto';
+import { BlockedUserResponseDto } from './dto/blocked-user.dto';
 import { SafetyService } from './safety.service';
 
 @Controller('safety')
@@ -98,5 +99,12 @@ export class SafetyController {
     @Param('userId') userId: string,
   ): Promise<string[]> {
     return this.safetyService.getBlockedAndBlockerIds(userId);
+  }
+
+  @Get('blocked-users-details')
+  async getBlockedUserDetails(
+    @Req() req: { user: { id: string } },
+  ): Promise<BlockedUserResponseDto[]> {
+    return this.safetyService.getBlockedUserDetails(req.user.id);
   }
 }
