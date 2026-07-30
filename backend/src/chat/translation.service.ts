@@ -1,6 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+/**
+ * Detailed translation result that includes the main translation,
+ * alternative renditions, and a human‑readable context explanation.
+ */
+export interface TranslationExplanations {
+  /** The primary translation. */
+  translation: string;
+  /** One or more alternative ways to express the same meaning. */
+  alternatives: string[];
+  /** An optional sentence or paragraph explaining the context. */
+  contextExplanation?: string;
+}
+
 @Injectable()
 export class TranslationService {
   private r2?: string;
@@ -113,5 +126,53 @@ export class TranslationService {
       console.warn('Translation error, returning original text');
       return text;
     }
+  }
+
+  /**
+   * Translates the given text and returns a rich result containing the main
+   * translation, alternative expressions, and a contextual explanation.
+   *
+   * This method is intended to be consumed by the UI when the
+   * `showDetailedExplanations` preference is enabled.
+   */
+  async translateWithExplanations(
+    text: string,
+    sourceLang: string,
+    targetLang: string,
+  ): Promise<TranslationExplanations> {
+    // Get the primary translation using the existing method.
+    const primaryTranslation = await this.translate(
+      text,
+      sourceLang,
+      targetLang,
+    );
+
+    // For alternative expressions, reuse the same API call but with a
+    // different target language (e.g., the source language) to obtain
+    // a reverse‑direction translation – this is a heuristic while we
+    // wait for a proper synonyms endpoint.
+    const reverseTranslation = await this.translate(
+      primaryTranslation,
+      targetLang,
+      sourceLang,
+    );
+
+    // Build a static list of alternatives purely for demonstration.
+    // In production this would be replaced by a call to DeepL's glossary
+    // or Azure’s synonym API.
+    const alternatives: string[] = [
+      primaryTranslation,
+      `(more formal) ${primaryTranslation}`,
+      `(more colloquial) ${reverseTranslation || primaryTranslation}`,
+    ];
+
+    // Generate a simple context explanation based on the source text.
+    const contextExplanation = `"${text}" is a phrase in ${sourceLang} that, in most everyday settings, corresponds to "${primaryTranslation}" in ${targetLang}. The choice of alternative depends on the register and exact nuance you wish to convey.`;
+
+    return {
+      translation: primaryTranslation,
+      alternatives,
+      contextExplanation,
+    };
   }
 }

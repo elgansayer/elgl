@@ -12,4 +12,13 @@ export class ChatSettingsDto {
   @IsOptional()
   @IsBoolean()
   enterToSend?: boolean;
+
+  /**
+   * When enabled, the UI will show detailed explanations (grammar notes,
+   * alternative translations, and context hints) alongside correction
+   * or translation results.
+   */
+  @IsOptional()
+  @IsBoolean()
+  showDetailedExplanations?: boolean;
 }
