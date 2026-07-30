@@ -152,6 +152,7 @@ export class VocabularyStore {
         { headers: this.getHeaders() },
       ),
     );
+    this.triggerHapticFeedback(fc.srs_level);
     this.allFlashcards.update((list) => list.map((item) => (item.id === fc.id ? fc : item)));
     this.flashcardMap.update((map) => {
       const next = new Map(map);
@@ -206,5 +207,22 @@ export class VocabularyStore {
         { headers: this.getHeaders() },
       ),
     );
+  }
+
+  /**
+   * Triggers haptic feedback based on SRS level.
+   * Known (level >=4) -> success buzz
+   * Learning (level 1-3) -> gentle pulse
+   */
+  private triggerHapticFeedback(level: number): void {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      if (level >= 4) {
+        // success buzz 100ms
+        navigator.vibrate(100);
+      } else {
+        // gentle pulsing pattern [on, off, on]
+        navigator.vibrate([50, 50, 50]);
+      }
+    }
   }
 }
