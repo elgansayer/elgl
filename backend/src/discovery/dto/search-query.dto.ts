@@ -87,4 +87,8 @@ export class SearchQueryDto {
   )
   @IsBoolean()
   voice_room_active?: boolean;
+
+  @IsOptional()
+  @IsString()
+  sort?: string;
 }

@@ -157,7 +157,7 @@ export class DiscoveryService {
     let queryBuilder = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false);
@@ -221,12 +221,7 @@ export class DiscoveryService {
         ...u,
         is_partner_of_week: partnerSet.has(u.id),
       }));
-      enriched.sort((a, b) => {
-        if (a.is_partner_of_week && !b.is_partner_of_week) return -1;
-        if (!a.is_partner_of_week && b.is_partner_of_week) return 1;
-        return 0;
-      });
-      return enriched;
+      return this.sortUsers(enriched, query.sort);
     };
 
     if (searchLat !== undefined && searchLon !== undefined) {
@@ -386,7 +381,7 @@ export class DiscoveryService {
     let queryBuilder = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
@@ -494,5 +489,50 @@ export class DiscoveryService {
     }
 
     return filtered.slice(0, 50) as unknown as UserProfile[];
+  }
+
+  private sortUsers(
+    users: UserProfile[],
+    sort?: string,
+    searchLat?: number,
+    searchLon?: number,
+  ): UserProfile[] {
+    if (!sort || !users.length) return users;
+    switch (sort) {
+      case 'best_match':
+        return users.sort((a, b) => {
+          const aPow = (a as any).is_partner_of_week ? 1 : 0;
+          const bPow = (b as any).is_partner_of_week ? 1 : 0;
+          if (aPow !== bPow) return bPow - aPow;
+          const streakA = a.study_streak_days ?? 0;
+          const streakB = b.study_streak_days ?? 0;
+          if (streakB !== streakA) return streakB - streakA;
+          const ratioA = a.correction_ratio ?? 0;
+          const ratioB = b.correction_ratio ?? 0;
+          if (ratioB !== ratioA) return ratioB - ratioA;
+          return 0;
+        });
+      case 'online_now':
+        return users.sort((a, b) => {
+          const aDate = (a as any).last_active_at ?? '';
+          const bDate = (b as any).last_active_at ?? '';
+          return bDate.localeCompare(aDate);
+        });
+      case 'nearest':
+        return users.sort((a, b) => {
+          const aDist = (a as any).distance ?? Number.MAX_VALUE;
+          const bDist = (b as any).distance ?? Number.MAX_VALUE;
+          if (aDist !== bDist) return aDist - bDist;
+          return 0;
+        });
+      case 'newest':
+        return users.sort((a, b) => {
+          const aDate = a.created_at ?? '';
+          const bDate = b.created_at ?? '';
+          return bDate.localeCompare(aDate);
+        });
+      default:
+        return users;
+    }
   }
 }
