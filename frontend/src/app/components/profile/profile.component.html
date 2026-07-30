@@ -79,7 +79,9 @@
         </div>
 
         <div class="flex items-center gap-2">
-          <a routerLink="/visitors" class="app-pill">{{ 'profile.visitorsLink' | t }}</a>
+          <button (click)="showVisitors.set(!showVisitors())" class="app-pill">
+            {{ showVisitors() ? ('profile.visitorsHide' | t) : ('profile.visitorsLink' | t) }}
+          </button>
           @if (profile()?.audio_intro_url) {
             <button
               (click)="playAudioIntro(profile()?.audio_intro_url)"
@@ -93,6 +95,42 @@
           </button>
         </div>
       </div>
+
+      @if (showVisitors()) {
+        <div class="mt-3">
+          <h3 class="text-xs font-semibold uppercase text-text-secondary mb-2">{{ 'profile.visitorsTitle' | t }}</h3>
+          @if (visitorsLoading()) {
+            <div class="flex items-center gap-2 text-xs text-text-secondary">{{ 'profile.loading' | t }}</div>
+          }
+          @if (visitorsError()) {
+            <div class="text-xs text-red-400">{{ visitorsError() }}</div>
+          }
+          @if (!visitorsLoading() && !visitorsError()) {
+            <div class="flex flex-wrap gap-2">
+              @for (visit of visitors(); track visit.id) {
+                <div class="flex items-center gap-2 rounded-full bg-surface-200 ps-2 pe-3 pt-1 pb-1 text-xs">
+                  @if (visit.visitor.avatar_url && visit.visitor.id !== 'hidden-vip-only') {
+                    <img
+                      [src]="visit.visitor.avatar_url"
+                      alt="avatar"
+                      class="h-6 w-6 rounded-full object-cover"
+                    />
+                  } @else {
+                    <div class="h-6 w-6 rounded-full bg-surface-300 flex items-center justify-center text-[8px] text-text-secondary">
+                      {{ visit.visitor.display_name?.charAt(0) || '?' }}
+                    </div>
+                  }
+                  <span>{{ visit.visitor.display_name || ('profile.anonymousVisitor' | t) }}</span>
+                  <span class="text-text-secondary">{{ visit.created_at | date:'short' }}</span>
+                </div>
+              }
+              @empty {
+                <span class="text-xs text-text-secondary">{{ 'profile.noVisitors' | t }}</span>
+              }
+            </div>
+          }
+        </div>
+      }
 
       <div
         class="mt-4 grid grid-cols-2 gap-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-3 pb-3 text-center sm:grid-cols-5"

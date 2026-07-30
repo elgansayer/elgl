@@ -5,6 +5,8 @@ import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SkeletonModule } from 'ngx-skeleton-loader';
 import { I18nService } from '../../services/i18n.service';
+import { ProfileVisitsService } from '../../services/profile-visits.service';
+import { ProfileVisit } from '../../interfaces/profile-visit.interface';
 import { UserService, UserProfile } from '../../services/user.service';
 import { CoverPhotoUploaderComponent } from '../cover-photo-uploader/cover-photo-uploader.component';
 import { HobbyTagsComponent } from '../hobby-tags/hobby-tags.component';
@@ -33,12 +35,17 @@ import { CelebrationOverlayComponent } from '../celebration-overlay/celebration-
 export class ProfileComponent implements OnInit {
   private userService = inject(UserService);
   private readonly i18n = inject(I18nService);
+  private profileVisitsService = inject(ProfileVisitsService);
 
   readonly profile = signal<UserProfile | null>(null);
   readonly isLoading = signal<boolean>(true);
   readonly isEditing = signal<boolean>(false);
   readonly errorMessage = signal<string>('');
   readonly successMessage = signal<string>('');
+  readonly visitors = signal<ProfileVisit[]>([]);
+  readonly visitorsLoading = signal(false);
+  readonly visitorsError = signal<string>('');
+  readonly showVisitors = signal(false);
 
   readonly avatarPreviewUrl = signal<string>('');
 
@@ -70,6 +77,7 @@ export class ProfileComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.loadProfile();
+    this.loadVisitors();
   }
 
   async loadProfile(): Promise<void> {
@@ -101,6 +109,21 @@ export class ProfileComponent implements OnInit {
       this.errorMessage.set(message || this.i18n.translate('profile.loadError'));
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  async loadVisitors(): Promise<void> {
+    this.visitorsLoading.set(true);
+    this.visitorsError.set('');
+    try {
+      const visits = await this.profileVisitsService.getMyVisitors();
+      // Limit to 5 for display
+      this.visitors.set(visits.slice(0, 5));
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      this.visitorsError.set(message);
+    } finally {
+      this.visitorsLoading.set(false);
     }
   }
 
