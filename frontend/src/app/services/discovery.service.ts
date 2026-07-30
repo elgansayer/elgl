@@ -20,6 +20,7 @@ export interface SearchFilterParams {
   age_max?: number;
   interests?: string;
   sort?: string;
+  has_audio_intro?: boolean;
 }
 
 @Injectable({
@@ -82,6 +83,9 @@ export class DiscoveryService {
 
     if (filters.sort)
       params = params.set('sort', filters.sort);
+
+    if (filters.has_audio_intro !== undefined)
+      params = params.set('has_audio_intro', filters.has_audio_intro.toString());
 
     const users = await firstValueFrom(
       this.http

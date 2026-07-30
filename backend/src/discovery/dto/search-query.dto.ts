@@ -91,4 +91,11 @@ export class SearchQueryDto {
   @IsOptional()
   @IsString()
   sort?: string;
+
+  @IsOptional()
+  @Transform(
+    ({ value }: { value: unknown }) => value === 'true' || value === true,
+  )
+  @IsBoolean()
+  has_audio_intro?: boolean;
 }

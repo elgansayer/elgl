@@ -163,6 +163,12 @@ export class DiscoveryService {
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false);
 
+    if (query.has_audio_intro) {
+      queryBuilder = queryBuilder
+        .not('audio_intro_url', 'is', null)
+        .neq('audio_intro_url', '');
+    }
+
     if (blockedIds.length > 0) {
       queryBuilder = queryBuilder.not('id', 'in', blockedIds);
     }
@@ -334,6 +340,12 @@ export class DiscoveryService {
       if (query.age_max !== undefined) {
         rpcResults = rpcResults.filter((u) => (u as any).age <= query.age_max);
       }
+
+      if (query.has_audio_intro) {
+        rpcResults = rpcResults.filter(
+          (u) => u.audio_intro_url && u.audio_intro_url.trim() !== '',
+        );
+      }
       const filtered = await this.filterByVoiceRoomActive(
         rpcResults,
         query.voice_room_active === true,
@@ -462,6 +474,12 @@ export class DiscoveryService {
 
     if (blockedIds.length > 0) {
       queryBuilder = queryBuilder.not('id', 'in', blockedIds);
+    }
+
+    if (query.has_audio_intro) {
+      queryBuilder = queryBuilder
+        .not('audio_intro_url', 'is', null)
+        .neq('audio_intro_url', '');
     }
 
     const nativeLang = native_language;
@@ -601,6 +619,12 @@ export class DiscoveryService {
     if (query.interests) {
       filtered = filtered.filter((u: any) =>
         u.interests?.includes(query.interests),
+      );
+    }
+
+    if (query.has_audio_intro) {
+      filtered = filtered.filter(
+        (u: any) => u.audio_intro_url && u.audio_intro_url !== '',
       );
     }
 

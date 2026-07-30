@@ -2731,3 +2731,17 @@
 [2026-07-30T10:59:03Z]   FAIL  backend lint
 [2026-07-30T10:59:38Z]   FAIL  backend test
 [2026-07-30T10:59:38Z] Tests have failures (pre-existing). Committing anyway.
+[2026-07-30T10:59:41Z] Committed: d1aded07 — feat: Add Language Proficiency filter (Beginner, Intermediate, Advanced).
+[2026-07-30T10:59:41Z] COMPLETED: Add Language Proficiency filter (Beginner, Intermediate, Advanced).
+[2026-07-30T10:59:41Z] Cooldown 15s...
+[2026-07-30T10:59:56Z] Task: Implement "Has Audio Intro" required filter.
+[2026-07-30T10:59:56Z] Queue: 30 pending, 182 done, 0 stuck
+[2026-07-30T10:59:56Z] Attempt 1/3
+[2026-07-30T10:59:56Z] Aider pass 1 (discover)...
+[2026-07-30T11:01:01Z] Pass 1: discovered 6 files
+[2026-07-30T11:01:01Z] Aider pass 2 round 1: 6 files in context
+[2026-07-30T11:02:31Z] Pass 2 round 1: produced 4 file changes
+[2026-07-30T11:02:42Z]   FAIL  frontend lint
+[2026-07-30T11:03:33Z]   FAIL  backend lint
+[2026-07-30T11:04:10Z]   FAIL  backend test
+[2026-07-30T11:04:10Z] Tests have failures (pre-existing). Committing anyway.
