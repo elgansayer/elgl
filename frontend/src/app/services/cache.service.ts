@@ -49,8 +49,16 @@ export class CacheService {
         cursorReq.onsuccess = () => {
           const cursor = cursorReq.result;
           if (cursor) {
-            const entry = cursor.value as { timestamp?: number };
-            const ageDays = entry.timestamp
+            const entry = cursor.value;
+            const ageDays = (function isTimestamp(
+              val: unknown,
+            ): val is { timestamp: number } {
+              return (
+                typeof val === 'object' &&
+                val !== null &&
+                'timestamp' in val
+              );
+            })(entry)
               ? (Date.now() - entry.timestamp) / (1000 * 60 * 60 * 24)
               : Infinity;
             if (ageDays > 30) {

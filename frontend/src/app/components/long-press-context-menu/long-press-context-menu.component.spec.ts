@@ -143,7 +143,7 @@ describe('LongPressContextMenuComponent', () => {
       preventDefault: vi.fn(),
     } as unknown as TouchEvent;
     component.onTouchStart(touchEvent);
-    component.onTouchMove();
+    (component as any).onTouchMove();
 
     expect((component as any).longPressTimer).toBeNull();
   });

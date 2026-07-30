@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ProfileCoverPhotoComponent } from './profile-cover-photo.component';
 import { CoverPhotoService } from '../../services/cover-photo.service';
@@ -13,11 +14,11 @@ class MockTranslatePipe implements PipeTransform {
 describe('ProfileCoverPhotoComponent', () => {
   let component: ProfileCoverPhotoComponent;
   let fixture: ComponentFixture<ProfileCoverPhotoComponent>;
-  let coverPhotoServiceSpy: jasmine.SpyObj<CoverPhotoService>;
+  let coverPhotoServiceSpy: { upload: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
-    coverPhotoServiceSpy = jasmine.createSpyObj('CoverPhotoService', ['upload']);
-    coverPhotoServiceSpy.upload.and.resolveTo('https://r2.example.com/cover.jpg');
+    coverPhotoServiceSpy = { upload: vi.fn() };
+    coverPhotoServiceSpy.upload.mockResolvedValue('https://r2.example.com/cover.jpg');
 
     await TestBed.configureTestingModule({
       imports: [ProfileCoverPhotoComponent],

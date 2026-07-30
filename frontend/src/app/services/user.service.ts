@@ -218,6 +218,14 @@ export class UserService {
     return this.updateMyProfile({ default_translation_language: lang });
   }
 
+  async updateNativeLanguages(nativeLanguages: string[]): Promise<UserProfile> {
+    return this.updateMyProfile({ native_languages: nativeLanguages });
+  }
+
+  async updateTargetLanguages(targetLanguages: string[]): Promise<UserProfile> {
+    return this.updateMyProfile({ target_languages: targetLanguages });
+  }
+
   async getMyVisitors(): Promise<VisitorLog[]> {
     return firstValueFrom(
       this.http.get<VisitorLog[]>(`${this.visitsUrl}/my-visitors`, { headers: this.getHeaders() }),
