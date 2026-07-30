@@ -202,4 +202,10 @@ export const routes: Routes = [
       import('./components/onboarding/onboarding-wizard.component').then((m) => m.OnboardingWizardComponent),
     title: 'Onboarding - HelloTalk',
   },
+  {
+    path: 'host-dashboard',
+    loadComponent: () =>
+      import('./components/host-dashboard/host-dashboard.component').then((m) => m.HostDashboardComponent),
+    title: 'Host Dashboard - HelloTalk',
+  },
 ];

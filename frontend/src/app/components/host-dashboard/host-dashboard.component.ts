@@ -1,8 +1,9 @@
-import { Component, input, computed } from '@angular/core';
+import { Component, input, computed, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AppCardComponent } from '../primitives/card/card.component';
-import { interval } from 'rxjs';
+import { interval, switchMap, startWith } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { HostDashboardService } from '../../services/host-dashboard.service';
 
 @Component({
   selector: 'app-host-dashboard',
@@ -44,13 +45,35 @@ import { toSignal } from '@angular/core/rxjs-interop';
   `,
 })
 export class HostDashboardComponent {
-  viewerCount = input<number>(0);
-  earnedCoins = input<number>(0);
-  startTime = input.required<Date>();
+  // Allow parent to override stats, otherwise component auto-fetches.
+  readonly roomId = input<string>('');
+  readonly viewerCount = signal<number>(0);
+  readonly earnedCoins = signal<number>(0);
+  readonly startTime = signal<Date>(new Date());
 
-  private tick = toSignal(interval(1000), { initialValue: 0 });
+  private readonly service = inject(HostDashboardService);
 
-  uptime = computed(() => {
+  private readonly poll = toSignal(
+    interval(10_000).pipe(
+      startWith(0),
+      switchMap(() => this.service.getDashboardStats(this.roomId())),
+    ),
+    { initialValue: { viewerCount: 0, earnedCoins: 0, startTime: new Date() } },
+  );
+
+  constructor() {
+    effect(() => {
+      const stats = this.poll();
+      if (!stats) return;
+      this.viewerCount.set(stats.viewerCount);
+      this.earnedCoins.set(stats.earnedCoins);
+      this.startTime.set(stats.startTime);
+    });
+  }
+
+  private readonly tick = toSignal(interval(1000), { initialValue: 0 });
+
+  readonly uptime = computed(() => {
     this.tick();
     const now = Date.now();
     const start = this.startTime().getTime();
