@@ -55,6 +55,7 @@ import { StudyBuddiesModule } from './study-buddies/study-buddies.module';
 import { AudioIntroModule } from './audio-intro/audio-intro.module';
 import { StatsModule } from './stats/stats.module';
 import { ScheduledDeletionModule } from './scheduled-deletion/scheduled-deletion.module';
+import { EventsModule } from './events/events.module';
 import { validationSchema } from './config/validation.schema';
 
 @Module({
@@ -127,6 +128,7 @@ import { validationSchema } from './config/validation.schema';
     AudioIntroModule,
     StatsModule,
     ScheduledDeletionModule,
+    EventsModule,
     ModerationModule,
   ],
   controllers: [AppController],

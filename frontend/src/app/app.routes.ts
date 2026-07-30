@@ -418,4 +418,10 @@ export const routes: Routes = [
       import('./components/language-parties/language-parties.component').then((m) => m.LanguagePartiesComponent),
     title: 'Language Parties - HelloTalk',
   },
+  {
+    path: 'events',
+    loadComponent: () =>
+      import('./components/events-feed/events-feed.component').then((m) => m.EventsFeedComponent),
+    title: 'Events - HelloTalk',
+  },
 ];
