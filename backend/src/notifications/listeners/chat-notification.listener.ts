@@ -16,11 +16,12 @@ export class ChatNotificationListener {
     const recipientId = payload.receiverId;
 
     try {
-      const shouldSend = await this.notificationPreferencesService.shouldSendNotification(
-        recipientId,
-        'new_message',
-        'push',
-      );
+      const shouldSend =
+        await this.notificationPreferencesService.shouldSendNotification(
+          recipientId,
+          'new_message',
+          'push',
+        );
       if (!shouldSend) {
         return;
       }

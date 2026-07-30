@@ -16,11 +16,12 @@ export class ProfileViewNotificationListener {
     const recipientId = payload.viewedId;
 
     try {
-      const shouldSend = await this.notificationPreferencesService.shouldSendNotification(
-        recipientId,
-        'profile_view',
-        'push',
-      );
+      const shouldSend =
+        await this.notificationPreferencesService.shouldSendNotification(
+          recipientId,
+          'profile_view',
+          'push',
+        );
       if (!shouldSend) {
         return;
       }

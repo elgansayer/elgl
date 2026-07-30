@@ -16,11 +16,12 @@ export class CommentNotificationListener {
     const recipientId = payload.momentAuthorId;
 
     try {
-      const shouldSend = await this.notificationPreferencesService.shouldSendNotification(
-        recipientId,
-        'moment_comment',
-        'push',
-      );
+      const shouldSend =
+        await this.notificationPreferencesService.shouldSendNotification(
+          recipientId,
+          'moment_comment',
+          'push',
+        );
       if (!shouldSend) {
         return;
       }
