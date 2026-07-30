@@ -15,6 +15,9 @@ export class ThemeService {
   constructor() {
     this.initTheme();
 
+    // Immediately apply the initial theme (avoids FOUC).
+    this.applyTheme(this.currentTheme());
+
     effect(() => {
       this.applyTheme(this.currentTheme());
     });
@@ -23,7 +26,7 @@ export class ThemeService {
     if (typeof window !== 'undefined') {
       window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
         if (this.currentTheme() === 'system') {
-          this.applyTheme('system');
+          this.applyTheme(this.currentTheme());
         }
       });
     }
@@ -52,10 +55,6 @@ export class ThemeService {
       theme === 'dark' ||
       (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    document.documentElement.classList.toggle('dark', isDark);
   }
 }
