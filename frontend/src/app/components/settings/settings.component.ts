@@ -45,6 +45,8 @@ export class SettingsComponent implements OnInit {
   vibrationEnabled = false;
 
   readonly linkedAccounts = signal<LinkedAccount[]>([]);
+  protected chatEnterToSend = false;
+  protected chatTextSize = 'medium';
 
   /** Providers we support linking */
   readonly supportedProviders = ['google', 'facebook', 'twitter', 'apple'] as const;
@@ -66,6 +68,8 @@ export class SettingsComponent implements OnInit {
         this.soundEffectsEnabled = Boolean(profile.sound_effects_enabled);
         this.vibrationEnabled = Boolean(profile.vibration_enabled);
         this.interests.set(profile.interests ?? []);
+        this.chatEnterToSend = Boolean(profile.chat_enter_to_send);
+        this.chatTextSize = profile.chat_text_size ?? 'medium';
       }
       // Load linked accounts
       const accounts = await this.userService.getLinkedAccounts();
@@ -165,6 +169,8 @@ export class SettingsComponent implements OnInit {
         vibration_enabled: this.vibrationEnabled,
         primary_accent_color: this.primaryAccentColor() ?? undefined,
         interests: this.interests(),
+        chat_enter_to_send: this.chatEnterToSend,
+        chat_text_size: this.chatTextSize,
       });
       this.successMessage.set('Settings saved successfully');
     } catch {

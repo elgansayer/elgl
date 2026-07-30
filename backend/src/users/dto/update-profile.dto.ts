@@ -258,4 +258,12 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsBoolean()
   vibration_enabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  chat_enter_to_send?: boolean;
+
+  @IsOptional()
+  @IsString()
+  chat_text_size?: 'small' | 'medium' | 'large';
 }

@@ -282,6 +282,8 @@ export class UsersService {
       is_vip: true,
       vip_tier: 'premium',
       coins_balance: 500,
+      chat_enter_to_send: false,
+      chat_text_size: 'medium',
       study_streak_days: 15,
       correction_ratio: 0.95,
       is_serious_learner: true,
@@ -380,6 +382,12 @@ export class UsersService {
 
     if (dto.vibration_enabled !== undefined)
       updatePayload.vibration_enabled = dto.vibration_enabled;
+
+    if (dto.chat_enter_to_send !== undefined)
+      updatePayload.chat_enter_to_send = dto.chat_enter_to_send;
+
+    if (dto.chat_text_size !== undefined)
+      updatePayload.chat_text_size = dto.chat_text_size;
 
     if (dto.business_name !== undefined)
       updatePayload.business_name = dto.business_name;

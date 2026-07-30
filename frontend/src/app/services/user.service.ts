@@ -45,6 +45,8 @@ export interface UserProfile {
   auto_download_media?: boolean;
   sound_effects_enabled?: boolean;
   vibration_enabled?: boolean;
+  chat_enter_to_send?: boolean;
+  chat_text_size?: 'small' | 'medium' | 'large';
   distance_metres?: number;
   is_admin?: boolean;
   profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
@@ -140,7 +142,7 @@ export class UserService {
     return firstValueFrom(
       this.http
         .get<UserProfile>(`${this.baseUrl}/me`, { headers: this.getHeaders() })
-        .pipe(catchError(() => of({...MOCK_USER_PROFILE, status_text:'Learning new languages!'}))),
+        .pipe(catchError(() => of({...MOCK_USER_PROFILE, status_text:'Learning new languages!', chat_enter_to_send: false, chat_text_size: 'medium'}))),
     );
   }
 
