@@ -1,13 +1,131 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventsQueryDto } from './dto/events-query.dto';
 
 @Injectable()
-export class EventsService {
+export class EventsService implements OnModuleInit {
   private readonly logger = new Logger(EventsService.name);
+  private intervalId: ReturnType<typeof setInterval> | null = null;
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
+
+  async onModuleInit() {
+    // Start background job that checks for upcoming event reminders every 60 seconds
+    this.intervalId = setInterval(() => this.checkReminders(), 60_000);
+  }
+
+  /**
+   * Scans events whose start time is between 14.5 and 15.5 minutes from now
+   * and sends a push reminder to each user who RSVPed as 'attending'.
+   */
+  private async checkReminders(): Promise<void> {
+    try {
+      const now = Date.now();
+      const minMillis = now + 14.5 * 60 * 1000; // 14.5 minutes ahead
+      const maxMillis = now + 15.5 * 60 * 1000; // 15.5 minutes ahead
+
+      const supabase = this.supabaseService.getClient();
+
+      const { data: events, error } = await supabase
+        .from('events')
+        .select('id, title, host_id, language_pair')
+        .gte('date_time', new Date(minMillis).toISOString())
+        .lte('date_time', new Date(maxMillis).toISOString());
+
+      if (error) {
+        this.logger.error(
+          'Failed to fetch upcoming events for reminders',
+          error,
+        );
+        return;
+      }
+
+      if (!events || events.length === 0) return;
+
+      for (const event of events) {
+        // Fetch attending users for this event
+        const { data: rsvps, error: rsvpError } = await supabase
+          .from('event_rsvps')
+          .select('user_id')
+          .eq('event_id', event.id)
+          .eq('status', 'attending');
+
+        if (rsvpError) {
+          this.logger.warn(
+            `Could not fetch RSVPs for event ${event.id}`,
+            rsvpError,
+          );
+          continue;
+        }
+
+        if (!rsvps) continue;
+
+        for (const rsvp of rsvps) {
+          await this.sendReminder(event.id, event.title, rsvp.user_id);
+        }
+      }
+    } catch (err) {
+      this.logger.error('Unexpected error in checkReminders', err);
+    }
+  }
+
+  /**
+   * Placeholder method that logs a reminder message and, in the future,
+   * will send an actual push notification via Firebase or a similar service.
+   */
+  private async sendReminder(
+    eventId: string,
+    eventTitle: string,
+    userId: string,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+
+    // Deduplicate: check if we already sent a reminder for this (event, user)
+    const { data: existing, error: fetchErr } = await supabase
+      .from('event_reminders_sent')
+      .select('id')
+      .eq('event_id', eventId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (fetchErr) {
+      this.logger.warn('Could not check existing reminder', fetchErr);
+      return;
+    }
+    if (existing) {
+      // Already notified
+      return;
+    }
+
+    // Send push notification using the existing NotificationsService
+    const title = `Event Reminder: ${eventTitle}`;
+    const body = `Your event "${eventTitle}" starts in 15 minutes.`;
+    await this.notificationsService.sendPushNotification(userId, {
+      type: 'event_reminder',
+      title,
+      body,
+      category: 'groups',
+    });
+
+    // Record that we sent the reminder to avoid duplicates
+    const { error: insertErr } = await supabase
+      .from('event_reminders_sent')
+      .insert({ event_id: eventId, user_id: userId });
+
+    if (insertErr) {
+      this.logger.warn('Failed to record sent reminder', insertErr);
+    }
+  }
 
   async createEvent(userId: string, dto: CreateEventDto) {
     const supabase = this.supabaseService.getClient();
