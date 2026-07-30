@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { DOCUMENT } from '@angular/common';
 import { User, Session, AuthError } from '@supabase/supabase-js';
@@ -232,6 +232,13 @@ export class AuthService {
 
   getAccessToken(): string | undefined {
     return this.currentSession()?.access_token;
+  }
+
+  getBearerHeaders(): HttpHeaders {
+    const token = this.getAccessToken();
+    return new HttpHeaders({
+      Authorization: token ? `Bearer ${token}` : '',
+    });
   }
 
   /**

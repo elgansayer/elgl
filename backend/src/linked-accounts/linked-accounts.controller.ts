@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Delete,
-  Query,
-  Body,
-  UseGuards,
-  Req,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Req } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { LinkedAccountsService } from './linked-accounts.service';
 import { Request } from 'express';
@@ -19,7 +10,7 @@ export class LinkedAccountsController {
   @UseGuards(SupabaseAuthGuard)
   @Get()
   async getLinkedAccounts(@Req() req: Request) {
-    const userId = req.user?.sub ?? req.user?.id;
+    const userId = (req as any).user?.id;
     return this.linkedAccountsService.getLinkedAccounts(userId);
   }
 
@@ -29,7 +20,7 @@ export class LinkedAccountsController {
     @Req() req: Request,
     @Body() body: { provider: string; name?: string },
   ) {
-    const userId = req.user?.sub ?? req.user?.id;
+    const userId = (req as any).user?.id;
     await this.linkedAccountsService.linkAccount(
       userId,
       body.provider,
@@ -41,7 +32,7 @@ export class LinkedAccountsController {
   @UseGuards(SupabaseAuthGuard)
   @Post('unlink')
   async unlinkAccount(@Req() req: Request, @Body() body: { provider: string }) {
-    const userId = req.user?.sub ?? req.user?.id;
+    const userId = (req as any).user?.id;
     await this.linkedAccountsService.unlinkAccount(userId, body.provider);
     return { success: true };
   }
