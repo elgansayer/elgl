@@ -88,10 +88,31 @@ export class EventsService {
     if (error || !data) {
       throw new NotFoundException('Event not found');
     }
+
+    // Fetch RSVP counts
+    const { count: attendingCount, error: aErr } = await supabase
+      .from('event_rsvps')
+      .select('id', { head: true, count: 'exact' })
+      .eq('event_id', eventId)
+      .eq('status', 'attending');
+    if (aErr) {
+      this.logger.warn('Failed to fetch attending count', aErr);
+    }
+    const { count: interestedCount, error: iErr } = await supabase
+      .from('event_rsvps')
+      .select('id', { head: true, count: 'exact' })
+      .eq('event_id', eventId)
+      .eq('status', 'interested');
+    if (iErr) {
+      this.logger.warn('Failed to fetch interested count', iErr);
+    }
+
     return {
       ...data,
       host_name: data.host?.display_name ?? null,
       host_avatar_url: data.host?.avatar_url ?? null,
+      attendees_count: attendingCount ?? 0,
+      interested_count: interestedCount ?? 0,
     };
   }
 
@@ -102,5 +123,63 @@ export class EventsService {
       'in_person_meetup',
       'cultural_exchange',
     ];
+  }
+
+  async getUserRsvp(userId: string, eventId: string) {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('event_rsvps')
+      .select('*')
+      .eq('event_id', eventId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Failed to get user RSVP', error);
+      throw error;
+    }
+    return data ?? null;
+  }
+
+  async createRsvp(
+    userId: string,
+    eventId: string,
+    status: 'attending' | 'interested',
+  ) {
+    const supabase = this.supabaseService.getClient();
+    // Delete existing RSVP for this user+event, then insert new one
+    const { error: deleteError } = await supabase
+      .from('event_rsvps')
+      .delete()
+      .eq('event_id', eventId)
+      .eq('user_id', userId);
+    if (deleteError) {
+      this.logger.error('Failed to remove existing RSVP', deleteError);
+      throw deleteError;
+    }
+    const { data, error } = await supabase
+      .from('event_rsvps')
+      .insert({ event_id: eventId, user_id: userId, status })
+      .select()
+      .single();
+    if (error) {
+      this.logger.error('Failed to create RSVP', error);
+      throw error;
+    }
+    return data;
+  }
+
+  async removeRsvp(userId: string, eventId: string) {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('event_rsvps')
+      .delete()
+      .eq('event_id', eventId)
+      .eq('user_id', userId);
+    if (error) {
+      this.logger.error('Failed to remove RSVP', error);
+      throw error;
+    }
+    return { success: true };
   }
 }
