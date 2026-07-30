@@ -346,6 +346,12 @@ export class UsersService {
     if (dto.silence_unknown_callers !== undefined)
       updatePayload.silence_unknown_callers = dto.silence_unknown_callers;
 
+    if (dto.sound_effects_enabled !== undefined)
+      updatePayload.sound_effects_enabled = dto.sound_effects_enabled;
+
+    if (dto.vibration_enabled !== undefined)
+      updatePayload.vibration_enabled = dto.vibration_enabled;
+
     if (dto.business_name !== undefined)
       updatePayload.business_name = dto.business_name;
     if (dto.business_hours !== undefined)

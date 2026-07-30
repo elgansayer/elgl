@@ -250,4 +250,12 @@ export class UpdateProfileDto {
   @ValidateNested()
   @Type(() => MessageFiltersDto)
   message_filters?: MessageFiltersDto;
+
+  @IsOptional()
+  @IsBoolean()
+  sound_effects_enabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  vibration_enabled?: boolean;
 }

@@ -41,6 +41,8 @@ export class SettingsComponent implements OnInit {
   privacyHideVipStatus = false;
   autoPlayVoiceNotes = false;
   autoDownloadMedia = false;
+  soundEffectsEnabled = false;
+  vibrationEnabled = false;
 
   readonly linkedAccounts = signal<LinkedAccount[]>([]);
 
@@ -61,6 +63,8 @@ export class SettingsComponent implements OnInit {
         this.privacyHideVipStatus = Boolean(profile.privacy_hide_vip_status);
         this.autoPlayVoiceNotes = Boolean(profile.auto_play_voice_notes);
         this.autoDownloadMedia = Boolean(profile.auto_download_media);
+        this.soundEffectsEnabled = Boolean(profile.sound_effects_enabled);
+        this.vibrationEnabled = Boolean(profile.vibration_enabled);
         this.interests.set(profile.interests ?? []);
       }
       // Load linked accounts
@@ -157,6 +161,8 @@ export class SettingsComponent implements OnInit {
         privacy_hide_vip_status: this.privacyHideVipStatus,
         auto_play_voice_notes: this.autoPlayVoiceNotes,
         auto_download_media: this.autoDownloadMedia,
+        sound_effects_enabled: this.soundEffectsEnabled,
+        vibration_enabled: this.vibrationEnabled,
         primary_accent_color: this.primaryAccentColor() ?? undefined,
         interests: this.interests(),
       });
