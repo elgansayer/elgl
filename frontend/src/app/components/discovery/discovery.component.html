@@ -44,30 +44,15 @@
     <!-- Gender Filter (VIP only) -->
     @if (isVip()) {
       <div class="flex overflow-x-auto hide-scrollbar gap-2 px-4 mt-3">
-        <button
-          (click)="setGender('')"
-          [class.bg-surface-200]="selectedGender() === ''"
-          [class.bg-surface-300]="selectedGender() !== ''"
-          class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-primary text-sm font-bold border border-surface-100 whitespace-nowrap"
+        <select
+          class="bg-surface-200 text-text-primary px-4 py-1.5 rounded-full border border-surface-100 text-sm font-bold appearance-none cursor-pointer"
+          [value]="selectedGender()"
+          (change)="setGender($any($event.target).value)"
         >
-          {{ 'discovery.genderAny' | t }}
-        </button>
-        <button
-          (click)="setGender('male')"
-          [class.bg-surface-200]="selectedGender() === 'male'"
-          [class.bg-surface-300]="selectedGender() !== 'male'"
-          class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-primary text-sm font-bold border border-surface-100 whitespace-nowrap"
-        >
-          {{ 'discovery.genderMale' | t }}
-        </button>
-        <button
-          (click)="setGender('female')"
-          [class.bg-surface-200]="selectedGender() === 'female'"
-          [class.bg-surface-300]="selectedGender() !== 'female'"
-          class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-primary text-sm font-bold border border-surface-100 whitespace-nowrap"
-        >
-          {{ 'discovery.genderFemale' | t }}
-        </button>
+          <option value="">{{ 'discovery.genderAny' | t }}</option>
+          <option value="male">{{ 'discovery.genderMale' | t }}</option>
+          <option value="female">{{ 'discovery.genderFemale' | t }}</option>
+        </select>
       </div>
     }
       <!-- Age range filter -->
