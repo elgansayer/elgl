@@ -200,4 +200,13 @@ export class ChatController {
     if (!user) return [];
     return this.chatService.getLockedChats(user.id);
   }
+
+  @Get('rooms/:roomId/export')
+  async exportChatHistory(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+  ): Promise<ChatMessage[]> {
+    if (!user) return [];
+    return await this.chatService.exportChatHistory(user.id, roomId);
+  }
 }

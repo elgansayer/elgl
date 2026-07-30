@@ -830,4 +830,50 @@ export class ChatService {
     // For future releases, delete the actual media from storage here
     // e.g., await this.viewOnceMediaService.deleteMedia(msg.media_url);
   }
+
+  /**
+   * Exports full chat history for the given room as an array of ChatMessage.
+   * The caller must be a member of the room.
+   */
+  async exportChatHistory(
+    userId: string,
+    roomId: string,
+  ): Promise<ChatMessage[]> {
+    const supabase = this.supabaseService.getClient();
+
+    // Verify membership
+    const { data: membership } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', roomId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this room');
+    }
+
+    // Fetch all messages for this room (up to 1000 for now)
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select(
+        `
+        *,
+        sender:users!chat_messages_sender_id_fkey (
+          id,
+          display_name,
+          avatar_url
+        )
+      `,
+      )
+      .eq('room_id', roomId)
+      .order('created_at', { ascending: true })
+      .limit(1000);
+
+    if (error) {
+      throw new Error(`Failed to fetch messages: ${error.message}`);
+    }
+
+    return (data ?? []) as ChatMessage[];
+  }
 }

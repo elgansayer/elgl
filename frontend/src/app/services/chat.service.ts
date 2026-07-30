@@ -463,4 +463,33 @@ export class ChatService {
       ),
     );
   }
+
+  /**
+   * Fetches the full message history for the given chat room (for export purposes).
+   */
+  async exportChatHistory(roomId: string): Promise<ChatMessage[]> {
+    return firstValueFrom(
+      this.http.get<ChatMessage[]>(`${this.baseUrl}/rooms/${roomId}/export`, {
+        headers: this.getHeaders(),
+      }),
+    );
+  }
+
+  /**
+   * Downloads the chat history as a JSON file directly in the browser.
+   */
+  async downloadChatHistory(roomId: string): Promise<void> {
+    if (typeof window === 'undefined') return;
+
+    const messages = await this.exportChatHistory(roomId);
+    const blob = new Blob([JSON.stringify(messages, null, 2)], {
+      type: 'application/json',
+    });
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `chat-history-${roomId}.json`;
+    anchor.click();
+    window.URL.revokeObjectURL(url);
+  }
 }
