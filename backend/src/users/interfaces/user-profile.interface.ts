@@ -24,6 +24,7 @@ export interface UserProfile {
   privacy_hide_gender: boolean;
   privacy_hide_exact_location: boolean;
   privacy_hide_online_status: boolean;
+  incognito_visits?: boolean;
   nationality?: string;
   region?: string;
   age?: number;

@@ -263,6 +263,7 @@ export class UsersService {
       silence_unknown_callers: false,
       status_visibility: 'public',
       corrector_score: 0,
+      incognito_visits: false,
       created_at: new Date().toISOString(),
       scheduled_for_deletion_at: undefined,
       xp_total: 100,
@@ -648,6 +649,7 @@ export class UsersService {
       privacy_profile_photo?: string;
       privacy_about_info?: string;
       privacy_status?: string;
+      incognito_visits?: boolean;
     },
   ): Promise<UserProfile> {
     const supabase = this.supabaseService.getClient();
@@ -661,6 +663,8 @@ export class UsersService {
       updatePayload.privacy_about_info = settings.privacy_about_info;
     if (settings.privacy_status !== undefined)
       updatePayload.privacy_status = settings.privacy_status;
+    if (settings.incognito_visits !== undefined)
+      updatePayload.incognito_visits = settings.incognito_visits;
 
     const response = await supabase
       .from('users')

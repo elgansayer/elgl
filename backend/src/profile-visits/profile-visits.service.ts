@@ -37,19 +37,12 @@ export class ProfileVisitsService {
     visitorId: string,
     viewedId: string,
     isVipVisitor: boolean,
+    incognitoEnabled: boolean,
   ): Promise<Record<string, unknown>> {
     if (visitorId === viewedId) return { ignored: true };
-    if (isVipVisitor) {
-      // VIP Incognito Mode option check
-      const supabase = this.supabaseService.getClient();
-      const userRes = await supabase
-        .from('users')
-        .select('privacy_hide_from_search')
-        .eq('id', visitorId)
-        .single();
-      if (userRes.data?.privacy_hide_from_search) {
-        return { incognito: true, ignored: true };
-      }
+    // VIP incognito mode: don't record visit at all
+    if (isVipVisitor && incognitoEnabled) {
+      return { incognito: true, ignored: true };
     }
 
     const supabase = this.supabaseService.getClient();

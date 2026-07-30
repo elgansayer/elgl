@@ -73,6 +73,7 @@ export class ProfileComponent implements OnInit {
   profileVisibility = signal<'everyone' | 'vips_only' | 'hidden'>('everyone');
 
   // Privacy fields
+  incognitoVisits = signal<boolean>(false);
   privacyLastSeen = 'everyone';
   privacyProfilePhoto = 'everyone';
   privacyAboutInfo = 'everyone';
@@ -102,6 +103,7 @@ export class ProfileComponent implements OnInit {
         this.bioText = data.bio_text || '';
         this.statusText = data.status_text || '';
         this.profileVisibility.set(data.profile_visibility || 'everyone');
+        this.incognitoVisits.set(data?.incognito_visits ?? false);
         this.privacyLastSeen = data.privacy_last_seen ?? 'everyone';
         this.privacyProfilePhoto = data.privacy_profile_photo ?? 'everyone';
         this.privacyAboutInfo = data.privacy_about_info ?? 'everyone';
@@ -216,6 +218,7 @@ export class ProfileComponent implements OnInit {
           privacy_profile_photo: this.privacyProfilePhoto,
           privacy_about_info: this.privacyAboutInfo,
           privacy_status: this.privacyStatus,
+          incognito_visits: this.incognitoVisits(),
         });
       } catch {
         // ignore privacy update errors

@@ -34,6 +34,7 @@ export interface UserProfile {
   privacy_hide_gender: boolean;
   privacy_hide_exact_location?: boolean;
   privacy_hide_online_status?: boolean;
+  incognito_visits?: boolean;
   silence_unknown_callers?: boolean;
   status_visibility?: string;
   auto_play_voice_notes?: boolean;
@@ -460,6 +461,7 @@ export class UserService {
     privacy_profile_photo?: string;
     privacy_about_info?: string;
     privacy_status?: string;
+    incognito_visits?: boolean;
     privacy_hide_exact_location?: boolean;
     privacy_hide_online_status?: boolean;
   }): Promise<UserProfile> {
