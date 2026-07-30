@@ -16,6 +16,7 @@ import { TranscriptEgressService } from './transcript-egress.service';
 import { NlpService } from '../nlp/nlp.service';
 import { CreatePollDto } from './dto/create-poll.dto';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
+import { PlaySoundDto } from './dto/play-sound.dto';
 import {
   ApproveSpeakerDto,
   ArchiveRoomDto,
@@ -884,5 +885,75 @@ export class AudioRoomsService implements OnModuleInit {
     if (room.co_host_id === userId) return true;
     if (room.speakers && room.speakers.includes(userId)) return true;
     return false;
+  }
+
+  private readonly soundboardSounds = [
+    {
+      id: 'applause',
+      name: 'Applause',
+      url: 'https://r2.hellotalk.mock/sounds/applause.mp3',
+      icon: '👏',
+    },
+    {
+      id: 'laugh',
+      name: 'Laughter',
+      url: 'https://r2.hellotalk.mock/sounds/laugh.mp3',
+      icon: '😂',
+    },
+    {
+      id: 'drumroll',
+      name: 'Drum Roll',
+      url: 'https://r2.hellotalk.mock/sounds/drumroll.mp3',
+      icon: '🥁',
+    },
+    {
+      id: 'airhorn',
+      name: 'Air Horn',
+      url: 'https://r2.hellotalk.mock/sounds/airhorn.mp3',
+      icon: '📯',
+    },
+    {
+      id: 'gong',
+      name: 'Gong',
+      url: 'https://r2.hellotalk.mock/sounds/gong.mp3',
+      icon: '🔔',
+    },
+  ];
+
+  async getSoundboardSounds(): Promise<{ sounds: any[] }> {
+    return { sounds: this.soundboardSounds };
+  }
+
+  async playSound(
+    userId: string,
+    dto: PlaySoundDto,
+  ): Promise<{ success: boolean; soundUrl: string | null }> {
+    const supabase = this.supabaseService.getClient();
+    const { data: roomRow, error } = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', dto.room_id)
+      .single();
+    if (error || !roomRow) {
+      throw new NotFoundException('Room not found');
+    }
+    const room = roomRow as AudioRoomRow;
+    // Only host or co‑host may play a sound
+    if (room.host_id !== userId && room.co_host_id !== userId) {
+      throw new ForbiddenException('Only the host or co‑host can play a sound');
+    }
+    const sound = this.soundboardSounds.find((s) => s.id === dto.sound_id);
+    if (!sound) {
+      throw new NotFoundException(`Sound '${dto.sound_id}' not found`);
+    }
+    // Publish the sound effect to every participant via Centrifugo
+    await this.centrifugoService.publish(`room_${room.id}`, {
+      type: 'soundboard_play',
+      sound_id: sound.id,
+      sound_name: sound.name,
+      sound_url: sound.url,
+      triggered_by: userId,
+    });
+    return { success: true, soundUrl: sound.url };
   }
 }

@@ -15,6 +15,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { AudioRoomsService } from './audio-rooms.service';
 import { CreatePollDto } from './dto/create-poll.dto';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
+import { PlaySoundDto } from './dto/play-sound.dto';
 import { TranscriptEgressService } from './transcript-egress.service';
 import {
   ApproveSpeakerDto,
@@ -210,5 +211,19 @@ export class AudioRoomsController {
     totalVotes: number;
   }> {
     return this.audioRoomsService.getPollResults(_roomId, pollId);
+  }
+
+  @Get('soundboard/list')
+  async listSoundboardSounds(): Promise<{ sounds: any[] }> {
+    return this.audioRoomsService.getSoundboardSounds();
+  }
+
+  @Post('soundboard/play')
+  async playSound(
+    @CurrentUser() user: User | null,
+    @Body() dto: PlaySoundDto,
+  ): Promise<{ success: boolean; soundUrl: string | null } | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.playSound(user.id, dto);
   }
 }
