@@ -229,4 +229,45 @@ export class MediaService implements OnModuleInit {
 
     return { coverUrl };
   }
+
+  async uploadAndSetAvatarImage(
+    userId: string,
+    file: Express.Multer.File,
+  ): Promise<{ avatarUrl: string }> {
+    // 1. Compress image
+    const compressedBuffer = await this.imageCompressionService.compress(
+      file.buffer,
+      file.mimetype,
+    );
+
+    // 2. Generate unique object key
+    const uniqueHash = crypto.randomBytes(8).toString('hex');
+    const extension = file.originalname.split('.').pop() || 'jpg';
+    const objectKey = `avatars/${userId}/${Date.now()}-${uniqueHash}.${extension}`;
+
+    // 3. Upload compressed buffer to R2
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: objectKey,
+      Body: compressedBuffer,
+      ContentType: file.mimetype || 'image/jpeg',
+    });
+
+    await this.s3Client.send(command);
+
+    const avatarUrl = `${this.publicDomain}/${objectKey}`;
+
+    // 4. Update user record
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('users')
+      .update({ avatar_url: avatarUrl })
+      .eq('id', userId);
+
+    if (error) {
+      throw new Error('Failed to update avatar photo URL');
+    }
+
+    return { avatarUrl };
+  }
 }

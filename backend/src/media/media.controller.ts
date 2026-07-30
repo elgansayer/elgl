@@ -57,4 +57,16 @@ export class MediaController {
     }
     return this.mediaService.uploadAndSetCoverImage(req.user.id, file);
   }
+
+  @Post('avatar/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadAvatarImage(
+    @Req() req: { user: { id: string } },
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<{ avatarUrl: string }> {
+    if (!file) {
+      throw new BadRequestException('No image file uploaded');
+    }
+    return this.mediaService.uploadAndSetAvatarImage(req.user.id, file);
+  }
 }
