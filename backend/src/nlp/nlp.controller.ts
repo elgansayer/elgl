@@ -113,6 +113,20 @@ export class NlpController {
     );
   }
 
+  @Post('translate-and-correct')
+  async translateAndCorrect(
+    @CurrentUser() user: User | null,
+    @Body() dto: TranslateDto,
+  ) {
+    if (!user) return null;
+    const profile = await this.usersService.getProfile(user.id);
+    return await this.nlpService.translateAndCorrect(
+      user.id,
+      profile?.is_vip ?? false,
+      dto,
+    );
+  }
+
   @Post('translate-bio')
   async translateBio(
     @CurrentUser() user: User | null,

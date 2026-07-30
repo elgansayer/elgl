@@ -566,6 +566,169 @@ export class NlpService {
     };
   }
 
+  async translateAndCorrect(
+    userId: string,
+    isVip: boolean,
+    dto: TranslateDto,
+  ): Promise<{
+    original_text: string;
+    translated_text: string;
+    detected_language: string;
+    transliteration: string;
+    definition: string;
+    pronunciation_url: string;
+    wordCorrections: Array<{
+      original: string;
+      corrected: string;
+      explanation: string;
+      offset: number;
+      isCorrect: boolean;
+    }>;
+  }> {
+    await this.checkRateLimit(userId, isVip);
+
+    // Detect source language if not provided
+    const detected =
+      dto.source_language || this.detectLanguage(dto.text).language;
+    const cleanWord = dto.text.trim();
+
+    const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
+    if (!deepLKey) {
+      throw new BadRequestException('DeepL API key not configured');
+    }
+
+    // Translate the original text via DeepL
+    const res = await fetch('https://api-free.deepl.com/v2/translate', {
+      method: 'POST',
+      headers: {
+        Authorization: `DeepL-Auth-Key ${deepLKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: [cleanWord],
+        target_lang: dto.target_language.toUpperCase(),
+        source_lang: detected.toUpperCase(),
+        tag_handling: 'xml',
+      }),
+    });
+
+    if (!res.ok) {
+      const errorBody = await res.text();
+      throw new BadRequestException(
+        `DeepL API error: ${res.status} ${errorBody}`,
+      );
+    }
+
+    const jsonResponse = (await res.json()) as unknown as {
+      translations: Array<{ text: string }>;
+    };
+    const translatedText = jsonResponse.translations[0].text;
+
+    let correctedText = cleanWord;
+    let explanation = '';
+    const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
+
+    // Obtain grammar‑style correction via Azure (mirrors the way
+    // grammarCheck works but does not count a second API call)
+    if (azureKey) {
+      const detectRes = await fetch(
+        'https://api.cognitive.microsofttranslator.com/detect?api-version=3.0',
+        {
+          method: 'POST',
+          headers: {
+            'Ocp-Apim-Subscription-Key': azureKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify([{ Text: cleanWord }]),
+        },
+      );
+      const detectData = (await detectRes.json()) as Array<{
+        language: string;
+      }>;
+      const detectedLang = detectData?.[0]?.language || 'en';
+
+      const dictRes = await fetch(
+        `https://api.cognitive.microsofttranslator.com/dictionary/lookup?api-version=3.0&from=${detectedLang}&to=en`,
+        {
+          method: 'POST',
+          headers: {
+            'Ocp-Apim-Subscription-Key': azureKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify([{ Text: cleanWord }]),
+        },
+      );
+      const dictData = (await dictRes.json()) as Array<{
+        displayTarget?: string;
+      }>;
+      correctedText = dictData?.[0]?.displayTarget || cleanWord;
+
+      const explainRes = await fetch(
+        `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=${detectedLang}&to=en&textType=html`,
+        {
+          method: 'POST',
+          headers: {
+            'Ocp-Apim-Subscription-Key': azureKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify([
+            {
+              Text: `Grammar correction: "${cleanWord}" → "${correctedText}"`,
+            },
+          ]),
+        },
+      );
+      if (explainRes.ok) {
+        const explainData = (await explainRes.json()) as Array<{
+          translations: Array<{ text: string }>;
+        }>;
+        explanation =
+          explainData[0]?.translations[0]?.text || 'Corrected via Azure AI';
+      } else {
+        explanation = 'Corrected via Azure AI';
+      }
+    }
+
+    // Build word‑level corrections to match Tandem‑style structured UI (every word)
+    const originalWords = cleanWord.split(/\s+/);
+    const correctedWords = correctedText.split(/\s+/);
+    const wordCorrections: Array<{
+      original: string;
+      corrected: string;
+      explanation: string;
+      offset: number;
+      isCorrect: boolean;
+    }> = [];
+    let currentPos = 0;
+    for (let i = 0; i < originalWords.length; i++) {
+      const origWord = originalWords[i];
+      const startIndex = cleanWord.indexOf(origWord, currentPos);
+      const corrWord = correctedWords[i] ?? origWord;
+      const isCorrect = origWord === corrWord;
+      wordCorrections.push({
+        original: origWord,
+        corrected: corrWord,
+        explanation: isCorrect ? '' : explanation,
+        offset: startIndex >= 0 ? startIndex : currentPos,
+        isCorrect,
+      });
+      currentPos =
+        startIndex >= 0
+          ? startIndex + origWord.length
+          : currentPos + origWord.length;
+    }
+
+    return {
+      original_text: cleanWord,
+      translated_text: translatedText,
+      detected_language: detected,
+      transliteration: '',
+      definition: `Translation of "${cleanWord}" in ${dto.target_language}`,
+      pronunciation_url: `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(translatedText)}&tl=${dto.target_language}`,
+      wordCorrections,
+    };
+  }
+
   async generateSessionSummary(
     text: string,
   ): Promise<{ summary: string; vocabulary: string[] }> {
