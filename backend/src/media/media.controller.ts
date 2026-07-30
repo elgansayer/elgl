@@ -45,4 +45,16 @@ export class MediaController {
   ): Promise<{ coverUrl: string }> {
     return this.mediaService.confirmCoverUpload(req.user.id, objectKey);
   }
+
+  @Post('cover/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadCoverImage(
+    @Req() req: { user: { id: string } },
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<{ coverUrl: string }> {
+    if (!file) {
+      throw new BadRequestException('No image file uploaded');
+    }
+    return this.mediaService.uploadAndSetCoverImage(req.user.id, file);
+  }
 }

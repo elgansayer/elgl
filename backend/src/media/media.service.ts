@@ -1,6 +1,11 @@
 import { Injectable, OnModuleInit, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  PutObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import * as crypto from 'crypto';
 import * as fs from 'fs/promises';
@@ -9,6 +14,7 @@ import * as path from 'path';
 import { PresignedUrlDto } from './dto/presigned-url.dto';
 import { SupabaseService } from '../supabase/supabase.service';
 import { AudioCompressionService } from './audio-compression.service';
+import { ImageCompressionService } from './image-compression.service';
 
 @Injectable()
 export class MediaService implements OnModuleInit {
@@ -20,6 +26,7 @@ export class MediaService implements OnModuleInit {
     private readonly configService: ConfigService,
     private readonly supabaseService: SupabaseService,
     private readonly audioCompressionService: AudioCompressionService,
+    private readonly imageCompressionService: ImageCompressionService,
   ) {}
 
   onModuleInit() {
@@ -126,9 +133,91 @@ export class MediaService implements OnModuleInit {
     userId: string,
     objectKey: string,
   ): Promise<{ coverUrl: string }> {
+    const bucket = this.bucket;
+    const key = objectKey;
+
+    // 1. Retrieve object metadata (ContentType)
+    let contentType: string;
+    try {
+      const headResult = await this.s3Client.send(
+        new HeadObjectCommand({ Bucket: bucket, Key: key }),
+      );
+      contentType = headResult.ContentType || 'image/jpeg';
+    } catch {
+      contentType = 'image/jpeg';
+    }
+
+    // 2. Download original object
+    const getResult = await this.s3Client.send(
+      new GetObjectCommand({ Bucket: bucket, Key: key }),
+    );
+    const stream = getResult.Body as import('stream').Readable;
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    const originalBuffer = Buffer.concat(chunks);
+
+    // 3. Compress image
+    const compressedBuffer = await this.imageCompressionService.compress(
+      originalBuffer,
+      contentType,
+    );
+
+    // 4. Overwrite with compressed version
+    await this.s3Client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: compressedBuffer,
+        ContentType: contentType,
+      }),
+    );
+
+    // 5. Update user record (same URL)
     const supabase = this.supabaseService.getClient();
+    const coverUrl = `${this.publicDomain}/${key}`;
+    const { error } = await supabase
+      .from('users')
+      .update({ cover_url: coverUrl })
+      .eq('id', userId);
+
+    if (error) {
+      throw new Error('Failed to update cover photo URL');
+    }
+
+    return { coverUrl };
+  }
+
+  async uploadAndSetCoverImage(
+    userId: string,
+    file: Express.Multer.File,
+  ): Promise<{ coverUrl: string }> {
+    // 1. Compress image
+    const compressedBuffer = await this.imageCompressionService.compress(
+      file.buffer,
+      file.mimetype,
+    );
+
+    // 2. Generate unique object key
+    const uniqueHash = crypto.randomBytes(8).toString('hex');
+    const extension = file.originalname.split('.').pop() || 'jpg';
+    const objectKey = `covers/${userId}/${Date.now()}-${uniqueHash}.${extension}`;
+
+    // 3. Upload compressed buffer to R2
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: objectKey,
+      Body: compressedBuffer,
+      ContentType: file.mimetype || 'image/jpeg',
+    });
+
+    await this.s3Client.send(command);
+
     const coverUrl = `${this.publicDomain}/${objectKey}`;
 
+    // 4. Update user record
+    const supabase = this.supabaseService.getClient();
     const { error } = await supabase
       .from('users')
       .update({ cover_url: coverUrl })

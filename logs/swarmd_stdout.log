@@ -329,3 +329,26 @@ To github.com:elgansayer/hellotalk.git
 [2026-07-30T00:18:09Z]   FAIL  backend lint
 [2026-07-30T00:18:40Z]   FAIL  backend test
 [2026-07-30T00:18:40Z] Tests have failures (pre-existing). Committing anyway.
+[main 1293d819] feat: Add "Voice Room Active" filter to find users currently hosting streams.
+ 7 files changed, 96 insertions(+), 6 deletions(-)
+ rename .tasks/{pending => completed}/0000-020-add-voice-room-active-filter-to-find-users-currently-hosting.task (100%)
+remote: 
+remote: GitHub found 11 vulnerabilities on elgansayer/hellotalk's default branch (6 high, 5 moderate). To find out more, visit:        
+remote:      https://github.com/elgansayer/hellotalk/security/dependabot        
+remote: 
+To github.com:elgansayer/hellotalk.git
+   6f5ae656..1293d819  main -> main
+[2026-07-30T00:18:43Z] Committed: 1293d819 — feat: Add "Voice Room Active" filter to find users currently hosting streams.
+[2026-07-30T00:18:43Z] COMPLETED: Add "Voice Room Active" filter to find users currently hosting streams.
+[2026-07-30T00:18:43Z] Cooldown 15s...
+[2026-07-30T00:18:58Z] Task: Integrate ImageCompressionService into the R2 upload flow (e.g., in MediaService
+[2026-07-30T00:18:58Z] Queue: 192 pending, 20 done, 0 stuck
+[2026-07-30T00:18:58Z] Attempt 1/3
+[2026-07-30T00:18:58Z] Aider pass 1 (discover)...
+[2026-07-30T00:20:08Z] Pass 1: discovered 4 files
+[2026-07-30T00:20:08Z] Aider pass 2 round 1: 4 files in context
+[2026-07-30T00:21:08Z] Pass 2 round 1: produced 3 file changes
+[2026-07-30T00:21:18Z]   FAIL  frontend lint
+[2026-07-30T00:21:57Z]   FAIL  backend lint
+[2026-07-30T00:22:29Z]   FAIL  backend test
+[2026-07-30T00:22:29Z] Tests have failures (pre-existing). Committing anyway.
