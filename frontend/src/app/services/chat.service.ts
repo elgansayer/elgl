@@ -362,6 +362,17 @@ export class ChatService {
     );
   }
 
+  async getRoomMembers(
+    roomId: string,
+  ): Promise<{ user_id: string; display_name?: string; avatar_url?: string | null }[]> {
+    return firstValueFrom(
+      this.http.get<{ user_id: string; display_name?: string; avatar_url?: string | null }[]>(
+        `${this.baseUrl}/rooms/${roomId}/members`,
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
   async translateText(text: string, targetLanguage: string): Promise<{ translated_text: string }> {
     return firstValueFrom(
       this.http.post<{ translated_text: string }>(

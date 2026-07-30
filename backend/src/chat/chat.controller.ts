@@ -137,4 +137,20 @@ export class ChatController {
     );
     return { translated_text: translated, detected_language: detected };
   }
+
+  @Get('rooms/:roomId/members')
+  async getRoomMembers(
+    @Param('roomId') roomId: string,
+    @CurrentUser() user: User | null,
+  ): Promise<
+    { user_id: string; display_name?: string; avatar_url?: string | null }[]
+  > {
+    if (!user) return [];
+    const members = await this.chatService.getGroupMembers(roomId);
+    return members.map((m: any) => ({
+      user_id: m.user_id,
+      display_name: m.user?.display_name,
+      avatar_url: m.user?.avatar_url,
+    }));
+  }
 }

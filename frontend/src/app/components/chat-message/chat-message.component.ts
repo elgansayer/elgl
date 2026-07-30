@@ -1,4 +1,4 @@
-import { Component, input, output, inject, signal, effect } from '@angular/core';
+import { Component, input, output, inject, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
@@ -40,7 +40,15 @@ import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
             [class.bg-surface-300]="!isOwnMessage()"
           >
             @if (message().message_type === 'text') {
-              <p class="text-sm">{{ message().text_content }}</p>
+              <p class="text-sm">
+                @for (segment of textSegments(); track $index) {
+                  @if (segment.isMention) {
+                    <span class="font-bold text-blue-400 cursor-pointer">{{ segment.value }}</span>
+                  } @else {
+                    {{ segment.value }}
+                  }
+                }
+              </p>
               <button
                 (click)="simplifyText()"
                 class="text-xs text-blue-400 ms-2 mt-1"
@@ -132,6 +140,25 @@ export class ChatMessageComponent {
   isBlocked = signal(false);
   simplifiedText = signal<string | null>(null);
   simplifying = signal(false);
+
+  textSegments = computed(() => {
+    const text = this.message()?.text_content ?? '';
+    const regex = /@([\w\u0641-\u06FF\u0600-\u06FF\u2013]|[\u00C0-\u024F])+/g;
+    const parts: { isMention: boolean; value: string }[] = [];
+    let match: RegExpExecArray | null;
+    let lastIndex = 0;
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ isMention: false, value: text.slice(lastIndex, match.index) });
+      }
+      parts.push({ isMention: true, value: match[0] });
+      lastIndex = regex.lastIndex;
+    }
+    if (lastIndex < text.length) {
+      parts.push({ isMention: false, value: text.slice(lastIndex) });
+    }
+    return parts;
+  });
 
   constructor() {
     effect(() => {
