@@ -292,7 +292,7 @@ export class AuthService {
     const accessToken = this.currentSession()?.access_token;
     const res = await lastValueFrom(
       this.http.post<{ url: string }>(
-        `${this.apiUrl}/generate-device-link`,
+        `${this.apiUrl}/transfer/generate`,
         {},
         {
           headers: {
@@ -302,6 +302,19 @@ export class AuthService {
       ),
     );
     return res.url;
+  }
+
+  /**
+   * Consume a device‑transfer token (called on the receiving device).
+   * Returns a short‑lived swap JWT that can be exchanged for a real session.
+   */
+  async consumeDeviceLink(token: string): Promise<{ swapToken: string }> {
+    return await lastValueFrom(
+      this.http.post<{ swapToken: string }>(
+        `${this.apiUrl}/transfer/consume`,
+        { token },
+      ),
+    );
   }
 
   private http = inject(HttpClient);

@@ -309,4 +309,12 @@ export const routes: Routes = [
       ),
     title: 'Call Logs - HelloTalk',
   },
+  {
+    path: 'device-transfer',
+    loadComponent: () =>
+      import('./components/device-transfer/device-transfer.component').then(
+        (m) => m.DeviceTransferComponent,
+      ),
+    title: 'Device Transfer - HelloTalk',
+  },
 ];
