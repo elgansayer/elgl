@@ -387,4 +387,12 @@ export const routes: Routes = [
       ),
     title: 'Account Deletion - HelloTalk',
   },
+  {
+    path: 'version',
+    loadComponent: () =>
+      import('./components/version-check/version-check.component').then(
+        (m) => m.VersionCheckComponent,
+      ),
+    title: 'App Version - HelloTalk',
+  },
 ];

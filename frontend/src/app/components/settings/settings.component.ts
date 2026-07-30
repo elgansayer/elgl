@@ -4,6 +4,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
 import { UserService, LinkedAccount } from '../../services/user.service';
 import { CacheService } from '../../services/cache.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-settings',
@@ -15,6 +16,7 @@ export class SettingsComponent implements OnInit {
   private cacheService = inject(CacheService);
   private userService = inject(UserService);
   private location = inject(Location);
+  private router = inject(Router);
 
   readonly isLoading = signal(true);
   readonly isDownloading = signal(false);
@@ -225,5 +227,9 @@ export class SettingsComponent implements OnInit {
     } finally {
       this.isDownloading.set(false);
     }
+  }
+
+  openVersionCheck(): void {
+    this.router.navigate(['/version']);
   }
 }

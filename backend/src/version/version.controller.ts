@@ -1,14 +1,12 @@
 import { Controller, Get } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { VersionService } from './version.service';
 
-@Controller('config')
+@Controller('version')
 export class VersionController {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly versionService: VersionService) {}
 
-  @Get('min-version')
-  getMinVersion() {
-    const version =
-      this.configService.get<string>('MIN_APP_VERSION') || '1.0.0';
-    return { minAppVersion: version };
+  @Get()
+  getVersion(): { current: string; latest: string } {
+    return this.versionService.getVersion();
   }
 }

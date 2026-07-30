@@ -4221,3 +4221,28 @@ To github.com:elgansayer/hellotalk.git
 [2026-07-30T10:30:37Z]   FAIL  backend lint
 [2026-07-30T10:31:14Z]   FAIL  backend test
 [2026-07-30T10:31:14Z] Tests have failures (pre-existing). Committing anyway.
+[main bf6725f7] feat: Add Support Centre and FAQ viewer.
+ 8 files changed, 191 insertions(+), 11 deletions(-)
+ rename .tasks/{pending => completed}/0000-175-add-support-centre-and-faq-viewer.task (100%)
+ create mode 100644 frontend/src/app/pages/support-centre/support-centre.component.ts
+ create mode 100644 frontend/src/app/services/help-faq.service.ts
+remote: 
+remote: GitHub found 11 vulnerabilities on elgansayer/hellotalk's default branch (6 high, 5 moderate). To find out more, visit:        
+remote:      https://github.com/elgansayer/hellotalk/security/dependabot        
+remote: 
+To github.com:elgansayer/hellotalk.git
+   49f83b07..bf6725f7  main -> main
+[2026-07-30T10:31:16Z] Committed: bf6725f7 — feat: Add Support Centre and FAQ viewer.
+[2026-07-30T10:31:16Z] COMPLETED: Add Support Centre and FAQ viewer.
+[2026-07-30T10:31:16Z] Cooldown 15s...
+[2026-07-30T10:31:31Z] Task: Implement App Version display and update checker.
+[2026-07-30T10:31:31Z] Queue: 37 pending, 175 done, 0 stuck
+[2026-07-30T10:31:31Z] Attempt 1/3
+[2026-07-30T10:31:31Z] Aider pass 1 (discover)...
+[2026-07-30T10:33:31Z] Pass 1: discovered 13 files
+[2026-07-30T10:33:31Z] Aider pass 2 round 1: 13 files in context
+[2026-07-30T10:34:37Z] Pass 2 round 1: produced 7 file changes
+[2026-07-30T10:34:48Z]   FAIL  frontend lint
+[2026-07-30T10:35:35Z]   FAIL  backend lint
+[2026-07-30T10:36:09Z]   FAIL  backend test
+[2026-07-30T10:36:09Z] Tests have failures (pre-existing). Committing anyway.
