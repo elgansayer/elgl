@@ -124,4 +124,10 @@ export class MonetisationService {
       ),
     );
   }
+
+  getCoinsBalance(): Promise<{ coins_balance: number }> {
+    return firstValueFrom(
+      this.http.get<{ coins_balance: number }>(`${this.baseUrl}/coins-balance`),
+    );
+  }
 }

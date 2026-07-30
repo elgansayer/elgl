@@ -378,4 +378,62 @@ export class MonetisationService {
     }
     throw new BadRequestException('Invalid platform');
   }
+
+  /**
+   * Deduct coins from user's balance.
+   * Throws BadRequestException if insufficient coins.
+   */
+  async deductCoins(userId: string, amount: number): Promise<number> {
+    const supabase = this.supabaseService.getClient();
+    const { data: user, error: fetchError } = await supabase
+      .from('users')
+      .select('coins_balance')
+      .eq('id', userId)
+      .single();
+
+    if (fetchError || !user) {
+      throw new Error(
+        `Failed to fetch user balance: ${fetchError?.message ?? 'user not found'}`,
+      );
+    }
+
+    const currentBalance = user.coins_balance ?? 0;
+    if (currentBalance < amount) {
+      throw new BadRequestException(
+        `Insufficient coins. You have ${currentBalance} coins but need ${amount}. Please purchase a coin pack from the store.`,
+      );
+    }
+
+    const newBalance = currentBalance - amount;
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ coins_balance: newBalance })
+      .eq('id', userId);
+
+    if (updateError) {
+      throw new Error(`Failed to deduct coins: ${updateError.message}`);
+    }
+
+    this.logger.log(
+      `Deducted ${amount} coins from user ${userId}, remaining ${newBalance}`,
+    );
+
+    return newBalance;
+  }
+
+  async getCoinsBalance(userId: string): Promise<number> {
+    const supabase = this.supabaseService.getClient();
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('coins_balance')
+      .eq('id', userId)
+      .single();
+    if (error || !user) {
+      throw new Error(
+        `Failed to fetch user balance: ${error?.message ?? 'user not found'}`,
+      );
+    }
+    const balance = user.coins_balance ?? 0;
+    return balance;
+  }
 }

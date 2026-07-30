@@ -141,4 +141,11 @@ export class MonetisationController {
       dto.receipt_data,
     );
   }
+
+  @Get('coins-balance')
+  @UseGuards(SupabaseAuthGuard)
+  async getCoinsBalance(@CurrentUser() user: User | null) {
+    if (!user) return null;
+    return await this.monetisationService.getCoinsBalance(user.id);
+  }
 }
