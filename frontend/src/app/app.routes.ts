@@ -357,4 +357,12 @@ export const routes: Routes = [
       ),
     title: 'Resource Library - HelloTalk',
   },
+  {
+    path: 'study-streak',
+    loadComponent: () =>
+      import('./components/study-streak-counter/study-streak-counter.component').then(
+        (m) => m.StudyStreakCounterComponent,
+      ),
+    title: 'Study Streak - HelloTalk',
+  },
 ];

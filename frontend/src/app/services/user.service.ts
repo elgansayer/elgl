@@ -390,6 +390,14 @@ export class UserService {
     return null;
   }
 
+  async getStudyStreak(): Promise<number> {
+    const stats = await firstValueFrom(
+      this.http.get<Partial<UserProfile>>(`${this.baseUrl}/me/stats`, { headers: this.getHeaders() })
+        .pipe(catchError(() => of({} as Partial<UserProfile>)))
+    );
+    return stats?.study_streak_days ?? 0;
+  }
+
   async getAvailableHobbies(): Promise<string[]> {
     return firstValueFrom(
       this.http.get<string[]>(`${this.baseUrl}/hobbies`, { headers: this.getHeaders() })
