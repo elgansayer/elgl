@@ -349,4 +349,12 @@ export const routes: Routes = [
     component: StudyBuddyComponent,
     title: 'Study Buddy Matching - HelloTalk',
   },
+  {
+    path: 'resource-library',
+    loadComponent: () =>
+      import('./components/resource-library/resource-library.component').then(
+        (m) => m.ResourceLibraryComponent,
+      ),
+    title: 'Resource Library - HelloTalk',
+  },
 ];
