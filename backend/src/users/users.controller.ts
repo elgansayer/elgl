@@ -7,6 +7,7 @@ import {
   Post,
   Put,
   Delete,
+  Query,
   UseGuards,
   UnauthorizedException,
   BadRequestException,
@@ -181,6 +182,24 @@ export class UsersController {
   @Get(':id/stats')
   async getUserStats(@Param('id') id: string): Promise<Partial<UserProfile>> {
     return this.usersService.getUserStats(id);
+  }
+
+  @Get(':id/followers')
+  async getFollowers(
+    @Param('id') id: string,
+    @Query('limit') limit?: number,
+    @Query('offset') offset?: number,
+  ): Promise<{ data: UserProfile[]; total: number }> {
+    return this.usersService.getFollowers(id, limit ?? 20, offset ?? 0);
+  }
+
+  @Get(':id/following')
+  async getFollowing(
+    @Param('id') id: string,
+    @Query('limit') limit?: number,
+    @Query('offset') offset?: number,
+  ): Promise<{ data: UserProfile[]; total: number }> {
+    return this.usersService.getFollowing(id, limit ?? 20, offset ?? 0);
   }
 
   @Get('me/privacy-settings')

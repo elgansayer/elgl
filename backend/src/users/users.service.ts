@@ -49,6 +49,26 @@ export class UsersService {
       (profile as any).corrector_score = 0;
     }
 
+    // Attach follower / following counts
+    let followersCount = 0;
+    let followingCount = 0;
+    try {
+      const { count: fc } = await supabase
+        .from('user_follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('following_id', userId);
+      const { count: fng } = await supabase
+        .from('user_follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('follower_id', userId);
+      followersCount = fc ?? 0;
+      followingCount = fng ?? 0;
+    } catch {
+      // leave zero.
+    }
+    (profile as any).followers_count = followersCount;
+    (profile as any).following_count = followingCount;
+
     return profile;
   }
 
@@ -252,6 +272,8 @@ export class UsersService {
       catalog: [],
       greeting_message: 'Hello! I am happy to practice languages with you.',
       away_message: 'I am away right now. I will reply later.',
+      followers_count: 0,
+      following_count: 0,
     };
   }
 
@@ -510,6 +532,86 @@ export class UsersService {
         `Failed to update message filters: ${error.message}`,
       );
     }
+  }
+
+  async getFollowers(
+    userId: string,
+    limit = 20,
+    offset = 0,
+  ): Promise<{ data: UserProfile[]; total: number }> {
+    const supabase = this.supabaseService.getClient();
+    const { count, error: countError } = await supabase
+      .from('user_follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('following_id', userId);
+    if (countError) {
+      throw new InternalServerErrorException('Failed to count followers');
+    }
+    const total = count ?? 0;
+    const { data, error } = await supabase
+      .from('user_follows')
+      .select(
+        `
+        follower_id,
+        follower:follower_id (
+          id,
+          display_name,
+          avatar_url,
+          native_languages,
+          target_languages
+        )
+      `,
+      )
+      .eq('following_id', userId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+    if (error) {
+      throw new InternalServerErrorException('Failed to fetch followers');
+    }
+    const users: UserProfile[] = (data ?? []).map(
+      (row: any) => row.follower as UserProfile,
+    );
+    return { data: users, total };
+  }
+
+  async getFollowing(
+    userId: string,
+    limit = 20,
+    offset = 0,
+  ): Promise<{ data: UserProfile[]; total: number }> {
+    const supabase = this.supabaseService.getClient();
+    const { count, error: countError } = await supabase
+      .from('user_follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('follower_id', userId);
+    if (countError) {
+      throw new InternalServerErrorException('Failed to count following');
+    }
+    const total = count ?? 0;
+    const { data, error } = await supabase
+      .from('user_follows')
+      .select(
+        `
+        following_id,
+        following:following_id (
+          id,
+          display_name,
+          avatar_url,
+          native_languages,
+          target_languages
+        )
+      `,
+      )
+      .eq('follower_id', userId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+    if (error) {
+      throw new InternalServerErrorException('Failed to fetch following');
+    }
+    const users: UserProfile[] = (data ?? []).map(
+      (row: any) => row.following as UserProfile,
+    );
+    return { data: users, total };
   }
 
   async generateDeviceLink(userId: string): Promise<string> {
