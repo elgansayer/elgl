@@ -21,6 +21,10 @@ export interface UserProfile {
   privacy_hide_location: boolean;
   privacy_hide_from_search: boolean;
   privacy_hide_gender: boolean;
+  nationality?: string;
+  region?: string;
+  age?: number;
+  gender?: string;
   status_visibility?: string;
   proficiency_level?: string;
   learning_goals?: string;

@@ -3,10 +3,13 @@ import {
   ArrayMinSize,
   IsArray,
   IsBoolean,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
   ValidateNested,
   Matches,
 } from 'class-validator';
@@ -125,6 +128,22 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsBoolean()
   privacy_hide_gender?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  nationality?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  region?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(150)
+  age?: number;
 
   @IsOptional()
   @IsBoolean()
