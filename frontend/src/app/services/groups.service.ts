@@ -37,4 +37,16 @@ export class GroupsService {
       this.http.delete<{ success: boolean }>(`${this.apiUrl}/${groupId}/members/${userId}`),
     );
   }
+
+  generateInviteCode(roomId: string): Promise<{ code: string }> {
+    return firstValueFrom(
+      this.http.post<{ code: string }>(`${this.apiUrl}/${roomId}/invite-code`, {}),
+    );
+  }
+
+  joinByInviteCode(code: string): Promise<{ success: boolean }> {
+    return firstValueFrom(
+      this.http.post<{ success: boolean }>(`${this.apiUrl}/join-by-code`, { code }),
+    );
+  }
 }

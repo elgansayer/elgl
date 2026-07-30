@@ -75,4 +75,24 @@ export class GroupsController {
     if (!user) return [];
     return await this.groupsService.getGroupMembers(roomId);
   }
+
+  @Post(':roomId/invite-code')
+  async generateInviteCode(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+  ): Promise<{ code: string } | null> {
+    if (!user) return null;
+    const code = await this.groupsService.generateInviteCode(user.id, roomId);
+    return { code };
+  }
+
+  @Post('join-by-code')
+  async joinByInviteCode(
+    @CurrentUser() user: User | null,
+    @Body() body: { code: string },
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.groupsService.joinByInviteCode(user.id, body.code);
+    return { success: true };
+  }
 }

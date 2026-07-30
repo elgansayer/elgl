@@ -1,7 +1,14 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+  ConflictException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SystemMessageService } from './services/system-message.service';
 import { ChatRoomRecord } from './interfaces/chat-message.interface';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class GroupsService {
@@ -145,5 +152,48 @@ export class GroupsService {
 
     if (error) throw new Error('Failed to fetch group members');
     return data || [];
+  }
+
+  async generateInviteCode(userId: string, roomId: string): Promise<string> {
+    await this.verifyAdmin(userId, roomId);
+    const supabase = this.supabaseService.getClient();
+    const code = randomBytes(6).toString('hex');
+    const { error } = await supabase
+      .from('chat_rooms')
+      .update({ invite_code: code })
+      .eq('id', roomId);
+    if (error)
+      throw new InternalServerErrorException('Failed to generate invite code');
+    return code;
+  }
+
+  async joinByInviteCode(userId: string, code: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { data: room, error: roomErr } = await supabase
+      .from('chat_rooms')
+      .select('id, title')
+      .eq('invite_code', code)
+      .single();
+    if (roomErr || !room)
+      throw new NotFoundException('Invalid or expired invite code');
+    const roomId = room.id;
+
+    const { data: member } = await supabase
+      .from('chat_room_members')
+      .select('id')
+      .match({ room_id: roomId, user_id: userId })
+      .maybeSingle();
+    if (member)
+      throw new ConflictException('You are already a member of this group');
+
+    const { error: insertErr } = await supabase
+      .from('chat_room_members')
+      .insert({ room_id: roomId, user_id: userId });
+    if (insertErr)
+      throw new InternalServerErrorException('Failed to join group');
+
+    await this.systemMessageService.publishToRoom(roomId, 'memberAdded', {
+      count: 1,
+    });
   }
 }
