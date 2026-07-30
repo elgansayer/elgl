@@ -115,16 +115,15 @@ recover_hung_pane() {
 
 recover_full_restart() {
     can_recover || return 1
-    send_telegram "🔧 <b>Auto-Recovery: Full swarm restart</b>\nRunning <code>kickoff.sh</code>."
+    send_telegram "🔧 <b>Auto-Recovery: Full swarm restart</b>\nRunning <code>swarmd.py</code>."
     tmux kill-session -t ai_swarm 2>/dev/null || true
     sleep 3
+    pkill -9 -f "swarmd.py" 2>/dev/null || true
     pkill -9 -f "loop.sh" 2>/dev/null || true
-    pkill -9 -f "qa-loop.sh" 2>/dev/null || true
-    pkill -9 -f "pm-loop.sh" 2>/dev/null || true
     pkill -9 -f "aider" 2>/dev/null || true
     pkill -9 -f "claude" 2>/dev/null || true
     sleep 2
-    cd "$REPO_DIR" && bash "$REPO_DIR/kickoff.sh" >> /tmp/kickoff_recovery.log 2>&1 &
+    cd "$REPO_DIR" && tmux new-session -d -s ai_swarm "python3 $REPO_DIR/swarmd.py"
     sleep 5
     return 0
 }
@@ -156,7 +155,7 @@ if $SESSION_DEAD; then
     local_log "tmux session ai_swarm is dead"
     alert "session_dead" \
         "SWARM DOWN - tmux session dead" \
-        "The <code>ai_swarm</code> tmux session is not running.\n\nAttempting automatic restart via <code>kickoff.sh</code>..."
+        "The <code>ai_swarm</code> tmux session is not running.\n\nAttempting automatic restart via <code>swarmd.py</code>..."
     recover_full_restart
     exit 0
 fi
@@ -189,40 +188,7 @@ else
     echo 0 > "$NO_COMMIT_COUNT"
 fi
 
-# --- CHECK 3: Main pane hung? (uses line count, not string equality) ---
-MAIN_PANE_LINES=$(tmux capture-pane -t ai_swarm:Main_Swarm -p 2>/dev/null | wc -l)
-if [ -f "$PANE_LINE_CACHE" ] && [ -n "$MAIN_PANE_LINES" ]; then
-    prev_lines=$(cat "$PANE_LINE_CACHE" 2>/dev/null || echo 0)
-    if [ "$MAIN_PANE_LINES" -eq "$prev_lines" ] && [ "$prev_lines" -gt 0 ]; then
-        stalls=$(cat "$CONSECUTIVE_STALLS" 2>/dev/null || echo 0)
-        stalls=$((stalls + 1))
-        echo "$stalls" > "$CONSECUTIVE_STALLS"
-        if [ "$stalls" -ge 4 ]; then
-            summary=$(get_swarm_summary)
-            local_log "Main pane line count unchanged for 4+ cycles. State: $summary"
-            alert "pane_hung" \
-                "Main pane appears hung" \
-                "Line count unchanged for ${stalls} cycles ($((stalls * 5)) mins).\nState: ${summary}\n\nAttempting pane restart..."
-            recover_hung_pane "Main_Swarm" "loop.sh"
-            echo 0 > "$CONSECUTIVE_STALLS"
-        fi
-    else
-        echo 0 > "$CONSECUTIVE_STALLS"
-    fi
-fi
-echo "$MAIN_PANE_LINES" > "$PANE_LINE_CACHE"
-
-# --- CHECK 4: Sudo password prompt? -----------------------------------
-for window in Main_Swarm PM_Swarm; do
-    pane_content=$(tmux capture-pane -t "ai_swarm:$window" -p 2>/dev/null || echo "")
-    if echo "$pane_content" | grep -q "\[sudo\] password"; then
-        local_log "Sudo password prompt visible in $window pane"
-        alert "sudo_prompt" \
-            "Sudo prompt blocking pipeline" \
-            "A <code>[sudo] password</code> prompt is visible in <code>$window</code>.\n\nAttempting auto-answer..."
-        recover_sudo "$window"
-    fi
-done
+# CHECK 3 (Pane Hung) and CHECK 4 (Sudo prompt) removed because swarmd.py handles liveness internally.
 
 # --- CHECK 5: Heartbeat stale? -----------------------------------------
 if [ -f "$HEARTBEAT" ]; then
@@ -238,7 +204,7 @@ if [ -f "$HEARTBEAT" ]; then
             local_log "Heartbeat stale for $((shc * 5)) mins. Triggering full restart."
             alert "swarm_blocked" \
                 "SWARM BLOCKED - Heartbeat stale" \
-                "Main loop heartbeat stale for $((shc * 5)) mins.\nState: ${summary}\n\nTriggering full restart via kickoff.sh..."
+                "Main loop heartbeat stale for $((shc * 5)) mins.\nState: ${summary}\n\nTriggering full restart via swarmd.py..."
             recover_full_restart
             echo 0 > "$STALE_HEARTBEAT"
         fi
