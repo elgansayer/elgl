@@ -348,7 +348,7 @@ private findRemoteVideoTrack(userId: string): RemoteVideoTrack | null {
     participant: RemoteParticipant,
   ): void {
     if (track.kind === Track.Kind.Video) {
-      const videoTrack = track as RemoteVideoTrack;
+      const videoTrack: RemoteVideoTrack = track;
       this.remoteVideoTracksByIdentity.update((map) => {
         const next = new Map(map);
         next.set(participant.identity, videoTrack);

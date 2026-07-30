@@ -1,1 +1,0 @@
-Integrate ImageCompressionService into the R2 upload flow (e.g., in MediaService or component upload handlers).

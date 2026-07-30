@@ -1,9 +1,7 @@
 import {
   Component,
   inject,
-  effect,
   OnInit,
-  signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';

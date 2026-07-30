@@ -189,6 +189,46 @@ export class MediaService implements OnModuleInit {
     return { coverUrl };
   }
 
+  async processUploadedImage(objectKey: string): Promise<void> {
+    // Retrieve object metadata (ContentType)
+    let contentType: string;
+    try {
+      const headResult = await this.s3Client.send(
+        new HeadObjectCommand({ Bucket: this.bucket, Key: objectKey }),
+      );
+      contentType = headResult.ContentType || 'image/jpeg';
+    } catch {
+      contentType = 'image/jpeg';
+    }
+
+    // Download original object
+    const getResult = await this.s3Client.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: objectKey }),
+    );
+    const stream = getResult.Body as import('stream').Readable;
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    const originalBuffer = Buffer.concat(chunks);
+
+    // Compress image
+    const compressedBuffer = await this.imageCompressionService.compress(
+      originalBuffer,
+      contentType,
+    );
+
+    // Overwrite with compressed version
+    await this.s3Client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: objectKey,
+        Body: compressedBuffer,
+        ContentType: contentType,
+      }),
+    );
+  }
+
   async uploadAndSetCoverImage(
     userId: string,
     file: Express.Multer.File,

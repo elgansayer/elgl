@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { ImageCompressionService } from './image-compression.service';
 
 export interface AvatarUploadResponse {
   avatarUrl: string;
@@ -12,11 +13,14 @@ export interface AvatarUploadResponse {
 })
 export class MediaService {
   private readonly http = inject(HttpClient);
+  private readonly imageCompression = inject(ImageCompressionService);
   private readonly baseUrl = `${environment.apiUrl}/media`;
 
   async uploadAvatar(file: File): Promise<AvatarUploadResponse> {
+    // Compress image client-side before uploading
+    const compressed = await this.imageCompression.compressImage(file);
     const formData = new FormData();
-    formData.append('file', file, file.name);
+    formData.append('file', compressed, compressed.name);
 
     return firstValueFrom(
       this.http.post<AvatarUploadResponse>(`${this.baseUrl}/avatar/upload`, formData),

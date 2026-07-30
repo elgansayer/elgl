@@ -64,7 +64,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
                 <p class="text-sm text-surface-400">
                   {{ log.call_type }}
                   · {{ log.started_at | date:'short' }}
-                  @if (log.duration_seconds != null) {
+                  @if (log.duration_seconds !== null) {
                     · {{ log.duration_seconds }}s
                   }
                 </p>
