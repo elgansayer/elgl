@@ -14,6 +14,8 @@ export interface AudioRoomRecord {
   listeners_count: number;
   recording_url?: string | null;
   created_at: string;
+  is_private?: boolean;
+  invited_user_ids?: string[];
   host?: {
     id: string;
     display_name?: string;

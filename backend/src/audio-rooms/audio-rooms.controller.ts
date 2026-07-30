@@ -39,6 +39,7 @@ import { VoiceRoomNote } from './interfaces/voice-room-note.interface';
 import { CreateVoiceRoomNoteDto } from './dto/voice-room-note.dto';
 import { GetCallLogsQueryDto } from './dto/get-call-logs-query.dto';
 import { CreateLanguagePartyDto } from './dto/create-language-party.dto';
+import { CreatePrivatePartyDto } from './dto/create-private-party.dto';
 
 @Controller('audio-rooms')
 @UseGuards(SupabaseAuthGuard)
@@ -86,6 +87,14 @@ export class AudioRoomsController {
     return await this.audioRoomsService.getDistinctLevels();
   }
 
+  @Get('private')
+  async getPrivateRooms(
+    @CurrentUser() user: User | null,
+  ): Promise<AudioRoomRecord[]> {
+    if (!user) return [];
+    return this.audioRoomsService.getInvitedPrivateRooms(user.id);
+  }
+
   @Get(':id')
   async getRoom(@Param('id') id: string): Promise<AudioRoomRecord> {
     return await this.audioRoomsService.getRoom(id);
@@ -98,6 +107,15 @@ export class AudioRoomsController {
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
     return await this.audioRoomsService.createLanguageParty(user.id, dto);
+  }
+
+  @Post('private')
+  async createPrivateParty(
+    @CurrentUser() user: User | null,
+    @Body() dto: CreatePrivatePartyDto,
+  ): Promise<AudioRoomRecord | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.createPrivateRoom(user.id, dto);
   }
 
   @Post('raise-hand')

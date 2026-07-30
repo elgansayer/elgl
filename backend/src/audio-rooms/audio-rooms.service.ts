@@ -20,6 +20,7 @@ import { CreatePollDto } from './dto/create-poll.dto';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
 import { PlaySoundDto } from './dto/play-sound.dto';
 import { CreateLanguagePartyDto } from './dto/create-language-party.dto';
+import { CreatePrivatePartyDto } from './dto/create-private-party.dto';
 import {
   ApproveSpeakerDto,
   ArchiveRoomDto,
@@ -56,6 +57,8 @@ interface AudioRoomRow {
   recording_url?: string | null;
   egress_id?: string | null;
   created_at: string;
+  is_private?: boolean;
+  invited_user_ids?: string[];
 }
 
 interface UserProfileRow {
@@ -262,6 +265,44 @@ export class AudioRoomsService implements OnModuleInit {
     };
   }
 
+  async createPrivateRoom(
+    hostId: string,
+    dto: CreatePrivatePartyDto,
+  ): Promise<AudioRoomRecord> {
+    // Verify VIP status
+    const hostProfile = await this.usersService.getProfile(hostId);
+    if (!hostProfile?.is_vip) {
+      throw new ForbiddenException(
+        'Only VIP members can create private rooms.',
+      );
+    }
+
+    // Reuse base room creation
+    const room = await this.createRoom(hostId, {
+      title: dto.title,
+      language_pair: dto.language_pair,
+      topic_tag: dto.topic_tag,
+      is_video_stream: dto.is_video_stream ?? false,
+      level: dto.level,
+    });
+
+    // Mark as private and store invited users
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('audio_rooms')
+      .update({
+        is_private: true,
+        invited_user_ids: dto.invited_user_ids,
+      })
+      .eq('id', room.id);
+
+    if (error) {
+      this.logger.warn('Failed to set private fields', error);
+    }
+
+    return this.getRoom(room.id);
+  }
+
   async generateToken(
     userId: string,
     dto: JoinRoomDto,
@@ -277,6 +318,16 @@ export class AudioRoomsService implements OnModuleInit {
     }
 
     const room = response.data as AudioRoomRow;
+    // Private room access check
+    if (
+      (room as any).is_private &&
+      !(room as any).invited_user_ids?.includes(userId) &&
+      room.host_id !== userId
+    ) {
+      throw new ForbiddenException(
+        'This is a private room. You are not invited.',
+      );
+    }
     const isHost = room.host_id === userId;
     const isSpeaker =
       isHost || (room.speakers && room.speakers.includes(userId));
@@ -327,6 +378,9 @@ export class AudioRoomsService implements OnModuleInit {
   ): Promise<AudioRoomRecord[]> {
     const supabase = this.supabaseService.getClient();
     let query = supabase.from('audio_rooms').select('*').eq('is_active', true);
+
+    // Exclude private rooms from public listing
+    query = query.or('is_private.is.null,is_private.eq.false');
 
     if (partyType) {
       query = query.eq('party_type', partyType);
@@ -776,6 +830,47 @@ export class AudioRoomsService implements OnModuleInit {
         .filter((l): l is string => l !== null && l !== ''),
     );
     return Array.from(levels).sort();
+  }
+
+  async getInvitedPrivateRooms(userId: string): Promise<AudioRoomRecord[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('is_active', true)
+      .eq('is_private', true)
+      .or(`host_id.eq.${userId},invited_user_ids.cs.["${userId}"]`)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error || !data) {
+      this.logger.warn('Could not fetch invited private rooms', error);
+      return [];
+    }
+
+    const rows = data as AudioRoomRow[];
+    if (rows.length === 0) return [];
+
+    const hostIds = Array.from(new Set(rows.map((r) => r.host_id)));
+    const { data: profiles } = await supabase
+      .from('users')
+      .select('id, display_name, avatar_url')
+      .in('id', hostIds);
+    const profileRows = (profiles ?? []) as UserProfileRow[];
+    const profileMap = new Map<string, UserProfileRow>();
+    profileRows.forEach((p) => profileMap.set(p.id, p));
+
+    return rows.map((r) => {
+      const p = profileMap.get(r.host_id);
+      return {
+        ...r,
+        host: {
+          id: p?.id ?? r.host_id,
+          display_name: p?.display_name ?? 'Room Host',
+          avatar_url: p?.avatar_url ?? null,
+        },
+      };
+    });
   }
 
   async getActiveHostIds(): Promise<string[]> {
