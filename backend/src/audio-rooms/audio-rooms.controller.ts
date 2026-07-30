@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -19,6 +27,8 @@ import {
   CaptionRecord,
   RoomTokenResponse,
 } from './interfaces/audio-room.interface';
+import { VoiceRoomNote } from './interfaces/voice-room-note.interface';
+import { CreateVoiceRoomNoteDto } from './dto/voice-room-note.dto';
 
 @Controller('audio-rooms')
 @UseGuards(SupabaseAuthGuard)
@@ -123,5 +133,30 @@ export class AudioRoomsController {
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
     return await this.audioRoomsService.archiveRoom(user.id, dto);
+  }
+
+  @Post(':roomId/notes')
+  async addNote(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+    @Body() dto: CreateVoiceRoomNoteDto,
+  ): Promise<VoiceRoomNote | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.addNote(roomId, user.id, dto);
+  }
+
+  @Get(':roomId/notes')
+  async getNotes(@Param('roomId') roomId: string): Promise<VoiceRoomNote[]> {
+    return await this.audioRoomsService.getNotes(roomId);
+  }
+
+  @Delete(':roomId/notes/:noteId')
+  async deleteNote(
+    @CurrentUser() user: User | null,
+    @Param('roomId') _roomId: string,
+    @Param('noteId') noteId: string,
+  ): Promise<void> {
+    if (!user) return;
+    return await this.audioRoomsService.deleteNote(noteId, user.id);
   }
 }

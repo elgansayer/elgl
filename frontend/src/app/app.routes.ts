@@ -293,4 +293,12 @@ export const routes: Routes = [
       ),
     title: 'Lessons - HelloTalk',
   },
+  {
+    path: 'voiceroom-notes/:roomId',
+    loadComponent: () =>
+      import('./components/voiceroom-notes/voiceroom-notes.component').then(
+        (m) => m.VoiceroomNotesComponent,
+      ),
+    title: 'Voice Room Notes - HelloTalk',
+  },
 ];

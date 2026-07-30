@@ -10,6 +10,8 @@ import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { ConfigService } from '@nestjs/config';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { CentrifugoService } from '../chat/centrifugo.service';
+import { CreateVoiceRoomNoteDto } from './dto/voice-room-note.dto';
+import { VoiceRoomNote } from './interfaces/voice-room-note.interface';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import {
@@ -595,5 +597,96 @@ export class AudioRoomsService implements OnModuleInit {
     }
     const rows = data as Array<{ host_id: string }>;
     return [...new Set(rows.map((r) => r.host_id))];
+  }
+
+  async addNote(
+    roomId: string,
+    userId: string,
+    dto: CreateVoiceRoomNoteDto,
+  ): Promise<VoiceRoomNote> {
+    const supabase = this.supabaseService.getClient();
+    const room = await this.getRoom(roomId);
+    if (!this.isAuthorizedInRoom(room, userId)) {
+      throw new ForbiddenException('Only host or speakers can post notes.');
+    }
+    const profile = await this.usersService.getProfile(userId);
+    const authorName = profile?.display_name ?? 'Unknown';
+
+    const response = await supabase
+      .from('audio_room_notes')
+      .insert({
+        room_id: room.id,
+        author_id: userId,
+        author_name: authorName,
+        content: dto.content,
+        vocabulary: dto.vocabulary ?? null,
+      })
+      .select()
+      .single();
+    if (response.error || !response.data) {
+      throw new Error(
+        `Failed to add note: ${response.error?.message ?? 'Unknown error'}`,
+      );
+    }
+    const noteRow = response.data as VoiceRoomNote;
+
+    // Broadcast to room via Centrifugo
+    void this.centrifugoService.publish(`room_${room.id}`, {
+      type: 'voice_room_note',
+      note: noteRow,
+    });
+
+    return noteRow;
+  }
+
+  async getNotes(roomId: string): Promise<VoiceRoomNote[]> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_room_notes')
+      .select('*')
+      .eq('room_id', roomId)
+      .order('created_at', { ascending: false });
+    if (response.error) {
+      throw new Error(`Failed to fetch notes: ${response.error.message}`);
+    }
+    return (response.data ?? []) as VoiceRoomNote[];
+  }
+
+  async deleteNote(noteId: string, userId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const noteResponse = await supabase
+      .from('audio_room_notes')
+      .select('*')
+      .eq('id', noteId)
+      .single();
+    if (!noteResponse.data) {
+      throw new NotFoundException('Note not found');
+    }
+    const note = noteResponse.data as VoiceRoomNote;
+    const room = await this.getRoom(note.room_id);
+    // Only note author or host can delete
+    if (note.author_id !== userId && room.host_id !== userId) {
+      throw new ForbiddenException('Not authorised to delete this note.');
+    }
+    const { error } = await supabase
+      .from('audio_room_notes')
+      .delete()
+      .eq('id', noteId);
+    if (error) {
+      throw new Error(`Failed to delete note: ${error.message}`);
+    }
+    // Broadcast removal to room
+    void this.centrifugoService.publish(`room_${room.id}`, {
+      type: 'voice_room_note_deleted',
+      note_id: noteId,
+      room_id: room.id,
+    });
+  }
+
+  private isAuthorizedInRoom(room: AudioRoomRecord, userId: string): boolean {
+    if (room.host_id === userId) return true;
+    if (room.co_host_id === userId) return true;
+    if (room.speakers && room.speakers.includes(userId)) return true;
+    return false;
   }
 }
