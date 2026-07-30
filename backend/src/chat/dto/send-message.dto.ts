@@ -30,4 +30,8 @@ export class SendMessageDto {
     corrected: string;
     explanation?: string;
   };
+
+  @IsOptional()
+  @IsString()
+  reply_to_id?: string;
 }

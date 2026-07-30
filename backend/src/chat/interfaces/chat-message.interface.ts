@@ -35,6 +35,15 @@ export interface ChatMessage {
   translated_text?: string;
   /** ISO 639-1 code of the source language detected */
   detected_language?: string;
+  /** ID of the message this is a reply to, for threaded conversations */
+  reply_to_id?: string;
+  /** Preview of the parent message (text_content + sender_id) for inline display */
+  reply_preview?: {
+    text_content: string;
+    sender_id: string;
+    display_name?: string;
+    avatar_url?: string | null;
+  };
 }
 
 export interface FavouriteRecord {

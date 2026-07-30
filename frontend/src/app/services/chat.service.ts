@@ -32,6 +32,15 @@ export interface ChatMessage {
     display_name?: string;
     avatar_url?: string | null;
   };
+  /** ID of the parent message this replies to (threaded replies) */
+  reply_to_id?: string;
+  /** Preview of the parent message for inline display */
+  reply_preview?: {
+    text_content: string;
+    sender_id: string;
+    display_name?: string;
+    avatar_url?: string | null;
+  };
 }
 
 export interface FavouriteRecord {
@@ -122,6 +131,7 @@ export class ChatService {
     text_content?: string;
     media_url?: string;
     correction_payload?: CorrectionPayload;
+    reply_to_id?: string;
   }): Promise<ChatMessage> {
     // Check if the receiver is blocked before sending
     const currentUser = this.authService.currentUser();
@@ -152,6 +162,7 @@ export class ChatService {
         text_content: payload.text_content,
         media_url: payload.media_url,
         correction_payload: payload.correction_payload,
+        reply_to_id: payload.reply_to_id,
         is_read: false,
         created_at: new Date().toISOString(),
       };
@@ -179,6 +190,7 @@ export class ChatService {
           text_content: msg.text_content,
           media_url: msg.media_url,
           correction_payload: msg.correction_payload,
+          reply_to_id: msg.reply_to_id,
         };
 
         await firstValueFrom(
