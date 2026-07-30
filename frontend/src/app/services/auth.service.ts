@@ -1,6 +1,7 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
+import { DOCUMENT } from '@angular/common';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { SupabaseService } from './supabase.service';
 import { FcmService } from './fcm.service';
@@ -41,6 +42,9 @@ export class AuthService {
     }
     this.isLoading.set(false);
 
+    // Initial biometric unlock
+    await this.unlockApp();
+
     this.supabase.auth.onAuthStateChange((_event, session) => {
       this.updateAuthState(session);
       if (!session) {
@@ -49,6 +53,51 @@ export class AuthService {
         });
       }
     });
+  }
+
+  readonly appLocked = signal<boolean>(true);
+
+  private async requestBiometric(): Promise<boolean> {
+    if (!(await this.isBiometricSupported())) {
+      // Biometric not supported – unlock automatically
+      this.appLocked.set(false);
+      return true;
+    }
+    const credential = await navigator.credentials.get({
+      publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        rpId: window.location.hostname,
+        userVerification: 'required',
+        allowCredentials: [],
+        timeout: 60_000,
+      },
+      mediation: 'optional',
+    }).catch(() => null);
+
+    if (credential) {
+      this.appLocked.set(false);
+      return true;
+    }
+    // User cancelled or error – keep locked
+    return false;
+  }
+
+  private async isBiometricSupported(): Promise<boolean> {
+    if (typeof window === 'undefined' || !window.PublicKeyCredential) return false;
+    try {
+      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      return available;
+    } catch {
+      return false;
+    }
+  }
+
+  async lockApp(): Promise<void> {
+    this.appLocked.set(true);
+  }
+
+  async unlockApp(): Promise<void> {
+    await this.requestBiometric();
   }
 
   private toAppUser(user: User | null): AppUser | null {

@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal, viewChild, afterNextRender } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, viewChild, afterNextRender, effect, DestroyRef } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from './services/auth.service';
 import { EconomyStore, VirtualGift } from './services/economy.store';
@@ -7,6 +7,7 @@ import { FcmService } from './services/fcm.service';
 import { SafetyService } from './services/safety.service';
 import { TranslatePipe } from './services/translate.pipe';
 import { routeAnimations } from './animations/route.animations';
+import { DOCUMENT } from '@angular/common';
 import {
   IncomingCallModalComponent,
   IncomingCallData,
@@ -40,7 +41,49 @@ import { I18nService } from './services/i18n.service';
     FontScaleSliderComponent,
     JoyrideModule,
   ],
-  templateUrl: './app.component.html',
+  template: `
+    @if (authService.appLocked()) {
+      <div
+        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90"
+        (click)="authService.unlockApp()"
+      >
+        <div class="text-center text-white">
+          <p class="mb-4 text-lg font-medium">{{ 'app_lock.title' | t }}</p>
+          <p class="mb-6 text-sm opacity-70">{{ 'app_lock.subtitle' | t }}</p>
+          <button
+            class="rounded-full bg-indigo-600 px-8 py-3 text-sm font-semibold shadow-xl hover:bg-indigo-500"
+            (click)="authService.unlockApp()"
+          >
+            {{ 'app_lock.unlock_btn' | t }}
+          </button>
+        </div>
+      </div>
+    }
+    <router-outlet />
+    <app-toast />
+    <app-incoming-call-modal
+      [callData]="incomingCallData()"
+      (accept)="onAcceptCall($event)"
+      (decline)="onDeclineCall($event)"
+    />
+    <app-report-user-modal #reportModal />
+    <app-daily-login-modal
+      [show]="showDailyRewardModal()"
+      [coinsRewarded]="dailyRewardCoins()"
+      (close)="showDailyRewardModal.set(false)"
+    />
+    <app-confirm-dialog />
+    <app-theme-selector />
+    @if (fontScaleService.isOpen()) {
+      <app-font-scale-slider
+        [scale]="fontScaleService.currentScale()"
+        (scaleChange)="fontScaleService.setScale($event)"
+      />
+    }
+  `,
+  host: {
+    '[class.app-locked]': 'authService.appLocked()',
+  },
   styleUrls: ['./app.component.scss'],
   animations: [routeAnimations],
 })
@@ -57,6 +100,8 @@ export class AppComponent implements OnInit {
   readonly fontScaleService = inject(FontScaleService);
   private joyrideService = inject(JoyrideService);
   private i18n = inject(I18nService);
+  private document = inject(DOCUMENT);
+  private destroyRef = inject(DestroyRef);
   readonly totalUnread = computed(() => this.unreadCounter.totalUnread());
 
   readonly unreadDisplayValue = computed(() =>
@@ -64,6 +109,7 @@ export class AppComponent implements OnInit {
   );
 
   private routerOutlet = viewChild.required(RouterOutlet);
+  readonly authService = inject(AuthService);
 
   protected prepareRoute(): string {
     return this.routerOutlet()?.activatedRouteData?.['animation'] ?? 'default';
@@ -81,6 +127,18 @@ export class AppComponent implements OnInit {
   constructor() {
     afterNextRender(() => {
       this.reportModalService.registerModal(this.reportModal());
+    });
+
+    // Lock when app goes to background
+    effect(() => {
+      const doc = this.document;
+      const handleVisibility = (): void => {
+        if (doc.hidden && this.authService.isAuthenticated()) {
+          this.authService.appLocked.set(true);
+        }
+      };
+      doc.addEventListener('visibilitychange', handleVisibility);
+      this.destroyRef.onDestroy(() => doc.removeEventListener('visibilitychange', handleVisibility));
     });
   }
 
