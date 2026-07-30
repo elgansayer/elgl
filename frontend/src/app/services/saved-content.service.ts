@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { firstValueFrom, catchError, of } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
 
@@ -49,7 +49,10 @@ export class SavedContentService {
       const tx = db.transaction(this.storeName, 'readonly');
       const store = tx.objectStore(this.storeName);
       const request = store.getAll();
-      request.onsuccess = () => resolve((request.result as SavedContent[]) ?? []);
+      request.onsuccess = () => {
+        const result: SavedContent[] = request.result ?? [];
+        resolve(result);
+      };
       request.onerror = () => reject(request.error);
     });
   }

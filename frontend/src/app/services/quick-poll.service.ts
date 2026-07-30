@@ -28,7 +28,8 @@ export class QuickPollService {
       const body = await res.text();
       throw new Error(body || 'API request failed');
     }
-    return res.json() as Promise<T>;
+    const data: T = await res.json();
+    return data;
   }
 
   async createPoll(roomId: string, question: string, options: string[]): Promise<{ poll_id: string }> {

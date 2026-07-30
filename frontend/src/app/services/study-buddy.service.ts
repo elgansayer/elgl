@@ -12,7 +12,7 @@ export class StudyBuddyService {
       await firstValueFrom(
         this.http.post(`${environment.apiUrl}/study-buddies/request`, dto),
       );
-    } catch (_err: unknown) {
+    } catch {
       console.warn('Study buddy request failed (fallback)');
     }
   }
@@ -23,7 +23,7 @@ export class StudyBuddyService {
         this.http.get<Record<string, unknown>[]>(`${environment.apiUrl}/study-buddies/matches`),
       );
       return data ?? [];
-    } catch (_err: unknown) {
+    } catch {
       return [];
     }
   }
