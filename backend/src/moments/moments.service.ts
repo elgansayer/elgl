@@ -16,6 +16,7 @@ import { StoryResponse } from './interfaces/story.interface';
 import { TimelineWorker } from './timeline.worker';
 import { MOCK_USERS } from '../mock-data';
 import { MomentCommentEvent } from '../notifications/events/notification.events';
+import { R2Service } from '../cloudflare-r2/r2.service';
 
 interface UserFollowRow {
   following_id: string;
@@ -60,6 +61,7 @@ export class MomentsService {
     private readonly timelineWorker: TimelineWorker,
     private readonly eventEmitter: EventEmitter2,
     private readonly safetyService: SafetyService,
+    private readonly r2Service: R2Service,
   ) {}
 
   async createStory(
@@ -134,6 +136,7 @@ export class MomentsService {
         media_urls: dto.media_urls ?? [],
         media_type: dto.media_type ?? 'none',
         target_language: dto.target_language,
+        voice_note_url: dto.voice_note_url ?? null,
       })
       .select()
       .single();
@@ -633,6 +636,27 @@ export class MomentsService {
         },
       };
     });
+  }
+
+  async getVoiceUploadUrl(
+    userId: string,
+    filename: string,
+    contentType: string,
+  ): Promise<{ uploadUrl: string; publicUrl: string }> {
+    const profile = await this.usersService.getProfile(userId);
+    if (!profile?.is_vip) {
+      throw new ForbiddenException(
+        'Voice notes are only available for VIP subscribers (8 UKP / $10 USD per month).',
+      );
+    }
+    return await this.r2Service.generateUploadUrl(filename, contentType);
+  }
+
+  async getMediaUploadUrl(
+    filename: string,
+    contentType: string,
+  ): Promise<{ uploadUrl: string; publicUrl: string }> {
+    return await this.r2Service.generateUploadUrl(filename, contentType);
   }
 
   async pinMoment(

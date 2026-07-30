@@ -8,7 +8,7 @@ import { TimelineWorker } from './timeline.worker';
 @Module({
   imports: [UsersModule, SafetyModule],
   controllers: [MomentsController],
-  providers: [MomentsService, TimelineWorker],
+  providers: [MomentsService, TimelineWorker, R2Service],
   exports: [MomentsService, TimelineWorker],
 })
 export class MomentsModule {}

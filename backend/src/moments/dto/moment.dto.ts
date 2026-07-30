@@ -25,6 +25,10 @@ export class CreateMomentDto {
   @IsString()
   @IsNotEmpty()
   target_language!: string;
+
+  @IsOptional()
+  @IsString()
+  voice_note_url?: string;
 }
 
 export class CreateCommentDto {

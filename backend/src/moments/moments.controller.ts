@@ -15,6 +15,7 @@ import { UsersService } from '../users/users.service';
 import { CreateCommentDto, CreateMomentDto } from './dto/moment.dto';
 import { CreateStoryDto } from './dto/create-story.dto';
 import { VoteCorrectionDto } from './dto/vote-correction.dto';
+import { R2Service } from '../cloudflare-r2/r2.service';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { StoryResponse } from './interfaces/story.interface';
 import { MomentsService } from './moments.service';
@@ -25,6 +26,7 @@ export class MomentsController {
   constructor(
     private readonly momentsService: MomentsService,
     private readonly usersService: UsersService,
+    private readonly r2Service: R2Service,
   ) {}
 
   @Post()
@@ -34,6 +36,30 @@ export class MomentsController {
   ): Promise<MomentRecord | null> {
     if (!user) return null;
     return await this.momentsService.createMoment(user.id, dto);
+  }
+
+  @Post('upload-voice')
+  async uploadVoice(
+    @CurrentUser() user: User | null,
+    @Body('filename') filename: string,
+    @Body('contentType') contentType: string,
+  ): Promise<{ uploadUrl: string; publicUrl: string } | null> {
+    if (!user) return null;
+    return await this.momentsService.getVoiceUploadUrl(
+      user.id,
+      filename,
+      contentType,
+    );
+  }
+
+  @Post('upload-media')
+  async uploadMedia(
+    @CurrentUser() user: User | null,
+    @Body('filename') filename: string,
+    @Body('contentType') contentType: string,
+  ): Promise<{ uploadUrl: string; publicUrl: string }> {
+    // user is authenticated via guard, no VIP check needed for general media uploads
+    return await this.momentsService.getMediaUploadUrl(filename, contentType);
   }
 
   @Post('stories')
