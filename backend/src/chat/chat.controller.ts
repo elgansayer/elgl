@@ -14,6 +14,7 @@ import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
+import { ConversationStarterDto } from './dto/conversation-starter.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import {
@@ -22,11 +23,15 @@ import {
   FavouriteRecord,
 } from './interfaces/chat-message.interface';
 import { ChatService } from './chat.service';
+import { ConversationStarterService } from './conversation-starter.service';
 
 @Controller('chat')
 @UseGuards(SupabaseAuthGuard)
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly conversationStarterService: ConversationStarterService,
+  ) {}
 
   // Tighter than the app-wide default (10/60s, app.module.ts) - this mints a
   // signed Centrifugo connection token, the most auth-sensitive operation this
@@ -154,5 +159,18 @@ export class ChatController {
   ): Promise<{ suggestions: string[] } | null> {
     if (!user) return null;
     return await this.chatService.getSuggestedReplies(user.id, dto);
+  }
+
+  @Post('conversation-starters')
+  async getConversationStarters(
+    @CurrentUser() user: User | null,
+    @Body() dto: ConversationStarterDto,
+  ): Promise<{ suggestions: string[] } | null> {
+    if (!user) return null;
+    const suggestions = await this.conversationStarterService.getSuggestions(
+      user.id,
+      dto.partnerId,
+    );
+    return { suggestions };
   }
 }

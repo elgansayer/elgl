@@ -6,6 +6,7 @@ import { LlmProxyModule } from '../llm-proxy/llm-proxy.module';
 import { CentrifugoService } from './centrifugo.service';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
+import { ConversationStarterService } from './conversation-starter.service';
 import { GroupsController } from './groups.controller';
 import { GroupsService } from './groups.service';
 import { SystemMessageService } from './services/system-message.service';
@@ -23,6 +24,7 @@ import { ChatSettingsService } from './chat-settings.service';
   providers: [
     CentrifugoService,
     ChatService,
+    ConversationStarterService,
     GroupsService,
     SystemMessageService,
     ChatSettingsService,
@@ -30,6 +32,7 @@ import { ChatSettingsService } from './chat-settings.service';
   exports: [
     CentrifugoService,
     ChatService,
+    ConversationStarterService,
     GroupsService,
     SystemMessageService,
     ChatSettingsService,

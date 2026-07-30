@@ -364,4 +364,20 @@ export class ChatService {
     );
     return response.suggestions;
   }
+
+  /**
+   * Retrieves AI‑generated conversation starters for a new chat window.
+   * Uses the partner's profile (display name, bio, target language) to build
+   * personalised questions.
+   */
+  async getConversationStarters(partnerId: string): Promise<string[]> {
+    const response = await firstValueFrom(
+      this.http.post<{ suggestions: string[] }>(
+        `${this.baseUrl}/conversation-starters`,
+        { partnerId },
+        { headers: this.getHeaders() },
+      ),
+    );
+    return response.suggestions;
+  }
 }
