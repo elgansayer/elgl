@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationsService } from '../notifications.service';
 import { NotificationPreferencesService } from '../notification-preferences.service';
+import { MomentCommentEvent } from '../events/notification.events';
 
 @Injectable()
 export class CommentNotificationListener {
@@ -11,32 +12,32 @@ export class CommentNotificationListener {
   ) {}
 
   @OnEvent('comment.moment')
-  async handleCommentMoment(payload: {
-    userId: string;
-    title: string;
-    body: string;
-    data?: Record<string, string>;
-  }): Promise<void> {
+  async handleCommentMoment(payload: MomentCommentEvent): Promise<void> {
+    const recipientId = payload.momentAuthorId;
+
     try {
-      const prefs = await this.notificationPreferencesService.getPreferences(
-        payload.userId,
+      const shouldSend = await this.notificationPreferencesService.shouldSendNotification(
+        recipientId,
+        'moment_comment',
+        'push',
       );
-      const category = prefs?.moment_comment;
-      if (category && category.push === false) {
+      if (!shouldSend) {
         return;
       }
     } catch (err) {
       console.error(
-        `Failed to check notification preferences for user ${payload.userId}:`,
+        `Failed to check notification preferences for user ${recipientId}:`,
         err,
       );
     }
 
-    await this.notificationsService.sendPushNotification(payload.userId, {
+    const title = 'New Comment';
+    const body = payload.commentPreview ?? 'Someone commented on your moment';
+    await this.notificationsService.sendPushNotification(recipientId, {
       type: 'comment_moment',
-      title: payload.title || 'New Comment',
-      body: payload.body,
-      data: { ...(payload.data || {}) },
+      title,
+      body,
+      data: {},
     });
   }
 }
