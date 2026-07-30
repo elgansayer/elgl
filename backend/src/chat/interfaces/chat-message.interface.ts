@@ -16,7 +16,13 @@ export interface ChatMessage {
   room_id: string;
   sender_id: string;
   message_type:
-    'text' | 'voice' | 'correction' | 'doodle' | 'sticker' | 'system';
+    | 'text'
+    | 'voice'
+    | 'correction'
+    | 'doodle'
+    | 'sticker'
+    | 'system'
+    | 'status_reply';
   text_content?: string;
   media_url?: string;
   correction_payload?: CorrectionPayload;
@@ -43,6 +49,11 @@ export interface ChatMessage {
     sender_id: string;
     display_name?: string;
     avatar_url?: string | null;
+  };
+  /** Contains data when the message is a reply to a status update */
+  status_reply_payload?: {
+    status_update_id: string;
+    status_text: string;
   };
 }
 

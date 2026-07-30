@@ -13,6 +13,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { ConversationStarterDto } from './dto/conversation-starter.dto';
+import { ReplyToStatusUpdateDto } from './dto/reply-to-status-update.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import {
@@ -136,6 +137,15 @@ export class ChatController {
       dto.target_language,
     );
     return { translated_text: translated, detected_language: detected };
+  }
+
+  @Post('messages/status-reply')
+  async replyToStatusUpdate(
+    @CurrentUser() user: User | null,
+    @Body() dto: ReplyToStatusUpdateDto,
+  ): Promise<ChatMessage | null> {
+    if (!user) return null;
+    return await this.chatService.replyToStatusUpdate(user.id, dto);
   }
 
   @Get('rooms/:roomId/members')

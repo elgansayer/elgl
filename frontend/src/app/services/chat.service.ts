@@ -17,7 +17,7 @@ export interface ChatMessage {
   id: string;
   room_id: string;
   sender_id: string;
-  message_type: 'text' | 'voice' | 'correction' | 'doodle' | 'sticker' | 'system' | 'correction_request';
+  message_type: 'text' | 'voice' | 'correction' | 'doodle' | 'sticker' | 'system' | 'correction_request' | 'status_reply';
   text_content?: string;
   media_url?: string;
   correction_payload?: CorrectionPayload;
@@ -44,6 +44,11 @@ export interface ChatMessage {
     sender_id: string;
     display_name?: string;
     avatar_url?: string | null;
+  };
+  /** Contains data when the message is a reply to a status update */
+  status_reply_payload?: {
+    status_update_id: string;
+    status_text: string;
   };
 }
 
@@ -131,7 +136,7 @@ export class ChatService {
 
   async sendMessage(payload: {
     room_id: string;
-    message_type: 'text' | 'voice' | 'correction' | 'doodle' | 'sticker' | 'correction_request';
+    message_type: 'text' | 'voice' | 'correction' | 'doodle' | 'sticker' | 'correction_request' | 'status_reply';
     text_content?: string;
     media_url?: string;
     correction_payload?: CorrectionPayload;
@@ -140,6 +145,10 @@ export class ChatService {
       target_language?: string;
     };
     reply_to_id?: string;
+    status_reply_payload?: {
+      status_update_id: string;
+      status_text: string;
+    };
   }): Promise<ChatMessage> {
     // Check if the receiver is blocked before sending
     const currentUser = this.authService.currentUser();
@@ -172,6 +181,7 @@ export class ChatService {
         correction_payload: payload.correction_payload,
         correction_request_payload: payload.correction_request_payload,
         reply_to_id: payload.reply_to_id,
+        status_reply_payload: payload.status_reply_payload,
         is_read: false,
         created_at: new Date().toISOString(),
       };
@@ -201,6 +211,7 @@ export class ChatService {
           correction_payload: msg.correction_payload,
           correction_request_payload: msg.correction_request_payload,
           reply_to_id: msg.reply_to_id,
+          status_reply_payload: msg.status_reply_payload,
         };
 
         await firstValueFrom(

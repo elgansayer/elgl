@@ -14,6 +14,7 @@ import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { SendMessageDto } from './dto/send-message.dto';
+import { ReplyToStatusUpdateDto } from './dto/reply-to-status-update.dto';
 import {
   ChatMessage,
   ChatRoomRecord,
@@ -161,6 +162,9 @@ export class ChatService {
         text_content: dto.text_content ?? null,
         media_url: dto.media_url ?? null,
         correction_payload: dto.correction_payload ?? null,
+        reply_to_id: dto.reply_to_id ?? null,
+        correction_request_payload: dto.correction_request_payload ?? null,
+        status_reply_payload: dto.status_reply_payload ?? null,
       })
       .select(
         `
@@ -589,6 +593,69 @@ export class ChatService {
 
     if (error) throw new Error('Failed to fetch group members');
     return data || [];
+  }
+
+  async replyToStatusUpdate(
+    userId: string,
+    dto: ReplyToStatusUpdateDto,
+  ): Promise<ChatMessage> {
+    const supabase = this.supabaseService.getClient();
+
+    // Determine deterministic room id
+    const ids = [userId, dto.target_user_id].sort();
+    const roomId = `chat_${ids.join('_')}`;
+
+    // Check if room exists
+    const { data: existingRoom } = await supabase
+      .from('chat_rooms')
+      .select('id')
+      .eq('id', roomId)
+      .maybeSingle();
+
+    if (!existingRoom) {
+      // Create room
+      const { error: roomError } = await supabase.from('chat_rooms').insert({
+        id: roomId,
+        title: '',
+        subtitle: '',
+        avatar: '',
+        is_online: false,
+        is_pinned: false,
+      });
+
+      if (roomError) {
+        throw new Error(`Failed to create room: ${roomError.message}`);
+      }
+
+      // Add both members
+      const members = ids.map((uid) => ({
+        room_id: roomId,
+        user_id: uid,
+      }));
+      const { error: memberError } = await supabase
+        .from('chat_room_members')
+        .insert(members);
+      if (memberError) {
+        throw new Error(`Failed to add room members: ${memberError.message}`);
+      }
+    }
+
+    // Reuse sendMessage logic
+    const msgDto: SendMessageDto = {
+      room_id: roomId,
+      message_type: 'status_reply',
+      text_content: undefined,
+      media_url: undefined,
+      correction_payload: undefined,
+      reply_to_id: undefined,
+      correction_request_payload: undefined,
+      status_reply_payload: {
+        status_update_id: dto.status_update_id,
+        status_text: dto.status_text,
+      },
+    };
+
+    return this.sendMessage(userId, msgDto);
   }
 
   async llmProxy(

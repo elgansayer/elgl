@@ -19,6 +19,7 @@ export class SendMessageDto {
     'doodle',
     'sticker',
     'correction_request',
+    'status_reply',
   ])
   message_type!: string;
 
@@ -47,5 +48,12 @@ export class SendMessageDto {
   correction_request_payload?: {
     original_text: string;
     target_language?: string;
+  };
+
+  @IsOptional()
+  @IsObject()
+  status_reply_payload?: {
+    status_update_id: string;
+    status_text: string;
   };
 }
