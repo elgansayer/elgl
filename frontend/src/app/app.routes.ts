@@ -222,4 +222,12 @@ export const routes: Routes = [
       ),
     title: 'Language Settings - HelloTalk',
   },
+  {
+    path: 'blocks',
+    loadComponent: () =>
+      import('./pages/block-management/block-management.component').then(
+        (m) => m.BlockManagementComponent,
+      ),
+    title: 'Block Management - HelloTalk',
+  },
 ];

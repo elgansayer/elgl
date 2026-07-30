@@ -1,0 +1,34 @@
+<div class="ps-4 pe-4">
+  <h1 class="text-2xl font-bold mb-4">{{ 'blockManagement.title' | t }}</h1>
+  @if (blockedUsers().length === 0) {
+    <p class="text-muted-foreground">{{ 'blockManagement.noBlockedUsers' | t }}</p>
+  } @else {
+    <ul class="space-y-2">
+      @for (user of blockedUsers(); track user.id) {
+        <li
+          class="flex items-center justify-between bg-surface rounded-lg p-3"
+        >
+          <div class="flex items-center gap-3">
+            <img
+              [src]="user.avatar_url || '/assets/default-avatar.png'"
+              [alt]="user.display_name"
+              class="w-10 h-10 rounded-full object-cover"
+            />
+            <div>
+              <p class="font-medium">{{ user.display_name }}</p>
+              <p class="text-sm text-muted-foreground">
+                {{ user.native_language }} → {{ user.target_languages?.join(', ') }}
+              </p>
+            </div>
+          </div>
+          <button
+            class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors"
+            (click)="onUnblock(user.id)"
+          >
+            {{ 'blockManagement.unblock' | t }}
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</div>
