@@ -15,4 +15,9 @@ export class HelpController {
   getCategories() {
     return this.helpService.getCategories();
   }
+
+  @Get('quick-replies')
+  getQuickReplies(): string[] {
+    return this.helpService.getQuickReplies();
+  }
 }

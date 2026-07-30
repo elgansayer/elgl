@@ -118,4 +118,19 @@ export class HelpService {
     const cats = new Set(this.faqs.map((f) => f.category));
     return Array.from(cats).sort();
   }
+
+  getQuickReplies(): string[] {
+    return [
+      'How do I reset my password?',
+      'How do I cancel my subscription?',
+      'What payment methods do you accept?',
+      'Is HelloTalk free?',
+      'Can I change my display name?',
+      'How do I block another user?',
+      'Who can see my profile?',
+      'How do I become a speaker?',
+      'What is a LingQ‑style reading session?',
+      'How do I get refund?',
+    ];
+  }
 }
