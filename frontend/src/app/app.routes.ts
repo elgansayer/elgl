@@ -238,4 +238,12 @@ export const routes: Routes = [
       ),
     title: 'Chat Settings - HelloTalk',
   },
+  {
+    path: 'data-storage',
+    loadComponent: () =>
+      import('./pages/data-storage/data-storage.component').then(
+        (m) => m.DataStorageComponent,
+      ),
+    title: 'Data & Storage - HelloTalk',
+  },
 ];
