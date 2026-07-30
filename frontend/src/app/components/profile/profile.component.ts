@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, viewChild, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -40,12 +40,19 @@ export class ProfileComponent implements OnInit {
   readonly errorMessage = signal<string>('');
   readonly successMessage = signal<string>('');
 
+  readonly avatarPreviewUrl = signal<string>('');
+
+  private selectedAvatarFile: File | null = null;
+
+  protected readonly fileInput = viewChild<HTMLInputElement>('fileInput');
+
   // Editable fields
   displayName = '';
   nativeLanguages: string[] = ['en'];
   targetLanguages: string[] = ['es'];
   avatarUrl = '';
   bioText = '';
+  statusText = '';
   proficiencyLevel = signal<string>('B1');
   learningGoals = signal<string>('');
   profileVisibility = signal<'everyone' | 'vips_only' | 'hidden'>('everyone');
@@ -75,7 +82,9 @@ export class ProfileComponent implements OnInit {
         this.nativeLanguages = data.native_languages;
         this.targetLanguages = data.target_languages || [];
         this.avatarUrl = data.avatar_url || '';
+        this.avatarPreviewUrl.set(data.avatar_url || '');
         this.bioText = data.bio_text || '';
+        this.statusText = data.status_text || '';
         this.profileVisibility.set(data.profile_visibility || 'everyone');
         this.privacyLastSeen = data.privacy_last_seen ?? 'everyone';
         this.privacyProfilePhoto = data.privacy_profile_photo ?? 'everyone';
@@ -83,6 +92,8 @@ export class ProfileComponent implements OnInit {
         this.privacyStatus = data.privacy_status ?? 'everyone';
         this.proficiencyLevel.set(data.proficiency_level || 'B1');
         this.learningGoals.set(data.learning_goals || '');
+        this.statusText = data.status_text || '';
+        this.statusText = data.status_text || '';
         this.checkMilestone();
       }
     } catch (e: unknown) {
@@ -116,21 +127,57 @@ export class ProfileComponent implements OnInit {
     this.profileVisibility.set(value as 'everyone' | 'vips_only' | 'hidden');
   }
 
+  onAvatarFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      this.selectedAvatarFile = file;
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.avatarPreviewUrl.set(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  onAvatarClick(): void {
+    const fileInputEl = this.fileInput();
+    if (fileInputEl) {
+      fileInputEl.click();
+    } else {
+      // fallback: directly use hidden file input from the DOM (already present)
+      const hiddenInput = document.querySelector<HTMLInputElement>('#avatar-upload');
+      if (hiddenInput) {
+        hiddenInput.click();
+      } else {
+        this.toggleEdit();
+      }
+    }
+  }
+
   async saveProfile(): Promise<void> {
     this.errorMessage.set('');
     this.successMessage.set('');
     try {
+      // Upload avatar if a new file was selected
+      if (this.selectedAvatarFile) {
+        this.avatarUrl = await this.userService.uploadAvatar(this.selectedAvatarFile);
+        this.selectedAvatarFile = null;
+      }
+
       const updated = await this.userService.updateMyProfile({
         display_name: this.displayName,
         native_languages: this.nativeLanguages,
         target_languages: this.targetLanguages,
         avatar_url: this.avatarUrl,
         bio_text: this.bioText,
+        status_text: this.statusText,
         profile_visibility: this.profileVisibility(),
         proficiency_level: this.proficiencyLevel(),
         learning_goals: this.learningGoals(),
       });
       this.profile.set(updated);
+      this.avatarPreviewUrl.set(updated.avatar_url || '');
       // Also save privacy settings
       try {
         await this.userService.updatePrivacySettings({

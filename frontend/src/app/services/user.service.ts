@@ -11,6 +11,7 @@ export interface UserProfile {
   native_languages: string[];
   target_languages: string[];
   bio_text?: string;
+  status_text?: string;
   avatar_url?: string;
   audio_intro_url?: string;
   cover_photo_url?: string;
@@ -105,7 +106,7 @@ export class UserService {
     return firstValueFrom(
       this.http
         .get<UserProfile>(`${this.baseUrl}/me`, { headers: this.getHeaders() })
-        .pipe(catchError(() => of(MOCK_USER_PROFILE))),
+        .pipe(catchError(() => of({...MOCK_USER_PROFILE, status_text:'Learning new languages!'}))),
     );
   }
 
@@ -155,7 +156,7 @@ export class UserService {
         .patch<UserProfile>(`${this.baseUrl}/me`, update, { headers: this.getHeaders() })
         .pipe(
           catchError(() => {
-            const updated: UserProfile = { ...MOCK_USER_PROFILE, ...update };
+            const updated: UserProfile = { ...MOCK_USER_PROFILE, status_text:'Learning new languages!', ...update };
             return of(updated);
           }),
         ),

@@ -124,4 +124,9 @@ export class UpdateProfileDto {
   @IsString()
   @MaxLength(1000)
   learning_goals?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  status_text?: string;
 }

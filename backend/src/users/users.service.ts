@@ -224,6 +224,7 @@ export class UsersService {
       target_languages: ['es', 'ja'],
       bio_text: 'This is my mock profile. I love learning languages!',
       proficiency_level: 'B1',
+      status_text: 'Learning new languages!',
       avatar_url: `https://i.pravatar.cc/150?u=${userId}`,
       audio_intro_url: undefined,
       cover_photo_url: undefined,
@@ -300,6 +301,10 @@ export class UsersService {
     if (dto.status_visibility !== undefined)
       updatePayload.status_visibility = dto.status_visibility;
     if (dto.interests !== undefined) updatePayload.interests = dto.interests;
+    if (dto.learning_goals !== undefined)
+      updatePayload.learning_goals = dto.learning_goals;
+    if (dto.status_text !== undefined)
+      updatePayload.status_text = dto.status_text;
 
     if (dto.silence_unknown_callers !== undefined)
       updatePayload.silence_unknown_callers = dto.silence_unknown_callers;

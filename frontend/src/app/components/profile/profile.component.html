@@ -38,7 +38,8 @@
       >
         <div class="flex items-center gap-3">
           <div
-            class="relative h-16 w-16 overflow-hidden rounded-full border border-surface-100 bg-surface-300 flex items-center justify-center"
+            class="relative h-16 w-16 overflow-hidden rounded-full border border-surface-100 bg-surface-300 flex items-center justify-center cursor-pointer"
+            (click)="onAvatarClick()"
           >
             @if (profile()?.avatar_url) {
               <img
@@ -52,7 +53,13 @@
                 profile()?.display_name?.charAt(0) || '?'
               }}</span>
             }
+            @if (!isEditing()) {
+              <div class="absolute bottom-0 end-0 rounded-full bg-surface-900/70 p-0.5 text-[10px] leading-none text-white">
+                ✏️
+              </div>
+            }
           </div>
+          <input #fileInput type="file" accept="image/*" (change)="onAvatarFileSelected($event)" class="hidden" />
           <div>
             <div class="flex items-center gap-2">
               <h1 class="app-section-title">
@@ -190,6 +197,11 @@
           <h3 class="text-xs font-semibold uppercase text-text-secondary">
             {{ 'profile.aboutMe' | t }}
           </h3>
+          @if (profile()?.status_text) {
+            <p class="mt-1 text-sm font-medium text-primary">
+              {{ profile()?.status_text }}
+            </p>
+          }
           <p class="mt-2 rounded-card bg-surface-300 ps-3 pe-3 pt-3 pb-3 text-sm text-text-primary">
             {{ profile()?.bio_text || ('profile.noBio' | t) }}
           </p>
@@ -229,13 +241,19 @@
             [placeholder]="'profile.displayNamePlaceholder' | t"
             class="app-input"
           />
-          <input
-            type="url"
-            [(ngModel)]="avatarUrl"
-            name="avatarUrl"
-            [placeholder]="'profile.avatarUrlPlaceholder' | t"
-            class="app-input"
-          />
+          <div class="relative">
+            <label class="block mb-1 text-xs font-semibold uppercase text-text-secondary">{{ 'profile.avatarLabel' | t }}</label>
+            <div class="flex items-center gap-3">
+              <div class="h-16 w-16 rounded-full overflow-hidden border border-surface-100 bg-surface-300 flex-shrink-0">
+                @if (avatarPreviewUrl()) {
+                  <img [src]="avatarPreviewUrl()" class="h-full w-full object-cover" />
+                } @else {
+                  <span class="text-2xl font-bold text-text-secondary flex items-center justify-center w-full h-full">{{ displayName.charAt(0) || '?' }}</span>
+                }
+              </div>
+              <button type="button" (click)="onAvatarClick()" class="app-button-secondary text-xs">{{ 'profile.changePhoto' | t }}</button>
+            </div>
+          </div>
 
           <div class="space-y-4 pt-2">
             <div>
@@ -393,6 +411,17 @@
             </select>
           </div>
 
+          <div class="mt-4">
+            <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{ 'profile.statusLabel' | t }}</label>
+            <input
+              type="text"
+              [(ngModel)]="statusText"
+              name="statusText"
+              [placeholder]="'profile.statusPlaceholder' | t"
+              maxlength="200"
+              class="app-input"
+            />
+          </div>
           <textarea
             [(ngModel)]="bioText"
             name="bioText"
