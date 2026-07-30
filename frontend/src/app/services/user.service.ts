@@ -418,6 +418,22 @@ export class UserService {
     );
   }
 
+  async getOverviewStats(): Promise<{
+    translations_count: number;
+    corrections_count: number;
+    moments_count: number;
+  }> {
+    return firstValueFrom(
+      this.http
+        .get<{
+          translations_count: number;
+          corrections_count: number;
+          moments_count: number;
+        }>(`${this.baseUrl}/stats/me`, { headers: this.getHeaders() })
+        .pipe(catchError(() => of({ translations_count: 0, corrections_count: 0, moments_count: 0 }))),
+    );
+  }
+
   async updatePrivacySettings(settings: {
     privacy_last_seen?: string;
     privacy_profile_photo?: string;

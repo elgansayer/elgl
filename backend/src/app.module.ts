@@ -51,6 +51,7 @@ import { PronunciationModule } from './pronunciation/pronunciation.module';
 import { MilestonesModule } from './milestones/milestones.module';
 import { StudyBuddiesModule } from './study-buddies/study-buddies.module';
 import { AudioIntroModule } from './audio-intro/audio-intro.module';
+import { StatsModule } from './stats/stats.module';
 import { validationSchema } from './config/validation.schema';
 
 @Module({
@@ -120,6 +121,7 @@ import { validationSchema } from './config/validation.schema';
     MilestonesModule,
     StudyBuddiesModule,
     AudioIntroModule,
+    StatsModule,
   ],
   controllers: [AppController],
   providers: [
