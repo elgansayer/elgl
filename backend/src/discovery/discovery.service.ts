@@ -115,7 +115,7 @@ export class DiscoveryService {
     let queryBuilder = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, created_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false);
@@ -141,6 +141,10 @@ export class DiscoveryService {
       queryBuilder = queryBuilder
         .gt('study_streak_days', 7)
         .gte('correction_ratio', 0.8);
+    }
+
+    if (query.level) {
+      queryBuilder = queryBuilder.eq('proficiency_level', query.level);
     }
 
     if (_currentUserProfile?.is_vip && query.gender) {
@@ -190,6 +194,12 @@ export class DiscoveryService {
             (u) => !blockedIds.includes(u.id),
           );
         }
+        // Filter by proficiency level
+        if (query.level) {
+          fallbackResults = fallbackResults.filter(
+            (u: any) => u.proficiency_level === query.level,
+          );
+        }
         // Age range filter for fallback results
         if (query.age_min !== undefined) {
           fallbackResults = fallbackResults.filter(
@@ -210,6 +220,29 @@ export class DiscoveryService {
       let rpcResults = response.data as UserProfile[];
       if (blockedIds.length > 0) {
         rpcResults = rpcResults.filter((u) => !blockedIds.includes(u.id));
+      }
+      // Filter by proficiency level
+      if (query.level) {
+        // RPC results may not include proficiency_level, fetch explicitly
+        if (rpcResults.length > 0) {
+          const { data: levelData } = await supabase
+            .from('users')
+            .select('id, proficiency_level')
+            .in(
+              'id',
+              rpcResults.map((u: any) => u.id),
+            );
+          const levelMap = new Map(
+            (levelData ?? []).map((u: any) => [u.id, u.proficiency_level]),
+          );
+          rpcResults = rpcResults.filter(
+            (u) => levelMap.get(u.id) === query.level,
+          );
+        } else {
+          rpcResults = rpcResults.filter(
+            (u: any) => u.proficiency_level === query.level,
+          );
+        }
       }
       if (_currentUserProfile?.is_vip && query.gender) {
         rpcResults = rpcResults.filter(
@@ -242,6 +275,10 @@ export class DiscoveryService {
     // Voice room active filter (if requested)
     if (blockedIds.length > 0) {
       results = results.filter((u) => !blockedIds.includes(u.id));
+    }
+    // Filter by proficiency level
+    if (query.level) {
+      results = results.filter((u: any) => u.proficiency_level === query.level);
     }
     // Age range filter for query results
     if (query.age_min !== undefined) {
@@ -300,6 +337,13 @@ export class DiscoveryService {
     }
     if (query.age_max !== undefined) {
       filtered = filtered.filter((u) => (u as any).age <= query.age_max);
+    }
+
+    // Filter by proficiency level
+    if (query.level) {
+      filtered = filtered.filter(
+        (u: any) => u.proficiency_level === query.level,
+      );
     }
 
     // Limit to 50
