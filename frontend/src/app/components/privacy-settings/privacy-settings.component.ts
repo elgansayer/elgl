@@ -56,6 +56,15 @@ import { resource } from '@angular/core';
             class="toggle-checkbox"
           />
         </label>
+        <label class="flex items-center justify-between">
+          <span>{{ 'privacy.hideExactLocation' | t }}</span>
+          <input
+            type="checkbox"
+            [checked]="hideExactLocation()"
+            (change)="hideExactLocation.set($event.target.checked)"
+            class="toggle-checkbox"
+          />
+        </label>
         <div class="space-y-2">
           <label>{{ 'privacy.statusVisibility' | t }}</label>
           <select
@@ -92,6 +101,7 @@ export class PrivacySettingsComponent {
   hideLocation = signal(false);
   hideFromSearch = signal(false);
   hideGender = signal(false);
+  hideExactLocation = signal(false);
   statusVisibility = signal('everyone');
   isSaving = signal(false);
 
@@ -107,6 +117,7 @@ export class PrivacySettingsComponent {
         this.hideLocation.set(profile.privacy_hide_location);
         this.hideFromSearch.set(profile.privacy_hide_from_search);
         this.hideGender.set(profile.privacy_hide_gender);
+        this.hideExactLocation.set(profile.privacy_hide_exact_location ?? false);
         this.statusVisibility.set(profile.status_visibility ?? 'everyone');
       }
     });
@@ -120,6 +131,7 @@ export class PrivacySettingsComponent {
         privacy_hide_location: this.hideLocation(),
         privacy_hide_from_search: this.hideFromSearch(),
         privacy_hide_gender: this.hideGender(),
+        privacy_hide_exact_location: this.hideExactLocation(),
         status_visibility: this.statusVisibility(),
       });
     } catch {
