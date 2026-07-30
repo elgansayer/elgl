@@ -102,6 +102,10 @@ export class UpdateProfileDto {
   privacy_hide_gender?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  silence_unknown_callers?: boolean;
+
+  @IsOptional()
   @IsString()
   profile_visibility?: string;
 

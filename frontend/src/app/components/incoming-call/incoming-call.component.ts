@@ -5,6 +5,7 @@ import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-p
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { CentrifugoService } from '../../services/centrifugo.service';
 import { AuthService } from '../../services/auth.service';
+import { UserService } from '../../services/user.service';
 import { LivekitService } from '../../services/livekit.service';
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 
@@ -113,6 +114,7 @@ export class IncomingCallComponent implements OnDestroy {
   private centrifugoService = inject(CentrifugoService);
   private authService = inject(AuthService);
   private livekitService = inject(LivekitService);
+  private userService = inject(UserService);
   private hapticFeedback = inject(HapticFeedbackService);
 
   readonly callAccepted = output<IncomingCallInfo>();
@@ -125,6 +127,7 @@ export class IncomingCallComponent implements OnDestroy {
   private ringtoneUrl = '/assets/audio/ringtone.mp3';
 
   private unsubscribeCentrifugo: (() => void) | null = null;
+  private currentUserSilenceUnknown = signal<boolean>(false);
   private fallbackAudioContext: AudioContext | null = null;
 
   constructor() {
@@ -138,6 +141,8 @@ export class IncomingCallComponent implements OnDestroy {
         this.unsubscribeCentrifugo();
         this.unsubscribeCentrifugo = null;
       }
+
+      this.loadSilenceSetting(userId);
 
       this.unsubscribeCentrifugo = this.centrifugoService.subscribe(
         `user_${userId}`,
@@ -158,8 +163,17 @@ export class IncomingCallComponent implements OnDestroy {
     });
   }
 
-  private handleIncomingCall(info: IncomingCallInfo): void {
+  private async handleIncomingCall(info: IncomingCallInfo): Promise<void> {
     this.callInfo.set(info);
+    const userId = this.authService.currentUser()?.id;
+    if (userId) {
+      await this.loadSilenceSetting(userId);
+    }
+    if (this.currentUserSilenceUnknown()) {
+      // reject automatically without ringing
+      this.rejectCall();
+      return;
+    }
     this.showCallModal.set(true);
     this.playRingtone();
   }
@@ -211,6 +225,13 @@ export class IncomingCallComponent implements OnDestroy {
       this.fallbackAudioContext = audioContext;
     } catch {
       // Silently fail if fallback also doesn't work
+    }
+  }
+
+  private async loadSilenceSetting(userId: string): Promise<void> {
+    const profile = await this.userService.getMyProfile();
+    if (profile) {
+      this.currentUserSilenceUnknown.set(profile.silence_unknown_callers ?? false);
     }
   }
 

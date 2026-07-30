@@ -238,6 +238,7 @@ export class UsersService {
       privacy_hide_location: false,
       privacy_hide_from_search: false,
       privacy_hide_gender: false,
+      silence_unknown_callers: false,
       status_visibility: 'public',
       corrector_score: 0,
       created_at: new Date().toISOString(),
@@ -299,6 +300,9 @@ export class UsersService {
     if (dto.status_visibility !== undefined)
       updatePayload.status_visibility = dto.status_visibility;
     if (dto.interests !== undefined) updatePayload.interests = dto.interests;
+
+    if (dto.silence_unknown_callers !== undefined)
+      updatePayload.silence_unknown_callers = dto.silence_unknown_callers;
 
     if (dto.location) {
       updatePayload.location = `POINT(${dto.location.longitude} ${dto.location.latitude})`;
@@ -402,6 +406,7 @@ export class UsersService {
     privacy_hide_location: boolean;
     privacy_hide_from_search: boolean;
     privacy_hide_gender: boolean;
+    silence_unknown_callers?: boolean;
     privacy_last_seen?: string;
     privacy_profile_photo?: string;
     privacy_about_info?: string;
@@ -413,6 +418,8 @@ export class UsersService {
       privacy_hide_location: profile.privacy_hide_location ?? false,
       privacy_hide_from_search: profile.privacy_hide_from_search ?? false,
       privacy_hide_gender: (profile as any)?.privacy_hide_gender ?? false,
+      silence_unknown_callers:
+        (profile as any)?.silence_unknown_callers ?? false,
       privacy_last_seen: (profile as any)?.privacy_last_seen ?? 'everyone',
       privacy_profile_photo:
         (profile as any)?.privacy_profile_photo ?? 'everyone',

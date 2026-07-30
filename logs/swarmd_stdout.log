@@ -2756,3 +2756,28 @@ To github.com:elgansayer/hellotalk.git
 [2026-07-30T06:34:04Z]   FAIL  backend lint
 [2026-07-30T06:34:41Z]   FAIL  backend test
 [2026-07-30T06:34:41Z] Tests have failures (pre-existing). Committing anyway.
+[main ec2643fb] feat: Control over who can see "Last Seen", profile photo, about info, and status.
+ 10 files changed, 240 insertions(+)
+ rename .tasks/{pending => completed}/0000-116-control-over-who-can-see-last-seen-profile-photo-about-info-.task (100%)
+ create mode 100644 backend/database/migrations/20260730_add_privacy_last_seen_photo_about_status.sql
+ create mode 100644 backend/src/users/dto/privacy-settings.dto.ts
+remote: 
+remote: GitHub found 11 vulnerabilities on elgansayer/hellotalk's default branch (6 high, 5 moderate). To find out more, visit:        
+remote:      https://github.com/elgansayer/hellotalk/security/dependabot        
+remote: 
+To github.com:elgansayer/hellotalk.git
+   7b02ce1a..ec2643fb  main -> main
+[2026-07-30T06:34:44Z] Committed: ec2643fb — feat: Control over who can see "Last Seen", profile photo, about info, and statu
+[2026-07-30T06:34:44Z] COMPLETED: Control over who can see "Last Seen", profile photo, about info, and status.
+[2026-07-30T06:34:44Z] Cooldown 15s...
+[2026-07-30T06:34:59Z] Task: Silence unknown callers.
+[2026-07-30T06:34:59Z] Queue: 96 pending, 116 done, 0 stuck
+[2026-07-30T06:34:59Z] Attempt 1/3
+[2026-07-30T06:34:59Z] Aider pass 1 (discover)...
+[2026-07-30T06:36:19Z] Pass 1: discovered 8 files
+[2026-07-30T06:36:19Z] Aider pass 2 round 1: 8 files in context
+[2026-07-30T06:36:59Z] Pass 2 round 1: produced 4 file changes
+[2026-07-30T06:37:10Z]   FAIL  frontend lint
+[2026-07-30T06:37:54Z]   FAIL  backend lint
+[2026-07-30T06:38:31Z]   FAIL  backend test
+[2026-07-30T06:38:31Z] Tests have failures (pre-existing). Committing anyway.
