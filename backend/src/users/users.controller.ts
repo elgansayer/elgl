@@ -140,6 +140,16 @@ export class UsersController {
     return this.usersService.getVisitors(user.id);
   }
 
+  @Get('me/status-viewers')
+  async getMyStatusViewers(
+    @CurrentUser() user: User | null,
+  ): Promise<ProfileVisitor[]> {
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    return this.usersService.getStatusViewers(user.id);
+  }
+
   @Get(':id')
   async getUserProfile(@Param('id') id: string): Promise<UserProfile> {
     return this.usersService.getProfile(id);

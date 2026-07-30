@@ -82,6 +82,44 @@ export class UsersService {
     return (response.data ?? []) as unknown as ProfileVisitor[];
   }
 
+  async getStatusViewers(userId: string): Promise<ProfileVisitor[]> {
+    const supabase = this.supabaseService.getClient();
+
+    const response = await supabase
+      .from('status_views')
+      .select(
+        `
+        id,
+        viewer_id,
+        status_owner_id,
+        created_at,
+        viewer:viewer_id (
+          id,
+          display_name,
+          avatar_url,
+          native_languages,
+          target_languages
+        )
+      `,
+      )
+      .eq('status_owner_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (response.error) {
+      throw new InternalServerErrorException('Failed to fetch status viewers');
+    }
+
+    const rows = response.data ?? [];
+    return rows.map((row: any) => ({
+      id: row.id,
+      visitor_id: row.viewer_id,
+      viewed_id: row.status_owner_id,
+      created_at: row.created_at,
+      visitor: row.viewer,
+    }));
+  }
+
   async followUser(followerId: string, targetUserId: string): Promise<void> {
     if (followerId === targetUserId) {
       throw new BadRequestException('Cannot follow yourself');
