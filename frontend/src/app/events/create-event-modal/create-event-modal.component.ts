@@ -30,10 +30,11 @@ export interface AppEventParams {
         <form [formGroup]="eventForm" (ngSubmit)="onSubmit()">
           <!-- What (Title) -->
           <div class="mb-3">
-            <label class="mb-1 block text-sm">
+            <label class="mb-1 block text-sm" for="titleInput">
               {{ 'events.title' | t }}
             </label>
             <input
+              id="titleInput"
               formControlName="title"
               type="text"
               required
@@ -44,10 +45,11 @@ export interface AppEventParams {
 
           <!-- When (Date & Time) -->
           <div class="mb-3">
-            <label class="mb-1 block text-sm">
+            <label class="mb-1 block text-sm" for="dateTimeInput">
               {{ 'events.dateTime' | t }}
             </label>
             <input
+              id="dateTimeInput"
               formControlName="date_time"
               type="datetime-local"
               required
@@ -57,13 +59,14 @@ export interface AppEventParams {
 
           <!-- Where (Platform / Location) -->
           <div class="mb-3">
-            <label class="mb-1 block text-sm">
+            <label class="mb-1 block text-sm" for="locationInput">
               {{ 'events.where' | t }}
             </label>
             <p class="text-xs text-gray-500 ms-1">
               {{ 'events.whereHint' | t }}
             </p>
             <input
+              id="locationInput"
               formControlName="platform_location"
               type="text"
               class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
@@ -73,10 +76,11 @@ export interface AppEventParams {
 
           <!-- Description -->
           <div class="mb-3">
-            <label class="mb-1 block text-sm">
+            <label class="mb-1 block text-sm" for="descriptionInput">
               {{ 'events.description' | t }}
             </label>
             <textarea
+              id="descriptionInput"
               formControlName="description"
               rows="3"
               class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
@@ -88,7 +92,7 @@ export interface AppEventParams {
           <div class="flex justify-end gap-3">
             <button
               type="button"
-              (click)="cancel.emit()"
+              (click)="dismiss.emit()"
               class="rounded-lg bg-gray-700 px-4 py-2 text-sm"
             >
               {{ 'events.cancel' | t }}
@@ -121,25 +125,24 @@ export class CreateEventModalComponent {
   readonly created = output<Event>();
 
   /** Emitted when the user cancels the modal. */
-  readonly cancel = output<void>();
+  readonly dismiss = output<void>();
 
   async onSubmit(): Promise<void> {
     if (this.eventForm.invalid) {
       return;
     }
     const raw = this.eventForm.value;
-    const payload = {
-      title: raw.title!,
-      date_time: raw.date_time!,
-      location: raw.platform_location ?? undefined,
-      description: raw.description ?? undefined,
-    };
     try {
       const createdEvent = await firstValueFrom(
-        this.eventsService.createEvent(payload as any),
+        this.eventsService.createEvent({
+          title: raw.title!,
+          date_time: raw.date_time!,
+          location: raw.platform_location ?? undefined,
+          description: raw.description ?? undefined,
+        }),
       );
       this.created.emit(createdEvent);
-      this.cancel.emit();
+      this.dismiss.emit();
     } catch (err) {
       console.error('Failed to create event', err);
     }

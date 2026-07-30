@@ -1,0 +1,16 @@
+import { Controller, Get, Param, Query } from '@nestjs/common';
+import { UserStatisticsService } from './user-statistics.service';
+import { UserStatisticsQueryDto } from './dto/user-statistics-query.dto';
+
+@Controller('user-statistics')
+export class UserStatisticsController {
+  constructor(private readonly userStatisticsService: UserStatisticsService) {}
+
+  @Get(':userId')
+  async getStatistics(
+    @Param('userId') userId: string,
+    @Query() query?: UserStatisticsQueryDto,
+  ) {
+    return this.userStatisticsService.getUserStatistics(userId, query);
+  }
+}

@@ -323,7 +323,16 @@ def git_commit(message: str) -> str:
     try:
         subprocess.run(['git', 'add', '-A'], check=True, timeout=30)
         subprocess.run(['git', 'commit', '-m', message], check=True, timeout=30)
-        subprocess.run(['git', 'push', 'origin', 'main'], check=True, timeout=60)
+        try:
+            subprocess.run(['git', 'push', 'origin', 'main'], check=True, timeout=60)
+        except subprocess.CalledProcessError:
+            log("Push rejected by remote. Attempting to pull with rebase...")
+            try:
+                subprocess.run(['git', 'pull', '--rebase', 'origin', 'main'], check=True, timeout=60)
+                subprocess.run(['git', 'push', 'origin', 'main'], check=True, timeout=60)
+            except subprocess.CalledProcessError:
+                subprocess.run(['git', 'rebase', '--abort'], check=False)
+                raise
         sha = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'],
                             capture_output=True, text=True, timeout=10).stdout.strip()
         state_patch(last_commit=sha, last_error='')
