@@ -339,6 +339,9 @@ export class I18nService {
     'chatRoom.bookmarkError': 'Already bookmarked or failed.',
     'chatRoom.savedLingqAlert': '📚 Saved sentence to your LingQ SRS Learning Deck:\n"{{text}}"',
     'chatRoom.saveLingqError': 'Failed to save sentence or already in your SRS deck.',
+    'chatRoom.simplifyBtn': 'Simplify',
+    'chatRoom.simplifying': 'Simplifying...',
+    'chatRoom.simplifiedTitle': '✅ Simplified:',
 
     // Chat List Component
     'chatList.title': 'Chats',

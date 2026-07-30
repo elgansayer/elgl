@@ -14,6 +14,7 @@ import {
   WordBreakdownItem,
 } from './interfaces/nlp-results.interface';
 import { ExplainGrammarDto } from './dto/explain-grammar.dto';
+import { SimplifyDto } from './dto/simplify.dto';
 
 @Injectable()
 export class NlpService {
@@ -412,6 +413,40 @@ export class NlpService {
       overall_score: overallScore,
       breakdown,
       feedback_summary: feedbackSummary,
+    };
+  }
+
+  async simplify(
+    userId: string,
+    isVip: boolean,
+    dto: SimplifyDto,
+  ): Promise<{ original: string; simplified: string }> {
+    await this.checkRateLimit(userId, isVip);
+
+    const text = dto.text.trim();
+
+    // Simple word‑replacement based simplification (example for English)
+    const replacements: Record<string, string> = {
+      utilise: 'use',
+      commence: 'start',
+      terminate: 'end',
+      sufficient: 'enough',
+      endeavour: 'try',
+      obtain: 'get',
+      demonstrate: 'show',
+      substantial: 'big',
+      facilitate: 'help',
+    };
+
+    let simplifiedText = text;
+    for (const [complex, simple] of Object.entries(replacements)) {
+      const regex = new RegExp(`\\b${complex}\\b`, 'gi');
+      simplifiedText = simplifiedText.replace(regex, simple);
+    }
+
+    return {
+      original: text,
+      simplified: simplifiedText,
     };
   }
 

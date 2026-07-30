@@ -41,6 +41,26 @@ import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
           >
             @if (message().message_type === 'text') {
               <p class="text-sm">{{ message().text_content }}</p>
+              <button
+                (click)="simplifyText()"
+                class="text-xs text-blue-400 ms-2 mt-1"
+                [disabled]="simplifying()"
+              >
+                @if (simplifying()) {
+                  {{ 'chatRoom.simplifying' | t }}
+                } @else {
+                  {{ 'chatRoom.simplifyBtn' | t }}
+                }
+              </button>
+            }
+            @if (simplifiedText(); as simplified) {
+              <div class="mt-1 ps-4 border-s-2 border-green-500 text-xs text-green-300">
+                <p>{{ 'chatRoom.simplifiedTitle' | t }}</p>
+                <p>{{ simplified }}</p>
+                <button (click)="simplifiedText.set(null)" class="text-red-400 text-xs ms-1">
+                  {{ 'common.close' | t }}
+                </button>
+              </div>
             }
 
             @if (message().message_type === 'voice') {
@@ -110,6 +130,8 @@ export class ChatMessageComponent {
   private i18n = inject(I18nService);
 
   isBlocked = signal(false);
+  simplifiedText = signal<string | null>(null);
+  simplifying = signal(false);
 
   constructor() {
     effect(() => {
@@ -134,6 +156,30 @@ export class ChatMessageComponent {
     if (this.message().media_url) {
       const audio = new Audio(this.message().media_url);
       audio.play().catch(console.error);
+    }
+  }
+
+  async simplifyText(): Promise<void> {
+    if (this.simplifying() || this.message().message_type !== 'text') return;
+    const text = this.message().text_content ?? '';
+    if (!text) return;
+    this.simplifying.set(true);
+    this.simplifiedText.set(null);
+    try {
+      const res = await fetch('/api/nlp/simplify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) {
+        throw new Error('Simplify request failed');
+      }
+      const data = (await res.json()) as { original: string; simplified: string };
+      this.simplifiedText.set(data.simplified);
+    } catch (err) {
+      console.error('Simplify error:', err);
+    } finally {
+      this.simplifying.set(false);
     }
   }
 

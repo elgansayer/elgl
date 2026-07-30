@@ -8,6 +8,7 @@ import { PronunciationScoreDto } from './dto/pronunciation-score.dto';
 import { TranslateDto } from './dto/translate.dto';
 import { TranslateUiDto } from './dto/translate-ui.dto';
 import { ExplainGrammarDto } from './dto/explain-grammar.dto';
+import { SimplifyDto } from './dto/simplify.dto';
 import {
   GrammarCheckResult,
   PronunciationScoreResult,
@@ -91,6 +92,20 @@ export class NlpController {
     if (!user) return null;
     const profile = await this.usersService.getProfile(user.id);
     return await this.nlpService.pronunciationScore(
+      user.id,
+      profile?.is_vip ?? false,
+      dto,
+    );
+  }
+
+  @Post('simplify')
+  async simplify(
+    @CurrentUser() user: User | null,
+    @Body() dto: SimplifyDto,
+  ): Promise<{ original: string; simplified: string } | null> {
+    if (!user) return null;
+    const profile = await this.usersService.getProfile(user.id);
+    return await this.nlpService.simplify(
       user.id,
       profile?.is_vip ?? false,
       dto,
