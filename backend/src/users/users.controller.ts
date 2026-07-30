@@ -219,9 +219,10 @@ export class UsersController {
 
   @Get('me/message-filters')
   async getMyMessageFilters(@CurrentUser() user: User | null): Promise<{
-    ageMin?: number;
-    ageMax?: number;
-    allowedNativeLanguages?: string[];
+    age_min?: number;
+    age_max?: number;
+    allowed_native_languages?: string[];
+    allowed_genders?: string[];
   }> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.getMessageFilters(user.id);
@@ -232,9 +233,10 @@ export class UsersController {
     @CurrentUser() user: User | null,
     @Body()
     filters: {
-      ageMin?: number;
-      ageMax?: number;
-      allowedNativeLanguages?: string[];
+      age_min?: number;
+      age_max?: number;
+      allowed_native_languages?: string[];
+      allowed_genders?: string[];
     },
   ): Promise<void> {
     if (!user) throw new UnauthorizedException();

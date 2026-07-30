@@ -517,4 +517,37 @@ export class UserService {
         .pipe(catchError(() => of({ message: '' }))),
     );
   }
+
+  async getMessageFilters(): Promise<{
+    age_min?: number;
+    age_max?: number;
+    allowed_genders?: string[];
+    allowed_native_languages?: string[];
+  }> {
+    return firstValueFrom(
+      this.http
+        .get<{
+          age_min?: number;
+          age_max?: number;
+          allowed_genders?: string[];
+          allowed_native_languages?: string[];
+        }>(`${this.baseUrl}/me/message-filters`, { headers: this.getHeaders() })
+        .pipe(catchError(() => of({}))),
+    );
+  }
+
+  async setMessageFilters(filters: {
+    age_min?: number;
+    age_max?: number;
+    allowed_genders?: string[];
+    allowed_native_languages?: string[];
+  }): Promise<void> {
+    return firstValueFrom(
+      this.http
+        .put<void>(`${this.baseUrl}/me/message-filters`, filters, {
+          headers: this.getHeaders(),
+        })
+        .pipe(catchError(() => of(undefined))),
+    );
+  }
 }

@@ -23,6 +23,28 @@ export class CoordinatesDto {
   longitude!: number;
 }
 
+export class MessageFiltersDto {
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  age_min?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  age_max?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  allowed_genders?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  allowed_native_languages?: string[];
+}
+
 export class BusinessCatalogItemDto {
   @IsString()
   @MaxLength(100)
@@ -218,4 +240,9 @@ export class UpdateProfileDto {
   @ValidateNested({ each: true })
   @Type(() => BusinessCatalogItemDto)
   catalog?: BusinessCatalogItemDto[];
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => MessageFiltersDto)
+  message_filters?: MessageFiltersDto;
 }

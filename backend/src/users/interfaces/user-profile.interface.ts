@@ -12,6 +12,12 @@ export interface UserProfile {
   hobbies?: string[];
   location?: string;
   mock_location?: string;
+  message_filters?: {
+    age_min?: number;
+    age_max?: number;
+    allowed_genders?: string[];
+    allowed_native_languages?: string[];
+  };
   is_vip: boolean;
   vip_tier: string;
   coins_balance: number;

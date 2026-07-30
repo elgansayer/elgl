@@ -360,6 +360,10 @@ export class UsersService {
       updatePayload.mock_location = `POINT(${dto.mock_location.longitude} ${dto.mock_location.latitude})`;
     }
 
+    if (dto.message_filters !== undefined) {
+      updatePayload.message_filters = dto.message_filters;
+    }
+
     const supabase = this.supabaseService.getClient();
     const response = await supabase
       .from('users')
@@ -497,9 +501,10 @@ export class UsersService {
   }
 
   async getMessageFilters(userId: string): Promise<{
-    ageMin?: number;
-    ageMax?: number;
-    allowedNativeLanguages?: string[];
+    age_min?: number;
+    age_max?: number;
+    allowed_native_languages?: string[];
+    allowed_genders?: string[];
   }> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
@@ -517,9 +522,10 @@ export class UsersService {
   async setMessageFilters(
     userId: string,
     filters: {
-      ageMin?: number;
-      ageMax?: number;
-      allowedNativeLanguages?: string[];
+      age_min?: number;
+      age_max?: number;
+      allowed_native_languages?: string[];
+      allowed_genders?: string[];
     },
   ): Promise<void> {
     const supabase = this.supabaseService.getClient();
