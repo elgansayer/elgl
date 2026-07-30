@@ -230,4 +230,12 @@ export const routes: Routes = [
       ),
     title: 'Block Management - HelloTalk',
   },
+  {
+    path: 'chat-settings',
+    loadComponent: () =>
+      import('./pages/chat-settings/chat-settings.component').then(
+        (m) => m.ChatSettingsComponent,
+      ),
+    title: 'Chat Settings - HelloTalk',
+  },
 ];

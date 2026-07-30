@@ -8,21 +8,25 @@ import { ChatService } from './chat.service';
 import { GroupsController } from './groups.controller';
 import { GroupsService } from './groups.service';
 import { SystemMessageService } from './services/system-message.service';
+import { ChatSettingsController } from './chat-settings.controller';
+import { ChatSettingsService } from './chat-settings.service';
 
 @Module({
   imports: [SafetyModule, LinkPreviewModule, SpamDetectionModule],
-  controllers: [ChatController, GroupsController],
+  controllers: [ChatController, GroupsController, ChatSettingsController],
   providers: [
     CentrifugoService,
     ChatService,
     GroupsService,
     SystemMessageService,
+    ChatSettingsService,
   ],
   exports: [
     CentrifugoService,
     ChatService,
     GroupsService,
     SystemMessageService,
+    ChatSettingsService,
   ],
 })
 export class ChatModule {}
