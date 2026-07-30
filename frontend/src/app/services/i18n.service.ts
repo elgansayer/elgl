@@ -830,6 +830,11 @@ export class I18nService {
     'password.resetError': 'Failed to reset password. Please try again.',
     'password.resetBtn': 'Reset Password',
     'password.sendResetLink': 'Send Reset Link',
+
+    // Appearance settings
+    'appearance.title': 'Appearance',
+    'appearance.themeLabel': 'Theme',
+    'appearance.languageLabel': 'Language',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });
