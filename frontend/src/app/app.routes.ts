@@ -366,6 +366,14 @@ export const routes: Routes = [
     title: 'Study Streak - HelloTalk',
   },
   {
+    path: 'my-subscription',
+    loadComponent: () =>
+      import('./pages/my-subscription/my-subscription.component').then(
+        (m) => m.MySubscriptionComponent,
+      ),
+    title: 'My Subscription - HelloTalk',
+  },
+  {
     path: 'account/deletion',
     loadComponent: () =>
       import('./components/account-deletion/account-deletion.component').then(

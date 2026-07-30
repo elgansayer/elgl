@@ -148,4 +148,24 @@ export class MonetisationController {
     if (!user) return null;
     return await this.monetisationService.getCoinsBalance(user.id);
   }
+
+  /**
+   * Get current subscription details for the authenticated user.
+   */
+  @Get('subscription')
+  @UseGuards(SupabaseAuthGuard)
+  async getSubscription(@CurrentUser() user: User | null) {
+    if (!user) return null;
+    return await this.monetisationService.getSubscriptionDetails(user.id);
+  }
+
+  /**
+   * Cancel the user's subscription (set Stripe subscription to cancel at period end).
+   */
+  @Post('subscription/cancel')
+  @UseGuards(SupabaseAuthGuard)
+  async cancelSubscription(@CurrentUser() user: User | null) {
+    if (!user) return null;
+    return await this.monetisationService.cancelSubscription(user.id);
+  }
 }

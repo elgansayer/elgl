@@ -463,4 +463,64 @@ export class MonetisationService {
     );
     return newBalance;
   }
+
+  /**
+   * Return subscription details for the given user.
+   */
+  async getSubscriptionDetails(
+    userId: string,
+  ): Promise<{ isVip: boolean; vipTier: string | null; email?: string }> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('is_vip, vip_tier, email')
+      .eq('id', userId)
+      .single();
+    if (error || !data) {
+      throw new Error(
+        `Failed to fetch subscription details: ${error?.message ?? 'user not found'}`,
+      );
+    }
+    return {
+      isVip: data.is_vip ?? false,
+      vipTier: data.vip_tier ?? null,
+      email: data.email ?? undefined,
+    };
+  }
+
+  /**
+   * Cancel the user's active Stripe subscription.
+   * Uses Stripe's API to list subscriptions by metadata user ID and cancels the first active one.
+   */
+  async cancelSubscription(userId: string): Promise<{ message: string }> {
+    // Locate the Stripe subscriptions that belong to this user
+    const subscriptions = await this.stripe.subscriptions.list({
+      limit: 10,
+    });
+
+    // Iterate through subscriptions to find the one with matching metadata
+    const userSubscription = subscriptions.data.find((sub) => {
+      return sub.metadata?.userId === userId && sub.status === 'active';
+    });
+
+    if (!userSubscription) {
+      throw new BadRequestException(
+        'No active subscription found for this user.',
+      );
+    }
+
+    // Cancel at period end (graceful cancellation)
+    await this.stripe.subscriptions.update(userSubscription.id, {
+      cancel_at_period_end: true,
+    });
+
+    this.logger.log(
+      `Subscription ${userSubscription.id} set to cancel at period end for user ${userId}`,
+    );
+
+    return {
+      message:
+        'Your subscription will be cancelled at the end of the current billing period. You will retain VIP benefits until that date.',
+    };
+  }
 }
