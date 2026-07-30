@@ -68,7 +68,7 @@ export class XpService {
     if (error || !data) {
       return 0;
     }
-    return data.xp_total ?? 0;
+    return (data as { xp_total?: number }).xp_total ?? 0;
   }
 
   /**

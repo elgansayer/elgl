@@ -1,4 +1,4 @@
-import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -25,7 +25,6 @@ import { FavouritesModule } from './favourites/favourites.module';
 import { VideoCallsModule } from './video-calls/video-calls.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { StreakModule } from './streak/streak.module';
-import { StreakMiddleware } from './streak/streak.middleware';
 import { ModerationModule } from './moderation/moderation.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CallsModule } from './calls/calls.module';
@@ -40,7 +39,6 @@ import { VersionModule } from './version/version.module';
 import { GroupsModule } from './groups/groups.module';
 import { ShoppingModule } from './shopping/shopping.module';
 import { StudyStreakModule } from './study-streak/study-streak.module';
-import { StreakCronModule } from './streak-cron/streak-cron.module';
 import { HostDashboardModule } from './host-dashboard/host-dashboard.module';
 import { PrivacyModule } from './privacy/privacy.module';
 import { AiConversationModule } from './ai-conversation/ai-conversation.module';
@@ -111,7 +109,6 @@ import { validationSchema } from './config/validation.schema';
     ProficiencyModule,
     VersionModule,
     StudyStreakModule,
-    StreakCronModule,
     HostDashboardModule,
     PrivacyModule,
     AiConversationModule,
@@ -141,8 +138,4 @@ import { validationSchema } from './config/validation.schema';
     },
   ],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(StreakMiddleware).forRoutes('*');
-  }
-}
+export class AppModule {}

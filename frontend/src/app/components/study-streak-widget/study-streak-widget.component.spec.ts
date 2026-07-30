@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
 import { of } from 'rxjs';
 import { I18nService } from '../../services/i18n.service';
 import { StudyStreakService } from '../../services/study-streak.service';
@@ -7,27 +8,26 @@ import { StudyStreakWidgetComponent } from './study-streak-widget.component';
 describe('StudyStreakWidgetComponent', () => {
   let component: StudyStreakWidgetComponent;
   let fixture: ComponentFixture<StudyStreakWidgetComponent>;
-  let streakServiceSpy: jasmine.SpyObj<StudyStreakService>;
-  let i18nServiceSpy: jasmine.SpyObj<I18nService>;
+
+  const mockStreakService = {
+    getStreak: vi.fn().mockReturnValue(of({ streak: 5 })),
+    checkin: vi.fn().mockReturnValue(of({ streak: 6 })),
+  };
+
+  const mockI18nService = {
+    translations: vi.fn().mockReturnValue({}),
+    translate: (key: string) => key,
+  };
 
   beforeEach(async () => {
-    streakServiceSpy = jasmine.createSpyObj('StudyStreakService', [
-      'getStreak',
-      'checkin',
-    ]);
-    streakServiceSpy.getStreak.and.returnValue(of({ streak: 5 }));
-    streakServiceSpy.checkin.and.returnValue(of({ streak: 6 }));
-
-    i18nServiceSpy = jasmine.createSpyObj('I18nService', ['translate']);
-    i18nServiceSpy.translate.and.callFake(
-      (key: string, _params?: Record<string, unknown>) => key,
-    );
+    mockStreakService.getStreak.mockReturnValue(of({ streak: 5 }));
+    mockStreakService.checkin.mockReturnValue(of({ streak: 6 }));
 
     await TestBed.configureTestingModule({
       imports: [StudyStreakWidgetComponent],
       providers: [
-        { provide: StudyStreakService, useValue: streakServiceSpy },
-        { provide: I18nService, useValue: i18nServiceSpy },
+        { provide: StudyStreakService, useValue: mockStreakService },
+        { provide: I18nService, useValue: mockI18nService },
       ],
     }).compileComponents();
 
@@ -40,21 +40,19 @@ describe('StudyStreakWidgetComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should load streak value from service', () => {
-    // The component uses a resource that fetches asynchronously.
-    // For simplicity, verify that the streak loading started (no error thrown).
+  it('loads the streak value from the service', async () => {
+    await fixture.whenStable();
+    fixture.detectChanges();
+
     expect(component.streakLoading()).toBe(false);
-    // The streak value may eventually become 5 after the async loader resolves
-    // but we cannot rely on timing in this minimal test.
-    expect(component.streakValue()).toBeGreaterThanOrEqual(0);
+    expect(component.streakValue()).toBe(5);
   });
 
-  it('should trigger checkin when button clicked', () => {
-    // Simulate click on the check-in button
+  it('triggers checkin when the button is clicked', () => {
     const button: HTMLButtonElement =
       fixture.nativeElement.querySelector('button');
     expect(button).toBeTruthy();
     button.click();
-    expect(streakServiceSpy.checkin).toHaveBeenCalled();
+    expect(mockStreakService.checkin).toHaveBeenCalled();
   });
 });

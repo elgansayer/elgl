@@ -144,10 +144,18 @@ export class UserService {
   }
 
   async getMyProfile(): Promise<UserProfile | null> {
+    const fallbackProfile: UserProfile = {
+      ...MOCK_USER_PROFILE,
+      status_text: 'Learning new languages!',
+      chat_enter_to_send: false,
+      chat_text_size: 'medium',
+      auto_download_wifi_only: false,
+      last_active_at: new Date().toISOString(),
+    };
     return firstValueFrom(
       this.http
         .get<UserProfile>(`${this.baseUrl}/me`, { headers: this.getHeaders() })
-        .pipe(catchError(() => of({...MOCK_USER_PROFILE, status_text:'Learning new languages!', chat_enter_to_send: false, chat_text_size: 'medium', auto_download_wifi_only: false, last_active_at: new Date().toISOString()}))),
+        .pipe(catchError(() => of(fallbackProfile))),
     );
   }
 
@@ -373,6 +381,7 @@ export class UserService {
           privacy_status?: string;
           privacy_hide_exact_location: boolean;
           privacy_hide_online_status: boolean;
+          privacy_hide_vip_status: boolean;
         }>(`${this.baseUrl}/me/privacy-settings`, { headers: this.getHeaders() })
         .pipe(
           catchError(() => {
@@ -382,10 +391,10 @@ export class UserService {
               privacy_hide_location: profile.privacy_hide_location ?? false,
               privacy_hide_from_search: profile.privacy_hide_from_search ?? false,
               privacy_hide_gender: profile.privacy_hide_gender ?? false,
-              privacy_last_seen: (profile as any)?.privacy_last_seen ?? 'everyone',
-              privacy_profile_photo: (profile as any)?.privacy_profile_photo ?? 'everyone',
-              privacy_about_info: (profile as any)?.privacy_about_info ?? 'everyone',
-              privacy_status: (profile as any)?.privacy_status ?? 'everyone',
+              privacy_last_seen: profile.privacy_last_seen ?? 'everyone',
+              privacy_profile_photo: profile.privacy_profile_photo ?? 'everyone',
+              privacy_about_info: profile.privacy_about_info ?? 'everyone',
+              privacy_status: profile.privacy_status ?? 'everyone',
               privacy_hide_exact_location: profile.privacy_hide_exact_location ?? false,
               privacy_hide_online_status: profile.privacy_hide_online_status ?? false,
               privacy_hide_vip_status: profile.privacy_hide_vip_status ?? false,

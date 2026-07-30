@@ -1,5 +1,10 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 
+interface GithubRelease {
+  tag_name?: string;
+  html_url?: string;
+}
+
 @Injectable()
 export class VersionService implements OnModuleInit {
   private readonly logger = new Logger(VersionService.name);
@@ -38,7 +43,7 @@ export class VersionService implements OnModuleInit {
         this.latestVersion = this.currentVersion;
         return;
       }
-      const data = await res.json();
+      const data = (await res.json()) as GithubRelease;
       const tag =
         typeof data.tag_name === 'string'
           ? data.tag_name.replace(/^v/i, '')
