@@ -36,6 +36,7 @@ export interface UserProfile {
   created_at: string;
   is_followed_by_me?: boolean;
   is_liked_by_me?: boolean;
+  corrector_score?: number;
 }
 
 export interface VisitorLog {
@@ -271,6 +272,16 @@ export class UserService {
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
+  }
+
+  async rateCorrector(ratedUserId: string, score: number): Promise<void> {
+    return firstValueFrom(
+      this.http.post<void>(
+        `${environment.apiUrl}/corrector-score/rate`,
+        { rated_user_id: ratedUserId, score },
+        { headers: this.getHeaders() },
+      ).pipe(catchError(() => of(undefined))),
+    );
   }
 
   async getLinkedAccounts(): Promise<LinkedAccount[]> {

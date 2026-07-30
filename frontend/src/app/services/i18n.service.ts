@@ -502,6 +502,8 @@ export class I18nService {
     'profile.correctionsLabel': 'Corrections',
     'profile.streakValue': '🔥 {{days}}d',
     'profile.correctionValue': '{{ratio}}x',
+    'profile.correctorScore': 'Corrector score',
+    'profile.noRatings': 'No ratings yet',
     'profile.favLink': '⭐ Favourites',
     'profile.vocabLink': '📚 Vocabulary',
     'profile.liveRoomsLink': '🎙️ Live rooms',

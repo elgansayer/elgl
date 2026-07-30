@@ -40,6 +40,7 @@ import { StreakCronModule } from './streak-cron/streak-cron.module';
 import { HostDashboardModule } from './host-dashboard/host-dashboard.module';
 import { PrivacyModule } from './privacy/privacy.module';
 import { AiConversationModule } from './ai-conversation/ai-conversation.module';
+import { CorrectorScoreModule } from './corrector-score/corrector-score.module';
 import { AchievementsModule } from './achievements/achievements.module';
 import { CulturalModule } from './cultural/cultural.module';
 import { validationSchema } from './config/validation.schema';
@@ -102,6 +103,7 @@ import { validationSchema } from './config/validation.schema';
     AiConversationModule,
     AchievementsModule,
     CulturalModule,
+    CorrectorScoreModule,
   ],
   controllers: [AppController],
   providers: [

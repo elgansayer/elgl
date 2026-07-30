@@ -1686,3 +1686,27 @@ To github.com:elgansayer/hellotalk.git
 [2026-07-30T03:42:59Z]   FAIL  backend lint
 [2026-07-30T03:43:31Z]   FAIL  backend test
 [2026-07-30T03:43:31Z] Tests have failures (pre-existing). Committing anyway.
+[main 61bf4e3b] feat: Build 'Correction Quality' rating system (up/down votes) for community corrections on Moments.
+ 7 files changed, 188 insertions(+), 2 deletions(-)
+ rename .tasks/{pending => completed}/0000-073-build-correction-quality-rating-system-up-down-votes-for-com.task (100%)
+ create mode 100644 backend/src/moments/dto/vote-correction.dto.ts
+remote: 
+remote: GitHub found 11 vulnerabilities on elgansayer/hellotalk's default branch (6 high, 5 moderate). To find out more, visit:        
+remote:      https://github.com/elgansayer/hellotalk/security/dependabot        
+remote: 
+To github.com:elgansayer/hellotalk.git
+   e9fe2bed..61bf4e3b  main -> main
+[2026-07-30T03:43:33Z] Committed: 61bf4e3b — feat: Build 'Correction Quality' rating system (up/down votes) for community cor
+[2026-07-30T03:43:33Z] COMPLETED: Build 'Correction Quality' rating system (up/down votes) for community correctio
+[2026-07-30T03:43:33Z] Cooldown 15s...
+[2026-07-30T03:43:48Z] Task: Implement a user-level 'Corrector Score' based on ratings to display on profiles
+[2026-07-30T03:43:48Z] Queue: 139 pending, 73 done, 0 stuck
+[2026-07-30T03:43:48Z] Attempt 1/3
+[2026-07-30T03:43:48Z] Aider pass 1 (discover)...
+[2026-07-30T03:45:34Z] Pass 1: discovered 13 files
+[2026-07-30T03:45:34Z] Aider pass 2 round 1: 13 files in context
+[2026-07-30T03:46:29Z] Pass 2 round 1: produced 10 file changes
+[2026-07-30T03:46:39Z]   FAIL  frontend lint
+[2026-07-30T03:47:20Z]   FAIL  backend lint
+[2026-07-30T03:47:53Z]   FAIL  backend test
+[2026-07-30T03:47:53Z] Tests have failures (pre-existing). Committing anyway.

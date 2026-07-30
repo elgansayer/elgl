@@ -13,6 +13,7 @@ import {
 } from './interfaces/user-profile.interface';
 
 import { Optional } from '@nestjs/common';
+import { CorrectorScoreService } from '../corrector-score/corrector-score.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { XpService } from '../xp/xp.service';
 
@@ -22,6 +23,7 @@ export class UsersService {
     private readonly supabaseService: SupabaseService,
     private readonly xpService: XpService,
     @Optional() private readonly notificationsService?: NotificationsService,
+    @Optional() private readonly correctorScoreService?: CorrectorScoreService,
   ) {}
 
   async getProfile(userId: string): Promise<UserProfile> {
@@ -36,7 +38,17 @@ export class UsersService {
       return this.getMockProfile(userId);
     }
 
-    return response.data as UserProfile;
+    const profile = response.data as UserProfile;
+
+    // Attach corrector score if available
+    if (this.correctorScoreService) {
+      const score = await this.correctorScoreService.getCorrectorScore(userId);
+      (profile as any).corrector_score = score.averageScore ?? 0;
+    } else {
+      (profile as any).corrector_score = 0;
+    }
+
+    return profile;
   }
 
   async getVisitors(userId: string): Promise<ProfileVisitor[]> {
@@ -188,6 +200,7 @@ export class UsersService {
       privacy_hide_location: false,
       privacy_hide_from_search: false,
       privacy_hide_gender: false,
+      corrector_score: 0,
       created_at: new Date().toISOString(),
       scheduled_for_deletion_at: undefined,
       xp_total: 100,

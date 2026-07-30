@@ -88,7 +88,7 @@
       </div>
 
       <div
-        class="mt-4 grid grid-cols-2 gap-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-3 pb-3 text-center sm:grid-cols-4"
+        class="mt-4 grid grid-cols-2 gap-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-3 pb-3 text-center sm:grid-cols-5"
       >
         <div>
           <p class="text-[10px] font-semibold uppercase text-text-secondary">
@@ -117,6 +117,18 @@
             {{ 'profile.statCorrections' | t }}
           </p>
           <p class="text-sm font-bold text-emerald-600">{{ profile()?.correction_ratio }}x</p>
+        </div>
+        <div>
+          <p class="text-[10px] font-semibold uppercase text-text-secondary">
+            {{ 'profile.correctorScore' | t }}
+          </p>
+          <p class="text-sm font-bold text-primary">
+            @if (profile()?.corrector_score != null) {
+              {{ profile()?.corrector_score }} / 5
+            } @else {
+              {{ 'profile.noRatings' | t }}
+            }
+          </p>
         </div>
       </div>
 
