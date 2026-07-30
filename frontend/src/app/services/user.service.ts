@@ -55,6 +55,7 @@ export interface UserProfile {
   learning_goals?: string;
   default_translation_language?: string;
   created_at: string;
+  last_active_at?: string;
   is_followed_by_me?: boolean;
   is_liked_by_me?: boolean;
   corrector_score?: number;
@@ -143,7 +144,7 @@ export class UserService {
     return firstValueFrom(
       this.http
         .get<UserProfile>(`${this.baseUrl}/me`, { headers: this.getHeaders() })
-        .pipe(catchError(() => of({...MOCK_USER_PROFILE, status_text:'Learning new languages!', chat_enter_to_send: false, chat_text_size: 'medium', auto_download_wifi_only: false}))),
+        .pipe(catchError(() => of({...MOCK_USER_PROFILE, status_text:'Learning new languages!', chat_enter_to_send: false, chat_text_size: 'medium', auto_download_wifi_only: false, last_active_at: new Date().toISOString()}))),
     );
   }
 
@@ -193,7 +194,7 @@ export class UserService {
         .patch<UserProfile>(`${this.baseUrl}/me`, update, { headers: this.getHeaders() })
         .pipe(
           catchError(() => {
-            const updated: UserProfile = { ...MOCK_USER_PROFILE, status_text:'Learning new languages!', ...update, auto_download_wifi_only: update.auto_download_wifi_only ?? false };
+            const updated: UserProfile = { ...MOCK_USER_PROFILE, status_text:'Learning new languages!', ...update, auto_download_wifi_only: update.auto_download_wifi_only ?? false, last_active_at: new Date().toISOString() };
             return of(updated);
           }),
         ),
@@ -577,5 +578,23 @@ export class UserService {
         headers: this.getHeaders(),
       }).pipe(catchError(() => of(MOCK_USER_PROFILE))),
     );
+  }
+
+  getOnlineStatus(user: Pick<UserProfile, 'last_active_at'>): 'online' | 'recently' | 'offline' {
+    if (!user.last_active_at) return 'offline';
+    const lastActive = new Date(user.last_active_at).getTime();
+    const now = Date.now();
+    const diffMs = now - lastActive;
+    // 5 minutes
+    if (diffMs <= 300_000) return 'online';
+    // 1 day
+    if (diffMs <= 86_400_000) return 'recently';
+    return 'offline';
+  }
+
+  getLastActiveFormatted(user: Pick<UserProfile, 'last_active_at'>): string | null {
+    if (!user.last_active_at) return null;
+    const date = new Date(user.last_active_at);
+    return date.toLocaleString();
   }
 }
