@@ -29,6 +29,12 @@ export interface ChatMessage {
     avatar_url?: string | null;
   };
   link_preview?: LinkPreview;
+  /** Original text detected by the translation service */
+  original_text?: string;
+  /** Translated version of the text, if automatic translation was applied */
+  translated_text?: string;
+  /** ISO 639-1 code of the source language detected */
+  detected_language?: string;
 }
 
 export interface FavouriteRecord {

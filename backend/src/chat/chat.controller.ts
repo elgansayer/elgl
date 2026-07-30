@@ -24,6 +24,7 @@ import {
 } from './interfaces/chat-message.interface';
 import { ChatService } from './chat.service';
 import { ConversationStarterService } from './conversation-starter.service';
+import { TranslationService } from './translation.service';
 
 @Controller('chat')
 @UseGuards(SupabaseAuthGuard)
@@ -31,6 +32,7 @@ export class ChatController {
   constructor(
     private readonly chatService: ChatService,
     private readonly conversationStarterService: ConversationStarterService,
+    private readonly translationService: TranslationService,
   ) {}
 
   // Tighter than the app-wide default (10/60s, app.module.ts) - this mints a
@@ -172,5 +174,20 @@ export class ChatController {
       dto.partnerId,
     );
     return { suggestions };
+  }
+
+  @Post('translate-voiceroom')
+  async translateVoiceroomText(
+    @CurrentUser() user: User | null,
+    @Body() dto: { text: string; target_language: string },
+  ): Promise<{ translated_text: string; detected_language: string } | null> {
+    if (!user) return null;
+    const detected = await this.translationService.detectLanguage(dto.text);
+    const translated = await this.translationService.translate(
+      dto.text,
+      detected,
+      dto.target_language,
+    );
+    return { translated_text: translated, detected_language: detected };
   }
 }

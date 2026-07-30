@@ -380,4 +380,18 @@ export class ChatService {
     );
     return response.suggestions;
   }
+
+  /**
+   * Requests a real‑time translation of the given text for the voice‑room overlay.
+   * The backend will detect the source language and return the translated text.
+   */
+  async translateVoiceroomText(text: string, targetLanguage: string): Promise<{ translated_text: string; detected_language: string }> {
+    return firstValueFrom(
+      this.http.post<{ translated_text: string; detected_language: string }>(
+        `${environment.apiUrl}/chat/translate-voiceroom`,
+        { text, target_language: targetLanguage },
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
 }

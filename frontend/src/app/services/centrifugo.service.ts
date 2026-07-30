@@ -74,4 +74,21 @@ export class CentrifugoService {
     if (!this.centrifuge) return;
     this.centrifuge.publish(channel, data);
   }
+
+  /**
+   * Subscribes to a voice‑room channel and calls `callback` for every
+   * translated message. The handler receives the full payload, which now
+   * includes `original_text`, `translated_text`, and `detected_language`.
+   */
+  subscribeVoiceRoom(
+    roomId: string,
+    callback: (data: { original_text: string; translated_text: string; detected_language: string } & Record<string, unknown>) => void,
+  ): void {
+    this.subscribe(`room_${roomId}`, (data: unknown) => {
+      const payload = data as Record<string, unknown>;
+      if (typeof payload.original_text === 'string') {
+        callback(payload as any);
+      }
+    });
+  }
 }
