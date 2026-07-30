@@ -35,6 +35,7 @@ import { HelpModule } from './help/help.module';
 import { PasswordResetModule } from './password-reset/password-reset.module';
 import { ProficiencyModule } from './proficiency/proficiency.module';
 import { VersionModule } from './version/version.module';
+import { GroupsModule } from './groups/groups.module';
 import { StudyStreakModule } from './study-streak/study-streak.module';
 import { StreakCronModule } from './streak-cron/streak-cron.module';
 import { HostDashboardModule } from './host-dashboard/host-dashboard.module';
@@ -108,6 +109,7 @@ import { validationSchema } from './config/validation.schema';
     DailyTipModule,
     CorrectorScoreModule,
     LanguageChallengesModule,
+    GroupsModule,
   ],
   controllers: [AppController],
   providers: [
