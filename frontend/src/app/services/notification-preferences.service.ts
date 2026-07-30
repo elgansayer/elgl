@@ -20,6 +20,7 @@ export interface NotificationPreferences {
   study_reminder: CategoryPreference;
   friend_request: CategoryPreference;
   audio_room_invite: CategoryPreference;
+  new_follower: CategoryPreference;
   quiet_hours_start?: string;
   quiet_hours_end?: string;
   do_not_disturb: boolean;

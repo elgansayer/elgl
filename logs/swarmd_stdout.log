@@ -3931,3 +3931,28 @@ To github.com:elgansayer/hellotalk.git
 [2026-07-30T09:46:07Z]   FAIL  backend lint
 [2026-07-30T09:46:45Z]   FAIL  backend test
 [2026-07-30T09:46:45Z] Tests have failures (pre-existing). Committing anyway.
+[main 9a555823] feat: Build Blocked Users management list.
+ 9 files changed, 149 insertions(+), 20 deletions(-)
+ rename .tasks/{pending => completed}/0000-163-build-blocked-users-management-list.task (100%)
+ create mode 100644 backend/src/safety/dto/blocked-user.dto.ts
+ create mode 100644 frontend/src/app/services/blocked-users.service.ts
+remote: 
+remote: GitHub found 11 vulnerabilities on elgansayer/hellotalk's default branch (6 high, 5 moderate). To find out more, visit:        
+remote:      https://github.com/elgansayer/hellotalk/security/dependabot        
+remote: 
+To github.com:elgansayer/hellotalk.git
+   6d5fdee1..9a555823  main -> main
+[2026-07-30T09:46:47Z] Committed: 9a555823 — feat: Build Blocked Users management list.
+[2026-07-30T09:46:47Z] COMPLETED: Build Blocked Users management list.
+[2026-07-30T09:46:47Z] Cooldown 15s...
+[2026-07-30T09:47:02Z] Task: Build granular Push Notification toggles (Messages, Comments, Likes, Followers).
+[2026-07-30T09:47:02Z] Queue: 49 pending, 163 done, 0 stuck
+[2026-07-30T09:47:02Z] Attempt 1/3
+[2026-07-30T09:47:02Z] Aider pass 1 (discover)...
+[2026-07-30T09:48:22Z] Pass 1: discovered 6 files
+[2026-07-30T09:48:22Z] Aider pass 2 round 1: 6 files in context
+[2026-07-30T09:49:18Z] Pass 2 round 1: produced 5 file changes
+[2026-07-30T09:49:28Z]   FAIL  frontend lint
+[2026-07-30T09:50:17Z]   FAIL  backend lint
+[2026-07-30T09:50:53Z]   FAIL  backend test
+[2026-07-30T09:50:53Z] Tests have failures (pre-existing). Committing anyway.

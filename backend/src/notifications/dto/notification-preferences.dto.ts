@@ -71,6 +71,11 @@ export class NotificationPreferencesDto {
   @Type(() => CategoryPreferenceDto)
   audio_room_invite?: CategoryPreferenceDto;
 
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CategoryPreferenceDto)
+  new_follower?: CategoryPreferenceDto;
+
   @IsString()
   @IsOptional()
   quiet_hours_start?: string;

@@ -54,6 +54,7 @@ export class NotificationPreferencesService {
     study_reminder: { push: true, email: true, in_app: true },
     friend_request: { push: true, email: false, in_app: true },
     audio_room_invite: { push: true, email: false, in_app: true },
+    new_follower: { push: true, email: false, in_app: true },
     quiet_hours_start: undefined,
     quiet_hours_end: undefined,
     do_not_disturb: false,
@@ -193,6 +194,7 @@ export class NotificationPreferencesService {
       'study_reminder',
       'friend_request',
       'audio_room_invite',
+      'new_follower',
     ];
 
     const merged = { ...existing } as Record<string, unknown>;
@@ -253,6 +255,7 @@ export class NotificationPreferencesService {
       study_reminder: data.study_reminder,
       friend_request: data.friend_request,
       audio_room_invite: data.audio_room_invite,
+      new_follower: data.new_follower,
       quiet_hours_start: data.quiet_hours_start ?? undefined,
       quiet_hours_end: data.quiet_hours_end ?? undefined,
       do_not_disturb: data.do_not_disturb,
@@ -278,6 +281,7 @@ export class NotificationPreferencesService {
       study_reminder: prefs.study_reminder,
       friend_request: prefs.friend_request,
       audio_room_invite: prefs.audio_room_invite,
+      new_follower: prefs.new_follower,
       quiet_hours_start: prefs.quiet_hours_start ?? null,
       quiet_hours_end: prefs.quiet_hours_end ?? null,
       do_not_disturb: prefs.do_not_disturb,
