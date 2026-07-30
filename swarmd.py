@@ -679,6 +679,7 @@ def run_copilot(task: str) -> dict:
 
     cmd = [aider, '--model', 'openai/gpt-4o',
            '--openai-api-base', copilot_base,
+           '--read', 'AGENTS.md',
            '--message', task,
            '--no-auto-commits', '--yes', '--no-suggest-shell-commands']
 
@@ -829,7 +830,7 @@ def run_deepseek(task: str) -> dict:
         cmd = [aider, '--yes']
         for f in sorted(all_files)[:30]:
             cmd.extend(['--file', f])
-        cmd.extend(['--message', task, '--no-auto-commits',
+        cmd.extend(['--read', 'AGENTS.md', '--message', task, '--no-auto-commits',
                      '--no-suggest-shell-commands', '--model', model])
 
         env = os.environ.copy()
@@ -984,13 +985,21 @@ def run_task_with_fallback(task: str, attempt: int = 0, cycle: int = 0) -> dict:
                 current_tool=f'Fallback chain (attempt {attempt+1}/{CFG["max_retries"]})')
     heartbeat()
 
+    enriched_task = (
+        "CRITICAL INSTRUCTION: You MUST strictly adhere to all architectural, "
+        "styling, and behavioral rules defined in AGENTS.md (use Angular signals, "
+        "no 'any' types, Tailwind logical properties for RTL, zero hardcoded strings, etc). "
+        "Read AGENTS.md if you need clarification.\n\n"
+        f"TASK:\n{task}"
+    )
+
     for model_name in ordered:
         runner = MODEL_RUNNERS.get(model_name)
         if not runner:
             continue
 
         log(f"Trying {model_name}...")
-        result = runner(task)
+        result = runner(enriched_task)
 
         if result.get('ok'):
             result['model_used'] = model_name
