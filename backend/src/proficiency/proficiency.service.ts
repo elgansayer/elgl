@@ -4,11 +4,16 @@ import {
   AssessmentResult,
   ProficiencyLevel,
 } from './interfaces/proficiency.interface';
+import { LanguageSelectionDto } from './dto/language-selection.dto';
 import { XpService } from '../xp/xp.service';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class ProficiencyService {
-  constructor(private readonly xpService: XpService) {}
+  constructor(
+    private readonly xpService: XpService,
+    private readonly supabaseService: SupabaseService,
+  ) {}
 
   assess(assessment: AssessmentResultDto): AssessmentResult {
     const scores: number[] = [];
@@ -40,6 +45,31 @@ export class ProficiencyService {
     );
 
     return result;
+  }
+
+  async setLanguages(dto: LanguageSelectionDto): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const languageCodes = dto.targetLanguages.map((t) => t.language);
+    const languageLevels = dto.targetLanguages.reduce(
+      (acc, t) => {
+        acc[t.language] = t.level;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+
+    const { error } = await supabase
+      .from('users')
+      .update({
+        native_language: dto.nativeLanguage,
+        target_languages: languageCodes,
+        language_levels: languageLevels,
+      })
+      .eq('id', dto.userId);
+
+    if (error) {
+      throw new Error(`Failed to update user languages: ${error.message}`);
+    }
   }
 
   private mapScoreToLevel(score: number): ProficiencyLevel {

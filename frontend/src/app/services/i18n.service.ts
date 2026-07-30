@@ -853,6 +853,13 @@ export class I18nService {
 
     // Report confirm
     'report.confirmMessage': 'Are you sure you want to report this message?',
+    'level.A1': 'A1 – Beginner',
+    'level.A2': 'A2 – Elementary',
+    'level.B1': 'B1 – Intermediate',
+    'level.B2': 'B2 – Upper Intermediate',
+    'level.C1': 'C1 – Advanced',
+    'level.C2': 'C2 – Proficient',
+    'level.native': 'Native',
 
     // Leaderboard
     'leaderboard.top_correctors': 'Top Correctors',

@@ -1,24 +1,28 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
 import { LanguageSelectorComponent } from './language-selector.component';
 import { I18nService } from '../../services/i18n.service';
+import { ProficiencyService } from '../../services/proficiency.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 describe('LanguageSelectorComponent', () => {
   let component: LanguageSelectorComponent;
   let fixture: ComponentFixture<LanguageSelectorComponent>;
-  let i18nService: I18nService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [LanguageSelectorComponent, TranslatePipe],
-      providers: [I18nService, provideHttpClient(), provideHttpClientTesting()],
+      imports: [LanguageSelectorComponent],
+      providers: [
+        provideHttpClient(),
+        I18nService,
+        ProficiencyService,
+        TranslatePipe,
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LanguageSelectorComponent);
     component = fixture.componentInstance;
-    i18nService = TestBed.inject(I18nService);
+    fixture.componentRef.setInput('userId', 'test-user-123');
     fixture.detectChanges();
   });
 
@@ -26,17 +30,25 @@ describe('LanguageSelectorComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should toggle modal open and closed', () => {
-    expect(component.isOpen()).toBe(false);
-    component.toggleModal();
-    expect(component.isOpen()).toBe(true);
-    component.closeModal();
-    expect(component.isOpen()).toBe(false);
+  it('should have access to availableLanguages', () => {
+    expect(component.availableLanguages.length).toBeGreaterThan(0);
   });
 
-  it('should change language when selected', async () => {
-    await component.selectLanguage('es');
-    expect(i18nService.currentLang()).toBe('es');
-    expect(component.isOpen()).toBe(false);
+  it('should start with no target languages', () => {
+    expect(component.targetLanguages().length).toBe(0);
+  });
+
+  it('should add a target language when addTargetLanguage is called', () => {
+    component.selectedNativeLang.set('en-GB');
+    component.addTargetLanguage();
+    expect(component.targetLanguages().length).toBe(1);
+  });
+
+  it('should not add more than 3 target languages', () => {
+    component.selectedNativeLang.set('en-GB');
+    for (let i = 0; i < 5; i++) {
+      component.addTargetLanguage();
+    }
+    expect(component.targetLanguages().length).toBe(3);
   });
 });
