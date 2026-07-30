@@ -8,10 +8,99 @@ import * as crypto from 'crypto';
 export class CallsService {
   private livekitHost: string;
 
+  // Active calls per user (userId -> (roomName -> { roomName, isHeld }))
+  private readonly activeCalls: Map<
+    string,
+    Map<string, { roomName: string; isHeld: boolean }>
+  > = new Map();
+
+  // Call‑waiting queue: userId -> list of calls where the user is the callee
+  // and hasn't yet answered.
+  private readonly waitingCalls: Map<
+    string,
+    Array<{
+      roomName: string;
+      calleeToken: string;
+      e2eeKey: string;
+      isVideo: boolean;
+    }>
+  > = new Map();
+
   constructor(private configService: ConfigService) {
     this.livekitHost =
       this.configService.get<string>('LIVEKIT_URL') || 'http://localhost:7880';
   }
+
+  /* ---------- Internal helpers for active-call tracking ---------- */
+
+  private ensureUser(
+    userId: string,
+  ): Map<string, { roomName: string; isHeld: boolean }> {
+    if (!this.activeCalls.has(userId)) {
+      this.activeCalls.set(userId, new Map());
+    }
+    return this.activeCalls.get(userId)!;
+  }
+
+  private registerParticipant(userId: string, roomName: string): void {
+    const userCalls = this.ensureUser(userId);
+    userCalls.set(roomName, { roomName, isHeld: false });
+  }
+
+  /* ---------- Public API for hold / resume / list ---------- */
+
+  getActiveCalls(userId: string): Array<{ roomName: string; isHeld: boolean }> {
+    const userCalls = this.activeCalls.get(userId);
+    if (!userCalls) return [];
+    return Array.from(userCalls.values());
+  }
+
+  holdCall(userId: string, roomName: string): void {
+    const userCalls = this.activeCalls.get(userId);
+    if (!userCalls || !userCalls.has(roomName)) {
+      throw new BadRequestException('Call not found');
+    }
+    userCalls.get(roomName)!.isHeld = true;
+  }
+
+  resumeCall(userId: string, roomName: string): void {
+    const userCalls = this.activeCalls.get(userId);
+    if (!userCalls || !userCalls.has(roomName)) {
+      throw new BadRequestException('Call not found');
+    }
+    userCalls.get(roomName)!.isHeld = false;
+  }
+
+  /* ---------- Call‑waiting ---------- */
+
+  getWaitingCalls(userId: string): Array<{
+    roomName: string;
+    calleeToken: string;
+    e2eeKey: string;
+    isVideo: boolean;
+  }> {
+    return this.waitingCalls.get(userId) || [];
+  }
+
+  acceptWaitingCall(userId: string, roomName: string): void {
+    const waitingList = this.waitingCalls.get(userId);
+    if (!waitingList) {
+      throw new BadRequestException('No waiting calls for this user');
+    }
+    const idx = waitingList.findIndex((w) => w.roomName === roomName);
+    if (idx === -1) {
+      throw new BadRequestException('Waiting call not found');
+    }
+    const callInfo = waitingList[idx];
+    // Move the call from waiting to active
+    waitingList.splice(idx, 1);
+    if (waitingList.length === 0) {
+      this.waitingCalls.delete(userId);
+    }
+    this.registerParticipant(userId, callInfo.roomName);
+  }
+
+  /* ---------- Existing call-creation methods (updated) ---------- */
 
   async initiateCall(
     callerId: string,
@@ -48,6 +137,42 @@ export class CallsService {
       generateToken(calleeId),
     ]);
 
+    // Determine if the callee is already in an active call (any room)
+    const isBusy =
+      this.activeCalls.has(calleeId) &&
+      this.activeCalls.get(calleeId)!.size > 0;
+
+    if (isBusy) {
+      // Callee is busy; store the call as a waiting call instead of registering
+      // them immediately.  The caller is registered right away.
+      this.registerParticipant(callerId, roomName);
+
+      const waitingEntry = {
+        roomName,
+        calleeToken,
+        e2eeKey,
+        isVideo,
+      };
+      if (!this.waitingCalls.has(calleeId)) {
+        this.waitingCalls.set(calleeId, []);
+      }
+      this.waitingCalls.get(calleeId)!.push(waitingEntry);
+
+      return {
+        room_name: roomName,
+        caller_token: callerToken,
+        callee_token: calleeToken,
+        e2ee_key: e2eeKey,
+        is_video: isVideo,
+        call_id: uuidv4(),
+        waiting: true,
+      };
+    }
+
+    // Callee is free; register both participants as usual
+    this.registerParticipant(callerId, roomName);
+    this.registerParticipant(calleeId, roomName);
+
     return {
       room_name: roomName,
       caller_token: callerToken,
@@ -55,6 +180,7 @@ export class CallsService {
       e2ee_key: e2eeKey,
       is_video: isVideo,
       call_id: uuidv4(),
+      waiting: false,
     };
   }
 
@@ -113,6 +239,11 @@ export class CallsService {
     };
 
     const tokens = await Promise.all(participantIds.map(generateToken));
+
+    // Track the newly created group call for every participant
+    for (const pid of participantIds) {
+      this.registerParticipant(pid, roomName);
+    }
 
     return {
       room_name: roomName,
