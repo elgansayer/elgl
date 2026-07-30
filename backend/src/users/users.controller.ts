@@ -14,6 +14,7 @@ import {
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { TwoFactorGuard } from '../two-factor/two-factor.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import {
   UserProfile,
@@ -30,6 +31,7 @@ export class UsersController {
     private readonly mediaService: MediaService,
   ) {}
 
+  @UseGuards(TwoFactorGuard)
   @Delete('me')
   async deleteMyAccount(
     @CurrentUser() user: User | null,
@@ -38,6 +40,7 @@ export class UsersController {
     return this.usersService.scheduleDeletion(user.id);
   }
 
+  @UseGuards(TwoFactorGuard)
   @Post('me/restore')
   async restoreMyAccount(
     @CurrentUser() user: User | null,
@@ -70,6 +73,7 @@ export class UsersController {
     return this.usersService.getUserStats(user.id);
   }
 
+  @UseGuards(TwoFactorGuard)
   @Patch('me')
   async updateMyProfile(
     @CurrentUser() user: User | null,
