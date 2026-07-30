@@ -141,6 +141,10 @@ export class DiscoveryService {
         .gte('correction_ratio', 0.8);
     }
 
+    if (_currentUserProfile?.is_vip && query.gender) {
+      queryBuilder = queryBuilder.eq('gender', query.gender);
+    }
+
     if (searchLat !== undefined && searchLon !== undefined) {
       const response = await supabase.rpc('search_nearby_users', {
         search_lat: searchLat,
@@ -178,6 +182,11 @@ export class DiscoveryService {
       let rpcResults = response.data as UserProfile[];
       if (blockedIds.length > 0) {
         rpcResults = rpcResults.filter((u) => !blockedIds.includes(u.id));
+      }
+      if (_currentUserProfile?.is_vip && query.gender) {
+        rpcResults = rpcResults.filter(
+          (u) => (u as any).gender === query.gender,
+        );
       }
       return rpcResults;
     }

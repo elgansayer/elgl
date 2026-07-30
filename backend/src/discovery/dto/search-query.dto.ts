@@ -54,4 +54,8 @@ export class SearchQueryDto {
   @IsOptional()
   @IsString()
   level?: string;
+
+  @IsOptional()
+  @IsString()
+  gender?: string;
 }

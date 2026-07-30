@@ -41,6 +41,35 @@
         ></app-language-picker>
       </div>
     </div>
+    <!-- Gender Filter (VIP only) -->
+    @if (isVip()) {
+      <div class="flex overflow-x-auto hide-scrollbar gap-2 px-4 mt-3">
+        <button
+          (click)="setGender('')"
+          [class.bg-surface-200]="selectedGender() === ''"
+          [class.bg-surface-300]="selectedGender() !== ''"
+          class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-primary text-sm font-bold border border-surface-100 whitespace-nowrap"
+        >
+          {{ 'discovery.genderAny' | t }}
+        </button>
+        <button
+          (click)="setGender('male')"
+          [class.bg-surface-200]="selectedGender() === 'male'"
+          [class.bg-surface-300]="selectedGender() !== 'male'"
+          class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-primary text-sm font-bold border border-surface-100 whitespace-nowrap"
+        >
+          {{ 'discovery.genderMale' | t }}
+        </button>
+        <button
+          (click)="setGender('female')"
+          [class.bg-surface-200]="selectedGender() === 'female'"
+          [class.bg-surface-300]="selectedGender() !== 'female'"
+          class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-primary text-sm font-bold border border-surface-100 whitespace-nowrap"
+        >
+          {{ 'discovery.genderFemale' | t }}
+        </button>
+      </div>
+    }
   </header>
 
   <!-- Prominent Colourful Banner Ad -->
@@ -87,73 +116,71 @@
       <div class="p-8 text-center text-text-secondary font-bold">
         {{ 'discovery.searching' | t }}
       </div>
-    }
-
-    @if (!isLoading() && partners().length === 0) {
+    } @else if (partners().length === 0) {
       <div class="p-8 text-center">
         <p class="font-bold text-text-primary text-lg">{{ 'discovery.noMatches' | t }}</p>
         <p class="mt-2 text-text-secondary text-sm">{{ 'discovery.tryBroadening' | t }}</p>
       </div>
-    }
-
-    <!-- User List -->
-    <div class="divide-y divide-surface-200">
-      @for (partner of partners(); track partner.id) {
-        <article
-          class="flex items-center justify-between gap-3 p-4 bg-surface-500 hover:bg-surface-400 transition-colors cursor-pointer"
-          [routerLink]="['/chat', partner.id]"
-        >
-          <div class="flex items-center gap-3 min-w-0">
-            <!-- Avatar -->
-            <div class="relative shrink-0" [routerLink]="['/profile/user', partner.id]">
-              <img
-                [src]="partner.avatar_url || 'https://i.pravatar.cc/150?u=' + partner.id"
-                alt="avatar"
-                class="h-14 w-14 rounded-full object-cover"
-              />
-              <span
-                class="absolute bottom-0 end-0 w-3.5 h-3.5 bg-green-500 border-2 border-surface-500 rounded-full"
-              ></span>
-            </div>
-
-            <div class="min-w-0">
-              <div class="flex items-center gap-2 mb-1">
-                <p class="truncate text-base font-black text-text-primary">
-                  {{ partner.display_name || ('discovery.partnerFallback' | t) }}
-                </p>
-                @if (partner.is_vip) {
-                  <span
-                    class="rounded bg-yellow-400 px-1.5 py-0.5 text-[9px] font-black uppercase text-black italic"
-                    >{{ 'discovery.vipBadge' | t }}</span
-                  >
-                }
-              </div>
-
-              <!-- Tight Fluency Indicator -->
-              <div class="mb-1">
-                <app-fluency-indicator
-                  [nativeLanguages]="getNativeLangs(partner)"
-                  [targetLanguages]="getTargetLangs(partner)"
-                >
-                </app-fluency-indicator>
-              </div>
-
-              <p class="text-xs text-text-secondary mt-0.5 truncate max-w-[200px]">
-                {{ partner.bio_text || ('discovery.partnerBioFallback' | t) }}
-              </p>
-            </div>
-          </div>
-
-          <!-- Gradient Action Button -->
-          <app-gradient-button
-            size="icon"
-            (clicked)="$event.stopPropagation()"
+    } @else {
+      <!-- User List -->
+      <div class="divide-y divide-surface-200">
+        @for (partner of partners(); track partner.id) {
+          <article
+            class="flex items-center justify-between gap-3 p-4 bg-surface-500 hover:bg-surface-400 transition-colors cursor-pointer"
             [routerLink]="['/chat', partner.id]"
           >
-            <span class="text-xl">👋</span>
-          </app-gradient-button>
-        </article>
-      }
-    </div>
+            <div class="flex items-center gap-3 min-w-0">
+              <!-- Avatar -->
+              <div class="relative shrink-0" [routerLink]="['/profile/user', partner.id]">
+                <img
+                  [src]="partner.avatar_url || 'https://i.pravatar.cc/150?u=' + partner.id"
+                  alt="avatar"
+                  class="h-14 w-14 rounded-full object-cover"
+                />
+                <span
+                  class="absolute bottom-0 end-0 w-3.5 h-3.5 bg-green-500 border-2 border-surface-500 rounded-full"
+                ></span>
+              </div>
+
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <p class="truncate text-base font-black text-text-primary">
+                    {{ partner.display_name || ('discovery.partnerFallback' | t) }}
+                  </p>
+                  @if (partner.is_vip) {
+                    <span
+                      class="rounded bg-yellow-400 px-1.5 py-0.5 text-[9px] font-black uppercase text-black italic"
+                      >{{ 'discovery.vipBadge' | t }}</span
+                    >
+                  }
+                </div>
+
+                <!-- Tight Fluency Indicator -->
+                <div class="mb-1">
+                  <app-fluency-indicator
+                    [nativeLanguages]="getNativeLangs(partner)"
+                    [targetLanguages]="getTargetLangs(partner)"
+                  >
+                  </app-fluency-indicator>
+                </div>
+
+                <p class="text-xs text-text-secondary mt-0.5 truncate max-w-[200px]">
+                  {{ partner.bio_text || ('discovery.partnerBioFallback' | t) }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Gradient Action Button -->
+            <app-gradient-button
+              size="icon"
+              (clicked)="$event.stopPropagation()"
+              [routerLink]="['/chat', partner.id]"
+            >
+              <span class="text-xl">👋</span>
+            </app-gradient-button>
+          </article>
+        }
+      </div>
+    }
   </main>
 </div>

@@ -6,6 +6,7 @@ import { I18nService } from '../../services/i18n.service';
 import { DiscoveryService } from '../../services/discovery.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
+import { AuthService } from '../../services/auth.service';
 
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
@@ -45,7 +46,10 @@ export class DiscoveryComponent implements OnInit {
   readonly selectedDistanceKm = signal<number>(50);
   readonly selectedNativeLanguage = signal<string>('');
   readonly selectedTargetLanguage = signal<string>('');
+  readonly selectedGender = signal<string>('');
   readonly seriousLearnerOnly = signal<boolean>(false);
+  private readonly authService = inject(AuthService);
+  readonly isVip = computed(() => this.authService.currentUser()?.is_vip ?? false);
 
   readonly filterPills = computed(() => {
     this.i18n.translations();
@@ -67,6 +71,11 @@ export class DiscoveryComponent implements OnInit {
 
   setLanguage(code: string) {
     this.selectedTargetLanguage.set(code);
+    void this.searchPartners();
+  }
+
+  setGender(gender: string) {
+    this.selectedGender.set(gender);
     void this.searchPartners();
   }
 
@@ -109,11 +118,14 @@ export class DiscoveryComponent implements OnInit {
   async searchPartners(): Promise<void> {
     this.isLoading.set(true);
     try {
+      const genderVal = this.selectedGender() || undefined;
+      const isVip = this.authService.currentUser()?.is_vip ?? false;
       const results = await this.discoveryService.findPartners({
         radius_metres: this.selectedDistanceKm() * 1000,
         native_languages: this.selectedNativeLanguage() || undefined,
         target_language: this.selectedTargetLanguage() || undefined,
         serious_learner_only: this.seriousLearnerOnly(),
+        gender: isVip ? genderVal : undefined,
       });
       // Filter out blocked users
       const blocked = this.blockedUserIds();
