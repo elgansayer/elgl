@@ -85,6 +85,16 @@ export class ChatController {
     return await this.chatService.getFavourites(user.id);
   }
 
+  @Post('llm-proxy')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  async chatLlmProxy(
+    @CurrentUser() user: User | null,
+    @Body() dto: { messageText: string },
+  ): Promise<{ response: string } | null> {
+    if (!user) return null;
+    return await this.chatService.llmProxy(user.id, dto.messageText);
+  }
+
   @Post('groups')
   async createGroup(
     @CurrentUser() user: User | null,

@@ -10,6 +10,7 @@ import { SafetyService } from '../safety/safety.service';
 import { LinkPreviewService } from '../link-preview/link-preview.service';
 import { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
 import { SpamDetectionService } from '../spam-detection/spam-detection.service';
+import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import {
@@ -29,6 +30,7 @@ export class ChatService {
     private readonly safetyService: SafetyService,
     private readonly linkPreviewService: LinkPreviewService,
     private readonly spamDetectionService: SpamDetectionService,
+    private readonly llmProxyService: LlmProxyService,
     private readonly systemMessageService: SystemMessageService,
   ) {}
 
@@ -492,5 +494,13 @@ export class ChatService {
 
     if (error) throw new Error('Failed to fetch group members');
     return data || [];
+  }
+
+  async llmProxy(
+    userId: string,
+    messageText: string,
+  ): Promise<{ response: string }> {
+    const result = await this.llmProxyService.proxyMessage(messageText);
+    return { response: result.response };
   }
 }
