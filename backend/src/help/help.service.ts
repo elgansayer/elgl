@@ -90,7 +90,7 @@ export class HelpService {
     const category = query.category;
     const cat = category?.toLowerCase();
 
-    const searchTerm = (query as { search?: string }).search;
+    const searchTerm = query.search;
     const search = searchTerm?.toLowerCase();
 
     if (cat) {
@@ -105,12 +105,17 @@ export class HelpService {
       );
     }
 
-    const page = (query as { page?: number }).page ?? 1;
-    const limit = (query as { limit?: number }).limit ?? 10;
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
     const total = filtered.length;
     const start = (page - 1) * limit;
     const items = filtered.slice(start, start + limit);
 
     return { items, total, page, limit };
+  }
+
+  getCategories(): string[] {
+    const cats = new Set(this.faqs.map((f) => f.category));
+    return Array.from(cats).sort();
   }
 }

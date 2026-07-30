@@ -446,3 +446,31 @@ To github.com:elgansayer/hellotalk.git
 [2026-07-30T00:37:02Z]   FAIL  backend lint
 [2026-07-30T00:37:34Z]   FAIL  backend test
 [2026-07-30T00:37:34Z] Tests have failures (pre-existing). Committing anyway.
+[main 6524756a] feat: Build Host Dashboard showing live viewer count, earned coins, and stream uptime.
+ 11 files changed, 166 insertions(+), 7 deletions(-)
+ rename .tasks/{pending => completed}/0000-025-build-host-dashboard-showing-live-viewer-count-earned-coins-.task (100%)
+ create mode 100644 backend/src/host-dashboard/dto/host-dashboard.dto.ts
+ create mode 100644 backend/src/host-dashboard/host-dashboard.controller.ts
+ create mode 100644 backend/src/host-dashboard/host-dashboard.module.ts
+ create mode 100644 backend/src/host-dashboard/host-dashboard.service.ts
+ create mode 100644 frontend/src/app/services/host-dashboard.service.ts
+remote: 
+remote: GitHub found 11 vulnerabilities on elgansayer/hellotalk's default branch (6 high, 5 moderate). To find out more, visit:        
+remote:      https://github.com/elgansayer/hellotalk/security/dependabot        
+remote: 
+To github.com:elgansayer/hellotalk.git
+   dab2a609..6524756a  main -> main
+[2026-07-30T00:37:36Z] Committed: 6524756a — feat: Build Host Dashboard showing live viewer count, earned coins, and stream u
+[2026-07-30T00:37:36Z] COMPLETED: Build Host Dashboard showing live viewer count, earned coins, and stream uptime.
+[2026-07-30T00:37:36Z] Cooldown 15s...
+[2026-07-30T00:37:51Z] Task: Build in-app Help Centre fetching dynamic FAQ articles from backend.
+[2026-07-30T00:37:51Z] Queue: 187 pending, 25 done, 0 stuck
+[2026-07-30T00:37:51Z] Attempt 1/3
+[2026-07-30T00:37:51Z] Aider pass 1 (discover)...
+[2026-07-30T00:39:57Z] Pass 1: discovered 9 files
+[2026-07-30T00:39:57Z] Aider pass 2 round 1: 9 files in context
+[2026-07-30T00:42:07Z] Pass 2 round 1: produced 5 file changes
+[2026-07-30T00:42:17Z]   FAIL  frontend lint
+[2026-07-30T00:42:51Z]   FAIL  backend lint
+[2026-07-30T00:43:23Z]   FAIL  backend test
+[2026-07-30T00:43:23Z] Tests have failures (pre-existing). Committing anyway.

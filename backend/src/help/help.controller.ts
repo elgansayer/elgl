@@ -10,4 +10,9 @@ export class HelpController {
   getArticles(@Query() query: HelpQueryDto) {
     return this.helpService.findAll(query);
   }
+
+  @Get('categories')
+  getCategories() {
+    return this.helpService.getCategories();
+  }
 }

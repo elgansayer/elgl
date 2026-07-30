@@ -1,112 +1,118 @@
-import { Component, signal, computed, inject, resource } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { FormsModule } from '@angular/forms';
+import { Component, inject, signal, resource } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { environment } from '../../../environments/environment';
-
-interface FAQ {
-  id: string;
-  category: string;
-  question: string;
-  answer: string;
-}
-
-interface HelpResponse {
-  items: FAQ[];
-  total: number;
-  page: number;
-  limit: number;
-}
+import { TranslatePipe } from '../../services/translate.pipe';
+import { HelpCentreService, FaqItem } from '../../services/help-centre.service';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-help-centre',
-  imports: [FormsModule],
-  templateUrl: './help-centre.component.html',
-  styles: [
-    `
-      .faq-item {
-        border-bottom: 1px solid #e5e7eb;
-        padding: 1rem 0;
+  standalone: true,
+  imports: [TranslatePipe, FormsModule],
+  template: `
+    <div class="max-w-3xl mx-auto px-4 py-6">
+      <h1 class="text-2xl font-bold mb-4">{{ 'help_centre.title' | t }}</h1>
+
+      <!-- category pills -->
+      @let cats = categoriesResource.value();
+      <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
+        <button
+          type="button"
+          class="whitespace-nowrap rounded-full px-4 py-1 text-sm font-medium transition-colors"
+          [class.bg-accent]="selectedCategory() === undefined"
+          [class.text-accent-content]="selectedCategory() === undefined"
+          [class.bg-surface]="selectedCategory() !== undefined"
+          [class.text-dim]="selectedCategory() !== undefined"
+          (click)="selectCategory('all')"
+        >
+          {{ 'help_centre.all_categories' | t }}
+        </button>
+        @for (cat of cats ?? []; track cat) {
+          <button
+            type="button"
+            class="whitespace-nowrap rounded-full px-4 py-1 text-sm font-medium transition-colors"
+            [class.bg-accent]="selectedCategory() === cat"
+            [class.text-accent-content]="selectedCategory() === cat"
+            [class.bg-surface]="selectedCategory() !== cat"
+            [class.text-dim]="selectedCategory() !== cat"
+            (click)="selectCategory(cat)"
+          >
+            {{ cat }}
+          </button>
+        }
+      </div>
+
+      <!-- search input -->
+      <div class="mb-6">
+        <input
+          type="text"
+          [placeholder]="'help_centre.search_placeholder' | t"
+          [ngModel]="searchText()"
+          (ngModelChange)="searchText.set($event)"
+          class="w-full p-2 rounded bg-surface border border-outline ps-3 pe-3 text-sm"
+        />
+      </div>
+
+      <!-- loading -->
+      @if (articlesResource.isLoading()) {
+        <div class="text-center py-8">{{ 'common.loading' | t }}</div>
       }
-      .faq-category {
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        color: #6b7280;
-        margin-bottom: 0.25rem;
+
+      <!-- error -->
+      @if (articlesResource.error()) {
+        <div class="text-red-500 text-center py-4">
+          {{ 'common.error_occurred' | t }}
+        </div>
       }
-    `,
-  ],
+
+      <!-- articles -->
+      @if (!articlesResource.isLoading() && !articlesResource.error()) {
+        @for (faq of articlesResource.value()?.items ?? []; track faq.id) {
+          <div
+            class="bg-surface shadow-sm rounded-lg p-4 mb-3 border border-outline"
+          >
+            <h3 class="font-semibold text-base mb-1">{{ faq.question }}</h3>
+            <p class="text-sm text-dim">{{ faq.answer }}</p>
+          </div>
+        } @empty {
+          <div class="text-center py-8">
+            {{ 'help_centre.no_articles' | t }}
+          </div>
+        }
+      }
+    </div>
+  `,
 })
 export class HelpCentreComponent {
-  private readonly baseUrl = `${environment.apiUrl}/help/articles`;
+  private helpService = inject(HelpCentreService);
+  protected searchText = signal<string>('');
+  protected selectedCategory = signal<string | undefined>(undefined);
 
-  loading = signal(false);
-  error = signal<string | null>(null);
-
-  articles = signal<FAQ[]>([]);
-  total = signal(0);
-  page = signal(1);
-  limit = signal(10);
-
-  selectedCategory = signal('');
-  searchText = '';
-  private searchSignal = signal('');
-
-  totalPages = computed(() => Math.ceil(this.total() / this.limit()) || 1);
-  hasPrevious = computed(() => this.page() > 1);
-  hasNext = computed(() => this.page() < this.totalPages());
-
-  private http = inject(HttpClient);
-
-  private articlesLoader = resource({
-    params: () => ({
-      page: this.page(),
-      limit: this.limit(),
-      category: this.selectedCategory(),
-      search: this.searchSignal(),
-    }),
-    loader: async ({ params }) => {
-      this.loading.set(true);
-      this.error.set(null);
-
-      const queryParams: Record<string, string | number> = {
-        page: params.page,
-        limit: params.limit,
-      };
-      if (params.category) queryParams['category'] = params.category;
-      if (params.search) queryParams['search'] = params.search;
-
-      try {
-        const res = await firstValueFrom(
-          this.http.get<HelpResponse>(this.baseUrl, { params: queryParams }),
-        );
-        this.articles.set(res.items);
-        this.total.set(res.total);
-        this.page.set(res.page);
-        this.limit.set(res.limit);
-        return res;
-      } catch (err) {
-        console.error(err);
-        this.error.set('Failed to load help articles. Please try again.');
-        return null;
-      } finally {
-        this.loading.set(false);
-      }
+  protected categoriesResource = resource({
+    loader: async () => {
+      const cats = await firstValueFrom(this.helpService.getCategories());
+      return cats ?? [];
     },
   });
 
-  applyCategory(category: string): void {
-    this.selectedCategory.set(category);
-    this.page.set(1);
-  }
+  protected articlesResource = resource({
+    request: () => ({
+      search: this.searchText(),
+      category: this.selectedCategory(),
+    }),
+    loader: async ({ request }) => {
+      const res = await firstValueFrom(
+        this.helpService.getArticles(
+          request.category,
+          request.search || undefined,
+          1,
+          50,
+        ),
+      );
+      return res ?? { items: [], total: 0, page: 1, limit: 50 };
+    },
+  });
 
-  applySearch(): void {
-    this.searchSignal.set(this.searchText);
-    this.page.set(1);
-  }
-
-  goToPage(page: number): void {
-    if (page < 1 || page > this.totalPages()) return;
-    this.page.set(page);
+  protected selectCategory(cat: string): void {
+    this.selectedCategory.set(cat === 'all' ? undefined : cat);
   }
 }
