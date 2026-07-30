@@ -43,6 +43,7 @@ export interface UserProfile {
   status_visibility?: string;
   auto_play_voice_notes?: boolean;
   auto_download_media?: boolean;
+  auto_download_wifi_only?: boolean;
   sound_effects_enabled?: boolean;
   vibration_enabled?: boolean;
   chat_enter_to_send?: boolean;
@@ -142,7 +143,7 @@ export class UserService {
     return firstValueFrom(
       this.http
         .get<UserProfile>(`${this.baseUrl}/me`, { headers: this.getHeaders() })
-        .pipe(catchError(() => of({...MOCK_USER_PROFILE, status_text:'Learning new languages!', chat_enter_to_send: false, chat_text_size: 'medium'}))),
+        .pipe(catchError(() => of({...MOCK_USER_PROFILE, status_text:'Learning new languages!', chat_enter_to_send: false, chat_text_size: 'medium', auto_download_wifi_only: false}))),
     );
   }
 
@@ -192,7 +193,7 @@ export class UserService {
         .patch<UserProfile>(`${this.baseUrl}/me`, update, { headers: this.getHeaders() })
         .pipe(
           catchError(() => {
-            const updated: UserProfile = { ...MOCK_USER_PROFILE, status_text:'Learning new languages!', ...update };
+            const updated: UserProfile = { ...MOCK_USER_PROFILE, status_text:'Learning new languages!', ...update, auto_download_wifi_only: update.auto_download_wifi_only ?? false };
             return of(updated);
           }),
         ),
