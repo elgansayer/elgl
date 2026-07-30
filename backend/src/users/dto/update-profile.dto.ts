@@ -136,6 +136,14 @@ export class UpdateProfileDto {
   privacy_hide_gender?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  privacy_hide_exact_location?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  privacy_hide_online_status?: boolean;
+
+  @IsOptional()
   @IsString()
   @MaxLength(100)
   nationality?: string;

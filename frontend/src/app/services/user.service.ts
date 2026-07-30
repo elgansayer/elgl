@@ -32,6 +32,8 @@ export interface UserProfile {
   region?: string;
   age?: number;
   privacy_hide_gender: boolean;
+  privacy_hide_exact_location?: boolean;
+  privacy_hide_online_status?: boolean;
   silence_unknown_callers?: boolean;
   status_visibility?: string;
   auto_play_voice_notes?: boolean;
@@ -334,6 +336,8 @@ export class UserService {
     privacy_profile_photo?: string;
     privacy_about_info?: string;
     privacy_status?: string;
+    privacy_hide_exact_location: boolean;
+    privacy_hide_online_status: boolean;
   }> {
     return firstValueFrom(
       this.http
@@ -346,6 +350,8 @@ export class UserService {
           privacy_profile_photo?: string;
           privacy_about_info?: string;
           privacy_status?: string;
+          privacy_hide_exact_location: boolean;
+          privacy_hide_online_status: boolean;
         }>(`${this.baseUrl}/me/privacy-settings`, { headers: this.getHeaders() })
         .pipe(
           catchError(() => {
@@ -359,6 +365,8 @@ export class UserService {
               privacy_profile_photo: (profile as any)?.privacy_profile_photo ?? 'everyone',
               privacy_about_info: (profile as any)?.privacy_about_info ?? 'everyone',
               privacy_status: (profile as any)?.privacy_status ?? 'everyone',
+              privacy_hide_exact_location: profile.privacy_hide_exact_location ?? false,
+              privacy_hide_online_status: profile.privacy_hide_online_status ?? false,
             });
           }),
         ),
@@ -452,6 +460,8 @@ export class UserService {
     privacy_profile_photo?: string;
     privacy_about_info?: string;
     privacy_status?: string;
+    privacy_hide_exact_location?: boolean;
+    privacy_hide_online_status?: boolean;
   }): Promise<UserProfile> {
     return firstValueFrom(
       this.http
