@@ -8,12 +8,16 @@ import { SafetyService } from '../../services/safety.service';
 import { ConfirmService } from '../../services/confirm.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 
 @Component({
   selector: 'app-chat-message',
-  imports: [CommonModule, LongPressContextMenuComponent, TranslatePipe],
+  imports: [CommonModule, LongPressContextMenuComponent, TranslatePipe, CulturalTipComponent],
   template: `
     @if (!isBlocked()) {
+      @if (isFirstMessage() && partnerLanguage(); as lang) {
+        <app-cultural-tip [language]="lang" />
+      }
       <app-long-press-context-menu
         [messageId]="message().id"
         [messageContent]="message().text_content ?? ''"
@@ -94,6 +98,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
 export class ChatMessageComponent {
   message = input.required<ChatMessage>();
   currentUserId = input<string>();
+  partnerLanguage = input<string | null>(null);
+  isFirstMessage = input(false);
 
   readonly messageBlocked = output<string>();
 
