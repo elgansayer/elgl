@@ -35,18 +35,33 @@ interface ChatMessage {
       <div class="flex-1 overflow-y-auto p-4 space-y-3">
         @for (msg of messages(); track msg.text) {
           <div
-            class="flex"
+            class="flex mb-2"
             [class.justify-end]="msg.from === 'user'"
             [class.justify-start]="msg.from === 'ai'"
           >
             <div
-              class="max-w-[75%] px-3 py-2 rounded-xl"
-              [class.bg-neutral-700]="msg.from === 'user'"
+              class="relative max-w-[75%] px-4 py-3 rounded-2xl shadow-sm"
+              [class.bg-green-600]="msg.from === 'user'"
               [class.bg-neutral-800]="msg.from === 'ai'"
               [class.text-white]="msg.from === 'user'"
-              [class.text-slate-200]="msg.from === 'ai'"
+              [class.text-gray-200]="msg.from === 'ai'"
             >
-              {{ msg.text }}
+              <span class="whitespace-pre-wrap break-words">{{ msg.text }}</span>
+              @if (msg.from === 'user') {
+                <div
+                  class="absolute -end-1.5 bottom-2 w-0 h-0
+                         border-t-[8px] border-t-transparent
+                         border-b-[8px] border-b-transparent
+                         border-s-[10px] border-s-green-600"
+                ></div>
+              } @else {
+                <div
+                  class="absolute -start-1.5 bottom-2 w-0 h-0
+                         border-t-[8px] border-t-transparent
+                         border-b-[8px] border-b-transparent
+                         border-e-[10px] border-e-neutral-800"
+                ></div>
+              }
             </div>
           </div>
         }
