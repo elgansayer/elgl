@@ -3,6 +3,7 @@ import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
 import { UserService, LinkedAccount } from '../../services/user.service';
+import { CacheService } from '../../services/cache.service';
 
 @Component({
   selector: 'app-settings',
@@ -11,11 +12,14 @@ import { UserService, LinkedAccount } from '../../services/user.service';
   styleUrls: ['./settings.component.scss'],
 })
 export class SettingsComponent implements OnInit {
+  private cacheService = inject(CacheService);
   private userService = inject(UserService);
   private location = inject(Location);
 
   readonly isLoading = signal(true);
   readonly isDownloading = signal(false);
+  readonly isClearingCache = signal(false);
+  readonly isDeletingOldMedia = signal(false);
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
 
@@ -177,6 +181,34 @@ export class SettingsComponent implements OnInit {
       this.errorMessage.set('Failed to save settings');
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  async clearCache(): Promise<void> {
+    this.errorMessage.set('');
+    this.successMessage.set('');
+    this.isClearingCache.set(true);
+    try {
+      await this.cacheService.clearCache();
+      this.successMessage.set('Cache cleared successfully');
+    } catch {
+      this.errorMessage.set('Failed to clear cache');
+    } finally {
+      this.isClearingCache.set(false);
+    }
+  }
+
+  async deleteOldMedia(): Promise<void> {
+    this.errorMessage.set('');
+    this.successMessage.set('');
+    this.isDeletingOldMedia.set(true);
+    try {
+      await this.cacheService.deleteOldMedia();
+      this.successMessage.set('Old media deleted successfully');
+    } catch {
+      this.errorMessage.set('Failed to delete old media');
+    } finally {
+      this.isDeletingOldMedia.set(false);
     }
   }
 

@@ -220,6 +220,32 @@
               class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"
             />
           </label>
+
+          <button
+            (click)="clearCache()"
+            [disabled]="isClearingCache()"
+            class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
+          >
+            <span>{{ 'settings.clearCache' | t }}</span>
+            @if (isClearingCache()) {
+              <span class="text-xs text-text-secondary">{{ 'common.loading' | t }}</span>
+            } @else {
+              <span class="text-xs uppercase text-primary">{{ 'common.clear' | t }}</span>
+            }
+          </button>
+
+          <button
+            (click)="deleteOldMedia()"
+            [disabled]="isDeletingOldMedia()"
+            class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
+          >
+            <span>{{ 'settings.deleteOldMedia' | t }}</span>
+            @if (isDeletingOldMedia()) {
+              <span class="text-xs text-text-secondary">{{ 'common.loading' | t }}</span>
+            } @else {
+              <span class="text-xs uppercase text-primary">{{ 'common.delete' | t }}</span>
+            }
+          </button>
         </div>
       </section>
 
