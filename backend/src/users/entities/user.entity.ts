@@ -89,6 +89,9 @@ export class User {
   @Column({ type: 'varchar', length: 2, nullable: true })
   proficiency_level!: string | null;
 
+  @Column({ type: 'text', array: true, nullable: true })
+  interests!: string[] | null;
+
   @CreateDateColumn({ type: 'timestamptz', default: () => 'NOW()' })
   created_at!: Date;
 }

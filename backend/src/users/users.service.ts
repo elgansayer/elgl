@@ -175,6 +175,7 @@ export class UsersService {
       avatar_url: `https://i.pravatar.cc/150?u=${userId}`,
       audio_intro_url: undefined,
       cover_photo_url: undefined,
+      interests: ['tech', 'travel', 'movies'],
       is_vip: true,
       vip_tier: 'premium',
       coins_balance: 500,
@@ -240,6 +241,7 @@ export class UsersService {
     if (dto.gender !== undefined) updatePayload.gender = dto.gender;
     if (dto.profile_visibility !== undefined)
       updatePayload.profile_visibility = dto.profile_visibility;
+    if (dto.interests !== undefined) updatePayload.interests = dto.interests;
 
     if (dto.location) {
       updatePayload.location = `POINT(${dto.location.longitude} ${dto.location.latitude})`;

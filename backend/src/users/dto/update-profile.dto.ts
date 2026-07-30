@@ -41,6 +41,12 @@ export class UpdateProfileDto {
   target_languages?: string[];
 
   @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayMaxSize(20)
+  interests?: string[];
+
+  @IsOptional()
   @IsString()
   @MaxLength(1000)
   bio_text?: string;

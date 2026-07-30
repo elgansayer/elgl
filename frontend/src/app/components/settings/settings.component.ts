@@ -21,6 +21,8 @@ export class SettingsComponent implements OnInit {
 
   readonly isVip = signal(false);
   readonly primaryAccentColor = signal<string | null>(null);
+  readonly interests = signal<string[]>([]);
+  newInterest = '';
 
   readonly availableColors = [
     '#4f46e5', // Indigo (default)
@@ -53,6 +55,7 @@ export class SettingsComponent implements OnInit {
         this.privacyHideAge = Boolean(profile.privacy_hide_age);
         this.privacyHideGender = Boolean(profile.privacy_hide_gender);
         this.autoPlayVoiceNotes = Boolean(profile.auto_play_voice_notes);
+        this.interests.set(profile.interests ?? []);
       }
       // Load linked accounts
       const accounts = await this.userService.getLinkedAccounts();
@@ -121,6 +124,18 @@ export class SettingsComponent implements OnInit {
     }
   }
 
+  addInterest(): void {
+    const tag = this.newInterest.trim().toLowerCase().replace(/\s+/g, '_');
+    if (tag && !this.interests().includes(tag)) {
+      this.interests.update(arr => [...arr, tag]);
+    }
+    this.newInterest = '';
+  }
+
+  removeInterest(index: number): void {
+    this.interests.update(arr => arr.filter((_, i) => i !== index));
+  }
+
   async saveSettings(): Promise<void> {
     this.errorMessage.set('');
     this.successMessage.set('');
@@ -134,6 +149,7 @@ export class SettingsComponent implements OnInit {
         privacy_hide_gender: this.privacyHideGender,
         auto_play_voice_notes: this.autoPlayVoiceNotes,
         primary_accent_color: this.primaryAccentColor() ?? undefined,
+        interests: this.interests(),
       });
       this.successMessage.set('Settings saved successfully');
     } catch {

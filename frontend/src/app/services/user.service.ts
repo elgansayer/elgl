@@ -15,6 +15,7 @@ export interface UserProfile {
   audio_intro_url?: string;
   cover_photo_url?: string;
   primary_accent_color?: string;
+  interests?: string[];
   is_vip: boolean;
   vip_tier: string;
   coins_balance: number;

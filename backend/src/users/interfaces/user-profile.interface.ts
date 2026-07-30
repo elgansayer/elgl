@@ -8,6 +8,7 @@ export interface UserProfile {
   audio_intro_url?: string;
   cover_photo_url?: string;
   primary_accent_color?: string;
+  interests?: string[];
   location?: string;
   mock_location?: string;
   is_vip: boolean;
@@ -21,6 +22,7 @@ export interface UserProfile {
   privacy_hide_from_search: boolean;
   privacy_hide_gender: boolean;
   proficiency_level?: string;
+  interests?: string[];
   is_admin?: boolean;
   created_at: string;
   scheduled_for_deletion_at?: string;
