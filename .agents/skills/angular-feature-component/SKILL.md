@@ -45,6 +45,7 @@ export class FeatureComponent {}
 - NEVER `ngOnChanges()`, `ngAfterViewInit()`. NEVER `ngOnInit()` for data loading. NEVER `ngOnDestroy()` for subscription cleanup - use `takeUntilDestroyed()` / `DestroyRef`.
 - NEVER `Subject` / `BehaviorSubject` for state - use `signal<T>()` instead.
 - NEVER `setTimeout` / `setInterval` for state or async work - use `resource()` with polling or `interval()` from rxjs + `toSignal()`.
+- NEVER `@NgModule` or `@Module`. All Angular components MUST be standalone. Never use `@Module({` or `@NgModule({`.
 - NEVER import from `rxjs/operators` - all operators are exported from `rxjs` directly.
 
 ## Template Rules (strict - enforced by `npm run check:*` scripts in `frontend/`)

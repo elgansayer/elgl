@@ -49,20 +49,24 @@ interface VoiceRoomNote {
       <hr class="my-4 border-muted" />
 
       <form (ngSubmit)="addNote()">
-        <label class="block mb-1 text-sm">{{ 'voices.notes.content_label' | t }}</label>
-        <textarea
-          class="w-full border rounded p-2 bg-surface-2"
-          rows="3"
-          [value]="content()"
-          (input)="content.set($any($event.target).value)"
-        ></textarea>
+        <label class="block mb-1 text-sm">
+          {{ 'voices.notes.content_label' | t }}
+          <textarea
+            class="w-full border rounded p-2 bg-surface-2"
+            rows="3"
+            [value]="content()"
+            (input)="content.set($any($event.target).value)"
+          ></textarea>
+        </label>
 
-        <label class="block mt-2 mb-1 text-sm">{{ 'voices.notes.vocabulary_label' | t }}</label>
-        <input
-          class="w-full border rounded p-2 bg-surface-2"
-          [value]="vocabulary()"
-          (input)="vocabulary.set($any($event.target).value)"
-        />
+        <label class="block mt-2 mb-1 text-sm">
+          {{ 'voices.notes.vocabulary_label' | t }}
+          <input
+            class="w-full border rounded p-2 bg-surface-2"
+            [value]="vocabulary()"
+            (input)="vocabulary.set($any($event.target).value)"
+          />
+        </label>
 
         <button
           type="submit"

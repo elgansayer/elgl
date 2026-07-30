@@ -7,10 +7,14 @@ import { ThemeService, Theme } from '../../services/theme.service';
   imports: [TranslatePipe],
   template: `
     <div
+      role="radiogroup"
+      [attr.aria-label]="'theme.label' | t"
       class="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700"
     >
       <button
         (click)="setTheme('light')"
+        [attr.aria-pressed]="currentTheme() === 'light'"
+        [attr.aria-label]="'theme.light' | t"
         [class.bg-blue-100]="currentTheme() === 'light'"
         [class.text-blue-700]="currentTheme() === 'light'"
         [class.dark:bg-blue-900]="currentTheme() === 'light'"
@@ -21,6 +25,8 @@ import { ThemeService, Theme } from '../../services/theme.service';
       </button>
       <button
         (click)="setTheme('dark')"
+        [attr.aria-pressed]="currentTheme() === 'dark'"
+        [attr.aria-label]="'theme.dark' | t"
         [class.bg-blue-100]="currentTheme() === 'dark'"
         [class.text-blue-700]="currentTheme() === 'dark'"
         [class.dark:bg-blue-900]="currentTheme() === 'dark'"
@@ -31,6 +37,8 @@ import { ThemeService, Theme } from '../../services/theme.service';
       </button>
       <button
         (click)="setTheme('system')"
+        [attr.aria-pressed]="currentTheme() === 'system'"
+        [attr.aria-label]="'theme.system' | t"
         [class.bg-blue-100]="currentTheme() === 'system'"
         [class.text-blue-700]="currentTheme() === 'system'"
         [class.dark:bg-blue-900]="currentTheme() === 'system'"

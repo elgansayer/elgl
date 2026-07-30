@@ -1,3 +1,9 @@
+interface MatchUser {
+  id: string;
+  display_name: string;
+  avatar_url?: string;
+}
+
 import { Component, inject, signal, afterNextRender } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -37,15 +43,16 @@ import { StudyBuddyService } from '../../services/study-buddy.service';
 })
 export class StudyBuddyComponent {
   private sbService = inject(StudyBuddyService);
-  matches = signal<any[]>([]);
+  matches = signal<MatchUser[]>([]);
 
   constructor() {
     afterNextRender(() => {
-      this.sbService.getMatches().then((data) => this.matches.set(data));
+      this.sbService.getMatches().then((data: MatchUser[]) => this.matches.set(data));
     });
   }
 
   requestBuddy(): void {
-    this.sbService.requestBuddy({ partnerId: 'placeholder' });
+    const payload: { partnerId: string } = { partnerId: 'placeholder' };
+    this.sbService.requestBuddy(payload);
   }
 }

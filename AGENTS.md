@@ -45,7 +45,7 @@ This section is the **supreme authority** on Angular coding style. Every rule be
 - **NEVER `@ViewChild()` / `@ViewChildren()`** -- use `viewChild()` / `viewChildren()` signal queries.
 - **NEVER `@ContentChild()` / `@ContentChildren()`** -- use `contentChild()` / `contentChildren()` signal queries.
 - **NEVER `@HostBinding()` / `@HostListener()`** -- use the `host: { ... }` property in `@Component()` / `@Directive()`.
-- **NEVER `@NgModule`** -- all components are standalone (default in Angular v20+).
+- **NEVER `@NgModule` or `@Module`** -- all Angular components must ALWAYS be standalone (default in Angular v20+). Never ever use `@Module({` or `@NgModule({` in the frontend codebase.
 
 ### 5.2 Signal State Mandate
 

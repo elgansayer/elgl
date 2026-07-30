@@ -3,12 +3,10 @@ import {
   input,
   output,
   afterNextRender,
-  signal,
   inject,
   ElementRef,
 } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { I18nService } from '../../services/i18n.service';
 
 @Component({
   selector: 'app-streak-congratulations',
@@ -18,6 +16,9 @@ import { I18nService } from '../../services/i18n.service';
     <div
       class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/70"
       (click)="onOverlayClick($event)"
+      (keydown)="onOverlayKeydown($event)"
+      tabindex="0"
+      role="dialog"
     >
       <canvas
         #confettiCanvas
@@ -27,6 +28,8 @@ import { I18nService } from '../../services/i18n.service';
       <div
         class="relative z-10 flex flex-col items-center gap-6 p-8 rounded-2xl bg-surface shadow-2xl border border-accent"
         (click)="$event.stopPropagation()"
+        (keydown)="$event.stopPropagation()"
+        tabindex="-1"
       >
         <span class="text-6xl">🎉</span>
         <h2 class="text-3xl font-bold text-white text-center">
@@ -38,6 +41,7 @@ import { I18nService } from '../../services/i18n.service';
         <button
           class="px-8 py-3 mt-4 rounded-full bg-accent text-white font-semibold text-lg hover:opacity-90 transition-opacity"
           (click)="dismiss.emit()"
+          (keydown)="dismiss.emit()"
         >
           {{ 'streak_congratulations.keep_going' | t }}
         </button>
@@ -123,7 +127,13 @@ export class StreakCongratulationsComponent {
     requestAnimationFrame(animate);
   }
 
-  onOverlayClick(event: MouseEvent): void {
+  onOverlayKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Escape') {
+      this.dismiss.emit();
+    }
+  }
+
+  onOverlayClick(_event: MouseEvent): void {
     this.dismiss.emit();
   }
 }
