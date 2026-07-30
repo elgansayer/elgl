@@ -203,6 +203,12 @@ export const routes: Routes = [
     title: 'Onboarding - HelloTalk',
   },
   {
+    path: 'forgot-password',
+    loadComponent: () =>
+      import('./components/forgot-password/forgot-password.component').then((m) => m.ForgotPasswordComponent),
+    title: 'Forgot Password - HelloTalk',
+  },
+  {
     path: 'host-dashboard',
     loadComponent: () =>
       import('./components/host-dashboard/host-dashboard.component').then((m) => m.HostDashboardComponent),

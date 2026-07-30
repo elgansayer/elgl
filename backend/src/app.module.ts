@@ -32,6 +32,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { RecommendationsModule } from './recommendations/recommendations.module';
 import { AdminModule } from './admin/admin.module';
 import { HelpModule } from './help/help.module';
+import { PasswordResetModule } from './password-reset/password-reset.module';
 import { ProficiencyModule } from './proficiency/proficiency.module';
 import { VersionModule } from './version/version.module';
 import { StudyStreakModule } from './study-streak/study-streak.module';
@@ -87,6 +88,7 @@ import { validationSchema } from './config/validation.schema';
     RecommendationsModule,
     AdminModule,
     HelpModule,
+    PasswordResetModule,
     ProficiencyModule,
     VersionModule,
     StudyStreakModule,
