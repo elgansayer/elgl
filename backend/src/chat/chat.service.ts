@@ -54,7 +54,7 @@ export class ChatService {
     const response = await supabase
       .from('chat_rooms')
       .select(
-        'id, title, subtitle, avatar, is_online, is_pinned, created_at, admin_id, wallpaper_url',
+        'id, title, subtitle, avatar, is_online, is_pinned, created_at, admin_id, wallpaper_url, labels',
       )
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: true });
@@ -70,6 +70,7 @@ export class ChatService {
           is_pinned: true,
           created_at: new Date().toISOString(),
           wallpaper_url: null,
+          labels: [],
         },
         {
           id: 'mock-room-2',
@@ -80,6 +81,7 @@ export class ChatService {
           is_pinned: false,
           created_at: new Date(Date.now() - 3600000).toISOString(),
           wallpaper_url: null,
+          labels: [],
         },
       ] as ChatRoomRecord[];
 
@@ -504,6 +506,7 @@ export class ChatService {
         is_online: true,
         is_pinned: false,
         admin_id: creatorId,
+        labels: [],
       })
       .select()
       .single();
@@ -881,6 +884,137 @@ export class ChatService {
    * Returns the greeting and away messages set by the other participant(s) in the room.
    * Used to display automated messages when a chat is first opened.
    */
+  /**
+   * Add a label to a chat room.
+   */
+  async addLabel(userId: string, roomId: string, label: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+
+    // Verify membership
+    const { data: membership } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', roomId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this room');
+    }
+
+    // Get current labels
+    const { data: room } = await supabase
+      .from('chat_rooms')
+      .select('labels')
+      .eq('id', roomId)
+      .single();
+
+    if (!room) {
+      throw new Error('Room not found');
+    }
+
+    const currentLabels: string[] = room.labels ?? [];
+    if (currentLabels.includes(label)) {
+      // Already exists
+      return;
+    }
+
+    const newLabels = [...currentLabels, label];
+    const { error } = await supabase
+      .from('chat_rooms')
+      .update({ labels: newLabels })
+      .eq('id', roomId);
+
+    if (error) {
+      throw new Error(`Failed to add label: ${error.message}`);
+    }
+  }
+
+  /**
+   * Remove a label from a chat room.
+   */
+  async removeLabel(
+    userId: string,
+    roomId: string,
+    label: string,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+
+    // Verify membership
+    const { data: membership } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', roomId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this room');
+    }
+
+    const { data: room } = await supabase
+      .from('chat_rooms')
+      .select('labels')
+      .eq('id', roomId)
+      .single();
+
+    if (!room) {
+      return;
+    }
+
+    let currentLabels: string[] = room.labels ?? [];
+    currentLabels = currentLabels.filter((l) => l !== label);
+
+    const { error } = await supabase
+      .from('chat_rooms')
+      .update({ labels: currentLabels })
+      .eq('id', roomId);
+
+    if (error) {
+      throw new Error(`Failed to remove label: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get all unique labels across rooms that the current user is a member of.
+   */
+  async getUserLabels(userId: string): Promise<string[]> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: memberRows } = await supabase
+      .from('chat_room_members')
+      .select('room_id')
+      .eq('user_id', userId);
+
+    const roomIds = (memberRows ?? []).map((r: any) => r.room_id);
+    if (roomIds.length === 0) {
+      return [];
+    }
+
+    const { data: rooms } = await supabase
+      .from('chat_rooms')
+      .select('labels')
+      .in('id', roomIds);
+
+    const labelSet = new Set<string>();
+    for (const r of rooms ?? []) {
+      const roomLabels: string[] = r.labels ?? [];
+      for (const l of roomLabels) {
+        labelSet.add(l);
+      }
+    }
+    return Array.from(labelSet);
+  }
+
+  /**
+   * Return all rooms belonging to the current user that have a specific label.
+   */
+  async getRoomsByLabel(
+    userId: string,
+    label: string,
+  ): Promise<ChatRoomRecord[]> {
+    const rooms = await this.getRooms(userId);
+    return rooms.filter((r) => r.labels?.includes(label));
+  }
+
   async getRoomGreeting(
     roomId: string,
     currentUserId: string,

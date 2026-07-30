@@ -81,4 +81,5 @@ export interface ChatRoomRecord {
   is_online: boolean;
   is_pinned: boolean;
   created_at: string;
+  labels?: string[];
 }

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -16,6 +17,7 @@ import { ConversationStarterDto } from './dto/conversation-starter.dto';
 import { ReplyToStatusUpdateDto } from './dto/reply-to-status-update.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
+import { AddLabelDto, RemoveLabelDto } from './dto/label.dto';
 import {
   ChatMessage,
   ChatRoomRecord,
@@ -199,6 +201,43 @@ export class ChatController {
   async getLockedRooms(@CurrentUser() user: User | null): Promise<string[]> {
     if (!user) return [];
     return this.chatService.getLockedChats(user.id);
+  }
+
+  // ── Label management endpoints ──
+
+  @Post('labels')
+  async addLabel(
+    @CurrentUser() user: User | null,
+    @Body() dto: AddLabelDto,
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.chatService.addLabel(user.id, dto.room_id, dto.label);
+    return { success: true };
+  }
+
+  @Delete('labels')
+  async removeLabel(
+    @CurrentUser() user: User | null,
+    @Body() dto: RemoveLabelDto,
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.chatService.removeLabel(user.id, dto.room_id, dto.label);
+    return { success: true };
+  }
+
+  @Get('labels')
+  async getUserLabels(@CurrentUser() user: User | null): Promise<string[]> {
+    if (!user) return [];
+    return this.chatService.getUserLabels(user.id);
+  }
+
+  @Get('labels/:label/rooms')
+  async getRoomsByLabel(
+    @CurrentUser() user: User | null,
+    @Param('label') label: string,
+  ): Promise<ChatRoomRecord[]> {
+    if (!user) return [];
+    return this.chatService.getRoomsByLabel(user.id, label);
   }
 
   @Get('rooms/:roomId/export')
