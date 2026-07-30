@@ -286,4 +286,86 @@ export class GroupsService {
     }
     return data || [];
   }
+
+  async getDiscoverableGroups(userId: string): Promise<any[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data: groups, error } = await supabase
+      .from('groups')
+      .select('id, name, owner_id, max_members, interest_id, created_at');
+    if (error) {
+      throw new NotFoundException('Failed to fetch groups');
+    }
+
+    const enriched = await Promise.all(
+      groups.map(async (group: any) => {
+        const { count: memberCount } = await supabase
+          .from('group_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('group_id', group.id);
+
+        const { data: membership } = await supabase
+          .from('group_members')
+          .select('user_id')
+          .eq('group_id', group.id)
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        const isMember = !!membership;
+        return {
+          ...group,
+          member_count: memberCount ?? 0,
+          is_member: isMember,
+        };
+      }),
+    );
+
+    return enriched;
+  }
+
+  async joinGroup(
+    groupId: string,
+    userId: string,
+  ): Promise<{ success: boolean }> {
+    const supabase = this.supabaseService.getClient();
+
+    // fetch group to get max_members
+    const { data: group, error: groupError } = await supabase
+      .from('groups')
+      .select('max_members')
+      .eq('id', groupId)
+      .single();
+    if (groupError || !group) {
+      throw new NotFoundException('Group not found');
+    }
+
+    // check if already a member
+    const { data: existing } = await supabase
+      .from('group_members')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (existing) {
+      return { success: false };
+    }
+
+    // count current members
+    const { count } = await supabase
+      .from('group_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('group_id', groupId);
+    if (count !== null && count >= group.max_members) {
+      throw new ForbiddenException('Group is full');
+    }
+
+    const { error: insertError } = await supabase
+      .from('group_members')
+      .insert({ group_id: groupId, user_id: userId });
+
+    if (insertError) {
+      throw new NotFoundException('Failed to join group');
+    }
+
+    return { success: true };
+  }
 }

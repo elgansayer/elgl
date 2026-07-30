@@ -132,4 +132,18 @@ export class GroupsController {
       requesterId,
     );
   }
+
+  @Get('discoverable')
+  @UseGuards(AuthGuard('jwt'))
+  async getDiscoverableGroups(@Req() req: any) {
+    const userId = req.user.id;
+    return this.groupsService.getDiscoverableGroups(userId);
+  }
+
+  @Post(':groupId/join')
+  @UseGuards(AuthGuard('jwt'))
+  async joinGroup(@Param('groupId') groupId: string, @Req() req: any) {
+    const userId = req.user.id;
+    return this.groupsService.joinGroup(groupId, userId);
+  }
 }

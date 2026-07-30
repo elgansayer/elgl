@@ -51,6 +51,14 @@ export const routes: Routes = [
       import('./components/chat-room/chat-room.component').then((m) => m.ChatRoomComponent),
   },
   {
+    path: 'groups',
+    loadComponent: () =>
+      import('./components/groups-discovery/groups-discovery.component').then(
+        (m) => m.GroupsDiscoveryComponent,
+      ),
+    title: 'Groups Discovery - HelloTalk',
+  },
+  {
     path: 'leaderboard',
     loadComponent: () =>
       import('./components/leaderboard/leaderboard.component').then((m) => m.LeaderboardComponent),
