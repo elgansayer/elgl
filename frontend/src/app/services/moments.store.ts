@@ -2,7 +2,6 @@ import { showToast } from './toast.service';
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom, catchError, of } from 'rxjs';
-import { MOCK_MOMENTS } from './mock-data';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
@@ -84,10 +83,7 @@ export class MomentsStore {
             headers: this.getHeaders(),
             params,
           })
-          .pipe(catchError(() => {
-            const mockFeed = MOCK_MOMENTS as MomentRecord[];
-            return of(mockFeed);
-          })),
+          .pipe(catchError(() => of<MomentRecord[]>([]))),
       );
       this.feed.set(list);
     } catch (e) {
