@@ -195,6 +195,26 @@
           </p>
         </div>
 
+        <!-- Read‑only privacy control display -->
+        <div class="mt-4 grid grid-cols-2 gap-2 text-xs text-text-secondary">
+          <div>
+            <span class="font-semibold">{{ 'privacy.lastSeen' | t }}:</span>
+            {{ privacyLastSeen }}
+          </div>
+          <div>
+            <span class="font-semibold">{{ 'privacy.profilePhoto' | t }}:</span>
+            {{ privacyProfilePhoto }}
+          </div>
+          <div>
+            <span class="font-semibold">{{ 'privacy.aboutInfo' | t }}:</span>
+            {{ privacyAboutInfo }}
+          </div>
+          <div>
+            <span class="font-semibold">{{ 'privacy.status' | t }}:</span>
+            {{ privacyStatus }}
+          </div>
+        </div>
+
         <div class="mt-8">
           <app-hobby-tags />
         </div>
@@ -339,6 +359,38 @@
                 {{ 'profile.visibility.hidden' | t }}
               </button>
             </div>
+          </div>
+          <div class="mt-4">
+            <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{ 'privacy.lastSeen' | t }}</label>
+            <select [(ngModel)]="privacyLastSeen" name="privacyLastSeen" class="app-input">
+              <option value="everyone">{{ 'privacy.everyone' | t }}</option>
+              <option value="contacts">{{ 'privacy.contacts' | t }}</option>
+              <option value="nobody">{{ 'privacy.nobody' | t }}</option>
+            </select>
+          </div>
+          <div class="mt-4">
+            <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{ 'privacy.profilePhoto' | t }}</label>
+            <select [(ngModel)]="privacyProfilePhoto" name="privacyProfilePhoto" class="app-input">
+              <option value="everyone">{{ 'privacy.everyone' | t }}</option>
+              <option value="contacts">{{ 'privacy.contacts' | t }}</option>
+              <option value="nobody">{{ 'privacy.nobody' | t }}</option>
+            </select>
+          </div>
+          <div class="mt-4">
+            <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{ 'privacy.aboutInfo' | t }}</label>
+            <select [(ngModel)]="privacyAboutInfo" name="privacyAboutInfo" class="app-input">
+              <option value="everyone">{{ 'privacy.everyone' | t }}</option>
+              <option value="contacts">{{ 'privacy.contacts' | t }}</option>
+              <option value="nobody">{{ 'privacy.nobody' | t }}</option>
+            </select>
+          </div>
+          <div class="mt-4">
+            <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{ 'privacy.status' | t }}</label>
+            <select [(ngModel)]="privacyStatus" name="privacyStatus" class="app-input">
+              <option value="everyone">{{ 'privacy.everyone' | t }}</option>
+              <option value="contacts">{{ 'privacy.contacts' | t }}</option>
+              <option value="nobody">{{ 'privacy.nobody' | t }}</option>
+            </select>
           </div>
 
           <textarea

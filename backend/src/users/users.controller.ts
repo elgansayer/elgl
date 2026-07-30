@@ -16,6 +16,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { TwoFactorGuard } from '../two-factor/two-factor.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { PrivacySettingsDto } from './dto/privacy-settings.dto';
 import {
   UserProfile,
   ProfileVisitor,
@@ -170,6 +171,10 @@ export class UsersController {
     privacy_hide_location: boolean;
     privacy_hide_from_search: boolean;
     privacy_hide_gender: boolean;
+    privacy_last_seen?: string;
+    privacy_profile_photo?: string;
+    privacy_about_info?: string;
+    privacy_status?: string;
   }> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.getPrivacySettings(user.id);
@@ -197,5 +202,14 @@ export class UsersController {
   ): Promise<void> {
     if (!user) throw new UnauthorizedException();
     await this.usersService.setMessageFilters(user.id, filters);
+  }
+
+  @Patch('me/privacy')
+  async updatePrivacySettings(
+    @CurrentUser() user: User | null,
+    @Body() dto: PrivacySettingsDto,
+  ): Promise<UserProfile | null> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.updatePrivacySettings(user.id, dto);
   }
 }

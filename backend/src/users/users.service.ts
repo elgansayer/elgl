@@ -402,6 +402,10 @@ export class UsersService {
     privacy_hide_location: boolean;
     privacy_hide_from_search: boolean;
     privacy_hide_gender: boolean;
+    privacy_last_seen?: string;
+    privacy_profile_photo?: string;
+    privacy_about_info?: string;
+    privacy_status?: string;
   }> {
     const profile = await this.getProfile(userId);
     return {
@@ -409,6 +413,11 @@ export class UsersService {
       privacy_hide_location: profile.privacy_hide_location ?? false,
       privacy_hide_from_search: profile.privacy_hide_from_search ?? false,
       privacy_hide_gender: (profile as any)?.privacy_hide_gender ?? false,
+      privacy_last_seen: (profile as any)?.privacy_last_seen ?? 'everyone',
+      privacy_profile_photo:
+        (profile as any)?.privacy_profile_photo ?? 'everyone',
+      privacy_about_info: (profile as any)?.privacy_about_info ?? 'everyone',
+      privacy_status: (profile as any)?.privacy_status ?? 'everyone',
     };
   }
 
@@ -469,6 +478,45 @@ export class UsersService {
         `Failed to update message filters: ${error.message}`,
       );
     }
+  }
+
+  async updatePrivacySettings(
+    userId: string,
+    settings: {
+      privacy_last_seen?: string;
+      privacy_profile_photo?: string;
+      privacy_about_info?: string;
+      privacy_status?: string;
+    },
+  ): Promise<UserProfile> {
+    const supabase = this.supabaseService.getClient();
+
+    const updatePayload: Record<string, unknown> = {};
+    if (settings.privacy_last_seen !== undefined)
+      updatePayload.privacy_last_seen = settings.privacy_last_seen;
+    if (settings.privacy_profile_photo !== undefined)
+      updatePayload.privacy_profile_photo = settings.privacy_profile_photo;
+    if (settings.privacy_about_info !== undefined)
+      updatePayload.privacy_about_info = settings.privacy_about_info;
+    if (settings.privacy_status !== undefined)
+      updatePayload.privacy_status = settings.privacy_status;
+
+    const response = await supabase
+      .from('users')
+      .update(updatePayload)
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (response.error || !response.data) {
+      Logger.warn(
+        `Supabase update for privacy settings failed, falling back to mock: ${response.error?.message}`,
+      );
+      const mock = this.getMockProfile(userId);
+      return { ...mock, ...updatePayload };
+    }
+
+    return response.data as UserProfile;
   }
 
   async getUserStats(userId: string): Promise<Partial<UserProfile>> {

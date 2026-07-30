@@ -38,6 +38,10 @@ export interface UserProfile {
   is_followed_by_me?: boolean;
   is_liked_by_me?: boolean;
   corrector_score?: number;
+  privacy_last_seen?: string;
+  privacy_profile_photo?: string;
+  privacy_about_info?: string;
+  privacy_status?: string;
 }
 
 export interface VisitorLog {
@@ -300,6 +304,10 @@ export class UserService {
     privacy_hide_location: boolean;
     privacy_hide_from_search: boolean;
     privacy_hide_gender: boolean;
+    privacy_last_seen?: string;
+    privacy_profile_photo?: string;
+    privacy_about_info?: string;
+    privacy_status?: string;
   }> {
     return firstValueFrom(
       this.http
@@ -308,6 +316,10 @@ export class UserService {
           privacy_hide_location: boolean;
           privacy_hide_from_search: boolean;
           privacy_hide_gender: boolean;
+          privacy_last_seen?: string;
+          privacy_profile_photo?: string;
+          privacy_about_info?: string;
+          privacy_status?: string;
         }>(`${this.baseUrl}/me/privacy-settings`, { headers: this.getHeaders() })
         .pipe(
           catchError(() => {
@@ -317,6 +329,10 @@ export class UserService {
               privacy_hide_location: profile.privacy_hide_location ?? false,
               privacy_hide_from_search: profile.privacy_hide_from_search ?? false,
               privacy_hide_gender: profile.privacy_hide_gender ?? false,
+              privacy_last_seen: (profile as any)?.privacy_last_seen ?? 'everyone',
+              privacy_profile_photo: (profile as any)?.privacy_profile_photo ?? 'everyone',
+              privacy_about_info: (profile as any)?.privacy_about_info ?? 'everyone',
+              privacy_status: (profile as any)?.privacy_status ?? 'everyone',
             });
           }),
         ),
@@ -352,5 +368,20 @@ export class UserService {
     if (streakDays >= 30) return 30;
     if (streakDays >= 7) return 7;
     return null;
+  }
+
+  async updatePrivacySettings(settings: {
+    privacy_last_seen?: string;
+    privacy_profile_photo?: string;
+    privacy_about_info?: string;
+    privacy_status?: string;
+  }): Promise<UserProfile> {
+    return firstValueFrom(
+      this.http
+        .patch<UserProfile>(`${this.baseUrl}/me/privacy`, settings, {
+          headers: this.getHeaders(),
+        })
+        .pipe(catchError(() => of(MOCK_USER_PROFILE))),
+    );
   }
 }

@@ -50,6 +50,12 @@ export class ProfileComponent implements OnInit {
   learningGoals = signal<string>('');
   profileVisibility = signal<'everyone' | 'vips_only' | 'hidden'>('everyone');
 
+  // Privacy fields
+  privacyLastSeen = 'everyone';
+  privacyProfilePhoto = 'everyone';
+  privacyAboutInfo = 'everyone';
+  privacyStatus = 'everyone';
+
   // Celebration state
   readonly showConfetti = signal<boolean>(false);
   readonly milestoneForConfetti = signal<number>(7);
@@ -71,6 +77,10 @@ export class ProfileComponent implements OnInit {
         this.avatarUrl = data.avatar_url || '';
         this.bioText = data.bio_text || '';
         this.profileVisibility.set(data.profile_visibility || 'everyone');
+        this.privacyLastSeen = data.privacy_last_seen ?? 'everyone';
+        this.privacyProfilePhoto = data.privacy_profile_photo ?? 'everyone';
+        this.privacyAboutInfo = data.privacy_about_info ?? 'everyone';
+        this.privacyStatus = data.privacy_status ?? 'everyone';
         this.proficiencyLevel.set(data.proficiency_level || 'B1');
         this.learningGoals.set(data.learning_goals || '');
         this.checkMilestone();
@@ -121,6 +131,17 @@ export class ProfileComponent implements OnInit {
         learning_goals: this.learningGoals(),
       });
       this.profile.set(updated);
+      // Also save privacy settings
+      try {
+        await this.userService.updatePrivacySettings({
+          privacy_last_seen: this.privacyLastSeen,
+          privacy_profile_photo: this.privacyProfilePhoto,
+          privacy_about_info: this.privacyAboutInfo,
+          privacy_status: this.privacyStatus,
+        });
+      } catch {
+        // ignore privacy update errors
+      }
       this.isEditing.set(false);
       this.successMessage.set(this.i18n.translate('profile.successUpdate'));
     } catch (e: unknown) {
