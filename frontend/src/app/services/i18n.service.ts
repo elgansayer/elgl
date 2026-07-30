@@ -752,6 +752,10 @@ export class I18nService {
     // Sticker Store
     'sticker.purchaseSuccess': 'Successfully purchased {{name}}!',
     'sticker.notEnoughCoins': 'Not enough coins!',
+    // Theme Selection
+    'theme.light': 'Light',
+    'theme.dark': 'Dark',
+    'theme.system': 'System Default',
     // VIP Subscription page
     'vip.heroTitle': 'Unlock Your Language Learning Potential',
     'vip.heroSubtitle': 'Choose the plan that fits your learning journey. From free basics to premium power tools.',

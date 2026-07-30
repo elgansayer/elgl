@@ -1,6 +1,10 @@
 <div
   class="min-h-[100dvh] flex flex-col bg-surface-500 text-text-primary font-sans relative overflow-x-hidden"
 >
+  <!-- Top Bar with Theme Selector -->
+  <div class="flex items-center justify-between ps-4 pe-4 py-2 bg-surface-200 border-b border-surface-100">
+    <app-theme-selector />
+  </div>
   <app-toast />
   <!-- Global Animated Virtual Gift Broadcast Overlay -->
   @if (economyStore.activeGiftAnimation(); as overlay) {
@@ -53,11 +57,12 @@
       >
         <div class="relative">
           <span class="text-2xl leading-none">💬</span>
-          @if (unreadCounter.totalUnread() > 0) {
+          @let totalUnread = unreadCounter.totalUnread();
+          @if (totalUnread > 0) {
             <span
               class="absolute -top-1 -end-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
             >
-              {{ unreadCounter.totalUnread() > 99 ? '99+' : unreadCounter.totalUnread() }}
+              {{ totalUnread > 99 ? '99+' : totalUnread }}
             </span>
           }
         </div>

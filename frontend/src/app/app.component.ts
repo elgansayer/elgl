@@ -17,6 +17,7 @@ import { DailyLoginModalComponent } from './components/daily-login-modal/daily-l
 import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dialog.component';
 import { UnreadCounterService } from './services/unread-counter.service';
 import { VersionCheckService } from './services/version-check.service';
+import { ThemeSelectorComponent } from './components/theme-selector/theme-selector.component';
 
 @Component({
   selector: 'app-root',
@@ -30,6 +31,7 @@ import { VersionCheckService } from './services/version-check.service';
     ReportUserModalComponent,
     DailyLoginModalComponent,
     ConfirmDialogComponent,
+    ThemeSelectorComponent,
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
@@ -42,7 +44,7 @@ export class AppComponent implements OnInit {
   fcmService = inject(FcmService);
   private safetyService = inject(SafetyService);
   reportModalService = inject(ReportUserModalService);
-  unreadCounter = inject(UnreadCounterService);
+  readonly unreadCounter = inject(UnreadCounterService);
   private versionCheckService = inject(VersionCheckService);
 
   // Incoming call state

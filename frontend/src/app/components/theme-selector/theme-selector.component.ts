@@ -1,10 +1,10 @@
 import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { ThemeService, Theme } from '../../services/theme.service';
 
 @Component({
   selector: 'app-theme-selector',
-  imports: [CommonModule],
+  imports: [TranslatePipe],
   template: `
     <div
       class="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700"
@@ -15,9 +15,9 @@ import { ThemeService, Theme } from '../../services/theme.service';
         [class.text-blue-700]="currentTheme() === 'light'"
         [class.dark:bg-blue-900]="currentTheme() === 'light'"
         [class.dark:text-blue-300]="currentTheme() === 'light'"
-        class="px-4 py-2 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+        class="ps-4 pe-4 py-2 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
       >
-        Light
+        {{ 'theme.light' | t }}
       </button>
       <button
         (click)="setTheme('dark')"
@@ -25,9 +25,9 @@ import { ThemeService, Theme } from '../../services/theme.service';
         [class.text-blue-700]="currentTheme() === 'dark'"
         [class.dark:bg-blue-900]="currentTheme() === 'dark'"
         [class.dark:text-blue-300]="currentTheme() === 'dark'"
-        class="px-4 py-2 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+        class="ps-4 pe-4 py-2 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
       >
-        Dark
+        {{ 'theme.dark' | t }}
       </button>
       <button
         (click)="setTheme('system')"
@@ -35,9 +35,9 @@ import { ThemeService, Theme } from '../../services/theme.service';
         [class.text-blue-700]="currentTheme() === 'system'"
         [class.dark:bg-blue-900]="currentTheme() === 'system'"
         [class.dark:text-blue-300]="currentTheme() === 'system'"
-        class="px-4 py-2 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+        class="ps-4 pe-4 py-2 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
       >
-        System
+        {{ 'theme.system' | t }}
       </button>
     </div>
   `,
