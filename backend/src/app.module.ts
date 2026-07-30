@@ -43,6 +43,7 @@ import { AiConversationModule } from './ai-conversation/ai-conversation.module';
 import { CorrectorScoreModule } from './corrector-score/corrector-score.module';
 import { AchievementsModule } from './achievements/achievements.module';
 import { CulturalModule } from './cultural/cultural.module';
+import { DailyTipModule } from './daily-tip/daily-tip.module';
 import { validationSchema } from './config/validation.schema';
 
 @Module({
@@ -103,6 +104,7 @@ import { validationSchema } from './config/validation.schema';
     AiConversationModule,
     AchievementsModule,
     CulturalModule,
+    DailyTipModule,
     CorrectorScoreModule,
   ],
   controllers: [AppController],

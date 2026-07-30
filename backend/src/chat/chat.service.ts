@@ -213,7 +213,7 @@ export class ChatService {
       const originalText = correctionPayload.original as string | undefined;
       const correctText = correctionPayload.corrected as string | undefined;
 
-      if (originalText && fixedText) {
+      if (originalText && correctText) {
         const prompt = `Explain simply why the following sentence was corrected.\nOriginal: "${originalText}"\nCorrected: "${correctText}"\nProvide a short explanation.`;
         try {
           const { response } = await this.llmProxyService.proxyMessage(prompt);
