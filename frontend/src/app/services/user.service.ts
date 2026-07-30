@@ -63,6 +63,16 @@ export interface ProfileVisitor {
   };
 }
 
+export interface LinkedAccount {
+  provider: string;
+  /** Display name of the linked account (e.g. email) */
+  name?: string;
+  /** Whether the link is active */
+  active: boolean;
+  /** When the link was created */
+  created_at?: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -257,5 +267,39 @@ export class UserService {
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
+  }
+
+  async getLinkedAccounts(): Promise<LinkedAccount[]> {
+    return firstValueFrom(
+      this.http
+        .get<LinkedAccount[]>(`${this.baseUrl}/me/linked-accounts`, {
+          headers: this.getHeaders(),
+        })
+        .pipe(catchError(() => of([]))),
+    );
+  }
+
+  async linkAccount(provider: string): Promise<void> {
+    return firstValueFrom(
+      this.http
+        .post<void>(
+          `${this.baseUrl}/me/linked-accounts/link`,
+          { provider },
+          { headers: this.getHeaders() },
+        )
+        .pipe(catchError(() => of(undefined))),
+    );
+  }
+
+  async unlinkAccount(provider: string): Promise<void> {
+    return firstValueFrom(
+      this.http
+        .post<void>(
+          `${this.baseUrl}/me/linked-accounts/unlink`,
+          { provider },
+          { headers: this.getHeaders() },
+        )
+        .pipe(catchError(() => of(undefined))),
+    );
   }
 }
