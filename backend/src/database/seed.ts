@@ -300,8 +300,53 @@ async function runSeed() {
     console.log('✅ Seeded subscription events for audit trail');
   }
 
+  // 6. Seed achievements definitions
+  const achievementsData = [
+    {
+      code: 'first_moment',
+      title: 'First Moment',
+      description: 'Publish your first moment',
+      category: 'social',
+      points: 10,
+    },
+    {
+      code: 'streak_7',
+      title: '7-Day Streak',
+      description: 'Maintain a 7‑day study streak',
+      category: 'streak',
+      points: 50,
+    },
+    {
+      code: 'first_correction',
+      title: 'First Correction',
+      description: 'Give your first grammar correction',
+      category: 'learning',
+      points: 20,
+    },
+    {
+      code: 'vip_user',
+      title: 'VIP Member',
+      description: 'Upgrade to a VIP subscription',
+      category: 'monetisation',
+      points: 100,
+    },
+  ];
+
+  const { error: achErr } = await supabase
+    .from('achievements')
+    .upsert(achievementsData, {
+      onConflict: 'code',
+      ignoreDuplicates: false,
+    });
+
+  if (achErr) {
+    console.error('Failed to seed achievements:', achErr);
+  } else {
+    console.log('✅ Seeded achievements definitions');
+  }
+
   console.log(
-    '✅ Database successfully seeded with rich global users, moments, comments, and LiveKit rooms!',
+    '✅ Database successfully seeded with rich global users, moments, comments, LiveKit rooms, and achievements!',
   );
 }
 
