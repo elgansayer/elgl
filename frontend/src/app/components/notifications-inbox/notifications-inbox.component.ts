@@ -6,7 +6,7 @@ import { I18nService } from '../../services/i18n.service';
 import { NotificationService, InAppNotification } from '../../services/notification.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 
-export type NotificationTab = 'all' | 'likes' | 'comments' | 'follows';
+export type NotificationTab = 'all' | 'likes' | 'comments' | 'follows' | 'system';
 
 @Component({
   selector: 'app-notifications-inbox',
@@ -32,6 +32,7 @@ export class NotificationsInboxComponent implements OnInit {
       { id: 'likes', label: this.i18n.translate('notifications.tabLikes') },
       { id: 'comments', label: this.i18n.translate('notifications.tabComments') },
       { id: 'follows', label: this.i18n.translate('notifications.tabFollows') },
+      { id: 'system', label: this.i18n.translate('notifications.tabSystem') },
     ];
   });
 
@@ -83,6 +84,8 @@ export class NotificationsInboxComponent implements OnInit {
       notif.type === 'reply_comment'
     ) {
       void this.router.navigate(['/moments']);
+    } else if (notif.type === 'system') {
+      void this.router.navigate(['/help']);
     } else {
       void this.router.navigate(['/profile/user', notif.actor_id]);
     }
@@ -100,6 +103,8 @@ export class NotificationsInboxComponent implements OnInit {
         return '👤';
       case 'profile_visit':
         return '👁️';
+      case 'system':
+        return '🔔';
       default:
         return '🔔';
     }
@@ -119,6 +124,8 @@ export class NotificationsInboxComponent implements OnInit {
         return 'notifications.followedYou';
       case 'profile_visit':
         return 'notifications.viewedProfile';
+      case 'system':
+        return 'notifications.systemAlert';
       default:
         return 'notifications.newActivity';
     }

@@ -150,7 +150,8 @@ export class NotificationsService {
       | 'comment_moment'
       | 'reply_comment'
       | 'profile_visit'
-      | 'mention_comment',
+      | 'mention_comment'
+      | 'system',
     entityId?: string,
     message?: string,
   ): Promise<void> {
@@ -176,6 +177,7 @@ export class NotificationsService {
         reply_comment: 'New Reply',
         profile_visit: 'Profile Visited',
         mention_comment: 'Mentioned in Comment',
+        system: 'System Alert',
       };
       const bodyMap: Record<string, string> = {
         follow: 'Someone started following you',
@@ -185,6 +187,7 @@ export class NotificationsService {
         reply_comment: message || 'Someone replied to your comment',
         profile_visit: 'Someone viewed your profile',
         mention_comment: message || 'Someone mentioned you in a comment',
+        system: message || 'You have a new system alert',
       };
 
       await this.sendPushNotification(recipientId, {
@@ -237,6 +240,8 @@ export class NotificationsService {
         ]);
       } else if (filterType === 'follows') {
         query = query.eq('type', 'follow');
+      } else if (filterType === 'system') {
+        query = query.eq('type', 'system');
       }
     }
 
@@ -359,6 +364,23 @@ export class NotificationsService {
           avatar_url: 'https://i.pravatar.cc/150?u=user-205',
           native_languages: ['fr'],
           target_languages: ['en'],
+        },
+      },
+      {
+        id: 'notif-6',
+        recipient_id: recipientId,
+        actor_id: 'admin-001',
+        type: 'system',
+        message:
+          'Welcome to HelloTalk! Your unified notifications area is ready.',
+        is_read: false,
+        created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+        actor: {
+          id: 'admin-001',
+          display_name: 'HelloTalk Team',
+          avatar_url: 'https://i.pravatar.cc/150?u=admin-001',
+          native_languages: ['en'],
+          target_languages: [],
         },
       },
     ];

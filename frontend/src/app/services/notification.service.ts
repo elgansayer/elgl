@@ -15,7 +15,8 @@ export interface InAppNotification {
     | 'comment_moment'
     | 'reply_comment'
     | 'profile_visit'
-    | 'mention_comment';
+    | 'mention_comment'
+    | 'system';
   entity_id?: string;
   message?: string;
   is_read: boolean;
@@ -155,6 +156,22 @@ export class NotificationService {
           avatar_url: 'https://i.pravatar.cc/150?u=user-205',
           native_languages: ['fr'],
           target_languages: ['en'],
+        },
+      },
+      {
+        id: 'notif-6',
+        recipient_id: 'me',
+        actor_id: 'admin-001',
+        type: 'system',
+        message: 'Welcome to HelloTalk! Your unified notifications area is ready.',
+        is_read: false,
+        created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+        actor: {
+          id: 'admin-001',
+          display_name: 'HelloTalk Team',
+          avatar_url: 'https://i.pravatar.cc/150?u=admin-001',
+          native_languages: ['en'],
+          target_languages: [],
         },
       },
     ];
