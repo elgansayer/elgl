@@ -4,6 +4,7 @@
   <!-- Top Bar with Theme Selector -->
   <div class="flex items-center justify-between ps-4 pe-4 py-2 bg-surface-200 border-b border-surface-100">
     <app-theme-selector />
+    <app-font-scale-slider />
   </div>
   <app-toast />
   <!-- Global Animated Virtual Gift Broadcast Overlay -->
@@ -57,12 +58,11 @@
       >
         <div class="relative">
           <span class="text-2xl leading-none">💬</span>
-          @let totalUnread = unreadCounter.totalUnread();
-          @if (totalUnread > 0) {
+          @if (totalUnread() > 0) {
             <span
               class="absolute -top-1 -end-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
             >
-              {{ totalUnread > 99 ? '99+' : totalUnread }}
+              {{ totalUnread() > 99 ? '99+' : totalUnread() }}
             </span>
           }
         </div>

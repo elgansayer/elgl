@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, viewChild, afterNextRender } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, viewChild, afterNextRender } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from './services/auth.service';
 import { EconomyStore, VirtualGift } from './services/economy.store';
@@ -18,6 +18,8 @@ import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dial
 import { UnreadCounterService } from './services/unread-counter.service';
 import { VersionCheckService } from './services/version-check.service';
 import { ThemeSelectorComponent } from './components/theme-selector/theme-selector.component';
+import { FontScaleSliderComponent } from './components/font-scale-slider/font-scale-slider.component';
+import { FontScaleService } from './services/font-scale.service';
 
 @Component({
   selector: 'app-root',
@@ -32,6 +34,7 @@ import { ThemeSelectorComponent } from './components/theme-selector/theme-select
     DailyLoginModalComponent,
     ConfirmDialogComponent,
     ThemeSelectorComponent,
+    FontScaleSliderComponent,
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
@@ -46,6 +49,8 @@ export class AppComponent implements OnInit {
   reportModalService = inject(ReportUserModalService);
   readonly unreadCounter = inject(UnreadCounterService);
   private versionCheckService = inject(VersionCheckService);
+  readonly fontScaleService = inject(FontScaleService);
+  readonly totalUnread = computed(() => this.unreadCounter.totalUnread());
 
   // Incoming call state
   readonly incomingCallData = signal<IncomingCallData | null>(null);
