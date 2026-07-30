@@ -188,6 +188,35 @@ export class UserService {
     );
   }
 
+  async getPresignedAvatarUrl(
+    filename: string,
+    contentType: string,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    return firstValueFrom(
+      this.http.post<{ uploadUrl: string; mediaUrl: string; objectKey: string }>(
+        `${this.baseUrl}/me/avatar/presigned-url`,
+        { filename, contentType },
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
+  async uploadAvatar(file: File): Promise<string> {
+    const { uploadUrl, mediaUrl } = await this.getPresignedAvatarUrl(file.name, file.type);
+
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type },
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error('Failed to upload avatar');
+    }
+
+    return mediaUrl;
+  }
+
   async updateCoverPhotoUrl(coverPhotoUrl: string): Promise<UserProfile> {
     return firstValueFrom(
       this.http.patch<UserProfile>(

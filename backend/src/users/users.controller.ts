@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -99,6 +100,25 @@ export class UsersController {
       { cover_photo_url: coverPhotoUrl },
       profile?.is_vip ?? false,
     );
+  }
+
+  @Post('me/avatar/presigned-url')
+  async getAvatarPresignedUrl(
+    @CurrentUser() user: User | null,
+    @Body() dto: { filename: string; contentType: string },
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    if (!user) throw new UnauthorizedException();
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(dto.contentType)) {
+      throw new BadRequestException(
+        'Only JPEG, PNG, and WebP images are allowed',
+      );
+    }
+    return this.mediaService.generatePresignedUrl(user.id, {
+      filename: dto.filename,
+      contentType: dto.contentType,
+      folder: 'avatars',
+    });
   }
 
   @Get('me/visitors')
