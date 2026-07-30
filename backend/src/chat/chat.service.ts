@@ -23,6 +23,7 @@ import {
 import { ChatMessageEvent } from '../notifications/events/notification.events';
 import { SystemMessageService } from './services/system-message.service';
 import { XpService } from '../xp/xp.service';
+import { LockChatDto } from './dto/lock-chat.dto';
 
 @Injectable()
 export class ChatService {
@@ -86,7 +87,24 @@ export class ChatService {
       return mockRooms;
     }
 
-    const rooms = response.data as ChatRoomRecord[];
+    let rooms = response.data as ChatRoomRecord[];
+
+    // Fetch locked chat room ids for the current user
+    const lockedRowsResponse = await supabase
+      .from('chat_room_members')
+      .select('room_id')
+      .eq('user_id', currentUserId)
+      .eq('is_locked', true);
+
+    const lockedSet = new Set<string>(
+      (lockedRowsResponse.data ?? []).map((r: any) => r.room_id),
+    );
+
+    // Annotate rooms with is_locked flag
+    rooms = rooms.map((r) => ({
+      ...r,
+      is_locked: lockedSet.has(r.id),
+    }));
 
     // Filter out rooms where the other participant is blocked
     if (blockedIds.length > 0) {
@@ -603,6 +621,50 @@ export class ChatService {
 
     if (error) throw new Error('Failed to fetch group members');
     return data || [];
+  }
+
+  // ---- Chat Lock methods ----
+
+  async lockChat(userId: string, roomId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+
+    const { error } = await supabase
+      .from('chat_room_members')
+      .update({ is_locked: true })
+      .match({ user_id: userId, room_id: roomId });
+
+    if (error) {
+      throw new Error(`Failed to lock chat: ${error.message}`);
+    }
+  }
+
+  async unlockChat(userId: string, roomId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+
+    const { error } = await supabase
+      .from('chat_room_members')
+      .update({ is_locked: false })
+      .match({ user_id: userId, room_id: roomId });
+
+    if (error) {
+      throw new Error(`Failed to unlock chat: ${error.message}`);
+    }
+  }
+
+  async getLockedChats(userId: string): Promise<string[]> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data, error } = await supabase
+      .from('chat_room_members')
+      .select('room_id')
+      .eq('user_id', userId)
+      .eq('is_locked', true);
+
+    if (error) {
+      throw new Error(`Failed to get locked chats: ${error.message}`);
+    }
+
+    return (data ?? []).map((row: any) => row.room_id);
   }
 
   async replyToStatusUpdate(

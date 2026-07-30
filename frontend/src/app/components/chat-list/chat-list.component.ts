@@ -35,6 +35,21 @@ export class ChatListComponent implements OnInit {
   readonly previews = signal<ChatRoomPreview[]>([]);
   readonly search = signal<string>('');
 
+  // ---------- Locked chat state ----------
+  readonly lockedRoomIds = signal<string[]>([]);
+  readonly showLocked = signal<boolean>(false);
+
+  // Computed previews after excluding locked rooms
+  readonly regularAndPinnedPreviews = computed(() => {
+    const lockedIds = this.lockedRoomIds();
+    return this.filteredPreviews().filter((p) => !lockedIds.includes(p.id));
+  });
+  readonly lockedPreviews = computed(() => {
+    const lockedIds = this.lockedRoomIds();
+    return this.previews().filter((p) => lockedIds.includes(p.id));
+  });
+
+  // --------------------------------------------------------------------
   notImplemented(): void {
     notImplementedToast();
   }
@@ -83,6 +98,7 @@ export class ChatListComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.loadPreviews();
+    await this.loadLockedRooms();
   }
 
   async loadPreviews(): Promise<void> {
@@ -110,6 +126,27 @@ export class ChatListComponent implements OnInit {
       this.previews.set([]);
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  private async loadLockedRooms(): Promise<void> {
+    try {
+      const ids = await this.chatService.getLockedRoomIds();
+      this.lockedRoomIds.set(ids);
+    } catch {
+      this.lockedRoomIds.set([]);
+    }
+  }
+
+  async toggleLockedFolder(): Promise<void> {
+    if (this.showLocked()) {
+      this.showLocked.set(false);
+      return;
+    }
+    // Request biometric / app unlock before revealing locked chats
+    await this.authService.unlockApp();
+    if (!this.authService.appLocked()) {
+      this.showLocked.set(true);
     }
   }
 

@@ -173,4 +173,31 @@ export class ChatController {
       avatar_url: m.user?.avatar_url,
     }));
   }
+
+  // Chat Lock endpoints
+  @Post('rooms/:roomId/lock')
+  async lockChat(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.chatService.lockChat(user.id, roomId);
+    return { success: true };
+  }
+
+  @Post('rooms/:roomId/unlock')
+  async unlockChat(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.chatService.unlockChat(user.id, roomId);
+    return { success: true };
+  }
+
+  @Get('locked-rooms')
+  async getLockedRooms(@CurrentUser() user: User | null): Promise<string[]> {
+    if (!user) return [];
+    return this.chatService.getLockedChats(user.id);
+  }
 }

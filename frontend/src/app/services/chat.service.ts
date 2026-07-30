@@ -72,6 +72,7 @@ export interface ChatRoom {
   avatar: string;
   is_online: boolean;
   is_pinned: boolean;
+  is_locked?: boolean;
   created_at: string;
   admin_id?: string;
 }
@@ -270,6 +271,26 @@ export class ChatService {
     }
 
     return rooms;
+  }
+
+  // ---- Chat Lock methods ----
+
+  async lockChat(roomId: string): Promise<void> {
+    await firstValueFrom(
+      this.http.post(`${this.baseUrl}/rooms/${roomId}/lock`, {}, { headers: this.getHeaders() }),
+    );
+  }
+
+  async unlockChat(roomId: string): Promise<void> {
+    await firstValueFrom(
+      this.http.post(`${this.baseUrl}/rooms/${roomId}/unlock`, {}, { headers: this.getHeaders() }),
+    );
+  }
+
+  async getLockedRoomIds(): Promise<string[]> {
+    return firstValueFrom(
+      this.http.get<string[]>(`${this.baseUrl}/locked-rooms`, { headers: this.getHeaders() }),
+    );
   }
 
   async addFavourite(messageId: string, noteText?: string): Promise<void> {
