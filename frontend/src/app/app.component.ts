@@ -24,6 +24,7 @@ import { FontScaleSliderComponent } from './components/font-scale-slider/font-sc
 import { FontScaleService } from './services/font-scale.service';
 import { JoyrideModule, JoyrideService } from 'ngx-joyride';
 import { I18nService } from './services/i18n.service';
+import { AppLanguageSelectorComponent } from './components/app-language-selector/app-language-selector.component';
 
 @Component({
   selector: 'app-root',
@@ -39,6 +40,7 @@ import { I18nService } from './services/i18n.service';
     ConfirmDialogComponent,
     ThemeSelectorComponent,
     FontScaleSliderComponent,
+    AppLanguageSelectorComponent,
     JoyrideModule,
   ],
   template: `
@@ -60,6 +62,8 @@ import { I18nService } from './services/i18n.service';
       </div>
     }
     <router-outlet />
+    <!-- Language selector button -->
+    <app-app-language-selector />
     <app-toast />
     <app-incoming-call-modal
       [callData]="incomingCallData()"
@@ -99,7 +103,7 @@ export class AppComponent implements OnInit {
   private versionCheckService = inject(VersionCheckService);
   readonly fontScaleService = inject(FontScaleService);
   private joyrideService = inject(JoyrideService);
-  private i18n = inject(I18nService);
+  readonly i18n = inject(I18nService);
   private document = inject(DOCUMENT);
   private destroyRef = inject(DestroyRef);
   readonly totalUnread = computed(() => this.unreadCounter.totalUnread());
@@ -117,6 +121,7 @@ export class AppComponent implements OnInit {
 
   // Incoming call state
   readonly incomingCallData = signal<IncomingCallData | null>(null);
+
 
   // Daily reward state
   readonly dailyRewardCoins = signal<number>(0);

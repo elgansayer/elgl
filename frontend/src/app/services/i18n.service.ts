@@ -117,6 +117,7 @@ export class I18nService {
     'lang.selectPlaceholder': 'Select language',
     'lang.customPlaceholder': 'Enter ISO code e.g. sv, th, id...',
     'lang.applyCustom': 'Switch Language',
+    'lang.noResults': 'No results',
     'lang.anyNative': 'Any native language',
     'lang.anyTarget': 'Any target language',
     'lang.en': 'English',
