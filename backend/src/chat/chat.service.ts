@@ -799,12 +799,16 @@ export class ChatService {
 
     const { data: originalMsg, error: fetchErr } = await supabase
       .from('chat_messages')
-      .select('room_id, text_content, sender_id')
+      .select('room_id, text_content, sender_id, message_type')
       .eq('id', messageId)
       .single();
 
     if (fetchErr || !originalMsg) {
       throw new Error('Original message not found');
+    }
+
+    if ((originalMsg as any).message_type !== 'text') {
+      throw new BadRequestException('Only text messages can be corrected');
     }
 
     const sendDto: SendMessageDto = {
@@ -841,6 +845,10 @@ export class ChatService {
 
     if (fetchErr || !originalMsg) {
       throw new Error('Message not found');
+    }
+
+    if (originalMsg.message_type !== 'text') {
+      throw new BadRequestException('Only text messages can be fixed');
     }
 
     const { data: membership } = await supabase
