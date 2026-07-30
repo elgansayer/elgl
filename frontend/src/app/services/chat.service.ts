@@ -352,6 +352,41 @@ export class ChatService {
     }
   }
 
+  /**
+   * Sends a correction to a message (any user can correct others' messages).
+   */
+  async correctMessage(
+    messageId: string,
+    correctedText: string,
+    explanation?: string,
+  ): Promise<ChatMessage> {
+    return firstValueFrom(
+      this.http.post<ChatMessage>(
+        `${this.baseUrl}/messages/${messageId}/correct`,
+        { correctedText, explanation },
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
+  /**
+   * Edits an existing message (the sender can fix their own message).
+   * This replaces the text_content and correction_payload in the server.
+   */
+  async fixMessage(
+    messageId: string,
+    correctedText: string,
+    explanation?: string,
+  ): Promise<ChatMessage> {
+    return firstValueFrom(
+      this.http.patch<ChatMessage>(
+        `${this.baseUrl}/messages/${messageId}/fix`,
+        { correctedText, explanation },
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
   async createGroup(name: string, memberIds: string[]): Promise<ChatRoom> {
     return firstValueFrom(
       this.http.post<ChatRoom>(
