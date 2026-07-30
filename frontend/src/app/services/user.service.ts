@@ -50,6 +50,7 @@ export interface UserProfile {
   profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
   proficiency_level?: string;
   learning_goals?: string;
+  default_translation_language?: string;
   created_at: string;
   is_followed_by_me?: boolean;
   is_liked_by_me?: boolean;
@@ -194,6 +195,10 @@ export class UserService {
           }),
         ),
     );
+  }
+
+  async setDefaultTranslationLanguage(lang: string): Promise<UserProfile> {
+    return this.updateMyProfile({ default_translation_language: lang });
   }
 
   async getMyVisitors(): Promise<VisitorLog[]> {

@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional } from 'class-validator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class ChatSettingsDto {
   @IsOptional()
@@ -21,4 +21,12 @@ export class ChatSettingsDto {
   @IsOptional()
   @IsBoolean()
   showDetailedExplanations?: boolean;
+
+  /**
+   * The ISO 639-1 language code for the default target language
+   * when automatic translation is enabled.
+   */
+  @IsOptional()
+  @IsString()
+  defaultTranslationLanguage?: string;
 }

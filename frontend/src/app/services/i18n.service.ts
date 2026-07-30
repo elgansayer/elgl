@@ -362,6 +362,8 @@ export class I18nService {
     'chatRoom.simplifyBtn': 'Simplify',
     'chatRoom.simplifying': 'Simplifying...',
     'chatRoom.simplifiedTitle': '✅ Simplified:',
+    // Default translation language setting
+    'chatRoom.defaultTranslationLanguage': 'Default translation language',
 
     // Chat List Component
     'chatList.title': 'Chats',

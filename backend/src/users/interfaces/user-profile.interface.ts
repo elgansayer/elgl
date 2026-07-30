@@ -3,6 +3,10 @@ export interface UserProfile {
   display_name?: string;
   native_languages: string[];
   target_languages: string[];
+  /**
+   * Default language code for automatic translation (ISO 639-1).
+   */
+  default_translation_language?: string;
   bio_text?: string;
   avatar_url?: string;
   audio_intro_url?: string;
