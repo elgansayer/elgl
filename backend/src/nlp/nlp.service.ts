@@ -15,6 +15,7 @@ import {
 } from './interfaces/nlp-results.interface';
 import { ExplainGrammarDto } from './dto/explain-grammar.dto';
 import { SimplifyDto } from './dto/simplify.dto';
+import { TranslateBioDto } from './dto/translate-bio.dto';
 
 @Injectable()
 export class NlpService {
@@ -527,6 +528,41 @@ export class NlpService {
       target_language: targetLang,
       translations: { ...dto.dictionary, ...translatedDict },
       cached: false,
+    };
+  }
+
+  async translateBio(
+    userId: string,
+    isVip: boolean,
+    dto: TranslateBioDto,
+  ): Promise<{
+    original_text: string;
+    translated_text: string;
+    detected_language: string;
+  }> {
+    await this.checkRateLimit(userId, isVip);
+
+    const supabase = this.supabaseService.getClient();
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('bio_text')
+      .eq('id', dto.target_user_id)
+      .single();
+
+    if (error || !user?.bio_text) {
+      throw new BadRequestException('User not found or no bio available');
+    }
+
+    const bioText = user.bio_text.trim();
+    const translateResult = await this.translate(userId, isVip, {
+      text: bioText,
+      target_language: dto.target_language,
+    });
+
+    return {
+      original_text: bioText,
+      translated_text: translateResult.translated_text,
+      detected_language: translateResult.detected_language,
     };
   }
 

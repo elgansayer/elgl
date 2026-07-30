@@ -548,6 +548,8 @@ export class I18nService {
     'profile.visibility.hidden': 'Hidden',
     'profile.loadError': 'Failed to load profile',
     'profile.updateError': 'Failed to update profile',
+    'profile.translateBio': 'Translate Bio',
+    'profile.translateBioError': 'Could not translate bio right now.',
     'hobby.add': '+ Add Hobby',
 
     'visitors.title': 'Who viewed me',

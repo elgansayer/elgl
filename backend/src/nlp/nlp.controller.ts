@@ -9,6 +9,7 @@ import { TranslateDto } from './dto/translate.dto';
 import { TranslateUiDto } from './dto/translate-ui.dto';
 import { ExplainGrammarDto } from './dto/explain-grammar.dto';
 import { SimplifyDto } from './dto/simplify.dto';
+import { TranslateBioDto } from './dto/translate-bio.dto';
 import {
   GrammarCheckResult,
   PronunciationScoreResult,
@@ -106,6 +107,24 @@ export class NlpController {
     if (!user) return null;
     const profile = await this.usersService.getProfile(user.id);
     return await this.nlpService.simplify(
+      user.id,
+      profile?.is_vip ?? false,
+      dto,
+    );
+  }
+
+  @Post('translate-bio')
+  async translateBio(
+    @CurrentUser() user: User | null,
+    @Body() dto: TranslateBioDto,
+  ): Promise<{
+    original_text: string;
+    translated_text: string;
+    detected_language: string;
+  } | null> {
+    if (!user) return null;
+    const profile = await this.usersService.getProfile(user.id);
+    return await this.nlpService.translateBio(
       user.id,
       profile?.is_vip ?? false,
       dto,
