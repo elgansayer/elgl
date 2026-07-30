@@ -32,6 +32,7 @@ export interface UserProfile {
   is_admin?: boolean;
   profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
   proficiency_level?: string;
+  learning_goals?: string;
   created_at: string;
   is_followed_by_me?: boolean;
   is_liked_by_me?: boolean;

@@ -43,6 +43,7 @@ export class ProfileComponent implements OnInit {
   avatarUrl = '';
   bioText = '';
   proficiencyLevel = signal<string>('B1');
+  learningGoals = signal<string>('');
   profileVisibility = signal<'everyone' | 'vips_only' | 'hidden'>('everyone');
 
   async ngOnInit(): Promise<void> {
@@ -62,6 +63,7 @@ export class ProfileComponent implements OnInit {
         this.bioText = data.bio_text || '';
         this.profileVisibility.set(data.profile_visibility || 'everyone');
         this.proficiencyLevel.set(data.proficiency_level || 'B1');
+        this.learningGoals.set(data.learning_goals || '');
       }
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
@@ -93,6 +95,7 @@ export class ProfileComponent implements OnInit {
         bio_text: this.bioText,
         profile_visibility: this.profileVisibility(),
         proficiency_level: this.proficiencyLevel(),
+        learning_goals: this.learningGoals(),
       });
       this.profile.set(updated);
       this.isEditing.set(false);
