@@ -124,4 +124,21 @@ export class DiscoveryService {
     }
     return filtered;
   }
+
+  async translateBio(bioText: string): Promise<string> {
+    const currentUser = this.authService.currentUser();
+    const targetLanguage = currentUser?.native_languages?.[0] ?? 'en';
+    try {
+      const result = await firstValueFrom(
+        this.http.post<{ translatedText: string }>(
+          `${environment.apiUrl}/nlp/translate`,
+          { text: bioText, sourceLanguage: '', targetLanguage },
+          { headers: this.getHeaders() }
+        )
+      );
+      return result.translatedText;
+    } catch {
+      return bioText;
+    }
+  }
 }
