@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { User } from '@supabase/supabase-js';
@@ -37,6 +38,7 @@ import { CallLogRecord } from './interfaces/call-log.interface';
 import { VoiceRoomNote } from './interfaces/voice-room-note.interface';
 import { CreateVoiceRoomNoteDto } from './dto/voice-room-note.dto';
 import { GetCallLogsQueryDto } from './dto/get-call-logs-query.dto';
+import { CreateLanguagePartyDto } from './dto/create-language-party.dto';
 
 @Controller('audio-rooms')
 @UseGuards(SupabaseAuthGuard)
@@ -62,13 +64,24 @@ export class AudioRoomsController {
   }
 
   @Get('list')
-  async listActiveRooms(): Promise<AudioRoomRecord[]> {
-    return await this.audioRoomsService.listActiveRooms();
+  async listActiveRooms(
+    @Query('type') partyType?: string,
+  ): Promise<AudioRoomRecord[]> {
+    return await this.audioRoomsService.listActiveRooms(partyType);
   }
 
   @Get(':id')
   async getRoom(@Param('id') id: string): Promise<AudioRoomRecord> {
     return await this.audioRoomsService.getRoom(id);
+  }
+
+  @Post('language-parties')
+  async createLanguageParty(
+    @CurrentUser() user: User | null,
+    @Body() dto: CreateLanguagePartyDto,
+  ): Promise<AudioRoomRecord | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.createLanguageParty(user.id, dto);
   }
 
   @Post('raise-hand')

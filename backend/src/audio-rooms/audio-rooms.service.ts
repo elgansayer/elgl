@@ -19,6 +19,7 @@ import { NlpService } from '../nlp/nlp.service';
 import { CreatePollDto } from './dto/create-poll.dto';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
 import { PlaySoundDto } from './dto/play-sound.dto';
+import { CreateLanguagePartyDto } from './dto/create-language-party.dto';
 import {
   ApproveSpeakerDto,
   ArchiveRoomDto,
@@ -40,6 +41,7 @@ interface AudioRoomRow {
   id: string;
   room_name: string;
   title: string;
+  party_type?: string;
   target_language: string;
   language_pair: string;
   topic_tag: string;
@@ -178,6 +180,85 @@ export class AudioRoomsService implements OnModuleInit {
     };
   }
 
+  async createLanguageParty(
+    hostId: string,
+    dto: CreateLanguagePartyDto,
+  ): Promise<AudioRoomRecord> {
+    const supabase = this.supabaseService.getClient();
+    const cleanTitle = dto.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+    const roomName = `language-party-${cleanTitle}-${Date.now()}`;
+
+    if (this.roomServiceClient && !this.livekitUrl.includes('mock')) {
+      try {
+        await this.roomServiceClient.createRoom({
+          name: roomName,
+          emptyTimeout: 3600,
+          maxParticipants: 500,
+        });
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        this.logger.warn(
+          `LiveKit server createRoom warning (${msg}). Continuing database creation.`,
+        );
+      }
+    }
+
+    const languagePair = String(dto.language_pair);
+    const targetLanguage = languagePair.split('-')[1] ?? languagePair;
+
+    const insertPayload: any = {
+      room_name: roomName,
+      title: dto.title,
+      party_type: 'language_party',
+      target_language: targetLanguage,
+      language_pair: dto.language_pair,
+      topic_tag: dto.topic_tag ?? 'General',
+      host_id: hostId,
+      is_video_stream: dto.is_video_stream ?? false,
+      co_host_id: null,
+      is_active: true,
+      speakers: [hostId],
+      raised_hands: [],
+      listeners_count: 1,
+    };
+
+    const response = await supabase
+      .from('audio_rooms')
+      .insert(insertPayload)
+      .select()
+      .single();
+
+    if (response.error || !response.data) {
+      throw new Error(
+        `Failed to create language party: ${response.error?.message ?? 'Unknown error'}`,
+      );
+    }
+
+    const row = response.data as AudioRoomRow;
+
+    // Start recording via LiveKit Egress (non‑blocking)
+    const egressId = await this.transcriptEgress.startEgress(roomName);
+    if (egressId) {
+      await supabase
+        .from('audio_rooms')
+        .update({ egress_id: egressId })
+        .eq('id', row.id);
+    }
+
+    const profile = await this.usersService.getProfile(hostId);
+    return {
+      ...row,
+      host: {
+        id: profile?.id ?? hostId,
+        display_name: profile?.display_name ?? 'Room Host',
+        avatar_url: profile?.avatar_url ?? null,
+      },
+    };
+  }
+
   async generateToken(
     userId: string,
     dto: JoinRoomDto,
@@ -236,12 +317,15 @@ export class AudioRoomsService implements OnModuleInit {
     };
   }
 
-  async listActiveRooms(): Promise<AudioRoomRecord[]> {
+  async listActiveRooms(partyType?: string): Promise<AudioRoomRecord[]> {
     const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('audio_rooms')
-      .select('*')
-      .eq('is_active', true)
+    let query = supabase.from('audio_rooms').select('*').eq('is_active', true);
+
+    if (partyType) {
+      query = query.eq('party_type', partyType);
+    }
+
+    const response = await query
       .order('created_at', { ascending: false })
       .limit(50);
 

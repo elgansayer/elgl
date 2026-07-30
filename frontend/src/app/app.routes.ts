@@ -412,4 +412,10 @@ export const routes: Routes = [
       ),
     title: 'App Version - HelloTalk',
   },
+  {
+    path: 'language-parties',
+    loadComponent: () =>
+      import('./components/language-parties/language-parties.component').then((m) => m.LanguagePartiesComponent),
+    title: 'Language Parties - HelloTalk',
+  },
 ];
