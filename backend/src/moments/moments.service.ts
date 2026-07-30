@@ -10,7 +10,9 @@ import { SafetyService } from '../safety/safety.service';
 import { XpService } from '../xp/xp.service';
 import { QuestsService } from '../quests/quests.service';
 import { CreateCommentDto, CreateMomentDto } from './dto/moment.dto';
+import { CreateStoryDto } from './dto/create-story.dto';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
+import { StoryResponse } from './interfaces/story.interface';
 import { TimelineWorker } from './timeline.worker';
 import { MOCK_USERS } from '../mock-data';
 import { MomentCommentEvent } from '../notifications/events/notification.events';
@@ -59,6 +61,59 @@ export class MomentsService {
     private readonly eventEmitter: EventEmitter2,
     private readonly safetyService: SafetyService,
   ) {}
+
+  async createStory(
+    userId: string,
+    dto: CreateStoryDto,
+  ): Promise<StoryResponse> {
+    const supabase = this.supabaseService.getClient();
+
+    // Calculate expires_at (default 24 hours)
+    const expireHours = dto.expireInHours ?? 24;
+    const expiresAt = new Date(
+      Date.now() + expireHours * 3600 * 1000,
+    ).toISOString();
+
+    const { data, error } = await supabase
+      .from('moments')
+      .insert({
+        user_id: userId,
+        text_content: dto.text_content ?? null,
+        media_urls: dto.media_urls ?? [],
+        media_type: dto.media_type ?? 'none',
+        target_language: dto.target_language ?? null,
+        voice_note_url: dto.voice_note_url ?? null,
+        is_ephemeral: true,
+        expires_at: expiresAt,
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      throw new Error(
+        `Failed to create story: ${error?.message ?? 'Unknown error'}`,
+      );
+    }
+
+    const profile = await this.usersService.getProfile(userId);
+
+    return {
+      id: data.id,
+      user_id: data.user_id,
+      text_content: data.text_content,
+      media_urls: data.media_urls ?? [],
+      media_type: data.media_type,
+      voice_note_url: data.voice_note_url ?? null,
+      target_language: data.target_language,
+      expires_at: data.expires_at,
+      created_at: data.created_at,
+      author: {
+        id: profile?.id ?? userId,
+        display_name: profile?.display_name ?? 'Serious Learner',
+        avatar_url: profile?.avatar_url ?? null,
+      },
+    };
+  }
 
   async createMoment(
     userId: string,

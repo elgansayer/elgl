@@ -13,8 +13,10 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { UsersService } from '../users/users.service';
 import { CreateCommentDto, CreateMomentDto } from './dto/moment.dto';
+import { CreateStoryDto } from './dto/create-story.dto';
 import { VoteCorrectionDto } from './dto/vote-correction.dto';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
+import { StoryResponse } from './interfaces/story.interface';
 import { MomentsService } from './moments.service';
 
 @Controller('moments')
@@ -32,6 +34,15 @@ export class MomentsController {
   ): Promise<MomentRecord | null> {
     if (!user) return null;
     return await this.momentsService.createMoment(user.id, dto);
+  }
+
+  @Post('stories')
+  async createStory(
+    @CurrentUser() user: User | null,
+    @Body() dto: CreateStoryDto,
+  ): Promise<StoryResponse | null> {
+    if (!user) return null;
+    return await this.momentsService.createStory(user.id, dto);
   }
 
   @Get('feed')
