@@ -18,6 +18,17 @@ export class AchievementsController {
     return this.achievementsService.getUserAchievements(userId);
   }
 
+  @Get('/full/:userId')
+  async getFullAchievements(@Param('userId') userId: string) {
+    return this.achievementsService.getFullAchievements(userId);
+  }
+
+  @Get('/my')
+  async getMyAchievements(@Req() req: AuthenticatedRequest) {
+    const userId = req.user.id;
+    return this.achievementsService.getFullAchievements(userId);
+  }
+
   @Post('/evaluate')
   async evaluateForCurrentUser(@Req() req: AuthenticatedRequest) {
     const userId = req.user.id;

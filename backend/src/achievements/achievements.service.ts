@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
+import { FullAchievementDto } from './dto/full-achievement.dto';
 
 @Injectable()
 export class AchievementsService implements OnModuleInit {
@@ -123,6 +124,64 @@ export class AchievementsService implements OnModuleInit {
       .select('achievements(*)')
       .eq('user_id', userId);
     return data ?? [];
+  }
+
+  async getFullAchievements(userId: string): Promise<FullAchievementDto[]> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: definitions } = await supabase
+      .from('achievements')
+      .select('code, name, description')
+      .order('code', { ascending: true });
+    if (!definitions) {
+      return [];
+    }
+
+    // get already earned codes
+    const earnedRows = await this.getUserAchievements(userId);
+    const earnedCodes = new Set<string>();
+    for (const row of earnedRows) {
+      const code = row.achievements?.code;
+      if (code) earnedCodes.add(code);
+    }
+
+    const msgCount = await this.getUserMessageCount(userId);
+    const streakDays = await this.getStudyStreakDays(userId);
+
+    const thresholds: Record<string, { required: number }> = {
+      first_message: { required: 1 },
+      '100_messages': { required: 100 },
+      '500_messages': { required: 500 },
+      '7_day_streak': { required: 7 },
+      '30_day_streak': { required: 30 },
+    };
+
+    return definitions.map((def) => {
+      let current = 0;
+      const threshold = thresholds[def.code];
+      if (threshold) {
+        if (
+          def.code === 'first_message' ||
+          def.code === '100_messages' ||
+          def.code === '500_messages'
+        ) {
+          current = msgCount;
+        } else if (
+          def.code === '7_day_streak' ||
+          def.code === '30_day_streak'
+        ) {
+          current = streakDays;
+        }
+      }
+      return {
+        code: def.code,
+        name: def.name,
+        description: def.description,
+        current,
+        required: threshold?.required ?? 0,
+        earned: earnedCodes.has(def.code),
+      };
+    });
   }
 
   async evaluateAchievements(userId: string): Promise<void> {
