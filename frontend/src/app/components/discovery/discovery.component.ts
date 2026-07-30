@@ -16,6 +16,7 @@ import {
   getLanguageFlag,
 } from '../primitives/language-picker/language-picker.component';
 import { RouterLink } from '@angular/router';
+import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range-slider.component';
 
 @Component({
   selector: 'app-discovery',
@@ -27,6 +28,7 @@ import { RouterLink } from '@angular/router';
     AppGradientButtonComponent,
     LanguagePickerComponent,
     RouterLink,
+    AgeRangeSliderComponent,
   ],
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
@@ -61,6 +63,14 @@ export class DiscoveryComponent implements OnInit {
   });
   readonly selectedFilter = signal<string>('all');
   readonly showBanner = signal<boolean>(true);
+  readonly ageRangeMin = signal<number>(18);
+  readonly ageRangeMax = signal<number>(100);
+
+  onAgeRangeChanged(range: AgeRange): void {
+    this.ageRangeMin.set(range.min);
+    this.ageRangeMax.set(range.max);
+    void this.searchPartners();
+  }
 
   onFilterSelect(id: string) {
     this.selectedFilter.set(id);
@@ -126,6 +136,8 @@ export class DiscoveryComponent implements OnInit {
         target_language: this.selectedTargetLanguage() || undefined,
         serious_learner_only: this.seriousLearnerOnly(),
         gender: isVip ? genderVal : undefined,
+        age_min: this.ageRangeMin(),
+        age_max: this.ageRangeMax(),
       });
       // Filter out blocked users
       const blocked = this.blockedUserIds();
@@ -144,6 +156,8 @@ export class DiscoveryComponent implements OnInit {
     this.selectedNativeLanguage.set('');
     this.selectedTargetLanguage.set('');
     this.seriousLearnerOnly.set(false);
+    this.ageRangeMin.set(18);
+    this.ageRangeMax.set(100);
     void this.searchPartners();
   }
 }

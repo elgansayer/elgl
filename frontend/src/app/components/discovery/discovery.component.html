@@ -70,6 +70,14 @@
         </button>
       </div>
     }
+      <!-- Age range filter -->
+      <div class="flex items-center gap-2 px-4 mt-3">
+        <app-age-range-slider
+          (ageRangeChanged)="onAgeRangeChanged($event)"
+          [initialMin]="ageRangeMin()"
+          [initialMax]="ageRangeMax()"
+        ></app-age-range-slider>
+      </div>
   </header>
 
   <!-- Prominent Colourful Banner Ad -->
