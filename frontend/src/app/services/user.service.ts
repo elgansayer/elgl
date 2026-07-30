@@ -103,6 +103,12 @@ export interface LinkedAccount {
   created_at?: string;
 }
 
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -415,6 +421,13 @@ export class UserService {
           // fallback to mock
           return of(['technology', 'fashion', 'food', 'travel', 'art', 'science', 'history', 'fitness']);
         })),
+    );
+  }
+
+  async getMyBadges(): Promise<Badge[]> {
+    return firstValueFrom(
+      this.http.get<Badge[]>(`${this.baseUrl}/me/badges`, { headers: this.getHeaders() })
+        .pipe(catchError(() => of([]))),
     );
   }
 

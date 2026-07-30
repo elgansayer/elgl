@@ -165,6 +165,14 @@ export class UsersController {
     return this.usersService.getAvailableInterests();
   }
 
+  @Get('me/badges')
+  async getMyBadges(
+    @CurrentUser() user: User | null,
+  ): Promise<{ id: string; name: string; description: string }[]> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.getBadges(user.id);
+  }
+
   @Get(':id')
   async getUserProfile(@Param('id') id: string): Promise<UserProfile> {
     return this.usersService.getProfile(id);

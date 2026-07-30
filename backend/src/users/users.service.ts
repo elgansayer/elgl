@@ -646,4 +646,27 @@ export class UsersService {
   async getAvailableInterests(): Promise<string[]> {
     return PREDEFINED_INTERESTS;
   }
+
+  async getBadges(
+    userId: string,
+  ): Promise<{ id: string; name: string; description: string }[]> {
+    const profile = await this.getProfile(userId);
+    const badges: { id: string; name: string; description: string }[] = [];
+    if (profile.is_vip) {
+      badges.push({
+        id: 'vip',
+        name: 'VIP User',
+        description:
+          'This user has a VIP subscription (8 UKP / $10 USD per month)',
+      });
+    }
+    if (profile.is_serious_learner) {
+      badges.push({
+        id: 'serious_learner',
+        name: 'Serious Learner',
+        description: 'User maintains a high study streak and correction ratio',
+      });
+    }
+    return badges;
+  }
 }
