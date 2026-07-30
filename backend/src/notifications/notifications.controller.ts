@@ -1,8 +1,10 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
   Patch,
+  Put,
   Query,
   UseGuards,
   UnauthorizedException,
@@ -30,6 +32,20 @@ export class NotificationsController {
   async getUnreadCount(@CurrentUser() user: User | null) {
     if (!user) throw new UnauthorizedException();
     return this.notificationsService.getUnreadCount(user.id);
+  }
+
+  @Get('preferences')
+  async getPreferences(@CurrentUser() user: User | null) {
+    if (!user) throw new UnauthorizedException();
+    return this.notificationsService.getPreferences(user.id);
+  }
+
+  @Put('preferences')
+  async updatePreferences(@CurrentUser() user: User | null, @Body() body: any) {
+    if (!user) throw new UnauthorizedException();
+    await this.notificationsService.updatePreferences(user.id, body);
+    const updated = await this.notificationsService.getPreferences(user.id);
+    return { success: true, preferences: updated };
   }
 
   @Patch('read-all')

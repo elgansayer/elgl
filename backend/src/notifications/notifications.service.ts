@@ -2,6 +2,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
+import { NotificationPreferences } from './interfaces/notification-preferences.interface';
 
 type FirebaseAdmin = any;
 
@@ -12,6 +13,67 @@ export class NotificationsService {
     private readonly supabaseService: SupabaseService,
   ) {}
 
+  async getPreferences(userId: string): Promise<NotificationPreferences> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('notification_preferences')
+      .select('preferences, updated_at')
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !data) {
+      // Return sensible defaults
+      return {
+        userId,
+        direct_messages: { push: true, badge: true },
+        groups: { push: true, badge: true },
+        likes: { push: true, badge: true },
+        voice_rooms: { push: true, badge: true },
+        do_not_disturb: false,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
+    const prefs: NotificationPreferences = {
+      userId,
+      ...(data.preferences as Omit<
+        NotificationPreferences,
+        'userId' | 'updatedAt'
+      >),
+      updatedAt: data.updated_at,
+    };
+    return prefs;
+  }
+
+  async updatePreferences(
+    userId: string,
+    preferences: Partial<Omit<NotificationPreferences, 'userId' | 'updatedAt'>>,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase.from('notification_preferences').upsert(
+      {
+        user_id: userId,
+        preferences: {
+          direct_messages: preferences.direct_messages ?? {
+            push: true,
+            badge: true,
+          },
+          groups: preferences.groups ?? { push: true, badge: true },
+          likes: preferences.likes ?? { push: true, badge: true },
+          voice_rooms: preferences.voice_rooms ?? { push: true, badge: true },
+          do_not_disturb: preferences.do_not_disturb ?? false,
+        },
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' },
+    );
+    if (error) {
+      throw new Error(
+        `Failed to update notification preferences: ${error.message}`,
+      );
+    }
+  }
+
   async sendPushNotification(
     userId: string,
     payload: {
@@ -19,9 +81,28 @@ export class NotificationsService {
       title: string;
       body: string;
       data?: Record<string, string>;
+      category?: 'direct_messages' | 'groups' | 'likes' | 'voice_rooms';
     },
   ): Promise<void> {
     try {
+      // Respect per‑category push toggle and badge toggle
+      let pushEnabled = true;
+      let badgeEnabled = true;
+      if (payload.category) {
+        const prefs = await this.getPreferences(userId);
+        const cat = prefs[payload.category];
+        if (cat) {
+          pushEnabled = cat.push;
+          badgeEnabled = cat.badge;
+        }
+      }
+      if (!pushEnabled) {
+        console.log(
+          `Push disabled for category '${payload.category}' for user ${userId}, skipping`,
+        );
+        return;
+      }
+
       const supabase = this.supabaseService.getClient();
       const { data: tokens, error } = await supabase
         .from('user_push_tokens')
@@ -34,7 +115,8 @@ export class NotificationsService {
       }
 
       const fcmTokens = tokens.map((t: { fcm_token: string }) => t.fcm_token);
-      await this.sendFcmBatch(fcmTokens, payload);
+      const badgeCount = badgeEnabled ? 1 : 0;
+      await this.sendFcmBatch(fcmTokens, payload, badgeCount);
     } catch (err) {
       console.error(`Failed to send push notification to user ${userId}:`, err);
     }
@@ -48,6 +130,7 @@ export class NotificationsService {
       body: string;
       data?: Record<string, string>;
     },
+    badgeCount?: number,
   ): Promise<void> {
     let firebaseAdmin: FirebaseAdmin;
     try {
@@ -100,7 +183,7 @@ export class NotificationsService {
         payload: {
           aps: {
             sound: 'default',
-            badge: 1,
+            badge: badgeCount ?? 1,
             contentAvailable: true,
           },
         },
@@ -190,11 +273,31 @@ export class NotificationsService {
         system: message || 'You have a new system alert',
       };
 
+      // Determine notification category for push‑toggle check
+      let pushCategory:
+        'direct_messages' | 'groups' | 'likes' | 'voice_rooms' | undefined;
+      switch (type) {
+        case 'follow':
+        case 'like_profile':
+        case 'like_moment':
+          pushCategory = 'likes';
+          break;
+        case 'comment_moment':
+        case 'reply_comment':
+        case 'mention_comment':
+          pushCategory = 'groups';
+          break;
+        default:
+          // system / other – always send
+          break;
+      }
+
       await this.sendPushNotification(recipientId, {
         type,
         title: titleMap[type] || 'New Notification',
         body: bodyMap[type] || 'You have a new alert',
         data: { actorId, entityId: entityId || '' },
+        category: pushCategory,
       });
     } catch (err) {
       console.error(`Failed to create notification for ${recipientId}:`, err);
