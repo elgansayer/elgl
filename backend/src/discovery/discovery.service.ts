@@ -260,7 +260,12 @@ export class DiscoveryService {
           );
           return enrich(filtered);
         }
-        let fallbackResults = fallbackRes.data as UserProfile[];
+        let fallbackResults: UserProfile[] = (fallbackRes.data as any[]).map(
+          (item: any) => ({
+            ...item,
+            distance_metres: undefined,
+          }),
+        );
         if (blockedIds.length > 0) {
           fallbackResults = fallbackResults.filter(
             (u) => !blockedIds.includes(u.id),
@@ -287,7 +292,12 @@ export class DiscoveryService {
         );
         return enrich(filtered);
       }
-      let rpcResults = response.data as UserProfile[];
+      let rpcResults: UserProfile[] = (response.data as any[]).map(
+        (item: any) => ({
+          ...item,
+          distance_metres: item.distance_metres ?? item.distance ?? undefined,
+        }),
+      );
       if (blockedIds.length > 0) {
         rpcResults = rpcResults.filter((u) => !blockedIds.includes(u.id));
       }
@@ -362,7 +372,10 @@ export class DiscoveryService {
       );
       return enrich(filtered);
     }
-    let results = response.data as UserProfile[];
+    let results: UserProfile[] = (response.data as any[]).map((item: any) => ({
+      ...item,
+      distance_metres: item.distance_metres ?? item.distance ?? undefined,
+    }));
     if (blockedIds.length > 0) {
       results = results.filter((u) => !blockedIds.includes(u.id));
     }

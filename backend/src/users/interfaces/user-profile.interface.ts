@@ -49,6 +49,7 @@ export interface UserProfile {
   interests?: string[];
   is_admin?: boolean;
   created_at: string;
+  distance_metres?: number;
   scheduled_for_deletion_at?: string;
   // Business profile fields
   business_name?: string;

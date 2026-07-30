@@ -151,6 +151,16 @@ export class DiscoveryComponent implements OnInit {
     }
   }
 
+  formatDistance(metres: number | undefined): string {
+    if (metres == null) return '';
+    const km = metres / 1000;
+    const miles = metres / 1609.344;
+    if (km < 1) {
+      return `${metres.toFixed(0)} m (${miles.toFixed(2)} mi)`;
+    }
+    return `${km.toFixed(1)} km · ${miles.toFixed(1)} mi`;
+  }
+
   resetFilters(): void {
     this.selectedDistanceKm.set(50);
     this.selectedNativeLanguage.set('');

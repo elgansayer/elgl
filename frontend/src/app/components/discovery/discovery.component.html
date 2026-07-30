@@ -160,6 +160,9 @@
                 <p class="text-xs text-text-secondary mt-0.5 truncate max-w-[200px]">
                   {{ partner.bio_text || ('discovery.partnerBioFallback' | t) }}
                 </p>
+                <p class="text-xs text-text-secondary mt-0.5">
+                  {{ formatDistance(partner.distance_metres) }}
+                </p>
               </div>
             </div>
 
