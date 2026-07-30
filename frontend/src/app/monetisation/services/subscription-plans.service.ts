@@ -57,6 +57,24 @@ export class SubscriptionPlansService {
         'Dedicated support',
       ],
     },
+    {
+      id: 'pro_12_ukp_15_usd',
+      name: 'Pro',
+      price: 12,
+      priceUSD: 15,
+      description: 'Unlimited translations, advanced visitor logs, nearby visibility & ad‑free',
+      features: [
+        'Unlimited AI translations',
+        'Advanced visitor logs (who viewed your profile)',
+        'See who has bookmarked you',
+        'Nearby members visibility boost',
+        'Ad‑free experience',
+        'Priority community support',
+        'Mock your location anywhere (VIP)',
+        'Up to 5 target languages',
+      ],
+      isPopular: true,
+    },
   ];
 
   getPlans(): SubscriptionPlan[] {

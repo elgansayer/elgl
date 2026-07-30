@@ -105,7 +105,7 @@ export class MonetisationService {
   }
 
   private getPriceIdForPlan(
-    planId: 'consumer_8_ukp_10_usd' | 'consumer_50_ukp_63_usd',
+    planId: string,
     interval: 'month' | 'year',
   ): string {
     if (planId === 'consumer_50_ukp_63_usd') {
@@ -117,11 +117,37 @@ export class MonetisationService {
       }
       return priceId;
     }
-    // planId === 'consumer_8_ukp_10_usd'
-    const priceId = this.configService.get<string>('STRIPE_MONTHLY_PRICE_ID');
+    if (planId === 'consumer_8_ukp_10_usd') {
+      const priceId = this.configService.get<string>('STRIPE_MONTHLY_PRICE_ID');
+      if (!priceId) {
+        throw new BadRequestException(
+          `Stripe price ID for plan "${planId}" (interval: ${interval}) is not configured. Ensure STRIPE_MONTHLY_PRICE_ID environment variable is set.`,
+        );
+      }
+      return priceId;
+    }
+    if (planId === 'pro_12_ukp_15_usd') {
+      const envKey =
+        interval === 'year'
+          ? 'STRIPE_PRO_YEARLY_PRICE_ID'
+          : 'STRIPE_PRO_MONTHLY_PRICE_ID';
+      const priceId = this.configService.get<string>(envKey);
+      if (!priceId) {
+        throw new BadRequestException(
+          `Stripe price ID for plan "${planId}" (interval: ${interval}) is not configured. Ensure ${envKey} environment variable is set.`,
+        );
+      }
+      return priceId;
+    }
+    // fallback for developer_20_ukp_26_usd or other future plans
+    const envKey =
+      interval === 'year'
+        ? 'STRIPE_DEVELOPER_YEARLY_PRICE_ID'
+        : 'STRIPE_DEVELOPER_MONTHLY_PRICE_ID';
+    const priceId = this.configService.get<string>(envKey);
     if (!priceId) {
       throw new BadRequestException(
-        `Stripe price ID for plan "${planId}" (interval: ${interval}) is not configured. Ensure STRIPE_MONTHLY_PRICE_ID environment variable is set.`,
+        `Stripe price ID for plan "${planId}" (interval: ${interval}) is not configured. Ensure ${envKey} environment variable is set.`,
       );
     }
     return priceId;
@@ -129,10 +155,18 @@ export class MonetisationService {
 
   async createCheckoutSession(
     userId: string,
-    planId: 'consumer_8_ukp_10_usd' | 'consumer_50_ukp_63_usd',
+    planId: string,
     interval: 'month' | 'year',
   ): Promise<{ sessionUrl: string; sessionId: string }> {
     const priceId = this.getPriceIdForPlan(planId, interval);
+
+    const tierMap: Record<string, string> = {
+      consumer_8_ukp_10_usd: 'consumer',
+      consumer_50_ukp_63_usd: 'consumer',
+      pro_12_ukp_15_usd: 'pro',
+      developer_20_ukp_26_usd: 'developer',
+    };
+    const tier = tierMap[planId] ?? 'consumer';
 
     const session = await this.stripe.checkout.sessions.create({
       mode: 'subscription',
@@ -146,7 +180,7 @@ export class MonetisationService {
         userId,
         planId,
         interval,
-        tier: 'consumer',
+        tier,
       },
       success_url: `${this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4200'}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4200'}/subscription/cancel`,

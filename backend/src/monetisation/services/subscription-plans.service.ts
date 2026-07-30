@@ -105,6 +105,37 @@ export class SubscriptionPlansService {
         'Custom integrations',
       ],
     },
+    {
+      id: 'pro_12_ukp_15_usd',
+      name: 'Pro',
+      description:
+        'Unlimited translations, advanced visitor insights, nearby visibility & ad-free',
+      price_ukp: 12,
+      price_usd: 15,
+      currency: 'USD',
+      interval: 'month',
+      is_popular: true,
+      stripe_price_id: 'price_pro_monthly',
+      stripe_price_id_yearly: 'price_pro_yearly',
+      badge_text: 'Best Value',
+      features: [
+        'Unlimited AI translations',
+        'Advanced visitor logs (who viewed your profile)',
+        'See who has bookmarked you',
+        'Nearby members visibility boost',
+        'Ad‑free experience',
+        'Priority community support',
+        'Mock your location anywhere (VIP)',
+        'Up to 5 target languages',
+      ],
+      highlighted_benefits: [
+        'Unlimited AI translations',
+        'See who visited your profile',
+        'Boosted visibility in Nearby',
+        'Fully ad‑free',
+        'Up to 5 target languages',
+      ],
+    },
   ];
 
   getAllPlans(): SubscriptionPlan[] {
@@ -160,6 +191,8 @@ export class SubscriptionPlansService {
       'com.hellotalk.vip.yearly': 'consumer_8_ukp_10_usd',
       'com.hellotalk.developer.monthly': 'developer_20_ukp_26_usd',
       'com.hellotalk.developer.yearly': 'developer_20_ukp_26_usd',
+      'com.hellotalk.pro.monthly': 'pro_12_ukp_15_usd',
+      'com.hellotalk.pro.yearly': 'pro_12_ukp_15_usd',
     };
     return PRODUCT_TIER_MAP[productId] || null;
   }
