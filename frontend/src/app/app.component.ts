@@ -58,7 +58,7 @@ export class AppComponent implements OnInit {
   reportModalService = inject(ReportUserModalService);
   readonly unreadCounter = inject(UnreadCounterService);
   private versionCheckService = inject(VersionCheckService);
-  readonly fontScaleService = inject(FontScaleService);
+  private fontScaleService = inject(FontScaleService);
   readonly i18n = inject(I18nService);
   private document = inject(DOCUMENT);
   private destroyRef = inject(DestroyRef);
@@ -103,6 +103,7 @@ export class AppComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    // Font scale and base rem sizing are handled globally by FontScaleService.
     // Block the app immediately if the installed version is deprecated.
     await this.versionCheckService.checkVersion();
 

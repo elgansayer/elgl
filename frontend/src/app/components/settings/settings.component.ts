@@ -1,10 +1,11 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
 import { UserService, LinkedAccount } from '../../services/user.service';
 import { CacheService } from '../../services/cache.service';
 import { Router } from '@angular/router';
+import { FontScaleService } from '../../services/font-scale.service';
 
 @Component({
   selector: 'app-settings',
@@ -17,6 +18,7 @@ export class SettingsComponent implements OnInit {
   private userService = inject(UserService);
   private location = inject(Location);
   private router = inject(Router);
+  private fontScaleService = inject(FontScaleService);
 
   readonly isLoading = signal(true);
   readonly isDownloading = signal(false);
@@ -24,6 +26,8 @@ export class SettingsComponent implements OnInit {
   readonly isDeletingOldMedia = signal(false);
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
+
+  readonly fontScale = computed(() => Math.round(this.fontScaleService.scaleFactor() * 100));
 
   readonly isVip = signal(false);
   readonly primaryAccentColor = signal<string | null>(null);
@@ -58,6 +62,7 @@ export class SettingsComponent implements OnInit {
   readonly supportedProviders = ['google', 'facebook', 'twitter', 'apple'] as const;
 
   async ngOnInit(): Promise<void> {
+    // Font scale is handled by FontScaleService and applied globally.
     try {
       const profile = await this.userService.getMyProfile();
       if (profile) {
@@ -136,6 +141,17 @@ export class SettingsComponent implements OnInit {
 
   goBack(): void {
     this.location.back();
+  }
+
+  onFontScaleChange(event: Event): void {
+    const target = event.target;
+    if (target instanceof HTMLInputElement) {
+      const percent = Number(target.value);
+      if (!Number.isNaN(percent)) {
+        const scale = percent / 100;
+        this.fontScaleService.setScale(scale);
+      }
+    }
   }
 
   setAccentColor(color: string): void {

@@ -54,6 +54,9 @@ import { AudioIntroModule } from './audio-intro/audio-intro.module';
 import { StatsModule } from './stats/stats.module';
 import { ScheduledDeletionModule } from './scheduled-deletion/scheduled-deletion.module';
 import { EventsModule } from './events/events.module';
+import { LessonsModule } from './lessons/lessons.module';
+import { LinkPreviewModule } from './link-preview/link-preview.module';
+import { ResourceLibraryModule } from './resource-library/resource-library.module';
 import { WordOfTheDayModule } from './word-of-the-day/word-of-the-day.module';
 import { SpamDetectionModule } from './spam-detection/spam-detection.module';
 import { UserStatisticsModule } from './user-statistics/user-statistics.module';
@@ -130,6 +133,9 @@ import { validationSchema } from './config/validation.schema';
     StatsModule,
     ScheduledDeletionModule,
     EventsModule,
+    LessonsModule,
+    LinkPreviewModule,
+    ResourceLibraryModule,
     NotificationPreferencesModule,
     ModerationModule,
     WordOfTheDayModule,

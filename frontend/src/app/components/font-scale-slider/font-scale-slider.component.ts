@@ -14,10 +14,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
       <input
         id="fontScaleSlider"
         type="range"
-        min="0.8"
-        max="1.5"
-        step="0.1"
+        [min]="min"
+        [max]="max"
+        [step]="step"
         [value]="scale()"
+        [attr.aria-valuemin]="min"
+        [attr.aria-valuemax]="max"
+        [attr.aria-valuenow]="scale()"
         [attr.aria-valuetext]="scalePercentLabel()"
         (input)="onInput($event)"
         class="w-24 h-1 accent-primary"
@@ -31,6 +34,10 @@ export class FontScaleSliderComponent {
   private i18nService = inject(I18nService);
 
   readonly scale = this.fontScaleService.scaleFactor;
+  readonly min = this.fontScaleService.min;
+  readonly max = this.fontScaleService.max;
+  readonly step = this.fontScaleService.step;
+
   readonly scalePercentLabel = computed(() =>
     new Intl.NumberFormat(this.i18nService.currentLang(), {
       style: 'percent',
@@ -39,7 +46,8 @@ export class FontScaleSliderComponent {
   );
 
   onInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) return;
     const value = parseFloat(input.value);
     if (!isNaN(value)) {
       this.fontScaleService.setScale(value);

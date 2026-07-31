@@ -65,6 +65,7 @@ describe('IncomingCallComponent', () => {
     fixture = TestBed.createComponent(IncomingCallComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   it('should create', () => {
@@ -84,6 +85,7 @@ describe('IncomingCallComponent', () => {
       subscribeCallback({ type: 'incoming_call', callInfo });
     }
 
+    fixture.detectChanges();
     expect(component.showCallModal()).toBe(true);
     expect(component.callInfo()).toEqual(callInfo);
   });

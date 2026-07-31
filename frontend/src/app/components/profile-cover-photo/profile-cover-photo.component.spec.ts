@@ -40,10 +40,12 @@ describe('ProfileCoverPhotoComponent', () => {
   it('should emit coverUpdated on successful save', async () => {
     // Simulate a file selection
     const file = new File([''], 'test.webp', { type: 'image/webp' });
-    const dataTransfer = new DataTransfer();
-    dataTransfer.items.add(file);
     const inputEl = fixture.nativeElement.querySelector('#cover-file-input') as HTMLInputElement;
-    inputEl.files = dataTransfer.files;
+    const fileList = [file] as unknown as FileList;
+    Object.defineProperty(inputEl, 'files', {
+      value: fileList,
+      configurable: true,
+    });
     inputEl.dispatchEvent(new Event('change'));
     fixture.detectChanges();
 

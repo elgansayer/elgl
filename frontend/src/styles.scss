@@ -11,6 +11,10 @@
     --app-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
+  html {
+    font-size: 16px;
+  }
+
   html,
   body {
     /* Enforce Dark Theme Defaults */

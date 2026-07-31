@@ -267,7 +267,7 @@ export class IncomingCallComponent implements OnDestroy {
       this.centrifugoService.publish(`user_${info.callerId}`, {
         type: 'call_accepted',
         data: {
-          _userId: this.authService.currentUser()?.id,
+          userId: this.authService.currentUser()?.id,
           roomName: info.roomName,
         },
       });
@@ -295,7 +295,7 @@ export class IncomingCallComponent implements OnDestroy {
     this.centrifugoService.publish(`user_${info.callerId}`, {
       type: 'call_rejected',
       data: {
-        _userId: this.authService.currentUser()?.id,
+        userId: this.authService.currentUser()?.id,
         roomName: info.roomName,
       },
     });

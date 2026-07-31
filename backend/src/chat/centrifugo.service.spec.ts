@@ -75,7 +75,9 @@ describe('CentrifugoService', () => {
     });
 
     afterEach(() => {
-      fetchSpy.mockRestore();
+      if (fetchSpy) {
+        fetchSpy.mockRestore();
+      }
     });
 
     it('should publish data successfully and return true when response ok', async () => {
