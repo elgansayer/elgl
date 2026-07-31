@@ -1,5 +1,4 @@
 import { Controller, Get, Post, Body, Req, UseGuards } from '@nestjs/common';
-import * as jwt from 'jsonwebtoken';
 import { AuthService } from './auth.service';
 import { SupabaseAuthGuard } from './supabase-auth.guard';
 
@@ -19,18 +18,16 @@ export class AuthController {
     return { message: 'Password successfully reset' };
   }
 
+  @UseGuards(SupabaseAuthGuard)
   @Post('change-password')
   async changePassword(
     @Req() req: any,
     @Body('newPassword') newPassword: string,
   ) {
-    const authHeader = req.headers['authorization'];
-    if (!authHeader) {
-      throw new Error('Authorization header missing');
+    if (!req.user || !req.user.id) {
+      throw new Error('Unauthorized');
     }
-    const token = authHeader.replace('Bearer ', '');
-    const decoded = jwt.decode(token) as { sub: string };
-    const userId: string = decoded.sub;
+    const userId: string = req.user.id;
     await this.authService.changePassword(userId, newPassword);
     return { message: 'Password changed successfully' };
   }
@@ -75,12 +72,9 @@ export class AuthController {
   }
 
   private getUserIdFromReq(req: any): string {
-    const authHeader = req.headers['authorization'];
-    if (!authHeader) {
-      throw new Error('Authorization header missing');
+    if (!req.user || !req.user.id) {
+      throw new Error('Unauthorized');
     }
-    const token = authHeader.replace('Bearer ', '');
-    const decoded = jwt.decode(token) as { sub: string };
-    return decoded.sub;
+    return req.user.id;
   }
 }

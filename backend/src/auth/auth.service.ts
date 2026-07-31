@@ -39,8 +39,16 @@ export class AuthService {
   async resetPassword(token: string, newPassword: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
     try {
-      const decoded = jwt.decode(token) as { sub: string };
-      const userId: string = decoded.sub;
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser(token);
+
+      if (userError || !user || !user.id) {
+        throw new BadRequestException('Invalid or expired reset token');
+      }
+
+      const userId = user.id;
 
       const { error } = await supabase.auth.admin.updateUserById(userId, {
         password: newPassword,
@@ -48,7 +56,10 @@ export class AuthService {
       if (error) {
         throw new BadRequestException(error.message);
       }
-    } catch {
+    } catch (err: unknown) {
+      if (err instanceof BadRequestException) {
+        throw err;
+      }
       throw new BadRequestException('Invalid or expired reset token');
     }
   }
