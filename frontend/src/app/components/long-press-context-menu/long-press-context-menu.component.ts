@@ -33,6 +33,13 @@ import {Component, input, output, signal} from '@angular/core';import { Translat
         >
           <button
             class="w-full text-start text-white font-medium py-2 px-3 rounded-lg hover:bg-white/10"
+            (click)="doReply()"
+          >
+            {{ 'context_menu.reply' | t }}
+          </button>
+
+          <button
+            class="w-full text-start text-white font-medium py-2 px-3 rounded-lg hover:bg-white/10"
             (click)="doCopy()"
           >
             {{ 'context_menu.copy' | t }}
@@ -85,6 +92,7 @@ export class LongPressContextMenuComponent {
   readonly roomId = input.required<string>();
   readonly isBlocked = input(false);
 
+  readonly reply = output<{ messageId: string }>();
   readonly copyMessage = output<{ messageId: string; content: string }>();
   readonly favourite = output<{
     messageId: string;
@@ -141,6 +149,11 @@ export class LongPressContextMenuComponent {
 
   closeMenu() {
     this.menuVisible.set(false);
+  }
+
+  doReply() {
+    this.reply.emit({ messageId: this.messageId() });
+    this.closeMenu();
   }
 
   doCopy() {

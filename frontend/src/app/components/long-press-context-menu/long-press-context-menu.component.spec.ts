@@ -28,6 +28,18 @@ describe('LongPressContextMenuComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should emit reply and close the menu when doReply is called', () => {
+    vi.spyOn(component.reply, 'emit');
+    component.menuVisible.set(true);
+
+    component.doReply();
+
+    expect(component.reply.emit).toHaveBeenCalledWith({
+      messageId: 'test-message-id',
+    });
+    expect(component.menuVisible()).toBe(false);
+  });
+
   it('should emit copyMessage and close the menu when doCopy is called', () => {
     vi.spyOn(component.copyMessage, 'emit');
     component.menuVisible.set(true);
@@ -125,6 +137,6 @@ describe('LongPressContextMenuComponent', () => {
     fixture.detectChanges();
 
     const buttons = fixture.debugElement.queryAll(By.css('button'));
-    expect(buttons.length).toBe(5);
+    expect(buttons.length).toBe(6);
   });
 });

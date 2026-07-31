@@ -357,6 +357,8 @@ export class I18nService {
     'chatRoom.doodleBtn': 'Doodle',
     'chatRoom.voiceBtn': 'Voice',
     'chatRoom.typePlaceholder': 'Type your message',
+    'chatRoom.replyingToLabel': 'Replying to a message in this conversation',
+    'chatRoom.replyPreviewFallback': 'Original message unavailable',
     'chatRoom.sendBtn': 'Send',
     'chatRoom.bookmarkSuccess': 'Message bookmarked to Favourites!',
     'chatRoom.bookmarkError': 'Already bookmarked or failed.',
@@ -714,6 +716,7 @@ export class I18nService {
     'tts.unsupported': 'Text-to-speech is not supported in this browser environment.',
 
     // Context Menu
+    'context_menu.reply': 'Reply',
     'context_menu.copy': 'Copy',
     'context_menu.favourite': 'Favourite',
     'context_menu.report': 'Report',
@@ -749,6 +752,8 @@ export class I18nService {
     'report.toast_error': 'Failed to submit report. Please try again.',
     'chat.message_blocked': 'This message is from a blocked user',
     'chat.unblock_user': 'Unblock user',
+    'chat.unknown_user': 'Unknown user',
+    'chat.cancel_reply': 'Cancel',
 
     // Chat System Messages (real-time bubbles published over Centrifugo)
     'system.profileUpdated': '{{name}} updated their profile.',

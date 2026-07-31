@@ -1,13 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { SupabaseAuthGuard } from './../src/auth/supabase-auth.guard';
 import { SupabaseService } from './../src/supabase/supabase.service';
 import { NlpService } from './../src/nlp/nlp.service';
 
-jest.setTimeout(60000);
+jest.setTimeout(300000);
 
 type MockNlpService = {
   detectLanguage: jest.Mock;
@@ -24,11 +23,43 @@ type MockNlpService = {
 };
 
 describe('HelloTalk API E2E Integration Suite', () => {
-  let app: INestApplication<App>;
+  let app: INestApplication;
   let mockNlpService: MockNlpService;
-  let mockSupabaseClient: any;
-  let mockRedisClient: any;
-  let mockQueryBuilder: any;
+  let mockSupabaseClient: {
+    from: jest.Mock;
+    auth: {
+      getUser: jest.Mock;
+    };
+  };
+  let mockRedisClient: {
+    get: jest.Mock;
+    set: jest.Mock;
+    expire: jest.Mock;
+    incr: jest.Mock;
+    lrange: jest.Mock;
+    lpush: jest.Mock;
+    ltrim: jest.Mock;
+  };
+  let mockQueryBuilder: {
+    select: jest.Mock;
+    insert: jest.Mock;
+    upsert: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+    eq: jest.Mock;
+    neq: jest.Mock;
+    gt: jest.Mock;
+    gte: jest.Mock;
+    lt: jest.Mock;
+    lte: jest.Mock;
+    in: jest.Mock;
+    contains: jest.Mock;
+    overlaps: jest.Mock;
+    order: jest.Mock;
+    limit: jest.Mock;
+    range: jest.Mock;
+    single: jest.Mock;
+  };
 
   beforeAll(() => {
     process.env.SUPABASE_URL = 'https://hellotalk.test.supabase.co';

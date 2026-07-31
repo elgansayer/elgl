@@ -19,6 +19,7 @@ import { StickerPickerComponent } from '../sticker-picker/sticker-picker.compone
 import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
 import { SafetyService } from '../../services/safety.service';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
+import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.component';
 
 @Component({
   selector: 'app-chat-room',
@@ -35,6 +36,7 @@ import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
     StickerPickerComponent,
     ChatSystemBubbleComponent,
     CulturalTipComponent,
+    ReplyPreviewComponent,
   ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss'],
@@ -76,6 +78,10 @@ export class ChatRoomComponent implements OnDestroy {
     const blocked = this.blockedUserIds();
     return this.messages().filter((m) => !blocked.includes(m.sender_id));
   });
+
+  // The message currently being replied to, shown as a preview above the composer.
+  readonly replyingTo = signal<ChatMessage | null>(null);
+  readonly highlightedMessageId = signal<string | null>(null);
 
   // Transliteration state: message id -> romaji/pinyin string
   readonly transliterations = signal<Record<string, string>>({});
@@ -198,6 +204,7 @@ export class ChatRoomComponent implements OnDestroy {
   async sendTextMessage(): Promise<void> {
     if (!this.textInput.trim()) return;
     const text = this.textInput.trim();
+    const replyToId = this.replyingTo()?.id;
     this.textInput = '';
 
     try {
@@ -205,9 +212,11 @@ export class ChatRoomComponent implements OnDestroy {
         room_id: this.roomId,
         message_type: 'text',
         text_content: text,
+        reply_to_id: replyToId,
       });
       // Add locally if not duplicate
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
+      this.replyingTo.set(null);
     } catch (e) {
       console.error('Failed to send text message:', e);
     }
@@ -413,11 +422,28 @@ export class ChatRoomComponent implements OnDestroy {
     this.sendCorrection();
   }
 
-  scrollToMessage(message: ChatMessage): void {
-    const index = this.messages().findIndex((m) => m.id === message.id);
-    if (index >= 0) {
-      // Scroll logic - could use ViewChild to scroll container
+  scrollToMessage(messageId: string): void {
+    const element = document.getElementById(`msg-${messageId}`);
+    if (!element) return;
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    this.highlightedMessageId.set(messageId);
+    setTimeout(() => this.highlightedMessageId.set(null), 1500);
+  }
+
+  parentMessageFor(msg: ChatMessage): ChatMessage | undefined {
+    if (!msg.reply_to_id) return undefined;
+    return this.messages().find((m) => m.id === msg.reply_to_id);
+  }
+
+  startReply(messageId: string): void {
+    const parent = this.messages().find((m) => m.id === messageId);
+    if (parent) {
+      this.replyingTo.set(parent);
     }
+  }
+
+  cancelReply(): void {
+    this.replyingTo.set(null);
   }
 
   openDoodlePreview(url: string): void {
