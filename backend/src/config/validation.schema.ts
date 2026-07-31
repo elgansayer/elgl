@@ -49,4 +49,12 @@ export const validationSchema = Joi.object({
   GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL: Joi.string()
     .email({ tlds: { allow: false } })
     .required(),
+
+  LLM_PROVIDER: Joi.string()
+    .valid('openai', 'anthropic', 'google', 'local')
+    .default('openai'),
+  LLM_API_KEY: Joi.string().required(),
+  LLM_BASE_URL: Joi.string().uri().optional(),
+  LLM_MODEL: Joi.string().optional(),
+  ANTHROPIC_VERSION: Joi.string().default('2023-06-01'),
 });

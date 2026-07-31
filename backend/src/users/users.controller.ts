@@ -96,7 +96,7 @@ export class UsersController {
     @Body() dto: UpdateProfileDto,
   ): Promise<UserProfile | null> {
     if (!user) return null;
-    const profile = await this.usersService.getProfile(user.id);
+    const profile = this.usersService.getProfile(user.id);
     return this.usersService.updateProfile(
       user.id,
       dto,
@@ -123,7 +123,7 @@ export class UsersController {
     @Body('cover_photo_url') coverPhotoUrl: string,
   ): Promise<UserProfile | null> {
     if (!user) return null;
-    const profile = await this.usersService.getProfile(user.id);
+    const profile = this.usersService.getProfile(user.id);
     return this.usersService.updateProfile(
       user.id,
       { cover_photo_url: coverPhotoUrl },
@@ -172,12 +172,12 @@ export class UsersController {
 
   @Get('hobbies')
   async getAvailableHobbies(): Promise<string[]> {
-    return await this.usersService.getAvailableHobbies();
+    return this.usersService.getAvailableHobbies();
   }
 
   @Get('interests')
   async getAvailableInterests(): Promise<string[]> {
-    return await this.usersService.getAvailableInterests();
+    return this.usersService.getAvailableInterests();
   }
 
   @Get('me/badges')

@@ -10,7 +10,7 @@ import { SafetyService } from '../safety/safety.service';
 import { LinkPreviewService } from '../link-preview/link-preview.service';
 import { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
 import { SpamDetectionService } from '../spam-detection/spam-detection.service';
-import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
+import { ChatLlmService } from './chat-llm.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { SendMessageDto } from './dto/send-message.dto';
@@ -35,7 +35,7 @@ export class ChatService {
     private readonly safetyService: SafetyService,
     private readonly linkPreviewService: LinkPreviewService,
     private readonly spamDetectionService: SpamDetectionService,
-    private readonly llmProxyService: LlmProxyService,
+    private readonly chatLlmService: ChatLlmService,
     private readonly systemMessageService: SystemMessageService,
     private readonly xpService: XpService,
   ) {}
@@ -243,7 +243,7 @@ export class ChatService {
       if (originalText && correctText) {
         const prompt = `Explain simply why the following sentence was corrected.\nOriginal: "${originalText}"\nCorrected: "${correctText}"\nProvide a short explanation.`;
         try {
-          const { response } = await this.llmProxyService.proxyMessage(prompt);
+          const { response } = await this.chatLlmService.proxyMessage(prompt);
           if (response && response.trim().length > 0) {
             const updatedPayload = {
               ...correctionPayload,
@@ -460,7 +460,7 @@ export class ChatService {
       .join('\n');
     const prompt = `Based on this conversation:\n${contextLines}\n\nGenerate 3 suggested replies that the user could send next. Format each reply on a separate line, without numbers.`;
     try {
-      const { response } = await this.llmProxyService.proxyMessage(prompt);
+      const { response } = await this.chatLlmService.proxyMessage(prompt);
       const lines = response
         .split('\n')
         .map((l) => l.trim())
@@ -784,7 +784,7 @@ export class ChatService {
     userId: string,
     messageText: string,
   ): Promise<{ response: string }> {
-    const result = await this.llmProxyService.proxyMessage(messageText);
+    const result = await this.chatLlmService.proxyMessage(messageText);
     return { response: result.response };
   }
 
@@ -1184,7 +1184,7 @@ export class ChatService {
       'Keep responses short, natural, and helpful.',
       `The user wrote: "${messageText}"`,
     ].join('\n');
-    const result = await this.llmProxyService.proxyMessage(prompt);
+    const result = await this.chatLlmService.proxyMessage(prompt);
     return { response: result.response };
   }
 }

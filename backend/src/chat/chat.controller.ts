@@ -17,6 +17,7 @@ import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { ConversationStarterDto } from './dto/conversation-starter.dto';
 import { ReplyToStatusUpdateDto } from './dto/reply-to-status-update.dto';
 import { AiGenerateReplyDto, SendMessageDto } from './dto/send-message.dto';
+import { LlmProxyDto } from './dto/llm-proxy.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { AddLabelDto, RemoveLabelDto } from './dto/label.dto';
 import { FixMessageDto } from './dto/fix-message.dto';
@@ -100,7 +101,7 @@ export class ChatController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async chatLlmProxy(
     @CurrentUser() user: User | null,
-    @Body() dto: { messageText: string },
+    @Body() dto: LlmProxyDto,
   ): Promise<{ response: string } | null> {
     if (!user) return null;
     return await this.chatService.llmProxy(user.id, dto.messageText);
