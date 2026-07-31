@@ -177,7 +177,7 @@ export class UsersService {
       viewed_id: row.status_owner_id,
       created_at: row.created_at,
       visitor: row.viewer,
-    }));
+    })) as unknown as ProfileVisitor[];
   }
 
   async followUser(followerId: string, targetUserId: string): Promise<void> {
@@ -558,7 +558,7 @@ export class UsersService {
     privacy_hide_vip_status?: boolean;
   }> {
     const profile = await this.getProfile(userId);
-    const privacyRecord = profile as Record<string, unknown>;
+    const privacyRecord = profile as unknown as Record<string, unknown>;
     return {
       privacy_hide_age: profile.privacy_hide_age ?? false,
       privacy_hide_location: profile.privacy_hide_location ?? false,
@@ -675,7 +675,7 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to fetch followers');
     }
     const users: UserProfile[] = (data ?? []).map(
-      (row) => row.follower as UserProfile,
+      (row) => row.follower as unknown as UserProfile,
     );
     return { data: users, total };
   }
@@ -715,7 +715,7 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to fetch following');
     }
     const users: UserProfile[] = (data ?? []).map(
-      (row) => row.following as UserProfile,
+      (row) => row.following as unknown as UserProfile,
     );
     return { data: users, total };
   }

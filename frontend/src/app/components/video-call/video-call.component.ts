@@ -18,6 +18,7 @@ import {
   RemoteTrack,
   LocalVideoTrack,
   LocalAudioTrack,
+  LocalTrackPublication,
   createLocalTracks,
   Track,
 } from 'livekit-client';
@@ -33,7 +34,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
     <div class="fixed inset-0 z-50 bg-black flex flex-col">
       <!-- Remote Video (full screen background) -->
       <div class="flex-1 relative bg-gray-900">
-        @if (remoteVideoTrack()) {
+        @if (mainVideoTrack()) {
           <video #remoteVideo autoplay playsinline class="w-full h-full object-cover"></video>
         } @else {
           <div class="flex items-center justify-center h-full">
@@ -44,6 +45,22 @@ import { TranslatePipe } from '../../services/translate.pipe';
               <p class="text-xl">{{ 'video_call.waiting_for' | t : { name: otherUserName() } }}</p>
             </div>
           </div>
+        }
+
+        @if (isRemoteScreenSharing()) {
+          <div class="absolute top-4 inset-x-0 flex justify-center pointer-events-none">
+            <div class="bg-black/60 px-3 py-1 rounded-lg text-white text-xs backdrop-blur-sm">
+              {{ 'video_call.remote_presenting' | t : { name: otherUserName() } }}
+            </div>
+          </div>
+
+          @if (remoteCameraTrack()) {
+            <div
+              class="absolute bottom-4 start-4 w-24 h-36 rounded-xl overflow-hidden shadow-lg border-2 border-white/30"
+            >
+              <video #remoteCameraVideo autoplay playsinline class="w-full h-full object-cover"></video>
+            </div>
+          }
         }
 
         <!-- Local Camera Preview (PiP overlay) -->
@@ -65,6 +82,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
           }
         </div>
 
+        @if (isScreenSharing()) {
+          <div
+            class="absolute bottom-4 end-4 bg-green-600/90 px-3 py-1 rounded-lg text-white text-xs font-semibold"
+          >
+            {{ 'video_call.you_are_presenting' | t }}
+          </div>
+        }
+
         <!-- Call duration -->
         <div class="absolute top-4 start-4 text-white/80 text-sm font-mono">
           {{ callDuration() }}
@@ -80,6 +105,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
               ? 'bg-red-500 hover:bg-red-600 rounded-full w-14 h-14'
               : 'bg-white/20 hover:bg-white/30 rounded-full w-14 h-14'
           "
+          [ariaLabel]="
+            (isAudioMuted() ? 'video_call.unmute_audio_aria' : 'video_call.mute_audio_aria') | t
+          "
+          [ariaPressed]="isAudioMuted()"
           (clicked)="toggleAudio()"
         >
           @if (isAudioMuted()) {
@@ -128,6 +157,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
               ? 'bg-red-500 hover:bg-red-600 rounded-full w-14 h-14'
               : 'bg-white/20 hover:bg-white/30 rounded-full w-14 h-14'
           "
+          [ariaLabel]="
+            (isVideoMuted() ? 'video_call.unmute_video_aria' : 'video_call.mute_video_aria') | t
+          "
+          [ariaPressed]="isVideoMuted()"
           (clicked)="toggleVideo()"
         >
           @if (isVideoMuted()) {
@@ -171,6 +204,12 @@ import { TranslatePipe } from '../../services/translate.pipe';
               ? 'bg-green-500 hover:bg-green-600 rounded-full w-14 h-14'
               : 'bg-white/20 hover:bg-white/30 rounded-full w-14 h-14'
           "
+          [ariaLabel]="
+            (isScreenSharing()
+              ? 'video_call.stop_screen_share_aria'
+              : 'video_call.start_screen_share_aria') | t
+          "
+          [ariaPressed]="isScreenSharing()"
           (clicked)="toggleScreenShare()"
         >
           <svg
@@ -194,6 +233,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
                 ? 'bg-blue-500 hover:bg-blue-600 rounded-full w-14 h-14'
                 : 'bg-white/20 hover:bg-white/30 rounded-full w-14 h-14'
             "
+            [ariaLabel]="
+              (isInPip() ? 'video_call.exit_pip_aria' : 'video_call.enter_pip_aria') | t
+            "
+            [ariaPressed]="isInPip()"
             (clicked)="togglePip()"
           >
             <svg
@@ -215,6 +258,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <app-gradient-button
           size="md"
           [customClass]="'rounded-full w-16 h-16 bg-red-600 hover:bg-red-700'"
+          [ariaLabel]="'video_call.end_call_aria' | t"
           (clicked)="endCall()"
         >
           <svg
@@ -249,6 +293,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   // View children for video elements
   readonly remoteVideoRef = viewChild<ElementRef<HTMLVideoElement>>('remoteVideo');
   readonly localVideoRef = viewChild<ElementRef<HTMLVideoElement>>('localVideo');
+  readonly remoteCameraVideoRef = viewChild<ElementRef<HTMLVideoElement>>('remoteCameraVideo');
 
   // Inputs
   readonly roomName = input.required<string>();
@@ -264,7 +309,12 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   private localVideo: LocalVideoTrack | null = null;
   private localAudio: LocalAudioTrack | null = null;
 
-  readonly remoteVideoTrack = signal<RemoteTrack | null>(null);
+  readonly remoteCameraTrack = signal<RemoteTrack | null>(null);
+  readonly remoteScreenShareTrack = signal<RemoteTrack | null>(null);
+  readonly mainVideoTrack = computed<RemoteTrack | null>(
+    () => this.remoteScreenShareTrack() ?? this.remoteCameraTrack(),
+  );
+  readonly isRemoteScreenSharing = computed(() => this.remoteScreenShareTrack() !== null);
   readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
   readonly isAudioMuted = signal(false);
   readonly isVideoMuted = signal(false);
@@ -272,15 +322,30 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   readonly isInPip = signal(false);
   readonly pipAvailable = computed(() => typeof document !== 'undefined' && document.pictureInPictureEnabled);
   readonly isScreenSharing = signal(false);
-  private screenTrack: LocalVideoTrack | null = null;
   private callStartTime: number = 0;
   private durationInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
-    // React to remote video track changes to attach/detach
+    // React to the main (screen share, falling back to camera) remote track and detach the
+    // previous one so a swap between camera and screen share doesn't leave a stale attachment.
+    let previousMainTrack: RemoteTrack | null = null;
     effect(() => {
-      const track = this.remoteVideoTrack();
+      const track = this.mainVideoTrack();
       const videoEl = this.remoteVideoRef()?.nativeElement;
+      if (previousMainTrack && previousMainTrack !== track) {
+        previousMainTrack.detach();
+      }
+      if (track && videoEl) {
+        track.attach(videoEl);
+      }
+      previousMainTrack = track;
+    });
+
+    // React to the remote participant's camera track when it's shown as a secondary
+    // thumbnail (i.e. while their screen share occupies the main view).
+    effect(() => {
+      const track = this.remoteCameraTrack();
+      const videoEl = this.remoteCameraVideoRef()?.nativeElement;
       if (track && videoEl) {
         track.attach(videoEl);
       }
@@ -325,6 +390,8 @@ export class VideoCallComponent implements OnInit, OnDestroy {
       this.room
         .on(RoomEvent.TrackSubscribed, this.onTrackSubscribed.bind(this))
         .on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribed.bind(this))
+        .on(RoomEvent.LocalTrackPublished, this.onLocalTrackPublished.bind(this))
+        .on(RoomEvent.LocalTrackUnpublished, this.onLocalTrackUnpublished.bind(this))
         .on(RoomEvent.ParticipantDisconnected, this.onParticipantDisconnected.bind(this))
         .on(RoomEvent.Disconnected, this.onDisconnected.bind(this));
 
@@ -364,14 +431,32 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   }
 
   private onTrackSubscribed(track: RemoteTrack): void {
-    if (track.kind === Track.Kind.Video) {
-      this.remoteVideoTrack.set(track);
+    if (track.kind !== Track.Kind.Video) return;
+    if (track.source === Track.Source.ScreenShare) {
+      this.remoteScreenShareTrack.set(track);
+    } else {
+      this.remoteCameraTrack.set(track);
     }
   }
 
   private onTrackUnsubscribed(track: RemoteTrack): void {
-    if (track.kind === Track.Kind.Video) {
-      this.remoteVideoTrack.set(null);
+    if (track.kind !== Track.Kind.Video) return;
+    if (track.source === Track.Source.ScreenShare) {
+      this.remoteScreenShareTrack.set(null);
+    } else {
+      this.remoteCameraTrack.set(null);
+    }
+  }
+
+  private onLocalTrackPublished(publication: LocalTrackPublication): void {
+    if (publication.source === Track.Source.ScreenShare) {
+      this.isScreenSharing.set(true);
+    }
+  }
+
+  private onLocalTrackUnpublished(publication: LocalTrackPublication): void {
+    if (publication.source === Track.Source.ScreenShare) {
+      this.isScreenSharing.set(false);
     }
   }
 
@@ -407,39 +492,15 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   }
 
   async toggleScreenShare(): Promise<void> {
-    if (this.isScreenSharing()) {
-      // Stop screen share
-      if (this.screenTrack) {
-        this.room?.localParticipant.unpublishTrack(this.screenTrack);
-        this.screenTrack.stop();
-        this.screenTrack = null;
-      }
-      this.isScreenSharing.set(false);
-      return;
-    }
+    if (!this.room) return;
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      const track = stream.getVideoTracks()[0];
-      if (!track) {
-        stream.getTracks().forEach((t) => t.stop());
-        return;
-      }
-      const screenTrack = new LocalVideoTrack(track);
-      await this.room?.localParticipant.publishTrack(screenTrack);
-      this.screenTrack = screenTrack;
-      this.isScreenSharing.set(true);
-      // When user stops sharing via browser UI, detect and adjust state
-      track.onended = () => {
-        if (this.screenTrack) {
-          this.room?.localParticipant.unpublishTrack(this.screenTrack);
-          this.screenTrack.stop();
-          this.screenTrack = null;
-        }
-        this.isScreenSharing.set(false);
-      };
+      // setScreenShareEnabled tags the published track with Track.Source.ScreenShare and,
+      // when the user stops sharing via the browser's native "Stop sharing" control rather
+      // than this button, automatically unpublishes it and fires LocalTrackUnpublished -
+      // onLocalTrackUnpublished() picks that up to reset isScreenSharing.
+      await this.room.localParticipant.setScreenShareEnabled(!this.isScreenSharing());
     } catch {
-      // User cancelled or error
-      this.isScreenSharing.set(false);
+      // User cancelled the share picker or denied permission; state is unchanged.
     }
   }
 
@@ -479,11 +540,6 @@ export class VideoCallComponent implements OnInit, OnDestroy {
       this.localAudio = null;
     }
 
-    if (this.screenTrack) {
-      this.screenTrack.stop();
-      this.screenTrack = null;
-    }
-
     if (this.room) {
       this.room.disconnect();
       this.room = null;
@@ -495,6 +551,8 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     }
 
     this.localVideoTrack.set(null);
-    this.remoteVideoTrack.set(null);
+    this.remoteCameraTrack.set(null);
+    this.remoteScreenShareTrack.set(null);
+    this.isScreenSharing.set(false);
   }
 }

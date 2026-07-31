@@ -40,7 +40,7 @@ export class SupabaseService implements OnModuleDestroy {
     return this.redisClient;
   }
 
-  async onModuleDestroy(): Promise<void> {
+  onModuleDestroy(): void {
     if (this.redisClient) {
       this.redisClient.disconnect();
     }
@@ -52,12 +52,11 @@ export class SupabaseService implements OnModuleDestroy {
     const { data, error: fetchError } = await supabase
       .from('users')
       .select('study_streak_days, correction_ratio')
-      .returns<{
+      .eq('id', userId)
+      .single<{
         study_streak_days: number | null;
         correction_ratio: number | null;
-      }>()
-      .eq('id', userId)
-      .single();
+      }>();
 
     if (fetchError) {
       console.error(
@@ -97,9 +96,8 @@ export class SupabaseService implements OnModuleDestroy {
       const { data, error: fetchError } = await supabase
         .from('users')
         .select('xp_total')
-        .returns<{ xp_total: number }>()
         .eq('id', userId)
-        .single();
+        .single<{ xp_total: number }>();
       if (fetchError || !data) {
         console.error(
           `Failed to increment XP for user ${userId}:`,
@@ -120,9 +118,8 @@ export class SupabaseService implements OnModuleDestroy {
     const { data, error } = await supabase
       .from('users')
       .select('xp_total')
-      .returns<{ xp_total: number }>()
       .eq('id', userId)
-      .single();
+      .single<{ xp_total: number }>();
     if (error || !data) {
       return 0;
     }

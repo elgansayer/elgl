@@ -337,6 +337,20 @@ export class I18nService {
     'videoRoom.removeCoHostAria': 'Remove co-host from split screen',
     'videoRoom.noEligibleSpeakers': 'Approve a stage speaker before inviting a co-host.',
 
+    // 1:1 Video Call Component
+    'video_call.waiting_for': 'Waiting for {{name}}...',
+    'video_call.you_are_presenting': "You're sharing your screen",
+    'video_call.remote_presenting': '{{name}} is sharing their screen',
+    'video_call.mute_audio_aria': 'Mute microphone',
+    'video_call.unmute_audio_aria': 'Unmute microphone',
+    'video_call.mute_video_aria': 'Turn off camera',
+    'video_call.unmute_video_aria': 'Turn on camera',
+    'video_call.start_screen_share_aria': 'Start screen sharing',
+    'video_call.stop_screen_share_aria': 'Stop screen sharing',
+    'video_call.enter_pip_aria': 'Enter picture-in-picture',
+    'video_call.exit_pip_aria': 'Exit picture-in-picture',
+    'video_call.end_call_aria': 'End call',
+
     // Chat Room Component
     'chatRoom.liveNow': 'Live now',
     'chatRoom.connecting': 'Connecting...',

@@ -3,7 +3,12 @@ import { Component, input, output, computed } from '@angular/core';
 @Component({
   selector: 'app-gradient-button',
   template: `
-    <button [disabled]="disabled()" [class]="buttonClasses()" (click)="onClick($event)">
+    <button
+      [disabled]="disabled()"
+      [class]="buttonClasses()"
+      [attr.aria-label]="ariaLabel() || null"
+      (click)="onClick($event)"
+    >
       <ng-content />
     </button>
   `,
@@ -15,6 +20,7 @@ export class AppGradientButtonComponent {
   readonly size = input<'sm' | 'md' | 'icon'>('md');
   readonly disabled = input<boolean>(false);
   readonly customClass = input<string>('');
+  readonly ariaLabel = input<string>('');
   readonly clicked = output<MouseEvent>();
 
   readonly buttonClasses = computed(() => {

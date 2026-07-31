@@ -1,30 +1,26 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
-import { AppButtonSecondaryComponent } from './button-secondary.component';
+import { AppGradientButtonComponent } from './gradient-button.component';
 
 @Component({
   template: `
-    <app-button-secondary
+    <app-gradient-button
       [size]="size()"
       [disabled]="disabled()"
-      [type]="type()"
       [customClass]="customClass()"
       [ariaLabel]="ariaLabel()"
-      [ariaPressed]="ariaPressed()"
       (clicked)="onClicked()"
     >
-      Secondary Action
-    </app-button-secondary>
+      End call
+    </app-gradient-button>
   `,
-  imports: [AppButtonSecondaryComponent],
+  imports: [AppGradientButtonComponent],
 })
 class TestHostComponent {
-  size = signal<'sm' | 'md' | 'lg'>('md');
+  size = signal<'sm' | 'md' | 'icon'>('md');
   disabled = signal<boolean>(false);
-  type = signal<'button' | 'submit' | 'reset'>('button');
   customClass = signal('');
   ariaLabel = signal('');
-  ariaPressed = signal<boolean | null>(null);
   clickCount = 0;
 
   onClicked(): void {
@@ -32,14 +28,14 @@ class TestHostComponent {
   }
 }
 
-describe('AppButtonSecondaryComponent', () => {
+describe('AppGradientButtonComponent', () => {
   let fixture: ComponentFixture<TestHostComponent>;
   let host: TestHostComponent;
   let buttonElement: HTMLButtonElement;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TestHostComponent, AppButtonSecondaryComponent],
+      imports: [TestHostComponent, AppGradientButtonComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TestHostComponent);
@@ -50,19 +46,25 @@ describe('AppButtonSecondaryComponent', () => {
 
   it('should create and render projected content inside inner button', () => {
     expect(buttonElement).toBeTruthy();
-    expect(buttonElement.textContent?.trim()).toBe('Secondary Action');
+    expect(buttonElement.textContent?.trim()).toBe('End call');
   });
 
-  it('should apply secondary styles and size md by default', () => {
-    expect(buttonElement.classList.contains('bg-surface-100')).toBe(true);
-    expect(buttonElement.classList.contains('text-text-primary')).toBe(true);
-    expect(buttonElement.classList.contains('border')).toBe(true);
-    expect(buttonElement.classList.contains('ps-4')).toBe(true);
+  it('should apply gradient styles and size md by default', () => {
+    expect(buttonElement.classList.contains('bg-gradient-to-r')).toBe(true);
+    expect(buttonElement.classList.contains('px-6')).toBe(true);
   });
 
   it('should emit clicked event when clicked and not disabled', () => {
     buttonElement.click();
     expect(host.clickCount).toBe(1);
+  });
+
+  it('should not emit clicked when disabled', () => {
+    host.disabled.set(true);
+    fixture.detectChanges();
+
+    buttonElement.click();
+    expect(host.clickCount).toBe(0);
   });
 
   it('should apply disabled classes when disabled', () => {
@@ -71,7 +73,6 @@ describe('AppButtonSecondaryComponent', () => {
 
     expect(buttonElement.disabled).toBe(true);
     expect(buttonElement.classList.contains('cursor-not-allowed')).toBe(true);
-    expect(buttonElement.classList.contains('bg-surface-100')).toBe(true);
   });
 
   it('should not set an aria-label attribute by default', () => {
@@ -79,25 +80,9 @@ describe('AppButtonSecondaryComponent', () => {
   });
 
   it('should expose an accessible name via aria-label for icon-only buttons', () => {
-    host.ariaLabel.set('Start screen sharing');
+    host.ariaLabel.set('End call');
     fixture.detectChanges();
 
-    expect(buttonElement.getAttribute('aria-label')).toBe('Start screen sharing');
-  });
-
-  it('should not set aria-pressed by default', () => {
-    expect(buttonElement.hasAttribute('aria-pressed')).toBe(false);
-  });
-
-  it('should reflect toggle state via aria-pressed when provided', () => {
-    host.ariaPressed.set(true);
-    fixture.detectChanges();
-
-    expect(buttonElement.getAttribute('aria-pressed')).toBe('true');
-
-    host.ariaPressed.set(false);
-    fixture.detectChanges();
-
-    expect(buttonElement.getAttribute('aria-pressed')).toBe('false');
+    expect(buttonElement.getAttribute('aria-label')).toBe('End call');
   });
 });

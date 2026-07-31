@@ -7,6 +7,8 @@ import { Component, input, output, computed } from '@angular/core';
       [type]="type()"
       [disabled]="disabled()"
       [class]="buttonClasses()"
+      [attr.aria-label]="ariaLabel() || null"
+      [attr.aria-pressed]="ariaPressed() === null ? null : ariaPressed()"
       (click)="onClick($event)"
     >
       <ng-content />
@@ -21,6 +23,8 @@ export class AppButtonSecondaryComponent {
   readonly disabled = input<boolean>(false);
   readonly type = input<'button' | 'submit' | 'reset'>('button');
   readonly customClass = input<string>('');
+  readonly ariaLabel = input<string>('');
+  readonly ariaPressed = input<boolean | null>(null);
 
   readonly clicked = output<MouseEvent>();
 
