@@ -50,7 +50,7 @@ LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 # ── config ────────────────────────────────────────────────────────────
 CFG = {
-    'max_retries':    int(os.environ.get('SWARM_MAX_RETRIES', 3)),
+    'max_retries':    int(os.environ.get('SWARM_MAX_RETRIES', 1)),
     'cooldown':       int(os.environ.get('SWARM_COOLDOWN', 15)),
     'idle_sleep':     int(os.environ.get('SWARM_IDLE_SLEEP', 60)),
     'stuck_timeout':  int(os.environ.get('SWARM_STUCK_TIMEOUT', 300)),
@@ -935,7 +935,7 @@ def run_deepseek(task: str) -> dict:
     stub_path = f"{stub_dir}:{os.environ.get('PATH', '')}"
 
     # --- Pass 2: edit ---
-    for round_num in range(4):
+    for round_num in range(2):
         log(f"Pass 2 round {round_num + 1}: {len(all_files)} files in context")
 
         cmd = [aider, '--yes']
