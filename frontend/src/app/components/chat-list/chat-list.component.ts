@@ -1,4 +1,4 @@
-import { notImplementedToast } from '../../services/toast.service';
+import { notImplementedToast, showToast } from '../../services/toast.service';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -147,6 +147,31 @@ export class ChatListComponent implements OnInit {
     await this.authService.unlockApp();
     if (!this.authService.appLocked()) {
       this.showLocked.set(true);
+    }
+  }
+
+  isRoomLocked(roomId: string): boolean {
+    return this.lockedRoomIds().includes(roomId);
+  }
+
+  async toggleRoomLock(event: Event, roomId: string): Promise<void> {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const wasLocked = this.isRoomLocked(roomId);
+    try {
+      if (wasLocked) {
+        await this.chatService.unlockChat(roomId);
+        this.lockedRoomIds.update((ids) => ids.filter((id) => id !== roomId));
+        showToast(this.i18n.translate('chatList.chatUnlocked'), 'success');
+      } else {
+        await this.chatService.lockChat(roomId);
+        this.lockedRoomIds.update((ids) => [...ids, roomId]);
+        showToast(this.i18n.translate('chatList.chatLocked'), 'success');
+      }
+    } catch (error) {
+      console.error('Failed to update chat lock status:', error);
+      showToast(this.i18n.translate('chatList.lockActionFailed'), 'error');
     }
   }
 

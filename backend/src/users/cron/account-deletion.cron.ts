@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../supabase/supabase.service';
+
+interface DeletableUser {
+  id: string;
+}
 
 @Injectable()
 export class AccountDeletionCron {
@@ -11,7 +16,7 @@ export class AccountDeletionCron {
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async handleAccountDeletions() {
     this.logger.log('Running account deletion cron job...');
-    const supabase = this.supabaseService.getClient();
+    const supabase: SupabaseClient = this.supabaseService.getClient();
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -22,7 +27,8 @@ export class AccountDeletionCron {
         .from('users')
         .select('id')
         .not('deletion_requested_at', 'is', null)
-        .lt('deletion_requested_at', thirtyDaysAgo.toISOString());
+        .lt('deletion_requested_at', thirtyDaysAgo.toISOString())
+        .returns<DeletableUser[]>();
 
       if (fetchError) {
         this.logger.error('Failed to fetch users for deletion', fetchError);

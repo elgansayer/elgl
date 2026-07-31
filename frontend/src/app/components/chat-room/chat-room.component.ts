@@ -1,4 +1,4 @@
-import { showToast } from '../../services/toast.service';
+import { showToast, showErrorToast } from '../../services/toast.service';
 import { Component, inject, signal, computed, OnDestroy, input, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -70,6 +70,8 @@ export class ChatRoomComponent implements OnDestroy {
   readonly showSearch = signal<boolean>(false);
   readonly showAdminPanel = signal<boolean>(false);
   readonly showParticipantDrawer = signal<boolean>(false);
+  readonly isLocked = signal<boolean>(false);
+  readonly pendingUnlock = signal<boolean>(false);
 
   readonly participants = signal<GroupMember[]>([]);
   readonly blockedUserIds = signal<string[]>([]);
@@ -114,10 +116,48 @@ export class ChatRoomComponent implements OnDestroy {
 
   private async initializeRoom(): Promise<void> {
     await this.loadRoomDetails();
+    if (this.isLocked()) {
+      // Hide the conversation until the user unlocks it (see toggleLock/unlockRoom).
+      this.pendingUnlock.set(true);
+      return;
+    }
+    await this.finishLoadingRoom();
+  }
+
+  private async finishLoadingRoom(): Promise<void> {
     await this.loadBlockedUsers();
     await this.loadMessages();
     await this.setupRealTime();
     await this.resolvePartnerLanguage();
+  }
+
+  /** Requests app unlock (biometric/PIN) before revealing a locked chat's messages. */
+  async unlockRoom(): Promise<void> {
+    await this.authService.unlockApp();
+    if (!this.authService.appLocked()) {
+      this.pendingUnlock.set(false);
+      await this.finishLoadingRoom();
+    }
+  }
+
+  async toggleLock(): Promise<void> {
+    if (!this.roomId) return;
+    try {
+      if (this.isLocked()) {
+        await this.chatService.unlockChat(this.roomId);
+        this.isLocked.set(false);
+        if (this.roomDetails) this.roomDetails.is_locked = false;
+        showToast(this.i18n.translate('chatList.chatUnlocked'), 'success');
+      } else {
+        await this.chatService.lockChat(this.roomId);
+        this.isLocked.set(true);
+        if (this.roomDetails) this.roomDetails.is_locked = true;
+        showToast(this.i18n.translate('chatList.chatLocked'), 'success');
+      }
+    } catch (e) {
+      console.error('Failed to update chat lock status:', e);
+      showErrorToast(this.i18n.translate('chatList.lockActionFailed'));
+    }
   }
 
   /** Looks up the chat partner's native language so a short cultural etiquette tip can be shown. */
@@ -139,6 +179,7 @@ export class ChatRoomComponent implements OnDestroy {
     try {
       const rooms = await this.chatService.getRooms();
       this.roomDetails = rooms.find((r) => r.id === this.roomId) || null;
+      this.isLocked.set(this.roomDetails?.is_locked ?? false);
     } catch (e) {
       console.error('Failed to load room details:', e);
     }

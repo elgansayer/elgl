@@ -38,6 +38,7 @@ describe('ChatService', () => {
       ilike: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
+      match: jest.fn().mockReturnThis(),
       patch: jest.fn().mockReturnThis(),
       upsert: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
@@ -257,6 +258,26 @@ describe('ChatService', () => {
       );
     });
 
+    it('should annotate rooms the user has locked with is_locked: true', async () => {
+      const rooms = [{ id: 'global-exchange' }, { id: 'english-spanish' }];
+      mockQueryBuilder.order
+        .mockReturnValueOnce(mockQueryBuilder)
+        .mockResolvedValueOnce({
+          data: rooms,
+          error: null,
+        });
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({ data: [{ room_id: 'english-spanish' }], error: null }),
+      );
+
+      const result = await service.getRooms('user-1');
+
+      expect(result).toEqual([
+        { id: 'global-exchange', is_locked: false },
+        { id: 'english-spanish', is_locked: true },
+      ]);
+    });
+
     it('should return fallback mock rooms when rooms query fails', async () => {
       mockQueryBuilder.order
         .mockReturnValueOnce(mockQueryBuilder)
@@ -429,6 +450,91 @@ describe('ChatService', () => {
 
       const result = await service.getFavourites('user-1');
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('lockChat', () => {
+    it('should mark the room as locked for the given user', async () => {
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({ error: null }),
+      );
+
+      await service.lockChat('user-1', 'room-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('chat_room_members');
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        is_locked: true,
+      });
+      expect(mockQueryBuilder.match).toHaveBeenCalledWith({
+        user_id: 'user-1',
+        room_id: 'room-1',
+      });
+    });
+
+    it('should throw when the update fails', async () => {
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({ error: { message: 'Update failed' } }),
+      );
+
+      await expect(service.lockChat('user-1', 'room-1')).rejects.toThrow(
+        'Failed to lock chat: Update failed',
+      );
+    });
+  });
+
+  describe('unlockChat', () => {
+    it('should mark the room as unlocked for the given user', async () => {
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({ error: null }),
+      );
+
+      await service.unlockChat('user-1', 'room-1');
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        is_locked: false,
+      });
+      expect(mockQueryBuilder.match).toHaveBeenCalledWith({
+        user_id: 'user-1',
+        room_id: 'room-1',
+      });
+    });
+
+    it('should throw when the update fails', async () => {
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({ error: { message: 'Update failed' } }),
+      );
+
+      await expect(service.unlockChat('user-1', 'room-1')).rejects.toThrow(
+        'Failed to unlock chat: Update failed',
+      );
+    });
+  });
+
+  describe('getLockedChats', () => {
+    it('should return the ids of rooms the user has locked', async () => {
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({
+          data: [{ room_id: 'room-1' }, { room_id: 'room-2' }],
+          error: null,
+        }),
+      );
+
+      const result = await service.getLockedChats('user-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('chat_room_members');
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('is_locked', true);
+      expect(result).toEqual(['room-1', 'room-2']);
+    });
+
+    it('should throw when the query fails', async () => {
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({ data: null, error: { message: 'Query failed' } }),
+      );
+
+      await expect(service.getLockedChats('user-1')).rejects.toThrow(
+        'Failed to get locked chats: Query failed',
+      );
     });
   });
 });

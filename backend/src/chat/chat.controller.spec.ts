@@ -22,6 +22,9 @@ describe('ChatController', () => {
             getMessages: jest.fn(),
             addFavourite: jest.fn(),
             getFavourites: jest.fn(),
+            lockChat: jest.fn(),
+            unlockChat: jest.fn(),
+            getLockedChats: jest.fn(),
           },
         },
         {
@@ -152,6 +155,61 @@ describe('ChatController', () => {
       const result = await controller.getFavourites({ id: 'user-1' } as any);
       expect(chatService.getFavourites).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(favourites);
+    });
+  });
+
+  describe('lockChat', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.lockChat(null, 'room-1');
+      expect(result).toBeNull();
+      expect(chatService.lockChat).not.toHaveBeenCalled();
+    });
+
+    it('should call chatService.lockChat when user is provided', async () => {
+      (chatService.lockChat as jest.Mock).mockResolvedValue(undefined);
+
+      const result = await controller.lockChat(
+        { id: 'user-1' } as any,
+        'room-1',
+      );
+      expect(chatService.lockChat).toHaveBeenCalledWith('user-1', 'room-1');
+      expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe('unlockChat', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.unlockChat(null, 'room-1');
+      expect(result).toBeNull();
+      expect(chatService.unlockChat).not.toHaveBeenCalled();
+    });
+
+    it('should call chatService.unlockChat when user is provided', async () => {
+      (chatService.unlockChat as jest.Mock).mockResolvedValue(undefined);
+
+      const result = await controller.unlockChat(
+        { id: 'user-1' } as any,
+        'room-1',
+      );
+      expect(chatService.unlockChat).toHaveBeenCalledWith('user-1', 'room-1');
+      expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe('getLockedRooms', () => {
+    it('should return an empty array if user is not provided', async () => {
+      const result = await controller.getLockedRooms(null);
+      expect(result).toEqual([]);
+      expect(chatService.getLockedChats).not.toHaveBeenCalled();
+    });
+
+    it('should call chatService.getLockedChats when user is provided', async () => {
+      const roomIds = ['room-1', 'room-2'];
+      (chatService.getLockedChats as jest.Mock).mockResolvedValue(roomIds);
+
+      const result = await controller.getLockedRooms({ id: 'user-1' } as any);
+      expect(chatService.getLockedChats).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(roomIds);
     });
   });
 });

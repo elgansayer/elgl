@@ -80,6 +80,7 @@ export interface ChatRoomRecord {
   avatar: string;
   is_online: boolean;
   is_pinned: boolean;
+  is_locked?: boolean;
   created_at: string;
   labels?: string[];
   wallpaper_url?: string | null;

@@ -383,6 +383,11 @@ export class I18nService {
     'chatRoom.simplifiedTitle': '✅ Simplified:',
     // Default translation language setting
     'chatRoom.defaultTranslationLanguage': 'Default translation language',
+    'chatRoom.lockChat': 'Lock chat',
+    'chatRoom.unlockChat': 'Unlock chat',
+    'chatRoom.lockedTitle': 'This chat is locked',
+    'chatRoom.lockedMessage': 'Unlock this chat to view the conversation.',
+    'chatRoom.unlockBtn': 'Unlock',
 
     // Chat List Component
     'chatList.title': 'Chats',
@@ -411,6 +416,12 @@ export class I18nService {
     'chatList.filterUnread': 'Unread',
     'chatList.filterMyTurn': 'My turn',
     'chatList.filterTimezone': 'Timezone proximity',
+    'chatList.lockedFolder': 'Locked chats',
+    'chatList.lockChat': 'Lock chat',
+    'chatList.unlockChat': 'Unlock chat',
+    'chatList.chatLocked': 'Chat locked',
+    'chatList.chatUnlocked': 'Chat unlocked',
+    'chatList.lockActionFailed': 'Could not update the lock status for this chat',
 
     // LingQ & Vocabulary Studio
     'vocabulary.title': '📚 Vocabulary studio',

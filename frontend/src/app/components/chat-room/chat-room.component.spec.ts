@@ -33,6 +33,14 @@ describe('ChatRoomComponent (threaded replies)', () => {
     getMessages: ReturnType<typeof vi.fn>;
     sendMessage: ReturnType<typeof vi.fn>;
     addFavourite: ReturnType<typeof vi.fn>;
+    lockChat: ReturnType<typeof vi.fn>;
+    unlockChat: ReturnType<typeof vi.fn>;
+  };
+  let mockAuthService: {
+    currentUser: ReturnType<typeof signal>;
+    getAccessToken: ReturnType<typeof vi.fn>;
+    unlockApp: ReturnType<typeof vi.fn>;
+    appLocked: ReturnType<typeof signal>;
   };
 
   beforeEach(async () => {
@@ -42,6 +50,8 @@ describe('ChatRoomComponent (threaded replies)', () => {
       getMessages: vi.fn().mockResolvedValue([]),
       sendMessage: vi.fn().mockResolvedValue(makeMessage({ id: 'm2' })),
       addFavourite: vi.fn().mockResolvedValue(undefined),
+      lockChat: vi.fn().mockResolvedValue(undefined),
+      unlockChat: vi.fn().mockResolvedValue(undefined),
     };
 
     const mockCentrifugeService = {
@@ -51,9 +61,11 @@ describe('ChatRoomComponent (threaded replies)', () => {
       unsubscribe: vi.fn(),
     };
 
-    const mockAuthService = {
+    mockAuthService = {
       currentUser: signal({ id: 'user-1', display_name: 'Me' }),
       getAccessToken: vi.fn(),
+      unlockApp: vi.fn().mockResolvedValue(undefined),
+      appLocked: signal(false),
     };
 
     const mockSafetyService = {
@@ -158,5 +170,79 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
     document.body.removeChild(el);
     vi.useRealTimers();
+  });
+
+  describe('chat lock', () => {
+    it('opening a locked room hides the conversation behind pendingUnlock', async () => {
+      mockChatService.getRooms.mockResolvedValue([
+        {
+          id: 'room-1',
+          title: 'Locked room',
+          subtitle: '',
+          avatar: '',
+          is_online: false,
+          is_pinned: false,
+          is_locked: true,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      mockChatService.getMessages.mockClear();
+
+      const lockedFixture = TestBed.createComponent(ChatRoomComponent);
+      const lockedComponent = lockedFixture.componentInstance;
+      lockedFixture.componentRef.setInput('id', 'room-1');
+      lockedFixture.detectChanges();
+      await lockedFixture.whenStable();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      lockedFixture.detectChanges();
+
+      expect(lockedComponent.isLocked()).toBe(true);
+      expect(lockedComponent.pendingUnlock()).toBe(true);
+      expect(mockChatService.getMessages).not.toHaveBeenCalled();
+    });
+
+    it('unlockRoom reveals the conversation once app unlock succeeds', async () => {
+      component.roomId = 'room-1';
+      component.isLocked.set(true);
+      component.pendingUnlock.set(true);
+      mockAuthService.unlockApp.mockImplementation(async () => {
+        mockAuthService.appLocked.set(false);
+      });
+
+      await component.unlockRoom();
+
+      expect(mockAuthService.unlockApp).toHaveBeenCalled();
+      expect(component.pendingUnlock()).toBe(false);
+      expect(mockChatService.getMessages).toHaveBeenCalledWith('room-1', '');
+    });
+
+    it('unlockRoom keeps the conversation hidden if app unlock fails', async () => {
+      component.roomId = 'room-1';
+      component.isLocked.set(true);
+      component.pendingUnlock.set(true);
+      mockChatService.getMessages.mockClear();
+      mockAuthService.unlockApp.mockImplementation(async () => {
+        mockAuthService.appLocked.set(true);
+      });
+
+      await component.unlockRoom();
+
+      expect(component.pendingUnlock()).toBe(true);
+      expect(mockChatService.getMessages).not.toHaveBeenCalled();
+    });
+
+    it('toggleLock locks and unlocks the current room', async () => {
+      component.roomId = 'room-1';
+      component.isLocked.set(false);
+
+      await component.toggleLock();
+      expect(mockChatService.lockChat).toHaveBeenCalledWith('room-1');
+      expect(component.isLocked()).toBe(true);
+
+      await component.toggleLock();
+      expect(mockChatService.unlockChat).toHaveBeenCalledWith('room-1');
+      expect(component.isLocked()).toBe(false);
+    });
   });
 });

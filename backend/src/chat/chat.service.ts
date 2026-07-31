@@ -149,7 +149,9 @@ export class ChatService {
       .eq('is_locked', true);
 
     const lockedSet = new Set<string>(
-      (lockedRowsResponse.data ?? []).map((r: any) => r.room_id),
+      (lockedRowsResponse.data ?? []).map(
+        (r: { room_id: string }) => r.room_id,
+      ),
     );
 
     // Annotate rooms with is_locked flag
@@ -721,7 +723,7 @@ export class ChatService {
       throw new Error(`Failed to get locked chats: ${error.message}`);
     }
 
-    return (data ?? []).map((row: any) => row.room_id);
+    return (data ?? []).map((row: { room_id: string }) => row.room_id);
   }
 
   async setWallpaper(

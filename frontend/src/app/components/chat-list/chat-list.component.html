@@ -153,6 +153,16 @@
             }
           </div>
         </div>
+
+        <button
+          type="button"
+          (click)="toggleRoomLock($event, preview.id)"
+          class="shrink-0 text-text-muted hover:text-text-primary p-1"
+          [attr.aria-label]="'chatList.lockChat' | t"
+          [attr.title]="'chatList.lockChat' | t"
+        >
+          <span class="text-sm">🔓</span>
+        </button>
       </a>
     }
 
@@ -212,6 +222,16 @@
                 }
               </div>
             </div>
+
+            <button
+              type="button"
+              (click)="toggleRoomLock($event, preview.id)"
+              class="shrink-0 text-text-muted hover:text-text-primary p-1"
+              [attr.aria-label]="'chatList.unlockChat' | t"
+              [attr.title]="'chatList.unlockChat' | t"
+            >
+              <span class="text-sm">🔒</span>
+            </button>
           </a>
         }
       }
