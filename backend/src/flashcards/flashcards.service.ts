@@ -100,7 +100,7 @@ export class FlashcardsService {
     if (response.error || !response.data) {
       return [];
     }
-    return response.data as Flashcard[];
+    return response.data;
   }
 
   async getDueReviews(userId: string): Promise<Flashcard[]> {
@@ -116,6 +116,6 @@ export class FlashcardsService {
     if (response.error || !response.data) {
       return [];
     }
-    return response.data as Flashcard[];
+    return response.data;
   }
 }

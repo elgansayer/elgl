@@ -36,7 +36,7 @@ export class FavouritesService {
       .single();
 
     if (insertResponse.error) throw insertResponse.error;
-    return insertResponse.data as Record<string, unknown>;
+    return insertResponse.data;
   }
 
   async removeFavourite(userId: string, favouriteId: string) {
@@ -60,6 +60,6 @@ export class FavouritesService {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return (data ?? []) as Record<string, unknown>[];
+    return data ?? [];
   }
 }

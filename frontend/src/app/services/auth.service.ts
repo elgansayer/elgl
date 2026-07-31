@@ -25,6 +25,16 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this.currentUser() !== null);
   readonly isLoading = signal<boolean>(true);
 
+  private readonly LOCK_ENABLED_KEY = 'hellotalk_biometric_lock_enabled';
+  private readonly CREDENTIAL_ID_KEY = 'hellotalk_biometric_credential_id';
+
+  readonly biometricLockEnabled = signal<boolean>(this.loadBiometricLockPreference());
+
+  private loadBiometricLockPreference(): boolean {
+    if (typeof localStorage === 'undefined') return false;
+    return localStorage.getItem(this.LOCK_ENABLED_KEY) === 'true';
+  }
+
   constructor() {
     this.initAuthListener();
   }
@@ -61,17 +71,28 @@ export class AuthService {
   readonly appLocked = signal<boolean>(false);
 
   private async requestBiometric(): Promise<boolean> {
-    if (!(await this.isBiometricSupported())) {
-      // Biometric not supported – unlock automatically
+    if (!this.biometricLockEnabled()) {
       this.appLocked.set(false);
       return true;
     }
+    if (!(await this.isBiometricSupported())) {
+      // Biometric not supported but lock enabled – cannot unlock.
+      return false;
+    }
+    const storedId = localStorage.getItem(this.CREDENTIAL_ID_KEY);
+    if (!storedId) {
+      // No credential stored – reset lock preference
+      this.biometricLockEnabled.set(false);
+      this.appLocked.set(false);
+      return true;
+    }
+    const credentialId = this.base64UrlToArrayBuffer(storedId);
     const credential = await navigator.credentials.get({
       publicKey: {
         challenge: crypto.getRandomValues(new Uint8Array(32)),
         rpId: window.location.hostname,
         userVerification: 'required',
-        allowCredentials: [],
+        allowCredentials: [{ type: 'public-key', id: credentialId }],
         timeout: 60_000,
       },
       mediation: 'optional',
@@ -85,22 +106,112 @@ export class AuthService {
     return false;
   }
 
-  private async isBiometricSupported(): Promise<boolean> {
+  private arrayBufferToBase64Url(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  private base64UrlToArrayBuffer(base64Url: string): ArrayBuffer {
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  private async createBiometricCredential(): Promise<boolean> {
     if (typeof window === 'undefined' || !window.PublicKeyCredential) return false;
     try {
-      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-      return available;
+      const user = this.currentUser();
+      if (!user) return false;
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions = {
+        challenge,
+        rp: {
+          name: 'HelloTalk',
+          id: window.location.hostname,
+        },
+        user: {
+          id: new TextEncoder().encode(user.id),
+          name: user.email ?? user.id,
+          displayName: user.user_metadata?.['display_name'] ?? user.email ?? user.id,
+        },
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+        timeout: 60000,
+        attestation: 'none',
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          userVerification: 'required',
+        },
+        excludeCredentials: [],
+      };
+      const credential = (await navigator.credentials.create({
+        publicKey: publicKeyCredentialCreationOptions,
+      })) as PublicKeyCredential | null;
+      if (!credential) return false;
+      const credentialId = credential.rawId;
+      const base64Url = this.arrayBufferToBase64Url(credentialId);
+      localStorage.setItem(this.CREDENTIAL_ID_KEY, base64Url);
+      return true;
     } catch {
       return false;
     }
   }
 
+  private biometricSupportedCache: boolean | null = null;
+
+  async isBiometricSupported(): Promise<boolean> {
+    if (this.biometricSupportedCache !== null) {
+      return this.biometricSupportedCache;
+    }
+    if (typeof window === 'undefined' || !window.PublicKeyCredential) {
+      this.biometricSupportedCache = false;
+      return false;
+    }
+    try {
+      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      this.biometricSupportedCache = available;
+      return available;
+    } catch {
+      this.biometricSupportedCache = false;
+      return false;
+    }
+  }
+
   async lockApp(): Promise<void> {
-    this.appLocked.set(true);
+    if (this.biometricLockEnabled()) {
+      this.appLocked.set(true);
+    }
   }
 
   async unlockApp(): Promise<void> {
     await this.requestBiometric();
+  }
+
+  async enableBiometricLock(): Promise<boolean> {
+    if (!(await this.isBiometricSupported())) {
+      return false;
+    }
+    const ok = await this.createBiometricCredential();
+    if (!ok) return false;
+    localStorage.setItem(this.LOCK_ENABLED_KEY, 'true');
+    this.biometricLockEnabled.set(true);
+    await this.lockApp();
+    return true;
+  }
+
+  async disableBiometricLock(): Promise<void> {
+    localStorage.removeItem(this.LOCK_ENABLED_KEY);
+    localStorage.removeItem(this.CREDENTIAL_ID_KEY);
+    this.biometricLockEnabled.set(false);
+    this.appLocked.set(false);
   }
 
   private toAppUser(user: User | null): AppUser | null {

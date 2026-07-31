@@ -3,16 +3,98 @@ import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import Redis from 'ioredis';
 
-interface UserStatsRow {
+type UsersRow = {
+  id: string;
   study_streak_days: number | null;
   correction_ratio: number | null;
   xp_total: number | null;
+  last_active_at: string | null;
+  is_serious_learner: boolean | null;
+};
+
+type GroupsRow = {
+  id: string;
+  name: string;
+  owner_id: string;
+  community_id: string | null;
+  interest_id: string | null;
+  max_members: number;
+  can_send_messages: boolean | null;
+  can_edit_info: boolean | null;
+  description: string | null;
+  rules: string | null;
+  created_at: string;
+};
+
+type GroupMembersRow = {
+  id: string;
+  group_id: string;
+  user_id: string;
+};
+
+type GroupAnnouncementsRow = {
+  id: string;
+  group_id: string;
+  sender_id: string;
+  message: string;
+  created_at: string;
+};
+
+type GroupResourcesRow = {
+  id: string;
+  group_id: string;
+  title: string;
+  url: string;
+  description: string | null;
+  created_at: string;
+};
+
+type InterestsRow = {
+  id: string;
+  name: string;
+};
+
+export interface Database {
+  public: {
+    Tables: {
+      users: {
+        Row: UsersRow;
+        Insert: Partial<UsersRow>;
+        Update: Partial<UsersRow>;
+      };
+      groups: {
+        Row: GroupsRow;
+        Insert: Partial<GroupsRow>;
+        Update: Partial<GroupsRow>;
+      };
+      group_members: {
+        Row: GroupMembersRow;
+        Insert: Partial<GroupMembersRow>;
+        Update: Partial<GroupMembersRow>;
+      };
+      group_announcements: {
+        Row: GroupAnnouncementsRow;
+        Insert: Partial<GroupAnnouncementsRow>;
+        Update: Partial<GroupAnnouncementsRow>;
+      };
+      group_resources: {
+        Row: GroupResourcesRow;
+        Insert: Partial<GroupResourcesRow>;
+        Update: Partial<GroupResourcesRow>;
+      };
+      interests: {
+        Row: InterestsRow;
+        Insert: Partial<InterestsRow>;
+        Update: Partial<InterestsRow>;
+      };
+    };
+  };
 }
 
 @Global()
 @Injectable()
 export class SupabaseService implements OnModuleDestroy {
-  private readonly client: SupabaseClient;
+  private readonly client: SupabaseClient<Database>;
   private readonly redisClient: Redis;
 
   constructor(private readonly configService: ConfigService) {
@@ -25,7 +107,7 @@ export class SupabaseService implements OnModuleDestroy {
         'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required',
       );
     }
-    this.client = createClient(supabaseUrl, supabaseKey);
+    this.client = createClient<Database>(supabaseUrl, supabaseKey);
 
     const redisUrl =
       this.configService.get<string>('REDIS_URL') || 'redis://localhost:6379';
@@ -38,7 +120,7 @@ export class SupabaseService implements OnModuleDestroy {
     });
   }
 
-  getClient(): SupabaseClient {
+  getClient(): SupabaseClient<Database> {
     return this.client;
   }
 
@@ -56,7 +138,7 @@ export class SupabaseService implements OnModuleDestroy {
     const supabase = this.getClient();
     // Fetch current study_streak_days and correction_ratio to compute is_serious_learner
     const { data, error: fetchError } = await supabase
-      .from<'users', UserStatsRow>('users')
+      .from('users')
       .select('study_streak_days, correction_ratio')
       .eq('id', userId)
       .single();
@@ -97,7 +179,7 @@ export class SupabaseService implements OnModuleDestroy {
     });
     if (error) {
       const { data, error: fetchError } = await supabase
-        .from<'users', UserStatsRow>('users')
+        .from('users')
         .select('xp_total')
         .eq('id', userId)
         .single();
@@ -119,7 +201,7 @@ export class SupabaseService implements OnModuleDestroy {
   async getUserXp(userId: string): Promise<number> {
     const supabase = this.getClient();
     const { data, error } = await supabase
-      .from<'users', UserStatsRow>('users')
+      .from('users')
       .select('xp_total')
       .eq('id', userId)
       .single();

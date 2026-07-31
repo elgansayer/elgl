@@ -464,7 +464,7 @@ export class ChatService {
     if (response.error || !response.data) {
       return [];
     }
-    return response.data as FavouriteRecord[];
+    return response.data;
   }
 
   async getSuggestedReplies(
@@ -1089,7 +1089,7 @@ export class ChatService {
       throw new Error(`Failed to fetch messages: ${error.message}`);
     }
 
-    return (data ?? []) as ChatMessage[];
+    return data ?? [];
   }
 
   /**

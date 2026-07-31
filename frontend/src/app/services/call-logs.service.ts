@@ -25,22 +25,24 @@ export class CallLogsService {
     const userId = authData?.user?.id;
     if (!userId) return [];
 
-    let query = supabase
-      .from<'call_logs', CallLogRecord>('call_logs')
+    const query = supabase
+      .from('call_logs')
       .select('*')
       .or(`caller_id.eq.${userId},receiver_id.eq.${userId}`)
       .order('started_at', { ascending: false })
       .range(
         options?.offset ?? 0,
         (options?.offset ?? 0) + (options?.limit ?? 20) - 1,
-      );
-
-    if (options?.callType) {
-      query = query.eq('call_type', options.callType);
-    }
+      )
+      .returns<CallLogRecord[]>();
 
     const { data } = await query;
-    const records: CallLogRecord[] = data ?? [];
+    const records = data ?? [];
+
+    if (options?.callType) {
+      return records.filter((r) => r.call_type === options.callType);
+    }
+
     return records;
   }
 }

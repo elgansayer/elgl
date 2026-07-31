@@ -139,7 +139,7 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to fetch visitors');
     }
 
-    return (response.data ?? []) as unknown as ProfileVisitor[];
+    return response.data ?? [];
   }
 
   async getStatusViewers(userId: string): Promise<ProfileVisitor[]> {
@@ -177,7 +177,7 @@ export class UsersService {
       viewed_id: row.status_owner_id,
       created_at: row.created_at,
       visitor: row.viewer,
-    })) as unknown as ProfileVisitor[];
+    }));
   }
 
   async followUser(followerId: string, targetUserId: string): Promise<void> {

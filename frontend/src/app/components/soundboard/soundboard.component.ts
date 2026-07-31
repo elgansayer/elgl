@@ -6,10 +6,8 @@ import {
     effect,
     DestroyRef,
 } from '@angular/core';
-import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { Subject } from 'rxjs';
 
-import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { CentrifugoService } from '../../services/centrifugo.service';
 import { AuthService } from '../../services/auth.service';
@@ -25,7 +23,7 @@ export interface SoundItem {
 
 @Component({
   selector: 'app-soundboard',
-  imports: [CommonModule, NgOptimizedImage, TranslatePipe],
+  imports: [],
   template: `
     <div class="flex flex-wrap gap-3 ps-2 pe-2">
       @for (sound of sounds(); track sound.id) {

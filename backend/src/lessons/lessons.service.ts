@@ -28,7 +28,7 @@ export class LessonsService {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return (data ?? []) as LessonRecord[];
+    return data ?? [];
   }
 
   async getLesson(id: string): Promise<LessonRecord> {
@@ -40,7 +40,7 @@ export class LessonsService {
       .single();
 
     if (error) throw error;
-    return data as LessonRecord;
+    return data;
   }
 
   async createLesson(dto: CreateLessonDto): Promise<LessonRecord> {
@@ -60,7 +60,7 @@ export class LessonsService {
       .single();
 
     if (error) throw error;
-    return data as LessonRecord;
+    return data;
   }
 
   async updateLesson(id: string, dto: UpdateLessonDto): Promise<LessonRecord> {
@@ -84,7 +84,7 @@ export class LessonsService {
       .single();
 
     if (error) throw error;
-    return data as LessonRecord;
+    return data;
   }
 
   async deleteLesson(id: string): Promise<void> {

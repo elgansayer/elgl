@@ -140,7 +140,7 @@ export class EconomyService {
       .from('virtual_gifts')
       .select('*')
       .order('cost_coins', { ascending: true });
-    return (response.data ?? []) as VirtualGiftRow[];
+    return response.data ?? [];
   }
 
   getPackages(): CoinPackage[] {

@@ -87,6 +87,13 @@ export class AppComponent implements OnInit {
 
   // Incoming call state
   readonly incomingCallData = signal<IncomingCallData | null>(null);
+  // Biometric lock state
+  readonly biometricAvailable = signal<boolean>(false);
+  readonly biometricBusy = signal<boolean>(false);
+  readonly biometricLockEnabled = computed(() => this.authService.biometricLockEnabled());
+  readonly biometricControlsVisible = computed(
+    () => this.authService.isAuthenticated() && this.biometricAvailable(),
+  );
 
 
   // Daily reward state
@@ -98,6 +105,9 @@ export class AppComponent implements OnInit {
   constructor() {
     afterNextRender(() => {
       this.reportModalService.registerModal(this.reportModal());
+      this.authService.isBiometricSupported().then((available) => {
+        this.biometricAvailable.set(available);
+      });
     });
 
     // Lock when app goes to background
@@ -105,7 +115,7 @@ export class AppComponent implements OnInit {
       const doc = this.document;
       const handleVisibility = (): void => {
         if (doc.hidden && this.authService.isAuthenticated()) {
-          this.authService.appLocked.set(true);
+          this.authService.lockApp();
         }
       };
       doc.addEventListener('visibilitychange', handleVisibility);
@@ -180,6 +190,20 @@ export class AppComponent implements OnInit {
   onDeclineCall(_callData: IncomingCallData): void {
     this.incomingCallData.set(null);
     // TODO: Send decline notification via Centrifugo
+  }
+
+  async toggleBiometricLock(): Promise<void> {
+    if (this.biometricBusy()) return;
+    this.biometricBusy.set(true);
+    try {
+      if (this.authService.biometricLockEnabled()) {
+        await this.authService.disableBiometricLock();
+      } else {
+        await this.authService.enableBiometricLock();
+      }
+    } finally {
+      this.biometricBusy.set(false);
+    }
   }
 
 }

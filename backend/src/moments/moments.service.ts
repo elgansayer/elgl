@@ -196,7 +196,7 @@ export class MomentsService {
           .select('*')
           .in('id', momentIds)
           .order('created_at', { ascending: false });
-        if (data) moments = data as MomentRecord[];
+        if (data) moments = data;
       } else {
         // Fallback: get followed users from DB
         const { data: follows } = await supabase
@@ -212,7 +212,7 @@ export class MomentsService {
           .in('user_id', ids)
           .order('created_at', { ascending: false })
           .limit(50);
-        if (data) moments = data as MomentRecord[];
+        if (data) moments = data;
       }
     } else if (filter === 'Classmates') {
       const lang = targetLang || 'en';
@@ -223,7 +223,7 @@ export class MomentsService {
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(50);
-      if (data) moments = data as MomentRecord[];
+      if (data) moments = data;
     } else {
       // All
       const { data } = await supabase
@@ -232,7 +232,7 @@ export class MomentsService {
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(50);
-      if (data) moments = data as MomentRecord[];
+      if (data) moments = data;
     }
 
     // Apply targeted visibility for non-Classmates filters: only show moments
@@ -362,7 +362,7 @@ export class MomentsService {
       throw new Error(`Failed to fetch questions: ${error.message}`);
     }
 
-    let moments: MomentRecord[] = (data ?? []) as MomentRecord[];
+    let moments: MomentRecord[] = data ?? [];
 
     if (blockedIds.length > 0) {
       moments = moments.filter((m) => !blockedIds.includes(m.user_id));

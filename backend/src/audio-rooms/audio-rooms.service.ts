@@ -1042,7 +1042,7 @@ export class AudioRoomsService implements OnModuleInit {
     if (response.error) {
       throw new Error(`Failed to fetch notes: ${response.error.message}`);
     }
-    return (response.data ?? []) as VoiceRoomNote[];
+    return response.data ?? [];
   }
 
   async deleteNote(noteId: string, userId: string): Promise<void> {
@@ -1171,7 +1171,7 @@ export class AudioRoomsService implements OnModuleInit {
       this.logger.warn('Failed to fetch call logs', error);
       return [];
     }
-    return (data ?? []) as CallLogRecord[];
+    return data ?? [];
   }
 
   private readonly soundboardSounds = [

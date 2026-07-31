@@ -31,6 +31,18 @@
       >
         <span class="text-xl leading-none">🎯</span>
       </button>
+      @if (biometricControlsVisible()) {
+        <button
+          type="button"
+          class="p-2 rounded-full hover:bg-surface-100 transition-colors disabled:opacity-50"
+          (click)="toggleBiometricLock()"
+          [disabled]="biometricBusy()"
+          [attr.aria-label]="authService.biometricLockEnabled() ? ('app_lock.disable_biometric' | t) : ('app_lock.enable_biometric' | t)"
+          [attr.title]="authService.biometricLockEnabled() ? ('app_lock.disable_biometric' | t) : ('app_lock.enable_biometric' | t)"
+        >
+          <span class="text-xl leading-none">{{ authService.biometricLockEnabled() ? '🔒' : '🔓' }}</span>
+        </button>
+      }
       <app-theme-selector />
       <app-font-scale-slider />
     </div>

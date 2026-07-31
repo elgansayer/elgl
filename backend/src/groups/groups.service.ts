@@ -343,7 +343,7 @@ export class GroupsService {
     if (error || !data) {
       throw new NotFoundException('Group not found');
     }
-    const interest = Array.isArray(data.interest)
+    const interestValue = Array.isArray(data.interest)
       ? (data.interest[0] ?? null)
       : data.interest;
     return {
@@ -353,7 +353,7 @@ export class GroupsService {
       max_members: data.max_members,
       interest_id: data.interest_id,
       community_id: data.community_id,
-      interest,
+      interest: interestValue ?? null,
     };
   }
 

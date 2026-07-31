@@ -53,7 +53,7 @@ export class CommunitiesService {
     if (error || !data) {
       throw new NotFoundException('Community not found');
     }
-    return data as CommunityRecord;
+    return data;
   }
 
   async listByOwner(ownerId: string): Promise<CommunityRecord[]> {
