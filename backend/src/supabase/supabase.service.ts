@@ -6,7 +6,7 @@ import Redis from 'ioredis';
 @Global()
 @Injectable()
 export class SupabaseService {
-  private readonly client: SupabaseClient<any, any, any>;
+  private readonly client: SupabaseClient;
   private readonly redisClient: Redis;
 
   constructor(private readonly configService: ConfigService) {
@@ -32,7 +32,7 @@ export class SupabaseService {
     });
   }
 
-  getClient(): SupabaseClient<any, any, any> {
+  getClient(): SupabaseClient {
     return this.client;
   }
 
@@ -114,6 +114,6 @@ export class SupabaseService {
     if (error || !data) {
       return 0;
     }
-    return (data.xp_total ?? 0) as number;
+    return Number(data.xp_total ?? 0);
   }
 }

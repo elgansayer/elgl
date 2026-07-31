@@ -25,6 +25,7 @@ import { FontScaleService } from './services/font-scale.service';
 import { I18nService } from './services/i18n.service';
 import { AppLanguageSelectorComponent } from './components/app-language-selector/app-language-selector.component';
 
+
 @Component({
   selector: 'app-root',
   imports: [
@@ -71,7 +72,12 @@ export class AppComponent implements OnInit {
   private routerOutlet = viewChild.required(RouterOutlet);
 
   protected prepareRoute(): string {
-    return this.routerOutlet()?.activatedRouteData?.['animation'] ?? 'default';
+    const outlet = this.routerOutlet();
+    if (!outlet?.activatedRoute) {
+      return 'default';
+    }
+    const url = outlet.activatedRoute.snapshot.url.join('/');
+    return url || 'root';
   }
 
   // Incoming call state
