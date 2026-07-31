@@ -58,3 +58,9 @@ export class SendMessageDto {
     status_text: string;
   };
 }
+
+export class AiGenerateReplyDto {
+  @IsString()
+  @IsNotEmpty()
+  text!: string;
+}

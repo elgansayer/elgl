@@ -2,11 +2,15 @@ import {
   Controller,
   Post,
   UseGuards,
-  Req,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { UsersService } from './users.service';
+import { CurrentUser } from '../auth/current-user.decorator';
+
+interface DeviceLinkUser {
+  id: string;
+}
 
 @Controller('generate-device-link')
 export class DeviceLinkController {
@@ -14,12 +18,13 @@ export class DeviceLinkController {
 
   @UseGuards(SupabaseAuthGuard)
   @Post()
-  async generate(@Req() req: any): Promise<{ url: string }> {
-    const userId = req.user?.sub ?? req.user?.id;
-    if (!userId) {
+  async generate(
+    @CurrentUser() user: DeviceLinkUser | null,
+  ): Promise<{ url: string }> {
+    if (!user) {
       throw new InternalServerErrorException('User not identified');
     }
-    const url = await this.usersService.generateDeviceLink(userId);
+    const url = await this.usersService.generateDeviceLink(user.id);
     return { url };
   }
 }

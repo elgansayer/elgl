@@ -1168,4 +1168,23 @@ export class ChatService {
       awayMessage: (profile as any).away_message ?? undefined,
     };
   }
+
+  /**
+   * Generates a reply from the AI conversation partner using the LLM proxy.
+   */
+  async generateAiReply(
+    userId: string,
+    messageText: string,
+  ): Promise<{ response: string }> {
+    if (!messageText || messageText.trim().length === 0) {
+      throw new BadRequestException('Message text cannot be empty');
+    }
+    const prompt = [
+      'You are a friendly language learning conversation partner.',
+      'Keep responses short, natural, and helpful.',
+      `The user wrote: "${messageText}"`,
+    ].join('\n');
+    const result = await this.llmProxyService.proxyMessage(prompt);
+    return { response: result.response };
+  }
 }

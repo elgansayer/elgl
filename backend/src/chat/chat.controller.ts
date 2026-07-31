@@ -16,7 +16,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { ConversationStarterDto } from './dto/conversation-starter.dto';
 import { ReplyToStatusUpdateDto } from './dto/reply-to-status-update.dto';
-import { SendMessageDto } from './dto/send-message.dto';
+import { AiGenerateReplyDto, SendMessageDto } from './dto/send-message.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { AddLabelDto, RemoveLabelDto } from './dto/label.dto';
 import { FixMessageDto } from './dto/fix-message.dto';
@@ -104,6 +104,16 @@ export class ChatController {
   ): Promise<{ response: string } | null> {
     if (!user) return null;
     return await this.chatService.llmProxy(user.id, dto.messageText);
+  }
+
+  @Post('ai-partner')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  async generateAiPartnerReply(
+    @CurrentUser() user: User | null,
+    @Body() dto: AiGenerateReplyDto,
+  ): Promise<{ response: string } | null> {
+    if (!user) return null;
+    return await this.chatService.generateAiReply(user.id, dto.text);
   }
 
   @Post('suggested-replies')
