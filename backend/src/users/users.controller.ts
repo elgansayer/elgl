@@ -17,6 +17,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { TwoFactorGuard } from '../two-factor/two-factor.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateBusinessProfileDto } from './dto/update-business-profile.dto';
 import { PrivacySettingsDto } from './dto/privacy-settings.dto';
 import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
 import {
@@ -105,11 +106,10 @@ export class UsersController {
     @Body() dto: UpdateProfileDto,
   ): Promise<UserProfile | null> {
     if (!user) return null;
-    const profile = await this.usersService.getProfile(user.id);
     return this.usersService.updateProfile(
       user.id,
       dto,
-      Boolean(profile?.is_vip ?? false),
+      Boolean((await this.usersService.getProfile(user.id))?.is_vip ?? false),
     );
   }
 
@@ -132,11 +132,10 @@ export class UsersController {
     @Body('cover_photo_url') coverPhotoUrl: string,
   ): Promise<UserProfile | null> {
     if (!user) return null;
-    const profile = await this.usersService.getProfile(user.id);
     return this.usersService.updateProfile(
       user.id,
       { cover_photo_url: coverPhotoUrl },
-      Boolean(profile?.is_vip ?? false),
+      Boolean((await this.usersService.getProfile(user.id))?.is_vip ?? false),
     );
   }
 
@@ -273,6 +272,26 @@ export class UsersController {
   ): Promise<UserProfile | null> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.updatePrivacySettings(user.id, dto);
+  }
+
+  @Get('me/business')
+  async getMyBusinessProfile(@CurrentUser() user: User | null): Promise<{
+    business_name?: string;
+    business_hours?: string;
+    website_url?: string;
+    catalog?: BusinessCatalogItem[];
+  }> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.getBusinessProfile(user.id);
+  }
+
+  @Patch('me/business')
+  async updateMyBusinessProfile(
+    @CurrentUser() user: User | null,
+    @Body() dto: UpdateBusinessProfileDto,
+  ): Promise<UserProfile | null> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.updateBusinessProfile(user.id, dto);
   }
 
   @Patch('me/dnd')

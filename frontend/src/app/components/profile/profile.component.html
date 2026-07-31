@@ -109,7 +109,7 @@
             <div class="flex flex-wrap gap-2">
               @for (visit of visitors(); track visit.id) {
                 <div class="flex items-center gap-2 rounded-full bg-surface-200 ps-2 pe-3 pt-1 pb-1 text-xs">
-                  @if (visit.visitor?.avatar_url && visit.visitor?.id !== 'hidden-vip-only') {
+                  @if (visit.visitor && visit.visitor.avatar_url && visit.visitor.id !== 'hidden-vip-only') {
                     <img
                       [src]="visit.visitor?.avatar_url"
                       alt="avatar"
@@ -230,7 +230,7 @@
         </div>
       }
 
-      @if (!isEditing() && profile()?.id) {
+      @if (!isEditing() && profile()) {
         <div class="mt-4">
           <app-achievements [userId]="profile()!.id" />
         </div>
@@ -270,6 +270,42 @@
             {{ privacyStatus }}
           </div>
         </div>
+
+        @if (profile()?.business_name || profile()?.business_hours || profile()?.website_url || profile()?.catalog?.length) {
+          <div class="mt-4 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-3 pb-3">
+            <h3 class="text-xs font-semibold uppercase text-text-secondary">{{ 'profile.businessTitle' | t }}</h3>
+            @if (profile()?.business_name) {
+              <p class="mt-1 text-sm font-bold text-text-primary">{{ profile()?.business_name }}</p>
+            }
+            @if (profile()?.business_hours) {
+              <p class="mt-1 text-sm text-text-secondary">{{ 'profile.businessHours' | t }}: {{ profile()?.business_hours }}</p>
+            }
+            @if (profile()?.website_url) {
+              <a
+                [href]="profile()?.website_url"
+                target="_blank"
+                rel="noopener"
+                class="mt-1 block text-sm text-primary underline"
+                >{{ profile()?.website_url }}</a
+              >
+            }
+            @if (catalog.length) {
+              <ul class="mt-2 space-y-1">
+                @for (item of catalog; track item.id ?? $index) {
+                  <li class="flex flex-wrap items-center gap-2 text-sm">
+                    <span class="font-medium">{{ item.name }}</span>
+                    @if (item.price) {
+                      <span class="text-text-secondary">{{ item.price }} {{ item.currency }}</span>
+                    }
+                    @if (item.description) {
+                      <span class="text-text-secondary">{{ item.description }}</span>
+                    }
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        }
 
         <div class="mt-8">
           <app-hobby-tags />
@@ -483,6 +519,111 @@
             [placeholder]="'profile.bioPlaceholder' | t"
             class="app-textarea"
           ></textarea>
+
+          <div class="mt-4 grid gap-2 sm:grid-cols-2">
+            <div>
+              <label class="block text-xs font-semibold uppercase text-text-secondary mb-1">{{
+                'profile.businessName' | t
+              }}</label>
+              <input
+                type="text"
+                [(ngModel)]="businessName"
+                name="businessName"
+                [placeholder]="'profile.businessNamePlaceholder' | t"
+                class="app-input"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold uppercase text-text-secondary mb-1">{{
+                'profile.businessHours' | t
+              }}</label>
+              <input
+                type="text"
+                [(ngModel)]="businessHours"
+                name="businessHours"
+                [placeholder]="'profile.businessHoursPlaceholder' | t"
+                class="app-input"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold uppercase text-text-secondary mb-1">{{
+                'profile.website' | t
+              }}</label>
+              <input
+                type="url"
+                [(ngModel)]="websiteUrl"
+                name="websiteUrl"
+                [placeholder]="'profile.websitePlaceholder' | t"
+                class="app-input"
+              />
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{
+              'profile.catalogTitle' | t
+            }}</label>
+            <div class="space-y-2">
+              @for (item of catalog; track item.id ?? $index; let idx = $index) {
+                <div
+                  class="rounded-card border border-surface-100 bg-surface-100 p-2 grid gap-1 sm:grid-cols-2"
+                >
+                  <input
+                    type="text"
+                    [(ngModel)]="catalog[idx].name"
+                    name="catalog-name-{{ idx }}"
+                    [placeholder]="'profile.catalogNamePlaceholder' | t"
+                    class="app-input"
+                  />
+                  <input
+                    type="text"
+                    [(ngModel)]="catalog[idx].description"
+                    name="catalog-desc-{{ idx }}"
+                    [placeholder]="'profile.catalogDescPlaceholder' | t"
+                    class="app-input"
+                  />
+                  <input
+                    type="text"
+                    [(ngModel)]="catalog[idx].price"
+                    name="catalog-price-{{ idx }}"
+                    [placeholder]="'profile.catalogPricePlaceholder' | t"
+                    class="app-input"
+                  />
+                  <select
+                    [(ngModel)]="catalog[idx].currency"
+                    name="catalog-currency-{{ idx }}"
+                    class="app-input"
+                  >
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="JPY">JPY</option>
+                    <option value="AUD">AUD</option>
+                    <option value="CAD">CAD</option>
+                  </select>
+                  <input
+                    type="url"
+                    [(ngModel)]="catalog[idx].image_url"
+                    name="catalog-image-{{ idx }}"
+                    [placeholder]="'profile.catalogImagePlaceholder' | t"
+                    class="app-input"
+                  />
+                  <button
+                    type="button"
+                    (click)="removeCatalogItem(idx)"
+                    class="app-button-secondary text-xs self-end"
+                  >
+                    {{ 'profile.removeCatalogItem' | t }}
+                  </button>
+                </div>
+              } @empty {
+                <p class="text-xs text-text-secondary">{{ 'profile.noCatalogItems' | t }}</p>
+              }
+            </div>
+            <button type="button" (click)="addCatalogItem()" class="mt-2 app-button-secondary text-xs">
+              {{ 'profile.addCatalogItem' | t }}
+            </button>
+          </div>
 
           <div class="flex justify-end gap-2 pt-1">
             <button

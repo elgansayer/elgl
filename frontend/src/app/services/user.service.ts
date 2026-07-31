@@ -535,6 +535,37 @@ export class UserService {
     );
   }
 
+  async getBusinessProfile(): Promise<{
+    business_name?: string;
+    business_hours?: string;
+    website_url?: string;
+    catalog?: BusinessCatalogItem[];
+  }> {
+    return firstValueFrom(
+      this.http.get<{
+        business_name?: string;
+        business_hours?: string;
+        website_url?: string;
+        catalog?: BusinessCatalogItem[];
+      }>(`${this.baseUrl}/me/business`, { headers: this.getHeaders() }),
+    );
+  }
+
+  async updateBusinessProfile(business: {
+    business_name?: string;
+    business_hours?: string;
+    website_url?: string;
+    catalog?: BusinessCatalogItem[];
+  }): Promise<UserProfile> {
+    return firstValueFrom(
+      this.http.patch<UserProfile>(
+        `${this.baseUrl}/me/business`,
+        business,
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
   async blockUser(userId: string): Promise<void> {
     return firstValueFrom(
       this.http.post<void>(`${environment.apiUrl}/trust-safety/block`, { blocked_id: userId }, { headers: this.getHeaders() })

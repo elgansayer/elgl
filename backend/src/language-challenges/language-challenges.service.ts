@@ -5,9 +5,31 @@ import {
   Logger,
 } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MonetisationService } from '../monetisation/monetisation.service';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
+
+type LanguageChallenge = {
+  id: string;
+  creator_id: string;
+  title: string;
+  description: string | null;
+  entry_fee_coins: number;
+  duration_days: number;
+  challenge_type: string;
+  prize_pool_coins: number;
+  status: 'open' | 'closed' | 'completed';
+  created_at: string;
+};
+
+type ChallengeParticipant = {
+  user_id: string;
+};
+
+type DailyActivity = {
+  activity_date: string;
+};
 
 @Injectable()
 export class LanguageChallengesService {
@@ -18,8 +40,12 @@ export class LanguageChallengesService {
     private readonly monetisationService: MonetisationService,
   ) {}
 
+  private get supabase(): SupabaseClient {
+    return this.supabaseService.getClient();
+  }
+
   async createChallenge(creatorId: string, dto: CreateChallengeDto) {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabase;
     const challengeId = uuidv4();
 
     const { error } = await supabase.from('language_challenges').insert({
@@ -44,10 +70,11 @@ export class LanguageChallengesService {
   }
 
   async listChallenges() {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabase;
     const { data, error } = await supabase
       .from('language_challenges')
       .select('*')
+      .returns<LanguageChallenge[]>()
       .eq('status', 'open')
       .order('created_at', { ascending: false });
 
@@ -59,12 +86,13 @@ export class LanguageChallengesService {
   }
 
   async joinChallenge(userId: string, challengeId: string) {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabase;
 
     // fetch challenge
     const { data: challenge, error: fetchError } = await supabase
       .from('language_challenges')
       .select('*')
+      .returns<LanguageChallenge>()
       .eq('id', challengeId)
       .single();
 
@@ -119,12 +147,13 @@ export class LanguageChallengesService {
     userId: string,
     challengeId: string,
   ): Promise<{ checkedIn: boolean }> {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabase;
 
     // ensure challenge exists and is active
     const { data: challenge, error: fetchError } = await supabase
       .from('language_challenges')
       .select('*')
+      .returns<LanguageChallenge>()
       .eq('id', challengeId)
       .single();
     if (fetchError || !challenge) {
@@ -178,12 +207,13 @@ export class LanguageChallengesService {
   }
 
   async claimPrize(userId: string, challengeId: string) {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabase;
 
     // fetch challenge
     const { data: challenge, error: fetchError } = await supabase
       .from('language_challenges')
       .select('*')
+      .returns<LanguageChallenge>()
       .eq('id', challengeId)
       .single();
 
@@ -221,6 +251,7 @@ export class LanguageChallengesService {
     const { data: activityRows, error: actError } = await supabase
       .from('language_challenge_daily_activity')
       .select('activity_date')
+      .returns<DailyActivity[]>()
       .eq('challenge_id', challengeId)
       .eq('user_id', userId);
 
@@ -231,9 +262,7 @@ export class LanguageChallengesService {
       throw new BadRequestException('Failed to retrieve daily activity');
     }
 
-    const uniqueDays = new Set(
-      activityRows?.map((r: any) => r.activity_date) ?? [],
-    );
+    const uniqueDays = new Set(activityRows?.map((r) => r.activity_date) ?? []);
 
     // check participant met daily requirement (at least durationDays distinct days)
     if (uniqueDays.size < challenge.duration_days) {
@@ -246,6 +275,7 @@ export class LanguageChallengesService {
     const { data: allParticipants } = await supabase
       .from('language_challenge_participants')
       .select('user_id')
+      .returns<ChallengeParticipant[]>()
       .eq('challenge_id', challengeId);
 
     const completerIds: string[] = [];
@@ -253,10 +283,11 @@ export class LanguageChallengesService {
       const { data: uActs } = await supabase
         .from('language_challenge_daily_activity')
         .select('activity_date')
+        .returns<DailyActivity[]>()
         .eq('challenge_id', challengeId)
         .eq('user_id', p.user_id);
 
-      const uDays = new Set(uActs?.map((r: any) => r.activity_date) ?? []);
+      const uDays = new Set(uActs?.map((r) => r.activity_date) ?? []);
       if (uDays.size >= challenge.duration_days) {
         completerIds.push(p.user_id);
       }

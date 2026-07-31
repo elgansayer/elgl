@@ -5,7 +5,7 @@ import {RouterLink} from '@angular/router';
 import {TranslatePipe} from '../../services/translate.pipe';
 import {NgxSkeletonLoaderComponent} from 'ngx-skeleton-loader';
 import {I18nService} from '../../services/i18n.service';
-import {UserService, UserProfile, VisitorLog} from '../../services/user.service';
+import {UserService, UserProfile, VisitorLog, BusinessCatalogItem} from '../../services/user.service';
 import {CoverPhotoUploaderComponent} from '../cover-photo-uploader/cover-photo-uploader.component';
 import {HobbyTagsComponent} from '../hobby-tags/hobby-tags.component';
 import {LanguagePickerComponent, getLanguageFlag} from '../primitives/language-picker/language-picker.component';
@@ -71,6 +71,10 @@ export class ProfileComponent implements OnInit {
   proficiencyLevel = signal<string>('B1');
   learningGoals = signal<string>('');
   profileVisibility = signal<'everyone' | 'vips_only' | 'hidden'>('everyone');
+  businessName = '';
+  businessHours = '';
+  websiteUrl = '';
+  catalog: BusinessCatalogItem[] = [];
 
   // Privacy fields
   incognitoVisits = signal<boolean>(false);
@@ -111,7 +115,10 @@ export class ProfileComponent implements OnInit {
         this.proficiencyLevel.set(data.proficiency_level || 'B1');
         this.learningGoals.set(data.learning_goals || '');
         this.statusText = data.status_text || '';
-        this.statusText = data.status_text || '';
+        this.businessName = data.business_name || '';
+        this.businessHours = data.business_hours || '';
+        this.websiteUrl = data.website_url || '';
+        this.catalog = data.catalog || [];
         this.checkMilestone();
       }
     } catch (e: unknown) {
@@ -213,6 +220,10 @@ export class ProfileComponent implements OnInit {
         profile_visibility: this.profileVisibility(),
         proficiency_level: this.proficiencyLevel(),
         learning_goals: this.learningGoals(),
+        business_name: this.businessName,
+        business_hours: this.businessHours,
+        website_url: this.websiteUrl,
+        catalog: this.catalog,
       });
       this.profile.set(updated);
       this.avatarPreviewUrl.set(updated.avatar_url || '');
@@ -331,5 +342,20 @@ export class ProfileComponent implements OnInit {
 
   removeTargetLanguage(code: string): void {
     this.targetLanguages = this.targetLanguages.filter((l) => l !== code);
+  }
+
+  addCatalogItem(): void {
+    const nextId = crypto.randomUUID();
+    this.catalog.push({ id: nextId, name: '' });
+  }
+
+  removeCatalogItem(index: number): void {
+    this.catalog.splice(index, 1);
+  }
+
+  updateCatalogItem(index: number, field: keyof BusinessCatalogItem, value: string): void {
+    const current = [...this.catalog];
+    current[index] = { ...current[index], [field]: value };
+    this.catalog = current;
   }
 }

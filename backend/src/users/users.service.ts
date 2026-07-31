@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateBusinessProfileDto } from './dto/update-business-profile.dto';
 import {
   UserProfile,
   ProfileVisitor,
@@ -461,10 +462,9 @@ export class UsersService {
       Logger.warn(
         `Supabase update failed, falling back to mock: ${updateError.message}`,
       );
-      const mock = this.getMockProfile(userId);
-      return { ...mock, ...updatePayload };
     }
-    return this.getProfile(userId);
+    const profile = await this.getProfile(userId);
+    return { ...profile, ...updatePayload };
   }
 
   async scheduleDeletion(
@@ -569,6 +569,39 @@ export class UsersService {
       privacy_hide_vip_status:
         (privacyRecord.privacy_hide_vip_status as boolean | undefined) ?? false,
     };
+  }
+
+  async getBusinessProfile(userId: string): Promise<{
+    business_name?: string;
+    business_hours?: string;
+    website_url?: string;
+    catalog?: BusinessCatalogItem[];
+  }> {
+    const profile = await this.getProfile(userId);
+    return {
+      business_name: profile.business_name,
+      business_hours: profile.business_hours,
+      website_url: profile.website_url,
+      catalog: profile.catalog ?? [],
+    };
+  }
+
+  async updateBusinessProfile(
+    userId: string,
+    dto: UpdateBusinessProfileDto,
+  ): Promise<UserProfile> {
+    const profile = await this.getProfile(userId);
+    const profileUpdate: UpdateProfileDto = {
+      business_name: dto.business_name,
+      business_hours: dto.business_hours,
+      website_url: dto.website_url,
+      catalog: dto.catalog,
+    };
+    return this.updateProfile(
+      userId,
+      profileUpdate,
+      Boolean(profile?.is_vip ?? false),
+    );
   }
 
   async awardCoins(userId: string, amount: number): Promise<void> {
