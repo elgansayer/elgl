@@ -33,7 +33,7 @@ export class ModerationQueueComponent {
           return items;
         } catch {
           this.error.set('Failed to load flagged moments.');
-          return [] as ModerationItem[];
+          return [];
         } finally {
           this.loadingMoments.set(false);
         }
@@ -45,13 +45,13 @@ export class ModerationQueueComponent {
           return items;
         } catch {
           this.error.set('Failed to load flagged profiles.');
-          return [] as ModerationItem[];
+          return [];
         } finally {
           this.loadingProfiles.set(false);
         }
       }
     },
-    defaultValue: [] as ModerationItem[],
+    defaultValue: [],
   });
 
   setTab(tab: 'moment' | 'profile'): void {

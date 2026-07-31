@@ -67,6 +67,14 @@ export const routes: Routes = [
     title: 'Groups Discovery - HelloTalk',
   },
   {
+    path: 'communities',
+    loadComponent: () =>
+      import('./components/communities/communities.component').then(
+        (m) => m.CommunitiesComponent,
+      ),
+    title: 'Communities - HelloTalk',
+  },
+  {
     path: 'leaderboard',
     loadComponent: () =>
       import('./components/leaderboard/leaderboard.component').then((m) => m.LeaderboardComponent),

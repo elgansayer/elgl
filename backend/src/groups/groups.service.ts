@@ -9,6 +9,45 @@ import { InterestsService } from '../interests/interests.service';
 import { UpdateGroupSettingsDto } from './dto/update-group-settings.dto';
 
 @Injectable()
+export interface GroupRecord {
+  id: string;
+  name: string;
+  owner_id: string;
+  community_id: string | null;
+  interest_id: string | null;
+  max_members: number;
+  created_at: string;
+}
+
+export interface GroupInfo {
+  id: string;
+  name: string;
+  owner_id: string;
+  max_members: number;
+  interest: { name: string } | null;
+  interest_id: string | null;
+  community_id: string | null;
+}
+
+export interface GroupMemberRecord {
+  user_id: string;
+  user: {
+    id: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  } | null;
+}
+
+export interface GroupSettings {
+  can_send_messages: boolean | null;
+  can_edit_info: boolean | null;
+  description: string | null;
+  rules: string | null;
+  interest_id: string | null;
+  max_members: number;
+}
+
+@Injectable()
 export class GroupsService {
   constructor(
     private readonly supabaseService: SupabaseService,
@@ -82,7 +121,7 @@ export class GroupsService {
     communityId?: string,
     interestId?: string,
     maxMembers?: number,
-  ): Promise<any> {
+  ): Promise<GroupRecord> {
     if (interestId) {
       const interest = await this.interestsService.findById(interestId);
       if (!interest) {
@@ -150,7 +189,7 @@ export class GroupsService {
     }
   }
 
-  async getGroupMembers(groupId: string): Promise<any[]> {
+  async getGroupMembers(groupId: string): Promise<GroupMemberRecord[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('group_members')
@@ -172,7 +211,7 @@ export class GroupsService {
     return data || [];
   }
 
-  async getSettings(groupId: string): Promise<Record<string, unknown>> {
+  async getSettings(groupId: string): Promise<GroupSettings> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('groups')
@@ -185,7 +224,7 @@ export class GroupsService {
     if (error || !data) {
       throw new NotFoundException('Group not found');
     }
-    return data;
+    return data as GroupSettings;
   }
 
   async sendAnnouncement(
@@ -226,7 +265,7 @@ export class GroupsService {
     return data || [];
   }
 
-  async getGroupInfo(groupId: string): Promise<any> {
+  async getGroupInfo(groupId: string): Promise<GroupInfo> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('groups')
@@ -240,10 +279,10 @@ export class GroupsService {
     if (error || !data) {
       throw new NotFoundException('Group not found');
     }
-    return data;
+    return data as GroupInfo;
   }
 
-  async getGroupsByInterest(interestId: string): Promise<any[]> {
+  async getGroupsByInterest(interestId: string): Promise<GroupRecord[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('groups')
@@ -273,7 +312,7 @@ export class GroupsService {
     }
   }
 
-  async getGroupsByCommunity(communityId: string): Promise<any[]> {
+  async getGroupsByCommunity(communityId: string): Promise<GroupRecord[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('groups')
@@ -285,7 +324,9 @@ export class GroupsService {
     return data || [];
   }
 
-  async getDiscoverableGroups(userId: string): Promise<any[]> {
+  async getDiscoverableGroups(
+    userId: string,
+  ): Promise<Array<GroupRecord & { member_count: number; is_member: boolean }>> {
     const supabase = this.supabaseService.getClient();
     const { data: groups, error } = await supabase
       .from('groups')

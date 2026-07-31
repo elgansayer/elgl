@@ -78,7 +78,10 @@ export class LeaderboardComponent {
   readonly isLoading = computed(() => this.correctorsResource.isLoading());
   readonly error = computed(() => {
     const e = this.correctorsResource.error();
-    return e ? (typeof e === 'string' ? e : (e as Error)?.message ?? 'Unknown error') : null;
+    if (!e) return null;
+    if (typeof e === 'string') return e;
+    if (e instanceof Error) return e.message;
+    return 'Unknown error';
   });
   readonly correctors = computed(() => this.correctorsResource.value() ?? []);
 }

@@ -98,7 +98,19 @@ export class LiveChatOverlayComponent implements OnInit, OnDestroy {
 
     // Subscribe directly to the channel and listen for publications
     this.subscription = this.centrifugo.subscribe(this.channelName, (data: unknown) => {
-      const event = data as CentrifugoMessageData;
+      // Type guard to verify the payload shape
+      const isCentrifugoMessageData = (value: unknown): value is CentrifugoMessageData => {
+        if (typeof value !== 'object' || value === null) return false;
+        if (!('type' in value) || !('content' in value)) return false;
+        const type = value.type;
+        const content = value.content;
+        return typeof type === 'string' && typeof content === 'string';
+      };
+
+      if (!isCentrifugoMessageData(data)) return;
+
+      // data is now narrowed to CentrifugoMessageData
+      const event = data;
 
       // Handle text payloads as defined in SPEC.md
       if (event.type === 'text') {

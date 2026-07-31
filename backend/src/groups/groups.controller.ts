@@ -45,6 +45,13 @@ export class GroupsController {
     return this.groupsService.getDiscoverableGroups(req.user.id);
   }
 
+  @Get('discoverable')
+  @UseGuards(SupabaseAuthGuard)
+  async getDiscoverableGroups(@Req() req: any) {
+    const userId = req.user.id;
+    return this.groupsService.getDiscoverableGroups(userId);
+  }
+
   @Get(':groupId/members')
   @UseGuards(SupabaseAuthGuard)
   async getMembers(@Param('groupId') groupId: string) {
@@ -133,13 +140,6 @@ export class GroupsController {
       dto.message,
       requesterId,
     );
-  }
-
-  @Get('discoverable')
-  @UseGuards(SupabaseAuthGuard)
-  async getDiscoverableGroups(@Req() req: any) {
-    const userId = req.user.id;
-    return this.groupsService.getDiscoverableGroups(userId);
   }
 
   @Post(':groupId/join')

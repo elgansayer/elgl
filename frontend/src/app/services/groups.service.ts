@@ -30,15 +30,17 @@ export class GroupsService {
 
   addMember(groupId: string, userId: string): Promise<{ success: boolean }> {
     return firstValueFrom(
-      this.http.post<{ success: boolean }>(`${this.apiUrl}/${groupId}/members`, {
-        user_id: userId,
+      this.http.post<{ success: boolean }>(`${this.apiUrl}/${groupId}/add-member`, {
+        memberId: userId,
       }),
     );
   }
 
   removeMember(groupId: string, userId: string): Promise<{ success: boolean }> {
     return firstValueFrom(
-      this.http.delete<{ success: boolean }>(`${this.apiUrl}/${groupId}/members/${userId}`),
+      this.http.post<{ success: boolean }>(`${this.apiUrl}/${groupId}/remove-member`, {
+        memberId: userId,
+      }),
     );
   }
 

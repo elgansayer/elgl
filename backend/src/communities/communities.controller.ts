@@ -3,15 +3,18 @@ import {
   Post,
   Get,
   Delete,
+  Patch,
   Param,
   Body,
   UseGuards,
   Req,
+  HttpCode,
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CommunitiesService } from './communities.service';
 import { CreateCommunityDto } from './dto/create-community.dto';
 import { AddGroupDto } from './dto/add-group.dto';
+import { UpdateCommunityDto } from './dto/update-community.dto';
 
 @Controller('communities')
 export class CommunitiesController {
@@ -35,6 +38,26 @@ export class CommunitiesController {
   async listMine(@Req() req: any) {
     const ownerId = req.user.id;
     return this.communitiesService.listByOwner(ownerId);
+  }
+
+  @Patch(':communityId')
+  @UseGuards(SupabaseAuthGuard)
+  async update(
+    @Param('communityId') communityId: string,
+    @Body() dto: UpdateCommunityDto,
+    @Req() req: any,
+  ) {
+    const userId = req.user.id;
+    await this.communitiesService.update(communityId, dto, userId);
+    return { success: true };
+  }
+
+  @Delete(':communityId')
+  @HttpCode(204)
+  @UseGuards(SupabaseAuthGuard)
+  async remove(@Param('communityId') communityId: string, @Req() req: any) {
+    const userId = req.user.id;
+    await this.communitiesService.delete(communityId, userId);
   }
 
   @Post(':communityId/groups')
