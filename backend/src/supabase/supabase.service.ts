@@ -1,11 +1,11 @@
-import { Global, Injectable } from '@nestjs/common';
+import { Global, Injectable, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import Redis from 'ioredis';
 
 @Global()
 @Injectable()
-export class SupabaseService {
+export class SupabaseService implements OnModuleDestroy {
   private readonly client: SupabaseClient;
   private readonly redisClient: Redis;
 
@@ -38,6 +38,12 @@ export class SupabaseService {
 
   getRedisClient(): Redis {
     return this.redisClient;
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    if (this.redisClient) {
+      this.redisClient.disconnect();
+    }
   }
 
   async updateLastActivity(userId: string): Promise<void> {

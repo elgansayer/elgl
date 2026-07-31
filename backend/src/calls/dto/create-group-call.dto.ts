@@ -4,6 +4,7 @@ import {
   IsString,
   ArrayMinSize,
   Min,
+  IsOptional,
 } from 'class-validator';
 
 export class CreateGroupCallDto {
@@ -12,7 +13,8 @@ export class CreateGroupCallDto {
   @ArrayMinSize(1)
   participant_ids: string[];
 
+  @IsOptional()
   @IsNumber()
   @Min(2)
-  participant_limit: number;
+  participant_limit?: number;
 }

@@ -11,7 +11,16 @@ export class CallsService {
   // Active calls per user (userId -> (roomName -> { roomName, isHeld, e2eeKey }))
   private readonly activeCalls: Map<
     string,
-    Map<string, { roomName: string; isHeld: boolean; e2eeKey: string | null }>
+    Map<
+      string,
+      {
+        roomName: string;
+        isHeld: boolean;
+        e2eeKey: string | null;
+        participantLimit: number | null;
+        isGroup: boolean;
+      }
+    >
   > = new Map();
 
   // Call‑waiting queue: userId -> list of calls where the user is the callee
@@ -33,11 +42,15 @@ export class CallsService {
 
   /* ---------- Internal helpers for active-call tracking ---------- */
 
-  private ensureUser(
-    userId: string,
-  ): Map<
+  private ensureUser(userId: string): Map<
     string,
-    { roomName: string; isHeld: boolean; e2eeKey: string | null }
+    {
+      roomName: string;
+      isHeld: boolean;
+      e2eeKey: string | null;
+      participantLimit: number | null;
+      isGroup: boolean;
+    }
   > {
     if (!this.activeCalls.has(userId)) {
       this.activeCalls.set(userId, new Map());
@@ -49,12 +62,16 @@ export class CallsService {
     userId: string,
     roomName: string,
     e2eeKey?: string,
+    participantLimit: number | null = null,
+    isGroup: boolean = false,
   ): void {
     const userCalls = this.ensureUser(userId);
     userCalls.set(roomName, {
       roomName,
       isHeld: false,
       e2eeKey: e2eeKey ?? null,
+      participantLimit,
+      isGroup,
     });
   }
 
@@ -64,12 +81,46 @@ export class CallsService {
 
   /* ---------- Public API for hold / resume / list ---------- */
 
-  getActiveCalls(
-    userId: string,
-  ): Array<{ roomName: string; isHeld: boolean; e2eeKey: string | null }> {
+  getActiveCalls(userId: string): Array<{
+    roomName: string;
+    isHeld: boolean;
+    e2eeKey: string | null;
+    participant_limit: number | null;
+    is_group: boolean;
+  }> {
     const userCalls = this.activeCalls.get(userId);
     if (!userCalls) return [];
-    return Array.from(userCalls.values());
+    return Array.from(userCalls.values()).map((call) => ({
+      roomName: call.roomName,
+      isHeld: call.isHeld,
+      e2eeKey: call.e2eeKey,
+      participant_limit: call.participantLimit,
+      is_group: call.isGroup,
+    }));
+  }
+
+  getActiveCall(
+    userId: string,
+    roomName: string,
+  ): {
+    roomName: string;
+    isHeld: boolean;
+    e2eeKey: string | null;
+    participant_limit: number | null;
+    is_group: boolean;
+  } {
+    const userCalls = this.activeCalls.get(userId);
+    if (!userCalls || !userCalls.has(roomName)) {
+      throw new BadRequestException('Call not found');
+    }
+    const call = userCalls.get(roomName)!;
+    return {
+      roomName: call.roomName,
+      isHeld: call.isHeld,
+      e2eeKey: call.e2eeKey,
+      participant_limit: call.participantLimit,
+      is_group: call.isGroup,
+    };
   }
 
   holdCall(userId: string, roomName: string): void {
@@ -217,15 +268,23 @@ export class CallsService {
   async createGroupCall(
     callerId: string,
     participantIds: string[],
-    participantLimit: number,
+    participantLimit?: number,
   ) {
+    const effectiveLimit = participantLimit ?? 10;
+
+    if (!Number.isInteger(effectiveLimit) || effectiveLimit < 2) {
+      throw new BadRequestException(
+        `participant_limit must be an integer greater than or equal to 2`,
+      );
+    }
+
     if (!participantIds.includes(callerId)) {
       participantIds.unshift(callerId);
     }
 
-    if (participantIds.length > participantLimit) {
+    if (participantIds.length > effectiveLimit) {
       throw new BadRequestException(
-        `Number of participants (${participantIds.length}) exceeds the limit (${participantLimit})`,
+        `Number of participants (${participantIds.length}) exceeds the limit (${effectiveLimit})`,
       );
     }
 
@@ -243,7 +302,7 @@ export class CallsService {
     );
     await roomService.createRoom({
       name: roomName,
-      maxParticipants: participantLimit,
+      maxParticipants: effectiveLimit,
     });
 
     const e2eeKey = this.generateE2eeKey();
@@ -251,7 +310,7 @@ export class CallsService {
       e2eeKey,
       isVideo: true,
       isGroup: true,
-      participantLimit,
+      participantLimit: effectiveLimit,
     });
 
     const generateToken = async (identity: string): Promise<string> => {
@@ -272,7 +331,7 @@ export class CallsService {
 
     // Track the newly created group call for every participant
     for (const pid of participantIds) {
-      this.registerParticipant(pid, roomName, e2eeKey);
+      this.registerParticipant(pid, roomName, e2eeKey, effectiveLimit, true);
     }
 
     return {
@@ -281,7 +340,7 @@ export class CallsService {
       e2ee_key: e2eeKey,
       is_video: true,
       call_id: uuidv4(),
-      participant_limit: participantLimit,
+      participant_limit: effectiveLimit,
       encryption: 'e2ee',
     };
   }

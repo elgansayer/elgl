@@ -52,6 +52,15 @@ export class CallsController {
     return this.callsService.getActiveCalls(userId);
   }
 
+  @Get('active/:room_name')
+  getActiveCall(
+    @Request() req: RequestWithUser,
+    @Param('room_name') roomName: string,
+  ) {
+    const userId = req.user?.id || 'dummy_caller_id';
+    return this.callsService.getActiveCall(userId, roomName);
+  }
+
   @Get('waiting')
   getWaitingCalls(@Request() req: RequestWithUser) {
     const userId = req.user?.id || 'dummy_caller_id';

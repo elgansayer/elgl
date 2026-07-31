@@ -5,7 +5,7 @@ import { SupabaseAuthGuard } from './../src/auth/supabase-auth.guard';
 import { SupabaseService } from './../src/supabase/supabase.service';
 import { NlpService } from './../src/nlp/nlp.service';
 
-let AppModule: any;
+let AppModule: typeof import('../src/app.module').AppModule;
 
 jest.setTimeout(300000);
 
@@ -117,6 +117,10 @@ describe('HelloTalk API E2E Integration Suite', () => {
       single: jest
         .fn()
         .mockResolvedValue({ data: { id: 'mock-id' }, error: null }),
+      rpc: jest.fn().mockReturnThis(),
+      maybeSingle: jest
+        .fn()
+        .mockResolvedValue({ data: { id: 'mock-id' }, error: null }),
     };
 
     mockSupabaseClient = {
@@ -137,6 +141,8 @@ describe('HelloTalk API E2E Integration Suite', () => {
       lrange: jest.fn().mockResolvedValue([]),
       lpush: jest.fn().mockResolvedValue(1),
       ltrim: jest.fn().mockResolvedValue('OK'),
+      quit: jest.fn().mockResolvedValue('OK'),
+      disconnect: jest.fn().mockReturnValue(undefined),
     };
 
     mockNlpService = {
@@ -230,6 +236,16 @@ describe('HelloTalk API E2E Integration Suite', () => {
 
   afterEach(async () => {
     await app.close();
+  });
+
+  afterAll(async () => {
+    if (app) {
+      try {
+        await app.close();
+      } catch {
+        // already closed by afterEach
+      }
+    }
   });
 
   describe('Core & Public Endpoints', () => {
