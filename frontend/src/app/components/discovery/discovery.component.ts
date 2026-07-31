@@ -50,7 +50,7 @@ export class DiscoveryComponent implements OnInit {
   readonly myTargetLangs = signal<{ code: string; flag: string; labelKey: string }[]>([]);
   readonly blockedUserIds = signal<string[]>([]);
 
-  readonly distanceBandsKm = [10, 25, 50, 100, 250] as const;
+  readonly distanceBandsKm: readonly number[] = [10, 25, 50, 100, 250];
   readonly selectedDistanceKm = signal<number>(50);
   readonly selectedNativeLanguage = signal<string>('');
   readonly selectedTargetLanguage = signal<string>('');

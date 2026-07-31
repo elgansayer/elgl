@@ -116,7 +116,7 @@ export class ForgotPasswordComponent {
     this.sendError.set(null);
     this.sendSuccess.set(false);
 
-    const { email } = this.emailForm.value as { email: string };
+    const email = this.emailForm.controls.email.value;
 
     this.http
       .post<{ token: string }>(`${environment.apiUrl}/auth/request-password-reset`, { email })
@@ -146,7 +146,7 @@ export class ForgotPasswordComponent {
     this.resetError.set(null);
     this.resetSuccess.set(false);
 
-    const { newPassword } = this.resetForm.value as { newPassword: string };
+    const newPassword = this.resetForm.controls.newPassword.value;
 
     this.http
       .post<{ message: string }>(`${environment.apiUrl}/auth/reset-password`, { token, newPassword })

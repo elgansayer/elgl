@@ -152,10 +152,11 @@ export class AuthService {
         },
         excludeCredentials: [],
       };
-      const credential = (await navigator.credentials.create({
+      const credential = await navigator.credentials.create({
         publicKey: publicKeyCredentialCreationOptions,
-      })) as PublicKeyCredential | null;
+      });
       if (!credential) return false;
+      if (!(credential instanceof PublicKeyCredential)) return false;
       const credentialId = credential.rawId;
       const base64Url = this.arrayBufferToBase64Url(credentialId);
       localStorage.setItem(this.CREDENTIAL_ID_KEY, base64Url);
