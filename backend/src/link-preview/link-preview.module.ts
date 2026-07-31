@@ -3,9 +3,10 @@ import { HttpModule } from '@nestjs/axios';
 import { LinkPreviewService } from './link-preview.service';
 import { LinkPreviewController } from './link-preview.controller';
 import { SupabaseService } from '../supabase/supabase.service';
+import { SupabaseModule } from '../supabase/supabase.module';
 
 @Module({
-  imports: [HttpModule],
+  imports: [HttpModule, SupabaseModule],
   controllers: [LinkPreviewController],
   providers: [
     LinkPreviewService,

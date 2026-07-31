@@ -1,14 +1,13 @@
 import { Module } from '@nestjs/common';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { LessonsModule } from '../lessons/lessons.module';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 import { AdminGuard } from './guards/admin.guard';
-import { LessonsController } from '../lessons/lessons.controller';
-import { LessonsService } from '../lessons/lessons.service';
 
 @Module({
-  imports: [SupabaseModule],
-  controllers: [AdminController, LessonsController],
-  providers: [AdminService, AdminGuard, LessonsService],
+  imports: [SupabaseModule, LessonsModule],
+  controllers: [AdminController],
+  providers: [AdminService, AdminGuard],
 })
 export class AdminModule {}

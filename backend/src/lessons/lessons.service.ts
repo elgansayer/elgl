@@ -1,11 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { XpService } from '../xp/xp.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 
 @Injectable()
 export class LessonsService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly xpService: XpService,
+  ) {}
 
   async listLessons(): Promise<any[]> {
     const supabase = this.supabaseService.getClient();
@@ -74,5 +78,20 @@ export class LessonsService {
     const { error } = await supabase.from('lessons').delete().eq('id', id);
 
     if (error) throw error;
+  }
+
+  async completeLesson(userId: string, lessonId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { data: lesson, error } = await supabase
+      .from('lessons')
+      .select('id')
+      .eq('id', lessonId)
+      .single();
+
+    if (error || !lesson) {
+      throw new NotFoundException(`Lesson ${lessonId} not found`);
+    }
+
+    await this.xpService.awardXpForActivity(userId, 'complete_lesson');
   }
 }

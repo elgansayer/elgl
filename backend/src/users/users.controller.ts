@@ -76,6 +76,15 @@ export class UsersController {
     return this.usersService.getUserStats(user.id);
   }
 
+  @Get('me/xp')
+  async getMyXp(
+    @CurrentUser() user: User | null,
+  ): Promise<{ totalXp: number }> {
+    if (!user) throw new UnauthorizedException();
+    const totalXp = await this.usersService.getUserXp(user.id);
+    return { totalXp };
+  }
+
   @Post('me/assess-proficiency')
   async assessProficiency(
     @CurrentUser() user: User | null,

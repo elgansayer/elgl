@@ -10,7 +10,6 @@ import { ChatService } from './chat.service';
 import { ChatLlmService } from './chat-llm.service';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
 import { ConversationStarterService } from './conversation-starter.service';
-import { GroupsController } from './groups.controller';
 import { GroupsService } from './groups.service';
 import { SystemMessageService } from './services/system-message.service';
 import { ChatSettingsController } from './chat-settings.controller';
@@ -18,7 +17,7 @@ import { ChatSettingsService } from './chat-settings.service';
 
 @Module({
   imports: [SafetyModule, LinkPreviewModule, SpamDetectionModule, XpModule],
-  controllers: [ChatController, GroupsController, ChatSettingsController],
+  controllers: [ChatController, ChatSettingsController],
   providers: [
     CentrifugoService,
     TranslationService,

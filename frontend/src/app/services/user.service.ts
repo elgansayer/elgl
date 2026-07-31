@@ -53,6 +53,7 @@ export interface UserProfile {
   profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
   proficiency_level?: string;
   learning_goals?: string;
+  xp_total?: number;
   availability_morning?: boolean;
   availability_afternoon?: boolean;
   availability_evening?: boolean;
@@ -506,6 +507,14 @@ export class UserService {
         }>(`${this.baseUrl}/stats/me`, { headers: this.getHeaders() })
         .pipe(catchError(() => of({ translations_count: 0, corrections_count: 0, moments_count: 0 }))),
     );
+  }
+
+  async getMyXpTotal(): Promise<number> {
+    const result = await firstValueFrom(
+      this.http.get<{ totalXp: number }>(`${this.baseUrl}/me/xp`, { headers: this.getHeaders() })
+        .pipe(catchError(() => of({ totalXp: 0 }))),
+    );
+    return result.totalXp;
   }
 
   async updatePrivacySettings(settings: {

@@ -102,8 +102,13 @@ export class UsersService {
     }
     (profile as any).followers_count = followersCount;
     (profile as any).following_count = followingCount;
+    profile.xp_total = await this.xpService.getTotalXp(userId);
 
     return profile;
+  }
+
+  async getUserXp(userId: string): Promise<number> {
+    return this.xpService.getTotalXp(userId);
   }
 
   async getVisitors(userId: string): Promise<ProfileVisitor[]> {

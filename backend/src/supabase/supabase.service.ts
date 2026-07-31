@@ -76,4 +76,44 @@ export class SupabaseService {
       );
     }
   }
+
+  async incrementXp(userId: string, points: number): Promise<void> {
+    const supabase = this.getClient();
+    const { error } = await supabase.rpc('increment_xp', {
+      user_id: userId,
+      amount: points,
+    });
+    if (error) {
+      const { data, error: fetchError } = await supabase
+        .from('users')
+        .select('xp_total')
+        .eq('id', userId)
+        .single();
+      if (fetchError || !data) {
+        console.error(
+          `Failed to increment XP for user ${userId}:`,
+          error.message ?? fetchError?.message,
+        );
+        return;
+      }
+      const current = (data.xp_total ?? 0) + points;
+      await supabase
+        .from('users')
+        .update({ xp_total: current })
+        .eq('id', userId);
+    }
+  }
+
+  async getUserXp(userId: string): Promise<number> {
+    const supabase = this.getClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('xp_total')
+      .eq('id', userId)
+      .single();
+    if (error || !data) {
+      return 0;
+    }
+    return (data.xp_total ?? 0) as number;
+  }
 }

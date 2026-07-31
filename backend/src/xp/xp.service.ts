@@ -1,82 +1,115 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+
+type XpActivityType =
+  | 'create_flashcard'
+  | 'review_flashcard'
+  | 'complete_lesson'
+  | 'create_moment'
+  | 'follow_language_partner';
+
+const ACTIVITY_POINTS: Record<XpActivityType, number> = {
+  create_flashcard: 5,
+  review_flashcard: 2,
+  complete_lesson: 10,
+  create_moment: 3,
+  follow_language_partner: 2,
+};
 
 @Injectable()
 export class XpService {
   private readonly logger = new Logger(XpService.name);
-
-  private readonly pointMap: Record<string, number> = {
-    send_message: 1,
-    create_flashcard: 5,
-    review_flashcard: 2,
-    create_moment: 10,
-    add_comment: 2,
-    complete_assessment: 20,
-  };
-
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  /**
-   * Award XP points to a user for a learning activity.
-   */
-  async awardXp(
-    userId: string,
-    reason: string,
-    points: number = 0,
-  ): Promise<void> {
+  async awardXpForActivity(userId: string, activity: string): Promise<void> {
+    const points = ACTIVITY_POINTS[activity as XpActivityType] ?? 0;
+    if (points <= 0) {
+      return;
+    }
+    await this.supabaseService.incrementXp(userId, points);
     const supabase = this.supabaseService.getClient();
-    // Read current XP total
-    const { data: user } = await supabase
-      .from('users')
-      .select('xp_total')
-      .eq('id', userId)
-      .single();
-
-    const currentXp = (user as { xp_total?: number })?.xp_total ?? 0;
-    const newXp = currentXp + points;
-
-    const { error } = await supabase
-      .from('users')
-      .update({ xp_total: newXp })
-      .eq('id', userId);
-
+    const { error } = await supabase.from('xp_events').insert({
+      user_id: userId,
+      points,
+      activity,
+      created_at: new Date().toISOString(),
+    });
     if (error) {
-      this.logger.warn(`Failed to award XP to ${userId}: ${error.message}`);
+      this.logger.warn(
+        `Failed to log XP event for user ${userId}: ${error.message}`,
+      );
     }
   }
 
-  /**
-   * Convenience method that looks up the point value from the internal map.
-   */
-  async awardXpForActivity(userId: string, reason: string): Promise<void> {
-    const points = this.pointMap[reason];
-    if (points === undefined) {
-      this.logger.warn(`Unknown XP reason "${reason}", no points awarded`);
-      return;
-    }
-    await this.awardXp(userId, reason, points);
+  async getTotalXp(userId: string): Promise<number> {
+    return this.supabaseService.getUserXp(userId);
   }
 
   async getXpTotal(userId: string): Promise<number> {
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from('users')
-      .select('xp_total')
-      .eq('id', userId)
-      .single();
-
-    if (error || !data) {
-      return 0;
-    }
-    return (data as { xp_total?: number }).xp_total ?? 0;
+    return this.getTotalXp(userId);
   }
 
-  /**
-   * Compute user level based on thresholds (every 100 XP).
-   */
+  async getXpHistory(
+    userId: string,
+    limit = 50,
+    offset = 0,
+  ): Promise<
+    Array<{
+      id: string;
+      user_id: string;
+      points: number;
+      activity: string;
+      created_at: string;
+    }>
+  > {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('xp_events')
+      .select('id, user_id, points, activity, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (response.error) {
+      throw new InternalServerErrorException('Failed to fetch XP history');
+    }
+
+    return response.data ?? [];
+  }
+
+  getActivityPoints(): Record<string, number> {
+    return { ...ACTIVITY_POINTS };
+  }
+
+  getPointsForActivity(activity: string): number {
+    return ACTIVITY_POINTS[activity as XpActivityType] ?? 0;
+  }
+
+  async awardXp(userId: string, reason: string, points = 0): Promise<void> {
+    if (points <= 0) {
+      return;
+    }
+    await this.supabaseService.incrementXp(userId, points);
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase.from('xp_events').insert({
+      user_id: userId,
+      points,
+      activity: reason,
+      created_at: new Date().toISOString(),
+    });
+    if (error) {
+      this.logger.warn(
+        `Failed to log XP event for user ${userId}: ${error.message}`,
+      );
+    }
+  }
+
   async getLevel(userId: string): Promise<number> {
-    const xpTotal = await this.getXpTotal(userId);
-    // level 1 at 0 XP, level 2 at 100, etc.
+    const xpTotal = await this.getTotalXp(userId);
     return Math.floor(xpTotal / 100) + 1;
   }
 }
