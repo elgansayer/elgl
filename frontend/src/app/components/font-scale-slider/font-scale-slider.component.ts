@@ -7,7 +7,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-font-scale-slider',
   imports: [TranslatePipe],
   template: `
-    <div class="flex items-center gap-2 ms-4 text-sm">
+    <div class="flex items-center gap-2 ms-4 text-sm" role="group" aria-label="{{ 'settings.fontScale' | t }}">
       <label for="fontScaleSlider" class="text-text-secondary whitespace-nowrap">
         {{ 'settings.fontScale' | t }}
       </label>
@@ -25,13 +25,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
         (input)="onInput($event)"
         class="w-24 h-1 accent-primary"
       />
-      <span class="text-text-secondary w-8 text-end">{{ scalePercentLabel() }}</span>
+      <span class="text-text-secondary w-8 text-end" aria-hidden="true">{{ scalePercentLabel() }}</span>
     </div>
   `,
 })
 export class FontScaleSliderComponent {
-  private fontScaleService = inject(FontScaleService);
-  private i18nService = inject(I18nService);
+  private readonly fontScaleService = inject(FontScaleService);
+  private readonly i18nService = inject(I18nService);
 
   readonly scale = this.fontScaleService.scaleFactor;
   readonly min = this.fontScaleService.min;
@@ -45,11 +45,11 @@ export class FontScaleSliderComponent {
     }).format(this.scale())
   );
 
-  onInput(event: Event): void {
+  protected onInput(event: Event): void {
     const input = event.target;
     if (!(input instanceof HTMLInputElement)) return;
-    const value = parseFloat(input.value);
-    if (!isNaN(value)) {
+    const value = Number.parseFloat(input.value);
+    if (!Number.isNaN(value)) {
       this.fontScaleService.setScale(value);
     }
   }

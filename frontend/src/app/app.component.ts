@@ -100,6 +100,14 @@ export class AppComponent implements OnInit {
       doc.addEventListener('visibilitychange', handleVisibility);
       this.destroyRef.onDestroy(() => doc.removeEventListener('visibilitychange', handleVisibility));
     });
+
+    // Apply font scale to the root rem unit
+    effect(() => {
+      const scale = this.fontScaleService.scaleFactor();
+      if (this.document && this.document.documentElement) {
+        this.document.documentElement.style.fontSize = `${(scale * 16).toFixed(2)}px`;
+      }
+    });
   }
 
   async ngOnInit(): Promise<void> {
