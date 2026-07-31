@@ -28,7 +28,11 @@ export class TwoFactorService {
     await this.supabaseService
       .getClient()
       .from('users')
-      .update({ totp_secret: secret.base32 })
+      .update({
+        totp_secret: secret.base32,
+        two_factor_secret: secret.base32,
+        two_factor_enabled: true,
+      })
       .eq('id', userId);
 
     return { secret: secret.base32, qrCodeUrl };
@@ -38,18 +42,19 @@ export class TwoFactorService {
     const { data, error } = await this.supabaseService
       .getClient()
       .from('users')
-      .select('totp_secret')
+      .select('totp_secret, two_factor_secret')
       .eq('id', userId)
       .single();
 
-    if (error || !data?.totp_secret) {
+    const secret = data?.totp_secret ?? data?.two_factor_secret;
+    if (error || !secret) {
       throw new UnauthorizedException(
         'Two‑factor authentication is not enabled',
       );
     }
 
     return speakeasy.totp.verify({
-      secret: data.totp_secret,
+      secret,
       encoding: 'base32',
       token,
       window: 2,
@@ -65,7 +70,11 @@ export class TwoFactorService {
     await this.supabaseService
       .getClient()
       .from('users')
-      .update({ totp_secret: null })
+      .update({
+        totp_secret: null,
+        two_factor_secret: null,
+        two_factor_enabled: false,
+      })
       .eq('id', userId);
   }
 
@@ -73,11 +82,11 @@ export class TwoFactorService {
     const { data, error } = await this.supabaseService
       .getClient()
       .from('users')
-      .select('totp_secret')
+      .select('totp_secret, two_factor_secret')
       .eq('id', userId)
       .single();
 
     if (error) return false;
-    return !!data?.totp_secret;
+    return !!(data?.totp_secret || data?.two_factor_secret);
   }
 }

@@ -174,7 +174,7 @@ export class AuthService {
     const accessToken = this.currentSession()?.access_token;
     const res = await lastValueFrom(
       this.http.post<{ secret: string; qrCodeUrl: string }>(
-        `${this.apiUrl}/two-factor/enable`,
+        `${this.apiUrl}/auth/two-factor/enable`,
         {},
         {
           headers: {
@@ -190,7 +190,7 @@ export class AuthService {
     const accessToken = this.currentSession()?.access_token;
     const res = await lastValueFrom(
       this.http.post<{ success: boolean }>(
-        `${this.apiUrl}/two-factor/verify`,
+        `${this.apiUrl}/auth/two-factor/verify`,
         { token },
         {
           headers: {
@@ -206,7 +206,7 @@ export class AuthService {
     const accessToken = this.currentSession()?.access_token;
     const res = await lastValueFrom(
       this.http.post<{ success: boolean }>(
-        `${this.apiUrl}/two-factor/disable`,
+        `${this.apiUrl}/auth/two-factor/disable`,
         { token },
         {
           headers: {
@@ -222,7 +222,7 @@ export class AuthService {
     const accessToken = this.currentSession()?.access_token;
     const res = await lastValueFrom(
       this.http.get<{ enabled: boolean }>(
-        `${this.apiUrl}/two-factor/status`,
+        `${this.apiUrl}/auth/two-factor/status`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,

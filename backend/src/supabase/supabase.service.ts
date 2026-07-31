@@ -3,6 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import Redis from 'ioredis';
 
+interface UserStatsRow {
+  study_streak_days: number | null;
+  correction_ratio: number | null;
+  xp_total: number | null;
+}
+
 @Global()
 @Injectable()
 export class SupabaseService implements OnModuleDestroy {
@@ -50,13 +56,9 @@ export class SupabaseService implements OnModuleDestroy {
     const supabase = this.getClient();
     // Fetch current study_streak_days and correction_ratio to compute is_serious_learner
     const { data, error: fetchError } = await supabase
-      .from('users')
+      .from<'users', UserStatsRow>('users')
       .select('study_streak_days, correction_ratio')
       .eq('id', userId)
-      .returns<{
-        study_streak_days: number | null;
-        correction_ratio: number | null;
-      }>()
       .single();
 
     if (fetchError) {
@@ -95,10 +97,9 @@ export class SupabaseService implements OnModuleDestroy {
     });
     if (error) {
       const { data, error: fetchError } = await supabase
-        .from('users')
+        .from<'users', UserStatsRow>('users')
         .select('xp_total')
         .eq('id', userId)
-        .returns<{ xp_total: number }>()
         .single();
       if (fetchError || !data) {
         console.error(
@@ -118,10 +119,9 @@ export class SupabaseService implements OnModuleDestroy {
   async getUserXp(userId: string): Promise<number> {
     const supabase = this.getClient();
     const { data, error } = await supabase
-      .from('users')
+      .from<'users', UserStatsRow>('users')
       .select('xp_total')
       .eq('id', userId)
-      .returns<{ xp_total: number }>()
       .single();
     if (error || !data) {
       return 0;

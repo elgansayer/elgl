@@ -26,7 +26,7 @@ export class CallLogsService {
     if (!userId) return [];
 
     let query = supabase
-      .from<CallLogRecord, CallLogRecord>('call_logs')
+      .from<'call_logs', CallLogRecord>('call_logs')
       .select('*')
       .or(`caller_id.eq.${userId},receiver_id.eq.${userId}`)
       .order('started_at', { ascending: false })

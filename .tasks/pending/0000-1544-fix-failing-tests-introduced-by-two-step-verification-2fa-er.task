@@ -1,0 +1,57 @@
+Fix failing tests introduced by: Two-step verification (2FA)..
+
+Errors:
+==== backend lint FAILED (exit 1) ====
+STDOUT:
+                   @typescript-eslint/no-unsafe-assignment
+   87:20  warning  Unsafe call of an `any` typed value                        @typescript-eslint/no-unsafe-call
+   87:31  warning  Unsafe member access .lte on an `any` value                @typescript-eslint/no-unsafe-member-access
+   89:11  warning  Unsafe assignment of an `any` value                        @typescript-eslint/no-unsafe-assignment
+   92:7   warning  Unsafe assignment of an `any` value                        @typescript-eslint/no-unsafe-assignment
+   92:29  warning  Unsafe member access .study_streak_days on an `any` value  @typescript-eslint/no-unsafe-member-access
+   93:7   warning  Unsafe assignment of an `any` value                        @typescript-eslint/no-unsafe-assignment
+   93:29  warning  Unsafe member access .correction_ratio on an `any` value   @typescript-eslint/no-unsafe-member-access
+   94:7   warning  Unsafe assignment of an `any` value                        @typescript-eslint/no-unsafe-assignment
+   94:26  warning  Unsafe member access .coins_balance on an `any` value      @typescript-eslint/no-unsafe-member-access
+   95:7   warning  Unsafe assignment of an `any` value                        @typescript-eslint/no-unsafe-assignment
+   95:19  warning  Unsafe member access .is_vip on an `any` value             @typescript-eslint/no-unsafe-member-access
+   96:7   warning  Unsafe assignment of an `any` value                        @typescript-eslint/no-unsafe-assignment
+   96:30  warning  Unsafe member access .created_at on an `any` value         @typescript-eslint/no-unsafe-member-access
+   97:7   warning  Unsafe assignment of an `any` value                        @typescript-eslint/no-unsafe-assignment
+   98:7   warning  Unsafe assignment of an `any` value                        @typescript-eslint/no-unsafe-assignment
+  100:7   warning  Unsafe assignment of an `any` value                        @typescript-eslint/no-unsafe-assignment
+
+✖ 731 problems (1 error, 730 warnings)
+
+
+STDERR:
+
+
+==== frontend build FAILED (exit 1) ====
+STDOUT:
+
+> frontend@0.0.0 build
+> ng build
+
+❯ Building...
+✔ Building...
+Prerendered 0 static routes.
+Application bundle generation failed. [36.333 seconds] - 2026-07-31T21:20:52.331Z
+
+
+STDERR:
+ar-compiler][0m
+
+    src/app/components/soundboard/soundboard.component.ts:28:26:
+[37m      28 │   imports: [CommonModule, [32mNgOptimizedImage[37m, TranslatePipe],
+         ╵                           [32m~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: TranslatePipe is not used within the template of SoundboardComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/soundboard/soundboard.component.ts:28:44:
+[37m      28 │   imports: [CommonModule, NgOptimizedImage, [32mTranslatePipe[37m],
+         ╵                                             [32m~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mTS2345: Argument of type '

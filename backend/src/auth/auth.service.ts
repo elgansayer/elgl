@@ -1,10 +1,14 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 import { SupabaseService } from '../supabase/supabase.service';
+import { TwoFactorService } from '../two-factor/two-factor.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly twoFactorService: TwoFactorService,
+  ) {}
 
   async requestPasswordReset(email: string): Promise<string> {
     const supabase = this.supabaseService.getClient();
@@ -57,5 +61,32 @@ export class AuthService {
     if (error) {
       throw new BadRequestException(error.message);
     }
+  }
+
+  async enableTwoFactor(
+    userId: string,
+  ): Promise<{ secret: string; qrCodeUrl: string }> {
+    return this.twoFactorService.generateSecret(userId);
+  }
+
+  async verifyTwoFactor(userId: string, token: string): Promise<boolean> {
+    try {
+      return await this.twoFactorService.verifyToken(userId, token);
+    } catch {
+      return false;
+    }
+  }
+
+  async disableTwoFactor(userId: string, token: string): Promise<boolean> {
+    try {
+      await this.twoFactorService.disable(userId, token);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async checkTwoFactorStatus(userId: string): Promise<boolean> {
+    return this.twoFactorService.isEnabled(userId);
   }
 }
