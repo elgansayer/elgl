@@ -6,8 +6,6 @@ import {
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { InterestsService } from '../interests/interests.service';
-import { AddMemberDto } from './dto/add-member.dto';
-import { RemoveMemberDto } from './dto/remove-member.dto';
 import { UpdateGroupSettingsDto } from './dto/update-group-settings.dto';
 
 @Injectable()

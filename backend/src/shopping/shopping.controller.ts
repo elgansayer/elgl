@@ -6,12 +6,12 @@ export class ShoppingController {
   constructor(private readonly shoppingService: ShoppingService) {}
 
   @Get('catalog')
-  async getCatalog() {
+  getCatalog() {
     return this.shoppingService.getCatalog();
   }
 
   @Get('items/:id')
-  async getItem(@Param('id') id: string) {
+  getItem(@Param('id') id: string) {
     return this.shoppingService.getItem(id);
   }
 }

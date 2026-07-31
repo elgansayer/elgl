@@ -1,3 +1,5 @@
+import { IsOptional, IsBoolean, IsString } from 'class-validator';
+
 export class UpdateNotificationPreferencesDto {
   @IsOptional()
   @IsBoolean()

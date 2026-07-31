@@ -39,8 +39,8 @@ export class TransferController {
    * swap JWT that the client can later exchange for a real session.
    */
   @Get('consume')
-  async consume(@Body() body: { token?: string }) {
-    // Actually we read from query — but for GET we can use @Query.
+  consume(@Body() _body: { token?: string }) {
+    // Actually we read from query - but for GET we can use @Query.
     // We'll keep it simple: use @Query()
     throw new Error('Not implemented – use the swap endpoint instead.');
   }
@@ -50,11 +50,11 @@ export class TransferController {
    * Public endpoint: exchange the swapJWT for a real Supabase session.
    */
   @Post('swap')
-  async swap(@Body('swapToken') swapToken?: string) {
+  swap(@Body('swapToken') swapToken?: string) {
     if (!swapToken) {
       throw new BadRequestException('swapToken is required');
     }
-    const result = await this.transferService.swapTokenForSession(swapToken);
+    const result = this.transferService.swapTokenForSession(swapToken);
     if (!result) {
       throw new BadRequestException('Invalid or expired swap token');
     }

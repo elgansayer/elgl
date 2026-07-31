@@ -11,9 +11,9 @@ export class AiConversationController {
   }
 
   @Post('message')
-  async handleMessage(
-    @Body() dto: { message: string; scenarioId?: string },
-  ): Promise<{ reply: string }> {
+  handleMessage(@Body() dto: { message: string; scenarioId?: string }): {
+    reply: string;
+  } {
     if (!dto.message || dto.message.trim().length === 0) {
       return { reply: 'Please say something first!' };
     }

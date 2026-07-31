@@ -9,13 +9,13 @@ export class CartController {
   constructor(private readonly cartService: CartService) {}
 
   @Get()
-  async getCart(@Req() req: Request) {
+  getCart(@Req() req: Request) {
     const userId = (req as any).user?.sub ?? (req as any).user?.id ?? 'unknown';
     return this.cartService.getCart(userId);
   }
 
   @Post('add')
-  async addItem(
+  addItem(
     @Req() req: Request,
     @Body() body: { itemId: string; quantity?: number },
   ) {
@@ -24,7 +24,7 @@ export class CartController {
   }
 
   @Post('remove')
-  async removeItem(
+  removeItem(
     @Req() req: Request,
     @Body() body: { itemId: string; quantity?: number },
   ) {

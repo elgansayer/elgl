@@ -39,7 +39,7 @@ export class EventsController {
 
   @UseGuards(SupabaseAuthGuard)
   @Get('categories')
-  async getCategories() {
+  getCategories() {
     return this.eventsService.getCategories();
   }
 

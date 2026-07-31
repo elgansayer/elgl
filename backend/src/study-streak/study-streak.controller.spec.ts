@@ -59,8 +59,8 @@ describe('StudyStreakController', () => {
   });
 
   describe('health', () => {
-    it('returns ok true', async () => {
-      const result = await controller.health();
+    it('returns ok true', () => {
+      const result = controller.health();
       expect(result).toEqual({ ok: true });
     });
   });

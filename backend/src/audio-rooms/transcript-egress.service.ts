@@ -115,7 +115,7 @@ export class TranscriptEgressService {
    * In production this should call Azure Speech Services or similar.
    * Returns a mock transcript for development purposes.
    */
-  async generateTranscriptFromAudioUrl(audioUrl: string): Promise<string> {
+  generateTranscriptFromAudioUrl(audioUrl: string): string {
     this.logger.log(`Generating transcript for audio URL: ${audioUrl}`);
     // TODO: replace with real Azure Speech-to-Text integration
     return (

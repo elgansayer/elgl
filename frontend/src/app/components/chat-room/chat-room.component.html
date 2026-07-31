@@ -90,6 +90,12 @@
     </div>
   }
 
+  @if (partnerLanguage(); as lang) {
+    @if (messages().length <= 1) {
+      <app-cultural-tip class="mt-2.5 block" [language]="lang" />
+    }
+  }
+
   <div
     class="mt-2.5 flex-1 overflow-y-auto rounded-card border border-surface-100 bg-surface-300 ps-2 pe-2 pt-2 pb-2 space-y-2"
   >

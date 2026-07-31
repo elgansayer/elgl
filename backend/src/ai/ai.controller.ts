@@ -23,7 +23,7 @@ export class AiController {
   }
 
   @Post('message')
-  async getMessage(
+  getMessage(
     @Body('message') message: string,
     @Body('scenarioId') scenarioId?: string,
   ) {

@@ -23,7 +23,7 @@ export class StudyBuddiesService {
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async requestBuddy(dto: StudyBuddyRequestDto, requesterId: string) {
+  requestBuddy(dto: StudyBuddyRequestDto, requesterId: string) {
     const request: BuddyRequest = {
       id: Date.now().toString(),
       requesterId,
@@ -104,10 +104,7 @@ export class StudyBuddiesService {
     }
   }
 
-  async getOrCreateChannel(
-    userId: string,
-    otherUserId: string,
-  ): Promise<{ channel: string }> {
+  getOrCreateChannel(userId: string, otherUserId: string): { channel: string } {
     const ids = [userId, otherUserId].sort();
     const channelName = `chat_${ids[0]}_${ids[1]}`;
     return { channel: channelName };

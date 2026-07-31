@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import * as jwt from 'jsonwebtoken';
 import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
@@ -34,7 +35,7 @@ export class AuthService {
   async resetPassword(token: string, newPassword: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
     try {
-      const decoded: any = require('jwt-decode')(token);
+      const decoded = jwt.decode(token) as { sub: string };
       const userId: string = decoded.sub;
 
       const { error } = await supabase.auth.admin.updateUserById(userId, {
@@ -43,7 +44,7 @@ export class AuthService {
       if (error) {
         throw new BadRequestException(error.message);
       }
-    } catch (err) {
+    } catch {
       throw new BadRequestException('Invalid or expired reset token');
     }
   }

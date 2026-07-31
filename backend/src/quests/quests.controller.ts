@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, UseGuards, Req } from '@nestjs/common';
 import { QuestsService } from './quests.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 

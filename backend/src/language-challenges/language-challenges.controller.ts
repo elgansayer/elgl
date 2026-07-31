@@ -6,7 +6,6 @@ import {
   Body,
   UseGuards,
   Req,
-  BadRequestException,
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { LanguageChallengesService } from './language-challenges.service';

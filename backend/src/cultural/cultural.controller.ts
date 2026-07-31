@@ -6,7 +6,7 @@ export class CulturalController {
   constructor(private readonly culturalService: CulturalService) {}
 
   @Get(':language')
-  async getGuide(@Param('language') language: string) {
+  getGuide(@Param('language') language: string) {
     const guide = this.culturalService.getGuideForLanguage(language);
     if (!guide) {
       throw new NotFoundException(

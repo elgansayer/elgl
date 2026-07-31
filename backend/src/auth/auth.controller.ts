@@ -1,4 +1,5 @@
 import { Controller, Post, Body, Req } from '@nestjs/common';
+import * as jwt from 'jsonwebtoken';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
@@ -26,8 +27,8 @@ export class AuthController {
     if (!authHeader) {
       throw new Error('Authorization header missing');
     }
-    const jwt = authHeader.replace('Bearer ', '');
-    const decoded: any = require('jwt-decode')(jwt);
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = jwt.decode(token) as { sub: string };
     const userId: string = decoded.sub;
     await this.authService.changePassword(userId, newPassword);
     return { message: 'Password changed successfully' };

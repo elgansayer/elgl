@@ -881,8 +881,8 @@ export class DiscoveryService {
   private sortUsers(
     users: UserProfile[],
     sort?: string,
-    searchLat?: number,
-    searchLon?: number,
+    _searchLat?: number,
+    _searchLon?: number,
   ): UserProfile[] {
     if (!sort || !users.length) return users;
     switch (sort) {

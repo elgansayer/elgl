@@ -22,13 +22,13 @@ export class EventsService implements OnModuleInit {
     private readonly audioRoomsService: AudioRoomsService,
   ) {}
 
-  async onModuleInit() {
+  onModuleInit() {
     // Start background job that checks for upcoming event reminders every 60 seconds
-    this.intervalId = setInterval(() => this.checkReminders(), 60_000);
+    this.intervalId = setInterval(() => void this.checkReminders(), 60_000);
 
     // Start background job that checks for events whose start time is happening now
     // and spins up a LiveKit audio room for them.
-    this.intervalId2 = setInterval(() => this.checkStartEvents(), 10_000);
+    this.intervalId2 = setInterval(() => void this.checkStartEvents(), 10_000);
   }
 
   /**
@@ -282,7 +282,7 @@ export class EventsService implements OnModuleInit {
     };
   }
 
-  async getCategories(): Promise<string[]> {
+  getCategories(): string[] {
     return [
       'audio_room',
       'learning_seminar',

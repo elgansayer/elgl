@@ -1,6 +1,7 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { catchError, map, of } from 'rxjs';
+import { catchError, firstValueFrom, of } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface CulturalGuideResponse {
   language: string;
@@ -10,16 +11,14 @@ export interface CulturalGuideResponse {
 @Injectable({ providedIn: 'root' })
 export class CulturalGuideService {
   private readonly http = inject(HttpClient);
-  readonly guide = signal<string | null>(null);
+  private readonly apiUrl = `${environment.apiUrl}/cultural-guides`;
 
-  fetchGuide(language: string): void {
-    // Use resource() in real implementation; for now simple fetch
-    this.http
-      .get<CulturalGuideResponse>(`/api/cultural-guides/${language}`)
-      .pipe(
-        map((res) => res.guide),
-        catchError(() => of(null)),
-      )
-      .subscribe((text) => this.guide.set(text ?? null));
+  async fetchGuide(language: string): Promise<string | null> {
+    const response = await firstValueFrom(
+      this.http
+        .get<CulturalGuideResponse>(`${this.apiUrl}/${language}`)
+        .pipe(catchError(() => of(null))),
+    );
+    return response?.guide ?? null;
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { MonetisationService } from '../monetisation/monetisation.service';
 
 export interface Scenario {
@@ -50,10 +50,10 @@ export class AiService {
     return this.scenarios;
   }
 
-  async handleMessage(
+  handleMessage(
     text: string,
     scenarioId?: string,
-  ): Promise<{ reply: string; scenarioId?: string }> {
+  ): { reply: string; scenarioId?: string } {
     // For now, return mock reply based on scenario
     let reply = `You said: "${text}"`;
     if (scenarioId) {

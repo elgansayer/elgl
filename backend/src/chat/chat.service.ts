@@ -23,7 +23,6 @@ import {
 import { ChatMessageEvent } from '../notifications/events/notification.events';
 import { SystemMessageService } from './services/system-message.service';
 import { XpService } from '../xp/xp.service';
-import { LockChatDto } from './dto/lock-chat.dto';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
 
 @Injectable()

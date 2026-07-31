@@ -65,11 +65,11 @@ export class TransferService {
    * front‑end to fall back to manual sign‑in.  This is acceptable for the
    * “account transfer between devices” MVP.
    */
-  async swapTokenForSession(swapToken: string): Promise<{
+  swapTokenForSession(swapToken: string): {
     access_token: string;
     refresh_token: string;
     user_id: string;
-  } | null> {
+  } | null {
     try {
       const payload = jwt.verify(swapToken, this.secret) as {
         sub: string;

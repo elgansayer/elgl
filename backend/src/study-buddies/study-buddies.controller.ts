@@ -50,7 +50,7 @@ export class StudyBuddiesController {
   }
 
   @Get('channel')
-  async getChannel(@Query('partnerId') partnerId: string, @Req() req: any) {
+  getChannel(@Query('partnerId') partnerId: string, @Req() req: any) {
     const userId = req.user.id;
     return this.sbService.getOrCreateChannel(userId, partnerId);
   }

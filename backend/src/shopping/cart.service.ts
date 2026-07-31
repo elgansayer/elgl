@@ -22,16 +22,12 @@ export class CartService {
     private readonly monetisationService: MonetisationService,
   ) {}
 
-  async getCart(userId: string): Promise<CartItem[]> {
+  getCart(userId: string): CartItem[] {
     return this.carts.get(userId) ?? [];
   }
 
-  async addItem(
-    userId: string,
-    itemId: string,
-    quantity: number,
-  ): Promise<CartItem[]> {
-    const item = await this.shoppingService.getItem(itemId);
+  addItem(userId: string, itemId: string, quantity: number): CartItem[] {
+    const item = this.shoppingService.getItem(itemId);
     if (!item) {
       throw new NotFoundException(`Item ${itemId} not found`);
     }
@@ -55,11 +51,7 @@ export class CartService {
     return items;
   }
 
-  async removeItem(
-    userId: string,
-    itemId: string,
-    quantity: number,
-  ): Promise<CartItem[]> {
+  removeItem(userId: string, itemId: string, quantity: number): CartItem[] {
     const items = this.carts.get(userId) ?? [];
     const existing = items.find((i) => i.itemId === itemId);
     if (existing) {
@@ -88,7 +80,7 @@ export class CartService {
 
     // Decrement stock for each purchased item
     for (const item of items) {
-      const ok = await this.shoppingService.decrementStock(
+      const ok = this.shoppingService.decrementStock(
         item.itemId,
         item.quantity,
       );

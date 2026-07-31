@@ -26,7 +26,7 @@ export class StudyStreakController {
   }
 
   @Get('health')
-  async health(): Promise<{ ok: boolean }> {
+  health(): { ok: boolean } {
     return { ok: true };
   }
 }

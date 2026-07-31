@@ -53,25 +53,6 @@ describe('IncomingCallComponent', () => {
     mockLivekitService = createLivekitMock();
     mockSafetyService = createSafetyMock();
 
-    await TestBed.configureTestingModule({
-      imports: [IncomingCallComponent],
-      providers: [
-        I18nService,
-        { provide: CentrifugoService, useValue: mockCentrifugoService },
-        { provide: AuthService, useValue: mockAuthService },
-        { provide: LivekitService, useValue: mockLivekitService },
-        { provide: SafetyService, useValue: mockSafetyService },
-      ],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(IncomingCallComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-    await fixture.whenStable();
-  });
-
-  beforeEach(async () => {
-    // Mock missing services for the component
     const userServiceMock = {
       getMyProfile: vi.fn().mockResolvedValue({ silence_unknown_callers: false }),
     };
@@ -80,8 +61,24 @@ describe('IncomingCallComponent', () => {
       success: vi.fn(),
       error: vi.fn(),
     };
-    TestBed.overrideProvider(UserService, { useValue: userServiceMock });
-    TestBed.overrideProvider(HapticFeedbackService, { useValue: hapticMock });
+
+    await TestBed.configureTestingModule({
+      imports: [IncomingCallComponent],
+      providers: [
+        I18nService,
+        { provide: CentrifugoService, useValue: mockCentrifugoService },
+        { provide: AuthService, useValue: mockAuthService },
+        { provide: LivekitService, useValue: mockLivekitService },
+        { provide: SafetyService, useValue: mockSafetyService },
+        { provide: UserService, useValue: userServiceMock },
+        { provide: HapticFeedbackService, useValue: hapticMock },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(IncomingCallComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   it('should create', () => {

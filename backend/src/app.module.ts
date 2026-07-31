@@ -71,10 +71,12 @@ import { validationSchema } from './config/validation.schema';
     }),
     ScheduleModule.forRoot(),
 
-    ThrottlerModule.forRoot({
-      ttl: 60000,
-      limit: 10,
-    }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 10,
+      },
+    ]),
     EventEmitterModule.forRoot({
       wildcard: false,
       delimiter: '.',

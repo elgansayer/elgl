@@ -43,19 +43,19 @@ export class CallsController {
   }
 
   @Get('active')
-  async getActiveCalls(@Request() req: RequestWithUser) {
+  getActiveCalls(@Request() req: RequestWithUser) {
     const userId = req.user?.id || 'dummy_caller_id';
     return this.callsService.getActiveCalls(userId);
   }
 
   @Get('waiting')
-  async getWaitingCalls(@Request() req: RequestWithUser) {
+  getWaitingCalls(@Request() req: RequestWithUser) {
     const userId = req.user?.id || 'dummy_caller_id';
     return this.callsService.getWaitingCalls(userId);
   }
 
   @Put(':room_name/accept-waiting')
-  async acceptWaitingCall(
+  acceptWaitingCall(
     @Request() req: RequestWithUser,
     @Param('room_name') roomName: string,
   ) {
@@ -65,7 +65,7 @@ export class CallsController {
   }
 
   @Put(':room_name/hold')
-  async holdCall(
+  holdCall(
     @Request() req: RequestWithUser,
     @Param('room_name') roomName: string,
   ) {
@@ -75,7 +75,7 @@ export class CallsController {
   }
 
   @Put(':room_name/resume')
-  async resumeCall(
+  resumeCall(
     @Request() req: RequestWithUser,
     @Param('room_name') roomName: string,
   ) {

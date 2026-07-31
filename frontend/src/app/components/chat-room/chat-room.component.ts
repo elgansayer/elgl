@@ -18,6 +18,7 @@ import { LongPressContextMenuComponent } from '../long-press-context-menu/long-p
 import { StickerPickerComponent } from '../sticker-picker/sticker-picker.component';
 import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
 import { SafetyService } from '../../services/safety.service';
+import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 
 @Component({
   selector: 'app-chat-room',
@@ -33,6 +34,7 @@ import { SafetyService } from '../../services/safety.service';
     LongPressContextMenuComponent,
     StickerPickerComponent,
     ChatSystemBubbleComponent,
+    CulturalTipComponent,
   ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss'],
@@ -69,6 +71,7 @@ export class ChatRoomComponent implements OnDestroy {
 
   readonly participants = signal<GroupMember[]>([]);
   readonly blockedUserIds = signal<string[]>([]);
+  readonly partnerLanguage = signal<string | null>(null);
   readonly filteredMessages = computed(() => {
     const blocked = this.blockedUserIds();
     return this.messages().filter((m) => !blocked.includes(m.sender_id));
@@ -108,6 +111,22 @@ export class ChatRoomComponent implements OnDestroy {
     await this.loadBlockedUsers();
     await this.loadMessages();
     await this.setupRealTime();
+    await this.resolvePartnerLanguage();
+  }
+
+  /** Looks up the chat partner's native language so a short cultural etiquette tip can be shown. */
+  async resolvePartnerLanguage(): Promise<void> {
+    const currentUserId = this.authService.currentUser()?.id;
+    if (!currentUserId) return;
+    try {
+      const members = await this.chatService.getGroupMembers(this.roomId);
+      const partner = members.find((m) => m.user_id !== currentUserId);
+      if (!partner) return;
+      const profile = await this.userService.getUserProfile(partner.user_id);
+      this.partnerLanguage.set(profile?.native_languages?.[0] ?? null);
+    } catch (e) {
+      console.error('Failed to resolve partner language:', e);
+    }
   }
 
   async loadRoomDetails(): Promise<void> {

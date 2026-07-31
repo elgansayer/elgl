@@ -13,7 +13,7 @@ export class ProfileViewNotificationListener {
 
   @OnEvent('profile.visit')
   async handleProfileVisit(payload: ProfileViewEvent): Promise<void> {
-    const recipientId = payload.viewedId;
+    const recipientId = payload.viewedUserId;
 
     try {
       const shouldSend =

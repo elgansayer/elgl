@@ -17,7 +17,6 @@ import { AudioRoomsService } from './audio-rooms.service';
 import { CreatePollDto } from './dto/create-poll.dto';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
 import { PlaySoundDto } from './dto/play-sound.dto';
-import { TranscriptEgressService } from './transcript-egress.service';
 import {
   ApproveSpeakerDto,
   ArchiveRoomDto,
@@ -273,7 +272,7 @@ export class AudioRoomsController {
   }
 
   @Get('soundboard/list')
-  async listSoundboardSounds(): Promise<{ sounds: any[] }> {
+  listSoundboardSounds(): { sounds: any[] } {
     return this.audioRoomsService.getSoundboardSounds();
   }
 
@@ -297,9 +296,11 @@ export class AudioRoomsController {
   }
 
   @Get('exclusive-emojis')
-  async getExclusiveEmojis(): Promise<
-    { emojiId: string; name: string; animationUrl: string }[]
-  > {
+  getExclusiveEmojis(): {
+    emojiId: string;
+    name: string;
+    animationUrl: string;
+  }[] {
     return this.audioRoomsService.getExclusiveEmojis();
   }
 }

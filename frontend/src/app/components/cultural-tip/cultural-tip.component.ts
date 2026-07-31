@@ -1,13 +1,12 @@
-import { Component, inject, input, effect } from '@angular/core';
+import { Component, inject, input, resource } from '@angular/core';
 import { CulturalGuideService } from '../../services/cultural-guide.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-cultural-tip',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
-    @if (guide(); as text) {
+    @if (guideResource.value(); as text) {
       <div
         class="ps-4 pe-4 py-3 rounded-xl bg-surface-2 border-s-4 border-e-0 border-accent
                text-sm leading-relaxed"
@@ -25,14 +24,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
 export class CulturalTipComponent {
   language = input.required<string>();
   private culturalGuideService = inject(CulturalGuideService);
-  protected guide = this.culturalGuideService.guide.asReadonly();
 
-  constructor() {
-    effect(() => {
-      const lang = this.language();
-      if (lang) {
-        this.culturalGuideService.fetchGuide(lang);
-      }
-    });
-  }
+  protected guideResource = resource({
+    params: () => ({ language: this.language() }),
+    loader: ({ params }) => this.culturalGuideService.fetchGuide(params.language),
+  });
 }

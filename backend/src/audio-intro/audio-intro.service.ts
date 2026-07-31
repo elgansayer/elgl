@@ -27,7 +27,7 @@ export class AudioIntroService {
 
   async getPresignedUploadUrl(
     filename: string,
-    contentType: string,
+    _contentType: string,
   ): Promise<{ uploadUrl: string; mediaUrl: string }> {
     const supabase = this.supabase.getClient();
     const bucket = 'audio'; // ensure this bucket exists in Supabase storage

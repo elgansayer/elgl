@@ -729,9 +729,10 @@ export class NlpService {
     };
   }
 
-  async generateSessionSummary(
-    text: string,
-  ): Promise<{ summary: string; vocabulary: string[] }> {
+  generateSessionSummary(text: string): {
+    summary: string;
+    vocabulary: string[];
+  } {
     if (!text || text.trim().length === 0) {
       return { summary: 'No transcript available.', vocabulary: [] };
     }

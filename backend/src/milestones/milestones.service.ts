@@ -6,7 +6,7 @@ export class MilestonesService {
   // In-memory store per user for quick demo; real data should go to DB
   private userMilestones = new Map<string, any[]>();
 
-  async create(dto: CreateMilestoneDto, userId: string) {
+  create(dto: CreateMilestoneDto, userId: string) {
     const milestone = {
       id: Date.now().toString(),
       userId,
@@ -20,16 +20,16 @@ export class MilestonesService {
     return milestone;
   }
 
-  async findAllForUser(userId: string) {
+  findAllForUser(userId: string) {
     return this.userMilestones.get(userId) || [];
   }
 
-  async findOneForUser(userId: string, milestoneId: string) {
+  findOneForUser(userId: string, milestoneId: string) {
     const userMilestones = this.userMilestones.get(userId) || [];
     return userMilestones.find((m) => m.id === milestoneId) || null;
   }
 
-  async markCompleted(milestoneId: string, userId: string) {
+  markCompleted(milestoneId: string, userId: string) {
     const userMilestones = this.userMilestones.get(userId);
     if (!userMilestones) return null;
     const milestone = userMilestones.find((m) => m.id === milestoneId);
@@ -40,7 +40,7 @@ export class MilestonesService {
     return null;
   }
 
-  async getProgress(userId: string) {
+  getProgress(userId: string) {
     const milestones = this.userMilestones.get(userId) || [];
     const total = milestones.length;
     const completed = milestones.filter((m) => m.completed).length;

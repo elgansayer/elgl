@@ -29,18 +29,25 @@ export class NotificationPreferencesService {
     userId: string,
     dto: UpdateNotificationPreferencesDto,
   ): Promise<any> {
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from(this.table)
-      .upsert({ userId, ...dto, updatedAt: new Date().toISOString() })
-      .single();
-    if (error) throw error;
-    return data;
+    return this.upsertPreferences(userId, dto);
   }
 
   async resetToDefaults(userId: string): Promise<any> {
     const defaults = this.getDefaultPreferences(userId);
-    return this.updatePreferences(userId, defaults);
+    return this.upsertPreferences(userId, defaults);
+  }
+
+  private async upsertPreferences(
+    userId: string,
+    changes: object,
+  ): Promise<any> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from(this.table)
+      .upsert({ userId, ...changes, updatedAt: new Date().toISOString() })
+      .single();
+    if (error) throw error;
+    return data;
   }
 
   private getDefaultPreferences(userId: string) {

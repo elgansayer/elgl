@@ -754,7 +754,7 @@ export class AudioRoomsService implements OnModuleInit {
 
     // Generate full transcript using speech‑to‑text (implemented via LiveKit egress or external STT)
     let transcriptText =
-      await this.transcriptEgress.generateTranscriptFromAudioUrl(recordingUrl);
+      this.transcriptEgress.generateTranscriptFromAudioUrl(recordingUrl);
 
     if (!transcriptText) {
       // fallback: build transcript from sent captions if egress not available
@@ -774,7 +774,7 @@ export class AudioRoomsService implements OnModuleInit {
     }
 
     const sessionSummary = transcriptText
-      ? await this.nlpService.generateSessionSummary(transcriptText)
+      ? this.nlpService.generateSessionSummary(transcriptText)
       : { summary: 'No transcript available.', vocabulary: [] };
 
     await supabase
@@ -1242,7 +1242,7 @@ export class AudioRoomsService implements OnModuleInit {
     return this.exclusiveEmojiList;
   }
 
-  async getSoundboardSounds(): Promise<{ sounds: any[] }> {
+  getSoundboardSounds(): { sounds: any[] } {
     return { sounds: this.soundboardSounds };
   }
 

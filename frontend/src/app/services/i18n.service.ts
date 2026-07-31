@@ -946,13 +946,6 @@ export class I18nService {
     'gdpr.deleteSuccess': 'Account deletion initiated. Check your email for confirmation.',
 
     'culturalGuide.title': 'Cultural Etiquette Guide',
-    'culturalGuide.french': 'In France, it is polite to greet with "Bonjour" and use "vous" for formal situations.',
-    'culturalGuide.japanese': 'In Japan, bowing is the customary greeting rather than handshakes. Avoid direct eye contact.',
-    'culturalGuide.arabic': 'In Arabic cultures, greetings are warm and often include "As-salamu alaykum". Use right hand for handshakes.',
-    'culturalGuide.spanish': 'In Spain, friends often greet with a hug or kiss on both cheeks. Use "tú" for informal contexts.',
-    'culturalGuide.korean': 'In Korea, bowing is common; use two hands when giving or receiving something. Respect elders.',
-    'culturalGuide.russian': 'In Russia, it is customary to bring a gift when visiting someone’s home and remove shoes at the door.',
-    'culturalGuide.italian': 'In Italy, greetings are enthusiastic; expect gestures during conversation. Use "ciao" for informal.',
     'settings.hideOnlineStatus': 'Hide online status',
     'settings.hideVipStatus': 'Hide VIP status',
     'settings.fontScale': 'Text size',

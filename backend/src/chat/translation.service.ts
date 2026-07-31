@@ -46,9 +46,6 @@ export class TranslationService {
         return 'en';
       }
 
-      const languages: { language: string; name: string }[] =
-        await response.json();
-
       // For simplicity we only try to parse the text using NLP later,
       // but here we rely on DeepL's detect endpoint for accuracy.
       const detectUrl = 'https://api-free.deepl.com/v2/translate';
