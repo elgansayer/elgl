@@ -16,8 +16,9 @@ export interface TranslationExplanations {
 
 @Injectable()
 export class TranslationService {
-  private r2?: string;
   private deeplApiKey?: string;
+  private readonly translationCache = new Map<string, string>();
+  private readonly detectionCache = new Map<string, string>();
 
   constructor(private configService: ConfigService) {
     this.deeplApiKey = this.configService.get<string>('DEEPL_API_KEY');
@@ -32,26 +33,23 @@ export class TranslationService {
       return 'en';
     }
 
-    const url = 'https://api-free.deepl.com/v2/languages';
+    const trimmed = text.trim();
+    if (trimmed.length === 0) {
+      return 'en';
+    }
+
+    const cacheKey = trimmed.toLowerCase();
+    const cached = this.detectionCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const detectUrl = 'https://api-free.deepl.com/v2/translate';
+    const formData = new URLSearchParams();
+    formData.append('text', text);
+    formData.append('target_lang', 'EN'); // always temporary
+
     try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          Authorization: `DeepL-Auth-Key ${this.deeplApiKey}`,
-        },
-      });
-
-      if (!response.ok) {
-        console.warn('Language detection failed, falling back to en');
-        return 'en';
-      }
-
-      // For simplicity we only try to parse the text using NLP later,
-      // but here we rely on DeepL's detect endpoint for accuracy.
-      const detectUrl = 'https://api-free.deepl.com/v2/translate';
-      const formData = new URLSearchParams();
-      formData.append('text', text);
-      formData.append('target_lang', 'EN'); // always temporary
       const detectRes = await fetch(detectUrl, {
         method: 'POST',
         headers: {
@@ -62,14 +60,29 @@ export class TranslationService {
       });
 
       if (!detectRes.ok) {
+        console.warn('Language detection failed, falling back to en');
         return 'en';
       }
 
-      const body = await detectRes.json();
-      if (body && body.translations && body.translations.length > 0) {
-        const detectedSource =
-          body.translations[0].detected_source_language || 'en';
-        return detectedSource.toLowerCase();
+      const body: unknown = await detectRes.json();
+      const bodyRecord =
+        body !== null && typeof body === 'object'
+          ? (body as Record<string, unknown>)
+          : null;
+      const translations = bodyRecord?.['translations'];
+      if (!Array.isArray(translations) || translations.length === 0) {
+        return 'en';
+      }
+
+      const first = translations[0];
+      if (first !== null && typeof first === 'object') {
+        const record = first as Record<string, unknown>;
+        const detected = record['detected_source_language'];
+        if (typeof detected === 'string' && detected.length > 0) {
+          const normalized = detected.toLowerCase();
+          this.detectionCache.set(cacheKey, normalized);
+          return normalized;
+        }
       }
 
       return 'en';
@@ -90,6 +103,12 @@ export class TranslationService {
   ): Promise<string> {
     if (!this.deeplApiKey) {
       return text;
+    }
+
+    const key = `${text}|${sourceLang.toUpperCase()}|${targetLang.toUpperCase()}`;
+    const cached = this.translationCache.get(key);
+    if (cached !== undefined) {
+      return cached;
     }
 
     const url = 'https://api-free.deepl.com/v2/translate';
@@ -113,16 +132,44 @@ export class TranslationService {
         return text;
       }
 
-      const body = await response.json();
-      if (body && body.translations && body.translations.length > 0) {
-        return body.translations[0].text;
+      const body: unknown = await response.json();
+      const bodyRecord =
+        body !== null && typeof body === 'object'
+          ? (body as Record<string, unknown>)
+          : null;
+      const translations = bodyRecord?.['translations'];
+      if (Array.isArray(translations) && translations.length > 0) {
+        const first = translations[0];
+        if (first !== null && typeof first === 'object') {
+          const record = first as Record<string, unknown>;
+          const translation = record['text'];
+          if (typeof translation === 'string' && translation.length > 0) {
+            this.translationCache.set(key, translation);
+            return translation;
+          }
+        }
       }
 
+      this.translationCache.set(key, text);
       return text;
     } catch {
+      this.translationCache.set(key, text);
       console.warn('Translation error, returning original text');
       return text;
     }
+  }
+
+  /**
+   * Translates `text` to `targetLang` and returns both the translated result and the detected language.
+   * Primarily used for the real‑time chat overlay in Voicerooms.
+   */
+  async translateWithDetection(
+    text: string,
+    targetLang: string,
+  ): Promise<{ translatedText: string; detectedLanguage: string }> {
+    const detected = await this.detectLanguage(text);
+    const translated = await this.translate(text, detected, targetLang);
+    return { translatedText: translated, detectedLanguage: detected };
   }
 
   /**

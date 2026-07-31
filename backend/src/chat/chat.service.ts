@@ -832,6 +832,23 @@ export class ChatService {
     return this.sendMessage(userId, msgDto);
   }
 
+  async translateMessage(
+    userId: string,
+    text: string,
+    targetLanguage: string,
+  ): Promise<string> {
+    if (!text || !text.trim()) {
+      throw new BadRequestException('Text cannot be empty');
+    }
+    if (!targetLanguage || !targetLanguage.trim()) {
+      throw new BadRequestException('Target language cannot be empty');
+    }
+    return this.chatLlmService.translateText(
+      text.trim(),
+      targetLanguage.trim(),
+    );
+  }
+
   async llmProxy(
     userId: string,
     messageText: string,

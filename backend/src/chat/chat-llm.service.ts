@@ -228,4 +228,18 @@ export class ChatLlmService {
     const response = await this.chatCompletion(messages);
     return { response };
   }
+
+  /**
+   * Translates a given text into the specified target language using the configured LLM.
+   */
+  async translateText(text: string, targetLanguage: string): Promise<string> {
+    const prompt = `Translate the following text into ${targetLanguage}. Respond only with the translated text, without any surrounding quotes or commentary.\n\n${text}`;
+    const response = await this.generateText(prompt, {
+      system:
+        'You are a precise translation engine. Provide accurate natural translations without adding explanations.',
+      temperature: 0.2,
+      maxTokens: 512,
+    });
+    return response.trim();
+  }
 }

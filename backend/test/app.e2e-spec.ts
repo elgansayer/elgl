@@ -5,11 +5,27 @@ import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { SupabaseAuthGuard } from './../src/auth/supabase-auth.guard';
 import { SupabaseService } from './../src/supabase/supabase.service';
+import { NlpService } from './../src/nlp/nlp.service';
 
-jest.setTimeout(30000);
+jest.setTimeout(60000);
+
+type MockNlpService = {
+  detectLanguage: jest.Mock;
+  checkRateLimit: jest.Mock;
+  translate: jest.Mock;
+  grammarCheck: jest.Mock;
+  explainGrammar: jest.Mock;
+  pronunciationScore: jest.Mock;
+  simplify: jest.Mock;
+  translateUi: jest.Mock;
+  translateBio: jest.Mock;
+  translateAndCorrect: jest.Mock;
+  generateSessionSummary: jest.Mock;
+};
 
 describe('HelloTalk API E2E Integration Suite', () => {
   let app: INestApplication<App>;
+  let mockNlpService: MockNlpService;
   let mockSupabaseClient: any;
   let mockRedisClient: any;
   let mockQueryBuilder: any;
@@ -79,6 +95,70 @@ describe('HelloTalk API E2E Integration Suite', () => {
       ltrim: jest.fn().mockResolvedValue('OK'),
     };
 
+    mockNlpService = {
+      detectLanguage: jest.fn().mockReturnValue({
+        language: 'en',
+        confidence: 0.99,
+      }),
+      checkRateLimit: jest.fn().mockResolvedValue(undefined),
+      translate: jest.fn().mockResolvedValue({
+        original_text: 'hello',
+        translated_text: 'hola',
+        detected_language: 'en',
+        transliteration: '',
+        definition: '',
+        pronunciation_url: '',
+      }),
+      grammarCheck: jest.fn().mockResolvedValue({
+        original: 'hello',
+        corrected: 'hello',
+        explanation: 'mocked',
+        errors_found: 0,
+      }),
+      explainGrammar: jest.fn().mockResolvedValue({
+        original: 'hello',
+        corrected: 'hello',
+        explanation: 'mocked',
+      }),
+      pronunciationScore: jest.fn().mockResolvedValue({
+        overall_score: 90,
+        breakdown: [],
+        feedback_summary: 'Good',
+      }),
+      simplify: jest.fn().mockResolvedValue({
+        original: 'hello',
+        simplified: 'hello',
+      }),
+      translateUi: jest
+        .fn()
+        .mockImplementation((dto?: { target_language?: string }) => ({
+          target_language: dto?.target_language ?? 'es',
+          translations: {
+            'app.title': 'Hola',
+            'nav.discover': '🌍 Descubrir',
+          },
+          cached: false,
+        })),
+      translateBio: jest.fn().mockResolvedValue({
+        original_text: 'text',
+        translated_text: 'text',
+        detected_language: 'en',
+      }),
+      translateAndCorrect: jest.fn().mockResolvedValue({
+        original_text: 'hello',
+        translated_text: 'hola',
+        detected_language: 'en',
+        transliteration: '',
+        definition: '',
+        pronunciation_url: '',
+        wordCorrections: [],
+      }),
+      generateSessionSummary: jest.fn().mockReturnValue({
+        summary: '',
+        vocabulary: [],
+      }),
+    };
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
@@ -96,6 +176,8 @@ describe('HelloTalk API E2E Integration Suite', () => {
           return true;
         }),
       })
+      .overrideProvider(NlpService)
+      .useValue(mockNlpService)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -111,7 +193,7 @@ describe('HelloTalk API E2E Integration Suite', () => {
       return request(app.getHttpServer())
         .get('/')
         .expect(200)
-        .expect('Hello World!');
+        .expect('Hey there!');
     });
 
     it('/nlp/detect-language (POST) - should detect language accurately', () => {

@@ -154,6 +154,31 @@ export class ChatController {
     return { translated_text: translated, detected_language: detected };
   }
 
+  @Post('translate-real-time')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  async translateRealTime(
+    @CurrentUser() user: User | null,
+    @Body() dto: { text: string; target_language: string },
+  ): Promise<{
+    translated_text: string;
+    original_text: string;
+    target_language: string;
+    detected_language: string;
+  } | null> {
+    if (!user) return null;
+    const { translatedText, detectedLanguage } =
+      await this.translationService.translateWithDetection(
+        dto.text,
+        dto.target_language,
+      );
+    return {
+      original_text: dto.text,
+      translated_text: translatedText,
+      target_language: dto.target_language,
+      detected_language: detectedLanguage,
+    };
+  }
+
   @Post('messages/status-reply')
   async replyToStatusUpdate(
     @CurrentUser() user: User | null,
