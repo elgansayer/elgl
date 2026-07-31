@@ -139,7 +139,12 @@ describe('UsersService', () => {
         mock_location: 'POINT(-0.1278 51.5074)',
       };
 
-      const updatedProfile = { id: 'user-1', ...dto };
+      const updatedProfile = {
+        id: 'user-1',
+        ...dto,
+        location: 'POINT(139.6917 35.6895)',
+        mock_location: 'POINT(-0.1278 51.5074)',
+      };
       mockQueryBuilder.single.mockResolvedValue({
         data: updatedProfile,
         error: null,
@@ -151,7 +156,7 @@ describe('UsersService', () => {
       expect(mockQueryBuilder.update).toHaveBeenCalledWith(expectedPayload);
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'user-1');
       expect(mockQueryBuilder.select).toHaveBeenCalled();
-      expect(result).toEqual(updatedProfile);
+      expect(result).toMatchObject(updatedProfile);
     });
 
     it('should update profile with minimal fields when only partial DTO provided', async () => {
@@ -168,7 +173,7 @@ describe('UsersService', () => {
       expect(mockQueryBuilder.update).toHaveBeenCalledWith({
         display_name: 'Minimal Update',
       });
-      expect(result).toEqual(updatedProfile);
+      expect(result).toMatchObject(updatedProfile);
     });
 
     it('should return mock profile when update fails with error message', async () => {

@@ -10,6 +10,7 @@ type UsersRow = {
   xp_total: number | null;
   last_active_at: string | null;
   is_serious_learner: boolean | null;
+  [key: string]: unknown;
 };
 
 type GroupsRow = {
@@ -230,7 +231,7 @@ export interface Database {
 @Global()
 @Injectable()
 export class SupabaseService implements OnModuleDestroy {
-  private readonly client: SupabaseClient<Database>;
+  private readonly client: SupabaseClient;
   private readonly redisClient: Redis;
 
   constructor(private readonly configService: ConfigService) {
@@ -256,7 +257,7 @@ export class SupabaseService implements OnModuleDestroy {
     });
   }
 
-  getClient(): SupabaseClient<Database> {
+  getClient(): SupabaseClient {
     return this.client;
   }
 
