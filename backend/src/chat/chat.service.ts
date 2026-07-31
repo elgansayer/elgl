@@ -442,32 +442,31 @@ export class ChatService {
     userId: string,
     dto: SuggestedRepliesRequestDto,
   ): Promise<{ suggestions: string[] }> {
-    // Use the LLM proxy to generate context-aware suggestions
     const recentMessages = dto.recent_messages ?? [];
     const contextMessages = recentMessages.slice(-10);
+
+    let prompt: string;
     if (contextMessages.length === 0) {
-      // fallback to static suggestions if no context is provided
-      return {
-        suggestions: [
-          'Sure, let’s talk about travel.',
-          'Could you help me with my pronunciation?',
-          'I enjoyed that conversation.',
-        ],
-      };
+      prompt =
+        'Generate 3 short, natural conversation starters for a new language exchange chat. Return one suggestion per line, without numbers or bullet points.';
+    } else {
+      const contextLines = contextMessages
+        .map((m) => `${m.sender_id}: ${m.text}`)
+        .join('\n');
+      prompt = `Based on this conversation:\n${contextLines}\n\nGenerate 3 short, natural suggested replies that the user could send next. Return one suggestion per line, without numbers or bullet points.`;
     }
-    const contextLines = contextMessages
-      .map((m) => `${m.sender_id}: ${m.text}`)
-      .join('\n');
-    const prompt = `Based on this conversation:\n${contextLines}\n\nGenerate 3 suggested replies that the user could send next. Format each reply on a separate line, without numbers.`;
+
     try {
-      const { response } = await this.chatLlmService.proxyMessage(prompt);
-      const lines = response
-        .split('\n')
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0);
+      const response = await this.chatLlmService.generateText(prompt, {
+        system:
+          'You are a helpful language learning conversation assistant. Provide concise, natural suggestions that fit the given context.',
+        temperature: 0.8,
+        maxTokens: 150,
+      });
+      const lines = this.parseSuggestedReplies(response);
       const suggestions = lines.slice(0, 3);
       if (suggestions.length === 0) {
-        throw new Error('Empty response from LLM proxy');
+        throw new Error('Empty response from LLM');
       }
       return { suggestions };
     } catch (error) {
@@ -484,6 +483,30 @@ export class ChatService {
         ],
       };
     }
+  }
+
+  private parseSuggestedReplies(raw: string): string[] {
+    const lines = raw
+      .split(/\r?\n/)
+      .map((line) =>
+        line
+          .replace(/^\s*[-•*]\s*/, '')
+          .replace(/^\s*\d+[.):]\s*/, '')
+          .replace(/^["'“”]/, '')
+          .replace(/["'“”]+$/, '')
+          .trim(),
+      )
+      .filter((line) => line.length > 0);
+
+    const seen = new Set<string>();
+    const uniqueLines: string[] = [];
+    for (const line of lines) {
+      if (!seen.has(line)) {
+        seen.add(line);
+        uniqueLines.push(line);
+      }
+    }
+    return uniqueLines;
   }
 
   async createGroup(
