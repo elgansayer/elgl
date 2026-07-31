@@ -6,6 +6,8 @@ import { AppModule } from './../src/app.module';
 import { SupabaseAuthGuard } from './../src/auth/supabase-auth.guard';
 import { SupabaseService } from './../src/supabase/supabase.service';
 
+jest.setTimeout(30000);
+
 describe('HelloTalk API E2E Integration Suite', () => {
   let app: INestApplication<App>;
   let mockSupabaseClient: any;

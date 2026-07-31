@@ -18,7 +18,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <h2 class="text-2xl font-black text-text-primary">
           {{ 'forcedUpdateModal.title' | t }}
         </h2>
-        <p class="text-sm text-text-secondary">{{ message }}</p>
+        <p class="text-sm text-text-secondary">{{ message() }}</p>
         <button
           (click)="handleUpdate()"
           class="w-full px-6 py-3 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold text-lg shadow transition-all"

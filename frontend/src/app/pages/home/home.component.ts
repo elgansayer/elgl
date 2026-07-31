@@ -1,13 +1,21 @@
-import { Component, inject } from '@angular/core';
+import { Component, effect, inject, resource, signal } from '@angular/core';
 
 import { AuthService } from '../../services/auth.service';
 import { StudyStreakWidgetComponent } from '../../components/study-streak-widget/study-streak-widget.component';
 import { WordOfTheDayComponent } from '../../components/word-of-the-day/word-of-the-day.component';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { UserService } from '../../services/user.service';
+import { StreakMilestoneService } from '../../services/streak-milestone.service';
+import { StreakCelebrationOverlayComponent } from '../../components/streak-celebration-overlay/streak-celebration-overlay.component';
 
 @Component({
   selector: 'app-home',
-  imports: [StudyStreakWidgetComponent, WordOfTheDayComponent, TranslatePipe],
+  imports: [
+    StudyStreakWidgetComponent,
+    WordOfTheDayComponent,
+    TranslatePipe,
+    StreakCelebrationOverlayComponent,
+  ],
   template: `
     <div class="min-h-screen bg-[#121212] text-white">
       <header class="py-4 ps-4 pe-4 border-b border-gray-700 flex items-center justify-between">
@@ -23,6 +31,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <app-study-streak-widget></app-study-streak-widget>
         <app-word-of-the-day></app-word-of-the-day>
       </main>
+
+      <app-streak-celebration-overlay></app-streak-celebration-overlay>
     </div>
   `,
   styles: [
@@ -35,4 +45,34 @@ import { TranslatePipe } from '../../services/translate.pipe';
 })
 export class HomeComponent {
   readonly authService = inject(AuthService);
+  private readonly userService = inject(UserService);
+  private readonly streakMilestoneService = inject(StreakMilestoneService);
+  private readonly previousStreak = signal<number>(0);
+  private readonly celebratedMilestones = signal<Set<number>>(new Set());
+
+  private readonly streakResource = resource({
+    loader: () => this.userService.getStudyStreak(),
+  });
+
+  constructor() {
+    effect(() => {
+      const current = this.streakResource.value();
+      if (current === null || current === undefined) {
+        return;
+      }
+      const previous = this.previousStreak();
+      const milestones = [7, 30, 100];
+      if (
+        milestones.includes(current) &&
+        current > previous &&
+        !this.celebratedMilestones().has(current)
+      ) {
+        this.streakMilestoneService.celebrate(current);
+        const updated = new Set(this.celebratedMilestones());
+        updated.add(current);
+        this.celebratedMilestones.set(updated);
+      }
+      this.previousStreak.set(current);
+    });
+  }
 }
