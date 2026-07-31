@@ -138,6 +138,10 @@ export class ChatRoomComponent implements OnDestroy {
     }
   }
 
+  isOwnMessage(msg: ChatMessage): boolean {
+    return msg.sender_id === this.authService.currentUser()?.id;
+  }
+
   get isAdmin(): boolean {
     const currentUser = this.authService.currentUser();
     return !!(currentUser && this.roomDetails && this.roomDetails.admin_id === currentUser.id);

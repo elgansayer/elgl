@@ -12,6 +12,27 @@ describe('HelloTalk API E2E Integration Suite', () => {
   let mockRedisClient: any;
   let mockQueryBuilder: any;
 
+  beforeAll(() => {
+    process.env.SUPABASE_URL = 'https://hellotalk.test.supabase.co';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-key';
+    process.env.REDIS_URL = 'redis://localhost:6379';
+    process.env.CENTRIFUGO_API_KEY = 'test-centrifugo-api-key';
+    process.env.CENTRIFUGO_SECRET = 'test-centrifugo-secret';
+    process.env.LIVEKIT_API_KEY = 'test-livekit-key';
+    process.env.LIVEKIT_SECRET = 'test-livekit-secret';
+    process.env.LIVEKIT_URL = 'ws://localhost:7880';
+    process.env.CLOUDFLARE_R2_ENDPOINT = 'https://test-r2.example.com';
+    process.env.CLOUDFLARE_R2_ACCESS_KEY_ID = 'test-r2-access';
+    process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY = 'test-r2-secret';
+    process.env.CLOUDFLARE_R2_BUCKET = 'test-bucket';
+    process.env.DEEPL_API_KEY = 'test-deepl-key';
+    process.env.AZURE_TRANSLATOR_KEY = 'test-azure-key';
+    process.env.STRIPE_SECRET_KEY = 'test-stripe-key';
+    process.env.STRIPE_WEBHOOK_SECRET = 'test-stripe-webhook-secret';
+    process.env.JWT_SECRET = 'test-jwt-secret';
+    process.env.NODE_ENV = 'test';
+  });
+
   beforeEach(async () => {
     mockQueryBuilder = {
       select: jest.fn().mockReturnThis(),

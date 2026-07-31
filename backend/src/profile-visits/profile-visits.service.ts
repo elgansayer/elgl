@@ -37,15 +37,28 @@ export class ProfileVisitsService {
     visitorId: string,
     viewedId: string,
     isVipVisitor: boolean,
-    incognitoEnabled: boolean,
   ): Promise<Record<string, unknown>> {
     if (visitorId === viewedId) return { ignored: true };
-    // VIP incognito mode: don't record visit at all
-    if (isVipVisitor && incognitoEnabled) {
-      return { incognito: true, ignored: true };
-    }
 
     const supabase = this.supabaseService.getClient();
+
+    if (isVipVisitor) {
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('privacy_hide_from_search')
+        .eq('id', visitorId)
+        .single();
+
+      if (userError || !user) {
+        const msg = userError?.message ?? 'Unknown error';
+        throw new Error(`Failed to load visitor privacy settings: ${msg}`);
+      }
+
+      if (user.privacy_hide_from_search) {
+        return { incognito: true, ignored: true };
+      }
+    }
+
     const response = await supabase
       .from('profile_visits')
       .insert({

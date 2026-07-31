@@ -35,11 +35,21 @@ import { environment } from '../../../environments/environment';
           [class.justify-start]="!isOwnMessage()"
         >
           <div
-            class="max-w-[70%] rounded-lg p-3"
+            class="relative max-w-[70%] p-3 rounded-ss-lg rounded-se-lg"
+            [class.rounded-es-lg]="isOwnMessage()"
+            [class.rounded-ee-none]="isOwnMessage()"
+            [class.rounded-ee-lg]="!isOwnMessage()"
+            [class.rounded-es-none]="!isOwnMessage()"
             [class.bg-blue-600]="isOwnMessage()"
             [class.text-white]="isOwnMessage()"
             [class.bg-surface-300]="!isOwnMessage()"
           >
+            <span
+              class="chat-bubble-tail"
+              [class.chat-bubble-tail--sent]="isOwnMessage()"
+              [class.chat-bubble-tail--received]="!isOwnMessage()"
+              aria-hidden="true"
+            ></span>
             @if (message().message_type === 'text') {
               <p class="text-sm">
                 @for (segment of textSegments(); track $index) {
@@ -120,6 +130,29 @@ import { environment } from '../../../environments/environment';
     `
       :host {
         display: block;
+      }
+
+      .chat-bubble-tail {
+        position: absolute;
+        bottom: 0;
+        width: 0.4rem;
+        height: 0.4rem;
+        background-color: inherit;
+      }
+
+      .chat-bubble-tail--sent {
+        inset-inline-end: -0.3rem;
+        clip-path: polygon(0 0, 100% 100%, 0 100%);
+      }
+
+      .chat-bubble-tail--received {
+        inset-inline-start: -0.3rem;
+        clip-path: polygon(100% 0, 100% 100%, 0 100%);
+      }
+
+      :dir(rtl) .chat-bubble-tail--sent,
+      :dir(rtl) .chat-bubble-tail--received {
+        transform: scaleX(-1);
       }
     `,
   ],

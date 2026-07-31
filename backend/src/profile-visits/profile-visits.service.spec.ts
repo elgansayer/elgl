@@ -78,20 +78,20 @@ describe('ProfileVisitsService', () => {
 
     it('should record visit for VIP visitor when incognito mode is disabled', async () => {
       // 1st single call: user lookup for privacy setting
-      mockQueryBuilder.single.mockResolvedValueOnce({
+      mockQueryBuilder.single.mockImplementationOnce(async () => ({
         data: { privacy_hide_from_search: false },
         error: null,
-      });
+      }));
       // 2nd single call: profile_visits insert
       const visitRow = {
         id: 'visit-1',
         visitor_id: 'vip-user',
         viewed_id: 'target-user',
       };
-      mockQueryBuilder.single.mockResolvedValueOnce({
+      mockQueryBuilder.single.mockImplementationOnce(async () => ({
         data: visitRow,
         error: null,
-      });
+      }));
 
       const result = await service.recordVisit('vip-user', 'target-user', true);
 

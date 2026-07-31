@@ -61,13 +61,11 @@ import { WordOfTheDayModule } from './word-of-the-day/word-of-the-day.module';
 import { SpamDetectionModule } from './spam-detection/spam-detection.module';
 import { UserStatisticsModule } from './user-statistics/user-statistics.module';
 import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
-import { validationSchema } from './config/validation.schema';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      validationSchema,
       validationOptions: { allowUnknown: true, abortEarly: false },
     }),
     ScheduleModule.forRoot(),

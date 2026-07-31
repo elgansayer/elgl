@@ -51,6 +51,10 @@ import { AppLanguageSelectorComponent } from './components/app-language-selector
 })
 export class AppComponent implements OnInit {
   title = 'HelloTalk Clone';
+
+  public startProductTour(): void {
+    // Placeholder method for the interactive product tour feature.
+  }
   authService = inject(AuthService);
   economyStore = inject(EconomyStore);
   centrifugeService = inject(CentrifugeService);

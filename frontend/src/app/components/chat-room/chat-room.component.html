@@ -131,17 +131,23 @@
             data-testid="chat-message"
             [class]="
               'chat-message flex gap-2 ' +
-              (msg.sender_id === authService.currentUser()?.id ? 'justify-end' : 'justify-start')
+              (isOwnMessage(msg) ? 'justify-end' : 'justify-start')
             "
           >
             <div
               [class]="
-                'max-w-[80%] rounded-2xl ps-3 pe-3 pt-2.5 pb-2.5 text-sm shadow-sm transition-colors ' +
-                (msg.sender_id === authService.currentUser()?.id
-                  ? 'bg-primary text-white'
-                  : 'bg-surface-200 border border-surface-100 text-text-primary')
+                'relative max-w-[80%] ps-3 pe-3 pt-2.5 pb-2.5 text-sm shadow-sm transition-colors ' +
+                (isOwnMessage(msg)
+                  ? 'rounded-ss-2xl rounded-se-2xl rounded-es-2xl rounded-ee-none bg-primary text-white'
+                  : 'rounded-ss-2xl rounded-se-2xl rounded-ee-2xl rounded-es-none border border-surface-100 bg-surface-200 text-text-primary')
               "
             >
+              <span
+                class="chat-bubble-tail"
+                [class.chat-bubble-tail--sent]="isOwnMessage(msg)"
+                [class.chat-bubble-tail--received]="!isOwnMessage(msg)"
+                aria-hidden="true"
+              ></span>
               <p class="mb-1 text-[11px] opacity-70">
                 {{ msg.sender?.display_name || ('chatRoom.partnerFallback' | t) }} ·
                 {{ msg.created_at | date: 'shortTime' }}
