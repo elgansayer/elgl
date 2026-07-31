@@ -304,28 +304,28 @@ async function runSeed() {
   const achievementsData = [
     {
       code: 'first_moment',
-      title: 'First Moment',
+      name: 'First Moment',
       description: 'Publish your first moment',
       category: 'social',
       points: 10,
     },
     {
       code: 'streak_7',
-      title: '7-Day Streak',
+      name: '7-Day Streak',
       description: 'Maintain a 7‑day study streak',
       category: 'streak',
       points: 50,
     },
     {
       code: 'first_correction',
-      title: 'First Correction',
+      name: 'First Correction',
       description: 'Give your first grammar correction',
       category: 'learning',
       points: 20,
     },
     {
       code: 'vip_user',
-      title: 'VIP Member',
+      name: 'VIP Member',
       description: 'Upgrade to a VIP subscription',
       category: 'monetisation',
       points: 100,

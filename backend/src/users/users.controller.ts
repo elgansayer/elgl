@@ -171,13 +171,13 @@ export class UsersController {
   }
 
   @Get('hobbies')
-  async getAvailableHobbies(): Promise<string[]> {
-    return await this.usersService.getAvailableHobbies();
+  getAvailableHobbies(): string[] {
+    return this.usersService.getAvailableHobbies();
   }
 
   @Get('interests')
-  async getAvailableInterests(): Promise<string[]> {
-    return await this.usersService.getAvailableInterests();
+  getAvailableInterests(): string[] {
+    return this.usersService.getAvailableInterests();
   }
 
   @Get('me/badges')
