@@ -38,6 +38,8 @@ export class FontScaleService {
     const stepCount = Math.round((next - MIN_SCALE) / STEP);
     const clamped = Math.min(MAX_SCALE, Math.max(MIN_SCALE, MIN_SCALE + stepCount * STEP));
     this.scaleFactor.set(clamped);
+    this.applyScale(clamped);
+    this.saveToStorage(clamped);
   }
 
   reset(): void {

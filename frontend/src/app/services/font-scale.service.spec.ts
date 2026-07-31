@@ -16,15 +16,15 @@ describe('FontScaleService', () => {
   });
 
   it('should restore a previously saved scale factor from localStorage', () => {
-    localStorage.setItem('hellotalk_font_scale', '1.3');
+    localStorage.setItem('app_font_scale', '110');
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({});
     const freshService = TestBed.inject(FontScaleService);
-    expect(freshService.scaleFactor()).toBe(1.3);
+    expect(freshService.scaleFactor()).toBe(1.1);
   });
 
   it('should ignore an out-of-range saved value and fall back to the default', () => {
-    localStorage.setItem('hellotalk_font_scale', '9.9');
+    localStorage.setItem('app_font_scale', '999');
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({});
     const freshService = TestBed.inject(FontScaleService);
@@ -37,14 +37,14 @@ describe('FontScaleService', () => {
   });
 
   it('should apply the scaled font size to the document root in px', () => {
-    service.setScale(1.5);
+    service.setScale(1.2);
     TestBed.flushEffects();
-    expect(document.documentElement.style.fontSize).toBe('24px');
+    expect(document.documentElement.style.fontSize).toBe('19.2px');
   });
 
   it('should persist the scale factor to localStorage', () => {
     service.setScale(0.8);
     TestBed.flushEffects();
-    expect(localStorage.getItem('hellotalk_font_scale')).toBe('0.8');
+    expect(localStorage.getItem('app_font_scale')).toBe('80');
   });
 });

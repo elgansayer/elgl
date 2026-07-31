@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { IncomingCallComponent } from './incoming-call.component';
 import { I18nService } from '../../services/i18n.service';
+import { UserService } from '../../services/user.service';
+import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 import { CentrifugoService } from '../../services/centrifugo.service';
 import { AuthService } from '../../services/auth.service';
 import { LivekitService } from '../../services/livekit.service';
@@ -68,6 +70,20 @@ describe('IncomingCallComponent', () => {
     await fixture.whenStable();
   });
 
+  beforeEach(async () => {
+    // Mock missing services for the component
+    const userServiceMock = {
+      getMyProfile: vi.fn().mockResolvedValue({ silence_unknown_callers: false }),
+    };
+    const hapticMock = {
+      tap: vi.fn(),
+      success: vi.fn(),
+      error: vi.fn(),
+    };
+    TestBed.overrideProvider(UserService, { useValue: userServiceMock });
+    TestBed.overrideProvider(HapticFeedbackService, { useValue: hapticMock });
+  });
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });
@@ -86,6 +102,7 @@ describe('IncomingCallComponent', () => {
     }
 
     fixture.detectChanges();
+    TestBed.flushEffects();
     expect(component.showCallModal()).toBe(true);
     expect(component.callInfo()).toEqual(callInfo);
   });

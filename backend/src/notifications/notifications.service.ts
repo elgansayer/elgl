@@ -2,6 +2,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
+import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 
 type FirebaseAdmin = any;
 
@@ -19,6 +20,11 @@ export interface LegacyNotificationPreferences {
   do_not_disturb: boolean;
   updatedAt: string;
 }
+
+type UpdatePreferencesInput = Partial<
+  Omit<LegacyNotificationPreferences, 'userId' | 'updatedAt'>
+> &
+  Partial<UpdateNotificationPreferencesDto>;
 
 @Injectable()
 export class NotificationsService {
@@ -61,9 +67,7 @@ export class NotificationsService {
 
   async updatePreferences(
     userId: string,
-    preferences: Partial<
-      Omit<LegacyNotificationPreferences, 'userId' | 'updatedAt'>
-    >,
+    preferences: UpdatePreferencesInput,
   ): Promise<void> {
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase.from('notification_preferences').upsert(

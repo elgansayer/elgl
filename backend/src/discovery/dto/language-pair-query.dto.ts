@@ -33,6 +33,10 @@ export class LanguagePairQueryDto {
   sort?: string = 'best_match';
 
   @IsOptional()
+  @IsString()
+  level?: string;
+
+  @IsOptional()
   @Transform(
     ({ value }: { value: unknown }) => value === 'true' || value === true,
   )

@@ -78,11 +78,11 @@ export class NotificationPreferencesDto {
 
   @IsString()
   @IsOptional()
-  quiet_hours_start?: string;
+  quiet_hours_start?: string | null;
 
   @IsString()
   @IsOptional()
-  quiet_hours_end?: string;
+  quiet_hours_end?: string | null;
 
   @IsBoolean()
   @IsOptional()

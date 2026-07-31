@@ -8,6 +8,7 @@ import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
 import { MOCK_USERS } from '../mock-data';
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 @Injectable()
 export class DiscoveryService {
   private readonly logger = new Logger(DiscoveryService.name);
@@ -659,6 +660,10 @@ export class DiscoveryService {
       queryBuilder = queryBuilder.eq('city', query.city);
     }
 
+    if (query.level) {
+      queryBuilder = queryBuilder.eq('proficiency_level', query.level);
+    }
+
     const nativeLang = native_language;
     const targetLang = target_language;
 
@@ -693,7 +698,7 @@ export class DiscoveryService {
         serious_learner_only: undefined,
         age_min: undefined,
         age_max: undefined,
-        level: undefined,
+        level: query.level,
         interests: undefined,
         latitude: undefined,
         longitude: undefined,

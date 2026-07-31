@@ -164,6 +164,7 @@ export class IncomingCallComponent implements OnDestroy {
 
   private async handleIncomingCall(info: IncomingCallInfo): Promise<void> {
     this.callInfo.set(info);
+    this.showCallModal.set(true);
     const _userId = this.authService.currentUser()?.id;
     if (_userId) {
       await this.loadSilenceSetting(_userId);
@@ -173,7 +174,6 @@ export class IncomingCallComponent implements OnDestroy {
       this.rejectCall();
       return;
     }
-    this.showCallModal.set(true);
     this.playRingtone();
   }
 

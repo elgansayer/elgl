@@ -102,8 +102,8 @@ export class GroupsDiscoveryComponent {
         throw new Error(err.message || 'Failed to join');
       }
       await this.fetchGroups();
-    } catch (e: unknown) {
-      this.error.set(e.message);
+    } catch {
+      this.error.set('Failed to join');
     } finally {
       this.joiningId.set(null);
     }

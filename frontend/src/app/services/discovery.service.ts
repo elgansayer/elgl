@@ -251,12 +251,19 @@ export class DiscoveryService {
     targetLanguage?: string,
     country?: string,
     city?: string,
+    proficiencyLevel?: string,
   ): Promise<UserProfile[]> {
     let params = new HttpParams();
     if (nativeLanguage) params = params.set('native_language', nativeLanguage);
     if (targetLanguage) params = params.set('target_language', targetLanguage);
     if (country) params = params.set('country', country);
     if (city) params = params.set('city', city);
+    if (proficiencyLevel) {
+      const mappedLevel =
+        this.PROFICIENCY_LEVEL_MAP[proficiencyLevel.toLowerCase()] ??
+        proficiencyLevel;
+      params = params.set('level', mappedLevel);
+    }
     const users = await firstValueFrom(
       this.http
         .get<UserProfile[]>(`${this.baseUrl}/language-pair`, {
