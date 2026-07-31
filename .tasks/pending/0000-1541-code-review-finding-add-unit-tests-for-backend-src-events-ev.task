@@ -1,0 +1,1 @@
+Code review finding: Add unit tests for backend/src/events/events.service (from commit 259c2418: Call logs (missed, incoming, outgoing).)

@@ -5,6 +5,7 @@ import {
   ConflictException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SystemMessageService } from './services/system-message.service';
 import { ChatRoomRecord } from './interfaces/chat-message.interface';
@@ -15,6 +16,7 @@ export class GroupsService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly systemMessageService: SystemMessageService,
+    private readonly configService: ConfigService,
   ) {}
 
   private async verifyAdmin(userId: string, roomId: string): Promise<void> {
@@ -165,6 +167,32 @@ export class GroupsService {
     if (error)
       throw new InternalServerErrorException('Failed to generate invite code');
     return code;
+  }
+
+  async generateInviteLink(
+    userId: string,
+    roomId: string,
+  ): Promise<{ code: string; url: string }> {
+    const code = await this.generateInviteCode(userId, roomId);
+    const baseUrl =
+      this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:4200';
+    const url = `${baseUrl}/join/${code}`;
+    return { code, url };
+  }
+
+  async getInviteInfo(
+    code: string,
+  ): Promise<{ roomId: string; title: string }> {
+    const supabase = this.supabaseService.getClient();
+    const { data: room, error } = await supabase
+      .from('chat_rooms')
+      .select('id, title')
+      .eq('invite_code', code)
+      .maybeSingle();
+    if (error || !room) {
+      throw new NotFoundException('Invalid or expired invite link');
+    }
+    return { roomId: room.id, title: room.title };
   }
 
   async joinByInviteCode(userId: string, code: string): Promise<void> {

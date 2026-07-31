@@ -48,6 +48,22 @@ export class GroupsService {
     );
   }
 
+  generateInviteLink(roomId: string): Promise<{ code: string; url: string }> {
+    return firstValueFrom(
+      this.http.get<{ code: string; url: string }>(
+        `${this.apiUrl}/${roomId}/invite-link`,
+      ),
+    );
+  }
+
+  getInviteInfo(code: string): Promise<{ roomId: string; title: string }> {
+    return firstValueFrom(
+      this.http.get<{ roomId: string; title: string }>(
+        `${this.apiUrl}/invite-info/${code}`,
+      ),
+    );
+  }
+
   sendAnnouncement(groupId: string, message: string): Promise<{ success: boolean }> {
     return firstValueFrom(
       this.http.post<{ success: boolean }>(`${this.apiUrl}/${groupId}/announcement`, { message }),

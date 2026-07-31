@@ -446,4 +446,16 @@ export const routes: Routes = [
       import('./components/events-calendar/events-calendar.component').then((m) => m.EventsCalendarComponent),
     title: 'Event Calendar - HelloTalk',
   },
+  {
+    path: 'join',
+    loadComponent: () =>
+      import('./pages/join-group/join-group.component').then((m) => m.JoinGroupComponent),
+    title: 'Join Group - HelloTalk',
+  },
+  {
+    path: 'join/:code',
+    loadComponent: () =>
+      import('./pages/join-group/join-group.component').then((m) => m.JoinGroupComponent),
+    title: 'Join Group - HelloTalk',
+  },
 ];

@@ -86,6 +86,24 @@ export class GroupsController {
     return { code };
   }
 
+  @Get(':roomId/invite-link')
+  async generateInviteLink(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+  ): Promise<{ code: string; url: string } | null> {
+    if (!user) return null;
+    return await this.groupsService.generateInviteLink(user.id, roomId);
+  }
+
+  @Get('invite-info/:code')
+  async getInviteInfo(
+    @CurrentUser() user: User | null,
+    @Param('code') code: string,
+  ): Promise<{ roomId: string; title: string } | null> {
+    if (!user) return null;
+    return await this.groupsService.getInviteInfo(code);
+  }
+
   @Post('join-by-code')
   async joinByInviteCode(
     @CurrentUser() user: User | null,
