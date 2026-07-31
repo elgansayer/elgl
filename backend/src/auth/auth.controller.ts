@@ -1,5 +1,6 @@
-import { Controller, Post, Body, Req } from '@nestjs/common';
+import { Controller, Post, Body, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { SupabaseAuthGuard } from './supabase-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -17,18 +18,16 @@ export class AuthController {
     return { message: 'Password successfully reset' };
   }
 
+  @UseGuards(SupabaseAuthGuard)
   @Post('change-password')
   async changePassword(
     @Req() req: any,
     @Body('newPassword') newPassword: string,
   ) {
-    const authHeader = req.headers['authorization'];
-    if (!authHeader) {
-      throw new Error('Authorization header missing');
+    if (!req.user || !req.user.id) {
+      throw new Error('Unauthorized');
     }
-    const jwt = authHeader.replace('Bearer ', '');
-    const decoded: any = require('jwt-decode')(jwt);
-    const userId: string = decoded.sub;
+    const userId: string = req.user.id;
     await this.authService.changePassword(userId, newPassword);
     return { message: 'Password changed successfully' };
   }
