@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Pipe, PipeTransform } from '@angular/core';
 import { signal } from '@angular/core';
+import type { Mock } from 'vitest';
 import { ThemeSelectorComponent } from './theme-selector.component';
 import { Theme, ThemeService } from '../../services/theme.service';
 import { TranslatePipe } from '../../services/translate.pipe';

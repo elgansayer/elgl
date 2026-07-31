@@ -1,5 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {Component, inject, signal} from '@angular/core';import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import {
   ModerationService,

@@ -2,25 +2,16 @@ import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { LongPressContextMenuComponent } from './long-press-context-menu.component';
-import { ReportUserModalService } from '../report-user-modal/report-user-modal.service';
-
-(globalThis as any).Touch = class Touch {} as any;
-
-(globalThis as any).TouchEvent = class TouchEvent extends Event {} as any;
+import { I18nService } from '../../services/i18n.service';
 
 describe('LongPressContextMenuComponent', () => {
   let component: LongPressContextMenuComponent;
   let fixture: ComponentFixture<LongPressContextMenuComponent>;
-  let reportModalService: { open: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
-    reportModalService = {
-      open: vi.fn(),
-    };
-
     await TestBed.configureTestingModule({
       imports: [LongPressContextMenuComponent],
-      providers: [{ provide: ReportUserModalService, useValue: reportModalService }],
+      providers: [I18nService],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LongPressContextMenuComponent);
@@ -37,149 +28,103 @@ describe('LongPressContextMenuComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should emit copy event when copy option is clicked', () => {
+  it('should emit copyMessage and close the menu when doCopy is called', () => {
     vi.spyOn(component.copyMessage, 'emit');
+    component.menuVisible.set(true);
 
-    (component as any).onOptionClick('copy');
+    component.doCopy();
+
     expect(component.copyMessage.emit).toHaveBeenCalledWith({
       messageId: 'test-message-id',
       content: 'Hello world',
     });
+    expect(component.menuVisible()).toBe(false);
   });
 
-  it('should emit favourite event when favourite option is clicked', () => {
+  it('should emit favourite and close the menu when doFavourite is called', () => {
     vi.spyOn(component.favourite, 'emit');
+    component.menuVisible.set(true);
 
-    (component as any).onOptionClick('favourite');
+    component.doFavourite();
+
     expect(component.favourite.emit).toHaveBeenCalledWith({
       messageId: 'test-message-id',
       content: 'Hello world',
       messageType: 'text',
     });
+    expect(component.menuVisible()).toBe(false);
   });
 
-  it('should open the report modal when report option is clicked', () => {
-    (component as any).onOptionClick('report');
+  it('should emit report and close the menu when doReport is called', () => {
+    vi.spyOn(component.report, 'emit');
+    component.menuVisible.set(true);
 
-    expect(reportModalService.open).toHaveBeenCalledWith('user-123', window.location.href);
+    component.doReport();
+
+    expect(component.report.emit).toHaveBeenCalledWith({
+      messageId: 'test-message-id',
+      senderId: 'user-123',
+    });
+    expect(component.menuVisible()).toBe(false);
   });
 
-  it('should close menu after option click', () => {
-    vi.spyOn(component as any, 'close');
+  it('should emit block toggled to true when the sender is not yet blocked', () => {
+    vi.spyOn(component.block, 'emit');
+    component.menuVisible.set(true);
 
-    (component as any).onOptionClick('copy');
+    component.doBlockToggle();
 
-    expect((component as any).close).toHaveBeenCalled();
+    expect(component.block.emit).toHaveBeenCalledWith({
+      senderId: 'user-123',
+      blocked: true,
+    });
+    expect(component.menuVisible()).toBe(false);
   });
 
-  it('should open menu on right click', () => {
-    const event = new MouseEvent('contextmenu', { clientX: 100, clientY: 200 });
-    vi.spyOn(event, 'preventDefault');
-    component.onRightClick(event);
-    expect(event.preventDefault).toHaveBeenCalled();
-    expect(component.showMenu()).toBe(true);
-    expect(component.position()).toEqual({ x: 100, y: 200 });
-  });
-
-  it('should close menu on document click outside', () => {
-    fixture.componentRef.setInput('showMenu', true);
-    fixture.detectChanges();
-    const outsideElement = document.createElement('div');
-    document.body.appendChild(outsideElement);
-    outsideElement.click();
-    expect(component.showMenu()).toBe(false);
-    document.body.removeChild(outsideElement);
-  });
-
-  it('should close menu on escape key', () => {
-    fixture.componentRef.setInput('showMenu', true);
-    fixture.detectChanges();
-    const event = new KeyboardEvent('keydown', { key: 'Escape' });
-    document.dispatchEvent(event);
-    expect(component.showMenu()).toBe(false);
-  });
-
-  it('should close menu on window resize', () => {
-    fixture.componentRef.setInput('showMenu', true);
-    fixture.detectChanges();
-    window.dispatchEvent(new Event('resize'));
-    expect(component.showMenu()).toBe(false);
-  });
-
-  it('should close menu on window scroll', () => {
-    fixture.componentRef.setInput('showMenu', true);
-    fixture.detectChanges();
-    window.dispatchEvent(new Event('scroll'));
-    expect(component.showMenu()).toBe(false);
-  });
-
-  it('should not open menu when disabled', () => {
-    fixture.componentRef.setInput('disabled', true);
-    fixture.detectChanges();
-    const event = new MouseEvent('contextmenu', { clientX: 100, clientY: 200 });
-    component.onRightClick(event);
-    expect(component.showMenu()).toBe(false);
-  });
-
-  it('should start long press timer on touch start', () => {
+  it('should open the menu after a long mouse press', () => {
     vi.useFakeTimers();
-    const touchEvent = {
-      type: 'touchstart',
-      touches: [{ clientX: 0, clientY: 0 }],
-      preventDefault: vi.fn(),
-    } as unknown as TouchEvent;
-    component.onTouchStart(touchEvent);
 
-    expect((component as any).longPressTimer).not.toBeNull();
-    vi.advanceTimersByTime(component.longPressDuration());
-    expect(component.showMenu()).toBe(true);
+    component.onMouseDown(new MouseEvent('mousedown', { button: 0 }));
+    expect(component.menuVisible()).toBe(false);
+
+    vi.advanceTimersByTime(600);
+    expect(component.menuVisible()).toBe(true);
+
     vi.useRealTimers();
   });
 
-  it('should cancel long press on touch move', () => {
-    const touchEvent = {
-      type: 'touchstart',
-      touches: [{ clientX: 0, clientY: 0 }],
-      preventDefault: vi.fn(),
-    } as unknown as TouchEvent;
-    component.onTouchStart(touchEvent);
-    (component as any).onTouchMove();
+  it('should not open the menu if the mouse is released before the long press threshold', () => {
+    vi.useFakeTimers();
 
-    expect((component as any).longPressTimer).toBeNull();
+    component.onMouseDown(new MouseEvent('mousedown', { button: 0 }));
+    component.onMouseUp();
+    vi.advanceTimersByTime(600);
+
+    expect(component.menuVisible()).toBe(false);
+    vi.useRealTimers();
   });
 
-  it('should cancel long press on touch end', () => {
-    const touchEvent = {
-      type: 'touchstart',
-      touches: [{ clientX: 0, clientY: 0 }],
-      preventDefault: vi.fn(),
-    } as unknown as TouchEvent;
-    component.onTouchStart(touchEvent);
-    component.onTouchEnd();
+  it('should ignore mouse down events from buttons other than the primary button', () => {
+    vi.useFakeTimers();
 
-    expect((component as any).longPressTimer).toBeNull();
+    component.onMouseDown(new MouseEvent('mousedown', { button: 1 }));
+    vi.advanceTimersByTime(600);
+
+    expect(component.menuVisible()).toBe(false);
+    vi.useRealTimers();
   });
 
-  it('should render menu options', () => {
-    fixture.componentRef.setInput('showMenu', true);
-    fixture.detectChanges();
-    const buttons = fixture.debugElement.queryAll(By.css('button[role="menuitem"]'));
-    expect(buttons.length).toBe(4);
-    expect(buttons[0].nativeElement.textContent).toContain('Copy');
-    expect(buttons[1].nativeElement.textContent).toContain('Favourite');
-    expect(buttons[2].nativeElement.textContent).toContain('Report');
-    expect(buttons[3].nativeElement.textContent).toContain('Block');
+  it('should close the menu when closeMenu is called', () => {
+    component.menuVisible.set(true);
+    component.closeMenu();
+    expect(component.menuVisible()).toBe(false);
   });
 
-  it.skip('should disable menu options when disabled input is true', () => {
-    fixture.componentRef.setInput('disabled', true);
-    fixture.detectChanges();
-    fixture.componentRef.setInput('showMenu', true);
+  it('should render menu options once the menu is visible', () => {
+    component.menuVisible.set(true);
     fixture.detectChanges();
 
-    const buttons = fixture.debugElement.queryAll(By.css('button[role="menuitem"]'));
-    buttons.forEach((btn) => {
-      expect(btn.nativeElement.disabled).toBe(true);
-    });
+    const buttons = fixture.debugElement.queryAll(By.css('button'));
+    expect(buttons.length).toBe(5);
   });
 });

@@ -851,11 +851,11 @@ export class UsersService {
     };
   }
 
-  async getAvailableHobbies(): Promise<string[]> {
+  getAvailableHobbies(): string[] {
     return PREDEFINED_HOBBIES;
   }
 
-  async getAvailableInterests(): Promise<string[]> {
+  getAvailableInterests(): string[] {
     return PREDEFINED_INTERESTS;
   }
 

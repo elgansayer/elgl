@@ -81,7 +81,7 @@ export class GdprComponent {
     try {
       await this.gdprService.requestArchive();
       this.archiveSuccess = true;
-    } catch (err: unknown) {
+    } catch {
       this.archiveError = this.i18n.translate('common.loadError');
     } finally {
       this.loading = false;
@@ -96,7 +96,7 @@ export class GdprComponent {
     try {
       await this.gdprService.deleteAccount(true);
       this.deleteSuccess = true;
-    } catch (err: unknown) {
+    } catch {
       this.deleteError = this.i18n.translate('common.loadError');
     } finally {
       this.deleting = false;

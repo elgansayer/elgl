@@ -32,8 +32,9 @@ import { I18nService } from '../../services/i18n.service';
       <!-- step content -->
       @if (onboardingService.currentStep() === 0) {
         <div class="mt-4">
-          <label class="block text-sm mb-1">{{ 'onboarding.step1.label' | t }}</label>
+          <label class="block text-sm mb-1" for="native-lang">{{ 'onboarding.step1.label' | t }}</label>
           <select
+            id="native-lang"
             class="w-full bg-surface-variant text-on-surface p-2 rounded"
             [value]="onboardingService.nativeLanguage()"
             (change)="onNativeLanguageChange($event)"
@@ -48,7 +49,7 @@ import { I18nService } from '../../services/i18n.service';
 
       @if (onboardingService.currentStep() === 1) {
         <div class="mt-4">
-          <label class="block text-sm mb-1">{{ 'onboarding.step2.label' | t }}</label>
+          <span class="block text-sm mb-1">{{ 'onboarding.step2.label' | t }}</span>
           <div class="grid grid-cols-1 gap-2">
             @for (lang of i18n.availableLanguages; track lang.code) {
               <label class="flex items-center gap-2 cursor-pointer">
@@ -66,8 +67,9 @@ import { I18nService } from '../../services/i18n.service';
 
       @if (onboardingService.currentStep() === 2) {
         <div class="mt-4">
-          <label class="block text-sm mb-1">{{ 'onboarding.step3.label' | t }}</label>
+          <label class="block text-sm mb-1" for="display-name">{{ 'onboarding.step3.label' | t }}</label>
           <input
+            id="display-name"
             class="w-full bg-surface-variant text-on-surface p-2 rounded"
             [value]="onboardingService.displayName()"
             (input)="onDisplayNameInput($event)"

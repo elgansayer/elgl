@@ -27,7 +27,7 @@ interface CartItem {
             <li class="flex items-center justify-between rounded-xl bg-surface p-3">
               <div>
                 <span class="font-medium">{{ item.name }}</span>
-                <span class="ml-2 text-xs opacity-50">x{{ item.quantity }}</span>
+                <span class="ms-2 text-xs opacity-50">x{{ item.quantity }}</span>
               </div>
               <div class="text-sm font-semibold">{{ item.unitPrice * item.quantity }} {{ 'common.coins' | t }}</div>
             </li>

@@ -1,4 +1,4 @@
-import { Component, signal, inject, output } from '@angular/core';
+import { Component, signal, output } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
 
@@ -20,7 +20,7 @@ import { FormsModule } from '@angular/forms';
       }
       <button (click)="addOption()" class="text-blue-400 text-sm mb-3">{{ 'quickPoll.addOption' | t }}</button>
       <div class="flex justify-end gap-2">
-        <button (click)="cancel.emit()" class="px-4 py-2 rounded bg-surface-4">{{ 'common.cancel' | t }}</button>
+        <button (click)="cancelled.emit()" class="px-4 py-2 rounded bg-surface-4">{{ 'common.cancel' | t }}</button>
         <button (click)="submit()" class="px-4 py-2 rounded bg-primary text-on-primary">{{ 'quickPoll.submitPoll' | t }}</button>
       </div>
     </div>
@@ -30,7 +30,7 @@ export class QuickPollFormComponent {
   readonly question = signal('');
   readonly options = signal(['', '']);
   readonly submitPoll = output<{ question: string; options: string[] }>();
-  readonly cancel = output<void>();
+  readonly cancelled = output<void>();
 
   addOption(): void {
     this.options.update(list => [...list, '']);

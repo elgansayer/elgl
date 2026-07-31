@@ -9,8 +9,9 @@ import { I18nService } from '../../services/i18n.service';
       <h2 class="title">{{ i18n.translate('password.resetTitle') }}</h2>
 
       <div class="field">
-        <label>{{ i18n.translate('password.newPassword') }}</label>
+        <label for="new-password">{{ i18n.translate('password.newPassword') }}</label>
         <input
+          id="new-password"
           type="password"
           [value]="newPassword()"
           (input)="newPassword.set($any($event.target).value)"
@@ -33,8 +34,9 @@ import { I18nService } from '../../services/i18n.service';
       </ul>
 
       <div class="field">
-        <label>{{ i18n.translate('password.confirmPassword') }}</label>
+        <label for="confirm-password">{{ i18n.translate('password.confirmPassword') }}</label>
         <input
+          id="confirm-password"
           type="password"
           [value]="confirmPassword()"
           (input)="confirmPassword.set($any($event.target).value)"

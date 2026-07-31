@@ -1,57 +1,71 @@
 <div class="bg-surface p-4 rounded-lg">
-  <div *ngIf="existingAudioUrl && !localPreviewUrl">
-    <div class="mb-3">
-      <p class="text-sm text-white/70 mb-1">{{ 'audio_recorder.current_intro' | t }}</p>
-      <audio controls [src]="existingAudioUrl" class="w-full h-10"></audio>
-    </div>
-  </div>
-  <p *ngIf="error" class="text-error text-sm mb-2">{{ error }}</p>
-  <div *ngIf="recording">
-    <div class="flex items-center gap-3 mb-3">
-      <span
-        class="inline-block w-3 h-3 rounded-full bg-red-500 animate-pulse"
-      ></span>
-      <span class="text-white/80 text-sm">{{ duration }} s / 30 s</span>
-      <button
-        *ngIf="duration < 30"
-        (click)="stopRecording()"
-        class="bg-red-600 text-white px-3 py-1 rounded-full text-sm"
-      >
-        {{ 'audio_recorder.stop' | t }}
-      </button>
-    </div>
-  </div>
-  <div *ngIf="!recording && localPreviewUrl">
-    <div class="mb-3">
-      <audio
-        #audioPlayer
-        controls
-        [src]="localPreviewUrl"
-        class="w-full h-10"
-      ></audio>
-      <div *ngIf="!uploading" class="flex gap-2 mt-2">
-        <button
-          (click)="uploadRecording()"
-          class="bg-green-600 text-white px-4 py-1.5 rounded-full text-sm"
-        >
-          {{ 'audio_recorder.upload' | t }}
-        </button>
-        <button
-          (click)="discardRecording()"
-          class="bg-slate-600 text-white px-4 py-1.5 rounded-full text-sm"
-        >
-          {{ 'audio_recorder.discard' | t }}
-        </button>
+  @if (existingAudioUrl && !localPreviewUrl) {
+    <div>
+      <div class="mb-3">
+        <p class="text-sm text-white/70 mb-1">{{ 'audio_recorder.current_intro' | t }}</p>
+        <audio controls [src]="existingAudioUrl" class="w-full h-10"></audio>
       </div>
-      <p *ngIf="uploading" class="text-sm text-white/70 mt-2">{{ 'common.loading' | t }}</p>
     </div>
-  </div>
-  <button
-    *ngIf="!recording && !localPreviewUrl"
-    (click)="startRecording()"
-    [disabled]="uploading"
-    class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-full"
-  >
-    <span>{{ 'audio_recorder.record' | t }}</span>
-  </button>
+  }
+  @if (error) {
+    <p class="text-error text-sm mb-2">{{ error }}</p>
+  }
+  @if (recording) {
+    <div>
+      <div class="flex items-center gap-3 mb-3">
+        <span
+          class="inline-block w-3 h-3 rounded-full bg-red-500 animate-pulse"
+        ></span>
+        <span class="text-white/80 text-sm">{{ duration }} s / 30 s</span>
+        @if (duration < 30) {
+          <button
+            (click)="stopRecording()"
+            class="bg-red-600 text-white px-3 py-1 rounded-full text-sm"
+          >
+            {{ 'audio_recorder.stop' | t }}
+          </button>
+        }
+      </div>
+    </div>
+  }
+  @if (!recording && localPreviewUrl) {
+    <div>
+      <div class="mb-3">
+        <audio
+          #audioPlayer
+          controls
+          [src]="localPreviewUrl"
+          class="w-full h-10"
+        ></audio>
+        @if (!uploading) {
+          <div class="flex gap-2 mt-2">
+            <button
+              (click)="uploadRecording()"
+              class="bg-green-600 text-white px-4 py-1.5 rounded-full text-sm"
+            >
+              {{ 'audio_recorder.upload' | t }}
+            </button>
+            <button
+              (click)="discardRecording()"
+              class="bg-slate-600 text-white px-4 py-1.5 rounded-full text-sm"
+            >
+              {{ 'audio_recorder.discard' | t }}
+            </button>
+          </div>
+        }
+        @if (uploading) {
+          <p class="text-sm text-white/70 mt-2">{{ 'common.loading' | t }}</p>
+        }
+      </div>
+    </div>
+  }
+  @if (!recording && !localPreviewUrl) {
+    <button
+      (click)="startRecording()"
+      [disabled]="uploading"
+      class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-full"
+    >
+      <span>{{ 'audio_recorder.record' | t }}</span>
+    </button>
+  }
 </div>

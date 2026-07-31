@@ -1,5 +1,4 @@
-import { Component, inject, effect, afterNextRender } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {Component, inject, afterNextRender} from '@angular/core';import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { MilestoneService } from '../../services/milestone.service';
 

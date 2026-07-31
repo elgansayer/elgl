@@ -1,7 +1,6 @@
 import {
   Component,
   ElementRef,
-  effect,
   inject,
   input,
   signal,

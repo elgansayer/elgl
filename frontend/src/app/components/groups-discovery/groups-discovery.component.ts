@@ -1,5 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {Component, signal} from '@angular/core';import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { environment } from '../../../environments/environment';
 
@@ -103,7 +102,7 @@ export class GroupsDiscoveryComponent {
         throw new Error(err.message || 'Failed to join');
       }
       await this.fetchGroups();
-    } catch (e: any) {
+    } catch (e: unknown) {
       this.error.set(e.message);
     } finally {
       this.joiningId.set(null);

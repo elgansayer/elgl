@@ -4,7 +4,6 @@ import { firstValueFrom } from 'rxjs';
 import { I18nService } from '../../services/i18n.service';
 import {
   ProficiencyService,
-  TargetLanguageLevel,
   LanguageSelectionDto,
   ProficiencyLevel,
 } from '../../services/proficiency.service';
@@ -24,10 +23,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
       <!-- Native language -->
       <div class="flex flex-col gap-2">
-        <label class="text-sm text-neutral-400">{{
+        <label for="native-lang-select" class="text-sm text-neutral-400">{{
           'nativeLanguage' | t
         }}</label>
         <select
+          id="native-lang-select"
           [value]="selectedNativeLang()"
           (change)="selectedNativeLang.set($any($event.target).value)"
           class="rounded border border-neutral-600 bg-neutral-800 px-3 py-2 text-white"
@@ -43,9 +43,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
       <!-- Target languages -->
       <div class="flex flex-col gap-2">
-        <label class="text-sm text-neutral-400">{{
+        <span class="text-sm text-neutral-400">{{
           'targetLanguages' | t
-        }}</label>
+        }}</span>
 
         @for (target of targetLanguages(); track $index) {
           <div class="flex items-center gap-2">

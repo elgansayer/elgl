@@ -3,7 +3,6 @@ import {
   inject,
   input,
   output,
-  signal,
   viewChild,
   afterNextRender,
   effect,

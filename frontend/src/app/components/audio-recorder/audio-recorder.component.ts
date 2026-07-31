@@ -1,9 +1,6 @@
 import {
   Component,
   inject,
-  input,
-  output,
-  signal,
   viewChild,
   Input,
   Output,
@@ -47,7 +44,7 @@ export class AudioRecorderComponent implements OnDestroy {
 
     try {
       this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch (e: any) {
+    } catch (e: unknown) {
       this.error = e?.message ?? 'Unable to access microphone';
       return;
     }
@@ -125,7 +122,7 @@ export class AudioRecorderComponent implements OnDestroy {
       await this.audioIntroService.updateAudioIntro(this.userId, mediaUrl);
       this.audioChanged.emit(mediaUrl);
       this.discardRecording(); // clean up local preview
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.error = err?.message ?? 'Upload error';
     } finally {
       this.uploading = false;

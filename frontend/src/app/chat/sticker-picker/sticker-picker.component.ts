@@ -10,9 +10,11 @@ interface Sticker {
   standalone: true,
   template: `
     @if (isOpen()) {
-      <div class="fixed inset-0 z-50 bg-black/50" (click)="closeDrawer()">
+      <div class="fixed inset-0 z-50 bg-black/50" tabindex="0" (keydown.enter)="$event.preventDefault(); closeDrawer()" (click)="closeDrawer()">
         <div
           class="fixed bottom-0 start-0 end-0 bg-neutral-900 rounded-t-2xl p-4 shadow-2xl max-h-80 overflow-y-auto"
+          tabindex="0"
+          (keydown.enter)="$event.preventDefault(); $event.stopPropagation()"
           (click)="$event.stopPropagation()"
         >
           <div class="grid grid-cols-4 gap-4">
@@ -41,7 +43,7 @@ interface Sticker {
 export class StickerPickerComponent {
   readonly isOpen = input(false);
   readonly stickerSelected = output<Sticker>();
-  readonly close = output<void>();
+  readonly pickerClosed = output<void>();
 
   protected readonly stickers = signal<Sticker[]>([
     { id: 'grinning', emoji: '😀' },
@@ -59,11 +61,11 @@ export class StickerPickerComponent {
   ]);
 
   closeDrawer(): void {
-    this.close.emit();
+    this.pickerClosed.emit();
   }
 
   onSelect(sticker: Sticker): void {
     this.stickerSelected.emit(sticker);
-    this.close.emit();
+    this.pickerClosed.emit();
   }
 }

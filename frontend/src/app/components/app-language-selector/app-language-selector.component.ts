@@ -19,6 +19,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
   @if (isOpen()) {
     <div
       class="absolute end-0 mt-2 w-56 rounded-lg bg-neutral-900 border border-neutral-700 shadow-xl z-[100] max-h-72 overflow-hidden flex flex-col"
+      tabindex="0"
+      (keydown.enter)="$event.preventDefault(); $event.stopPropagation()"
       (click)="$event.stopPropagation()"
     >
       <div class="p-2 text-sm font-semibold text-neutral-300 border-b border-neutral-700">

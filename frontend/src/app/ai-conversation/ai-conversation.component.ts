@@ -132,7 +132,7 @@ export class AiConversationComponent {
         this.currentScenarioId,
       );
       this.messages.update((msgs) => [...msgs, { from: 'ai', text: reply }]);
-    } catch (error) {
+    } catch {
       this.messages.update((msgs) => [
         ...msgs,
         {

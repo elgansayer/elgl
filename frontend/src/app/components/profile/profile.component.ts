@@ -1,21 +1,17 @@
-import { Component, inject, signal, viewChild, computed, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { TranslatePipe } from '../../services/translate.pipe';
-import { NgxSkeletonLoaderComponent } from 'ngx-skeleton-loader';
-import { I18nService } from '../../services/i18n.service';
-import { UserService, UserProfile, VisitorLog } from '../../services/user.service';
-import { CoverPhotoUploaderComponent } from '../cover-photo-uploader/cover-photo-uploader.component';
-import { HobbyTagsComponent } from '../hobby-tags/hobby-tags.component';
-import {
-  LanguagePickerComponent,
-  getLanguageFlag,
-} from '../primitives/language-picker/language-picker.component';
-import { CelebrationOverlayComponent } from '../celebration-overlay/celebration-overlay.component';
-import { BlockService } from '../../services/block.service';
-import { SafetyService } from '../../services/safety.service';
-import { showToast } from '../../services/toast.service';
+import {Component, inject, signal, viewChild, computed, OnInit} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {FormsModule} from '@angular/forms';
+import {RouterLink} from '@angular/router';
+import {TranslatePipe} from '../../services/translate.pipe';
+import {NgxSkeletonLoaderComponent} from 'ngx-skeleton-loader';
+import {I18nService} from '../../services/i18n.service';
+import {UserService, UserProfile, VisitorLog} from '../../services/user.service';
+import {CoverPhotoUploaderComponent} from '../cover-photo-uploader/cover-photo-uploader.component';
+import {HobbyTagsComponent} from '../hobby-tags/hobby-tags.component';
+import {LanguagePickerComponent, getLanguageFlag} from '../primitives/language-picker/language-picker.component';
+import {CelebrationOverlayComponent} from '../celebration-overlay/celebration-overlay.component';
+import {SafetyService} from '../../services/safety.service';
+import {showToast} from '../../services/toast.service';
 
 @Component({
   selector: 'app-profile',

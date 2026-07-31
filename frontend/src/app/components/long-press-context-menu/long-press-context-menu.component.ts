@@ -1,5 +1,4 @@
-import { Component, input, output, signal, inject } from '@angular/core';
-import { TranslatePipe } from '../../services/translate.pipe';
+import {Component, input, output, signal} from '@angular/core';import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-long-press-context-menu',
@@ -20,12 +19,16 @@ import { TranslatePipe } from '../../services/translate.pipe';
     @if (menuVisible()) {
       <div
         class="fixed inset-0 z-50 flex items-end justify-center pb-8"
+        tabindex="0"
+        (keydown.enter)="$event.preventDefault(); closeMenu()"
         (click)="closeMenu()"
         role="dialog"
         aria-modal="true"
       >
         <div
           class="bg-surface-800 rounded-2xl shadow-2xl px-6 py-4 space-y-2"
+          tabindex="0"
+          (keydown.enter)="$event.preventDefault(); $event.stopPropagation()"
           (click)="$event.stopPropagation()"
         >
           <button

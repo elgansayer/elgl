@@ -1,5 +1,4 @@
-import { Component, inject, signal, effect } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import {Component, inject, signal} from '@angular/core';import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
@@ -64,7 +63,7 @@ export class DeviceTransferComponent {
       const url = await this.authService.generateDeviceLink();
       this.deviceLink.set(url);
       this.status.set('ready');
-    } catch (e: any) {
+    } catch (e: unknown) {
       this.status.set('error');
       this.errorMessage.set(e?.message ?? 'Failed to generate device link');
     }
@@ -102,7 +101,7 @@ export class DeviceTransferComponent {
       } else {
         throw new Error('Failed to establish session');
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       this.status.set('error');
       this.errorMessage.set(e?.message ?? 'Transfer failed');
     }

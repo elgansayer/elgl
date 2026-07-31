@@ -1,5 +1,4 @@
-import { Component, inject, OnInit, signal, OnDestroy } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import {Component, inject, OnInit, signal} from '@angular/core';import { CommonModule, DatePipe } from '@angular/common';
 import { EventsService, Event } from '../../services/events.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { firstValueFrom } from 'rxjs';

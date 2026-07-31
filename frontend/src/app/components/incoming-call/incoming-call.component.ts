@@ -133,8 +133,8 @@ export class IncomingCallComponent implements OnDestroy {
   constructor() {
     effect((onCleanup) => {
       const user = this.authService.currentUser();
-      const userId = user?.id;
-      if (!userId) return;
+      const _userId = user?.id;
+      if (!_userId) return;
 
       // Unsubscribe previous subscription if user changed
       if (this.subscribedChannel) {
@@ -142,9 +142,9 @@ export class IncomingCallComponent implements OnDestroy {
         this.subscribedChannel = null;
       }
 
-      this.loadSilenceSetting(userId);
+      this.loadSilenceSetting(_userId);
 
-      const channel = `user_${userId}`;
+      const channel = `user_${_userId}`;
       this.centrifugoService.subscribe(channel, (data: unknown) => {
         const event = data as { type: string; callInfo: IncomingCallInfo };
         if (event.type === 'incoming_call' && event.callInfo) {
@@ -164,9 +164,9 @@ export class IncomingCallComponent implements OnDestroy {
 
   private async handleIncomingCall(info: IncomingCallInfo): Promise<void> {
     this.callInfo.set(info);
-    const userId = this.authService.currentUser()?.id;
-    if (userId) {
-      await this.loadSilenceSetting(userId);
+    const _userId = this.authService.currentUser()?.id;
+    if (_userId) {
+      await this.loadSilenceSetting(_userId);
     }
     if (this.currentUserSilenceUnknown()) {
       // reject automatically without ringing
@@ -227,7 +227,7 @@ export class IncomingCallComponent implements OnDestroy {
     }
   }
 
-  private async loadSilenceSetting(userId: string): Promise<void> {
+  private async loadSilenceSetting(_userId: string): Promise<void> {
     const profile = await this.userService.getMyProfile();
     if (profile) {
       this.currentUserSilenceUnknown.set(profile.silence_unknown_callers ?? false);
@@ -267,7 +267,7 @@ export class IncomingCallComponent implements OnDestroy {
       this.centrifugoService.publish(`user_${info.callerId}`, {
         type: 'call_accepted',
         data: {
-          userId: this.authService.currentUser()?.id,
+          _userId: this.authService.currentUser()?.id,
           roomName: info.roomName,
         },
       });
@@ -295,7 +295,7 @@ export class IncomingCallComponent implements OnDestroy {
     this.centrifugoService.publish(`user_${info.callerId}`, {
       type: 'call_rejected',
       data: {
-        userId: this.authService.currentUser()?.id,
+        _userId: this.authService.currentUser()?.id,
         roomName: info.roomName,
       },
     });

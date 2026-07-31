@@ -55,8 +55,9 @@ import {
 
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs mb-1">{{ 'notification_preferences.quiet_hours_start' | t }}</label>
+              <label class="block text-xs mb-1" for="quiet-hours-start">{{ 'notification_preferences.quiet_hours_start' | t }}</label>
               <input
+                id="quiet-hours-start"
                 type="time"
                 [value]="quietStart()"
                 (input)="updateQuietStart($event)"
@@ -64,8 +65,9 @@ import {
               />
             </div>
             <div>
-              <label class="block text-xs mb-1">{{ 'notification_preferences.quiet_hours_end' | t }}</label>
+              <label class="block text-xs mb-1" for="quiet-hours-end">{{ 'notification_preferences.quiet_hours_end' | t }}</label>
               <input
+                id="quiet-hours-end"
                 type="time"
                 [value]="quietEnd()"
                 (input)="updateQuietEnd($event)"

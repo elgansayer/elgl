@@ -348,7 +348,8 @@ private findRemoteVideoTrack(userId: string): RemoteVideoTrack | null {
     participant: RemoteParticipant,
   ): void {
     if (track.kind === Track.Kind.Video) {
-      const videoTrack: RemoteVideoTrack = track;
+      // eslint-disable-next-line no-restricted-syntax
+      const videoTrack = track as RemoteVideoTrack;
       this.remoteVideoTracksByIdentity.update((map) => {
         const next = new Map(map);
         next.set(participant.identity, videoTrack);
