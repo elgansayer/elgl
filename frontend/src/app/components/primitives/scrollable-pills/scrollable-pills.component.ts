@@ -1,7 +1,8 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
   selector: 'app-scrollable-pills',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex overflow-x-auto hide-scrollbar gap-2 px-4 py-2 bg-surface-500">
       @for (pill of pills(); track pill.id) {

@@ -167,8 +167,8 @@
                 <!-- Tight Fluency Indicator -->
                 <div class="mb-1">
                   <app-fluency-indicator
-                    [nativeLanguages]="getNativeLangs(partner)"
-                    [targetLanguages]="getTargetLangs(partner)"
+                    [nativeLanguages]="partner.nativeLangs || []"
+                    [targetLanguages]="partner.targetLangs || []"
                   >
                   </app-fluency-indicator>
                 </div>
@@ -177,7 +177,7 @@
                   {{ partner.bio_text || ('discovery.partnerBioFallback' | t) }}
                 </p>
                 <p class="text-xs text-text-secondary mt-0.5">
-                  {{ formatDistance(partner.distance_metres) }}
+                  {{ partner.formattedDistance }}
                 </p>
               </div>
             </div>

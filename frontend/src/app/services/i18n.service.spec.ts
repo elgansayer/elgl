@@ -50,4 +50,123 @@ describe('I18nService', () => {
     expect(service.currentLang()).toBe('sw');
     expect(localStorage.getItem('hellotalk_locale')).toBe('sw');
   });
+
+  it('should set dir to rtl for all RTL languages (ar, he, fa, ur)', async () => {
+    for (const lang of ['ar', 'he', 'fa', 'ur']) {
+      await service.setLanguage(lang);
+      expect(service.currentLang()).toBe(lang);
+      if (typeof document !== 'undefined') {
+        expect(document.documentElement.dir).toBe('rtl');
+      }
+    }
+  });
+
+  it('should reuse cached translation dictionary from localStorage when available', async () => {
+    const cached = { 'vip.heroTitle': 'Cached VIP Hero' };
+    localStorage.setItem('hellotalk_dict_fr', JSON.stringify(cached));
+    await service.setLanguage('fr');
+    expect(service.translate('vip.heroTitle')).toBe('Cached VIP Hero');
+  });
+
+  describe('VIP subscription showcase translations', () => {
+    it('should have hero and CTA translations', () => {
+      expect(service.translate('vip.heroTitle')).toBe('Unlock Your Language Learning Potential');
+      expect(service.translate('vip.heroSubtitle')).toBe(
+        'Choose the plan that fits your learning journey. From free basics to premium power tools.',
+      );
+      expect(service.translate('vip.seePlans')).toBe('See Plans');
+      expect(service.translate('vip.startFree')).toBe('Start Free');
+    });
+
+    it('should contain price labels with both currencies', () => {
+      expect(service.translate('vip.freePrice')).toBe('Free');
+      expect(service.translate('vip.consumerPrice')).toBe('8 UKP / $10 USD');
+      expect(service.translate('vip.developerPrice')).toBe('20 UKP / $26 USD');
+      expect(service.translate('vip.billedMonthly')).toBe('billed monthly');
+    });
+
+    it('should expose VIP badge labels', () => {
+      expect(service.translate('common.vipStdLabel')).toBe('8 UKP / $10 USD VIP');
+      expect(service.translate('common.vipDevLabel')).toBe('20 UKP / $26 USD Dev VIP');
+    });
+
+    it('should include feature list descriptions', () => {
+      expect(service.translate('vip.consumerFeature1')).toBe('Unlimited AI calls');
+      expect(service.translate('vip.consumerFeature2')).toBe('Global discovery');
+      expect(service.translate('vip.developerFeature3')).toBe('600 RPM rate limit');
+      expect(service.translate('vip.developerFeature4')).toBe('Advanced analytics');
+    });
+
+    it('should include FAQ translations', () => {
+      expect(service.translate('vip.faqTitle')).toBe('Frequently Asked Questions');
+      expect(service.translate('vip.faqSwitchQ')).toBe('Can I switch plans anytime?');
+      expect(service.translate('vip.faqPaymentA')).toBe(
+        'We accept all major credit cards, PayPal, and in-app purchases on iOS and Android',
+      );
+      expect(service.translate('vip.faqCancelQ')).toBe('Can I cancel my subscription?');
+    });
+
+    it('should interpolate plan name inside choosePlan key', () => {
+      const text = service.translate('vip.choosePlan', { name: 'Consumer VIP' });
+      expect(text).toBe('Choose Consumer VIP');
+    });
+
+    it('should contain all VIP showcase keys with non-empty values', () => {
+      const vipKeys = [
+        'vip.heroTitle',
+        'vip.heroSubtitle',
+        'vip.seePlans',
+        'vip.startFree',
+        'vip.tryAgain',
+        'vip.failedLoad',
+        'vip.freeUpgrade',
+        'vip.getStartedFree',
+        'vip.freePrice',
+        'vip.premiumPlans',
+        'vip.premiumSubtitle',
+        'vip.mostPopular',
+        'vip.billedMonthly',
+        'vip.keyBenefits',
+        'vip.allFeatures',
+        'vip.subscribeNow',
+        'vip.choosePlan',
+        'vip.compareAllFeatures',
+        'vip.featureTableHeader',
+        'vip.included',
+        'vip.notIncluded',
+        'vip.ctaTitle',
+        'vip.ctaSubtitle',
+        'vip.viewPlans',
+        'vip.continueFree',
+        'vip.freePlan',
+        'vip.freeFeature1',
+        'vip.freeFeature2',
+        'vip.freeFeature3',
+        'vip.consumerPlan',
+        'vip.consumerPrice',
+        'vip.consumerFeature1',
+        'vip.consumerFeature2',
+        'vip.consumerFeature3',
+        'vip.consumerFeature4',
+        'vip.developerPlan',
+        'vip.developerPrice',
+        'vip.developerFeature1',
+        'vip.developerFeature2',
+        'vip.developerFeature3',
+        'vip.developerFeature4',
+        'vip.developerFeature5',
+      ];
+
+      for (const key of vipKeys) {
+        const value = service.translate(key);
+        expect(value).not.toBe(key);
+        expect(value.trim()).not.toBe('');
+      }
+    });
+
+    it('should return the key itself for unknown translation keys', () => {
+      const key = 'vip.doesNotExist';
+      expect(service.translate(key)).toBe(key);
+    });
+  });
 });
