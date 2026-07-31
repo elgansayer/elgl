@@ -25,6 +25,7 @@ jest.mock('./centrifugo.service', () => ({
 describe('ChatService', () => {
   let service: ChatService;
   let centrifugoService: any;
+  let chatLlmService: any;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
 
@@ -114,6 +115,7 @@ describe('ChatService', () => {
 
     service = module.get<ChatService>(ChatService);
     centrifugoService = module.get<CentrifugoService>(CentrifugoService) as any;
+    chatLlmService = module.get<ChatLlmService>(ChatLlmService) as any;
   });
 
   afterEach(() => {
@@ -199,6 +201,41 @@ describe('ChatService', () => {
 
       await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
         'Failed to save message',
+      );
+    }, 15000);
+
+    it('should generate AI explanation for correction payload when explanation is missing', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'correction',
+        correction_payload: {
+          original: 'I goed to store',
+          corrected: 'I went to the store',
+        },
+      };
+      const savedMessage = {
+        id: 'msg-1',
+        room_id: 'room-1',
+        sender_id: 'sender-1',
+        message_type: 'correction',
+        correction_payload: {
+          original: 'I goed to store',
+          corrected: 'I went to the store',
+        },
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: savedMessage,
+        error: null,
+      });
+      (chatLlmService.proxyMessage as jest.Mock).mockResolvedValue({
+        response: 'The past tense of "go" is "went".',
+      });
+
+      const result = (await service.sendMessage('sender-1', dto)) as any;
+
+      expect(chatLlmService.proxyMessage).toHaveBeenCalled();
+      expect(result.correction_payload.explanation).toBe(
+        'The past tense of "go" is "went".',
       );
     }, 15000);
   });

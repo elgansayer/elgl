@@ -16,6 +16,7 @@ import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto'
 import { SendMessageDto } from './dto/send-message.dto';
 import { ReplyToStatusUpdateDto } from './dto/reply-to-status-update.dto';
 import {
+  CorrectionPayload,
   ChatMessage,
   ChatRoomRecord,
   FavouriteRecord,
@@ -24,6 +25,10 @@ import { ChatMessageEvent } from '../notifications/events/notification.events';
 import { SystemMessageService } from './services/system-message.service';
 import { XpService } from '../xp/xp.service';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 @Injectable()
 export class ChatService {
@@ -41,6 +46,49 @@ export class ChatService {
 
   generateConnectionToken(userId: string): { token: string } {
     return this.centrifugoService.generateConnectionToken(userId);
+  }
+
+  private async generateCorrectionPayloadIfNeeded(
+    correctionPayload: unknown,
+  ): Promise<CorrectionPayload | null> {
+    if (!isRecord(correctionPayload)) {
+      return null;
+    }
+
+    if (
+      typeof correctionPayload.explanation === 'string' &&
+      correctionPayload.explanation.trim().length > 0
+    ) {
+      return null;
+    }
+
+    const originalText =
+      typeof correctionPayload.original === 'string'
+        ? correctionPayload.original
+        : undefined;
+    const correctedText =
+      typeof correctionPayload.corrected === 'string'
+        ? correctionPayload.corrected
+        : undefined;
+
+    if (!originalText || !correctedText) {
+      return null;
+    }
+
+    const prompt = `Explain simply why the following sentence was corrected.\nOriginal: "${originalText}"\nCorrected: "${correctedText}"\nProvide a short explanation.`;
+    try {
+      const { response } = await this.chatLlmService.proxyMessage(prompt);
+      if (response && response.trim().length > 0) {
+        return {
+          original: originalText,
+          corrected: correctedText,
+          explanation: response.trim(),
+        };
+      }
+    } catch {
+      // Explanation generation failed; serve the message without it
+    }
+    return null;
   }
 
   async getRooms(currentUserId: string): Promise<ChatRoomRecord[]> {
@@ -91,7 +139,7 @@ export class ChatService {
       return mockRooms;
     }
 
-    let rooms = response.data as ChatRoomRecord[];
+    let rooms: ChatRoomRecord[] = response.data;
 
     // Fetch locked chat room ids for the current user
     const lockedRowsResponse = await supabase
@@ -206,7 +254,7 @@ export class ChatService {
       throw new Error(`Failed to save message: ${msg}`);
     }
 
-    const savedMessage = insertResponse.data as ChatMessage;
+    const savedMessage = insertResponse.data;
 
     // Award XP for sending a message
     void this.xpService.awardXpForActivity(senderId, 'send_message');
@@ -229,41 +277,23 @@ export class ChatService {
       ? { ...savedMessage, link_preview: linkPreview }
       : savedMessage;
 
-    if (
-      savedMessage.correction_payload &&
-      !(savedMessage.correction_payload as unknown as Record<string, unknown>)
-        .explanation
-    ) {
-      const correctionPayload =
-        savedMessage.correction_payload as unknown as Record<string, unknown>;
-      const originalText = correctionPayload.original as string | undefined;
-      const correctText = correctionPayload.corrected as string | undefined;
+    const enrichedCorrectionPayload =
+      await this.generateCorrectionPayloadIfNeeded(
+        savedMessage.correction_payload,
+      );
+    if (enrichedCorrectionPayload) {
+      const { error: updateError } = await this.supabaseService
+        .getClient()
+        .from('chat_messages')
+        .update({ correction_payload: enrichedCorrectionPayload })
+        .eq('id', savedMessage.id);
 
-      if (originalText && correctText) {
-        const prompt = `Explain simply why the following sentence was corrected.\nOriginal: "${originalText}"\nCorrected: "${correctText}"\nProvide a short explanation.`;
-        try {
-          const { response } = await this.chatLlmService.proxyMessage(prompt);
-          if (response && response.trim().length > 0) {
-            const updatedPayload = {
-              ...correctionPayload,
-              explanation: response.trim(),
-            };
-            const { error: updateError } = await this.supabaseService
-              .getClient()
-              .from('chat_messages')
-              .update({ correction_payload: updatedPayload })
-              .eq('id', savedMessage.id);
-
-            if (!updateError) {
-              messageForPublish = {
-                ...messageForPublish,
-                correction_payload: updatedPayload,
-              } as ChatMessage;
-            }
-          }
-        } catch {
-          // Explanation generation failed; serve the message without it
-        }
+      if (!updateError) {
+        const updatedMessage: ChatMessage = {
+          ...messageForPublish,
+          correction_payload: enrichedCorrectionPayload,
+        };
+        messageForPublish = updatedMessage;
       }
     }
 
@@ -342,7 +372,7 @@ export class ChatService {
 
     const response = await query;
     if (response.error || !response.data || response.data.length === 0) {
-      const mockMessages = [
+      const mockMessages: ChatMessage[] = [
         {
           id: 'mock-msg-1',
           room_id: roomId,
@@ -371,7 +401,7 @@ export class ChatService {
           created_at: new Date().toISOString(),
           sender: { id: 'me', display_name: 'Me', avatar_url: null },
         },
-      ] as ChatMessage[];
+      ];
 
       // Filter out blocked users from mock data
       if (blockedIds.length > 0) {
@@ -381,7 +411,7 @@ export class ChatService {
       }
       return mockMessages;
     }
-    const messages = response.data as ChatMessage[];
+    const messages: ChatMessage[] = response.data;
 
     // Exclude media_url for view-once media that has already been viewed
     for (const msg of messages) {
@@ -887,14 +917,39 @@ export class ChatService {
       throw new ForbiddenException('You cannot fix your own message');
     }
 
-    const currentPayload = originalMsg.correction_payload as Record<
-      string,
-      unknown
-    > | null;
+    const rawCorrectionPayload: unknown = originalMsg.correction_payload;
+    const currentPayload = isRecord(rawCorrectionPayload)
+      ? rawCorrectionPayload
+      : null;
+
+    const originalText =
+      currentPayload && typeof currentPayload.original === 'string'
+        ? currentPayload.original
+        : (originalMsg.text_content ?? '');
+
+    let resolvedExplanation = explanation;
+
+    if (!resolvedExplanation) {
+      const payloadForGeneration = currentPayload ?? {
+        original: originalText,
+        corrected: correctedText,
+      };
+      const enrichedPayload =
+        await this.generateCorrectionPayloadIfNeeded(payloadForGeneration);
+      if (enrichedPayload && typeof enrichedPayload.explanation === 'string') {
+        resolvedExplanation = enrichedPayload.explanation;
+      }
+    }
+
+    const existingExplanation =
+      currentPayload && typeof currentPayload.explanation === 'string'
+        ? currentPayload.explanation
+        : undefined;
+
     const updatedPayload = {
-      original: currentPayload?.original ?? originalMsg.text_content ?? '',
+      original: originalText,
       corrected: correctedText,
-      explanation: explanation ?? currentPayload?.explanation ?? undefined,
+      explanation: resolvedExplanation ?? existingExplanation,
     };
 
     const { data: updatedMsg, error: updateErr } = await supabase
@@ -926,7 +981,7 @@ export class ChatService {
       message: updatedMsg,
     });
 
-    return updatedMsg as ChatMessage;
+    return updatedMsg;
   }
 
   async viewMessageMedia(userId: string, messageId: string): Promise<void> {
