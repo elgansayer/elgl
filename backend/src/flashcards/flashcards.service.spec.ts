@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { FlashcardsService } from './flashcards.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { XpService } from '../xp/xp.service';
 
 describe('FlashcardsService', () => {
   let service: FlashcardsService;
@@ -30,6 +31,12 @@ describe('FlashcardsService', () => {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+          },
+        },
+        {
+          provide: XpService,
+          useValue: {
+            awardXpForActivity: jest.fn(),
           },
         },
       ],

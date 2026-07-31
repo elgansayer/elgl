@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DiscoveryService } from './discovery.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
+import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 
 jest.mock('../mock-data', () => ({
   MOCK_USERS: [],
@@ -12,6 +13,7 @@ describe('DiscoveryService', () => {
   let service: DiscoveryService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let mockRedisClient: any;
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -29,6 +31,10 @@ describe('DiscoveryService', () => {
       rpc: jest.fn(),
     };
 
+    mockRedisClient = {
+      get: jest.fn().mockResolvedValue(null),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DiscoveryService,
@@ -36,12 +42,19 @@ describe('DiscoveryService', () => {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
           },
         },
         {
           provide: SafetyService,
           useValue: {
             getBlockedAndBlockerIds: jest.fn().mockResolvedValue([]),
+          },
+        },
+        {
+          provide: AudioRoomsService,
+          useValue: {
+            getActiveHostIds: jest.fn().mockResolvedValue([]),
           },
         },
       ],
@@ -76,7 +89,9 @@ describe('DiscoveryService', () => {
         false,
       );
       expect(mockQueryBuilder.limit).toHaveBeenCalledWith(50);
-      expect(result).toEqual(partners);
+      expect(result).toEqual(
+        partners.map((p) => ({ ...p, is_partner_of_week: false })),
+      );
     });
 
     it('should apply native language, target language, and serious learner filters', async () => {
@@ -105,7 +120,9 @@ describe('DiscoveryService', () => {
         'correction_ratio',
         0.8,
       );
-      expect(result).toEqual(partners);
+      expect(result).toEqual(
+        partners.map((p) => ({ ...p, is_partner_of_week: false })),
+      );
     });
 
     it('should call rpc search_nearby_users when latitude and longitude are provided', async () => {
@@ -134,7 +151,9 @@ describe('DiscoveryService', () => {
           serious_only: false,
         },
       );
-      expect(result).toEqual(nearbyPartners);
+      expect(result).toEqual(
+        nearbyPartners.map((p) => ({ ...p, is_partner_of_week: false })),
+      );
     });
 
     it('should use mock_location if user is VIP and mock_location is set', async () => {
@@ -149,7 +168,7 @@ describe('DiscoveryService', () => {
       const mockUser = {
         id: 'user-1',
         is_vip: true,
-        mock_location: { coordinates: [-74.006, 40.7128] }, // GeoJSON Point [lon, lat]
+        mock_location: { type: 'Point', coordinates: [-74.006, 40.7128] }, // GeoJSON Point [lon, lat]
       };
 
       const result = await service.searchPartners('user-1', mockUser, {
@@ -170,7 +189,9 @@ describe('DiscoveryService', () => {
           serious_only: false,
         },
       );
-      expect(result).toEqual(nearbyPartners);
+      expect(result).toEqual(
+        nearbyPartners.map((p) => ({ ...p, is_partner_of_week: false })),
+      );
     });
 
     it('should apply serious learner filter to rpc call', async () => {
@@ -201,7 +222,9 @@ describe('DiscoveryService', () => {
           serious_only: true,
         },
       );
-      expect(result).toEqual(nearbyPartners);
+      expect(result).toEqual(
+        nearbyPartners.map((p) => ({ ...p, is_partner_of_week: false })),
+      );
     });
 
     it('should fall back to standard query when rpc returns error', async () => {
@@ -221,7 +244,9 @@ describe('DiscoveryService', () => {
       });
 
       expect(mockQueryBuilder.limit).toHaveBeenCalledWith(50);
-      expect(result).toEqual(fallbackPartners);
+      expect(result).toEqual(
+        fallbackPartners.map((p) => ({ ...p, is_partner_of_week: false })),
+      );
     });
 
     it('should return empty array when rpc fallback returns error or null data', async () => {

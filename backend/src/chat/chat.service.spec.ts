@@ -14,6 +14,9 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SafetyService } from '../safety/safety.service';
 import { LinkPreviewService } from '../link-preview/link-preview.service';
 import { SystemMessageService } from './services/system-message.service';
+import { SpamDetectionService } from '../spam-detection/spam-detection.service';
+import { ChatLlmService } from './chat-llm.service';
+import { XpService } from '../xp/xp.service';
 
 jest.mock('./centrifugo.service', () => ({
   CentrifugoService: jest.fn(),
@@ -87,6 +90,25 @@ describe('ChatService', () => {
             publishToRoom: jest.fn().mockResolvedValue(undefined),
           },
         },
+        {
+          provide: SpamDetectionService,
+          useValue: {
+            isSpam: jest.fn().mockReturnValue(false),
+          },
+        },
+        {
+          provide: ChatLlmService,
+          useValue: {
+            generateText: jest.fn(),
+            proxyMessage: jest.fn(),
+          },
+        },
+        {
+          provide: XpService,
+          useValue: {
+            awardXpForActivity: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -145,6 +167,10 @@ describe('ChatService', () => {
         text_content: 'Hello World',
         media_url: null,
         correction_payload: null,
+        reply_to_id: null,
+        correction_request_payload: null,
+        status_reply_payload: null,
+        is_view_once: false,
       });
       expect(centrifugoService.publish).toHaveBeenCalledWith('chat:room-1', {
         message: savedMessage,
@@ -189,7 +215,9 @@ describe('ChatService', () => {
 
       const result = await service.getRooms('user-1');
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('chat_rooms');
-      expect(result).toEqual(rooms);
+      expect(result).toEqual(
+        rooms.map((room) => ({ ...room, is_locked: false })),
+      );
     });
 
     it('should return fallback mock rooms when rooms query fails', async () => {

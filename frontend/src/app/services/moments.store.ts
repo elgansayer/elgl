@@ -4,6 +4,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom, catchError, of } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { HapticFeedbackService } from './haptic-feedback.service';
 
 export interface MomentComment {
   id: string;
@@ -53,6 +54,7 @@ export interface MomentRecord {
 export class MomentsStore {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
+  private hapticFeedback = inject(HapticFeedbackService);
   private baseUrl = `${environment.apiUrl}/moments`;
 
   readonly feed = signal<MomentRecord[]>([]);
@@ -115,6 +117,7 @@ export class MomentsStore {
           { headers: this.getHeaders() },
         ),
       );
+      this.hapticFeedback.success();
       this.feed.update((list) =>
         list.map((m) => {
           if (m.id === momentId) {

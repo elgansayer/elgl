@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { ConversationStarterService } from './conversation-starter.service';
+import { TranslationService } from './translation.service';
 
 describe('ChatController', () => {
   let controller: ChatController;
@@ -20,6 +22,18 @@ describe('ChatController', () => {
             getMessages: jest.fn(),
             addFavourite: jest.fn(),
             getFavourites: jest.fn(),
+          },
+        },
+        {
+          provide: ConversationStarterService,
+          useValue: {
+            getSuggestions: jest.fn(),
+          },
+        },
+        {
+          provide: TranslationService,
+          useValue: {
+            translate: jest.fn(),
           },
         },
       ],

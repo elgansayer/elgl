@@ -5,6 +5,8 @@ import { AudioRoomsService } from './audio-rooms.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
+import { TranscriptEgressService } from './transcript-egress.service';
+import { NlpService } from '../nlp/nlp.service';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 
 const mockCreateRoom = jest.fn().mockResolvedValue({});
@@ -34,11 +36,13 @@ describe('AudioRoomsService', () => {
     mockToJwt.mockClear().mockResolvedValue('mock-livekit-jwt');
     mockQueryBuilder = {
       insert: jest.fn().mockReturnThis(),
+      upsert: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
       delete: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       in: jest.fn().mockReturnThis(),
+      or: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
       single: jest.fn(),
@@ -83,6 +87,20 @@ describe('AudioRoomsService', () => {
           provide: CentrifugoService,
           useValue: {
             publish: jest.fn().mockResolvedValue(true),
+          },
+        },
+        {
+          provide: TranscriptEgressService,
+          useValue: {
+            startEgress: jest.fn(),
+            stopEgress: jest.fn(),
+            generateTranscriptFromAudioUrl: jest.fn(),
+          },
+        },
+        {
+          provide: NlpService,
+          useValue: {
+            generateSessionSummary: jest.fn(),
           },
         },
       ],

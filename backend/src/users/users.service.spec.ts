@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { XpService } from '../xp/xp.service';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -27,6 +28,13 @@ describe('UsersService', () => {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+          },
+        },
+        {
+          provide: XpService,
+          useValue: {
+            getTotalXp: jest.fn().mockResolvedValue(0),
+            awardXpForActivity: jest.fn(),
           },
         },
       ],

@@ -6,6 +6,9 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { TimelineWorker } from './timeline.worker';
 import { SafetyService } from '../safety/safety.service';
+import { XpService } from '../xp/xp.service';
+import { QuestsService } from '../quests/quests.service';
+import { R2Service } from '../cloudflare-r2/r2.service';
 
 describe('MomentsService', () => {
   let service: MomentsService;
@@ -73,6 +76,24 @@ describe('MomentsService', () => {
             getBlockedAndBlockerIds: jest.fn().mockResolvedValue([]),
           },
         },
+        {
+          provide: XpService,
+          useValue: {
+            awardXpForActivity: jest.fn(),
+          },
+        },
+        {
+          provide: QuestsService,
+          useValue: {
+            incrementProgress: jest.fn(),
+          },
+        },
+        {
+          provide: R2Service,
+          useValue: {
+            generateUploadUrl: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -128,6 +149,11 @@ describe('MomentsService', () => {
         media_urls: ['url1.jpg'],
         media_type: 'image',
         target_language: 'JA',
+        post_type: 'moment',
+        question_text: null,
+        question_options: [],
+        correct_answer: null,
+        voice_note_url: null,
       });
       expect(timelineWorker.fanOutMoment).toHaveBeenCalledWith(
         'moment-1',

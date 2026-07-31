@@ -3,6 +3,7 @@ import { MomentsController } from './moments.controller';
 import { MomentsService } from './moments.service';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { R2Service } from '../cloudflare-r2/r2.service';
 
 describe('MomentsController', () => {
   let controller: MomentsController;
@@ -29,6 +30,10 @@ describe('MomentsController', () => {
           useValue: {
             getProfile: jest.fn(),
           },
+        },
+        {
+          provide: R2Service,
+          useValue: {},
         },
       ],
     })
@@ -159,8 +164,11 @@ describe('MomentsController', () => {
       const comments: any[] = [{ id: 'c-1' }];
       (momentsService.getComments as jest.Mock).mockResolvedValue(comments);
 
-      const result = await controller.getComments('m-1');
-      expect(momentsService.getComments).toHaveBeenCalledWith('m-1');
+      const result = await controller.getComments(
+        { id: 'user-1' } as any,
+        'm-1',
+      );
+      expect(momentsService.getComments).toHaveBeenCalledWith('m-1', 'user-1');
       expect(result).toEqual(comments);
     });
   });

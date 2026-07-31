@@ -12,9 +12,38 @@ jest.mock('ioredis');
 
 describe('SupabaseService', () => {
   let service: SupabaseService;
-  let configService: ConfigService;
   let mockSupabaseClient: any;
   let mockRedisInstance: any;
+
+  const buildConfigService = (
+    overrides: Record<string, string | undefined> = {},
+  ): ConfigService => {
+    const values: Record<string, string | undefined> = {
+      SUPABASE_URL: 'https://test.supabase.co',
+      SUPABASE_SERVICE_ROLE_KEY: 'test-service-key',
+      REDIS_URL: 'redis://localhost:6379',
+      ...overrides,
+    };
+    return {
+      get: jest.fn((key: string) => values[key] ?? null),
+    } as unknown as ConfigService;
+  };
+
+  const createService = async (
+    configService: ConfigService,
+  ): Promise<SupabaseService> => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        SupabaseService,
+        {
+          provide: ConfigService,
+          useValue: configService,
+        },
+      ],
+    }).compile();
+
+    return module.get<SupabaseService>(SupabaseService);
+  };
 
   beforeEach(async () => {
     mockSupabaseClient = {
@@ -30,26 +59,7 @@ describe('SupabaseService', () => {
     };
     (Redis as unknown as jest.Mock).mockImplementation(() => mockRedisInstance);
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        SupabaseService,
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn((key: string) => {
-              if (key === 'SUPABASE_URL') return 'https://test.supabase.co';
-              if (key === 'SUPABASE_SERVICE_ROLE_KEY')
-                return 'test-service-key';
-              if (key === 'REDIS_URL') return 'redis://localhost:6379';
-              return null;
-            }),
-          },
-        },
-      ],
-    }).compile();
-
-    service = module.get<SupabaseService>(SupabaseService);
-    configService = module.get<ConfigService>(ConfigService);
+    service = await createService(buildConfigService());
   });
 
   afterEach(() => {
@@ -60,10 +70,8 @@ describe('SupabaseService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('onModuleInit', () => {
+  describe('initialisation', () => {
     it('should initialise supabase and redis clients successfully', () => {
-      service.onModuleInit();
-
       expect(createClient).toHaveBeenCalledWith(
         'https://test.supabase.co',
         'test-service-key',
@@ -80,14 +88,8 @@ describe('SupabaseService', () => {
       expect(service.getRedisClient()).toBe(mockRedisInstance);
     });
 
-    it('should use default redis URL if REDIS_URL is not provided', () => {
-      jest.spyOn(configService, 'get').mockImplementation((key: string) => {
-        if (key === 'SUPABASE_URL') return 'https://test.supabase.co';
-        if (key === 'SUPABASE_SERVICE_ROLE_KEY') return 'test-service-key';
-        return undefined;
-      });
-
-      service.onModuleInit();
+    it('should use default redis URL if REDIS_URL is not provided', async () => {
+      await createService(buildConfigService({ REDIS_URL: undefined }));
 
       expect(Redis).toHaveBeenCalledWith('redis://localhost:6379', {
         maxRetriesPerRequest: 1,
@@ -95,24 +97,20 @@ describe('SupabaseService', () => {
       });
     });
 
-    it('should throw an error if SUPABASE_URL is missing', () => {
-      jest.spyOn(configService, 'get').mockImplementation((key: string) => {
-        if (key === 'SUPABASE_SERVICE_ROLE_KEY') return 'test-service-key';
-        return undefined;
-      });
-
-      expect(() => service.onModuleInit()).toThrow(
+    it('should throw an error if SUPABASE_URL is missing', async () => {
+      await expect(
+        createService(buildConfigService({ SUPABASE_URL: undefined })),
+      ).rejects.toThrow(
         'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required',
       );
     });
 
-    it('should throw an error if SUPABASE_SERVICE_ROLE_KEY is missing', () => {
-      jest.spyOn(configService, 'get').mockImplementation((key: string) => {
-        if (key === 'SUPABASE_URL') return 'https://test.supabase.co';
-        return undefined;
-      });
-
-      expect(() => service.onModuleInit()).toThrow(
+    it('should throw an error if SUPABASE_SERVICE_ROLE_KEY is missing', async () => {
+      await expect(
+        createService(
+          buildConfigService({ SUPABASE_SERVICE_ROLE_KEY: undefined }),
+        ),
+      ).rejects.toThrow(
         'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required',
       );
     });
@@ -121,7 +119,6 @@ describe('SupabaseService', () => {
       const consoleSpy = jest
         .spyOn(console, 'error')
         .mockImplementation(() => {});
-      service.onModuleInit();
 
       const errorCallback = mockRedisInstance.on.mock.calls.find(
         (call: any[]) => call[0] === 'error',
@@ -139,7 +136,6 @@ describe('SupabaseService', () => {
 
   describe('getClient and getRedisClient', () => {
     it('should return initialised supabase and redis clients', () => {
-      service.onModuleInit();
       expect(service.getClient()).toBe(mockSupabaseClient);
       expect(service.getRedisClient()).toBe(mockRedisInstance);
     });

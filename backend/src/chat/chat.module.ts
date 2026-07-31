@@ -3,6 +3,7 @@ import { SafetyModule } from '../safety/safety.module';
 import { LinkPreviewModule } from '../link-preview/link-preview.module';
 import { SpamDetectionModule } from '../spam-detection/spam-detection.module';
 import { XpModule } from '../xp/xp.module';
+import { LlmProxyModule } from '../llm-proxy/llm-proxy.module';
 import { CentrifugoService } from './centrifugo.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
@@ -16,7 +17,13 @@ import { ChatSettingsController } from './chat-settings.controller';
 import { ChatSettingsService } from './chat-settings.service';
 
 @Module({
-  imports: [SafetyModule, LinkPreviewModule, SpamDetectionModule, XpModule],
+  imports: [
+    SafetyModule,
+    LinkPreviewModule,
+    SpamDetectionModule,
+    XpModule,
+    LlmProxyModule,
+  ],
   controllers: [ChatController, ChatSettingsController],
   providers: [
     CentrifugoService,

@@ -23,12 +23,10 @@ export class ProfileVisitsController {
   ): Promise<Record<string, unknown> | null> {
     if (!user) return null;
     const profile = await this.usersService.getProfile(user.id);
-    const incognitoEnabled = profile?.incognito_visits ?? false;
     return this.profileVisitsService.recordVisit(
       user.id,
       viewedId,
       profile?.is_vip ?? false,
-      incognitoEnabled,
     );
   }
 

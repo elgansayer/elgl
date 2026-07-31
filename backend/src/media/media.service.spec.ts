@@ -5,6 +5,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { SupabaseService } from '../supabase/supabase.service';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { AudioCompressionService } from './audio-compression.service';
+import { ImageCompressionService } from './image-compression.service';
 
 jest.mock('@aws-sdk/client-s3', () => ({
   S3Client: jest.fn(),
@@ -33,6 +34,12 @@ describe('MediaService', () => {
           useValue: {
             compressToOgg: jest.fn(),
             compressToM4a: jest.fn(),
+          },
+        },
+        {
+          provide: ImageCompressionService,
+          useValue: {
+            compress: jest.fn(),
           },
         },
         {

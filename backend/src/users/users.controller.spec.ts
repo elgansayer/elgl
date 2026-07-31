@@ -3,6 +3,7 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { MediaService } from '../media/media.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { TwoFactorGuard } from '../two-factor/two-factor.guard';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -30,6 +31,8 @@ describe('UsersController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .overrideGuard(TwoFactorGuard)
       .useValue({ canActivate: jest.fn().mockReturnValue(true) })
       .compile();
 
