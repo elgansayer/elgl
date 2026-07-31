@@ -62,7 +62,11 @@ CFG = {
     'repo_name':      os.environ.get('SWARM_REPO_NAME', 'hellotalk'),
     'gh_sync_cycles': int(os.environ.get('SWARM_GH_SYNC_CYCLES', 20)),
     'review_cycles':  int(os.environ.get('SWARM_REVIEW_CYCLES', 5)),
-    'models':         ['claude', 'antigravity', 'copilot', 'deepseek'],  # fallback order
+    'models':         ['claude', 'antigravity', 'copilot', 'deepseek'],
+    'audit_cooldown_cycles': int(os.environ.get('SWARM_AUDIT_COOLDOWN_CYCLES', 10)),
+    'fix_max_rounds': int(os.environ.get('SWARM_FIX_MAX_ROUNDS', 5)),
+    'stuck_alert_s':  int(os.environ.get('SWARM_STUCK_ALERT_SECONDS', 900)),
+    'stuck_restart_s': int(os.environ.get('SWARM_STUCK_RESTART_SECONDS', 2700)),
 }
 
 # ── logging ───────────────────────────────────────────────────────────
@@ -78,6 +82,30 @@ def log(msg: str):
                 f.write(line + '\n')
         except Exception:
             pass
+
+# ── Telegram alerts ───────────────────────────────────────────────────
+def send_telegram(text: str):
+    token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+    chat_id = os.environ.get('TELEGRAM_CHAT_ID', '')
+    if not token or not chat_id:
+        return
+    try:
+        subprocess.run([
+            'curl', '-sf', '-X', 'POST',
+            f'https://api.telegram.org/bot{token}/sendMessage',
+            '-H', 'Content-Type: application/json',
+            '-d', json.dumps({'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML'})
+        ], capture_output=True, timeout=10)
+    except Exception:
+        pass
+
+_last_alert_ts = {}
+def alert_telegram(stall_type: str, title: str, body: str):
+    now = time.time()
+    if now - _last_alert_ts.get(stall_type, 0) < 600:
+        return
+    _last_alert_ts[stall_type] = now
+    send_telegram(f"<b>{title}</b>\n\n{body}")
 
 # ── state (atomic writes) ─────────────────────────────────────────────
 def _atomic_write(path: Path, content: str):
@@ -1099,7 +1127,7 @@ def run_task_with_fallback(task: str, attempt: int = 0, cycle: int = 0) -> dict:
             'killed': False, 'reason': 'all_exhausted'}
 
 # ── lint + test ────────────────────────────────────────────────────────
-def run_tests() -> tuple[bool, str]:
+def run_tests(only_checks: set | None = None) -> tuple[bool, str]:
     state_patch(current_stage='stage3_verify')
     heartbeat()
     errors = []
@@ -1116,6 +1144,9 @@ def run_tests() -> tuple[bool, str]:
     ]
 
     for name, cwd, args in checks:
+        if only_checks and name not in only_checks:
+            log(f"  SKIP  {name}")
+            continue
         try:
             r = subprocess.run(args, cwd=str(ROOT / cwd),
                               capture_output=True, text=True,
@@ -1139,17 +1170,78 @@ def run_tests() -> tuple[bool, str]:
     heartbeat()
     return len(errors) == 0, '\n\n'.join(errors)
 
+def _extract_error_files(errors: str) -> dict[str, list[str]]:
+    """Parse lint/test output into {filepath: [error_messages]}."""
+    result = {}
+    current = None
+    path_re = re.compile(r'^(?:/[\w./-]*?)?((?:frontend|backend)/(?:src|test)/[\w./-]+\.(?:ts|html|scss|css|json))\s*$')
+    err_re = re.compile(r'^\s*(\d+):(\d+)\s+(error|warning)\s+(.+)$')
+    for raw in errors.split('\n'):
+        line = raw.strip()
+        m = path_re.match(line)
+        if m:
+            current = m.group(1)
+            result.setdefault(current, [])
+            continue
+        m2 = err_re.match(line)
+        if m2 and current:
+            result[current].append(f"L{m2.group(1)}:{m2.group(2)} {m2.group(3)}: {m2.group(4)}")
+    return result
+
 def run_test_fix(errors: str, cycle: int = 0) -> bool:
-    broken = re.findall(r'((?:frontend|backend)/[\w./-]+\.(?:ts|html|scss))', errors)
-    files = list(set(broken))[:25]
-    files_str = ' '.join(files) if files else '(unknown)'
-    task = (
-        "The automated lint and test suite failed. Fix the codebase so "
-        "lint and tests pass. Do not invent new features, only fix the "
-        f"errors shown below. Files likely in scope: {files_str}\n\n"
-        f"Error output:\n{errors[:5000]}"
-    )
-    return run_task_with_fallback(task, attempt=0, cycle=cycle).get('ok', False)
+    """
+    Multi-round batch fixer. Groups errors by file, fixes in batches of 10,
+    re-runs only failed checks. Up to fix_max_rounds iterations.
+    """
+    if not errors.strip():
+        return True
+
+    failed_checks = {n for n in ['swarmd syntax','frontend lint','backend lint',
+        'frontend test','backend test','backend e2e','frontend build','backend build']
+        if f'==== {n} FAILED' in errors}
+
+    file_map = _extract_error_files(errors)
+    if not file_map:
+        log("  No parseable file paths. Broad fix attempt.")
+        t = ("The automated lint/test/build suite failed. Fix ALL errors. "
+             f"Do not add features.\n\n{errors[:8000]}")
+        return run_task_with_fallback(t, attempt=0, cycle=cycle).get('ok', False)
+
+    error_files = sorted(file_map, key=lambda f: -len(file_map[f]))
+    max_rounds = CFG['fix_max_rounds']
+
+    for rnd in range(max_rounds):
+        if not error_files:
+            break
+        batch = error_files[:10]
+        error_files = error_files[10:]
+
+        summary = '\n'.join(f"In {f}:\n  " + '\n  '.join(file_map[f][:15]) for f in batch)
+        log(f"  Fix round {rnd+1}/{max_rounds}: {len(batch)} files ({len(error_files)} remaining)")
+        prompt = (f"Fix ALL errors in these files. Targeted fixes only.\n\n{summary[:8000]}")
+        result = run_task_with_fallback(prompt, attempt=0, cycle=cycle)
+
+        if not result.get('ok'):
+            log(f"  Round {rnd+1}: no changes.")
+            if rnd == 0:
+                run_task_with_fallback(f"Fix ALL lint/type/build errors.\n{errors[:6000]}", 0, cycle)
+            continue
+
+        passed, new_errors = run_tests(only_checks=failed_checks)
+        if passed:
+            log("  All failed checks pass.")
+            return run_tests()[0]
+
+        new_map = _extract_error_files(new_errors)
+        file_map = new_map
+        prev = set(batch) | set(error_files)
+        error_files = sorted(
+            [f for f in new_map if any('error:' in e for e in new_map[f])],
+            key=lambda f: -len(new_map[f]))
+        error_files = [f for f in error_files if f not in batch]
+
+    log(f"  {max_rounds} fix rounds exhausted.")
+    return run_tests()[0]
 
 def _has_changes() -> bool:
     before = set()
@@ -1239,9 +1331,36 @@ def supervisor():
     last_api_call = 0.0
     cycle_count = 0
     last_gh_sync = 0.0
+    _last_progress_ts = time.time()
 
     while not _shutdown:
         heartbeat()
+        state_patch(current_stage='stage1_select',
+                    uptime_seconds=int(time.time() - CFG['start_ts']))
+
+        stuck_s = time.time() - _last_progress_ts
+        if stuck_s > CFG['stuck_alert_s']:
+            stats = task_stats()
+            alert_telegram('stuck',
+                f'Swarm stuck {int(stuck_s/60)}min',
+                f'No progress in {int(stuck_s/60)}min. '
+                f'Queue: {stats["pending"]}p/{stats["stuck"]}s/{stats["completed"]}c.')
+            log(f"STUCK ALERT: {int(stuck_s/60)}min no progress.")
+            if stuck_s > CFG['stuck_restart_s']:
+                alert_telegram('restart', 'Auto-restart',
+                    f'Force-resetting after {int(stuck_s/60)}min stuck.')
+                discard_working_tree_changes()
+                state_save({
+                    'started_at': datetime.now(timezone.utc).isoformat(),
+                    'current_stage': 'restart', 'current_task': '', 'attempt': 0,
+                    'tasks_completed': prev.get('tasks_completed', 0),
+                    'tasks_stuck': prev.get('tasks_stuck', 0),
+                    'last_error': 'auto-restart', 'last_commit': '', 'uptime_seconds': 0,
+                })
+                CFG['start_ts'] = time.time()
+                _last_progress_ts = time.time()
+                cycle_count = 0
+                continue
         state_patch(current_stage='stage1_select',
                     uptime_seconds=int(time.time() - CFG['start_ts']))
 
@@ -1274,9 +1393,11 @@ def supervisor():
             if not passed:
                 log(f"Background regression tests failed! Creating fix task.")
                 task_add(f"Background tests failed. Please fix them. Errors:\n{test_errors[:3000]}")
+                _last_progress_ts = time.time()
             else:
                 log(f"Background tests passed. Generating deep code review task to ensure 24/7 improvement...")
                 generate_review_task()
+                _last_progress_ts = time.time()
             
             # Brief sleep before picking up the newly generated task
             time.sleep(5)
@@ -1290,14 +1411,14 @@ def supervisor():
         log(f"Queue: {stats['pending']} pending, {stats['completed']} done, "
             f"{stats['stuck']} stuck")
 
-        # Handle autonomous directive (do not run Aider)
+        # Handle autonomous directive with cooldown (prevents queue flooding)
         if task and 'AUTONOMOUS DIRECTIVE' in task:
-            log("Autonomous directive: running codebase audit")
-            # Add placeholder audit tasks as pending
-            task_add("Audit: fix zero hardcoded strings across frontend ts/html files")
-            task_add("Audit: run lint and test suites ensuring pass, fix failures")
-            task_add("Audit: verify visual match against screenshots (manual)")
-            # Move the directive back to pending so it loops continuously
+            interval = CFG['audit_cooldown_cycles']
+            if cycle_count % interval == 0:
+                log(f"Autonomous directive: codebase audit (cycle {cycle_count})")
+                task_add("Audit: fix zero hardcoded strings across frontend ts/html files")
+                task_add("Audit: run lint and test suites ensuring pass, fix failures")
+                task_add("Audit: verify visual match against screenshots (manual)")
             if taskfile and taskfile.exists():
                 taskfile = task_move(taskfile, 'pending')
             continue
@@ -1332,6 +1453,9 @@ def supervisor():
                 else:
                     log(f"STUCK: No changes after {CFG['max_retries']} attempts across all models")
                     state_patch(last_error='No code changes after max retries')
+                    alert_telegram('no_changes', 'Task stuck: no changes',
+                        f'{CFG["max_retries"]} attempts, no changes.\n{task[:200]}')
+                    _last_progress_ts = time.time()
                     break
 
             # Changes made — run tests. A task only reaches git_commit() if
@@ -1363,6 +1487,8 @@ def supervisor():
                 log(f"STUCK: task still fails tests after {CFG['max_retries']} attempts. "
                     f"Moving to stuck/ without committing.")
                 state_patch(last_error=f'Tests failing after all attempts: {final_errors[:500]}')
+                alert_telegram('test_fail', 'Task stuck: tests failing',
+                    f'{CFG["max_retries"]} attempts + fix rounds, tests fail.\n{final_errors[:500]}')
                 if taskfile and taskfile.exists():
                     try:
                         taskfile.write_text(
@@ -1373,11 +1499,13 @@ def supervisor():
                     except Exception:
                         pass
                     taskfile = task_move(taskfile, 'stuck')
+                _last_progress_ts = time.time()
                 break
 
             if taskfile and taskfile.exists():
                 taskfile = task_move(taskfile, 'completed')
             sha = git_commit(f"feat: {task}")
+            _last_progress_ts = time.time()
             s = state_load()
             state_save({**s, 'tasks_completed': s.get('tasks_completed', 0) + 1})
             log(f"COMPLETED: {task[:80]}")
