@@ -31,7 +31,7 @@
 
   @if (editLesson() || isNew()) {
     <div class="mt-4 border p-4">
-      <h3>{{ isNew() ? 'Create' : 'Edit' }} {{ 'admin.lessons.lesson' | t }}</h3>
+      <h3>{{ (isNew() ? 'admin.lessons.create_lesson' : 'admin.lessons.edit_lesson') | t }}</h3>
       <div class="mb-2">
         <label>{{ 'admin.lessons.title' | t }}</label>
         <input [(ngModel)]="form.title" class="input" />
@@ -49,10 +49,34 @@
         <input type="number" [(ngModel)]="form.difficulty_level" class="input" />
       </div>
       <div class="mb-2">
+        <label>{{ 'admin.lessons.cover_image' | t }}</label>
+        <div class="flex items-center gap-2">
+          <input type="file" class="hidden" (change)="onCoverFileSelected($event)" #coverFileInput />
+          <button type="button" class="btn btn-secondary" (click)="coverFileInput.click()">
+            {{ 'admin.lessons.upload_cover' | t }}
+          </button>
+          @if (form.cover_image_url) {
+            <span class="text-sm truncate" [title]="form.cover_image_url">{{ form.cover_image_url }}</span>
+          }
+        </div>
+      </div>
+      <div class="mb-2">
+        <label>{{ 'admin.lessons.audio' | t }}</label>
+        <div class="flex items-center gap-2">
+          <input type="file" class="hidden" (change)="onAudioFileSelected($event)" #audioFileInput />
+          <button type="button" class="btn btn-secondary" (click)="audioFileInput.click()">
+            {{ 'admin.lessons.upload_audio' | t }}
+          </button>
+          @if (form.audio_url) {
+            <span class="text-sm truncate" [title]="form.audio_url">{{ form.audio_url }}</span>
+          }
+        </div>
+      </div>
+      <div class="mb-2">
         <label>{{ 'admin.lessons.content' | t }}</label>
         <textarea [(ngModel)]="form.content_json" class="input font-mono h-24"></textarea>
       </div>
-      <button class="btn btn-primary" (click)="save()">{{ 'admin.lessons.save' | t }}</button>
+      <button class="btn btn-primary" (click)="save()" [disabled]="isSaving() || isUploading()">{{ 'admin.lessons.save' | t }}</button>
       <button class="btn btn-secondary ms-2" (click)="cancelEdit()">{{ 'admin.lessons.cancel' | t }}</button>
     </div>
   }

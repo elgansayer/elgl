@@ -11,6 +11,8 @@ export interface Lesson {
   content_json?: Record<string, unknown>;
   language_code: string;
   difficulty_level?: number;
+  cover_image_url?: string;
+  audio_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -20,6 +22,7 @@ export class LessonService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private baseUrl = `${environment.apiUrl}/admin/lessons`;
+  private uploadBaseUrl = `${environment.apiUrl}/media/upload`;
 
   private getHeaders() {
     const token = this.authService.getAccessToken();
@@ -54,5 +57,16 @@ export class LessonService {
     await firstValueFrom(
       this.http.delete(`${this.baseUrl}/${id}`, { headers: this.getHeaders() }),
     );
+  }
+
+  async uploadFile(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const result = await firstValueFrom(
+      this.http.post<{ url: string }>(this.uploadBaseUrl, formData, {
+        headers: this.getHeaders(),
+      }),
+    );
+    return result.url;
   }
 }

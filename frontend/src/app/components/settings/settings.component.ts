@@ -2,7 +2,7 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
-import { UserService, LinkedAccount } from '../../services/user.service';
+import { UserService, LinkedAccount, UserProfile } from '../../services/user.service';
 import { CacheService } from '../../services/cache.service';
 import { Router } from '@angular/router';
 import { FontScaleService } from '../../services/font-scale.service';
@@ -59,12 +59,12 @@ export class SettingsComponent implements OnInit {
   protected chatTextSize: 'small' | 'medium' | 'large' = 'medium';
 
   /** Providers we support linking */
-  readonly supportedProviders = ['google', 'facebook', 'twitter', 'apple'] as const;
+  readonly supportedProviders: readonly string[] = ['google', 'facebook', 'twitter', 'apple'];
 
   async ngOnInit(): Promise<void> {
     // Font scale is handled by FontScaleService and applied globally.
     try {
-      const profile = await this.userService.getMyProfile();
+      const profile: UserProfile | null = await this.userService.getMyProfile();
       if (profile) {
         this.isVip.set(Boolean(profile.is_vip));
         this.primaryAccentColor.set(profile.primary_accent_color || '#4f46e5');
@@ -83,7 +83,7 @@ export class SettingsComponent implements OnInit {
         this.chatTextSize = profile.chat_text_size ?? 'medium';
       }
       // Load linked accounts
-      const accounts = await this.userService.getLinkedAccounts();
+      const accounts: LinkedAccount[] | null = await this.userService.getLinkedAccounts();
       this.linkedAccounts.set(accounts ?? []);
     } catch {
       this.errorMessage.set('Failed to load settings');
@@ -97,7 +97,7 @@ export class SettingsComponent implements OnInit {
     this.successMessage.set('');
     try {
       await this.userService.linkAccount(provider);
-      const updated = await this.userService.getLinkedAccounts();
+      const updated: LinkedAccount[] | null = await this.userService.getLinkedAccounts();
       this.linkedAccounts.set(updated ?? []);
       this.successMessage.set(`Linked account (${provider})`);
     } catch {
@@ -110,7 +110,7 @@ export class SettingsComponent implements OnInit {
     this.successMessage.set('');
     try {
       await this.userService.unlinkAccount(provider);
-      const updated = await this.userService.getLinkedAccounts();
+      const updated: LinkedAccount[] | null = await this.userService.getLinkedAccounts();
       this.linkedAccounts.set(updated ?? []);
       this.successMessage.set(`Unlinked account (${provider})`);
     } catch {

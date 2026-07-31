@@ -18,4 +18,12 @@ export class CreateLessonDto {
   @IsOptional()
   @IsNumber()
   difficulty_level?: number;
+
+  @IsOptional()
+  @IsString()
+  cover_image_url?: string;
+
+  @IsOptional()
+  @IsString()
+  audio_url?: string;
 }

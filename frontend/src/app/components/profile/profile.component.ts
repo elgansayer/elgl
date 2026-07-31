@@ -14,6 +14,10 @@ import {SafetyService} from '../../services/safety.service';
 import {showToast} from '../../services/toast.service';
 import {AchievementsComponent} from '../../achievements/achievements.component';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object';
+}
+
 @Component({
   selector: 'app-profile',
   imports: [
@@ -153,17 +157,22 @@ export class ProfileComponent implements OnInit {
   }
 
   async onVisibilityChange(value: string): Promise<void> {
-    this.profileVisibility.set(value as 'everyone' | 'vips_only' | 'hidden');
+    if (value === 'everyone' || value === 'vips_only' || value === 'hidden') {
+      this.profileVisibility.set(value);
+    }
   }
 
   onAvatarFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) return;
     if (input.files && input.files.length > 0) {
       const file = input.files[0];
       this.selectedAvatarFile = file;
       const reader = new FileReader();
       reader.onload = () => {
-        this.avatarPreviewUrl.set(reader.result as string);
+        if (typeof reader.result === 'string') {
+          this.avatarPreviewUrl.set(reader.result);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -223,15 +232,15 @@ export class ProfileComponent implements OnInit {
       this.successMessage.set(this.i18n.translate('profile.successUpdate'));
     } catch (e: unknown) {
       let errorMsg = this.i18n.translate('profile.updateError');
-      if (e && typeof e === 'object') {
-        const obj = e as Record<string, unknown>;
-        if (typeof obj['error'] === 'object' && obj['error'] !== null) {
-          const errObj = obj['error'] as Record<string, unknown>;
-          if (typeof errObj['message'] === 'string') {
-            errorMsg = errObj['message'];
+      if (isRecord(e)) {
+        const err = e['error'];
+        if (isRecord(err)) {
+          const msg = err['message'];
+          if (typeof msg === 'string') {
+            errorMsg = msg;
           }
-        } else if (typeof obj['message'] === 'string') {
-          errorMsg = obj['message'];
+        } else if (typeof e['message'] === 'string') {
+          errorMsg = e['message'];
         }
       }
       this.errorMessage.set(errorMsg);

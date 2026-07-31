@@ -312,9 +312,8 @@ export class LanguagePickerComponent {
   }
 
   onSearchInput(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    if (target) {
-      this.searchQuery.set(target.value);
-    }
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    this.searchQuery.set(target.value);
   }
 }
