@@ -1411,16 +1411,19 @@ def supervisor():
         log(f"Queue: {stats['pending']} pending, {stats['completed']} done, "
             f"{stats['stuck']} stuck")
 
-        # Handle autonomous directive with cooldown (prevents queue flooding)
+        # Handle autonomous directive with cooldown
         if task and 'AUTONOMOUS DIRECTIVE' in task:
             interval = CFG['audit_cooldown_cycles']
             if cycle_count % interval == 0:
-                log(f"Autonomous directive: codebase audit (cycle {cycle_count})")
+                log(f"Autonomous directive: audit (cycle {cycle_count})")
                 task_add("Audit: fix zero hardcoded strings across frontend ts/html files")
                 task_add("Audit: run lint and test suites ensuring pass, fix failures")
                 task_add("Audit: verify visual match against screenshots (manual)")
+            # Move to completed (one-shot, re-added by generate_review_task periodically)
             if taskfile and taskfile.exists():
-                taskfile = task_move(taskfile, 'pending')
+                taskfile = task_move(taskfile, 'completed')
+            cycle_count += 1
+            _last_progress_ts = time.time()
             continue
 
         # Rate limit: cooldown between API calls
