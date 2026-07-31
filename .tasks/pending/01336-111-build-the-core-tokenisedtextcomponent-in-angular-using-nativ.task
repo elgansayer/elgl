@@ -1,0 +1,1 @@
+Build the core `TokenisedTextComponent` in Angular using native `Intl.Segmenter` API (`granularity: word`) to render clickable tokens.

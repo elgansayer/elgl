@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Pipe, PipeTransform } from '@angular/core';
 import { signal } from '@angular/core';
-import type { Mock } from 'vitest';
+import { vi, type Mock } from 'vitest';
 import { ThemeSelectorComponent } from './theme-selector.component';
 import { Theme, ThemeService } from '../../services/theme.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -20,11 +20,11 @@ describe('ThemeSelectorComponent', () => {
 
   // We inject a manually‑constructed service so tests are hermetic
   let currentTheme: ReturnType<typeof signal<Theme>>;
-  let setThemeSpy: jasmine.Spy;
+  let setThemeSpy: Mock;
 
   beforeEach(async () => {
     currentTheme = signal<Theme>('light');
-    setThemeSpy = jasmine.createSpy('setTheme').and.callFake((theme: Theme) => {
+    setThemeSpy = vi.fn((theme: Theme) => {
       currentTheme.set(theme);
     });
 

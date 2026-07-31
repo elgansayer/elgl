@@ -946,6 +946,7 @@ export class I18nService {
     'culturalGuide.italian': 'In Italy, greetings are enthusiastic; expect gestures during conversation. Use "ciao" for informal.',
     'settings.hideOnlineStatus': 'Hide online status',
     'settings.hideVipStatus': 'Hide VIP status',
+    'settings.fontScale': 'Text size',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });

@@ -1,0 +1,1 @@
+Exempt non-user-authored body fields (client error `stack` traces in `LogClientErrorDto`, Apple/Google IAP webhook payloads) from the global `SanitiseHtmlPipe`, which currently strips angle-bracket content like `<anonymous>` and generic type params from stack traces before they reach analytics.
