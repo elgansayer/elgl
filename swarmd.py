@@ -354,12 +354,24 @@ def git_commit(message: str) -> str:
         try:
             subprocess.run(['git', 'push', 'origin', 'main'], check=True, timeout=60)
         except subprocess.CalledProcessError:
-            log("Push rejected by remote. Attempting to pull with rebase...")
+            log("Push rejected by remote. Syncing with remote...")
             try:
-                subprocess.run(['git', 'pull', '--rebase', 'origin', 'main'], check=True, timeout=60)
+                # Strategy 1: rebase
+                try:
+                    subprocess.run(['git', 'pull', '--rebase', 'origin', 'main'], check=True, timeout=60)
+                except subprocess.CalledProcessError:
+                    subprocess.run(['git', 'rebase', '--abort'], check=False)
+                    # Strategy 2: merge-based pull
+                    log("Rebase failed, falling back to merge...")
+                    subprocess.run(['git', 'pull', 'origin', 'main'], check=True, timeout=60)
                 subprocess.run(['git', 'push', 'origin', 'main'], check=True, timeout=60)
             except subprocess.CalledProcessError:
                 subprocess.run(['git', 'rebase', '--abort'], check=False)
+                subprocess.run(['git', 'merge', '--abort'], check=False)
+                log("Push failed after rebase and merge attempts. Manual intervention required.")
+                alert_telegram('git_stuck',
+                               'Git sync stuck',
+                               'Push to origin/main failed after both rebase and merge attempts. Manual intervention required on the swarm host.')
                 raise
         sha = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'],
                             capture_output=True, text=True, timeout=10).stdout.strip()
