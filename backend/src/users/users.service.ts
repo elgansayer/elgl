@@ -288,20 +288,16 @@ export class UsersService {
       updatePayload.quiet_hours_start = dto.quiet_hours_start;
     if (dto.quiet_hours_end !== undefined)
       updatePayload.quiet_hours_end = dto.quiet_hours_end;
-    const response = await supabase
+    const { error: dndUpdateError } = await supabase
       .from('users')
       .update(updatePayload)
-      .eq('id', userId)
-      .select()
-      .single();
-    if (response.error || !response.data) {
-      Logger.warn(
-        `DND update failed, falling back: ${response.error?.message}`,
-      );
+      .eq('id', userId);
+    if (dndUpdateError) {
+      Logger.warn(`DND update failed, falling back: ${dndUpdateError.message}`);
       const mock = this.getMockProfile(userId);
       return { ...mock, ...updatePayload };
     }
-    return response.data as UserProfile;
+    return this.getProfile(userId);
   }
 
   private getMockProfile(userId: string): UserProfile {
@@ -457,22 +453,18 @@ export class UsersService {
     }
 
     const supabase = this.supabaseService.getClient();
-    const response = await supabase
+    const { error: updateError } = await supabase
       .from('users')
       .update(updatePayload)
-      .eq('id', userId)
-      .select()
-      .single();
-
-    if (response.error || !response.data) {
+      .eq('id', userId);
+    if (updateError) {
       Logger.warn(
-        `Supabase update failed, falling back to mock: ${response.error?.message}`,
+        `Supabase update failed, falling back to mock: ${updateError.message}`,
       );
       const mock = this.getMockProfile(userId);
       return { ...mock, ...updatePayload };
     }
-
-    return response.data as UserProfile;
+    return this.getProfile(userId);
   }
 
   async scheduleDeletion(
@@ -774,22 +766,18 @@ export class UsersService {
     if (settings.privacy_hide_vip_status !== undefined)
       updatePayload.privacy_hide_vip_status = settings.privacy_hide_vip_status;
 
-    const response = await supabase
+    const { error: privacyUpdateError } = await supabase
       .from('users')
       .update(updatePayload)
-      .eq('id', userId)
-      .select()
-      .single();
-
-    if (response.error || !response.data) {
+      .eq('id', userId);
+    if (privacyUpdateError) {
       Logger.warn(
-        `Supabase update for privacy settings failed, falling back to mock: ${response.error?.message}`,
+        `Supabase update for privacy settings failed, falling back to mock: ${privacyUpdateError.message}`,
       );
       const mock = this.getMockProfile(userId);
       return { ...mock, ...updatePayload };
     }
-
-    return response.data as UserProfile;
+    return this.getProfile(userId);
   }
 
   async getUserStats(userId: string): Promise<
@@ -811,13 +799,7 @@ export class UsersService {
       followingCountRes,
       visitsCountRes,
     ] = await Promise.all([
-      supabase
-        .from('users')
-        .select(
-          'coins_balance, study_streak_days, correction_ratio, is_serious_learner, display_name, avatar_url, created_at',
-        )
-        .eq('id', userId)
-        .single(),
+      supabase.from('users').select('*').eq('id', userId).maybeSingle(),
       supabase
         .from('moments')
         .select('id', { count: 'exact', head: true })
@@ -844,7 +826,7 @@ export class UsersService {
       throw new NotFoundException(`User stats not found for user ${userId}`);
     }
 
-    const user = userRes.data as Partial<UserProfile>;
+    const user = userRes.data;
     const momentsCount = momentsCountRes.count ?? 0;
     const commentsCount = commentsCountRes.count ?? 0;
     const followersCount = followersCountRes.count ?? 0;

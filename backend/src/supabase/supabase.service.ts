@@ -54,6 +54,87 @@ type InterestsRow = {
   name: string;
 };
 
+type XpEventRow = {
+  id: string;
+  user_id: string;
+  points: number;
+  activity: string;
+  created_at: string;
+};
+
+type UserFollowRow = {
+  id: string;
+  follower_id: string;
+  following_id: string;
+  created_at: string;
+};
+
+type UserProfileLikeRow = {
+  id: string;
+  liker_id: string;
+  liked_id: string;
+  created_at: string;
+};
+
+type ProfileVisitRow = {
+  id: string;
+  visitor_id: string;
+  viewed_id: string;
+  created_at: string;
+};
+
+type StatusViewRow = {
+  id: string;
+  viewer_id: string;
+  status_owner_id: string;
+  created_at: string;
+};
+
+type MomentRow = {
+  id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+};
+
+type MomentCommentRow = {
+  id: string;
+  author_id: string;
+  moment_id: string;
+  content: string;
+  created_at: string;
+};
+
+type MomentLikeRow = {
+  id: string;
+  user_id: string;
+  moment_id: string;
+  created_at: string;
+};
+
+type FlashcardRow = {
+  id: string;
+  user_id: string;
+  front: string;
+  back: string;
+  created_at: string;
+};
+
+type FavouriteRow = {
+  id: string;
+  user_id: string;
+  moment_id: string;
+  created_at: string;
+};
+
+type ChatMessageRow = {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  created_at: string;
+};
+
 export interface Database {
   public: {
     Tables: {
@@ -86,6 +167,61 @@ export interface Database {
         Row: InterestsRow;
         Insert: Partial<InterestsRow>;
         Update: Partial<InterestsRow>;
+      };
+      xp_events: {
+        Row: XpEventRow;
+        Insert: Partial<XpEventRow>;
+        Update: Partial<XpEventRow>;
+      };
+      user_follows: {
+        Row: UserFollowRow;
+        Insert: Partial<UserFollowRow>;
+        Update: Partial<UserFollowRow>;
+      };
+      user_profile_likes: {
+        Row: UserProfileLikeRow;
+        Insert: Partial<UserProfileLikeRow>;
+        Update: Partial<UserProfileLikeRow>;
+      };
+      profile_visits: {
+        Row: ProfileVisitRow;
+        Insert: Partial<ProfileVisitRow>;
+        Update: Partial<ProfileVisitRow>;
+      };
+      status_views: {
+        Row: StatusViewRow;
+        Insert: Partial<StatusViewRow>;
+        Update: Partial<StatusViewRow>;
+      };
+      moments: {
+        Row: MomentRow;
+        Insert: Partial<MomentRow>;
+        Update: Partial<MomentRow>;
+      };
+      moment_comments: {
+        Row: MomentCommentRow;
+        Insert: Partial<MomentCommentRow>;
+        Update: Partial<MomentCommentRow>;
+      };
+      moment_likes: {
+        Row: MomentLikeRow;
+        Insert: Partial<MomentLikeRow>;
+        Update: Partial<MomentLikeRow>;
+      };
+      flashcards: {
+        Row: FlashcardRow;
+        Insert: Partial<FlashcardRow>;
+        Update: Partial<FlashcardRow>;
+      };
+      favourites: {
+        Row: FavouriteRow;
+        Insert: Partial<FavouriteRow>;
+        Update: Partial<FavouriteRow>;
+      };
+      chat_messages: {
+        Row: ChatMessageRow;
+        Insert: Partial<ChatMessageRow>;
+        Update: Partial<ChatMessageRow>;
       };
     };
   };

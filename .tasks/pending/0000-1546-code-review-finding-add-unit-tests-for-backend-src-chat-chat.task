@@ -1,0 +1,1 @@
+Code review finding: Add unit tests for backend/src/chat/chat.service (from commit 4a46d1fc: Chat Lock (hide specific chats in a locked folder))

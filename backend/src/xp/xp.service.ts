@@ -5,6 +5,14 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
+interface XpEventRecord {
+  id: string;
+  user_id: string;
+  points: number;
+  activity: string;
+  created_at: string;
+}
+
 type XpActivityType =
   | 'create_flashcard'
   | 'review_flashcard'

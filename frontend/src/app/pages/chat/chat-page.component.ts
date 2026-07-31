@@ -131,6 +131,12 @@ interface AiChatMessage {
                   <h3 class="font-semibold">{{ room.title }}</h3>
                   <p class="text-sm text-text-muted">{{ room.subtitle }}</p>
                 </div>
+                <button
+                  (click)="exportChat()"
+                  class="ms-auto p-2 text-sm text-text-muted hover:text-text transition-colors"
+                >
+                  {{ 'chat.exportHistory' | t }}
+                </button>
               </div>
             </div>
 
@@ -382,6 +388,16 @@ export class ChatPageComponent implements OnInit {
       this.messages.set(messages);
     } catch (error) {
       console.error('Failed to load messages', error);
+    }
+  }
+
+  async exportChat(): Promise<void> {
+    const room = this.selectedRoom();
+    if (!room) return;
+    try {
+      await this.chatService.downloadChatHistory(room.id);
+    } catch (error) {
+      console.error('Failed to export chat history', error);
     }
   }
 
