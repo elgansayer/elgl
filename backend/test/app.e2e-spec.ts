@@ -1,10 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from './../src/app.module';
 import { SupabaseAuthGuard } from './../src/auth/supabase-auth.guard';
 import { SupabaseService } from './../src/supabase/supabase.service';
 import { NlpService } from './../src/nlp/nlp.service';
+
+let AppModule: any;
 
 jest.setTimeout(300000);
 
@@ -61,25 +62,37 @@ describe('HelloTalk API E2E Integration Suite', () => {
     single: jest.Mock;
   };
 
-  beforeAll(() => {
+  beforeAll(async () => {
     process.env.SUPABASE_URL = 'https://hellotalk.test.supabase.co';
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-key';
+    process.env.SUPABASE_ANON_KEY = 'test-anon-key';
+    process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/db';
     process.env.REDIS_URL = 'redis://localhost:6379';
+    process.env.CENTRIFUGO_URL = 'http://localhost:8000';
     process.env.CENTRIFUGO_API_KEY = 'test-centrifugo-api-key';
     process.env.CENTRIFUGO_SECRET = 'test-centrifugo-secret';
+    process.env.LIVEKIT_URL = 'ws://localhost:7880';
     process.env.LIVEKIT_API_KEY = 'test-livekit-key';
     process.env.LIVEKIT_SECRET = 'test-livekit-secret';
-    process.env.LIVEKIT_URL = 'ws://localhost:7880';
     process.env.CLOUDFLARE_R2_ENDPOINT = 'https://test-r2.example.com';
     process.env.CLOUDFLARE_R2_ACCESS_KEY_ID = 'test-r2-access';
     process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY = 'test-r2-secret';
     process.env.CLOUDFLARE_R2_BUCKET = 'test-bucket';
+    process.env.CLOUDFLARE_R2_PUBLIC_DOMAIN = 'https://example.com';
     process.env.DEEPL_API_KEY = 'test-deepl-key';
     process.env.AZURE_TRANSLATOR_KEY = 'test-azure-key';
     process.env.STRIPE_SECRET_KEY = 'test-stripe-key';
     process.env.STRIPE_WEBHOOK_SECRET = 'test-stripe-webhook-secret';
+    process.env.STRIPE_MONTHLY_PRICE_ID = 'price_monthly_test';
+    process.env.STRIPE_YEARLY_PRICE_ID = 'price_yearly_test';
     process.env.JWT_SECRET = 'test-jwt-secret';
     process.env.NODE_ENV = 'test';
+    process.env.APPLE_SHARED_SECRET = 'test-apple-secret';
+    process.env.APPLE_ROOT_CA_CERT_1 = 'test-apple-ca-cert-1';
+    process.env.GOOGLE_PUBSUB_AUDIENCE = 'https://pubsub.googleapis.com/test';
+    process.env.GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL = 'test@example.com';
+    process.env.LLM_API_KEY = 'test-llm-key';
+    ({ AppModule } = await import('./../src/app.module'));
   });
 
   beforeEach(async () => {

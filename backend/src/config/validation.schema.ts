@@ -35,75 +35,49 @@ export const validationSchema = Joi.object({
   NODE_ENV: Joi.string()
     .valid('development', 'production', 'test', 'provision')
     .default('development'),
-  SUPABASE_URL: Joi.string()
-    .uri()
-    .required()
-    .default(testDefaults.SUPABASE_URL),
-  SUPABASE_ANON_KEY: Joi.string()
-    .required()
-    .default(testDefaults.SUPABASE_ANON_KEY),
-  SUPABASE_SERVICE_ROLE_KEY: Joi.string()
-    .required()
-    .default(testDefaults.SUPABASE_SERVICE_ROLE_KEY),
-  DATABASE_URL: Joi.string().required().default(testDefaults.DATABASE_URL),
-  REDIS_URL: Joi.string().required().default(testDefaults.REDIS_URL),
-  CENTRIFUGO_URL: Joi.string()
-    .uri()
-    .required()
-    .default(testDefaults.CENTRIFUGO_URL),
-  CENTRIFUGO_API_KEY: Joi.string()
-    .required()
-    .default(testDefaults.CENTRIFUGO_API_KEY),
-  CENTRIFUGO_SECRET: Joi.string()
-    .required()
-    .default(testDefaults.CENTRIFUGO_SECRET),
-  LIVEKIT_URL: Joi.string().required().default(testDefaults.LIVEKIT_URL),
-  LIVEKIT_API_KEY: Joi.string()
-    .required()
-    .default(testDefaults.LIVEKIT_API_KEY),
-  LIVEKIT_SECRET: Joi.string().required().default(testDefaults.LIVEKIT_SECRET),
+  SUPABASE_URL: Joi.string().uri().default(testDefaults.SUPABASE_URL),
+  SUPABASE_ANON_KEY: Joi.string().default(testDefaults.SUPABASE_ANON_KEY),
+  SUPABASE_SERVICE_ROLE_KEY: Joi.string().default(
+    testDefaults.SUPABASE_SERVICE_ROLE_KEY,
+  ),
+  DATABASE_URL: Joi.string().default(testDefaults.DATABASE_URL),
+  REDIS_URL: Joi.string().default(testDefaults.REDIS_URL),
+  CENTRIFUGO_URL: Joi.string().uri().default(testDefaults.CENTRIFUGO_URL),
+  CENTRIFUGO_API_KEY: Joi.string().default(testDefaults.CENTRIFUGO_API_KEY),
+  CENTRIFUGO_SECRET: Joi.string().default(testDefaults.CENTRIFUGO_SECRET),
+  LIVEKIT_URL: Joi.string().default(testDefaults.LIVEKIT_URL),
+  LIVEKIT_API_KEY: Joi.string().default(testDefaults.LIVEKIT_API_KEY),
+  LIVEKIT_SECRET: Joi.string().default(testDefaults.LIVEKIT_SECRET),
   CLOUDFLARE_R2_ENDPOINT: Joi.string()
     .uri()
-    .required()
     .default(testDefaults.CLOUDFLARE_R2_ENDPOINT),
-  CLOUDFLARE_R2_ACCESS_KEY_ID: Joi.string()
-    .required()
-    .default(testDefaults.CLOUDFLARE_R2_ACCESS_KEY_ID),
-  CLOUDFLARE_R2_SECRET_ACCESS_KEY: Joi.string()
-    .required()
-    .default(testDefaults.CLOUDFLARE_R2_SECRET_ACCESS_KEY),
-  CLOUDFLARE_R2_BUCKET: Joi.string()
-    .required()
-    .default(testDefaults.CLOUDFLARE_R2_BUCKET),
+  CLOUDFLARE_R2_ACCESS_KEY_ID: Joi.string().default(
+    testDefaults.CLOUDFLARE_R2_ACCESS_KEY_ID,
+  ),
+  CLOUDFLARE_R2_SECRET_ACCESS_KEY: Joi.string().default(
+    testDefaults.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+  ),
+  CLOUDFLARE_R2_BUCKET: Joi.string().default(testDefaults.CLOUDFLARE_R2_BUCKET),
   CLOUDFLARE_R2_PUBLIC_DOMAIN: Joi.string()
     .uri()
-    .required()
     .default(testDefaults.CLOUDFLARE_R2_PUBLIC_DOMAIN),
-  DEEPL_API_KEY: Joi.string().required().default(testDefaults.DEEPL_API_KEY),
-  AZURE_TRANSLATOR_KEY: Joi.string()
-    .required()
-    .default(testDefaults.AZURE_TRANSLATOR_KEY),
+  DEEPL_API_KEY: Joi.string().default(testDefaults.DEEPL_API_KEY),
+  AZURE_TRANSLATOR_KEY: Joi.string().default(testDefaults.AZURE_TRANSLATOR_KEY),
   AZURE_TRANSLATOR_REGION: Joi.string().default('global'),
-  STRIPE_SECRET_KEY: Joi.string()
-    .required()
-    .default(testDefaults.STRIPE_SECRET_KEY),
-  STRIPE_WEBHOOK_SECRET: Joi.string()
-    .required()
-    .default(testDefaults.STRIPE_WEBHOOK_SECRET),
-  STRIPE_MONTHLY_PRICE_ID: Joi.string()
-    .required()
-    .default(testDefaults.STRIPE_MONTHLY_PRICE_ID),
-  STRIPE_YEARLY_PRICE_ID: Joi.string()
-    .required()
-    .default(testDefaults.STRIPE_YEARLY_PRICE_ID),
+  STRIPE_SECRET_KEY: Joi.string().default(testDefaults.STRIPE_SECRET_KEY),
+  STRIPE_WEBHOOK_SECRET: Joi.string().default(
+    testDefaults.STRIPE_WEBHOOK_SECRET,
+  ),
+  STRIPE_MONTHLY_PRICE_ID: Joi.string().default(
+    testDefaults.STRIPE_MONTHLY_PRICE_ID,
+  ),
+  STRIPE_YEARLY_PRICE_ID: Joi.string().default(
+    testDefaults.STRIPE_YEARLY_PRICE_ID,
+  ),
   FRONTEND_URL: Joi.string().uri().default('http://localhost:4200'),
   APPLE_BUNDLE_ID: Joi.string().default('com.hellotalk.app'),
-  APPLE_SHARED_SECRET: Joi.string()
-    .required()
-    .default(testDefaults.APPLE_SHARED_SECRET),
-  APPLE_ROOT_CA_CERT_1: Joi.string()
-    .required()
-    .default(testDefaults.APPLE_ROOT_CA_CERT_1),
+  APPLE_SHARED_SECRET: Joi.string().default(testDefaults.APPLE_SHARED_SECRET),
+  APPLE_ROOT_CA_CERT_1: Joi.string().default(testDefaults.APPLE_ROOT_CA_CERT_1),
   APPLE_ROOT_CA_CERT_2: Joi.string().optional().allow(''),
   APPLE_VERIFICATION_URL: Joi.string()
     .uri()
@@ -115,20 +89,18 @@ export const validationSchema = Joi.object({
   // every push request (see GooglePlayNotificationService#verifyPubSubAuthorization).
   GOOGLE_PUBSUB_AUDIENCE: Joi.string()
     .uri()
-    .required()
     .default(testDefaults.GOOGLE_PUBSUB_AUDIENCE),
   // tlds disabled: this is matched as a literal string against an OIDC claim
   // (see GooglePlayNotificationService#verifyPubSubAuthorization), never used
   // for delivery, so rely on basic email syntax only.
   GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL: Joi.string()
     .email()
-    .required()
     .default(testDefaults.GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL),
 
   LLM_PROVIDER: Joi.string()
     .valid('openai', 'anthropic', 'google', 'local')
     .default('openai'),
-  LLM_API_KEY: Joi.string().required().default(testDefaults.LLM_API_KEY),
+  LLM_API_KEY: Joi.string().default(testDefaults.LLM_API_KEY),
   LLM_BASE_URL: Joi.string().uri().optional(),
   LLM_MODEL: Joi.string().optional(),
   ANTHROPIC_VERSION: Joi.string().default('2023-06-01'),

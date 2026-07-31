@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { CallsService } from './calls.service';
 import { CreateGroupCallDto } from './dto/create-group-call.dto';
+import { InitiateCallDto } from './dto/initiate-call.dto';
 
 interface RequestWithUser {
   user?: {
@@ -23,12 +24,15 @@ export class CallsController {
   @Post('initiate')
   async initiateCall(
     @Request() req: RequestWithUser,
-    @Body('callee_id') calleeId: string,
-    @Body('is_video') isVideo?: boolean,
+    @Body() dto: InitiateCallDto,
   ) {
     // Fallback to a dummy user ID if req.user is not populated in this mock
     const callerId = req.user?.id || 'dummy_caller_id';
-    return this.callsService.initiateCall(callerId, calleeId, isVideo);
+    return this.callsService.initiateCall(
+      callerId,
+      dto.callee_id,
+      dto.is_video,
+    );
   }
 
   @Post('group')
@@ -81,6 +85,16 @@ export class CallsController {
   ) {
     const userId = req.user?.id || 'dummy_caller_id';
     this.callsService.resumeCall(userId, roomName);
+    return { success: true };
+  }
+
+  @Put(':room_name/leave')
+  leaveCall(
+    @Request() req: RequestWithUser,
+    @Param('room_name') roomName: string,
+  ) {
+    const userId = req.user?.id || 'dummy_caller_id';
+    this.callsService.leaveCall(userId, roomName);
     return { success: true };
   }
 }
