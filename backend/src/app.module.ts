@@ -68,6 +68,7 @@ import { validationSchema } from './config/validation.schema';
     ConfigModule.forRoot({
       isGlobal: true,
       validationSchema,
+      validationOptions: { allowUnknown: true, abortEarly: false },
     }),
     ScheduleModule.forRoot(),
 

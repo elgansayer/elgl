@@ -64,6 +64,7 @@ export class AppComponent implements OnInit {
   private document = inject(DOCUMENT);
   private destroyRef = inject(DestroyRef);
   readonly totalUnread = computed(() => this.unreadCounter.totalUnread());
+  readonly hasUnread = computed(() => this.totalUnread() > 0);
 
   readonly unreadDisplayValue = computed(() =>
     this.totalUnread() > 99 ? '99+' : String(this.totalUnread()),
@@ -129,6 +130,7 @@ export class AppComponent implements OnInit {
       // Load the blocked user list once the user is available
       await this.safetyService.loadBlockedUsers();
 
+
       // Check for daily login reward
       const checkIn = await this.economyStore.claimDailyCheckIn();
       if (checkIn?.claimed) {
@@ -175,4 +177,5 @@ export class AppComponent implements OnInit {
     this.incomingCallData.set(null);
     // TODO: Send decline notification via Centrifugo
   }
+
 }

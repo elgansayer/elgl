@@ -132,4 +132,4 @@ export const validationSchema = Joi.object({
   LLM_BASE_URL: Joi.string().uri().optional(),
   LLM_MODEL: Joi.string().optional(),
   ANTHROPIC_VERSION: Joi.string().default('2023-06-01'),
-});
+}).unknown(true);

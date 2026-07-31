@@ -1,7 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as jwt from 'jsonwebtoken';
-import { TranslationService } from './translation.service';
 
 @Injectable()
 export class CentrifugoService implements OnModuleInit {
@@ -9,10 +8,7 @@ export class CentrifugoService implements OnModuleInit {
   private apiKey!: string;
   private tokenSecret!: string;
 
-  constructor(
-    private readonly configService: ConfigService,
-    private readonly translationService: TranslationService,
-  ) {}
+  constructor(private readonly configService: ConfigService) {}
 
   onModuleInit() {
     this.apiUrl = `${this.configService.get<string>('CENTRIFUGO_URL')}/api`;
@@ -56,12 +52,7 @@ export class CentrifugoService implements OnModuleInit {
   }
 
   /**
-   * Publishes a voice‑room chat message with real‑time translation.
-   *
-   * 1. Detects the source language of `textContent`.
-   * 2. Translates the text into the target language.
-   * 3. Publishes a payload that includes both the original and the
-   *    translated version so that the client can display either.
+   * Publishes a voice‑room chat message.
    */
   async publishTranslated(
     channel: string,
@@ -69,35 +60,12 @@ export class CentrifugoService implements OnModuleInit {
     targetLang: string,
     extraData: Record<string, unknown>,
   ): Promise<boolean> {
-    let detectedLanguage = 'en';
-    let translatedText = originalText;
-
-    try {
-      const detected =
-        await this.translationService.detectLanguage(originalText);
-      detectedLanguage = detected;
-
-      // Avoid translating when source and target are identical
-      if (detectedLanguage !== targetLang) {
-        translatedText = await this.translationService.translate(
-          originalText,
-          detectedLanguage,
-          targetLang,
-        );
-      }
-    } catch (error) {
-      console.error(
-        'Translation failed, falling back to original text:',
-        error,
-      );
-    }
-
     const data: Record<string, unknown> = {
       ...extraData,
       text_content: originalText,
       original_text: originalText,
-      translated_text: translatedText,
-      detected_language: detectedLanguage,
+      translated_text: originalText,
+      detected_language: 'en',
     };
 
     return this.publish(channel, data);
