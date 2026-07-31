@@ -1,8 +1,7 @@
-import { Component, inject, OnInit, DestroyRef, signal } from '@angular/core';
+import { Component, inject, computed, signal, resource } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CallLogRecord, CallLogsService } from '../../services/call-logs.service';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-call-logs',
@@ -62,7 +61,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
                   {{ log.caller_name }} → {{ log.receiver_name }}
                 </p>
                 <p class="text-sm text-surface-400">
-                  {{ log.call_type }}
+                  {{ ('call_logs.' + log.call_type) | t }}
                   · {{ log.started_at | date:'short' }}
                   @if (log.duration_seconds !== null) {
                     · {{ log.duration_seconds }}s
@@ -76,29 +75,19 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
     </div>
   `,
 })
-export class CallLogsComponent implements OnInit {
+export class CallLogsComponent {
   private callLogsService = inject(CallLogsService);
-  private destroyRef = inject(DestroyRef);
-  logs = signal<CallLogRecord[]>([]);
   selectedCallType = signal<string | undefined>(undefined);
 
-  ngOnInit(): void {
-    this.loadLogs();
-  }
+  private callLogsResource = resource<CallLogRecord[], { callType?: string }>({
+    params: () => ({ callType: this.selectedCallType() }),
+    loader: ({ params }) =>
+      this.callLogsService.getCallLogs({ callType: params.callType }),
+  });
+
+  logs = computed<CallLogRecord[]>(() => this.callLogsResource.value() ?? []);
 
   onFilterChange(callType?: string): void {
     this.selectedCallType.set(callType);
-    this.loadLogs();
-  }
-
-  private loadLogs(): void {
-    // TODO: obtain current user id from auth service
-    const userId = 'current-user-id-placeholder';
-    this.callLogsService
-      .getCallLogs(userId, { callType: this.selectedCallType() })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((data) => {
-        this.logs.set(data);
-      });
   }
 }

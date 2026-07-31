@@ -2,6 +2,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -11,7 +12,7 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { EventsQueryDto } from './dto/events-query.dto';
 
 @Injectable()
-export class EventsService implements OnModuleInit {
+export class EventsService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(EventsService.name);
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private intervalId2: ReturnType<typeof setInterval> | null = null;
@@ -29,6 +30,17 @@ export class EventsService implements OnModuleInit {
     // Start background job that checks for events whose start time is happening now
     // and spins up a LiveKit audio room for them.
     this.intervalId2 = setInterval(() => void this.checkStartEvents(), 10_000);
+  }
+
+  onModuleDestroy() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+    if (this.intervalId2) {
+      clearInterval(this.intervalId2);
+      this.intervalId2 = null;
+    }
   }
 
   /**

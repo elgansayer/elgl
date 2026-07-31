@@ -914,6 +914,12 @@ export class I18nService {
     'leaderboard.serious': 'Serious Learner',
     'leaderboard.days': 'days',
     'leaderboard.empty': 'No correctors yet.',
+    'call_logs.title': 'Call Logs',
+    'call_logs.all': 'All',
+    'call_logs.incoming': 'Incoming',
+    'call_logs.outgoing': 'Outgoing',
+    'call_logs.missed': 'Missed',
+    'call_logs.empty': 'No call logs yet.',
     'common.error': 'Error',
 
     // Password Policy & Reset

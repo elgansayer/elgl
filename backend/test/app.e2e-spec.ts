@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { json, Request, Response } from 'express';
+import Stripe from 'stripe';
 import { SupabaseAuthGuard } from './../src/auth/supabase-auth.guard';
 import { SupabaseService } from './../src/supabase/supabase.service';
 import { NlpService } from './../src/nlp/nlp.service';
@@ -217,6 +219,8 @@ describe('HelloTalk API E2E Integration Suite', () => {
         getClient: jest.fn().mockReturnValue(mockSupabaseClient),
         getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
         validateConfiguration: jest.fn().mockReturnValue(true),
+        incrementXp: jest.fn().mockResolvedValue(undefined),
+        getUserXp: jest.fn().mockResolvedValue(0),
       })
       .overrideGuard(SupabaseAuthGuard)
       .useValue({
@@ -230,7 +234,18 @@ describe('HelloTalk API E2E Integration Suite', () => {
       .useValue(mockNlpService)
       .compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication({ rawBody: true });
+    app.use(
+      json({
+        verify: (
+          req: Request & { rawBody?: Buffer },
+          _res: Response,
+          buf: Buffer,
+        ) => {
+          req.rawBody = buf;
+        },
+      }),
+    );
     await app.init();
   });
 
@@ -282,19 +297,27 @@ describe('HelloTalk API E2E Integration Suite', () => {
     });
 
     it('/monetisation/webhooks/stripe (POST) - should process Stripe webhooks cleanly', () => {
-      return request(app.getHttpServer())
-        .post('/monetisation/webhooks/stripe')
-        .send({
-          type: 'checkout.session.completed',
-          data: {
-            object: {
-              metadata: {
-                userId: 'e2e-user-1',
-                tier: 'developer',
-              },
+      const payload = JSON.stringify({
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            metadata: {
+              userId: 'e2e-user-1',
+              tier: 'developer',
             },
           },
-        })
+        },
+      });
+      const signature = Stripe.webhooks.generateTestHeaderString({
+        payload,
+        secret: process.env.STRIPE_WEBHOOK_SECRET as string,
+      });
+
+      return request(app.getHttpServer())
+        .post('/monetisation/webhooks/stripe')
+        .set('Content-Type', 'application/json')
+        .set('stripe-signature', signature)
+        .send(payload)
         .expect(200)
         .expect({ received: true, status: 'processed' });
     });
@@ -302,6 +325,12 @@ describe('HelloTalk API E2E Integration Suite', () => {
 
   describe('Guarded Domain Endpoints (Authenticated E2E Flows)', () => {
     it('/users/profile (GET) - should return authenticated user profile details', () => {
+      // First .single() call is consumed by the global LastActiveInterceptor
+      // checking last_active_at before the request reaches the controller.
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { last_active_at: null },
+        error: null,
+      });
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: {
           id: 'e2e-user-1',
@@ -353,6 +382,10 @@ describe('HelloTalk API E2E Integration Suite', () => {
         status: 'active',
       };
       mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { last_active_at: null },
+        error: null,
+      });
+      mockQueryBuilder.single.mockResolvedValueOnce({
         data: newRoom,
         error: null,
       });
@@ -380,6 +413,10 @@ describe('HelloTalk API E2E Integration Suite', () => {
         target_language: 'es',
       };
       mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { last_active_at: null },
+        error: null,
+      });
+      mockQueryBuilder.single.mockResolvedValueOnce({
         data: newMoment,
         error: null,
       });
@@ -404,6 +441,10 @@ describe('HelloTalk API E2E Integration Suite', () => {
         word_token: 'hola',
         translation: 'hello',
       };
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { last_active_at: null },
+        error: null,
+      });
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: card,
         error: null,

@@ -1,7 +1,5 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
-import { Observable, from } from 'rxjs';
-import { map } from 'rxjs/operators';
 
 export interface CallLogRecord {
   id: string;
@@ -21,12 +19,13 @@ export interface CallLogRecord {
 export class CallLogsService {
   private supabase = inject(SupabaseService);
 
-  getCallLogs(
-    userId: string,
-    options?: { callType?: string; limit?: number; offset?: number },
-  ): Observable<CallLogRecord[]> {
-    let query = this.supabase
-      .getClient()
+  async getCallLogs(options?: { callType?: string; limit?: number; offset?: number }): Promise<CallLogRecord[]> {
+    const supabase = this.supabase.getClient();
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData?.user?.id;
+    if (!userId) return [];
+
+    let query = supabase
       .from('call_logs')
       .select('*')
       .or(`caller_id.eq.${userId},receiver_id.eq.${userId}`)
@@ -40,11 +39,8 @@ export class CallLogsService {
       query = query.eq('call_type', options.callType);
     }
 
-    return from(query).pipe(
-      map(({ data }): CallLogRecord[] => {
-        const arr = data ?? [];
-        return Array.isArray(arr) ? arr : [];
-      }),
-    );
+    const { data } = await query;
+    const arr = data ?? [];
+    return Array.isArray(arr) ? (arr as CallLogRecord[]) : [];
   }
 }
