@@ -37,6 +37,10 @@ export interface UserProfile {
   privacy_hide_exact_location: boolean;
   privacy_hide_online_status: boolean;
   privacy_hide_vip_status: boolean;
+  privacy_last_seen?: string;
+  privacy_profile_photo?: string;
+  privacy_about_info?: string;
+  privacy_status?: string;
   incognito_visits?: boolean;
   do_not_disturb?: boolean;
   quiet_hours_start?: string;

@@ -171,12 +171,69 @@ export class CallsService {
       throw new BadRequestException('Waiting call not found');
     }
     const callInfo = waitingList[idx];
-    // Move the call from waiting to active
+    // Put any current active calls on hold before accepting the waiting call.
+    const userCalls = this.activeCalls.get(userId);
+    if (userCalls) {
+      for (const activeCall of userCalls.values()) {
+        activeCall.isHeld = true;
+      }
+    }
     waitingList.splice(idx, 1);
     if (waitingList.length === 0) {
       this.waitingCalls.delete(userId);
     }
     this.registerParticipant(userId, callInfo.roomName, callInfo.e2eeKey);
+  }
+
+  /* ---------- Switching between calls ---------- */
+
+  switchCall(
+    userId: string,
+    currentRoomName: string,
+    targetRoomName: string,
+  ): {
+    room_name: string;
+    callee_token: string;
+    e2ee_key: string;
+    is_video: boolean;
+    held_call_room_name: string;
+    success: boolean;
+  } {
+    if (currentRoomName === targetRoomName) {
+      throw new BadRequestException('Cannot switch to the same call');
+    }
+    const userCalls = this.activeCalls.get(userId);
+    if (!userCalls || !userCalls.has(currentRoomName)) {
+      throw new BadRequestException('Call not found');
+    }
+    const waitingList = this.waitingCalls.get(userId);
+    if (!waitingList || waitingList.length === 0) {
+      throw new BadRequestException('No waiting calls for this user');
+    }
+    const idx = waitingList.findIndex((w) => w.roomName === targetRoomName);
+    if (idx === -1) {
+      throw new BadRequestException('Waiting call not found');
+    }
+    const waitingCall = waitingList[idx];
+
+    // Put the current active call on hold
+    userCalls.get(currentRoomName)!.isHeld = true;
+
+    // Remove the target from waiting queue and register it as active
+    waitingList.splice(idx, 1);
+    if (waitingList.length === 0) {
+      this.waitingCalls.delete(userId);
+    }
+    this.registerParticipant(userId, waitingCall.roomName, waitingCall.e2eeKey);
+
+    return {
+      room_name: waitingCall.roomName,
+      callee_token: waitingCall.calleeToken,
+      e2ee_key: waitingCall.e2eeKey,
+      is_video: waitingCall.isVideo,
+      held_call_room_name: currentRoomName,
+      success: true,
+    };
   }
 
   /* ---------- Existing call-creation methods (updated) ---------- */

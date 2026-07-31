@@ -52,6 +52,10 @@ export class SupabaseService implements OnModuleDestroy {
     const { data, error: fetchError } = await supabase
       .from('users')
       .select('study_streak_days, correction_ratio')
+      .returns<{
+        study_streak_days: number | null;
+        correction_ratio: number | null;
+      }>()
       .eq('id', userId)
       .single();
 
@@ -93,6 +97,7 @@ export class SupabaseService implements OnModuleDestroy {
       const { data, error: fetchError } = await supabase
         .from('users')
         .select('xp_total')
+        .returns<{ xp_total: number }>()
         .eq('id', userId)
         .single();
       if (fetchError || !data) {
@@ -115,6 +120,7 @@ export class SupabaseService implements OnModuleDestroy {
     const { data, error } = await supabase
       .from('users')
       .select('xp_total')
+      .returns<{ xp_total: number }>()
       .eq('id', userId)
       .single();
     if (error || !data) {

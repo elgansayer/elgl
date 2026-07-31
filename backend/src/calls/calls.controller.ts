@@ -10,6 +10,7 @@ import {
 import { CallsService } from './calls.service';
 import { CreateGroupCallDto } from './dto/create-group-call.dto';
 import { InitiateCallDto } from './dto/initiate-call.dto';
+import { SwitchCallDto } from './dto/switch-call.dto';
 
 interface RequestWithUser {
   user?: {
@@ -65,6 +66,16 @@ export class CallsController {
   getWaitingCalls(@Request() req: RequestWithUser) {
     const userId = req.user?.id || 'dummy_caller_id';
     return this.callsService.getWaitingCalls(userId);
+  }
+
+  @Put('switch')
+  switchCall(@Request() req: RequestWithUser, @Body() dto: SwitchCallDto) {
+    const userId = req.user?.id || 'dummy_caller_id';
+    return this.callsService.switchCall(
+      userId,
+      dto.current_room_name,
+      dto.target_room_name,
+    );
   }
 
   @Put(':room_name/accept-waiting')

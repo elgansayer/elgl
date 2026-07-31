@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return */
 import {
   BadRequestException,
   Injectable,
@@ -76,12 +76,12 @@ export class UsersService {
     const profile = response.data as UserProfile;
 
     // Attach corrector score if available
+    let correctorScore = 0;
     if (this.correctorScoreService) {
       const score = await this.correctorScoreService.getCorrectorScore(userId);
-      (profile as any).corrector_score = score.averageScore ?? 0;
-    } else {
-      (profile as any).corrector_score = 0;
+      correctorScore = score.averageScore ?? 0;
     }
+    profile.corrector_score = correctorScore;
 
     // Attach follower / following counts
     let followersCount = 0;
@@ -100,8 +100,8 @@ export class UsersService {
     } catch {
       // leave zero.
     }
-    (profile as any).followers_count = followersCount;
-    (profile as any).following_count = followingCount;
+    profile.followers_count = followersCount;
+    profile.following_count = followingCount;
     profile.xp_total = await this.xpService.getTotalXp(userId);
 
     return profile;
@@ -171,7 +171,7 @@ export class UsersService {
     }
 
     const rows = response.data ?? [];
-    return rows.map((row: any) => ({
+    return rows.map((row) => ({
       id: row.id,
       visitor_id: row.viewer_id,
       viewed_id: row.status_owner_id,
@@ -558,20 +558,24 @@ export class UsersService {
     privacy_hide_vip_status?: boolean;
   }> {
     const profile = await this.getProfile(userId);
+    const privacyRecord = profile as Record<string, unknown>;
     return {
       privacy_hide_age: profile.privacy_hide_age ?? false,
       privacy_hide_location: profile.privacy_hide_location ?? false,
       privacy_hide_from_search: profile.privacy_hide_from_search ?? false,
-      privacy_hide_gender: (profile as any)?.privacy_hide_gender ?? false,
-      silence_unknown_callers:
-        (profile as any)?.silence_unknown_callers ?? false,
-      privacy_last_seen: (profile as any)?.privacy_last_seen ?? 'everyone',
+      privacy_hide_gender: profile.privacy_hide_gender ?? false,
+      silence_unknown_callers: profile.silence_unknown_callers ?? false,
+      privacy_last_seen:
+        (privacyRecord.privacy_last_seen as string | undefined) ?? 'everyone',
       privacy_profile_photo:
-        (profile as any)?.privacy_profile_photo ?? 'everyone',
-      privacy_about_info: (profile as any)?.privacy_about_info ?? 'everyone',
-      privacy_status: (profile as any)?.privacy_status ?? 'everyone',
+        (privacyRecord.privacy_profile_photo as string | undefined) ??
+        'everyone',
+      privacy_about_info:
+        (privacyRecord.privacy_about_info as string | undefined) ?? 'everyone',
+      privacy_status:
+        (privacyRecord.privacy_status as string | undefined) ?? 'everyone',
       privacy_hide_vip_status:
-        (profile as any)?.privacy_hide_vip_status ?? false,
+        (privacyRecord.privacy_hide_vip_status as boolean | undefined) ?? false,
     };
   }
 
@@ -671,7 +675,7 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to fetch followers');
     }
     const users: UserProfile[] = (data ?? []).map(
-      (row: any) => row.follower as UserProfile,
+      (row) => row.follower as UserProfile,
     );
     return { data: users, total };
   }
@@ -711,7 +715,7 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to fetch following');
     }
     const users: UserProfile[] = (data ?? []).map(
-      (row: any) => row.following as UserProfile,
+      (row) => row.following as UserProfile,
     );
     return { data: users, total };
   }
