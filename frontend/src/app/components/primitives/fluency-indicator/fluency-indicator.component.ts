@@ -1,9 +1,10 @@
-import { Component, input } from '@angular/core';
+import { Component, input, ChangeDetectionStrategy } from '@angular/core';
 
 import { getLanguageFlag } from '../language-picker/language-picker.component';
 
 @Component({
   selector: 'app-fluency-indicator',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [],
   template: `
     <div class="flex items-center gap-1.5 text-xs font-bold text-text-primary">

@@ -39,7 +39,13 @@ export class DiscoveryComponent implements OnInit {
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
 
-  readonly partners = signal<UserProfile[]>([]);
+  readonly partners = signal<
+    (UserProfile & {
+      nativeLangs?: { code: string; level: number }[];
+      targetLangs?: { code: string; level: number }[];
+      formattedDistance?: string;
+    })[]
+  >([]);
   readonly isLoading = signal<boolean>(true);
   readonly myTargetLangs = signal<{ code: string; flag: string; labelKey: string }[]>([]);
   readonly blockedUserIds = signal<string[]>([]);
@@ -90,17 +96,6 @@ export class DiscoveryComponent implements OnInit {
   setGender(gender: string) {
     this.selectedGender.set(gender);
     void this.searchPartners();
-  }
-
-  getNativeLangs(partner: UserProfile) {
-    return (partner.native_languages || ['EN']).map((code) => ({ code, level: 5 }));
-  }
-
-  getTargetLangs(partner: UserProfile) {
-    return (partner.target_languages?.length ? partner.target_languages : ['JA']).map((code) => ({
-      code,
-      level: 1,
-    }));
   }
 
   async ngOnInit(): Promise<void> {
@@ -161,7 +156,18 @@ export class DiscoveryComponent implements OnInit {
       const blocked = this.blockedUserIds();
       const filtered =
         blocked.length > 0 ? results.filter((u) => !blocked.includes(u.id)) : results;
-      this.partners.set(filtered);
+
+      const mapped = filtered.map((partner) => ({
+        ...partner,
+        nativeLangs: (partner.native_languages || ['EN']).map((code) => ({ code, level: 5 })),
+        targetLangs: (partner.target_languages?.length ? partner.target_languages : ['JA']).map((code) => ({
+          code,
+          level: 1,
+        })),
+        formattedDistance: this.formatDistanceHelper(partner.distance_metres),
+      }));
+
+      this.partners.set(mapped);
     } catch (e) {
       console.error('Partner search failed:', e);
     } finally {
@@ -184,7 +190,7 @@ export class DiscoveryComponent implements OnInit {
     }
   }
 
-  formatDistance(metres: number | undefined): string {
+  private formatDistanceHelper(metres: number | undefined): string {
     if (metres == null) return '';
     const km = metres / 1000;
     const miles = metres / 1609.344;

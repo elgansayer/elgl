@@ -45,7 +45,7 @@ export class AudioRecorderComponent implements OnDestroy {
     try {
       this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (e: unknown) {
-      this.error = e?.message ?? 'Unable to access microphone';
+      this.error = (e as Error)?.message ?? 'Unable to access microphone';
       return;
     }
 
@@ -123,7 +123,7 @@ export class AudioRecorderComponent implements OnDestroy {
       this.audioChanged.emit(mediaUrl);
       this.discardRecording(); // clean up local preview
     } catch (err: unknown) {
-      this.error = err?.message ?? 'Upload error';
+      this.error = (err as Error)?.message ?? 'Upload error';
     } finally {
       this.uploading = false;
     }

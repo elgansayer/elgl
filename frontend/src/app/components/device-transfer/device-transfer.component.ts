@@ -65,7 +65,7 @@ export class DeviceTransferComponent {
       this.status.set('ready');
     } catch (e: unknown) {
       this.status.set('error');
-      this.errorMessage.set(e?.message ?? 'Failed to generate device link');
+      this.errorMessage.set((e as Error)?.message ?? 'Failed to generate device link');
     }
   }
 
@@ -103,7 +103,7 @@ export class DeviceTransferComponent {
       }
     } catch (e: unknown) {
       this.status.set('error');
-      this.errorMessage.set(e?.message ?? 'Transfer failed');
+      this.errorMessage.set((e as Error)?.message ?? 'Transfer failed');
     }
   }
 

@@ -47,7 +47,7 @@ export class StudyBuddyComponent {
 
   constructor() {
     afterNextRender(() => {
-      this.sbService.getMatches().then((data: MatchUser[]) => this.matches.set(data));
+      this.sbService.getMatches().then((data: Record<string, unknown>[]) => this.matches.set(data as unknown as MatchUser[]));
     });
   }
 

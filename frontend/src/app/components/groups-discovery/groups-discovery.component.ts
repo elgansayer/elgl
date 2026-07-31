@@ -103,7 +103,7 @@ export class GroupsDiscoveryComponent {
       }
       await this.fetchGroups();
     } catch (e: unknown) {
-      this.error.set(e.message);
+      this.error.set((e as Error).message);
     } finally {
       this.joiningId.set(null);
     }
