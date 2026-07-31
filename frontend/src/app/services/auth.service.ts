@@ -438,5 +438,37 @@ export class AuthService {
     );
   }
 
+  /**
+   * Exchange a short‑lived swap JWT for a real Supabase session.
+   */
+  async swapDeviceLink(swapToken: string): Promise<boolean> {
+    try {
+      const result = await lastValueFrom(
+        this.http.post<{
+          access_token: string;
+          refresh_token: string;
+          user_id: string;
+        }>(
+          `${this.apiUrl}/transfer/swap`,
+          { swapToken },
+        ),
+      );
+      const { data: sessionData, error: setError } =
+        await this.supabase.auth.setSession({
+          access_token: result.access_token,
+          refresh_token: result.refresh_token,
+        });
+      if (setError) {
+        return false;
+      }
+      if (sessionData.session) {
+        this.updateAuthState(sessionData.session);
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private http = inject(HttpClient);
 }

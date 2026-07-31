@@ -4,6 +4,7 @@ import {
   Get,
   Req,
   Body,
+  Query,
   UnauthorizedException,
   BadRequestException,
   UseGuards,
@@ -22,7 +23,7 @@ export class TransferController {
    */
   @UseGuards(SupabaseAuthGuard)
   @Post('generate')
-  async generate(@Req() req: any) {
+  async generate(@Req() req: { user?: { id?: string } }) {
     const userId = req.user?.id;
     if (!userId) {
       throw new UnauthorizedException();
@@ -39,10 +40,33 @@ export class TransferController {
    * swap JWT that the client can later exchange for a real session.
    */
   @Get('consume')
-  consume(@Body() _body: { token?: string }) {
-    // Actually we read from query - but for GET we can use @Query.
-    // We'll keep it simple: use @Query()
-    throw new Error('Not implemented – use the swap endpoint instead.');
+  async consume(@Query('token') token?: string) {
+    if (!token) {
+      throw new BadRequestException('token query parameter is required');
+    }
+    const swapToken = await this.transferService.consumeTransferToken(token);
+    if (!swapToken) {
+      throw new BadRequestException('Invalid or expired transfer token');
+    }
+    return { swapToken };
+  }
+
+  /**
+   * POST /transfer/consume
+   * Public endpoint: consume a one‑time transfer token using a request body.
+   * Returns the same shape as the GET variant, for compatibility with clients
+   * that send the token in the JSON body.
+   */
+  @Post('consume')
+  async consumePost(@Body('token') token?: string) {
+    if (!token) {
+      throw new BadRequestException('token is required');
+    }
+    const swapToken = await this.transferService.consumeTransferToken(token);
+    if (!swapToken) {
+      throw new BadRequestException('Invalid or expired transfer token');
+    }
+    return { swapToken };
   }
 
   /**
@@ -50,11 +74,11 @@ export class TransferController {
    * Public endpoint: exchange the swapJWT for a real Supabase session.
    */
   @Post('swap')
-  swap(@Body('swapToken') swapToken?: string) {
+  async swap(@Body('swapToken') swapToken?: string) {
     if (!swapToken) {
       throw new BadRequestException('swapToken is required');
     }
-    const result = this.transferService.swapTokenForSession(swapToken);
+    const result = await this.transferService.swapTokenForSession(swapToken);
     if (!result) {
       throw new BadRequestException('Invalid or expired swap token');
     }

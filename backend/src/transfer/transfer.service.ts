@@ -65,26 +65,53 @@ export class TransferService {
    * front‑end to fall back to manual sign‑in.  This is acceptable for the
    * “account transfer between devices” MVP.
    */
-  swapTokenForSession(swapToken: string): {
-    access_token: string;
-    refresh_token: string;
-    user_id: string;
-  } | null {
+  async swapTokenForSession(swapToken: string) {
     try {
-      const payload = jwt.verify(swapToken, this.secret) as {
-        sub: string;
-        type: string;
-      };
-      if (payload.type !== 'device-transfer') {
+      const decoded = jwt.verify(swapToken, this.secret);
+      if (typeof decoded !== 'object' || decoded === null) {
         return null;
       }
-      const userId = payload.sub;
-      // In a real implementation we would call the Supabase admin endpoint here.
-      // For now we return a dummy structure that the consuming code can detect.
+      if (!('sub' in decoded) || !('type' in decoded)) {
+        return null;
+      }
+      if (
+        typeof decoded.sub !== 'string' ||
+        decoded.type !== 'device-transfer'
+      ) {
+        return null;
+      }
+      const userId = decoded.sub;
+      const client = this.supabaseService.getClient();
+      const { data: userData, error: userError } =
+        await client.auth.admin.getUserById(userId);
+      if (userError || !userData?.user) {
+        return null;
+      }
+      const email = userData.user.email;
+      if (!email) {
+        return null;
+      }
+      const { data: linkData, error: linkError } =
+        await client.auth.admin.generateLink({
+          type: 'magiclink',
+          email,
+        });
+      if (linkError || !linkData?.properties?.hashed_token) {
+        return null;
+      }
+      const { data: sessionData, error: sessionError } =
+        await client.auth.verifyOtp({
+          type: 'magiclink',
+          token_hash: linkData.properties.hashed_token,
+          email,
+        });
+      if (sessionError || !sessionData?.session) {
+        return null;
+      }
       return {
-        access_token: 'placeholder-access-token',
-        refresh_token: 'placeholder-refresh-token',
-        user_id: userId,
+        access_token: sessionData.session.access_token,
+        refresh_token: sessionData.session.refresh_token,
+        user_id: sessionData.user.id,
       };
     } catch {
       return null;

@@ -5,14 +5,6 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
-interface XpEventRecord {
-  id: string;
-  user_id: string;
-  points: number;
-  activity: string;
-  created_at: string;
-}
-
 type XpActivityType =
   | 'create_flashcard'
   | 'review_flashcard'
@@ -26,6 +18,14 @@ const ACTIVITY_POINTS: Record<XpActivityType, number> = {
   complete_lesson: 10,
   create_moment: 3,
   follow_language_partner: 2,
+};
+
+type XpEventRecord = {
+  id: string;
+  user_id: string;
+  points: number;
+  activity: string;
+  created_at: string;
 };
 
 @Injectable()
@@ -65,15 +65,7 @@ export class XpService {
     userId: string,
     limit = 50,
     offset = 0,
-  ): Promise<
-    Array<{
-      id: string;
-      user_id: string;
-      points: number;
-      activity: string;
-      created_at: string;
-    }>
-  > {
+  ): Promise<XpEventRecord[]> {
     const supabase = this.supabaseService.getClient();
     const response = await supabase
       .from('xp_events')
