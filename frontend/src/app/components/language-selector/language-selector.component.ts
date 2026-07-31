@@ -6,6 +6,7 @@ import {
   ProficiencyService,
   LanguageSelectionDto,
   ProficiencyLevel,
+  isProficiencyLevel,
 } from '../../services/proficiency.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -155,7 +156,7 @@ export class LanguageSelectorComponent {
 
     this.targetLanguages.update((arr) => [
       ...arr,
-      { language: next.code, level: 'A1' as ProficiencyLevel },
+      { language: next.code, level: 'A1' },
     ]);
   }
 
@@ -172,9 +173,11 @@ export class LanguageSelectorComponent {
   }
 
   updateTargetLevel(index: number, newLevel: string): void {
+    if (!isProficiencyLevel(newLevel)) return;
+
     this.targetLanguages.update((arr) => {
       const copy = [...arr];
-      copy[index] = { ...copy[index], level: newLevel as ProficiencyLevel };
+      copy[index] = { ...copy[index], level: newLevel };
       return copy;
     });
   }

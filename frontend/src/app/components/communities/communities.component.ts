@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { CommunitiesService, Community } from '../../services/communities.service';
+import { CommunitiesService } from '../../services/communities.service';
 
 @Component({
   selector: 'app-communities',

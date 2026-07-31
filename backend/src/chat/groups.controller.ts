@@ -104,6 +104,28 @@ export class GroupsController {
     return await this.groupsService.getInviteInfo(code);
   }
 
+  @Post(':roomId/announcement')
+  async sendAnnouncement(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+    @Body() body: { message: string },
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.groupsService.sendAnnouncement(user.id, roomId, body.message);
+    return { success: true };
+  }
+
+  @Get(':roomId/announcements')
+  async getAnnouncements(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+  ): Promise<
+    Array<{ id: string; message: string; createdAt: string; senderId: string }>
+  > {
+    if (!user) return [];
+    return await this.groupsService.getAnnouncements(roomId);
+  }
+
   @Post('join-by-code')
   async joinByInviteCode(
     @CurrentUser() user: User | null,

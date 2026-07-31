@@ -18,6 +18,32 @@ export interface IncomingCallInfo {
   e2eeKey?: string;
 }
 
+function isIncomingCallEvent(
+  value: unknown,
+): value is { type: string; callInfo: IncomingCallInfo } {
+  if (typeof value !== 'object' || value === null) return false;
+  if (!('type' in value) || !('callInfo' in value)) return false;
+  return (
+    typeof value.type === 'string' &&
+    typeof value.callInfo === 'object' &&
+    value.callInfo !== null
+  );
+}
+
+interface WindowWithWebkitAudioContext extends Window {
+  webkitAudioContext: typeof AudioContext;
+}
+
+function hasWebkitAudioContext(win: Window): win is WindowWithWebkitAudioContext {
+  return 'webkitAudioContext' in win;
+}
+
+function getAudioContextClass(): typeof AudioContext | undefined {
+  if (window.AudioContext) return window.AudioContext;
+  if (hasWebkitAudioContext(window)) return window.webkitAudioContext;
+  return undefined;
+}
+
 @Component({
   selector: 'app-incoming-call',
   imports: [AppButtonPrimaryComponent, AppButtonSecondaryComponent],
@@ -146,9 +172,8 @@ export class IncomingCallComponent implements OnDestroy {
 
       const channel = `user_${_userId}`;
       this.centrifugoService.subscribe(channel, (data: unknown) => {
-        const event = data as { type: string; callInfo: IncomingCallInfo };
-        if (event.type === 'incoming_call' && event.callInfo) {
-          this.handleIncomingCall(event.callInfo);
+        if (isIncomingCallEvent(data) && data.type === 'incoming_call' && data.callInfo) {
+          this.handleIncomingCall(data.callInfo);
         }
       });
       this.subscribedChannel = channel;
@@ -194,9 +219,7 @@ export class IncomingCallComponent implements OnDestroy {
 
   private playFallbackRingtone(): void {
     try {
-      const AudioContextClass =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioContextClass = getAudioContextClass();
       if (!AudioContextClass) return;
 
       const audioContext = new AudioContextClass();

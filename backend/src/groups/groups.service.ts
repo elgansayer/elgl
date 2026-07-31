@@ -47,6 +47,13 @@ export interface GroupSettings {
   max_members: number;
 }
 
+export interface GroupAnnouncement {
+  id: string;
+  message: string;
+  senderId: string;
+  createdAt: string;
+}
+
 @Injectable()
 export class GroupsService {
   constructor(
@@ -251,16 +258,41 @@ export class GroupsService {
     return { success: true };
   }
 
-  async getAnnouncements(groupId: string): Promise<any[]> {
+  async getAnnouncements(groupId: string): Promise<GroupAnnouncement[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('group_announcements')
-      .select('*')
+      .select('id, sender_id, message, created_at')
       .eq('group_id', groupId)
       .order('created_at', { ascending: false });
 
     if (error) {
       throw new NotFoundException('Failed to fetch announcements');
+    }
+
+    const rows = (data ?? []) as Array<{
+      id: string;
+      sender_id: string;
+      message: string;
+      created_at: string;
+    }>;
+
+    return rows.map((row) => ({
+      id: row.id,
+      message: row.message,
+      senderId: row.sender_id,
+      createdAt: row.created_at,
+    }));
+  }
+
+  async getMyAdminGroups(userId: string): Promise<GroupRecord[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('groups')
+      .select('*')
+      .eq('owner_id', userId);
+    if (error) {
+      throw new NotFoundException('Failed to fetch groups');
     }
     return data || [];
   }

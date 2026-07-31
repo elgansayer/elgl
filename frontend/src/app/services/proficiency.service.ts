@@ -27,6 +27,20 @@ export type ProficiencyLevel =
   | 'C1'
   | 'C2';
 
+export function isProficiencyLevel(value: string): value is ProficiencyLevel {
+  switch (value) {
+    case 'A1':
+    case 'A2':
+    case 'B1':
+    case 'B2':
+    case 'C1':
+    case 'C2':
+      return true;
+    default:
+      return false;
+  }
+}
+
 export interface TargetLanguageLevel {
   language: string;
   level: ProficiencyLevel;

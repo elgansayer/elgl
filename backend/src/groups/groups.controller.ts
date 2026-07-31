@@ -12,6 +12,8 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { User } from '@supabase/supabase-js';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { GroupsService } from './groups.service';
 import { AddMemberDto } from './dto/add-member.dto';
 import { RemoveMemberDto } from './dto/remove-member.dto';
@@ -68,6 +70,13 @@ export class GroupsController {
   @UseGuards(SupabaseAuthGuard)
   async getAnnouncements(@Param('groupId') groupId: string) {
     return this.groupsService.getAnnouncements(groupId);
+  }
+
+  @Get('mine')
+  @UseGuards(SupabaseAuthGuard)
+  async getMyAdminGroups(@CurrentUser() user: User | null) {
+    if (!user) throw new UnauthorizedException('Not authenticated');
+    return this.groupsService.getMyAdminGroups(user.id);
   }
 
   @Get(':groupId')

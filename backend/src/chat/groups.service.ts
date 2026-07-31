@@ -224,4 +224,55 @@ export class GroupsService {
       count: 1,
     });
   }
+
+  async sendAnnouncement(
+    userId: string,
+    roomId: string,
+    message: string,
+  ): Promise<void> {
+    await this.verifyAdmin(userId, roomId);
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase.from('chat_room_announcements').insert({
+      room_id: roomId,
+      admin_id: userId,
+      message,
+    });
+    if (error) {
+      throw new InternalServerErrorException('Failed to send announcement');
+    }
+    await this.systemMessageService.publishToRoom(roomId, 'announcement', {
+      message,
+    });
+  }
+
+  async getAnnouncements(
+    roomId: string,
+  ): Promise<
+    Array<{ id: string; message: string; createdAt: string; senderId: string }>
+  > {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('chat_room_announcements')
+      .select('id, message, created_at, admin_id')
+      .eq('room_id', roomId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new InternalServerErrorException('Failed to fetch announcements');
+    }
+
+    const rows = (data ?? []) as Array<{
+      id: string;
+      message: string;
+      created_at: string;
+      admin_id: string;
+    }>;
+
+    return rows.map((row) => ({
+      id: row.id,
+      message: row.message,
+      createdAt: row.created_at,
+      senderId: row.admin_id,
+    }));
+  }
 }

@@ -9,6 +9,13 @@ export interface ChatGroup {
   created_at: string;
 }
 
+export interface ChatAnnouncement {
+  id: string;
+  message: string;
+  createdAt: string;
+  senderId: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -26,6 +33,10 @@ export class GroupsService {
 
   renameGroup(groupId: string, name: string): Promise<ChatGroup> {
     return firstValueFrom(this.http.put<ChatGroup>(`${this.apiUrl}/${groupId}/rename`, { name }));
+  }
+
+  getMyGroups(): Promise<ChatGroup[]> {
+    return firstValueFrom(this.http.get<ChatGroup[]>(`${this.apiUrl}/mine`));
   }
 
   addMember(groupId: string, userId: string): Promise<{ success: boolean }> {
@@ -72,9 +83,9 @@ export class GroupsService {
     );
   }
 
-  getAnnouncements(groupId: string): Promise<unknown[]> {
+  getAnnouncements(groupId: string): Promise<ChatAnnouncement[]> {
     return firstValueFrom(
-      this.http.get<unknown[]>(`${this.apiUrl}/${groupId}/announcements`),
+      this.http.get<ChatAnnouncement[]>(`${this.apiUrl}/${groupId}/announcements`),
     );
   }
 

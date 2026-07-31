@@ -8,6 +8,20 @@ export interface IncomingCallData {
   isVideoCall: boolean;
 }
 
+interface WindowWithWebkitAudioContext extends Window {
+  webkitAudioContext: typeof AudioContext;
+}
+
+function hasWebkitAudioContext(win: Window): win is WindowWithWebkitAudioContext {
+  return 'webkitAudioContext' in win;
+}
+
+function getAudioContextClass(): typeof AudioContext | undefined {
+  if (window.AudioContext) return window.AudioContext;
+  if (hasWebkitAudioContext(window)) return window.webkitAudioContext;
+  return undefined;
+}
+
 @Component({
   selector: 'app-incoming-call-modal',
   imports: [],
@@ -201,10 +215,10 @@ export class IncomingCallModalComponent implements OnDestroy {
 
   private playFallbackBeep(): void {
     try {
-      this.audioContext = new (
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-      )();
+      const AudioContextClass = getAudioContextClass();
+      if (!AudioContextClass) return;
+
+      this.audioContext = new AudioContextClass();
       this.oscillator = this.audioContext.createOscillator();
       this.gainNode = this.audioContext.createGain();
 
