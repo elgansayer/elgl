@@ -514,6 +514,15 @@ export class I18nService {
     'developer.logsTitle': '🛡️ Live Architectural Diagnostics Stream',
     'developer.showingLogs': 'Showing last {{count}} events',
 
+    // Achievements Showcase Component
+    'achievements.title': 'Achievements',
+    'achievements.loading': 'Loading achievements...',
+    'achievements.loadError': 'Failed to load achievements.',
+    'achievements.empty': 'No achievements available yet.',
+    'achievements.earnedLabel': 'Earned',
+    'achievements.lockedLabel': 'Locked',
+    'achievements.progressLabel': '{{current}} / {{required}}',
+
     // Profile Component & Visitor Logs
     'profile.title': 'Your Language Profile',
     'profile.loading': 'Loading profile...',

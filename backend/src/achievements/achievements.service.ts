@@ -2,6 +2,8 @@ import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { FullAchievementDto } from './dto/full-achievement.dto';
+import { AchievementDto } from './dto/achievement.dto';
+import { UserAchievementDto } from './dto/user-achievement.dto';
 
 @Injectable()
 export class AchievementsService implements OnModuleInit {
@@ -111,18 +113,22 @@ export class AchievementsService implements OnModuleInit {
     return !!data;
   }
 
-  async listAchievements(): Promise<any[]> {
+  async listAchievements(): Promise<AchievementDto[]> {
     const supabase = this.supabaseService.getClient();
-    const { data } = await supabase.from('achievements').select('*');
+    const { data } = await supabase
+      .from('achievements')
+      .select('*')
+      .returns<AchievementDto[]>();
     return data ?? [];
   }
 
-  async getUserAchievements(userId: string): Promise<any[]> {
+  async getUserAchievements(userId: string): Promise<UserAchievementDto[]> {
     const supabase = this.supabaseService.getClient();
     const { data } = await supabase
       .from('user_achievements')
       .select('achievements(*)')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .returns<UserAchievementDto[]>();
     return data ?? [];
   }
 
@@ -132,7 +138,8 @@ export class AchievementsService implements OnModuleInit {
     const { data: definitions } = await supabase
       .from('achievements')
       .select('code, name, description')
-      .order('code', { ascending: true });
+      .order('code', { ascending: true })
+      .returns<Pick<AchievementDto, 'code' | 'name' | 'description'>[]>();
     if (!definitions) {
       return [];
     }
@@ -176,7 +183,7 @@ export class AchievementsService implements OnModuleInit {
       return {
         code: def.code,
         name: def.name,
-        description: def.description,
+        description: def.description ?? '',
         current,
         required: threshold?.required ?? 0,
         earned: earnedCodes.has(def.code),
@@ -185,8 +192,6 @@ export class AchievementsService implements OnModuleInit {
   }
 
   async evaluateAchievements(userId: string): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-
     // Message count
     const msgCount = await this.getUserMessageCount(userId);
 
@@ -257,7 +262,7 @@ export class AchievementsService implements OnModuleInit {
       .from('users')
       .select('study_streak_days')
       .eq('id', userId)
-      .single();
+      .single<{ study_streak_days: number | null }>();
     if (error || !data) {
       return 0;
     }

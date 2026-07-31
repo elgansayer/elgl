@@ -5,10 +5,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { UserService, UserProfile } from '../../services/user.service';
 import { ReportButtonComponent } from '../report-user-modal/report-button.component';
+import { AchievementsComponent } from '../../achievements/achievements.component';
 
 @Component({
   selector: 'app-user-detail',
-  imports: [CommonModule, RouterLink, TranslatePipe, ReportButtonComponent],
+  imports: [CommonModule, RouterLink, TranslatePipe, ReportButtonComponent, AchievementsComponent],
   templateUrl: './user-detail.component.html',
   styleUrls: ['./user-detail.component.scss'],
 })

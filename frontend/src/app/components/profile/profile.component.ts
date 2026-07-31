@@ -12,6 +12,7 @@ import {LanguagePickerComponent, getLanguageFlag} from '../primitives/language-p
 import {CelebrationOverlayComponent} from '../celebration-overlay/celebration-overlay.component';
 import {SafetyService} from '../../services/safety.service';
 import {showToast} from '../../services/toast.service';
+import {AchievementsComponent} from '../../achievements/achievements.component';
 
 @Component({
   selector: 'app-profile',
@@ -25,6 +26,7 @@ import {showToast} from '../../services/toast.service';
     HobbyTagsComponent,
     LanguagePickerComponent,
     CelebrationOverlayComponent,
+    AchievementsComponent,
   ],
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.scss'],

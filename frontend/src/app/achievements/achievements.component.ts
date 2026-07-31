@@ -1,6 +1,8 @@
 import { Component, inject, input, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
+import { TranslatePipe } from '../services/translate.pipe';
 
 interface FullAchievementDto {
   code: string;
@@ -13,50 +15,66 @@ interface FullAchievementDto {
 
 @Component({
   selector: 'app-achievements',
-  standalone: true,
-  imports: [],
+  imports: [TranslatePipe],
   template: `
-    <div class="ps-4 pe-4 py-3">
-      @if (achievementsResource.isLoading()) {
-        <div class="text-slate-400 text-sm">Loading...</div>
-      } @else if (achievementsResource.error()) {
-        <div class="text-red-400 text-sm">Error loading achievements.</div>
-      } @else {
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          @for (ach of achievementsResource.value(); track ach.code) {
-            <div
-              class="flex items-center gap-3 p-3 rounded-lg transition-colors duration-200"
-              [class.bg-slate-800]="!ach.earned"
-              [class.bg-green-900]="ach.earned"
-            >
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium truncate"
-                   [class.text-slate-200]="!ach.earned"
-                   [class.text-green-200]="ach.earned">
-                  {{ ach.name }}
-                </p>
-                <p class="text-xs text-slate-400 truncate">{{ ach.description }}</p>
-                <div class="mt-1 flex items-center gap-2">
-                  <span class="text-xs text-slate-500">{{ ach.current }} / {{ ach.required }}</span>
+    <section class="app-card app-padded" aria-labelledby="achievements-heading">
+      <h2 id="achievements-heading" class="app-section-title">{{ 'achievements.title' | t }}</h2>
+
+      <div class="mt-3" role="status" aria-live="polite">
+        @if (achievementsResource.isLoading()) {
+          <p class="app-muted">{{ 'achievements.loading' | t }}</p>
+        } @else if (achievementsResource.error()) {
+          <p class="text-sm text-red-400" role="alert">{{ 'achievements.loadError' | t }}</p>
+        } @else if (achievementsResource.value().length === 0) {
+          <p class="app-muted">{{ 'achievements.empty' | t }}</p>
+        } @else {
+          <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2" role="list">
+            @for (ach of achievementsResource.value(); track ach.code) {
+              <li
+                class="flex items-center gap-3 rounded-card border border-surface-100 bg-surface-300 p-3"
+              >
+                <div
+                  class="shrink-0 flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold"
+                  [class.bg-surface-100]="!ach.earned"
+                  [class.bg-primary]="ach.earned"
+                >
                   @if (ach.earned) {
-                    <span class="text-xs text-green-300">Earned</span>
+                    <span class="text-white" aria-hidden="true">&#9733;</span>
+                  } @else {
+                    <span class="text-text-secondary" aria-hidden="true">&#9723;</span>
                   }
+                  <span class="sr-only">{{
+                    (ach.earned ? 'achievements.earnedLabel' : 'achievements.lockedLabel') | t
+                  }}</span>
                 </div>
-              </div>
-              <div class="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
-                   [class.bg-slate-700]="!ach.earned"
-                   [class.bg-green-600]="ach.earned">
-                @if (ach.earned) {
-                  <span class="text-white">&#9733;</span>
-                } @else {
-                  <span class="text-slate-400">&#9723;</span>
-                }
-              </div>
-            </div>
-          }
-        </div>
-      }
-    </div>
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm font-medium text-text-primary">{{ ach.name }}</p>
+                  <p class="truncate text-xs text-text-secondary">{{ ach.description }}</p>
+                  <div class="mt-1.5">
+                    <div
+                      class="h-1.5 w-full overflow-hidden rounded-pill bg-surface-100"
+                      role="progressbar"
+                      [attr.aria-label]="ach.name"
+                      [attr.aria-valuemin]="0"
+                      [attr.aria-valuemax]="ach.required || ach.current"
+                      [attr.aria-valuenow]="ach.current"
+                    >
+                      <div
+                        class="h-full rounded-pill bg-primary"
+                        [style.width.%]="progressPercent(ach)"
+                      ></div>
+                    </div>
+                    <span class="mt-1 block text-xs text-text-secondary">
+                      {{ 'achievements.progressLabel' | t: { current: ach.current, required: ach.required } }}
+                    </span>
+                  </div>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </section>
   `,
 })
 export class AchievementsComponent {
@@ -68,9 +86,18 @@ export class AchievementsComponent {
     params: () => ({ userId: this.userId() }),
     loader: ({ params }) => {
       return firstValueFrom(
-        this.http.get<FullAchievementDto[]>(`/api/achievements/full/${params.userId}`)
+        this.http.get<FullAchievementDto[]>(
+          `${environment.apiUrl}/achievements/full/${params.userId}`,
+        ),
       );
     },
     defaultValue: [],
   });
+
+  progressPercent(ach: FullAchievementDto): number {
+    if (!ach.required) {
+      return ach.earned ? 100 : 0;
+    }
+    return Math.min(100, Math.round((ach.current / ach.required) * 100));
+  }
 }

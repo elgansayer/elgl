@@ -230,6 +230,12 @@
         </div>
       }
 
+      @if (!isEditing() && profile()?.id) {
+        <div class="mt-4">
+          <app-achievements [userId]="profile()!.id" />
+        </div>
+      }
+
       @if (!isEditing()) {
         <div class="mt-4">
           <h3 class="text-xs font-semibold uppercase text-text-secondary">

@@ -121,6 +121,12 @@
         }
       </div>
 
+      @if (profile()?.id) {
+        <div class="mb-6">
+          <app-achievements [userId]="profile()!.id" />
+        </div>
+      }
+
       <div class="flex flex-col gap-3">
         <a
           [routerLink]="['/chat', profile()?.id]"
