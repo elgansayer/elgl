@@ -273,6 +273,21 @@ export class ChatService {
     return rooms;
   }
 
+  /**
+   * Sends a reply to a status update, creating a direct chat room if needed.
+   */
+  async replyToStatusUpdate(payload: {
+    target_user_id: string;
+    status_update_id: string;
+    status_text: string;
+  }): Promise<ChatMessage> {
+    return firstValueFrom(
+      this.http.post<ChatMessage>(`${this.baseUrl}/messages/status-reply`, payload, {
+        headers: this.getHeaders(),
+      }),
+    );
+  }
+
   // ---- Chat Lock methods ----
 
   async lockChat(roomId: string): Promise<void> {

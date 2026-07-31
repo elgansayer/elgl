@@ -26,7 +26,7 @@ export class CallLogsService {
     if (!userId) return [];
 
     let query = supabase
-      .from<CallLogRecord>('call_logs')
+      .from<CallLogRecord, CallLogRecord>('call_logs')
       .select('*')
       .or(`caller_id.eq.${userId},receiver_id.eq.${userId}`)
       .order('started_at', { ascending: false })
@@ -40,6 +40,7 @@ export class CallLogsService {
     }
 
     const { data } = await query;
-    return data ?? [];
+    const records: CallLogRecord[] = data ?? [];
+    return records;
   }
 }

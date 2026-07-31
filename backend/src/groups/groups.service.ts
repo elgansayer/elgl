@@ -24,7 +24,7 @@ export interface GroupInfo {
   name: string;
   owner_id: string;
   max_members: number;
-  interest: { name: string } | null;
+  interest: { name: string } | Array<{ name: string }> | null;
   interest_id: string | null;
   community_id: string | null;
 }
@@ -52,6 +52,35 @@ export interface GroupAnnouncement {
   message: string;
   senderId: string;
   createdAt: string;
+}
+
+export interface GroupInfoRow {
+  id: string;
+  name: string;
+  owner_id: string;
+  max_members: number;
+  interest_id: string | null;
+  community_id: string | null;
+  interest: Array<{ name: string }> | null;
+}
+
+export interface DiscoverableGroupRow {
+  id: string;
+  name: string;
+  owner_id: string;
+  community_id: string | null;
+  interest_id: string | null;
+  max_members: number;
+  created_at: string;
+}
+
+export interface GroupResource {
+  id: string;
+  group_id: string;
+  title: string;
+  url: string;
+  description?: string;
+  created_at: string;
 }
 
 @Injectable()
@@ -226,12 +255,13 @@ export class GroupsService {
         'can_send_messages, can_edit_info, description, rules, interest_id, max_members',
       )
       .eq('id', groupId)
+      .returns<GroupSettings>()
       .single();
 
     if (error || !data) {
       throw new NotFoundException('Group not found');
     }
-    return data as GroupSettings;
+    return data;
   }
 
   async sendAnnouncement(
@@ -290,7 +320,8 @@ export class GroupsService {
     const { data, error } = await supabase
       .from('groups')
       .select('*')
-      .eq('owner_id', userId);
+      .eq('owner_id', userId)
+      .returns<GroupRecord[]>();
     if (error) {
       throw new NotFoundException('Failed to fetch groups');
     }
@@ -306,28 +337,55 @@ export class GroupsService {
         interest:interests(name)`,
       )
       .eq('id', groupId)
+      .returns<GroupInfoRow>()
       .single();
 
     if (error || !data) {
       throw new NotFoundException('Group not found');
     }
-    return data as GroupInfo;
+    const interest = Array.isArray(data.interest)
+      ? (data.interest[0] ?? null)
+      : data.interest;
+    return {
+      id: data.id,
+      name: data.name,
+      owner_id: data.owner_id,
+      max_members: data.max_members,
+      interest_id: data.interest_id,
+      community_id: data.community_id,
+      interest,
+    };
   }
 
-  async getGroupsByInterest(interestId: string): Promise<GroupRecord[]> {
+  async getGroupsByInterest(interestId: string): Promise<GroupInfo[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('groups')
       .select(
-        `id, name, owner_id, max_members,
+        `id, name, owner_id, community_id, interest_id, max_members, created_at,
         interest:interests(name)`,
       )
-      .eq('interest_id', interestId);
+      .eq('interest_id', interestId)
+      .returns<GroupInfoRow[]>();
 
     if (error) {
       throw new NotFoundException('Failed to fetch groups');
     }
-    return data || [];
+    const rows = data ?? [];
+    return rows.map((row) => {
+      const interest = Array.isArray(row.interest)
+        ? (row.interest[0] ?? null)
+        : row.interest;
+      return {
+        id: row.id,
+        name: row.name,
+        owner_id: row.owner_id,
+        max_members: row.max_members,
+        interest_id: row.interest_id,
+        community_id: row.community_id,
+        interest,
+      };
+    });
   }
 
   async setCommunityId(
@@ -349,7 +407,8 @@ export class GroupsService {
     const { data, error } = await supabase
       .from('groups')
       .select('*')
-      .eq('community_id', communityId);
+      .eq('community_id', communityId)
+      .returns<GroupRecord[]>();
     if (error) {
       throw new NotFoundException('Failed to fetch groups');
     }
@@ -362,13 +421,16 @@ export class GroupsService {
     const supabase = this.supabaseService.getClient();
     const { data: groups, error } = await supabase
       .from('groups')
-      .select('id, name, owner_id, max_members, interest_id, created_at');
+      .select(
+        'id, name, owner_id, community_id, interest_id, max_members, created_at',
+      )
+      .returns<DiscoverableGroupRow[]>();
     if (error) {
       throw new NotFoundException('Failed to fetch groups');
     }
 
     const enriched = await Promise.all(
-      groups.map(async (group: any) => {
+      groups.map(async (group: DiscoverableGroupRow) => {
         const { count: memberCount } = await supabase
           .from('group_members')
           .select('*', { count: 'exact', head: true })
@@ -440,12 +502,13 @@ export class GroupsService {
     return { success: true };
   }
 
-  async getGroupResources(groupId: string): Promise<any[]> {
+  async getGroupResources(groupId: string): Promise<GroupResource[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('group_resources')
       .select('*')
-      .eq('group_id', groupId);
+      .eq('group_id', groupId)
+      .returns<GroupResource[]>();
 
     if (error) {
       throw new NotFoundException('Failed to fetch group resources');

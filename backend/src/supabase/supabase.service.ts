@@ -53,10 +53,11 @@ export class SupabaseService implements OnModuleDestroy {
       .from('users')
       .select('study_streak_days, correction_ratio')
       .eq('id', userId)
-      .single<{
+      .returns<{
         study_streak_days: number | null;
         correction_ratio: number | null;
-      }>();
+      }>()
+      .single();
 
     if (fetchError) {
       console.error(
@@ -97,7 +98,8 @@ export class SupabaseService implements OnModuleDestroy {
         .from('users')
         .select('xp_total')
         .eq('id', userId)
-        .single<{ xp_total: number }>();
+        .returns<{ xp_total: number }>()
+        .single();
       if (fetchError || !data) {
         console.error(
           `Failed to increment XP for user ${userId}:`,
@@ -119,7 +121,8 @@ export class SupabaseService implements OnModuleDestroy {
       .from('users')
       .select('xp_total')
       .eq('id', userId)
-      .single<{ xp_total: number }>();
+      .returns<{ xp_total: number }>()
+      .single();
     if (error || !data) {
       return 0;
     }

@@ -18,7 +18,7 @@ import { EconomyStore } from '../../services/economy.store';
               <span>🛡️ Trust and safety moderation</span>
             </h3>
             <p class="text-xs text-text-secondary">
-              Report or block {{ targetName }} to keep our community safe
+              Report or block {{ targetName() }} to keep our community safe
             </p>
           </div>
           <button
@@ -86,7 +86,7 @@ import { EconomyStore } from '../../services/economy.store';
         @if (mode === 'block') {
           <div class="bg-red-500/10 p-4 rounded-2xl border border-red-500/30 space-y-2 text-xs">
             <span class="font-bold text-red-900 block"
-              >⚠️ What happens when you block {{ targetName }}:</span
+              >⚠️ What happens when you block {{ targetName() }}:</span
             >
             <ul class="list-disc list-inside space-y-1 text-text-primary">
               <li>They will not be able to send you direct chat messages.</li>

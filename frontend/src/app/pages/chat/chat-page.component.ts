@@ -158,7 +158,15 @@ interface AiChatMessage {
                     }
 
                     <!-- Correction type message -->
-                    @if (msg.message_type === 'correction' && msg.correction_payload) {
+                    @if (msg.message_type === 'status_reply' && msg.status_reply_payload) {
+                      <div class="space-y-1">
+                        <p class="text-xs text-text-muted">{{ 'chat.statusReply' | t }}</p>
+                        <p class="text-sm">{{ msg.status_reply_payload.status_text }}</p>
+                        <button (click)="replyToStatus(msg)" class="text-xs text-blue-400 hover:underline">
+                          {{ 'chat.replyToStatus' | t }}
+                        </button>
+                      </div>
+                    } @else if (msg.message_type === 'correction' && msg.correction_payload) {
                       <div class="space-y-1">
                         <p class="text-xs line-through opacity-70">{{ msg.correction_payload.original }}</p>
                         <p class="text-green-400 font-medium">{{ msg.correction_payload.corrected }}</p>
@@ -488,6 +496,22 @@ export class ChatPageComponent implements OnInit {
     // mark view-once media as viewed (future implementation)
     if (typeof window !== 'undefined') {
       alert('View-once media will be shown here for one time.');
+    }
+  }
+
+  async replyToStatus(msg: ChatMessage): Promise<void> {
+    if (!msg.status_reply_payload) return;
+    const targetUserId = msg.sender_id ?? '';
+    if (!targetUserId) return;
+    try {
+      const result = await this.chatService.replyToStatusUpdate({
+        target_user_id: targetUserId,
+        status_update_id: msg.status_reply_payload.status_update_id,
+        status_text: msg.status_reply_payload.status_text,
+      });
+      this.messages.update((msgs) => [...msgs, result]);
+    } catch (error) {
+      console.error('Failed to reply to status update', error);
     }
   }
 
