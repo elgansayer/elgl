@@ -51,12 +51,6 @@ export class SettingsComponent implements OnInit {
   privacyHideOnlineStatus = false;
   privacyHideVipStatus = false;
   autoPlayVoiceNotes = false;
-
-  readonly isExactLocationVisible = signal(false);
-
-  toggleExactLocationVisibility(): void {
-    this.isExactLocationVisible.update((visible) => !visible);
-  }
   autoDownloadMedia = false;
   soundEffectsEnabled = false;
   vibrationEnabled = false;

@@ -88,7 +88,13 @@ describe('EventsService', () => {
         page: 1,
         limit: 10,
       });
-      expect(result).toEqual(mockEvents);
+      expect(result).toEqual(
+        mockEvents.map((ev) => ({
+          ...ev,
+          host_name: null,
+          host_avatar_url: null,
+        })),
+      );
       expect(supabaseService.getClient).toHaveBeenCalled();
     });
   });
