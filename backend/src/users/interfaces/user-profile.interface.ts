@@ -94,11 +94,5 @@ export interface ProfileVisitor {
   visitor_id: string;
   viewed_id: string;
   created_at: string;
-  visitor?: {
-    id: string;
-    display_name?: string;
-    avatar_url?: string;
-    native_languages?: string[];
-    target_languages?: string[];
-  } | null;
+  visitor?: ProfileVisitor['visitor'] | null;
 }
