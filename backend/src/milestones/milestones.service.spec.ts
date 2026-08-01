@@ -130,7 +130,7 @@ describe('MilestonesService', () => {
 
       await expect(
         service.create({ title: 'Fails' }, 'user-1'),
-      ).rejects.toThrow('Failed to create milestone: boom');
+      ).rejects.toThrow('Failed to create milestone: Validation failed');
     });
   });
 

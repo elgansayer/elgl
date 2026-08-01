@@ -46,10 +46,7 @@ export class MilestonesService {
 
   async create(dto: CreateMilestoneDto, userId: string): Promise<Milestone> {
     const supabase = this.supabaseService.getClient();
-    const { error } = await this.validateDto(dto);
-    if (error) {
-      throw new Error(`Validation failed: ${error.message}`);
-    }
+    // Removed the call to validateDto as it does not exist
     const { data, error: insertError } = await supabase
       .from('milestones')
       .insert({
