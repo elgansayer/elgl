@@ -275,7 +275,10 @@ export class SupabaseService implements OnModuleDestroy {
     const supabase = this.getClient();
     // Fetch current study_streak_days and correction_ratio to compute is_serious_learner
     const { data, error: fetchError } = await supabase
-      .from<Database['public']['Tables']['users']['Row']>('users')
+      .from<
+        Database['public']['Tables']['users']['Row'],
+        Database['public']['Tables']['users']['Insert']
+      >('users')
       .select('study_streak_days, correction_ratio')
       .eq('id', userId)
       .single();
@@ -310,13 +313,16 @@ export class SupabaseService implements OnModuleDestroy {
 
   async incrementXp(userId: string, points: number): Promise<void> {
     const supabase = this.getClient();
-    const { error } = await supabase.rpc<void>('increment_xp', {
+    const { error } = await supabase.rpc<null>('increment_xp', {
       user_id: userId,
       amount: points,
     });
     if (error) {
       const { data, error: fetchError } = await supabase
-        .from<Database['public']['Tables']['users']['Row']>('users')
+        .from<
+          Database['public']['Tables']['users']['Row'],
+          Database['public']['Tables']['users']['Insert']
+        >('users')
         .select('xp_total')
         .eq('id', userId)
         .single();
