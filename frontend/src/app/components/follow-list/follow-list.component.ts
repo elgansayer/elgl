@@ -117,7 +117,7 @@ export class FollowListComponent {
 
   private readonly followOverrides = signal<Map<string, boolean>>(new Map());
   private readonly pendingIds = signal<Set<string>>(new Set());
-  private readonly toggleError = signal<string | null>(null);
+  readonly toggleError = signal<string | null>(null);
 
   readonly titleKey = computed(() =>
     this.mode() === 'followers' ? 'followList.followersTitle' : 'followList.followingTitle',
