@@ -89,10 +89,18 @@ export interface BusinessCatalogItem {
   image_url?: string;
 }
 
+export interface ProfileVisitorSummary {
+  id: string;
+  display_name: string;
+  avatar_url: string;
+  native_languages: string[];
+  target_languages: string[];
+}
+
 export interface ProfileVisitor {
   id: string;
   visitor_id: string;
   viewed_id: string;
   created_at: string;
-  visitor?: ProfileVisitor;
+  visitor?: ProfileVisitorSummary;
 }

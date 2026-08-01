@@ -105,7 +105,7 @@ export class TransferService {
           token_hash: linkData.properties.hashed_token,
           email,
         });
-      if (sessionError || !sessionData?.session) {
+      if (sessionError || !sessionData?.session || !sessionData.user) {
         return null;
       }
       return {

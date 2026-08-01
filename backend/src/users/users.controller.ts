@@ -23,6 +23,7 @@ import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
 import {
   UserProfile,
   ProfileVisitor,
+  BusinessCatalogItem,
 } from './interfaces/user-profile.interface';
 import { UsersService } from './users.service';
 import { MediaService } from '../media/media.service';

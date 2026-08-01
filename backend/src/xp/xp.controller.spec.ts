@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { XpController } from './xp.controller';
 import { XpService } from './xp.service';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { UnauthorizedException } from '@nestjs/common';
 
 type XpHistoryEntry = {
@@ -28,7 +29,10 @@ describe('XpController', () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [XpController],
       providers: [{ provide: XpService, useValue: mockXpService }],
-    }).compile();
+    })
+      .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .compile();
 
     controller = moduleRef.get<XpController>(XpController);
     jest.clearAllMocks();

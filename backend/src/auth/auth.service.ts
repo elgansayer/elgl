@@ -1,5 +1,4 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import * as jwt from 'jsonwebtoken';
 import { SupabaseService } from '../supabase/supabase.service';
 import { TwoFactorService } from '../two-factor/two-factor.service';
 

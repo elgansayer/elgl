@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <div class="text-6xl mb-2">🎁</div>
         <h3 class="text-2xl font-black text-text-primary">Daily Reward!</h3>
         <p class="text-text-secondary">
-          You received <span class="font-bold text-amber-500">{{ coins }} coins</span> for logging
+          You received <span class="font-bold text-amber-500">{{ coins() }} coins</span> for logging
           in today.
         </p>
         <button

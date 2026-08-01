@@ -74,9 +74,9 @@ export class LanguageChallengesService {
     const { data, error } = await supabase
       .from('language_challenges')
       .select('*')
-      .returns<LanguageChallenge[]>()
       .eq('status', 'open')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .returns<LanguageChallenge[]>();
 
     if (error) {
       this.logger.error(`Failed to list challenges: ${error.message}`);
@@ -92,8 +92,8 @@ export class LanguageChallengesService {
     const { data: challenge, error: fetchError } = await supabase
       .from('language_challenges')
       .select('*')
-      .returns<LanguageChallenge>()
       .eq('id', challengeId)
+      .returns<LanguageChallenge[]>()
       .single();
 
     if (fetchError || !challenge) {
@@ -153,8 +153,8 @@ export class LanguageChallengesService {
     const { data: challenge, error: fetchError } = await supabase
       .from('language_challenges')
       .select('*')
-      .returns<LanguageChallenge>()
       .eq('id', challengeId)
+      .returns<LanguageChallenge[]>()
       .single();
     if (fetchError || !challenge) {
       throw new NotFoundException('Challenge not found');
@@ -213,8 +213,8 @@ export class LanguageChallengesService {
     const { data: challenge, error: fetchError } = await supabase
       .from('language_challenges')
       .select('*')
-      .returns<LanguageChallenge>()
       .eq('id', challengeId)
+      .returns<LanguageChallenge[]>()
       .single();
 
     if (fetchError || !challenge) {
@@ -251,9 +251,9 @@ export class LanguageChallengesService {
     const { data: activityRows, error: actError } = await supabase
       .from('language_challenge_daily_activity')
       .select('activity_date')
-      .returns<DailyActivity[]>()
       .eq('challenge_id', challengeId)
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .returns<DailyActivity[]>();
 
     if (actError) {
       this.logger.error(
@@ -275,17 +275,17 @@ export class LanguageChallengesService {
     const { data: allParticipants } = await supabase
       .from('language_challenge_participants')
       .select('user_id')
-      .returns<ChallengeParticipant[]>()
-      .eq('challenge_id', challengeId);
+      .eq('challenge_id', challengeId)
+      .returns<ChallengeParticipant[]>();
 
     const completerIds: string[] = [];
     for (const p of allParticipants ?? []) {
       const { data: uActs } = await supabase
         .from('language_challenge_daily_activity')
         .select('activity_date')
-        .returns<DailyActivity[]>()
         .eq('challenge_id', challengeId)
-        .eq('user_id', p.user_id);
+        .eq('user_id', p.user_id)
+        .returns<DailyActivity[]>();
 
       const uDays = new Set(uActs?.map((r) => r.activity_date) ?? []);
       if (uDays.size >= challenge.duration_days) {

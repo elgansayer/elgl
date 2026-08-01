@@ -12,17 +12,15 @@ import { UpdateBusinessProfileDto } from './dto/update-business-profile.dto';
 import {
   UserProfile,
   ProfileVisitor,
+  ProfileVisitorSummary,
+  BusinessCatalogItem,
 } from './interfaces/user-profile.interface';
 
 import { Optional } from '@nestjs/common';
 import { CorrectorScoreService } from '../corrector-score/corrector-score.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { XpService } from '../xp/xp.service';
-import {
-  PREDEFINED_HOBBIES,
-  PREDEFINED_INTERESTS,
-  BusinessCatalogItem,
-} from './constants';
+import { PREDEFINED_HOBBIES, PREDEFINED_INTERESTS } from './constants';
 import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
 
 @Injectable()
@@ -144,7 +142,23 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to fetch visitors');
     }
 
-    return response.data ?? [];
+    const rows = (response.data ?? []) as Array<{
+      id: string;
+      visitor_id: string;
+      viewed_id: string;
+      created_at: string;
+      visitor: ProfileVisitorSummary | ProfileVisitorSummary[] | null;
+    }>;
+
+    return rows.map((row) => ({
+      id: row.id,
+      visitor_id: row.visitor_id,
+      viewed_id: row.viewed_id,
+      created_at: row.created_at,
+      visitor: Array.isArray(row.visitor)
+        ? (row.visitor[0] ?? undefined)
+        : (row.visitor ?? undefined),
+    }));
   }
 
   async getStatusViewers(userId: string): Promise<ProfileVisitor[]> {

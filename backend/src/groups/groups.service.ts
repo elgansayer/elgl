@@ -8,7 +8,6 @@ import { CentrifugoService } from '../chat/centrifugo.service';
 import { InterestsService } from '../interests/interests.service';
 import { UpdateGroupSettingsDto } from './dto/update-group-settings.dto';
 
-@Injectable()
 export interface GroupRecord {
   id: string;
   name: string;
@@ -239,7 +238,8 @@ export class GroupsService {
         )
       `,
       )
-      .eq('group_id', groupId);
+      .eq('group_id', groupId)
+      .returns<GroupMemberRecord[]>();
 
     if (error) {
       throw new NotFoundException('Failed to fetch group members');
@@ -337,8 +337,8 @@ export class GroupsService {
         interest:interests(name)`,
       )
       .eq('id', groupId)
-      .returns<GroupInfoRow>()
-      .single();
+      .single()
+      .returns<GroupInfoRow>();
 
     if (error || !data) {
       throw new NotFoundException('Group not found');
@@ -417,7 +417,9 @@ export class GroupsService {
 
   async getDiscoverableGroups(
     userId: string,
-  ): Promise<Array<GroupRecord & { member_count: number; is_member: boolean }>> {
+  ): Promise<
+    Array<GroupRecord & { member_count: number; is_member: boolean }>
+  > {
     const supabase = this.supabaseService.getClient();
     const { data: groups, error } = await supabase
       .from('groups')
