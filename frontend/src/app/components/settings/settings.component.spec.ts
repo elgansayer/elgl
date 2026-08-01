@@ -3,6 +3,7 @@ import { SettingsComponent } from './settings.component';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { signal } from '@angular/core';
+import jasmine from 'jasmine';
 
 describe('SettingsComponent', () => {
   let component: SettingsComponent;
