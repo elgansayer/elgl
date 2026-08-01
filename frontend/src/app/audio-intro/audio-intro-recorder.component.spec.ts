@@ -1,9 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Pipe, PipeTransform } from '@angular/core';
 import { AudioIntroRecorderComponent } from './audio-intro-recorder.component';
 import { AudioIntroService } from '../services/audio-intro.service';
-import { TranslatePipe } from '../services/translate.pipe';
 
-class MockTranslatePipe {
+@Pipe({ name: 't' })
+class MockTranslatePipe implements PipeTransform {
   transform(key: string): string {
     return `t:${key}`;
   }
@@ -27,11 +28,12 @@ describe('AudioIntroRecorderComponent', () => {
     service = new MockAudioIntroService();
     await TestBed.configureTestingModule({
       imports: [AudioIntroRecorderComponent],
-      providers: [
-        { provide: AudioIntroService, useValue: service },
-        { provide: TranslatePipe, useClass: MockTranslatePipe },
-      ],
-    }).compileComponents();
+      providers: [{ provide: AudioIntroService, useValue: service }],
+    })
+      .overrideComponent(AudioIntroRecorderComponent, {
+        set: { imports: [MockTranslatePipe] },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(AudioIntroRecorderComponent);
     component = fixture.componentInstance;

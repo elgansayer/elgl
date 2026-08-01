@@ -12,6 +12,7 @@ vi.mock('livekit-client', () => ({
   LocalTrack: vi.fn(),
   RemoteTrack: vi.fn(),
   RoomOptions: {},
+  Track: { Source: { Microphone: 'microphone' } },
 }));
 
 /** Exposes the private internals of {@link LivekitService} for testing. */

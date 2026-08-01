@@ -32,9 +32,9 @@ export class AudioIntroRecorderComponent {
     { audio_url: string | null },
     { userId: string }
   >({
-    request: () => ({ userId: this.userId() }),
+    params: () => ({ userId: this.userId() }),
     loader: (ctx) =>
-      this.audioIntroService.getAudioIntro(ctx.request.userId).catch(() => {
+      this.audioIntroService.getAudioIntro(ctx.params.userId).catch(() => {
         this.setError('audioIntro.errorLoading');
         return { audio_url: null };
       }),
