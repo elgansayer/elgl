@@ -91,7 +91,7 @@ export class StudyBuddiesService {
         `Failed to create study buddy request: ${error?.message}`,
       );
     }
-    return this.toBuddyRequest(data as BuddyRequestRow);
+    return this.toBuddyRequest(data);
   }
 
   async getIncomingRequests(userId: string): Promise<BuddyRequest[]> {
@@ -146,7 +146,7 @@ export class StudyBuddiesService {
     if (!data) {
       throw new NotFoundException('Study buddy request not found');
     }
-    return this.toBuddyRequest(data as BuddyRequestRow);
+    return this.toBuddyRequest(data);
   }
 
   async getPotentialBuddies(userId: string): Promise<UserProfile[]> {
@@ -179,7 +179,7 @@ export class StudyBuddiesService {
     }
 
     const { data } = await query.limit(20);
-    return (data ?? []) as UserProfile[];
+    return data ?? [];
   }
 
   async followUser(userId: string, targetUserId: string): Promise<void> {

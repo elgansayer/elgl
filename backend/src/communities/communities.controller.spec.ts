@@ -30,7 +30,7 @@ describe('CommunitiesController', () => {
 
       service.create.mockResolvedValue(expectedResult);
 
-      const result = await controller.create(dto, req as any);
+      const result = await controller.create(dto, req);
 
       expect(service.create).toHaveBeenCalledWith('user-123', dto);
       expect(result).toEqual(expectedResult);
@@ -73,7 +73,7 @@ describe('CommunitiesController', () => {
 
       service.listByOwner.mockResolvedValue(expectedResult);
 
-      const result = await controller.listMine(req as any);
+      const result = await controller.listMine(req);
 
       expect(service.listByOwner).toHaveBeenCalledWith('owner-987');
       expect(result).toEqual(expectedResult);
@@ -88,7 +88,7 @@ describe('CommunitiesController', () => {
 
       service.update.mockResolvedValue(undefined);
 
-      const result = await controller.update(communityId, dto, req as any);
+      const result = await controller.update(communityId, dto, req);
 
       expect(service.update).toHaveBeenCalledWith(
         communityId,
@@ -106,7 +106,7 @@ describe('CommunitiesController', () => {
 
       service.delete.mockResolvedValue(undefined);
 
-      await controller.remove(communityId, req as any);
+      await controller.remove(communityId, req);
 
       expect(service.delete).toHaveBeenCalledWith(communityId, 'user-deleter');
     });
@@ -134,7 +134,7 @@ describe('CommunitiesController', () => {
 
       service.removeGroup.mockResolvedValue(expectedResult);
 
-      const result = await controller.removeGroup(communityId, groupId);
+      const result = await controller.removeGroup(groupId);
 
       expect(service.removeGroup).toHaveBeenCalledWith(groupId);
       expect(result).toEqual(expectedResult);

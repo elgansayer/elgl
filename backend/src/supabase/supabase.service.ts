@@ -10,7 +10,6 @@ type UsersRow = {
   xp_total: number | null;
   last_active_at: string | null;
   is_serious_learner: boolean | null;
-  [key: string]: unknown;
 };
 
 type GroupsRow = {
@@ -225,13 +224,19 @@ export interface Database {
         Update: Partial<ChatMessageRow>;
       };
     };
+    Functions: {
+      increment_xp: {
+        Args: { user_id: string; amount: number };
+        Returns: void;
+      };
+    };
   };
 }
 
 @Global()
 @Injectable()
 export class SupabaseService implements OnModuleDestroy {
-  private readonly client: SupabaseClient;
+  private readonly client: SupabaseClient<Database>;
   private readonly redisClient: Redis;
 
   constructor(private readonly configService: ConfigService) {
@@ -244,7 +249,7 @@ export class SupabaseService implements OnModuleDestroy {
         'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required',
       );
     }
-    this.client = createClient(supabaseUrl, supabaseKey);
+    this.client = createClient<Database>(supabaseUrl, supabaseKey);
 
     const redisUrl =
       this.configService.get<string>('REDIS_URL') || 'redis://localhost:6379';
@@ -257,7 +262,7 @@ export class SupabaseService implements OnModuleDestroy {
     });
   }
 
-  getClient(): SupabaseClient {
+  getClient(): SupabaseClient<Database> {
     return this.client;
   }
 
@@ -275,10 +280,7 @@ export class SupabaseService implements OnModuleDestroy {
     const supabase = this.getClient();
     // Fetch current study_streak_days and correction_ratio to compute is_serious_learner
     const { data, error: fetchError } = await supabase
-      .from<
-        Database['public']['Tables']['users']['Row'],
-        Database['public']['Tables']['users']['Insert']
-      >('users')
+      .from('users')
       .select('study_streak_days, correction_ratio')
       .eq('id', userId)
       .single();
@@ -313,16 +315,13 @@ export class SupabaseService implements OnModuleDestroy {
 
   async incrementXp(userId: string, points: number): Promise<void> {
     const supabase = this.getClient();
-    const { error } = await supabase.rpc<null>('increment_xp', {
+    const { error } = await supabase.rpc('increment_xp', {
       user_id: userId,
       amount: points,
     });
     if (error) {
       const { data, error: fetchError } = await supabase
-        .from<
-          Database['public']['Tables']['users']['Row'],
-          Database['public']['Tables']['users']['Insert']
-        >('users')
+        .from('users')
         .select('xp_total')
         .eq('id', userId)
         .single();

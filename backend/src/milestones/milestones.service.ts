@@ -63,7 +63,7 @@ export class MilestonesService {
     if (insertError || !data) {
       throw new Error('Failed to create milestone: Validation failed');
     }
-    return this.toMilestone(data as MilestoneRow);
+    return this.toMilestone(data);
   }
 
   async findAllForUser(userId: string): Promise<Milestone[]> {
@@ -98,7 +98,7 @@ export class MilestonesService {
     if (!data) {
       throw new NotFoundException('Milestone not found');
     }
-    return this.toMilestone(data as MilestoneRow);
+    return this.toMilestone(data);
   }
 
   async markCompleted(milestoneId: string, userId: string): Promise<Milestone> {
@@ -117,7 +117,7 @@ export class MilestonesService {
     if (!data) {
       throw new NotFoundException('Milestone not found');
     }
-    return this.toMilestone(data as MilestoneRow);
+    return this.toMilestone(data);
   }
 
   async remove(milestoneId: string, userId: string): Promise<void> {

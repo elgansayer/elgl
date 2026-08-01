@@ -20,6 +20,7 @@ export class CallsService {
         participantLimit: number | null;
         isGroup: boolean;
         calleeToken: string | null;
+        isVideo: boolean;
       }
     >
   > = new Map();
@@ -67,6 +68,7 @@ export class CallsService {
     participantLimit: number | null = null,
     isGroup: boolean = false,
     calleeToken: string | null = null,
+    isVideo: boolean = true,
   ): void {
     const userCalls = this.ensureUser(userId);
     userCalls.set(roomName, {
@@ -76,6 +78,7 @@ export class CallsService {
       participantLimit,
       isGroup,
       calleeToken,
+      isVideo,
     });
   }
 
@@ -96,9 +99,10 @@ export class CallsService {
     const userCalls = this.activeCalls.get(userId);
     if (!userCalls) return [];
     return Array.from(userCalls.values()).map((call) => ({
-      roomName: call.roomName,
-      isHeld: call.isHeld,
-      e2eeKey: call.e2eeKey,
+      room_name: call.roomName,
+      is_held: call.isHeld,
+      e2ee_key: call.e2eeKey,
+      is_video: call.isVideo,
       participant_limit: call.participantLimit,
       is_group: call.isGroup,
       callee_token: call.calleeToken,
@@ -109,9 +113,10 @@ export class CallsService {
     userId: string,
     roomName: string,
   ): {
-    roomName: string;
-    isHeld: boolean;
-    e2eeKey: string | null;
+    room_name: string;
+    is_held: boolean;
+    e2ee_key: string | null;
+    is_video: boolean;
     participant_limit: number | null;
     is_group: boolean;
     callee_token: string | null;
@@ -122,9 +127,10 @@ export class CallsService {
     }
     const call = userCalls.get(roomName)!;
     return {
-      roomName: call.roomName,
-      isHeld: call.isHeld,
-      e2eeKey: call.e2eeKey,
+      room_name: call.roomName,
+      is_held: call.isHeld,
+      e2ee_key: call.e2eeKey,
+      is_video: call.isVideo,
       participant_limit: call.participantLimit,
       is_group: call.isGroup,
       callee_token: call.calleeToken,
@@ -161,12 +167,18 @@ export class CallsService {
   /* ---------- Call‑waiting ---------- */
 
   getWaitingCalls(userId: string): Array<{
-    roomName: string;
-    calleeToken: string;
-    e2eeKey: string;
-    isVideo: boolean;
+    room_name: string;
+    callee_token: string;
+    e2ee_key: string;
+    is_video: boolean;
   }> {
-    return this.waitingCalls.get(userId) || [];
+    const waitingList = this.waitingCalls.get(userId) || [];
+    return waitingList.map((w) => ({
+      room_name: w.roomName,
+      callee_token: w.calleeToken,
+      e2ee_key: w.e2eeKey,
+      is_video: w.isVideo,
+    }));
   }
 
   acceptWaitingCall(userId: string, roomName: string): void {
@@ -197,6 +209,7 @@ export class CallsService {
       null,
       false,
       callInfo.calleeToken,
+      callInfo.isVideo,
     );
   }
 
@@ -246,6 +259,7 @@ export class CallsService {
       null,
       false,
       waitingCall.calleeToken,
+      waitingCall.isVideo,
     );
 
     return {
@@ -314,7 +328,15 @@ export class CallsService {
     if (isBusy) {
       // Callee is busy; store the call as a waiting call instead of registering
       // them immediately.  The caller is registered right away.
-      this.registerParticipant(callerId, roomName, e2eeKey);
+      this.registerParticipant(
+        callerId,
+        roomName,
+        e2eeKey,
+        null,
+        false,
+        null,
+        isVideo,
+      );
 
       const waitingEntry = {
         roomName,
@@ -340,8 +362,24 @@ export class CallsService {
     }
 
     // Callee is free; register both participants as usual
-    this.registerParticipant(callerId, roomName, e2eeKey);
-    this.registerParticipant(calleeId, roomName, e2eeKey);
+    this.registerParticipant(
+      callerId,
+      roomName,
+      e2eeKey,
+      null,
+      false,
+      null,
+      isVideo,
+    );
+    this.registerParticipant(
+      calleeId,
+      roomName,
+      e2eeKey,
+      null,
+      false,
+      null,
+      isVideo,
+    );
 
     return {
       room_name: roomName,
@@ -421,7 +459,15 @@ export class CallsService {
 
     // Track the newly created group call for every participant
     for (const pid of participantIds) {
-      this.registerParticipant(pid, roomName, e2eeKey, effectiveLimit, true);
+      this.registerParticipant(
+        pid,
+        roomName,
+        e2eeKey,
+        effectiveLimit,
+        true,
+        null,
+        true,
+      );
     }
 
     return {
