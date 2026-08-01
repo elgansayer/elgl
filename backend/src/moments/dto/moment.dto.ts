@@ -27,8 +27,8 @@ export class CreateMomentDto {
   target_language!: string;
 
   @IsOptional()
-  @IsEnum(['moment', 'question'])
-  post_type?: 'moment' | 'question';
+  @IsEnum(['moment', 'question', 'language_question'])
+  post_type?: 'moment' | 'question' | 'language_question';
 
   @IsOptional()
   @IsString()

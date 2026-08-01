@@ -26,7 +26,7 @@ export interface MomentRecord {
   media_urls?: string[];
   media_type: 'none' | 'images' | 'audio';
   target_language: string;
-  post_type?: 'moment' | 'question';
+  post_type?: 'moment' | 'question' | 'language_question';
   question_text?: string;
   question_options?: string[];
   correct_answer?: string;

@@ -35,7 +35,7 @@ interface MomentLikeRow {
   moment_id: string;
 }
 
-interface MomentLikeUser {
+export interface MomentLikeUser {
   id: string;
   display_name: string;
   avatar_url: string | null;
@@ -210,7 +210,11 @@ export class MomentsService {
       );
     }
 
-    const moment = response.data;
+    const moment = response.data as MomentRecord & { post_type?: string };
+    moment.post_type = dto.post_type ?? 'moment';
+    moment.media_type = dto.media_type ?? 'none';
+    if (!moment.correct_answers_count) moment.correct_answers_count = 0;
+    if (!moment.total_answers_count) moment.total_answers_count = 0;
     // Award XP for creating a Moment
     void this.xpService.awardXpForActivity(userId, 'create_moment');
     // Award quest progress for posting a Moment
@@ -257,7 +261,14 @@ export class MomentsService {
         `Failed to create language question: ${error?.message ?? 'Unknown error'}`,
       );
     }
-    const moment = data;
+    const moment = data as MomentRecord & { post_type?: string };
+    moment.post_type = 'language_question';
+    moment.media_type = 'none';
+    moment.is_pinned = false;
+    moment.likes_count = 0;
+    moment.comments_count = 0;
+    moment.correct_answers_count = 0;
+    moment.total_answers_count = 0;
     void this.xpService.awardXpForActivity(userId, 'create_moment');
     void this.questsService.incrementProgress(userId, 'post_moment', 1);
     const profile = await this.usersService.getProfile(userId);
@@ -335,6 +346,9 @@ export class MomentsService {
         .limit(50);
       if (data) moments = data;
     }
+
+    // Exclude post types that are not regular moments (questions/language questions)
+    moments = moments.filter((m) => !m.post_type || m.post_type === 'moment');
 
     // Apply targeted visibility for non-Classmates filters: only show moments
     // whose target_language matches the current user's native language.

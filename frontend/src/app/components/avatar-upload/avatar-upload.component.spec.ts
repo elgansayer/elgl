@@ -148,6 +148,7 @@ describe('AvatarUploadComponent', () => {
       clientX: 50,
       clientY: 40,
       currentTarget: target,
+      preventDefault: vi.fn(),
     } as unknown as MouseEvent;
     component.onImageMouseDown(firstEvent);
 

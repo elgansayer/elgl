@@ -93,7 +93,7 @@ export class AvatarUploadComponent {
     this.startX = event.clientX - rect.left;
     this.startY = event.clientY - rect.top;
     this.isDragging = true;
-    event.preventDefault();
+    event.preventDefault?.();
   }
 
   onImageMouseMove(event: MouseEvent): void {
@@ -133,13 +133,13 @@ export class AvatarUploadComponent {
     this.cropY.set(y);
     this.cropSize.set(size);
 
-    event.preventDefault();
+    event.preventDefault?.();
   }
 
   onImageMouseUp(event: MouseEvent): void {
     if (this.isDragging) {
       this.isDragging = false;
-      event.preventDefault();
+      event.preventDefault?.();
     }
   }
 

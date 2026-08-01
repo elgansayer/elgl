@@ -21,7 +21,7 @@ import { AnswerLanguageQuestionDto } from './dto/answer-language-question.dto';
 import { R2Service } from '../cloudflare-r2/r2.service';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { StoryResponse } from './interfaces/story.interface';
-import { MomentsService } from './moments.service';
+import { MomentsService, MomentLikeUser } from './moments.service';
 
 @Controller('moments')
 @UseGuards(SupabaseAuthGuard)
@@ -137,7 +137,7 @@ export class MomentsController {
   }
 
   @Get(':id/likes')
-  async getMomentLikes(@Param('id') id: string): Promise<any[]> {
+  async getMomentLikes(@Param('id') id: string): Promise<MomentLikeUser[]> {
     return await this.momentsService.getMomentLikes(id);
   }
 
