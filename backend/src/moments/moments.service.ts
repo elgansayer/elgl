@@ -547,7 +547,7 @@ export class MomentsService {
       throw new Error(`Failed to fetch likes: ${error.message}`);
     }
 
-    const rows = (data ?? []) as Array<{ users: MomentLikeUser }>;
+    const rows = (data ?? []) as unknown as Array<{ users: MomentLikeUser }>;
     const fullUsers = rows
       .map((row) => row.users)
       .filter((user): user is MomentLikeUser => Boolean(user));

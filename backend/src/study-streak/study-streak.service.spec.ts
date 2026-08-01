@@ -2,22 +2,50 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { StudyStreakService } from './study-streak.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
+type MockRow = {
+  study_streak_days?: number;
+  last_active_at?: string;
+};
+
+type MockResult = {
+  data: MockRow | null;
+  error: { code?: string; message: string } | null;
+};
+
+type QueryChainMock = {
+  select: jest.Mock;
+  from: jest.Mock;
+  eq: jest.Mock;
+  single: jest.Mock;
+  update: jest.Mock;
+  upsert: jest.Mock;
+  _setResolveData: (data: MockResult) => void;
+  then: (resolve: (value: MockResult) => void) => undefined;
+};
+
 // Helper to create a mock query chain that mimics the Supabase PostgREST
 // fluent API so the service doesn't throw when it calls methods like `.eq`.
-const createQueryChain = () => {
-  const chain: any = {};
-  const methods = ['select', 'from', 'eq', 'single', 'update', 'upsert'];
+const createQueryChain = (): QueryChainMock => {
+  const chain = {} as QueryChainMock;
+  const methods = [
+    'select',
+    'from',
+    'eq',
+    'single',
+    'update',
+    'upsert',
+  ] as const;
   methods.forEach((method) => {
     chain[method] = jest.fn().mockReturnValue(chain);
   });
 
-  let resolveData: any = null;
+  let resolveData: MockResult | null = null;
 
-  chain._setResolveData = (data: any) => {
+  chain._setResolveData = (data: MockResult) => {
     resolveData = data;
   };
 
-  chain.then = (resolve: any) => {
+  chain.then = (resolve: (value: MockResult) => void) => {
     resolve(resolveData ?? { data: null, error: null });
     return undefined;
   };
@@ -27,7 +55,7 @@ const createQueryChain = () => {
 
 describe('StudyStreakService', () => {
   let service: StudyStreakService;
-  let supabaseMock: any;
+  let supabaseMock: { from: jest.Mock };
 
   beforeEach(async () => {
     supabaseMock = {

@@ -135,7 +135,8 @@ describe('AppModule', () => {
       (Reflect.getMetadata('imports', AppModule) as unknown[]) ?? [];
 
     const featureModules = imports.filter(
-      (mod): mod is Function => typeof mod === 'function',
+      (mod): mod is new (...args: unknown[]) => unknown =>
+        typeof mod === 'function',
     );
     const duplicateModules = featureModules.filter(
       (mod, index) => featureModules.indexOf(mod) !== index,
