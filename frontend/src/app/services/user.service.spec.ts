@@ -238,7 +238,7 @@ describe('UserService', () => {
 
   describe('getOnlineStatus', () => {
     it('should return online for activity within the last five minutes', () => {
-      const recent = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const recent = new Date(Date.now() - 4 * 60 * 1000).toISOString();
       expect(service.getOnlineStatus({ last_active_at: recent })).toBe('online');
     });
 

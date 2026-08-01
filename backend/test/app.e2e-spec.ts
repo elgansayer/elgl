@@ -250,7 +250,9 @@ describe('HelloTalk API E2E Integration Suite', () => {
   });
 
   afterEach(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   afterAll(async () => {
