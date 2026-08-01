@@ -155,23 +155,22 @@ export class AppComponent implements OnInit {
       await this.centrifugeService.connect();
       this.centrifugeService.subscribe(`user_${user.id}`, (data: unknown) => {
         const payload = this.isValidPayload(data) ? data : null;
-        if (payload && payload.type === 'virtual_gift' && payload.gift) {
+        if (payload && payload.type === 'virtual_gift' && payload.gift !== undefined) {
           this.economyStore.triggerGiftAnimation({
             gift: payload.gift,
-            sender_name: payload.sender_name || 'Language Partner',
+            sender_name: payload.sender_name ?? 'Language Partner',
             receiver_name: 'You',
           });
         }
 
         // Handle incoming call events
-        if (payload && payload.type === 'incoming_call') {
-          const callPayload = this.isValidCallPayload(payload) ? payload : null;
+        if (payload && payload.type === 'incoming_call' && this.isIncomingCallPayload(payload)) {
           this.incomingCallData.set({
-            callerId: callPayload.callerId,
-            callerName: callPayload.callerName,
-            callerAvatarUrl: callPayload.callerAvatarUrl,
-            roomName: callPayload.roomName,
-            isVideoCall: callPayload.isVideoCall,
+            callerId: payload.callerId,
+            callerName: payload.callerName,
+            callerAvatarUrl: payload.callerAvatarUrl,
+            roomName: payload.roomName,
+            isVideoCall: payload.isVideoCall,
           });
         }
       });
@@ -180,6 +179,37 @@ export class AppComponent implements OnInit {
       await this.fcmService.requestPermission();
       await this.fcmService.persistFcmToken(user.id);
     }
+  }
+
+  private isValidPayload(data: unknown): data is {
+    type: string;
+    gift?: unknown;
+    sender_name?: string;
+    callerId?: string;
+    callerName?: string;
+    callerAvatarUrl?: string;
+    roomName?: string;
+    isVideoCall?: boolean;
+  } {
+    if (!data || typeof data !== 'object') {
+      return false;
+    }
+    const candidate = data as Record<string, unknown>;
+    return typeof candidate.type === 'string';
+  }
+
+  private isIncomingCallPayload(payload: unknown): payload is IncomingCallData {
+    if (!payload || typeof payload !== 'object') {
+      return false;
+    }
+    const candidate = payload as Record<string, unknown>;
+    return (
+      typeof candidate.callerId === 'string' &&
+      typeof candidate.callerName === 'string' &&
+      typeof candidate.callerAvatarUrl === 'string' &&
+      typeof candidate.roomName === 'string' &&
+      typeof candidate.isVideoCall === 'boolean'
+    );
   }
 
   onAcceptCall(_callData: IncomingCallData): void {

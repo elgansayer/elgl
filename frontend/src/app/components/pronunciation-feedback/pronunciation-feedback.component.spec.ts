@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { of, throwError } from 'rxjs';
+import { vi } from 'vitest';
 
 import { PronunciationFeedbackComponent } from './pronunciation-feedback.component';
 import {
@@ -12,8 +13,8 @@ import { I18nService } from '../../services/i18n.service';
 describe('PronunciationFeedbackComponent', () => {
   let component: PronunciationFeedbackComponent;
   let fixture: ComponentFixture<PronunciationFeedbackComponent>;
-  let pronunciationServiceMock: { analyse: jest.Mock };
-  let i18nServiceMock: { translate: jest.Mock };
+  let pronunciationServiceMock: { analyse: vi.Mock };
+  let i18nServiceMock: { translate: vi.Mock };
 
   const feedback: PronunciationFeedback = {
     score: 92,
@@ -23,10 +24,10 @@ describe('PronunciationFeedbackComponent', () => {
 
   beforeEach(async () => {
     pronunciationServiceMock = {
-      analyse: jest.fn().mockReturnValue(of(feedback)),
+      analyse: vi.fn().mockReturnValue(of(feedback)),
     };
     i18nServiceMock = {
-      translate: jest.fn().mockImplementation((key: string) => key),
+      translate: vi.fn().mockImplementation((key: string) => key),
     };
 
     // Mock MediaRecorder and getUserMedia for every test
@@ -60,7 +61,7 @@ describe('PronunciationFeedbackComponent', () => {
     Object.defineProperty(navigator, 'mediaDevices', {
       configurable: true,
       value: {
-        getUserMedia: jest.fn().mockResolvedValue(streamMock),
+        getUserMedia: vi.fn().mockResolvedValue(streamMock),
       },
     });
 
@@ -78,7 +79,7 @@ describe('PronunciationFeedbackComponent', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('initial state', () => {
