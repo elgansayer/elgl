@@ -661,7 +661,7 @@ export class UserService {
     const now = Date.now();
     const diffMs = now - lastActive;
     // 5 minutes
-    if (diffMs <= 300_000) return 'online';
+    if (diffMs < 300_000) return 'online';
     // 1 day
     if (diffMs <= 86_400_000) return 'recently';
     return 'offline';
