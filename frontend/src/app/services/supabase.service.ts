@@ -3,14 +3,35 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { openDB, IDBPDatabase } from 'idb';
 import { environment } from '../../environments/environment';
 
+interface Database {
+  public: {
+    Tables: {
+      user_streaks: {
+        Row: { user_id: string; streak_count: number };
+        Insert: { user_id: string; streak_count: number };
+        Update: { user_id?: string; streak_count?: number };
+        Relationships: [];
+      };
+      users: {
+        Row: { id: string; audio_intro_url: string | null; is_vip: boolean; vip_tier: string; is_serious_learner?: boolean };
+        Insert: { id: string; audio_intro_url?: string | null; is_vip?: boolean; vip_tier?: string; is_serious_learner?: boolean };
+        Update: Partial<{ id: string; audio_intro_url: string | null; is_vip: boolean; vip_tier: string; is_serious_learner?: boolean }>;
+        Relationships: [];
+      };
+    };
+    Views: Record<string, { Row: Record<string, unknown> }>;
+    Functions: Record<string, { Args: Record<string, unknown>; Returns: unknown }>;
+  };
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class SupabaseService {
-  private supabase: SupabaseClient;
+  private supabase: SupabaseClient<Database>;
 
   constructor() {
-    this.supabase = createClient(environment.supabaseUrl, environment.supabaseAnonKey);
+    this.supabase = createClient<Database>(environment.supabaseUrl, environment.supabaseAnonKey);
   }
 
   async getDailyStreak(userId: string): Promise<number> {

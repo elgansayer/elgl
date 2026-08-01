@@ -320,11 +320,20 @@ export class ChatService {
     status_update_id: string;
     status_text: string;
   }): Promise<ChatMessage> {
-    return firstValueFrom(
-      this.http.post<ChatMessage>(`${this.baseUrl}/messages/status-reply`, payload, {
-        headers: this.getHeaders(),
-      }),
-    );
+    try {
+      const response = await firstValueFrom(
+        this.http.post<ChatMessage>(`${this.baseUrl}/messages/status-reply`, payload, {
+          headers: this.getHeaders(),
+        }),
+      );
+      this.hapticFeedback.tap();
+      return response;
+    } catch (cause) {
+      console.error('Failed to reply to status update:', cause);
+      throw new Error('Could not send reply to status update. Please try again.', {
+        cause: cause instanceof Error ? cause : new Error(String(cause)),
+      });
+    }
   }
 
   // ---- Chat Lock methods ----
