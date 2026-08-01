@@ -231,7 +231,7 @@ export interface Database {
 @Global()
 @Injectable()
 export class SupabaseService implements OnModuleDestroy {
-  private readonly client: SupabaseClient;
+  private readonly client: SupabaseClient<Database>;
   private readonly redisClient: Redis;
 
   constructor(private readonly configService: ConfigService) {
@@ -257,7 +257,7 @@ export class SupabaseService implements OnModuleDestroy {
     });
   }
 
-  getClient(): SupabaseClient {
+  getClient(): SupabaseClient<Database> {
     return this.client;
   }
 
@@ -275,7 +275,7 @@ export class SupabaseService implements OnModuleDestroy {
     const supabase = this.getClient();
     // Fetch current study_streak_days and correction_ratio to compute is_serious_learner
     const { data, error: fetchError } = await supabase
-      .from<Database['public']['Tables']['users']['Row']>('users')
+      .from('users')
       .select('study_streak_days, correction_ratio')
       .eq('id', userId)
       .single();
@@ -338,7 +338,7 @@ export class SupabaseService implements OnModuleDestroy {
   async getUserXp(userId: string): Promise<number> {
     const supabase = this.getClient();
     const { data, error } = await supabase
-      .from<Database['public']['Tables']['users']['Row']>('users')
+      .from('users')
       .select('xp_total')
       .eq('id', userId)
       .single();
