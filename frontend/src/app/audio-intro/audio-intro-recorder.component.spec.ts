@@ -53,4 +53,25 @@ describe('AudioIntroRecorderComponent', () => {
     const title = fixture.nativeElement.querySelector('h2')?.textContent;
     expect(title).toContain('t:audioIntro.title');
   });
+  it('should start and stop recording audio', () => {
+    component.startRecording();
+    expect(component.isRecording).toBe(true);
+
+    component.stopRecording();
+    expect(component.isRecording).toBe(false);
+  });
+
+  it('should upload recorded audio and update audio intro URL', async () => {
+    const mockBlob = new Blob(['audio data'], { type: 'audio/wav' });
+
+    await component.uploadAudio(mockBlob);
+    expect(service.uploadAudioBlob).toHaveBeenCalledWith(mockBlob);
+    expect(component.audioIntroUrl()).toBe('media-url');
+  });
+
+  it('should render hobbies and interests tags', () => {
+    const tags = fixture.nativeElement.querySelectorAll('.hobby-tag');
+    expect(tags.length).toBeGreaterThan(0);
+    expect(tags[0].textContent).toContain('t:hobbyTag.example');
+  });
 });

@@ -50,9 +50,21 @@ export class AudioIntroRecorderComponent {
   private readonly i18n = inject(I18nService);
   private readonly audioPlayer = viewChild<HTMLAudioElement>('audioPlayer');
 
+  readonly audioIntroUrl = signal<string | null>(null);
+
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
   private stream: MediaStream | null = null;
+
+  async uploadAudio(blob: Blob): Promise<void> {
+    try {
+      const mediaUrl = await this.audioIntroService.uploadAudioBlob(blob);
+      await this.audioIntroService.updateAudioIntro(this.userId(), mediaUrl);
+      this.audioIntroUrl.set(mediaUrl);
+    } catch {
+      this.setError('audioIntro.uploadError');
+    }
+  }
 
   constructor() {
     effect(() => {
