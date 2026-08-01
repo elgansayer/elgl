@@ -2,6 +2,14 @@ import { Injectable, signal, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
 import { showToast } from './toast.service';
 
+interface SubscriptionRow {
+  id: string;
+  user_id: string;
+  plan_id: string;
+  status: string;
+  created_at: string;
+}
+
 export interface RestoreResult {
   success: boolean;
   restoredPlans: string[];
@@ -41,7 +49,8 @@ export class RestorePurchasesService {
       const { data: subscriptions, error } = await supabase
         .from('subscriptions')
         .select('*')
-        .eq('user_id', user.id)
+        .returns<SubscriptionRow[]>()
+        .filter('user_id', 'eq', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {

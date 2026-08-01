@@ -42,7 +42,7 @@ export class VipSubscriptionComponent {
         const plans = await this.subscriptionPlansService.getAllPlans();
         this.plans.set(plans);
         return plans;
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Failed to load subscription plans:', err);
         this.error.set(this.i18n.translate('vip.failedLoad'));
         return EMPTY_PLANS;

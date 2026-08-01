@@ -1,5 +1,4 @@
 import { Component, inject, signal, resource } from '@angular/core';
-import { NgOptimizedImage } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import {
@@ -13,7 +12,7 @@ import {
 @Component({
   selector: 'app-notification-preferences',
   standalone: true,
-  imports: [NgOptimizedImage, TranslatePipe],
+  imports: [TranslatePipe],
   template: `
     <div class="surface p-4 rounded-lg max-w-2xl mx-auto">
       <h2 class="text-xl font-bold mb-4">{{ 'notification_preferences.title' | t }}</h2>

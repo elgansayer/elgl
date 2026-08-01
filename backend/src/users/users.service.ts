@@ -18,7 +18,11 @@ import { Optional } from '@nestjs/common';
 import { CorrectorScoreService } from '../corrector-score/corrector-score.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { XpService } from '../xp/xp.service';
-import { PREDEFINED_HOBBIES, PREDEFINED_INTERESTS } from './constants';
+import {
+  PREDEFINED_HOBBIES,
+  PREDEFINED_INTERESTS,
+  BusinessCatalogItem,
+} from './constants';
 import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
 
 @Injectable()
@@ -177,7 +181,13 @@ export class UsersService {
       visitor_id: row.viewer_id,
       viewed_id: row.status_owner_id,
       created_at: row.created_at,
-      visitor: row.viewer,
+      visitor: {
+        id: row.viewer.id,
+        display_name: row.viewer.display_name,
+        avatar_url: row.viewer.avatar_url,
+        native_languages: row.viewer.native_languages,
+        target_languages: row.viewer.target_languages,
+      },
     }));
   }
 

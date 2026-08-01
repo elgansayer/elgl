@@ -101,7 +101,7 @@ describe('I18nService', () => {
       expect(service.translate('vip.faqTitle')).toBe('Frequently Asked Questions');
       expect(service.translate('vip.faqSwitchQ')).toBe('Can I switch plans anytime?');
       expect(service.translate('vip.faqPaymentA')).toBe(
-        'We accept all major credit cards, PayPal, and in-app purchases on iOS and Android',
+        'We accept all major credit cards, PayPal, and in-app purchases on iOS and Android.',
       );
       expect(service.translate('vip.faqCancelQ')).toBe('Can I cancel my subscription?');
     });

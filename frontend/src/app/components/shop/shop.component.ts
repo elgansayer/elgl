@@ -3,7 +3,6 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { RouterLink } from '@angular/router';
 
 interface CatalogItem {
   id: string;
@@ -16,7 +15,7 @@ interface CatalogItem {
 @Component({
   selector: 'app-shop',
   standalone: true,
-  imports: [TranslatePipe, RouterLink],
+  imports: [TranslatePipe],
   template: `
     <div class="p-4">
       <h1 class="text-xl font-bold mb-4">{{ 'shop.title' | t }}</h1>
