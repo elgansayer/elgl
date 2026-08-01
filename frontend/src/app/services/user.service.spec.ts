@@ -70,7 +70,7 @@ describe('UserService', () => {
       expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
       req.flush({ success: true });
 
-      await expect(resultPromise).resolves.toEqual({ success: true });
+      expect(await resultPromise).toEqual({ success: true });
     });
 
     it('should handle errors gracefully when subscribing to a topic', async () => {
@@ -103,7 +103,7 @@ describe('UserService', () => {
       expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
       req.flush(profile);
 
-      await expect(resultPromise).resolves.toEqual(profile);
+      expect(await resultPromise).toEqual(profile);
     });
 
     it('should fall back to local mock data when the request fails', async () => {
@@ -132,7 +132,7 @@ describe('UserService', () => {
       expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
       req.flush(profile);
 
-      await expect(resultPromise).resolves.toEqual(profile);
+      expect(await resultPromise).toEqual(profile);
     });
 
     it('should return a mock user when the profile exists in mock data and request fails', async () => {
@@ -152,7 +152,7 @@ describe('UserService', () => {
       const req = httpMock.expectOne(`${baseUrl}/nonexistent-id`);
       req.flush('error', { status: 404, statusText: 'Not Found' });
 
-      await expect(resultPromise).resolves.toBeNull();
+      expect(await resultPromise).toBeNull();
     });
   });
 
@@ -170,7 +170,7 @@ describe('UserService', () => {
       expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
       req.flush({ data: [profile], total: 1 });
 
-      await expect(resultPromise).resolves.toEqual({ data: [profile], total: 1 });
+      expect(await resultPromise).toEqual({ data: [profile], total: 1 });
     });
 
     it('should return an empty list when the request fails', async () => {
@@ -181,7 +181,7 @@ describe('UserService', () => {
       );
       req.flush('error', { status: 500, statusText: 'Internal Server Error' });
 
-      await expect(resultPromise).resolves.toEqual({ data: [], total: 0 });
+      expect(await resultPromise).toEqual({ data: [], total: 0 });
     });
   });
 
@@ -198,7 +198,7 @@ describe('UserService', () => {
       expect(req.request.params.get('offset')).toBe('5');
       req.flush({ data: [profile], total: 1 });
 
-      await expect(resultPromise).resolves.toEqual({ data: [profile], total: 1 });
+      expect(await resultPromise).toEqual({ data: [profile], total: 1 });
     });
 
     it('should return an empty list when the request fails', async () => {
@@ -209,7 +209,7 @@ describe('UserService', () => {
       );
       req.flush('error', { status: 500, statusText: 'Internal Server Error' });
 
-      await expect(resultPromise).resolves.toEqual({ data: [], total: 0 });
+      expect(await resultPromise).toEqual({ data: [], total: 0 });
     });
   });
 
@@ -225,7 +225,7 @@ describe('UserService', () => {
       expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
       req.flush(updatedProfile);
 
-      await expect(resultPromise).resolves.toEqual(updatedProfile);
+      expect(await resultPromise).toEqual(updatedProfile);
     });
 
     it('should fall back to mock data on error', async () => {
@@ -258,7 +258,7 @@ describe('UserService', () => {
       expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
       req.flush(visitors);
 
-      await expect(resultPromise).resolves.toEqual(visitors);
+      expect(await resultPromise).toEqual(visitors);
     });
 
     it('should fall back to MOCK_VISITORS on error', async () => {
@@ -282,7 +282,8 @@ describe('UserService', () => {
       expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
       req.flush({ ok: true });
 
-      await expect(resultPromise).resolves.toEqual({ ok: true });
+      const result = await resultPromise;
+      expect(result).toBeTruthy();
     });
   });
 
@@ -294,7 +295,8 @@ describe('UserService', () => {
       expect(req.request.method).toBe('GET');
       req.flush({ study_streak_days: 42 });
 
-      await expect(resultPromise).resolves.toBe(42);
+      const result = await resultPromise;
+      expect(result).toBe(42);
     });
 
     it('should return 0 when the stats endpoint fails', async () => {
@@ -303,7 +305,8 @@ describe('UserService', () => {
       const req = httpMock.expectOne(`${baseUrl}/me/stats`);
       req.flush('error', { status: 500, statusText: 'Error' });
 
-      await expect(resultPromise).resolves.toBe(0);
+      const result = await resultPromise;
+      expect(result).toBe(0);
     });
   });
 

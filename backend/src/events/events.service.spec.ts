@@ -75,8 +75,10 @@ describe('EventsService', () => {
       supabaseService.getClient.mockReturnValue({
         from: jest.fn().mockReturnValue({
           select: jest.fn().mockReturnValue({
-            order: jest.fn().mockReturnValue({
-              range: jest.fn().mockResolvedValue({ data: mockEvents }),
+            gte: jest.fn().mockReturnValue({
+              order: jest.fn().mockReturnValue({
+                range: jest.fn().mockResolvedValue({ data: mockEvents }),
+              }),
             }),
           }),
         }),

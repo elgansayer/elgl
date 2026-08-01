@@ -8,7 +8,7 @@ import * as crypto from 'crypto';
 export class CallsService {
   private livekitHost: string;
 
-  // Active calls per user (userId -> (roomName -> { roomName, isHeld, e2eeKey }))
+  // Active calls per user (userId -> (roomName -> { roomName, isHeld, e2eeKey, calleeToken }))
   private readonly activeCalls: Map<
     string,
     Map<
@@ -19,6 +19,7 @@ export class CallsService {
         e2eeKey: string | null;
         participantLimit: number | null;
         isGroup: boolean;
+        calleeToken: string | null;
       }
     >
   > = new Map();
@@ -50,6 +51,7 @@ export class CallsService {
       e2eeKey: string | null;
       participantLimit: number | null;
       isGroup: boolean;
+      calleeToken: string | null;
     }
   > {
     if (!this.activeCalls.has(userId)) {
@@ -64,6 +66,7 @@ export class CallsService {
     e2eeKey?: string,
     participantLimit: number | null = null,
     isGroup: boolean = false,
+    calleeToken: string | null = null,
   ): void {
     const userCalls = this.ensureUser(userId);
     userCalls.set(roomName, {
@@ -72,6 +75,7 @@ export class CallsService {
       e2eeKey: e2eeKey ?? null,
       participantLimit,
       isGroup,
+      calleeToken,
     });
   }
 
@@ -87,6 +91,7 @@ export class CallsService {
     e2eeKey: string | null;
     participant_limit: number | null;
     is_group: boolean;
+    callee_token: string | null;
   }> {
     const userCalls = this.activeCalls.get(userId);
     if (!userCalls) return [];
@@ -96,6 +101,7 @@ export class CallsService {
       e2eeKey: call.e2eeKey,
       participant_limit: call.participantLimit,
       is_group: call.isGroup,
+      callee_token: call.calleeToken,
     }));
   }
 
@@ -108,6 +114,7 @@ export class CallsService {
     e2eeKey: string | null;
     participant_limit: number | null;
     is_group: boolean;
+    callee_token: string | null;
   } {
     const userCalls = this.activeCalls.get(userId);
     if (!userCalls || !userCalls.has(roomName)) {
@@ -120,6 +127,7 @@ export class CallsService {
       e2eeKey: call.e2eeKey,
       participant_limit: call.participantLimit,
       is_group: call.isGroup,
+      callee_token: call.calleeToken,
     };
   }
 
@@ -182,7 +190,14 @@ export class CallsService {
     if (waitingList.length === 0) {
       this.waitingCalls.delete(userId);
     }
-    this.registerParticipant(userId, callInfo.roomName, callInfo.e2eeKey);
+    this.registerParticipant(
+      userId,
+      callInfo.roomName,
+      callInfo.e2eeKey,
+      null,
+      false,
+      callInfo.calleeToken,
+    );
   }
 
   /* ---------- Switching between calls ---------- */
@@ -224,7 +239,14 @@ export class CallsService {
     if (waitingList.length === 0) {
       this.waitingCalls.delete(userId);
     }
-    this.registerParticipant(userId, waitingCall.roomName, waitingCall.e2eeKey);
+    this.registerParticipant(
+      userId,
+      waitingCall.roomName,
+      waitingCall.e2eeKey,
+      null,
+      false,
+      waitingCall.calleeToken,
+    );
 
     return {
       room_name: waitingCall.roomName,
@@ -248,6 +270,17 @@ export class CallsService {
       this.configService.get<string>('LIVEKIT_API_KEY') || 'devkey';
     const apiSecret =
       this.configService.get<string>('LIVEKIT_SECRET') || 'secret';
+
+    // Create the room for the 1:1 call
+    const roomService = new RoomServiceClient(
+      this.livekitHost,
+      apiKey,
+      apiSecret,
+    );
+    await roomService.createRoom({
+      name: roomName,
+      maxParticipants: 2,
+    });
 
     // Generate a random 32‑byte key for end‑to‑end encryption
     const e2eeKey = this.generateE2eeKey();

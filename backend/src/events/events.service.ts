@@ -178,9 +178,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
 
     let q = supabase
       .from('events')
-      .select('*, host:host_id(display_name, avatar_url)')
-      .order('date_time', { ascending: true })
-      .range(offset, offset + limit - 1);
+      .select('*, host:host_id(display_name, avatar_url)');
 
     if (query.status === 'past') {
       q = q.lt('date_time', new Date().toISOString());
@@ -201,6 +199,10 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     if (query.to_date) {
       q = q.lte('date_time', query.to_date);
     }
+
+    q = q
+      .order('date_time', { ascending: true })
+      .range(offset, offset + limit - 1);
 
     const { data, error } = await q;
     if (error) {
