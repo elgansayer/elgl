@@ -59,6 +59,32 @@ describe('UserService', () => {
     httpMock = TestBed.inject(HttpTestingController);
   });
 
+  describe('subscribeToFcmTopic', () => {
+    it('should POST to the FCM topic subscription endpoint', async () => {
+      const topic = 'test-topic';
+      const resultPromise = service.subscribeToFcmTopic(topic);
+
+      const req = httpMock.expectOne(`${baseUrl}/fcm/subscribe`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ topic });
+      expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
+      req.flush({ success: true });
+
+      await expect(resultPromise).resolves.toEqual({ success: true });
+    });
+
+    it('should handle errors gracefully when subscribing to a topic', async () => {
+      const topic = 'test-topic';
+      const resultPromise = service.subscribeToFcmTopic(topic);
+
+      const req = httpMock.expectOne(`${baseUrl}/fcm/subscribe`);
+      req.flush('error', { status: 500, statusText: 'Internal Server Error' });
+
+      await expect(resultPromise).rejects.toThrow('Failed to subscribe to topic');
+    });
+  });
+
+
   afterEach(() => {
     httpMock.verify();
   });

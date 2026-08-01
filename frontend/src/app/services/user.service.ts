@@ -587,6 +587,22 @@ export class UserService {
     );
   }
 
+  async unsubscribeFromFcmTopic(topic: string): Promise<{ success: boolean }> {
+    return firstValueFrom(
+      this.http
+        .post<{ success: boolean }>(
+          `${this.baseUrl}/fcm/unsubscribe`,
+          { topic },
+          { headers: this.getHeaders() },
+        )
+        .pipe(
+          catchError(() => {
+            throw new Error('Failed to unsubscribe from topic');
+          }),
+        ),
+    );
+  }
+
   async deleteMyAccount(): Promise<{ message: string; scheduled_for_deletion_at: string }> {
     return firstValueFrom(
       this.http
