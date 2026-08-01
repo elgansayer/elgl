@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { describe, expect, it, vi } from 'vitest';
 import { I18nService } from './i18n.service';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -12,6 +13,66 @@ describe('I18nService', () => {
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
     service = TestBed.inject(I18nService);
+  });
+
+  describe('setLanguage', () => {
+    it('should set the language and update document directionality', async () => {
+      await service.setLanguage('ar');
+      expect(service.currentLang()).toBe('ar');
+      if (typeof document !== 'undefined') {
+        expect(document.documentElement.lang).toBe('ar');
+        expect(document.documentElement.dir).toBe('rtl');
+      }
+    });
+
+    it('should cache the language in localStorage', async () => {
+      await service.setLanguage('fr');
+      expect(localStorage.getItem('hellotalk_locale')).toBe('fr');
+    });
+
+    it('should load translations from localStorage cache if available', async () => {
+      const cachedTranslations = { 'test.key': 'Cached Translation' };
+      localStorage.setItem('hellotalk_dict_fr', JSON.stringify(cachedTranslations));
+      await service.setLanguage('fr');
+      expect(service.translate('test.key')).toBe('Cached Translation');
+    });
+
+    it('should fallback to base dictionary if translation key is missing', async () => {
+      await service.setLanguage('fr');
+      expect(service.translate('app.title')).toBe('HelloTalk');
+    });
+
+    it('should call the backend API for translations if not cached', async () => {
+      vi.spyOn(window, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ translations: { 'test.key': 'API Translation' } }),
+      } as Response);
+      await service.setLanguage('de');
+      expect(service.translate('test.key')).toBe('API Translation');
+    });
+
+    it('should handle API errors gracefully and fallback to base dictionary', async () => {
+      vi.spyOn(window, 'fetch').mockRejectedValue(new Error('API Error'));
+      await service.setLanguage('de');
+      expect(service.translate('app.title')).toBe('HelloTalk');
+    });
+  });
+
+  describe('translate', () => {
+    it('should return the translation for a given key', () => {
+      const translation = service.translate('app.title');
+      expect(translation).toBe('HelloTalk');
+    });
+
+    it('should interpolate parameters in the translation string', () => {
+      const translation = service.translate('common.coinsBalance', { coins: 100 });
+      expect(translation).toBe('100 Coins');
+    });
+
+    it('should return the key itself if no translation is found', () => {
+      const translation = service.translate('non.existent.key');
+      expect(translation).toBe('non.existent.key');
+    });
   });
 
   it('should be created with default British English language', () => {
