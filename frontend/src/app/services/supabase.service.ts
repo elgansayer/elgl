@@ -55,6 +55,31 @@ export class SupabaseService {
     return data?.audio_intro_url ?? null;
   }
 
+  async getEarnedBadges(
+    userId: string,
+  ): Promise<{ isVip: boolean; vipTier: string; isSeriousLearner: boolean }> {
+    const { data, error } = await this.supabase
+      .from('users')
+      .select('is_vip, vip_tier, is_serious_learner')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.warn('Failed to fetch earned badges', error);
+      return {
+        isVip: false,
+        vipTier: 'free',
+        isSeriousLearner: false,
+      };
+    }
+
+    return {
+      isVip: data?.is_vip ?? false,
+      vipTier: data?.vip_tier ?? 'free',
+      isSeriousLearner: data?.is_serious_learner ?? false,
+    };
+  }
+
   private async getOfflineDB(): Promise<IDBPDatabase> {
     return openDB('OfflineContentDB', 1, {
       upgrade(db: IDBPDatabase) {

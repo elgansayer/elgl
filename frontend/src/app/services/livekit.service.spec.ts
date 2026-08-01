@@ -142,16 +142,23 @@ describe('LivekitService', () => {
 
   describe('joinRoom', () => {
     it('should connect to a room with the token from the backend', async () => {
-      mockRoomConnect.mockResolvedValue(Promise.resolve());
+      const fakeRoom = {
+        connect: mockRoomConnect,
+        disconnect: mockRoomDisconnect,
+      };
+      // Override the private createRoom factory so we do not depend on the
+      // real livekit-client Room constructor during this test.
+      (service as unknown as { createRoom: (options: unknown) => unknown }).createRoom = () => fakeRoom;
+
+      mockRoomConnect.mockImplementation(async () => {});
       const roomPromise = service.joinRoom('my-room', 'user-123', false);
       const req = httpMock.expectOne(`${environment.apiUrl}/livekit/token`);
       expect(req.request.method).toBe('POST');
       req.flush({ token: 'test-token' });
       const room = await roomPromise;
       expect(mockRoomConnect).toHaveBeenCalledWith(environment.liveKitUrl, 'test-token');
-      expect(constructedRoom).toBeTruthy();
-      expect(room).toStrictEqual(constructedRoom);
-      expect(internals(service).room).toStrictEqual(room);
+      expect(room).toStrictEqual(fakeRoom);
+      expect(internals(service).room).toStrictEqual(fakeRoom);
     });
   });
 
