@@ -5,6 +5,17 @@ interface GithubRelease {
   html_url?: string;
 }
 
+function isGithubRelease(value: unknown): value is GithubRelease {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const tagNameValid =
+    !('tag_name' in value) || typeof value.tag_name === 'string';
+  const htmlUrlValid =
+    !('html_url' in value) || typeof value.html_url === 'string';
+  return tagNameValid && htmlUrlValid;
+}
+
 @Injectable()
 export class VersionService implements OnModuleInit {
   private readonly logger = new Logger(VersionService.name);
@@ -43,7 +54,12 @@ export class VersionService implements OnModuleInit {
         this.latestVersion = this.currentVersion;
         return;
       }
-      const data = (await res.json()) as GithubRelease;
+      const data: unknown = await res.json();
+      if (!isGithubRelease(data)) {
+        this.logger.warn('GitHub API response did not match expected shape');
+        this.latestVersion = this.currentVersion;
+        return;
+      }
       const tag =
         typeof data.tag_name === 'string'
           ? data.tag_name.replace(/^v/i, '')
