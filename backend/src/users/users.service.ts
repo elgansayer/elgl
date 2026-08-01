@@ -920,7 +920,7 @@ export class UsersService {
     const profileVisitsCount = visitsCountRes.count ?? 0;
 
     return {
-      ...user,
+      ...(user as Record<string, unknown>),
       momentsCount,
       commentsCount,
       followersCount,
