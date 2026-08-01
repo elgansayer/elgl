@@ -86,7 +86,7 @@ export class MomentsService {
       Date.now() + expireHours * 3600 * 1000,
     ).toISOString();
 
-    const { data, error } = await supabase
+    const { data, error } = (await supabase
       .from('moments')
       .insert({
         user_id: userId,
@@ -99,7 +99,20 @@ export class MomentsService {
         expires_at: expiresAt,
       })
       .select()
-      .single();
+      .single()) as unknown as {
+      data: {
+        id: string;
+        user_id: string;
+        text_content: string | null;
+        media_urls: string[];
+        media_type: string;
+        voice_note_url: string | null;
+        target_language: string | null;
+        expires_at: string;
+        created_at: string;
+      } | null;
+      error: { message?: string } | null;
+    };
 
     if (error || !data) {
       throw new Error(
@@ -138,7 +151,7 @@ export class MomentsService {
     }
 
     const supabase = this.supabaseService.getClient();
-    const response = await supabase
+    const response = (await supabase
       .from('moments')
       .insert({
         user_id: userId,
@@ -153,7 +166,10 @@ export class MomentsService {
         voice_note_url: dto.voice_note_url ?? null,
       })
       .select()
-      .single();
+      .single()) as unknown as {
+      data: MomentRecord | null;
+      error: { message?: string } | null;
+    };
 
     if (response.error || !response.data) {
       throw new Error(
@@ -161,7 +177,7 @@ export class MomentsService {
       );
     }
 
-    const moment = response.data as MomentRecord;
+    const moment = response.data;
     // Award XP for creating a Moment
     void this.xpService.awardXpForActivity(userId, 'create_moment');
     // Award quest progress for posting a Moment
@@ -455,16 +471,19 @@ export class MomentsService {
     const supabase = this.supabaseService.getClient();
 
     // Check if the moment author has blocked the current user
-    const momentResponse = await supabase
+    const momentResponse = (await supabase
       .from('moments')
       .select('user_id')
       .eq('id', momentId)
-      .single();
+      .single()) as unknown as {
+      data: { user_id: string } | null;
+      error: { message?: string } | null;
+    };
 
     const momentData = momentResponse.data;
 
     if (momentData) {
-      const momentAuthorId = momentData.user_id as string;
+      const momentAuthorId = momentData.user_id;
       const blockedIds =
         await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
       if (blockedIds.includes(userId)) {
@@ -568,16 +587,19 @@ export class MomentsService {
     const supabase = this.supabaseService.getClient();
 
     // Check if the moment author has blocked the current user
-    const momentResponse = await supabase
+    const momentResponse = (await supabase
       .from('moments')
       .select('user_id')
       .eq('id', momentId)
-      .single();
+      .single()) as unknown as {
+      data: { user_id: string } | null;
+      error: { message?: string } | null;
+    };
 
     const momentData = momentResponse.data;
 
     if (momentData) {
-      const momentAuthorId = momentData.user_id as string;
+      const momentAuthorId = momentData.user_id;
       const blockedIds =
         await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
       if (blockedIds.includes(userId)) {
@@ -872,11 +894,14 @@ export class MomentsService {
     }
 
     const supabase = this.supabaseService.getClient();
-    const momentResponse = await supabase
+    const momentResponse = (await supabase
       .from('moments')
       .select('user_id, is_pinned')
       .eq('id', momentId)
-      .single();
+      .single()) as unknown as {
+      data: { user_id: string; is_pinned: boolean } | null;
+      error: { message?: string } | null;
+    };
 
     const momentData = momentResponse.data;
 
