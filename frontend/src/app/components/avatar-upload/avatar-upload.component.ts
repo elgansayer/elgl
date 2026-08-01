@@ -41,7 +41,8 @@ export class AvatarUploadComponent {
   private imageElement!: HTMLImageElement;
 
   async onFileSelected(event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) return;
     if (!input.files?.length) return;
 
     const file = input.files[0];
@@ -66,7 +67,8 @@ export class AvatarUploadComponent {
 
   // Called when the <img> inside the template has finished loading
   onImageLoad(event: Event): void {
-    const img = event.target as HTMLImageElement;
+    const img = event.target;
+    if (!(img instanceof HTMLImageElement)) return;
     const dw = img.clientWidth;
     const dh = img.clientHeight;
     this.displayWidth.set(dw);
@@ -83,7 +85,8 @@ export class AvatarUploadComponent {
 
   onImageMouseDown(event: MouseEvent): void {
     // Start dragging a new square
-    const target = event.currentTarget as HTMLElement;
+    const target = event.currentTarget;
+    if (!(target instanceof HTMLElement)) return;
     const rect = target.getBoundingClientRect();
     this.startX = event.clientX - rect.left;
     this.startY = event.clientY - rect.top;
@@ -95,7 +98,8 @@ export class AvatarUploadComponent {
     if (!this.isDragging) {
       return;
     }
-    const target = event.currentTarget as HTMLElement;
+    const target = event.currentTarget;
+    if (!(target instanceof HTMLElement)) return;
     const rect = target.getBoundingClientRect();
     const curX = event.clientX - rect.left;
     const curY = event.clientY - rect.top;

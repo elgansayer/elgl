@@ -123,7 +123,8 @@ export class AgeRangeSliderComponent {
   }
 
   protected onMinChange(event: Event): void {
-    const target = event.target as HTMLInputElement;
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
     const value = Number(target.value);
     // clamp to maxAge
     const clamped = Math.min(value, this.maxAge());
@@ -131,7 +132,8 @@ export class AgeRangeSliderComponent {
   }
 
   protected onMaxChange(event: Event): void {
-    const target = event.target as HTMLInputElement;
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
     const value = Number(target.value);
     const clamped = Math.max(value, this.minAge());
     this.maxAge.set(clamped);
