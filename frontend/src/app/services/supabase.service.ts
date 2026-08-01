@@ -13,6 +13,31 @@ export class SupabaseService {
     this.supabase = createClient(environment.supabaseUrl, environment.supabaseAnonKey);
   }
 
+  async getDailyStreak(userId: string): Promise<number> {
+    const { data, error } = await this.supabase
+      .from('user_streaks')
+      .select('streak_count')
+      .eq('user_id', userId)
+      .single();
+
+    if (error) {
+      console.warn('Failed to fetch daily streak', error);
+      return 0;
+    }
+
+    return data?.streak_count ?? 0;
+  }
+
+  async updateDailyStreak(userId: string, streakCount: number): Promise<void> {
+    const { error } = await this.supabase
+      .from('user_streaks')
+      .upsert({ user_id: userId, streak_count: streakCount });
+
+    if (error) {
+      throw new Error(`Failed to update daily streak: ${error.message}`);
+    }
+  }
+
   getClient(): SupabaseClient {
     return this.supabase;
   }
