@@ -6,6 +6,8 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { ConfigService } from '@nestjs/config';
 import { ConfigModule } from '@nestjs/config';
 
+const mockSupabaseService = { getClient: () => ({}) };
+
 describe('UserStatisticsModule', () => {
   describe('module compilation', () => {
     it('should compile the module', async () => {
@@ -16,7 +18,7 @@ describe('UserStatisticsModule', () => {
         ],
       })
         .overrideProvider(SupabaseService)
-        .useValue({})
+        .useValue(mockSupabaseService)
         .overrideProvider(ConfigService)
         .useValue({})
         .compile();
@@ -32,7 +34,7 @@ describe('UserStatisticsModule', () => {
         ],
       })
         .overrideProvider(SupabaseService)
-        .useValue({})
+        .useValue(mockSupabaseService)
         .overrideProvider(ConfigService)
         .useValue({})
         .compile();

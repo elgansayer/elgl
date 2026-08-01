@@ -5,7 +5,6 @@ import { UserStatisticsQueryDto } from './dto/user-statistics-query.dto';
 
 describe('UserStatisticsController', () => {
   let controller: UserStatisticsController;
-  let service: UserStatisticsService;
 
   const mockStats = {
     studyStreakDays: 3,
@@ -37,7 +36,6 @@ describe('UserStatisticsController', () => {
     controller = moduleRef.get<UserStatisticsController>(
       UserStatisticsController,
     );
-    service = moduleRef.get<UserStatisticsService>(UserStatisticsService);
   });
 
   afterEach(() => {
@@ -58,7 +56,7 @@ describe('UserStatisticsController', () => {
     it('should call the service with the given user id and query', async () => {
       mockService.getUserStatistics.mockResolvedValue(mockStats);
 
-      const result = await controller.getStatistics(userId, query);
+      await controller.getStatistics(userId, query);
 
       expect(mockService.getUserStatistics).toHaveBeenCalledWith(userId, query);
     });
@@ -74,7 +72,7 @@ describe('UserStatisticsController', () => {
     it('should pass an undefined query when no query is supplied', async () => {
       mockService.getUserStatistics.mockResolvedValue(mockStats);
 
-      const result = await controller.getStatistics(userId);
+      await controller.getStatistics(userId);
 
       expect(mockService.getUserStatistics).toHaveBeenCalledWith(
         userId,
