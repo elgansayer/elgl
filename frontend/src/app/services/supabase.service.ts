@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { openDB, IDBPDatabase } from 'idb';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -28,4 +29,35 @@ export class SupabaseService {
     }
     return data?.audio_intro_url ?? null;
   }
+
+  private async getOfflineDB(): Promise<IDBPDatabase> {
+    return openDB('OfflineContentDB', 1, {
+      upgrade(db: IDBPDatabase) {
+        if (!db.objectStoreNames.contains('savedContent')) {
+          db.createObjectStore('savedContent', { keyPath: 'id' });
+        }
+      },
+    });
+  }
+
+  async saveContentOffline(content: { id: string; data: unknown }): Promise<void> {
+    const db = await this.getOfflineDB();
+    await db.put('savedContent', content);
+  }
+
+  async getOfflineContent(id: string): Promise<unknown | null> {
+    const db = await this.getOfflineDB();
+    return db.get('savedContent', id);
+  }
+
+  async getAllOfflineContent(): Promise<unknown[]> {
+    const db = await this.getOfflineDB();
+    return db.getAll('savedContent');
+  }
+
+  async deleteOfflineContent(id: string): Promise<void> {
+    const db = await this.getOfflineDB();
+    await db.delete('savedContent', id);
+  }
+}
 }

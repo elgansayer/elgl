@@ -15,7 +15,7 @@ interface CartItem {
 @Component({
   selector: 'app-cart',
   standalone: true,
-  imports: [TranslatePipe, RouterLink],
+  imports: [TranslatePipe],
   template: `
     <div class="p-4">
       <h1 class="text-xl font-bold mb-4">{{ 'cart.title' | t }}</h1>

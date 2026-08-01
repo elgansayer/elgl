@@ -1,4 +1,5 @@
 import { Injectable, signal, effect } from '@angular/core';
+import { openDB } from 'idb';
 import { environment } from '../../environments/environment';
 
 export interface LanguageInfo {
@@ -1076,17 +1077,11 @@ export class I18nService {
       return;
     }
 
-    if (typeof localStorage !== 'undefined') {
-      const cached = localStorage.getItem(`hellotalk_dict_${code}`);
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          this.translations.set({ ...this.baseDictionary, ...parsed });
-          return;
-        } catch {
-          // ignore cache parse errors
-        }
-      }
+    const db = await openDB('OfflineContentDB', 1);
+    const cached = await db.get('savedContent', `hellotalk_dict_${code}`);
+    if (cached) {
+      this.translations.set({ ...this.baseDictionary, ...cached });
+      return;
     }
 
     // Call backend dynamic ANY-language translation API
