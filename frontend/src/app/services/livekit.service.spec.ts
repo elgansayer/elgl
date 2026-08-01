@@ -30,9 +30,40 @@ const mockRoomConnect = vi.fn();
 const mockRoomDisconnect = vi.fn();
 const mockRoomPublishTrack = vi.fn();
 
+/**
+ * `Room` and `LocalTrack` are large third-party classes with many members we
+ * never touch in these tests. Rather than sprinkling `as unknown as X` casts
+ * at every call site, the minimal shape actually exercised by
+ * {@link LivekitService} is described here once and cast in a single,
+ * well-typed place.
+ */
+interface MockRoomShape {
+  connect?: typeof mockRoomConnect;
+  disconnect?: typeof mockRoomDisconnect;
+  localParticipant?: { publishTrack: typeof mockRoomPublishTrack };
+}
+
+function mockRoom(shape: MockRoomShape): livekitClient.Room {
+  return shape as unknown as livekitClient.Room;
+}
+
+interface MockLocalTrackShape {
+  kind: 'audio' | 'video';
+  isMuted: boolean;
+  mute: () => void;
+  unmute: () => void;
+  getSettings?: () => unknown;
+  mediaStreamTrack?: { getSettings: () => unknown; stop: () => void };
+}
+
+function mockLocalTrack(shape: MockLocalTrackShape): livekitClient.LocalTrack {
+  return shape as unknown as livekitClient.LocalTrack;
+}
+
 describe('LivekitService', () => {
   let service: LivekitService;
   let httpMock: HttpTestingController;
+  let constructedRoom: livekitClient.Room | null = null;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -49,13 +80,15 @@ describe('LivekitService', () => {
 
     // Default mocked Room constructor
     const roomMock = vi.mocked(livekitClient.Room);
-    roomMock.mockImplementation(function () {
-      return {
+    constructedRoom = null;
+    roomMock.mockImplementation(function (): livekitClient.Room {
+      constructedRoom = mockRoom({
         connect: mockRoomConnect,
         disconnect: mockRoomDisconnect,
         localParticipant: { publishTrack: mockRoomPublishTrack },
-      };
-    } as unknown as typeof livekitClient.Room);
+      });
+      return constructedRoom;
+    });
 
     // Default createLocalTracks returns an empty array
     const createLocalTracksMock = vi.mocked(livekitClient.createLocalTracks);
@@ -96,9 +129,6 @@ describe('LivekitService', () => {
 
   describe('joinRoom', () => {
     it('should connect to a room with the token from the backend', async () => {
-      const fakeRoom = new livekitClient.Room();
-      internals(service).room = fakeRoom;
-
       mockRoomConnect.mockResolvedValue(undefined);
       const roomPromise = service.joinRoom('my-room', 'user-123', false);
       const req = httpMock.expectOne(`${environment.apiUrl}/livekit/token`);
@@ -106,15 +136,16 @@ describe('LivekitService', () => {
       req.flush({ token: 'test-token' });
       const room = await roomPromise;
       expect(mockRoomConnect).toHaveBeenCalledWith(environment.liveKitUrl, 'test-token');
-      expect(room).toBe(fakeRoom);
-      expect(internals(service).room).toBe(fakeRoom);
+      expect(constructedRoom).toBeTruthy();
+      expect(room).toStrictEqual(constructedRoom);
+      expect(internals(service).room).toStrictEqual(room);
     });
   });
 
   describe('publishTracks', () => {
     it('should publish the audio track and keep it as the local audio track', async () => {
-      const mockAudioTrack = {
-        kind: 'audio' as const,
+      const mockAudioTrack = mockLocalTrack({
+        kind: 'audio',
         isMuted: false,
         mute: vi.fn(),
         unmute: vi.fn(),
@@ -123,12 +154,12 @@ describe('LivekitService', () => {
           getSettings: vi.fn(() => ({})),
           stop: vi.fn(),
         },
-      } as unknown as livekitClient.LocalTrack;
+      });
       vi.mocked(livekitClient.createLocalTracks).mockResolvedValue([mockAudioTrack]);
 
-      const fakeRoom = {
+      const fakeRoom = mockRoom({
         localParticipant: { publishTrack: mockRoomPublishTrack },
-      } as unknown as typeof livekitClient.Room;
+      });
       internals(service).room = fakeRoom;
 
       const result = await service.publishTracks();
@@ -141,8 +172,8 @@ describe('LivekitService', () => {
 
   describe('toggleMute', () => {
     it('should toggle the local audio track muted state', async () => {
-      const mockAudioTrack = {
-        kind: 'audio' as const,
+      const mockAudioTrack = mockLocalTrack({
+        kind: 'audio',
         isMuted: false,
         mute: vi.fn(() => {
           mockAudioTrack.isMuted = true;
@@ -150,7 +181,7 @@ describe('LivekitService', () => {
         unmute: vi.fn(() => {
           mockAudioTrack.isMuted = false;
         }),
-      } as unknown as livekitClient.LocalTrack;
+      });
       internals(service)._localAudioTrack = mockAudioTrack;
       internals(service)._muted = false;
 
@@ -181,9 +212,9 @@ describe('LivekitService', () => {
 
   describe('leaveRoom', () => {
     it('should disconnect and clear the room when a room exists', () => {
-      const fakeRoom = {
+      const fakeRoom = mockRoom({
         disconnect: mockRoomDisconnect,
-      } as unknown as typeof livekitClient.Room;
+      });
       internals(service).room = fakeRoom;
       service.leaveRoom();
       expect(mockRoomDisconnect).toHaveBeenCalledTimes(1);
