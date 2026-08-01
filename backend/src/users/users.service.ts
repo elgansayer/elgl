@@ -449,6 +449,11 @@ export class UsersService {
       updatePayload.privacy_hide_from_search = dto.privacy_hide_from_search;
     if (dto.privacy_hide_gender !== undefined)
       updatePayload.privacy_hide_gender = dto.privacy_hide_gender;
+    if (dto.privacy_hide_exact_location !== undefined)
+      updatePayload.privacy_hide_exact_location =
+        dto.privacy_hide_exact_location;
+    if (dto.privacy_hide_online_status !== undefined)
+      updatePayload.privacy_hide_online_status = dto.privacy_hide_online_status;
     if (dto.gender !== undefined) updatePayload.gender = dto.gender;
     if (dto.profile_visibility !== undefined)
       updatePayload.profile_visibility = dto.profile_visibility;

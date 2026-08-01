@@ -136,6 +136,8 @@ describe('UsersService', () => {
         privacy_hide_age: true,
         privacy_hide_location: false,
         privacy_hide_from_search: true,
+        privacy_hide_exact_location: true,
+        privacy_hide_online_status: true,
         location: { latitude: 35.6895, longitude: 139.6917 },
         mock_location: { latitude: 51.5074, longitude: -0.1278 },
       };
@@ -150,6 +152,8 @@ describe('UsersService', () => {
         privacy_hide_age: true,
         privacy_hide_location: false,
         privacy_hide_from_search: true,
+        privacy_hide_exact_location: true,
+        privacy_hide_online_status: true,
         location: 'POINT(139.6917 35.6895)',
         mock_location: 'POINT(-0.1278 51.5074)',
       };
@@ -171,6 +175,27 @@ describe('UsersService', () => {
       expect(mockQueryBuilder.update).toHaveBeenCalledWith(expectedPayload);
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'user-1');
       expect(mockQueryBuilder.select).toHaveBeenCalled();
+      expect(result).toMatchObject(updatedProfile);
+    });
+
+    it('should persist privacy_hide_exact_location and privacy_hide_online_status toggles', async () => {
+      const dto = {
+        privacy_hide_exact_location: true,
+        privacy_hide_online_status: true,
+      };
+      const updatedProfile = { id: 'user-1', ...dto };
+
+      mockQueryBuilder.single.mockResolvedValue({
+        data: updatedProfile,
+        error: null,
+      });
+
+      const result = await service.updateProfile('user-1', dto, false);
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        privacy_hide_exact_location: true,
+        privacy_hide_online_status: true,
+      });
       expect(result).toMatchObject(updatedProfile);
     });
 

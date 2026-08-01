@@ -1077,6 +1077,7 @@ export class I18nService {
     'gdpr.deleteSuccess': 'Account deletion initiated. Check your email for confirmation.',
 
     'culturalGuide.title': 'Cultural Etiquette Guide',
+    'settings.hideExactLocation': 'Hide exact location',
     'settings.hideOnlineStatus': 'Hide online status',
     'settings.hideVipStatus': 'Hide VIP status',
     'settings.fontScale': 'Text size',

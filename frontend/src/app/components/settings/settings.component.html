@@ -119,6 +119,19 @@
             class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-200 transition-colors"
           >
             <span class="text-sm font-medium text-text-primary">{{
+              'settings.hideExactLocation' | t
+            }}</span>
+            <input
+              type="checkbox"
+              [(ngModel)]="privacyHideExactLocation"
+              class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"
+            />
+          </label>
+
+          <label
+            class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-200 transition-colors"
+          >
+            <span class="text-sm font-medium text-text-primary">{{
               'settings.hideSearch' | t
             }}</span>
             <input

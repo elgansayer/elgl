@@ -47,6 +47,7 @@ export class SettingsComponent implements OnInit {
   privacyHideSearch = false;
   privacyHideAge = false;
   privacyHideGender = false;
+  privacyHideExactLocation = false;
   privacyHideOnlineStatus = false;
   privacyHideVipStatus = false;
   autoPlayVoiceNotes = false;
@@ -72,6 +73,7 @@ export class SettingsComponent implements OnInit {
         this.privacyHideSearch = Boolean(profile.privacy_hide_from_search);
         this.privacyHideAge = Boolean(profile.privacy_hide_age);
         this.privacyHideGender = Boolean(profile.privacy_hide_gender);
+        this.privacyHideExactLocation = Boolean(profile.privacy_hide_exact_location);
         this.privacyHideOnlineStatus = Boolean(profile.privacy_hide_online_status);
         this.privacyHideVipStatus = Boolean(profile.privacy_hide_vip_status);
         this.autoPlayVoiceNotes = Boolean(profile.auto_play_voice_notes);
@@ -183,6 +185,7 @@ export class SettingsComponent implements OnInit {
         privacy_hide_from_search: this.privacyHideSearch,
         privacy_hide_age: this.privacyHideAge,
         privacy_hide_gender: this.privacyHideGender,
+        privacy_hide_exact_location: this.privacyHideExactLocation,
         privacy_hide_online_status: this.privacyHideOnlineStatus,
         privacy_hide_vip_status: this.privacyHideVipStatus,
         auto_play_voice_notes: this.autoPlayVoiceNotes,
