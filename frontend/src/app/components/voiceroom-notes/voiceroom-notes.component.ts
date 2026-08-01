@@ -55,7 +55,7 @@ interface VoiceRoomNote {
             class="w-full border rounded p-2 bg-surface-2"
             rows="3"
             [value]="content()"
-            (input)="content.set($any($event.target).value)"
+            (input)="onContentInput($event)"
           ></textarea>
         </label>
 
@@ -64,7 +64,7 @@ interface VoiceRoomNote {
           <input
             class="w-full border rounded p-2 bg-surface-2"
             [value]="vocabulary()"
-            (input)="vocabulary.set($any($event.target).value)"
+            (input)="onVocabularyInput($event)"
           />
         </label>
 
@@ -109,6 +109,20 @@ export class VoiceroomNotesComponent {
       ),
     defaultValue: [],
   });
+
+  onContentInput(event: Event): void {
+    const target = event.target;
+    if (target instanceof HTMLTextAreaElement) {
+      this.content.set(target.value);
+    }
+  }
+
+  onVocabularyInput(event: Event): void {
+    const target = event.target;
+    if (target instanceof HTMLInputElement) {
+      this.vocabulary.set(target.value);
+    }
+  }
 
   async addNote(): Promise<void> {
     const c = this.content().trim();

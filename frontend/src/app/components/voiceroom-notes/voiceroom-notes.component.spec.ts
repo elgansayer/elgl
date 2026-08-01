@@ -89,16 +89,32 @@ describe('VoiceroomNotesComponent', () => {
     component.content.set('New note');
     component.vocabulary.set('word');
     component.addNote();
+    console.log('AFTER addNote call');
 
     const postReq = httpMock.expectOne('/audio-rooms/room-1/notes');
+    console.log('GOT POST REQ');
     expect(postReq.request.method).toBe('POST');
     expect(postReq.request.body).toEqual({
       content: 'New note',
       vocabulary: 'word',
     });
     postReq.flush({});
+    console.log('FLUSHED POST');
+    for (let i = 0; i < 10; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      try {
+        const earlyReloadReq = httpMock.expectOne('/audio-rooms/room-1/notes');
+        console.log('FOUND reload req after', i, 'macrotask ticks', earlyReloadReq.request.method);
+        earlyReloadReq.flush([]);
+        break;
+      } catch (e) {
+        console.log('tick', i, 'not found', (e as Error).message);
+      }
+    }
     await fixture.whenStable();
+    console.log('WHEN STABLE RESOLVED');
     fixture.detectChanges();
+    console.log('content after', component.content(), 'refresh triggered?');
 
     const reloadReq = httpMock.expectOne('/audio-rooms/room-1/notes');
     expect(reloadReq.request.method).toBe('GET');
