@@ -40,14 +40,12 @@ export class XpService {
     }
     await this.supabaseService.incrementXp(userId, points);
     const supabase = this.supabaseService.getClient();
-    const { error } = await supabase.from('xp_events').insert([
-      {
-        user_id: userId,
-        points,
-        activity,
-        created_at: new Date().toISOString(),
-      },
-    ] as never[]);
+    const { error } = await supabase.from('xp_events').insert({
+      user_id: userId,
+      points,
+      activity,
+      created_at: new Date().toISOString(),
+    });
     if (error) {
       this.logger.warn(
         `Failed to log XP event for user ${userId}: ${error.message}`,
@@ -97,14 +95,12 @@ export class XpService {
     }
     await this.supabaseService.incrementXp(userId, points);
     const supabase = this.supabaseService.getClient();
-    const { error } = await supabase.from('xp_events').insert([
-      {
-        user_id: userId,
-        points,
-        activity: reason,
-        created_at: new Date().toISOString(),
-      },
-    ] as never[]);
+    const { error } = await supabase.from('xp_events').insert({
+      user_id: userId,
+      points,
+      activity: reason,
+      created_at: new Date().toISOString(),
+    });
     if (error) {
       this.logger.warn(
         `Failed to log XP event for user ${userId}: ${error.message}`,

@@ -14,11 +14,11 @@ export interface StoryRecord {
 export interface StoryResponse {
   id: string;
   user_id: string;
-  text_content?: string;
+  text_content: string | null;
   media_urls: string[];
-  voice_note_url?: string;
-  media_type?: 'none' | 'images' | 'audio' | 'video';
-  target_language?: string;
+  voice_note_url: string | null;
+  media_type: string;
+  target_language: string | null;
   expires_at: string;
   created_at: string;
   author: {
