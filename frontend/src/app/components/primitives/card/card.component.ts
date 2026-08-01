@@ -23,7 +23,7 @@ export class AppCardComponent {
   });
 
   readonly hostClasses = computed(() => {
-    const base = 'block rounded-2xl bg-surface-200 transition-all';
+    const base = this.i18n.translate('card.base_classes');
 
     let paddingClass = '';
     switch (this.padding()) {

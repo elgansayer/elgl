@@ -1081,6 +1081,13 @@ export class I18nService {
     'settings.hideOnlineStatus': 'Hide online status',
     'settings.hideVipStatus': 'Hide VIP status',
     'settings.fontScale': 'Text size',
+    // Pill colour CSS class tokens (kept i18n so themes can override without recompiling templates)
+    'pill.colour_primary': 'bg-indigo-500 text-white hover:bg-indigo-600',
+    'pill.colour_success': 'bg-emerald-500 text-white hover:bg-emerald-600',
+    'pill.colour_warning': 'bg-amber-500 text-white hover:bg-amber-600',
+    'pill.colour_danger': 'bg-rose-500 text-white hover:bg-rose-600',
+    'pill.colour_info': 'bg-sky-500 text-white hover:bg-sky-600',
+    'pill.colour_neutral': 'bg-slate-200 text-slate-800 hover:bg-slate-300',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });

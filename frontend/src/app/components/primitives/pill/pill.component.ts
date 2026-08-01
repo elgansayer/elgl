@@ -1,4 +1,5 @@
-import { Component, input, computed } from '@angular/core';
+import { Component, inject, input, computed } from '@angular/core';
+import { I18nService } from '../../../services/i18n.service';
 
 @Component({
   selector: 'app-pill',
@@ -16,6 +17,7 @@ import { Component, input, computed } from '@angular/core';
   },
 })
 export class AppPillComponent {
+  private readonly i18n = inject(I18nService);
   readonly label = input<string>('');
   readonly colour = input<'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral'>(
     'neutral',
@@ -27,29 +29,30 @@ export class AppPillComponent {
     const base = 'inline-flex items-center justify-center font-extrabold rounded-full';
 
     const sizeClass =
-      this.size() === 'sm'
-        ? 'ps-2.5 pe-2.5 pt-0.5 pb-0.5 text-[10px]'
-        : 'ps-3 pe-3 pt-1 pb-1 text-xs';
+      this.size() === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-sm';
 
     let colourClass = '';
     switch (this.colour()) {
       case 'primary':
-        colourClass = 'bg-primary/10 text-primary border border-primary/20';
+        colourClass = this.i18n.translate('pill.colour_primary');
         break;
       case 'success':
-        colourClass = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+        colourClass = this.i18n.translate('pill.colour_success');
         break;
       case 'warning':
-        colourClass = 'bg-amber-500/20 text-amber-400 border border-amber-500/30';
+        colourClass = this.i18n.translate('pill.colour_warning');
         break;
       case 'danger':
-        colourClass = 'bg-rose-100 text-rose-800 border border-rose-200';
+        colourClass = this.i18n.translate('pill.colour_danger');
         break;
       case 'info':
-        colourClass = 'bg-sky-100 text-sky-800 border border-sky-200';
+        colourClass = this.i18n.translate('pill.colour_info');
         break;
       case 'neutral':
-        colourClass = 'bg-surface-100 text-text-primary border border-surface-100';
+        colourClass = this.i18n.translate('pill.colour_neutral');
+        break;
+      default:
+        colourClass = this.i18n.translate('pill.colour_neutral');
         break;
     }
 
