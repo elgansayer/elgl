@@ -30,6 +30,8 @@ export interface MomentRecord {
   question_text?: string;
   question_options?: string[];
   correct_answer?: string;
+  correct_answers_count?: number;
+  total_answers_count?: number;
   is_pinned: boolean;
   likes_count: number;
   comments_count: number;

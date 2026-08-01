@@ -181,6 +181,10 @@ export class AppComponent implements OnInit {
     }
   }
 
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
   private isValidPayload(data: unknown): data is {
     type: string;
     gift?: VirtualGift;
@@ -191,37 +195,27 @@ export class AppComponent implements OnInit {
     roomName?: string;
     isVideoCall?: boolean;
   } {
-    if (!data || typeof data !== 'object') {
+    if (!this.isRecord(data)) {
       return false;
     }
-    if (typeof data === 'object' && data !== null) {
-      if ('type' in data && typeof (data as Record<string, unknown>)['type'] === 'string') {
-        return true;
-      }
+    const type = data['type'];
+    if (typeof type === 'string') {
+      return true;
     }
     return false;
   }
 
   private isIncomingCallPayload(payload: unknown): payload is IncomingCallData {
-    if (!payload || typeof payload !== 'object') {
+    if (!this.isRecord(payload)) {
       return false;
     }
-    if (typeof payload === 'object' && payload !== null) {
-      const candidate = payload as Record<string, unknown>;
-      return (
-        'callerId' in candidate &&
-        'callerName' in candidate &&
-        'callerAvatarUrl' in candidate &&
-        'roomName' in candidate &&
-        'isVideoCall' in candidate &&
-        typeof candidate['callerId'] === 'string' &&
-        typeof candidate['callerName'] === 'string' &&
-        typeof candidate['callerAvatarUrl'] === 'string' &&
-        typeof candidate['roomName'] === 'string' &&
-        typeof candidate['isVideoCall'] === 'boolean'
-      );
-    }
-    return false;
+    return (
+      typeof payload['callerId'] === 'string' &&
+      typeof payload['callerName'] === 'string' &&
+      typeof payload['callerAvatarUrl'] === 'string' &&
+      typeof payload['roomName'] === 'string' &&
+      typeof payload['isVideoCall'] === 'boolean'
+    );
   }
 
   onAcceptCall(_callData: IncomingCallData): void {

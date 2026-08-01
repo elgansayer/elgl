@@ -10,6 +10,7 @@ import { SafetyService } from '../safety/safety.service';
 import { XpService } from '../xp/xp.service';
 import { QuestsService } from '../quests/quests.service';
 import { CreateCommentDto, CreateMomentDto } from './dto/moment.dto';
+import { CreateLanguageQuestionDto } from './dto/create-language-question.dto';
 import { CreateStoryDto } from './dto/create-story.dto';
 import { EditTextDto } from './dto/edit-text.dto';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
@@ -184,6 +185,48 @@ export class MomentsService {
     // Asynchronous fan-out via Redis timeline queue
     void this.timelineWorker.fanOutMoment(moment.id, userId);
 
+    const profile = await this.usersService.getProfile(userId);
+    moment.author = {
+      id: profile?.id ?? userId,
+      display_name: profile?.display_name ?? 'Serious Learner',
+      avatar_url: profile?.avatar_url ?? null,
+    };
+    moment.is_liked_by_me = false;
+    return moment;
+  }
+
+  async createLanguageQuestion(
+    userId: string,
+    dto: CreateLanguageQuestionDto,
+  ): Promise<MomentRecord> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = (await supabase
+      .from('moments')
+      .insert({
+        user_id: userId,
+        text_content: dto.text_content ?? null,
+        media_urls: [],
+        media_type: 'none',
+        target_language: dto.target_language,
+        post_type: 'language_question',
+        question_text: dto.question_text,
+        question_options: dto.question_options,
+        correct_answer: dto.correct_answer,
+      })
+      .select()
+      .single()) as unknown as {
+      data: MomentRecord | null;
+      error?: { message?: string } | null;
+    };
+
+    if (error || !data) {
+      throw new Error(
+        `Failed to create language question: ${error?.message ?? 'Unknown error'}`,
+      );
+    }
+    const moment = data;
+    void this.xpService.awardXpForActivity(userId, 'create_moment');
+    void this.questsService.incrementProgress(userId, 'post_moment', 1);
     const profile = await this.usersService.getProfile(userId);
     moment.author = {
       id: profile?.id ?? userId,
@@ -374,7 +417,7 @@ export class MomentsService {
     let query = supabase
       .from('moments')
       .select('*')
-      .eq('post_type', 'question')
+      .in('post_type', ['question', 'language_question'])
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -463,6 +506,75 @@ export class MomentsService {
         is_liked_by_me: likedSet.has(m.id),
       };
     });
+  }
+
+  async answerLanguageQuestion(
+    userId: string,
+    momentId: string,
+    answer: string,
+  ): Promise<{ correct: boolean; correctAnswer: string }> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: moment, error: fetchError } = await supabase
+      .from('moments')
+      .select(
+        'user_id, post_type, correct_answer, question_options, question_text',
+      )
+      .eq('id', momentId)
+      .returns<{
+        user_id: string;
+        post_type?: string;
+        correct_answer?: string;
+        question_options?: string[];
+        question_text?: string;
+      }>()
+      .single();
+
+    if (fetchError || !moment) {
+      throw new Error('Moment not found');
+    }
+
+    if (moment.post_type !== 'language_question') {
+      throw new BadRequestException('Only language questions can be answered.');
+    }
+
+    const correct = moment.correct_answer === answer;
+
+    try {
+      const { error: insertError } = await supabase
+        .from('moment_question_answers')
+        .insert({
+          moment_id: momentId,
+          user_id: userId,
+          answer,
+          is_correct: correct,
+        });
+      if (insertError) {
+        // ignore; table may not exist in some environments
+      }
+    } catch {
+      // ignore
+    }
+
+    const { data: rows, error: countError } = await supabase
+      .from('moment_question_answers')
+      .select('is_correct')
+      .eq('moment_id', momentId)
+      .returns<Array<{ is_correct: boolean }>>();
+
+    if (!countError && rows) {
+      const total = rows.length;
+      const correctCount = rows.filter((r) => r.is_correct).length;
+      await supabase
+        .from('moments')
+        .update({
+          correct_answers_count: correctCount,
+          total_answers_count: total,
+        })
+        .eq('id', momentId);
+    }
+
+    return { correct, correctAnswer: moment.correct_answer ?? '' };
   }
 
   async likeMoment(
