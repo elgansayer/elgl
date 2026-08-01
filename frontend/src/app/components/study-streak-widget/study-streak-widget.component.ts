@@ -24,7 +24,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <span class="text-2xl font-bold text-red-400">{{ 'common.error' | t }}</span>
           }
         } @else {
-          <span class="text-2xl font-bold text-yellow-400"
+          <span class="streak-value text-2xl font-bold text-yellow-400"
             >{{ streakValue() }} {{ dayLabel() | t }}</span
           >
         }
