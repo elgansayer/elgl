@@ -18,6 +18,10 @@ describe('UsersController', () => {
           useValue: {
             getProfile: jest.fn(),
             updateProfile: jest.fn(),
+            getFollowers: jest.fn(),
+            getFollowing: jest.fn(),
+            followUser: jest.fn(),
+            unfollowUser: jest.fn(),
           },
         },
         {
@@ -133,6 +137,98 @@ describe('UsersController', () => {
       const result = await controller.getUserProfile('target-user');
       expect(usersService.getProfile).toHaveBeenCalledWith('target-user');
       expect(result).toEqual(mockProfile);
+    });
+  });
+
+  describe('getFollowers', () => {
+    it('should apply default paging and forward the viewer id', async () => {
+      const mockResult = { data: [{ id: 'follower-1' }], total: 1 } as any;
+      (usersService.getFollowers as jest.Mock).mockResolvedValue(mockResult);
+
+      const result = await controller.getFollowers(
+        'target-user',
+        undefined,
+        undefined,
+        { id: 'viewer-1' } as any,
+      );
+
+      expect(usersService.getFollowers).toHaveBeenCalledWith(
+        'target-user',
+        20,
+        0,
+        'viewer-1',
+      );
+      expect(result).toEqual(mockResult);
+    });
+
+    it('should pass through explicit limit/offset and a null viewer', async () => {
+      const mockResult = { data: [], total: 0 } as any;
+      (usersService.getFollowers as jest.Mock).mockResolvedValue(mockResult);
+
+      await controller.getFollowers('target-user', 5, 10, null);
+
+      expect(usersService.getFollowers).toHaveBeenCalledWith(
+        'target-user',
+        5,
+        10,
+        undefined,
+      );
+    });
+  });
+
+  describe('getFollowing', () => {
+    it('should apply default paging and forward the viewer id', async () => {
+      const mockResult = { data: [{ id: 'following-1' }], total: 1 } as any;
+      (usersService.getFollowing as jest.Mock).mockResolvedValue(mockResult);
+
+      const result = await controller.getFollowing(
+        'target-user',
+        undefined,
+        undefined,
+        { id: 'viewer-1' } as any,
+      );
+
+      expect(usersService.getFollowing).toHaveBeenCalledWith(
+        'target-user',
+        20,
+        0,
+        'viewer-1',
+      );
+      expect(result).toEqual(mockResult);
+    });
+  });
+
+  describe('followUser', () => {
+    it('should throw when no user is authenticated', async () => {
+      await expect(controller.followUser('target-user', null)).rejects.toThrow(
+        'Unauthorized',
+      );
+      expect(usersService.followUser).not.toHaveBeenCalled();
+    });
+
+    it('should follow the target user on behalf of the current user', async () => {
+      await controller.followUser('target-user', { id: 'viewer-1' } as any);
+      expect(usersService.followUser).toHaveBeenCalledWith(
+        'viewer-1',
+        'target-user',
+      );
+    });
+  });
+
+  describe('unfollowUser', () => {
+    it('should throw when no user is authenticated', async () => {
+      await expect(
+        controller.unfollowUser('target-user', null),
+      ).rejects.toThrow('Unauthorized');
+      expect(usersService.unfollowUser).not.toHaveBeenCalled();
+    });
+
+    it('should unfollow the target user on behalf of the current user', async () => {
+      await controller.unfollowUser('target-user', { id: 'viewer-1' } as any);
+      expect(usersService.unfollowUser).toHaveBeenCalledWith(
+        'viewer-1',
+        'target-user',
+      );
     });
   });
 });

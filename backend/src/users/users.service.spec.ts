@@ -201,4 +201,111 @@ describe('UsersService', () => {
       expect(result.display_name).toBe('Error Name');
     });
   });
+
+  describe('getFollowers', () => {
+    it('should return the total count and mark rows followed by the viewer', async () => {
+      const countBuilder = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({ count: 2, error: null }),
+      };
+      const dataBuilder = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        range: jest.fn().mockResolvedValue({
+          data: [
+            {
+              follower_id: 'f1',
+              follower: { id: 'f1', display_name: 'Follower One' },
+            },
+          ],
+          error: null,
+        }),
+      };
+      const followBuilder = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({ data: [{ following_id: 'f1' }] }),
+      };
+
+      mockSupabaseClient.from
+        .mockReturnValueOnce(countBuilder)
+        .mockReturnValueOnce(dataBuilder)
+        .mockReturnValueOnce(followBuilder);
+
+      const result = await service.getFollowers('user-1', 20, 0, 'viewer-1');
+
+      expect(result.total).toBe(2);
+      expect(result.data).toEqual([
+        { id: 'f1', display_name: 'Follower One', is_followed_by_me: true },
+      ]);
+      expect(followBuilder.eq).toHaveBeenCalledWith('follower_id', 'viewer-1');
+      expect(followBuilder.in).toHaveBeenCalledWith('following_id', ['f1']);
+    });
+
+    it('should skip the follow-state lookup when there is no viewer', async () => {
+      const countBuilder = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({ count: 1, error: null }),
+      };
+      const dataBuilder = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        range: jest.fn().mockResolvedValue({
+          data: [{ follower_id: 'f1', follower: { id: 'f1' } }],
+          error: null,
+        }),
+      };
+
+      mockSupabaseClient.from
+        .mockReturnValueOnce(countBuilder)
+        .mockReturnValueOnce(dataBuilder);
+
+      const result = await service.getFollowers('user-1', 20, 0);
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledTimes(2);
+      expect(result.data).toEqual([{ id: 'f1' }]);
+    });
+  });
+
+  describe('getFollowing', () => {
+    it('should return the total count and mark rows followed by the viewer', async () => {
+      const countBuilder = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({ count: 1, error: null }),
+      };
+      const dataBuilder = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        range: jest.fn().mockResolvedValue({
+          data: [
+            {
+              following_id: 'g1',
+              following: { id: 'g1', display_name: 'Following One' },
+            },
+          ],
+          error: null,
+        }),
+      };
+      const followBuilder = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({ data: [] }),
+      };
+
+      mockSupabaseClient.from
+        .mockReturnValueOnce(countBuilder)
+        .mockReturnValueOnce(dataBuilder)
+        .mockReturnValueOnce(followBuilder);
+
+      const result = await service.getFollowing('user-1', 20, 0, 'viewer-1');
+
+      expect(result.total).toBe(1);
+      expect(result.data).toEqual([
+        { id: 'g1', display_name: 'Following One', is_followed_by_me: false },
+      ]);
+    });
+  });
 });

@@ -75,6 +75,16 @@
             <p class="app-muted">
               {{ 'profile.joinedPrefix' | t }} {{ profile()?.created_at | date: 'mediumDate' }}
             </p>
+            <div class="flex gap-3 mt-1 text-xs">
+              <a [routerLink]="['/profile', profile()?.id, 'followers']" class="hover:underline">
+                <span class="font-bold text-text-primary">{{ profile()?.followers_count ?? 0 }}</span>
+                <span class="app-muted ms-1">{{ 'profile.followersLabel' | t }}</span>
+              </a>
+              <a [routerLink]="['/profile', profile()?.id, 'following']" class="hover:underline">
+                <span class="font-bold text-text-primary">{{ profile()?.following_count ?? 0 }}</span>
+                <span class="app-muted ms-1">{{ 'profile.followingLabel' | t }}</span>
+              </a>
+            </div>
           </div>
         </div>
 

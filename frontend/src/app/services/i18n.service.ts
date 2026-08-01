@@ -262,6 +262,7 @@ export class I18nService {
     'common.cancel': 'Cancel',
     'common.confirm': 'Confirm',
     'common.close': 'Close',
+    'common.back': 'Back',
     'common.loadError': 'Failed to load data',
     'moments.showMore': 'Show more',
     'moments.showLess': 'Show less',
@@ -501,6 +502,17 @@ export class I18nService {
     'userProfile.loadError': 'Failed to load profile. Please try again.',
     'userProfile.follow': 'Follow',
     'userProfile.following': 'Following',
+    'userProfile.followersLabel': 'Followers',
+    'userProfile.followingLabel': 'Following',
+
+    // Followers / Following List Component
+    'followList.followersTitle': 'Followers',
+    'followList.followingTitle': 'Following',
+    'followList.follow': 'Follow',
+    'followList.unfollow': 'Unfollow',
+    'followList.emptyFollowers': 'No followers yet.',
+    'followList.emptyFollowing': 'Not following anyone yet.',
+    'followList.loadError': 'Failed to load the list. Please try again.',
 
     // Favourites Component
     'favourites.title': 'Favourites',
@@ -609,6 +621,8 @@ export class I18nService {
     'profile.correctionValue': '{{ratio}}x',
     'profile.correctorScore': 'Corrector score',
     'profile.noRatings': 'No ratings yet',
+    'profile.followersLabel': 'Followers',
+    'profile.followingLabel': 'Following',
     'profile.favLink': '⭐ Favourites',
     'profile.vocabLink': '📚 Vocabulary',
     'profile.liveRoomsLink': '🎙️ Live rooms',

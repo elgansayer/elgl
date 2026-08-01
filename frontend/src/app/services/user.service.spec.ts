@@ -156,6 +156,63 @@ describe('UserService', () => {
     });
   });
 
+  describe('getFollowers', () => {
+    it('should GET /users/:id/followers with paging params and return the list', async () => {
+      const profile = createProfile({ id: 'follower-1' });
+      const resultPromise = service.getFollowers('user-1', 20, 0);
+
+      const req = httpMock.expectOne(
+        (r) => r.url === `${baseUrl}/user-1/followers`,
+      );
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.get('limit')).toBe('20');
+      expect(req.request.params.get('offset')).toBe('0');
+      expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
+      req.flush({ data: [profile], total: 1 });
+
+      await expect(resultPromise).resolves.toEqual({ data: [profile], total: 1 });
+    });
+
+    it('should return an empty list when the request fails', async () => {
+      const resultPromise = service.getFollowers('user-1');
+
+      const req = httpMock.expectOne(
+        (r) => r.url === `${baseUrl}/user-1/followers`,
+      );
+      req.flush('error', { status: 500, statusText: 'Internal Server Error' });
+
+      await expect(resultPromise).resolves.toEqual({ data: [], total: 0 });
+    });
+  });
+
+  describe('getFollowing', () => {
+    it('should GET /users/:id/following with paging params and return the list', async () => {
+      const profile = createProfile({ id: 'following-1' });
+      const resultPromise = service.getFollowing('user-1', 10, 5);
+
+      const req = httpMock.expectOne(
+        (r) => r.url === `${baseUrl}/user-1/following`,
+      );
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.get('limit')).toBe('10');
+      expect(req.request.params.get('offset')).toBe('5');
+      req.flush({ data: [profile], total: 1 });
+
+      await expect(resultPromise).resolves.toEqual({ data: [profile], total: 1 });
+    });
+
+    it('should return an empty list when the request fails', async () => {
+      const resultPromise = service.getFollowing('user-1');
+
+      const req = httpMock.expectOne(
+        (r) => r.url === `${baseUrl}/user-1/following`,
+      );
+      req.flush('error', { status: 500, statusText: 'Internal Server Error' });
+
+      await expect(resultPromise).resolves.toEqual({ data: [], total: 0 });
+    });
+  });
+
   describe('updateMyProfile', () => {
     it('should PATCH /users/me with the update', async () => {
       const update = { native_languages: ['de'] };

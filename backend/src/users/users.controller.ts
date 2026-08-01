@@ -210,19 +210,49 @@ export class UsersController {
   @Get(':id/followers')
   async getFollowers(
     @Param('id') id: string,
-    @Query('limit') limit?: number,
-    @Query('offset') offset?: number,
+    @Query('limit') limit: number | undefined,
+    @Query('offset') offset: number | undefined,
+    @CurrentUser() user: User | null,
   ): Promise<{ data: UserProfile[]; total: number }> {
-    return this.usersService.getFollowers(id, limit ?? 20, offset ?? 0);
+    return this.usersService.getFollowers(
+      id,
+      limit ?? 20,
+      offset ?? 0,
+      user?.id,
+    );
   }
 
   @Get(':id/following')
   async getFollowing(
     @Param('id') id: string,
-    @Query('limit') limit?: number,
-    @Query('offset') offset?: number,
+    @Query('limit') limit: number | undefined,
+    @Query('offset') offset: number | undefined,
+    @CurrentUser() user: User | null,
   ): Promise<{ data: UserProfile[]; total: number }> {
-    return this.usersService.getFollowing(id, limit ?? 20, offset ?? 0);
+    return this.usersService.getFollowing(
+      id,
+      limit ?? 20,
+      offset ?? 0,
+      user?.id,
+    );
+  }
+
+  @Post(':id/follow')
+  async followUser(
+    @Param('id') id: string,
+    @CurrentUser() user: User | null,
+  ): Promise<void> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.followUser(user.id, id);
+  }
+
+  @Delete(':id/follow')
+  async unfollowUser(
+    @Param('id') id: string,
+    @CurrentUser() user: User | null,
+  ): Promise<void> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.unfollowUser(user.id, id);
   }
 
   @Get('me/privacy-settings')

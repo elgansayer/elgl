@@ -102,6 +102,20 @@ export const routes: Routes = [
       import('./components/user-detail/user-detail.component').then((m) => m.UserDetailComponent),
   },
   {
+    path: 'profile/:userId/followers',
+    loadComponent: () =>
+      import('./components/follow-list/follow-list.component').then((m) => m.FollowListComponent),
+    data: { mode: 'followers' },
+    title: 'Followers - HelloTalk',
+  },
+  {
+    path: 'profile/:userId/following',
+    loadComponent: () =>
+      import('./components/follow-list/follow-list.component').then((m) => m.FollowListComponent),
+    data: { mode: 'following' },
+    title: 'Following - HelloTalk',
+  },
+  {
     path: 'visitors',
     loadComponent: () =>
       import('./components/visitor-logs/visitor-logs.component').then(

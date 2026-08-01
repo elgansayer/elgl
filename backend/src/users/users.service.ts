@@ -724,6 +724,7 @@ export class UsersService {
     userId: string,
     limit = 20,
     offset = 0,
+    viewerId?: string,
   ): Promise<{ data: UserProfile[]; total: number }> {
     const supabase = this.supabaseService.getClient();
     const { count, error: countError } = await supabase
@@ -758,13 +759,14 @@ export class UsersService {
       follower: UserProfile;
     }>;
     const users = rows.map((row) => row.follower);
-    return { data: users, total };
+    return { data: await this.attachIsFollowedByMe(users, viewerId), total };
   }
 
   async getFollowing(
     userId: string,
     limit = 20,
     offset = 0,
+    viewerId?: string,
   ): Promise<{ data: UserProfile[]; total: number }> {
     const supabase = this.supabaseService.getClient();
     const { count, error: countError } = await supabase
@@ -799,7 +801,34 @@ export class UsersService {
       following: UserProfile;
     }>;
     const users = rows.map((row) => row.following);
-    return { data: users, total };
+    return { data: await this.attachIsFollowedByMe(users, viewerId), total };
+  }
+
+  private async attachIsFollowedByMe(
+    users: UserProfile[],
+    viewerId?: string,
+  ): Promise<UserProfile[]> {
+    if (!viewerId || users.length === 0) {
+      return users;
+    }
+    const supabase = this.supabaseService.getClient();
+    const { data } = await supabase
+      .from('user_follows')
+      .select('following_id')
+      .eq('follower_id', viewerId)
+      .in(
+        'following_id',
+        users.map((user) => user.id),
+      );
+    const followedIds = new Set(
+      ((data ?? []) as Array<{ following_id: string }>).map(
+        (row) => row.following_id,
+      ),
+    );
+    return users.map((user) => ({
+      ...user,
+      is_followed_by_me: followedIds.has(user.id),
+    }));
   }
 
   async generateDeviceLink(userId: string): Promise<string> {

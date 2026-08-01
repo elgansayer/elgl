@@ -62,6 +62,8 @@ export interface UserProfile {
   last_active_at?: string;
   is_followed_by_me?: boolean;
   is_liked_by_me?: boolean;
+  followers_count?: number;
+  following_count?: number;
   corrector_score?: number;
   privacy_last_seen?: string;
   privacy_profile_photo?: string;
@@ -185,6 +187,36 @@ export class UserService {
       this.http
         .delete<void>(`${this.baseUrl}/${userId}/follow`, { headers: this.getHeaders() })
         .pipe(catchError(() => of(undefined))),
+    );
+  }
+
+  async getFollowers(
+    userId: string,
+    limit = 20,
+    offset = 0,
+  ): Promise<{ data: UserProfile[]; total: number }> {
+    return firstValueFrom(
+      this.http
+        .get<{ data: UserProfile[]; total: number }>(`${this.baseUrl}/${userId}/followers`, {
+          headers: this.getHeaders(),
+          params: { limit: String(limit), offset: String(offset) },
+        })
+        .pipe(catchError(() => of({ data: [], total: 0 }))),
+    );
+  }
+
+  async getFollowing(
+    userId: string,
+    limit = 20,
+    offset = 0,
+  ): Promise<{ data: UserProfile[]; total: number }> {
+    return firstValueFrom(
+      this.http
+        .get<{ data: UserProfile[]; total: number }>(`${this.baseUrl}/${userId}/following`, {
+          headers: this.getHeaders(),
+          params: { limit: String(limit), offset: String(offset) },
+        })
+        .pipe(catchError(() => of({ data: [], total: 0 }))),
     );
   }
 
