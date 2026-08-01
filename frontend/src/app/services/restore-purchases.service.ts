@@ -48,9 +48,8 @@ export class RestorePurchasesService {
       // Query the subscriptions table for any active or past subscriptions
       const { data: subscriptions, error } = await supabase
         .from('subscriptions')
-        .select('*')
-        .returns<SubscriptionRow[]>()
-        .filter('user_id', 'eq', user.id)
+        .select<SubscriptionRow[]>('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {

@@ -14,7 +14,6 @@ import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.component';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { CorrectionModalComponent } from '../correction-modal/correction-modal.component';
-import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.component';
 
 @Component({
   selector: 'app-moments-feed',
@@ -29,7 +28,6 @@ import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.componen
     VoiceRecorderComponent,
     ScrollablePillsComponent,
     CorrectionModalComponent,
-    LikedByModalComponent,
   ],
   templateUrl: './moments-feed.component.html',
   styleUrls: ['./moments-feed.component.scss'],

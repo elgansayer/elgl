@@ -94,7 +94,7 @@ export const validationSchema = Joi.object({
   // (see GooglePlayNotificationService#verifyPubSubAuthorization), never used
   // for delivery, so rely on basic email syntax only.
   GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL: Joi.string()
-    .email()
+    .allow('')
     .default(testDefaults.GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL),
 
   LLM_PROVIDER: Joi.string()

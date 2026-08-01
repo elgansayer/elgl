@@ -27,7 +27,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           {{ 'forcedUpdateModal.message' | t }}
         </p>
         <a
-          [href]="storeUrl"
+          [href]="storeUrl()"
           target="_blank"
           class="inline-flex items-center justify-center px-6 py-3
                  font-bold text-white bg-purple-600 rounded-full
