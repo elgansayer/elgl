@@ -31,10 +31,10 @@ export class AvatarUploadComponent {
   readonly cropY = signal(0);
   readonly cropSize = signal(0);
 
-  private readonly displayWidth = signal(0);
-  private readonly displayHeight = signal(0);
-  private readonly naturalWidth = signal(0);
-  private readonly naturalHeight = signal(0);
+  readonly displayWidth = signal(0);
+  readonly displayHeight = signal(0);
+  readonly naturalWidth = signal(0);
+  readonly naturalHeight = signal(0);
 
   private startX = 0;
   private startY = 0;
