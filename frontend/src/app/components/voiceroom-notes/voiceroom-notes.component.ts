@@ -96,8 +96,13 @@ export class VoiceroomNotesComponent {
   vocabulary = signal('');
   isPosting = signal(false);
 
+  private readonly refreshCounter = signal(0);
+
   readonly notesResource = resource({
-    params: () => ({ roomId: this.roomId() }),
+    params: () => ({
+      roomId: this.roomId(),
+      refreshKey: this.refreshCounter(),
+    }),
     loader: ({ params }) =>
       firstValueFrom(
         this.http.get<VoiceRoomNote[]>(`/audio-rooms/${params.roomId}/notes`)
@@ -118,7 +123,7 @@ export class VoiceroomNotesComponent {
       );
       this.content.set('');
       this.vocabulary.set('');
-      this.notesResource.reload();
+      this.refreshCounter.update((value) => value + 1);
     } catch {
       // handled by UI error display
     } finally {
@@ -131,7 +136,7 @@ export class VoiceroomNotesComponent {
       await firstValueFrom(
         this.http.delete(`/audio-rooms/${this.roomId()}/notes/${noteId}`)
       );
-      this.notesResource.reload();
+      this.refreshCounter.update((value) => value + 1);
     } catch {
       // handled by UI error display
     }

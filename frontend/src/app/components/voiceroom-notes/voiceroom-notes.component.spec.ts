@@ -97,8 +97,8 @@ describe('VoiceroomNotesComponent', () => {
       vocabulary: 'word',
     });
     postReq.flush({});
-    await Promise.resolve();
-    await Promise.resolve();
+    await fixture.whenStable();
+    fixture.detectChanges();
 
     const reloadReq = httpMock.expectOne('/audio-rooms/room-1/notes');
     expect(reloadReq.request.method).toBe('GET');
@@ -140,8 +140,8 @@ describe('VoiceroomNotesComponent', () => {
     const deleteReq = httpMock.expectOne('/audio-rooms/room-1/notes/n1');
     expect(deleteReq.request.method).toBe('DELETE');
     deleteReq.flush({});
-    await Promise.resolve();
-    await Promise.resolve();
+    await fixture.whenStable();
+    fixture.detectChanges();
 
     const reloadReq = httpMock.expectOne('/audio-rooms/room-1/notes');
     expect(reloadReq.request.method).toBe('GET');
