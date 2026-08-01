@@ -3,8 +3,68 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard } from '@nestjs/throttler';
+import { UserStatisticsModule } from './user-statistics/user-statistics.module';
 
 type ProviderToken = unknown;
+
+/** Every feature module that AppModule is expected to import. */
+const EXPECTED_MODULE_NAMES = [
+  'SupabaseModule',
+  'AuthModule',
+  'UsersModule',
+  'MediaModule',
+  'DiscoveryModule',
+  'ProfileVisitsModule',
+  'ChatModule',
+  'NlpModule',
+  'FlashcardsModule',
+  'MomentsModule',
+  'AudioRoomsModule',
+  'MonetisationModule',
+  'EconomyModule',
+  'SafetyModule',
+  'HobbyTagsModule',
+  'InterestsModule',
+  'FavouritesModule',
+  'VideoCallsModule',
+  'LeaderboardModule',
+  'StreakModule',
+  'NotificationsModule',
+  'CallsModule',
+  'QuizModule',
+  'RecommendationsModule',
+  'AdminModule',
+  'HelpModule',
+  'PasswordResetModule',
+  'ProficiencyModule',
+  'VersionModule',
+  'StudyStreakModule',
+  'HostDashboardModule',
+  'PrivacyModule',
+  'AiConversationModule',
+  'AchievementsModule',
+  'CulturalModule',
+  'DailyTipModule',
+  'CorrectorScoreModule',
+  'LanguageChallengesModule',
+  'PronunciationModule',
+  'GroupsModule',
+  'ShoppingModule',
+  'MilestonesModule',
+  'StudyBuddiesModule',
+  'AudioIntroModule',
+  'StatsModule',
+  'ScheduledDeletionModule',
+  'EventsModule',
+  'LessonsModule',
+  'LinkPreviewModule',
+  'ResourceLibraryModule',
+  'NotificationPreferencesModule',
+  'ModerationModule',
+  'WordOfTheDayModule',
+  'SpamDetectionModule',
+  'UserStatisticsModule',
+];
 
 function findProvider(
   providers: unknown[],
@@ -47,5 +107,40 @@ describe('AppModule', () => {
 
     expect(guardProvider).toBeDefined();
     expect(guardProvider?.useClass).toBe(ThrottlerGuard);
+  });
+
+  it('should register UserStatisticsModule in its imports metadata', () => {
+    const importsMetadata =
+      (Reflect.getMetadata('imports', AppModule) as unknown[]) ?? [];
+
+    expect(importsMetadata).toContain(UserStatisticsModule);
+  });
+
+  it('should import all required feature modules', () => {
+    const imports =
+      (Reflect.getMetadata('imports', AppModule) as unknown[]) ?? [];
+
+    const importedNames = imports.map((mod) => {
+      const moduleConstructor = (mod as { name?: string })?.name;
+      return moduleConstructor ?? '';
+    });
+
+    for (const name of EXPECTED_MODULE_NAMES) {
+      expect(importedNames).toContain(name);
+    }
+  });
+
+  it('should not contain duplicate feature module imports', () => {
+    const imports =
+      (Reflect.getMetadata('imports', AppModule) as unknown[]) ?? [];
+
+    const featureModules = imports.filter(
+      (mod): mod is Function => typeof mod === 'function',
+    );
+    const duplicateModules = featureModules.filter(
+      (mod, index) => featureModules.indexOf(mod) !== index,
+    );
+
+    expect(duplicateModules).toHaveLength(0);
   });
 });

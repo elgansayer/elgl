@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { StudyBuddyRequestDto } from './dto/study-buddy.dto';
 import { SupabaseService } from '../supabase/supabase.service';
+import { UserProfile } from '../users/interfaces/user-profile.interface';
 
 export interface BuddyRequest {
   id: string;
@@ -66,7 +67,7 @@ export class StudyBuddiesService {
     }
 
     const { data } = await query.limit(20);
-    return (data ?? []) as any[];
+    return (data ?? []) as UserProfile[];
   }
 
   async followUser(userId: string, targetUserId: string): Promise<void> {

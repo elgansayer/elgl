@@ -8,7 +8,26 @@ import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
 import { MOCK_USERS } from '../mock-data';
 
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
+type DiscoveryUser = UserProfile & {
+  distance?: number;
+  distance_metres?: number;
+  is_partner_of_week?: boolean;
+  proficiency_level?: string;
+  age?: number;
+  gender?: string;
+  country?: string;
+  city?: string;
+  interests?: string[];
+  learning_goals?: string[];
+  availability_morning?: boolean;
+  availability_afternoon?: boolean;
+  availability_evening?: boolean;
+  available_time_start?: string;
+  available_time_end?: string;
+  last_active_at?: string;
+  coins_balance?: number;
+};
+
 @Injectable()
 export class DiscoveryService {
   private readonly logger = new Logger(DiscoveryService.name);
@@ -123,12 +142,7 @@ export class DiscoveryService {
   async getPartnerOfWeekIds(): Promise<string[]> {
     const redis = this.supabaseService.getRedisClient();
     const raw = await redis.get('partner_of_week_ids');
-    if (!raw) return [];
-    try {
-      return JSON.parse(raw) as string[];
-    } catch {
-      return [];
-    }
+    return this.parseStringArray(raw);
   }
 
   async searchPartners(
@@ -258,14 +272,7 @@ export class DiscoveryService {
       const raw = await this.supabaseService
         .getRedisClient()
         .get('partner_of_week_ids');
-      let partnerIds: string[] = [];
-      if (raw) {
-        try {
-          partnerIds = JSON.parse(raw);
-        } catch {
-          /* ignore */
-        }
-      }
+      const partnerIds = this.parseStringArray(raw);
       const partnerSet = new Set(partnerIds);
       const enriched = filtered.map((u) => ({
         ...u,
@@ -288,7 +295,7 @@ export class DiscoveryService {
       if (
         response.error ||
         !response.data ||
-        (response.data as any[]).length === 0
+        (response.data as unknown[]).length === 0
       ) {
         const fallbackRes = await queryBuilder.limit(50);
         if (
@@ -303,12 +310,12 @@ export class DiscoveryService {
           );
           return enrich(filtered);
         }
-        let fallbackResults: UserProfile[] = (fallbackRes.data as any[]).map(
-          (item: any) => ({
-            ...item,
-            distance_metres: undefined,
-          }),
-        );
+        let fallbackResults: DiscoveryUser[] = (
+          fallbackRes.data as unknown as DiscoveryUser[]
+        ).map((item) => ({
+          ...item,
+          distance_metres: undefined,
+        }));
         if (blockedIds.length > 0) {
           fallbackResults = fallbackResults.filter(
             (u) => !blockedIds.includes(u.id),
@@ -316,20 +323,16 @@ export class DiscoveryService {
         }
         if (query.level) {
           fallbackResults = fallbackResults.filter(
-            (u: any) => u.proficiency_level === query.level,
+            (u) => u.proficiency_level === query.level,
           );
         }
         if (query.age_min !== undefined) {
           const ageMin = query.age_min;
-          fallbackResults = fallbackResults.filter(
-            (u) => (u as any).age >= ageMin,
-          );
+          fallbackResults = fallbackResults.filter((u) => u.age! >= ageMin);
         }
         if (query.age_max !== undefined) {
           const ageMax = query.age_max;
-          fallbackResults = fallbackResults.filter(
-            (u) => (u as any).age <= ageMax,
-          );
+          fallbackResults = fallbackResults.filter((u) => u.age! <= ageMax);
         }
         const filtered = await this.filterByVoiceRoomActive(
           fallbackResults,
@@ -337,12 +340,12 @@ export class DiscoveryService {
         );
         return enrich(filtered);
       }
-      let rpcResults: UserProfile[] = (response.data as any[]).map(
-        (item: any) => ({
-          ...item,
-          distance_metres: item.distance_metres ?? item.distance ?? undefined,
-        }),
-      );
+      let rpcResults: DiscoveryUser[] = (
+        response.data as unknown as DiscoveryUser[]
+      ).map((item) => ({
+        ...item,
+        distance_metres: item.distance_metres ?? item.distance ?? undefined,
+      }));
       if (blockedIds.length > 0) {
         rpcResults = rpcResults.filter((u) => !blockedIds.includes(u.id));
       }
@@ -353,17 +356,17 @@ export class DiscoveryService {
             .select('id, proficiency_level')
             .in(
               'id',
-              rpcResults.map((u: any) => u.id),
+              rpcResults.map((u) => u.id),
             );
-          const levelMap = new Map(
-            (levelData ?? []).map((u: any) => [u.id, u.proficiency_level]),
+          const levelMap = new Map<string, string>(
+            (levelData ?? []).map((u) => [u.id, u.proficiency_level as string]),
           );
           rpcResults = rpcResults.filter(
             (u) => levelMap.get(u.id) === query.level,
           );
         } else {
           rpcResults = rpcResults.filter(
-            (u: any) => u.proficiency_level === query.level,
+            (u) => u.proficiency_level === query.level,
           );
         }
       }
@@ -374,10 +377,10 @@ export class DiscoveryService {
             .select('id, interests')
             .in(
               'id',
-              rpcResults.map((u: any) => u.id),
+              rpcResults.map((u) => u.id),
             );
           const interestMap = new Map<string, string[]>(
-            (interestData ?? []).map((u: any) => [u.id, u.interests ?? []]),
+            (interestData ?? []).map((u) => [u.id, u.interests as string[]]),
           );
           rpcResults = rpcResults.filter((u) =>
             interestMap.get(u.id)?.includes(query.interests!),
@@ -385,17 +388,15 @@ export class DiscoveryService {
         }
       }
       if (_currentUserProfile?.is_vip && query.gender) {
-        rpcResults = rpcResults.filter(
-          (u) => (u as any).gender === query.gender,
-        );
+        rpcResults = rpcResults.filter((u) => u.gender === query.gender);
       }
       if (query.age_min !== undefined) {
         const ageMin = query.age_min;
-        rpcResults = rpcResults.filter((u) => (u as any).age >= ageMin);
+        rpcResults = rpcResults.filter((u) => u.age! >= ageMin);
       }
       if (query.age_max !== undefined) {
         const ageMax = query.age_max;
-        rpcResults = rpcResults.filter((u) => (u as any).age <= ageMax);
+        rpcResults = rpcResults.filter((u) => u.age! <= ageMax);
       }
 
       if (query.has_audio_intro) {
@@ -419,7 +420,9 @@ export class DiscoveryService {
       );
       return enrich(filtered);
     }
-    let results: UserProfile[] = (response.data as any[]).map((item: any) => ({
+    let results: DiscoveryUser[] = (
+      response.data as unknown as DiscoveryUser[]
+    ).map((item) => ({
       ...item,
       distance_metres: item.distance_metres ?? item.distance ?? undefined,
     }));
@@ -427,15 +430,15 @@ export class DiscoveryService {
       results = results.filter((u) => !blockedIds.includes(u.id));
     }
     if (query.level) {
-      results = results.filter((u: any) => u.proficiency_level === query.level);
+      results = results.filter((u) => u.proficiency_level === query.level);
     }
     if (query.age_min !== undefined) {
       const ageMin = query.age_min;
-      results = results.filter((u) => (u as any).age >= ageMin);
+      results = results.filter((u) => u.age! >= ageMin);
     }
     if (query.age_max !== undefined) {
       const ageMax = query.age_max;
-      results = results.filter((u) => (u as any).age <= ageMax);
+      results = results.filter((u) => u.age! <= ageMax);
     }
     const filtered = await this.filterByVoiceRoomActive(
       results,
@@ -474,7 +477,7 @@ export class DiscoveryService {
       .neq('audio_intro_url', '');
 
     if (blockedIds.length > 0) {
-      queryBuilder = (queryBuilder as any).not('id', 'in', blockedIds);
+      queryBuilder = queryBuilder.not('id', 'in', blockedIds);
     }
 
     if (query.native_languages) {
@@ -517,7 +520,7 @@ export class DiscoveryService {
     if (response.error || !response.data) {
       return [];
     }
-    let results = response.data as UserProfile[];
+    let results = response.data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
       results = results.filter((u) => !blockedIds.includes(u.id));
     }
@@ -547,7 +550,7 @@ export class DiscoveryService {
     if (error || !data) {
       return [];
     }
-    let results = data as UserProfile[];
+    let results = data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
       results = results.filter((u) => !blockedIds.includes(u.id));
     }
@@ -556,14 +559,8 @@ export class DiscoveryService {
     const rawPoW = await this.supabaseService
       .getRedisClient()
       .get('partner_of_week_ids');
-    let partnerSet = new Set<string>();
-    if (rawPoW) {
-      try {
-        partnerSet = new Set(JSON.parse(rawPoW));
-      } catch {
-        /* ignore */
-      }
-    }
+    const partnerIds = this.parseStringArray(rawPoW);
+    const partnerSet = new Set(partnerIds);
     results = results.map((u) => ({
       ...u,
       is_partner_of_week: partnerSet.has(u.id),
@@ -591,7 +588,7 @@ export class DiscoveryService {
     if (error || !data) {
       return [];
     }
-    let results = data as UserProfile[];
+    let results = data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
       results = results.filter((u) => !blockedIds.includes(u.id));
     }
@@ -600,14 +597,8 @@ export class DiscoveryService {
     const rawPoW = await this.supabaseService
       .getRedisClient()
       .get('partner_of_week_ids');
-    let partnerSet = new Set<string>();
-    if (rawPoW) {
-      try {
-        partnerSet = new Set(JSON.parse(rawPoW));
-      } catch {
-        /* ignore */
-      }
-    }
+    const partnerIds = this.parseStringArray(rawPoW);
+    const partnerSet = new Set(partnerIds);
     results = results.map((u) => ({
       ...u,
       is_partner_of_week: partnerSet.has(u.id),
@@ -712,21 +703,15 @@ export class DiscoveryService {
       return mock.slice(offset, offset + limit);
     }
 
-    let results = response.data as UserProfile[];
+    let results = response.data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
       results = results.filter((u) => !blockedIds.includes(u.id));
     }
 
     // Attach Partner of the Week flag
     const rawPoW = await redis.get('partner_of_week_ids');
-    let partnerSet = new Set<string>();
-    if (rawPoW) {
-      try {
-        partnerSet = new Set(JSON.parse(rawPoW));
-      } catch {
-        /* ignore */
-      }
-    }
+    const partnerIds = this.parseStringArray(rawPoW);
+    const partnerSet = new Set(partnerIds);
     results = results.map((u) => ({
       ...u,
       is_partner_of_week: partnerSet.has(u.id),
@@ -735,8 +720,8 @@ export class DiscoveryService {
     // For best_match, promote partner of week first, then maintain db order
     if (sort === 'best_match') {
       results.sort((a, b) => {
-        const aPoW = (a as any).is_partner_of_week ? 1 : 0;
-        const bPoW = (b as any).is_partner_of_week ? 1 : 0;
+        const aPoW = a.is_partner_of_week ? 1 : 0;
+        const bPoW = b.is_partner_of_week ? 1 : 0;
         if (aPoW !== bPoW) return bPoW - aPoW;
         const streakA = a.study_streak_days ?? 0;
         const streakB = b.study_streak_days ?? 0;
@@ -763,7 +748,7 @@ export class DiscoveryService {
     query: SearchQueryDto,
     blockedIds: string[] = [],
   ): UserProfile[] {
-    let filtered = MOCK_USERS;
+    let filtered = MOCK_USERS as unknown as DiscoveryUser[];
 
     if (blockedIds.length > 0) {
       filtered = filtered.filter((u) => !blockedIds.includes(u.id));
@@ -789,53 +774,51 @@ export class DiscoveryService {
 
     if (query.age_min !== undefined) {
       const ageMin = query.age_min;
-      filtered = filtered.filter((u) => (u as any).age >= ageMin);
+      filtered = filtered.filter((u) => u.age! >= ageMin);
     }
     if (query.age_max !== undefined) {
       const ageMax = query.age_max;
-      filtered = filtered.filter((u) => (u as any).age <= ageMax);
+      filtered = filtered.filter((u) => u.age! <= ageMax);
     }
 
     if (query.level) {
-      filtered = filtered.filter(
-        (u: any) => u.proficiency_level === query.level,
-      );
+      filtered = filtered.filter((u) => u.proficiency_level === query.level);
     }
 
     if (query.interests) {
-      filtered = filtered.filter((u: any) =>
-        u.interests?.includes(query.interests),
+      filtered = filtered.filter((u) =>
+        u.interests?.includes(query.interests!),
       );
     }
 
     if (query.has_audio_intro) {
       filtered = filtered.filter(
-        (u: any) => u.audio_intro_url && u.audio_intro_url !== '',
+        (u) => u.audio_intro_url && u.audio_intro_url !== '',
       );
     }
 
     if (query.country) {
-      filtered = filtered.filter((u: any) => u.country === query.country);
+      filtered = filtered.filter((u) => u.country === query.country);
     }
     if (query.city) {
-      filtered = filtered.filter((u: any) => u.city === query.city);
+      filtered = filtered.filter((u) => u.city === query.city);
     }
 
-    return filtered.slice(0, 50) as unknown as UserProfile[];
+    return filtered.slice(0, 50);
   }
 
   private applyAdvancedFilters(
     users: UserProfile[],
     query: SearchQueryDto,
   ): UserProfile[] {
-    let result = users;
+    let result = users as DiscoveryUser[];
 
     if (query.learning_goals) {
       const goalList = query.learning_goals
         .split(',')
         .map((g) => g.trim().toLowerCase());
       result = result.filter((u) => {
-        const userGoals: string[] = (u as any).learning_goals ?? [];
+        const userGoals: string[] = u.learning_goals ?? [];
         const lowerUserGoals = userGoals.map((g) => g.toLowerCase());
         return goalList.some((g) => lowerUserGoals.includes(g));
       });
@@ -849,13 +832,13 @@ export class DiscoveryService {
     ): boolean => query[field] ?? false;
 
     if (checkAvailability('availability_morning')) {
-      result = result.filter((u) => (u as any).availability_morning === true);
+      result = result.filter((u) => u.availability_morning === true);
     }
     if (checkAvailability('availability_afternoon')) {
-      result = result.filter((u) => (u as any).availability_afternoon === true);
+      result = result.filter((u) => u.availability_afternoon === true);
     }
     if (checkAvailability('availability_evening')) {
-      result = result.filter((u) => (u as any).availability_evening === true);
+      result = result.filter((u) => u.availability_evening === true);
     }
 
     // Exact availability time overlap filtering (Tandem‑style)
@@ -864,8 +847,8 @@ export class DiscoveryService {
       const qEnd = query.available_time_end;
 
       result = result.filter((u) => {
-        const uStart: string | undefined = (u as any).available_time_start;
-        const uEnd: string | undefined = (u as any).available_time_end;
+        const uStart: string | undefined = u.available_time_start;
+        const uEnd: string | undefined = u.available_time_end;
         if (!uStart || !uEnd) {
           // user has no exact times set – treat as always available
           return true;
@@ -885,11 +868,12 @@ export class DiscoveryService {
     _searchLon?: number,
   ): UserProfile[] {
     if (!sort || !users.length) return users;
+    const discoveryUsers = users as DiscoveryUser[];
     switch (sort) {
       case 'best_match':
-        return users.sort((a, b) => {
-          const aPow = (a as any).is_partner_of_week ? 1 : 0;
-          const bPow = (b as any).is_partner_of_week ? 1 : 0;
+        return discoveryUsers.sort((a, b) => {
+          const aPow = a.is_partner_of_week ? 1 : 0;
+          const bPow = b.is_partner_of_week ? 1 : 0;
           if (aPow !== bPow) return bPow - aPow;
           const streakA = a.study_streak_days ?? 0;
           const streakB = b.study_streak_days ?? 0;
@@ -900,20 +884,20 @@ export class DiscoveryService {
           return 0;
         });
       case 'online_now':
-        return users.sort((a, b) => {
-          const aDate = (a as any).last_active_at ?? '';
-          const bDate = (b as any).last_active_at ?? '';
+        return discoveryUsers.sort((a, b) => {
+          const aDate = a.last_active_at ?? '';
+          const bDate = b.last_active_at ?? '';
           return bDate.localeCompare(aDate);
         });
       case 'nearest':
-        return users.sort((a, b) => {
-          const aDist = (a as any).distance ?? Number.MAX_VALUE;
-          const bDist = (b as any).distance ?? Number.MAX_VALUE;
+        return discoveryUsers.sort((a, b) => {
+          const aDist = a.distance ?? Number.MAX_VALUE;
+          const bDist = b.distance ?? Number.MAX_VALUE;
           if (aDist !== bDist) return aDist - bDist;
           return 0;
         });
       case 'newest':
-        return users.sort((a, b) => {
+        return discoveryUsers.sort((a, b) => {
           const aDate = a.created_at ?? '';
           const bDate = b.created_at ?? '';
           return bDate.localeCompare(aDate);
@@ -921,5 +905,20 @@ export class DiscoveryService {
       default:
         return users;
     }
+  }
+
+  private parseStringArray(raw: string | null): string[] {
+    if (!raw) return [];
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(
+          (item): item is string => typeof item === 'string',
+        );
+      }
+    } catch {
+      return [];
+    }
+    return [];
   }
 }

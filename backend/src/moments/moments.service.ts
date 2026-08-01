@@ -34,6 +34,15 @@ interface MomentLikeRow {
   moment_id: string;
 }
 
+interface MomentLikeUser {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  native_language?: string;
+  native_languages?: string[];
+  target_languages: string[];
+}
+
 interface MomentCountRow {
   likes_count?: number;
   comments_count?: number;
@@ -509,7 +518,7 @@ export class MomentsService {
   async getMomentLikes(
     momentId: string,
     currentUserId?: string,
-  ): Promise<any[]> {
+  ): Promise<MomentLikeUser[]> {
     const supabase = this.supabaseService.getClient();
 
     const blockedIds = currentUserId
@@ -538,12 +547,14 @@ export class MomentsService {
       throw new Error(`Failed to fetch likes: ${error.message}`);
     }
 
-    // Extract the joined user profiles
-    const fullUsers = data.map((row: any) => row.users).filter(Boolean);
+    const rows = (data ?? []) as Array<{ users: MomentLikeUser }>;
+    const fullUsers = rows
+      .map((row) => row.users)
+      .filter((user): user is MomentLikeUser => Boolean(user));
 
     // Filter out blocked users
     if (blockedIds.length > 0) {
-      return fullUsers.filter((user: any) => !blockedIds.includes(user.id));
+      return fullUsers.filter((user) => !blockedIds.includes(user.id));
     }
 
     return fullUsers;
@@ -807,7 +818,8 @@ export class MomentsService {
       throw new Error('Moment not found');
     }
 
-    const momentAuthorId = (momentData as any).user_id;
+    const momentAuthorId = (momentData as unknown as { user_id: string })
+      .user_id;
 
     // Check if the editor is blocked by the moment author
     const blockedIds =
@@ -953,10 +965,9 @@ export class MomentsService {
       .select('vote')
       .eq('comment_id', commentId);
 
-    const upVotes = (votes ?? []).filter((v: any) => v.vote === 'up').length;
-    const downVotes = (votes ?? []).filter(
-      (v: any) => v.vote === 'down',
-    ).length;
+    const voteRows = (votes ?? []) as Array<{ vote: 'up' | 'down' }>;
+    const upVotes = voteRows.filter((v) => v.vote === 'up').length;
+    const downVotes = voteRows.filter((v) => v.vote === 'down').length;
 
     // Determine current user's vote after toggle
     const { data: myVote } = await supabase
