@@ -63,6 +63,38 @@ interface MomentCommentRow {
 
 @Injectable()
 export class MomentsService {
+  async getLifetimeCounts(): Promise<{
+    translations: number;
+    corrections: number;
+    moments: number;
+  }> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: momentsData, error: momentsError } = await supabase
+      .from('moments')
+      .select('id', { count: 'exact' });
+
+    const { data: correctionsData, error: correctionsError } = await supabase
+      .from('moment_comments')
+      .select('id', { count: 'exact' })
+      .not('correction_payload', 'is', null);
+
+    const { data: translationsData, error: translationsError } = await supabase
+      .from('translations')
+      .select('id', { count: 'exact' });
+
+    if (momentsError || correctionsError || translationsError) {
+      throw new Error(
+        `Failed to fetch counts: ${momentsError?.message ?? ''} ${correctionsError?.message ?? ''} ${translationsError?.message ?? ''}`,
+      );
+    }
+
+    return {
+      translations: translationsData?.length ?? 0,
+      corrections: correctionsData?.length ?? 0,
+      moments: momentsData?.length ?? 0,
+    };
+  }
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly usersService: UsersService,

@@ -41,6 +41,15 @@ export class MomentsController {
     return await this.momentsService.createMoment(user.id, dto);
   }
 
+  @Get('lifetime-counts')
+  async getLifetimeCounts(): Promise<{
+    translations: number;
+    corrections: number;
+    moments: number;
+  }> {
+    return await this.momentsService.getLifetimeCounts();
+  }
+
   @Post('upload-voice')
   async uploadVoice(
     @CurrentUser() user: User | null,

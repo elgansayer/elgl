@@ -142,7 +142,7 @@ describe('LivekitService', () => {
 
   describe('joinRoom', () => {
     it('should connect to a room with the token from the backend', async () => {
-      mockRoomConnect.mockResolvedValue(undefined);
+      mockRoomConnect.mockResolvedValue(Promise.resolve());
       const roomPromise = service.joinRoom('my-room', 'user-123', false);
       const req = httpMock.expectOne(`${environment.apiUrl}/livekit/token`);
       expect(req.request.method).toBe('POST');
