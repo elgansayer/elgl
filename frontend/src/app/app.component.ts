@@ -195,11 +195,11 @@ export class AppComponent implements OnInit {
       return false;
     }
     if (typeof data === 'object' && data !== null) {
-      const candidate = data as Record<string, unknown>;
-      return typeof candidate['type'] === 'string';
+      if ('type' in data && typeof (data as Record<string, unknown>)['type'] === 'string') {
+        return true;
+      }
     }
     return false;
-    return typeof candidate['type'] === 'string';
   }
 
   private isIncomingCallPayload(payload: unknown): payload is IncomingCallData {
@@ -209,6 +209,11 @@ export class AppComponent implements OnInit {
     if (typeof payload === 'object' && payload !== null) {
       const candidate = payload as Record<string, unknown>;
       return (
+        'callerId' in candidate &&
+        'callerName' in candidate &&
+        'callerAvatarUrl' in candidate &&
+        'roomName' in candidate &&
+        'isVideoCall' in candidate &&
         typeof candidate['callerId'] === 'string' &&
         typeof candidate['callerName'] === 'string' &&
         typeof candidate['callerAvatarUrl'] === 'string' &&
@@ -217,13 +222,6 @@ export class AppComponent implements OnInit {
       );
     }
     return false;
-    return (
-      typeof candidate['callerId'] === 'string' &&
-      typeof candidate['callerName'] === 'string' &&
-      typeof candidate['callerAvatarUrl'] === 'string' &&
-      typeof candidate['roomName'] === 'string' &&
-      typeof candidate['isVideoCall'] === 'boolean'
-    );
   }
 
   onAcceptCall(_callData: IncomingCallData): void {

@@ -23,9 +23,10 @@ export class PronunciationService {
   }
 
   async getUserAudioIntro(userId: string): Promise<string | null> {
-    const { data, error } = await this.supabase
-      .from<{ audio_intro_url: string }>('users')
-      .select('audio_intro_url')
+    const supabaseClient = inject(SupabaseService).getClient();
+    const { data, error } = await supabaseClient
+      .from('users')
+      .select<{ audio_intro_url: string }>('audio_intro_url')
       .eq('id', userId)
       .single();
     if (error) {
@@ -34,11 +35,6 @@ export class PronunciationService {
     }
     return data?.audio_intro_url ?? null;
   }
-
-@Injectable({ providedIn: 'root' })
-export class PronunciationService {
-  private http = inject(HttpClient);
-  private apiUrl = `${environment.apiUrl}/pronunciation/feedback`;
 
   analyse(
     audioBlob: Blob,
