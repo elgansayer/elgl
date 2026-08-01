@@ -1,7 +1,5 @@
 import { CommunitiesController } from './communities.controller';
-import { CommunitiesService } from './communities.service';
 import { CreateCommunityDto } from './dto/create-community.dto';
-import { AddGroupDto } from './dto/add-group.dto';
 import { UpdateCommunityDto } from './dto/update-community.dto';
 
 describe('CommunitiesController', () => {

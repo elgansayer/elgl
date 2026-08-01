@@ -19,7 +19,7 @@ interface Database {
         Relationships: [];
       };
     };
-    Views: Record<string, { Row: Record<string, unknown> }>;
+    Views: Record<string, { Row: Record<string, unknown>; Relationships: [] }>;
     Functions: Record<string, { Args: Record<string, unknown>; Returns: unknown }>;
   };
 }

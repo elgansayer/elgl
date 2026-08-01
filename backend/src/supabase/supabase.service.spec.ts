@@ -142,38 +142,77 @@ describe('SupabaseService', () => {
   });
 });
 describe('SupabaseService - Methods', () => {
+  let service: SupabaseService;
+  let mockSupabaseClient: any;
+  let mockRedisInstance: any;
+
+  beforeEach(async () => {
+    mockSupabaseClient = {
+      from: jest.fn(),
+      rpc: jest.fn(),
+      auth: { getUser: jest.fn() },
+    };
+    (createClient as jest.Mock).mockReturnValue(mockSupabaseClient);
+
+    mockRedisInstance = {
+      on: jest.fn(),
+      get: jest.fn(),
+      set: jest.fn(),
+    };
+    (Redis as unknown as jest.Mock).mockImplementation(() => mockRedisInstance);
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        SupabaseService,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn(
+              (key: string) =>
+                ({
+                  SUPABASE_URL: 'https://test.supabase.co',
+                  SUPABASE_SERVICE_ROLE_KEY: 'test-service-key',
+                  REDIS_URL: 'redis://localhost:6379',
+                })[key] ?? null,
+            ),
+          },
+        },
+      ],
+    }).compile();
+
+    service = module.get<SupabaseService>(SupabaseService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe('updateLastActivity', () => {
     it('should update last_active_at and is_serious_learner', async () => {
       const mockUserId = 'user123';
       const mockData = { study_streak_days: 10, correction_ratio: 0.85 };
       const mockUpdateResponse = { error: null };
 
-      mockSupabaseClient.from.mockReturnValueOnce({
-        select: jest.fn().mockReturnValueOnce({
-          eq: jest.fn().mockReturnValueOnce({
-            single: jest
-              .fn()
-              .mockResolvedValueOnce({ data: mockData, error: null }),
-          }),
-        }),
+      const mockEq = jest.fn().mockReturnValueOnce({
+        single: jest
+          .fn()
+          .mockResolvedValueOnce({ data: mockData, error: null }),
       });
-      mockSupabaseClient.from.mockReturnValueOnce({
-        update: jest.fn().mockReturnValueOnce({
-          eq: jest.fn().mockReturnValueOnce(mockUpdateResponse),
-        }),
-      });
+      const mockSelect = jest.fn().mockReturnValueOnce({ eq: mockEq });
+      const mockUpdateEq = jest.fn().mockReturnValueOnce(mockUpdateResponse);
+      const mockUpdate = jest.fn().mockReturnValueOnce({ eq: mockUpdateEq });
+
+      mockSupabaseClient.from.mockReturnValueOnce({ select: mockSelect });
+      mockSupabaseClient.from.mockReturnValueOnce({ update: mockUpdate });
 
       await service.updateLastActivity(mockUserId);
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
-      expect(mockSupabaseClient.from().select).toHaveBeenCalledWith(
+      expect(mockSelect).toHaveBeenCalledWith(
         'study_streak_days, correction_ratio',
       );
-      expect(mockSupabaseClient.from().select().eq).toHaveBeenCalledWith(
-        'id',
-        mockUserId,
-      );
-      expect(mockSupabaseClient.from().update).toHaveBeenCalledWith({
+      expect(mockEq).toHaveBeenCalledWith('id', mockUserId);
+      expect(mockUpdate).toHaveBeenCalledWith({
         last_active_at: expect.any(String),
         is_serious_learner: true,
       });
@@ -229,26 +268,23 @@ describe('SupabaseService - Methods', () => {
       mockSupabaseClient.rpc.mockResolvedValueOnce({
         error: { message: 'RPC error' },
       });
-      mockSupabaseClient.from.mockReturnValueOnce({
-        select: jest.fn().mockReturnValueOnce({
-          eq: jest.fn().mockReturnValueOnce({
-            single: jest
-              .fn()
-              .mockResolvedValueOnce({ data: mockData, error: null }),
-          }),
-        }),
+      const mockSelectEq = jest.fn().mockReturnValueOnce({
+        single: jest
+          .fn()
+          .mockResolvedValueOnce({ data: mockData, error: null }),
       });
-      mockSupabaseClient.from.mockReturnValueOnce({
-        update: jest.fn().mockReturnValueOnce({
-          eq: jest.fn().mockResolvedValueOnce({ error: null }),
-        }),
-      });
+      const mockSelect = jest.fn().mockReturnValueOnce({ eq: mockSelectEq });
+      const mockUpdateEq = jest.fn().mockResolvedValueOnce({ error: null });
+      const mockUpdate = jest.fn().mockReturnValueOnce({ eq: mockUpdateEq });
+
+      mockSupabaseClient.from.mockReturnValueOnce({ select: mockSelect });
+      mockSupabaseClient.from.mockReturnValueOnce({ update: mockUpdate });
 
       await service.incrementXp(mockUserId, mockPoints);
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
-      expect(mockSupabaseClient.from().select).toHaveBeenCalledWith('xp_total');
-      expect(mockSupabaseClient.from().update).toHaveBeenCalledWith({
+      expect(mockSelect).toHaveBeenCalledWith('xp_total');
+      expect(mockUpdate).toHaveBeenCalledWith({
         xp_total: 150,
       });
     });

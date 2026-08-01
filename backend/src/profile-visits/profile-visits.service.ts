@@ -79,7 +79,7 @@ export class ProfileVisitsService {
       new ProfileViewEvent(visitorId, viewedId),
     );
 
-    return response.data as Record<string, unknown>;
+    return response.data;
   }
 
   async getVisitors(

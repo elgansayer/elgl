@@ -4,10 +4,7 @@ import {
   GroupsService,
   GroupRecord,
   GroupInfo,
-  GroupMemberRecord,
   GroupSettings,
-  GroupAnnouncement,
-  GroupResource,
 } from './groups.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupSettingsDto } from './dto/update-group-settings.dto';
@@ -17,7 +14,6 @@ import { RemoveMemberDto } from './dto/remove-member.dto';
 
 describe('GroupsController', () => {
   let controller: GroupsController;
-  let service: jest.Mocked<GroupsService>;
 
   const mockGroupsService = {
     isAdmin: jest.fn(),
@@ -43,7 +39,6 @@ describe('GroupsController', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     controller = new GroupsController(mockGroupsService);
-    service = mockGroupsService;
   });
 
   describe('create', () => {

@@ -142,88 +142,106 @@ export interface Database {
         Row: UsersRow;
         Insert: Partial<UsersRow>;
         Update: Partial<UsersRow>;
+        Relationships: [];
       };
       groups: {
         Row: GroupsRow;
         Insert: Partial<GroupsRow>;
         Update: Partial<GroupsRow>;
+        Relationships: [];
       };
       group_members: {
         Row: GroupMembersRow;
         Insert: Partial<GroupMembersRow>;
         Update: Partial<GroupMembersRow>;
+        Relationships: [];
       };
       group_announcements: {
         Row: GroupAnnouncementsRow;
         Insert: Partial<GroupAnnouncementsRow>;
         Update: Partial<GroupAnnouncementsRow>;
+        Relationships: [];
       };
       group_resources: {
         Row: GroupResourcesRow;
         Insert: Partial<GroupResourcesRow>;
         Update: Partial<GroupResourcesRow>;
+        Relationships: [];
       };
       interests: {
         Row: InterestsRow;
         Insert: Partial<InterestsRow>;
         Update: Partial<InterestsRow>;
+        Relationships: [];
       };
       xp_events: {
         Row: XpEventRow;
         Insert: Partial<XpEventRow>;
         Update: Partial<XpEventRow>;
+        Relationships: [];
       };
       user_follows: {
         Row: UserFollowRow;
         Insert: Partial<UserFollowRow>;
         Update: Partial<UserFollowRow>;
+        Relationships: [];
       };
       user_profile_likes: {
         Row: UserProfileLikeRow;
         Insert: Partial<UserProfileLikeRow>;
         Update: Partial<UserProfileLikeRow>;
+        Relationships: [];
       };
       profile_visits: {
         Row: ProfileVisitRow;
         Insert: Partial<ProfileVisitRow>;
         Update: Partial<ProfileVisitRow>;
+        Relationships: [];
       };
       status_views: {
         Row: StatusViewRow;
         Insert: Partial<StatusViewRow>;
         Update: Partial<StatusViewRow>;
+        Relationships: [];
       };
       moments: {
         Row: MomentRow;
         Insert: Partial<MomentRow>;
         Update: Partial<MomentRow>;
+        Relationships: [];
       };
       moment_comments: {
         Row: MomentCommentRow;
         Insert: Partial<MomentCommentRow>;
         Update: Partial<MomentCommentRow>;
+        Relationships: [];
       };
       moment_likes: {
         Row: MomentLikeRow;
         Insert: Partial<MomentLikeRow>;
         Update: Partial<MomentLikeRow>;
+        Relationships: [];
       };
       flashcards: {
         Row: FlashcardRow;
         Insert: Partial<FlashcardRow>;
         Update: Partial<FlashcardRow>;
+        Relationships: [];
       };
       favourites: {
         Row: FavouriteRow;
         Insert: Partial<FavouriteRow>;
         Update: Partial<FavouriteRow>;
+        Relationships: [];
       };
       chat_messages: {
         Row: ChatMessageRow;
         Insert: Partial<ChatMessageRow>;
         Update: Partial<ChatMessageRow>;
+        Relationships: [];
       };
     };
+    Views: Record<string, never>;
     Functions: {
       increment_xp: {
         Args: { user_id: string; amount: number };
