@@ -87,6 +87,6 @@ export class TwoFactorService {
       .single();
 
     if (error) return false;
-    return !!(data?.totp_secret || data?.two_factor_secret);
+    return !!(data?.totp_secret || (data as any)?.two_factor_secret);
   }
 }

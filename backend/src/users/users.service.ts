@@ -666,7 +666,7 @@ export class UsersService {
 
   async awardCoins(userId: string, amount: number): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    const { error } = await supabase.rpc('increment_coins', {
+    const { error } = await supabase.rpc('increment_xp', {
       user_id: userId,
       amount,
     });
