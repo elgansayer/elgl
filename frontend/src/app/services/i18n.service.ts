@@ -1088,7 +1088,13 @@ export class I18nService {
     'pill.colour_danger': 'bg-rose-500 text-white hover:bg-rose-600',
     'pill.colour_info': 'bg-sky-500 text-white hover:bg-sky-600',
     'pill.colour_neutral': 'bg-slate-200 text-slate-800 hover:bg-slate-300',
-    'card.base_classes': 'block rounded-2xl',
+    'card.base_classes': 'block rounded-2xl bg-surface-200 transition-all',
+
+    // Daily login modal
+    'daily_login_modal.title': 'Daily Login Reward',
+    'daily_login_modal.message': 'Come back tomorrow to claim more coins!',
+    'daily_login_modal.coins': '{{coins}} coins',
+    'daily_login_modal.button': 'Claim',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });
