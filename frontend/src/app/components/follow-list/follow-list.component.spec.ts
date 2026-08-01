@@ -157,7 +157,7 @@ describe('FollowListComponent', () => {
     fixture.detectChanges();
 
     const errorMessage = fixture.nativeElement.querySelector('.error-message');
-    expect(errorMessage.textContent).toContain('Error loading followers.');
+    expect(errorMessage.textContent).toContain('Failed to load the list. Please try again.');
   });
 
   it('should handle errors when toggling follow state', async () => {
