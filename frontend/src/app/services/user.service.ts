@@ -587,6 +587,22 @@ export class UserService {
     );
   }
 
+  async subscribeToFcmTopic(topic: string): Promise<{ success: boolean }> {
+    return firstValueFrom(
+      this.http
+        .post<{ success: boolean }>(
+          `${this.baseUrl}/fcm/subscribe`,
+          { topic },
+          { headers: this.getHeaders() },
+        )
+        .pipe(
+          catchError(() => {
+            throw new Error('Failed to subscribe to topic');
+          }),
+        ),
+    );
+  }
+
   async unsubscribeFromFcmTopic(topic: string): Promise<{ success: boolean }> {
     return firstValueFrom(
       this.http
