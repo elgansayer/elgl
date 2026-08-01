@@ -8,6 +8,7 @@ import {
   RemoteTrack,
   RoomOptions,
   ExternalE2EEKeyProvider,
+  Track,
 } from 'livekit-client';
 
 @Injectable({
@@ -79,10 +80,10 @@ export class LivekitService {
       return { audioTrack: null, videoTrack: null };
     }
     await this.room.localParticipant.setMicrophoneEnabled(true);
-    const pub = this.room.localParticipant.getTrackPublication('microphone');
+    const pub = this.room.localParticipant.getTrackPublication(Track.Source.Microphone);
     const audioTrack = pub?.track ?? null;
-    this._localAudioTrack = audioTrack as LocalTrack | null;
-    return { audioTrack: audioTrack as LocalTrack | null, videoTrack: null };
+    this._localAudioTrack = audioTrack;
+    return { audioTrack, videoTrack: null };
   }
 
   /** Toggle the local audio track's mute state and return the new state. */
