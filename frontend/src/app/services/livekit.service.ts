@@ -8,7 +8,6 @@ import {
   RemoteTrack,
   RoomOptions,
   ExternalE2EEKeyProvider,
-  createLocalTracks,
 } from 'livekit-client';
 
 @Injectable({
@@ -22,6 +21,10 @@ export class LivekitService {
   private _localAudioTrack: LocalTrack | null = null;
   private _muted = false;
   private _speakerphone = false;
+
+  private createRoom(options: RoomOptions): Room {
+    return new Room(options);
+  }
 
   /**
    * Get a LiveKit access token from the backend.
@@ -65,20 +68,21 @@ export class LivekitService {
       await keyProvider.setKey(e2eeKey);
     }
 
-    const room = new Room(roomOptions);
+    const room = this.createRoom(roomOptions);
     this.room = room;
     await room.connect(this.getLiveKitUrl(), token);
     return room;
   }
 
   async publishTracks(): Promise<{ audioTrack: LocalTrack | null; videoTrack: LocalTrack | null }> {
-    const tracks = await createLocalTracks({ audio: true, video: false });
-    const audioTrack = tracks.find(t => t.kind === 'audio') ?? null;
-    if (audioTrack && this.room) {
-      await this.room.localParticipant.publishTrack(audioTrack);
-      this._localAudioTrack = audioTrack;
+    if (!this.room) {
+      return { audioTrack: null, videoTrack: null };
     }
-    return { audioTrack, videoTrack: null };
+    await this.room.localParticipant.setMicrophoneEnabled(true);
+    const pub = this.room.localParticipant.getTrackPublication('microphone');
+    const audioTrack = pub?.track ?? null;
+    this._localAudioTrack = audioTrack as LocalTrack | null;
+    return { audioTrack: audioTrack as LocalTrack | null, videoTrack: null };
   }
 
   /** Toggle the local audio track's mute state and return the new state. */

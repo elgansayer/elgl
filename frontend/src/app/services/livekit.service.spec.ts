@@ -29,6 +29,8 @@ function internals(service: LivekitService): LivekitServiceInternals {
 const mockRoomConnect = vi.fn();
 const mockRoomDisconnect = vi.fn();
 const mockRoomPublishTrack = vi.fn();
+const mockSetMicrophoneEnabled = vi.fn();
+const mockGetTrackPublication = vi.fn();
 
 /**
  * `Room` and `LocalTrack` are large third-party classes with many members we
@@ -40,7 +42,11 @@ const mockRoomPublishTrack = vi.fn();
 interface MockRoomShape {
   connect?: typeof mockRoomConnect;
   disconnect?: typeof mockRoomDisconnect;
-  localParticipant?: { publishTrack: typeof mockRoomPublishTrack };
+  localParticipant?: {
+    publishTrack: typeof mockRoomPublishTrack;
+    setMicrophoneEnabled?: typeof mockSetMicrophoneEnabled;
+    getTrackPublication?: typeof mockGetTrackPublication;
+  };
 }
 
 function mockRoom(shape: MockRoomShape): livekitClient.Room {
@@ -77,6 +83,8 @@ describe('LivekitService', () => {
     mockRoomConnect.mockReset();
     mockRoomDisconnect.mockReset();
     mockRoomPublishTrack.mockReset();
+    mockSetMicrophoneEnabled.mockReset();
+    mockGetTrackPublication.mockReset();
 
     // Default mocked Room constructor
     const roomMock = vi.mocked(livekitClient.Room);
@@ -85,7 +93,11 @@ describe('LivekitService', () => {
       constructedRoom = mockRoom({
         connect: mockRoomConnect,
         disconnect: mockRoomDisconnect,
-        localParticipant: { publishTrack: mockRoomPublishTrack },
+        localParticipant: {
+          publishTrack: mockRoomPublishTrack,
+          setMicrophoneEnabled: mockSetMicrophoneEnabled,
+          getTrackPublication: mockGetTrackPublication,
+        },
       });
       return constructedRoom;
     });
@@ -155,15 +167,21 @@ describe('LivekitService', () => {
           stop: vi.fn(),
         },
       });
-      vi.mocked(livekitClient.createLocalTracks).mockResolvedValue([mockAudioTrack]);
+      mockSetMicrophoneEnabled.mockResolvedValue(undefined);
+      mockGetTrackPublication.mockReturnValue({ track: mockAudioTrack });
 
       const fakeRoom = mockRoom({
-        localParticipant: { publishTrack: mockRoomPublishTrack },
+        localParticipant: {
+          publishTrack: mockRoomPublishTrack,
+          setMicrophoneEnabled: mockSetMicrophoneEnabled,
+          getTrackPublication: mockGetTrackPublication,
+        },
       });
       internals(service).room = fakeRoom;
 
       const result = await service.publishTracks();
-      expect(mockRoomPublishTrack).toHaveBeenCalledWith(mockAudioTrack);
+      expect(mockSetMicrophoneEnabled).toHaveBeenCalledWith(true);
+      expect(mockGetTrackPublication).toHaveBeenCalledWith('microphone');
       expect(result.audioTrack).toBe(mockAudioTrack);
       expect(result.videoTrack).toBeNull();
       expect(internals(service)._localAudioTrack).toBe(mockAudioTrack);

@@ -75,6 +75,10 @@ export class ProfileComponent implements OnInit {
   businessHours = '';
   websiteUrl = '';
   catalog: BusinessCatalogItem[] = [];
+  nationality = '';
+  region = '';
+  age: number | null = null;
+  gender = '';
 
   // Privacy fields
   incognitoVisits = signal<boolean>(false);
@@ -119,6 +123,10 @@ export class ProfileComponent implements OnInit {
         this.businessHours = data.business_hours || '';
         this.websiteUrl = data.website_url || '';
         this.catalog = data.catalog || [];
+        this.nationality = data.nationality || '';
+        this.region = data.region || '';
+        this.age = data.age || null;
+        this.gender = data.gender || '';
         this.checkMilestone();
       }
     } catch (e: unknown) {
