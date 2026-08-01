@@ -11,7 +11,19 @@ export class UserStatisticsService {
   }
 
   async getUserStatistics(userId: string, query?: UserStatisticsQueryDto) {
-    const { data: user, error: userError } = await this.supabase
+    const {
+      data: user,
+      error: userError,
+    }: {
+      data: {
+        study_streak_days: number;
+        correction_ratio: number;
+        coins_balance: number;
+        created_at: string;
+        is_vip: boolean;
+      } | null;
+      error: any;
+    } = await this.supabase
       .from('users')
       .select(
         'study_streak_days, correction_ratio, coins_balance, created_at, is_vip',
@@ -60,7 +72,10 @@ export class UserStatisticsService {
     if (query?.toDate) {
       momentIdsQuery = momentIdsQuery.lte('created_at', query.toDate);
     }
-    const { data: momentIds, error: momentIdsError } = await momentIdsQuery;
+    const {
+      data: momentIds,
+      error: momentIdsError,
+    }: { data: { id: string }[] | null; error: any } = await momentIdsQuery;
     if (momentIdsError) {
       throw new NotFoundException('Could not load moments');
     }
@@ -68,10 +83,11 @@ export class UserStatisticsService {
 
     let likesReceived = 0;
     if (ids.length > 0) {
-      const { count: totalLikes } = await this.supabase
-        .from('moment_likes')
-        .select('id', { count: 'exact', head: true })
-        .in('moment_id', ids);
+      const { count: totalLikes }: { count: number | null } =
+        await this.supabase
+          .from('moment_likes')
+          .select('id', { count: 'exact', head: true })
+          .in('moment_id', ids);
       likesReceived = totalLikes ?? 0;
     }
 
@@ -86,7 +102,8 @@ export class UserStatisticsService {
     if (query?.toDate) {
       visitQuery = visitQuery.lte('created_at', query.toDate);
     }
-    const { count: totalProfileVisits } = await visitQuery;
+    const { count: totalProfileVisits }: { count: number | null } =
+      await visitQuery;
 
     return {
       studyStreakDays: user.study_streak_days,
