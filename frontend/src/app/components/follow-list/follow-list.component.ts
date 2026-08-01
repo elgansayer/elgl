@@ -26,6 +26,15 @@ import { AuthService } from '../../services/auth.service';
       </div>
 
       <div class="p-4" role="status" aria-live="polite">
+        @if (toggleError()) {
+          <p
+            role="alert"
+            class="bg-neon-pink/10 text-neon-pink px-4 py-3 rounded-lg mb-4 font-medium error-message"
+          >
+            {{ toggleError() }}
+          </p>
+        }
+
         @if (listResource.isLoading()) {
           <div class="flex justify-center py-8">
             <div
@@ -34,8 +43,8 @@ import { AuthService } from '../../services/auth.service';
             ></div>
           </div>
         } @else if (listResource.error()) {
-          <p class="text-center text-neon-pink py-6 font-medium" role="alert">
-            {{ 'followList.loadError' | t }}
+          <p class="text-center text-neon-pink py-6 font-medium error-message" role="alert">
+            {{ loadErrorMessage() }}
           </p>
         } @else {
           <ul class="space-y-2" role="list">
@@ -108,6 +117,7 @@ export class FollowListComponent {
 
   private readonly followOverrides = signal<Map<string, boolean>>(new Map());
   private readonly pendingIds = signal<Set<string>>(new Set());
+  private readonly toggleError = signal<string | null>(null);
 
   readonly titleKey = computed(() =>
     this.mode() === 'followers' ? 'followList.followersTitle' : 'followList.followingTitle',
@@ -123,6 +133,14 @@ export class FollowListComponent {
       params.mode === 'followers'
         ? this.userService.getFollowers(params.userId)
         : this.userService.getFollowing(params.userId),
+  });
+
+  readonly loadErrorMessage = computed(() => {
+    const error = this.listResource.error();
+    if (error) {
+      return this.i18n.translate('followList.loadError');
+    }
+    return '';
   });
 
   readonly users = computed<UserProfile[]>(() => {
@@ -150,6 +168,7 @@ export class FollowListComponent {
 
     const wasFollowing = user.is_followed_by_me ?? false;
     this.pendingIds.update((ids) => new Set(ids).add(user.id));
+    this.toggleError.set(null);
     this.followOverrides.update((map) => new Map(map).set(user.id, !wasFollowing));
 
     try {
@@ -158,9 +177,13 @@ export class FollowListComponent {
       } else {
         await this.userService.followUser(user.id);
       }
-    } catch (e: unknown) {
+    } catch (error: unknown) {
       this.followOverrides.update((map) => new Map(map).set(user.id, wasFollowing));
-      console.error(this.i18n.translate('followList.loadError'), e);
+      this.toggleError.set(
+        error instanceof Error && error.message
+          ? error.message
+          : this.i18n.translate('followList.followError'),
+      );
     } finally {
       this.pendingIds.update((ids) => {
         const next = new Set(ids);

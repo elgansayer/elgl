@@ -130,4 +130,56 @@ describe('FollowListComponent', () => {
     expect(mockUserService.followUser).toHaveBeenCalledWith('f1');
     expect(button.textContent).toContain('Unfollow');
   });
+  it('should render the correct number of followers', async () => {
+    mockUserService.getFollowers.mockResolvedValue({
+      data: [
+        makeUser({ id: 'f1', display_name: 'Follower One' }),
+        makeUser({ id: 'f2', display_name: 'Follower Two' }),
+      ],
+      total: 2,
+    });
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const userElements = fixture.nativeElement.querySelectorAll('li');
+    expect(userElements.length).toBe(2);
+    expect(fixture.nativeElement.textContent).toContain('Follower One');
+    expect(fixture.nativeElement.textContent).toContain('Follower Two');
+  });
+
+  it('should handle errors when fetching followers', async () => {
+    mockUserService.getFollowers.mockRejectedValue(new Error('Failed to fetch followers'));
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const errorMessage = fixture.nativeElement.querySelector('.error-message');
+    expect(errorMessage.textContent).toContain('Error loading followers.');
+  });
+
+  it('should handle errors when toggling follow state', async () => {
+    mockUserService.getFollowers.mockResolvedValue({
+      data: [makeUser({ id: 'f1', display_name: 'Follower One', is_followed_by_me: false })],
+      total: 1,
+    });
+    mockUserService.followUser.mockRejectedValue(new Error('Failed to follow user'));
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('li button');
+    expect(button.textContent).toContain('Follow');
+
+    button.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(mockUserService.followUser).toHaveBeenCalledWith('f1');
+    const errorMessage = fixture.nativeElement.querySelector('.error-message');
+    expect(errorMessage.textContent).toContain('Failed to follow user');
+  });
 });
