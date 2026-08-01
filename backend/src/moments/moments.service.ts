@@ -63,11 +63,12 @@ interface MomentCommentRow {
 
 @Injectable()
 export class MomentsService {
-  async getLifetimeCounts(): Promise<{
+  async getLifetimeCounts(_userId?: string): Promise<{
     translations: number;
     corrections: number;
     moments: number;
   }> {
+    void _userId;
     const supabase = this.supabaseService.getClient();
 
     const { data: momentsData, error: momentsError } = await supabase
