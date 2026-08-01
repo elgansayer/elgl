@@ -10,6 +10,19 @@ type UsersRow = {
   xp_total: number | null;
   last_active_at: string | null;
   is_serious_learner: boolean | null;
+  totp_secret?: string | null;
+  two_factor_secret?: string | null;
+  two_factor_enabled?: boolean | null;
+  profile_visibility?: string | null;
+  status_visibility?: string | null;
+  message_filters?: Record<string, unknown> | null;
+  business_name?: string | null;
+  business_hours?: string | null;
+  website_url?: string | null;
+  catalog?: unknown[] | null;
+  greeting_message?: string | null;
+  away_message?: string | null;
+  coins_balance?: number | null;
 };
 
 type GroupsRow = {
@@ -80,6 +93,7 @@ type ProfileVisitRow = {
   id: string;
   visitor_id: string;
   viewed_id: string;
+  viewer_id?: string;
   created_at: string;
 };
 
@@ -124,6 +138,14 @@ type FavouriteRow = {
   id: string;
   user_id: string;
   moment_id: string;
+  created_at: string;
+};
+
+type LoginHistoryRow = {
+  id: string;
+  user_id: string;
+  ip_address?: string | null;
+  user_agent?: string | null;
   created_at: string;
 };
 
@@ -238,6 +260,12 @@ export interface Database {
         Row: ChatMessageRow;
         Insert: Partial<ChatMessageRow>;
         Update: Partial<ChatMessageRow>;
+        Relationships: [];
+      };
+      login_history: {
+        Row: LoginHistoryRow;
+        Insert: Partial<LoginHistoryRow>;
+        Update: Partial<LoginHistoryRow>;
         Relationships: [];
       };
     };

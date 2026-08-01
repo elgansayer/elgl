@@ -28,6 +28,7 @@ describe('ChatService', () => {
 
   beforeEach(() => {
     currentUser = signal<{ id: string } | null>(null);
+    currentUser.set({ id: 'user-1' });
     getAccessTokenMock = vi.fn().mockReturnValue('test-token');
     getBlockedAndBlockerIdsMock = vi.fn().mockResolvedValue([]);
     getBlockedIdsAsyncMock = vi.fn().mockResolvedValue([]);
@@ -74,6 +75,7 @@ describe('ChatService', () => {
   });
 
   afterEach(() => {
+    TestBed.resetTestingModule();
     httpMock.verify();
     vi.restoreAllMocks();
   });

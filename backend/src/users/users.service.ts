@@ -1012,7 +1012,7 @@ export class UsersService {
       supabase.from('flashcards').delete().eq('user_id', userId),
       supabase.from('chat_messages').delete().eq('sender_id', userId),
       supabase.from('favourites').delete().eq('user_id', userId),
-      supabase.from('profile_visits').delete().eq('viewer_id', userId),
+      supabase.from('profile_visits').delete().eq('visitor_id', userId),
       supabase.from('profile_visits').delete().eq('viewed_id', userId),
       supabase.from('user_follows').delete().eq('follower_id', userId),
       supabase.from('user_follows').delete().eq('following_id', userId),

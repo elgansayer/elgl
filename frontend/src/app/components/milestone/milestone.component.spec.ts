@@ -36,6 +36,8 @@ describe('MilestoneComponent', () => {
       deleteMilestone: vi.fn().mockResolvedValue(undefined),
     };
 
+    TestBed.resetTestingModule();
+
     await TestBed.configureTestingModule({
       imports: [MilestoneComponent],
       providers: [{ provide: MilestoneService, useValue: serviceMock }],
@@ -47,6 +49,10 @@ describe('MilestoneComponent', () => {
 
     fixture = TestBed.createComponent(MilestoneComponent);
     component = fixture.componentInstance;
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
   });
 
   it('should create the component', () => {
