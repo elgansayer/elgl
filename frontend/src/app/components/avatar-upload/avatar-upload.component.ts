@@ -7,6 +7,7 @@ import {
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { MediaService } from '../../services/media.service';
+import { SupabaseService } from '../../services/supabase.service';
 
 @Component({
   selector: 'app-avatar-upload',
@@ -18,6 +19,7 @@ import { MediaService } from '../../services/media.service';
 export class AvatarUploadComponent {
   private readonly i18n = inject(I18nService);
   private readonly mediaService = inject(MediaService);
+  private readonly supabaseService = inject(SupabaseService);
 
   readonly avatarUrl = output<string>();
 
@@ -185,8 +187,7 @@ export class AvatarUploadComponent {
       });
 
       // 5. Upload via Supabase service
-      const supabaseService = inject(SupabaseService);
-      const result = await supabaseService.uploadAvatar(croppedFile);
+      const result = await this.supabaseService.uploadAvatar(croppedFile);
 
       // 6. Emit the resulting URL
       this.avatarUrl.emit(result.avatarUrl);

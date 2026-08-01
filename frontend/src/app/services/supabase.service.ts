@@ -72,7 +72,7 @@ export class SupabaseService {
       throw new Error(`Failed to upload avatar: ${error.message}`);
     }
 
-    const { publicUrl } = this.supabase.storage.from('avatars').getPublicUrl(fileName);
-    return { avatarUrl: publicUrl };
+    const { data } = this.supabase.storage.from('avatars').getPublicUrl(fileName);
+    return { avatarUrl: data.publicUrl };
   }
 }
