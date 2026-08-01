@@ -331,7 +331,7 @@ export class ChatService {
     } catch (cause) {
       console.error('Failed to reply to status update:', cause);
       throw new Error('Could not send reply to status update. Please try again.', {
-        cause: cause instanceof Error ? cause : new Error(String(cause)),
+        cause: cause instanceof Error ? cause : undefined,
       });
     }
   }
