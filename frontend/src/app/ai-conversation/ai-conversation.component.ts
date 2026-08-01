@@ -127,10 +127,16 @@ export class AiConversationComponent {
     this.inputText.set('');
     this.isLoading.set(true);
     try {
-      const { reply } = await this.aiService.sendMessage(
+      const response = await this.aiService.sendMessage(
         text,
         this.currentScenarioId,
       );
+      if (this.isValidResponse(response)) {
+        const { reply } = response;
+        this.messages.update((msgs) => [...msgs, { from: 'ai', text: reply }]);
+      } else {
+        throw new Error('Invalid response format');
+      }
       this.messages.update((msgs) => [...msgs, { from: 'ai', text: reply }]);
     } catch {
       this.messages.update((msgs) => [

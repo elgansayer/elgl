@@ -154,7 +154,7 @@ export class AppComponent implements OnInit {
 
       await this.centrifugeService.connect();
       this.centrifugeService.subscribe(`user_${user.id}`, (data: unknown) => {
-        const payload = data as { type?: string; gift?: VirtualGift; sender_name?: string } | null;
+        const payload = this.isValidPayload(data) ? data : null;
         if (payload && payload.type === 'virtual_gift' && payload.gift) {
           this.economyStore.triggerGiftAnimation({
             gift: payload.gift,
@@ -165,7 +165,7 @@ export class AppComponent implements OnInit {
 
         // Handle incoming call events
         if (payload && payload.type === 'incoming_call') {
-          const callPayload = payload as IncomingCallData & { type: string };
+          const callPayload = this.isValidCallPayload(payload) ? payload : null;
           this.incomingCallData.set({
             callerId: callPayload.callerId,
             callerName: callPayload.callerName,
