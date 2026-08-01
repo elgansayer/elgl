@@ -1,5 +1,4 @@
 import { Component, input, output } from '@angular/core';
-import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-daily-login-modal',

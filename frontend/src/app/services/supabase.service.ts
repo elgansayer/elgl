@@ -59,5 +59,20 @@ export class SupabaseService {
     const db = await this.getOfflineDB();
     await db.delete('savedContent', id);
   }
-}
+  async uploadAvatar(file: File): Promise<{ avatarUrl: string }> {
+    const fileName = `avatars/${Date.now()}-${file.name}`;
+    const { error } = await this.supabase.storage
+      .from('avatars')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (error) {
+      throw new Error(`Failed to upload avatar: ${error.message}`);
+    }
+
+    const { publicUrl } = this.supabase.storage.from('avatars').getPublicUrl(fileName);
+    return { avatarUrl: publicUrl };
+  }
 }

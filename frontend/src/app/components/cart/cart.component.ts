@@ -3,7 +3,6 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { RouterLink } from '@angular/router';
 
 interface CartItem {
   itemId: string;

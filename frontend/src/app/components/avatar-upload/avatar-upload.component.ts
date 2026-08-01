@@ -184,8 +184,9 @@ export class AvatarUploadComponent {
         type: 'image/png',
       });
 
-      // 5. Upload via media service
-      const result = await this.mediaService.uploadAvatar(croppedFile);
+      // 5. Upload via Supabase service
+      const supabaseService = inject(SupabaseService);
+      const result = await supabaseService.uploadAvatar(croppedFile);
 
       // 6. Emit the resulting URL
       this.avatarUrl.emit(result.avatarUrl);
