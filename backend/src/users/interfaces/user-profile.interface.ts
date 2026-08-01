@@ -100,5 +100,5 @@ export interface ProfileVisitor {
     avatar_url?: string;
     native_languages?: string[];
     target_languages?: string[];
-  };
+  } | null;
 }

@@ -90,6 +90,45 @@ export interface GroupMember {
   providedIn: 'root',
 })
 export class ChatService {
+  private readonly labels = signal<string[]>([]);
+
+  async getLabels(): Promise<string[]> {
+    const response = await firstValueFrom(
+      this.http.get<string[]>(`${this.baseUrl}/labels`, { headers: this.getHeaders() }),
+    );
+    this.labels.set(response);
+    return response;
+  }
+
+  async addLabel(label: string): Promise<void> {
+    await firstValueFrom(
+      this.http.post(`${this.baseUrl}/labels`, { label }, { headers: this.getHeaders() }),
+    );
+    this.labels.update((labels) => [...labels, label]);
+  }
+
+  async removeLabel(label: string): Promise<void> {
+    await firstValueFrom(
+      this.http.delete(`${this.baseUrl}/labels/${encodeURIComponent(label)}`, {
+        headers: this.getHeaders(),
+      }),
+    );
+    this.labels.update((labels) => labels.filter((l) => l !== label));
+  }
+
+  async assignLabelToRoom(roomId: string, label: string): Promise<void> {
+    await firstValueFrom(
+      this.http.post(`${this.baseUrl}/rooms/${roomId}/labels`, { label }, { headers: this.getHeaders() }),
+    );
+  }
+
+  async removeLabelFromRoom(roomId: string, label: string): Promise<void> {
+    await firstValueFrom(
+      this.http.delete(`${this.baseUrl}/rooms/${roomId}/labels/${encodeURIComponent(label)}`, {
+        headers: this.getHeaders(),
+      }),
+    );
+  }
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private safetyService = inject(SafetyService);

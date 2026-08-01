@@ -32,6 +32,8 @@ export class ChatListComponent implements OnInit {
   private readonly i18n = inject(I18nService);
 
   readonly isLoading = signal<boolean>(true);
+  readonly labels = signal<string[]>([]);
+  readonly selectedLabel = signal<string | null>(null);
   readonly previews = signal<ChatRoomPreview[]>([]);
   readonly search = signal<string>('');
 
@@ -52,6 +54,55 @@ export class ChatListComponent implements OnInit {
   // --------------------------------------------------------------------
   notImplemented(): void {
     notImplementedToast();
+  }
+
+  async loadLabels(): Promise<void> {
+    try {
+      const labels = await this.chatService.getLabels();
+      this.labels.set(labels);
+    } catch (error) {
+      console.error('Failed to load labels:', error);
+    }
+  }
+
+  async addLabel(label: string): Promise<void> {
+    try {
+      await this.chatService.addLabel(label);
+      showToast(this.i18n.translate('chatList.labelAdded'), 'success');
+    } catch (error) {
+      console.error('Failed to add label:', error);
+      showToast(this.i18n.translate('chatList.labelAddFailed'), 'error');
+    }
+  }
+
+  async removeLabel(label: string): Promise<void> {
+    try {
+      await this.chatService.removeLabel(label);
+      showToast(this.i18n.translate('chatList.labelRemoved'), 'success');
+    } catch (error) {
+      console.error('Failed to remove label:', error);
+      showToast(this.i18n.translate('chatList.labelRemoveFailed'), 'error');
+    }
+  }
+
+  async assignLabelToRoom(roomId: string, label: string): Promise<void> {
+    try {
+      await this.chatService.assignLabelToRoom(roomId, label);
+      showToast(this.i18n.translate('chatList.labelAssigned'), 'success');
+    } catch (error) {
+      console.error('Failed to assign label to room:', error);
+      showToast(this.i18n.translate('chatList.labelAssignFailed'), 'error');
+    }
+  }
+
+  async removeLabelFromRoom(roomId: string, label: string): Promise<void> {
+    try {
+      await this.chatService.removeLabelFromRoom(roomId, label);
+      showToast(this.i18n.translate('chatList.labelRemovedFromRoom'), 'success');
+    } catch (error) {
+      console.error('Failed to remove label from room:', error);
+      showToast(this.i18n.translate('chatList.labelRemoveFromRoomFailed'), 'error');
+    }
   }
 
   readonly filterPills = computed(() => {
@@ -99,6 +150,7 @@ export class ChatListComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     await this.loadPreviews();
     await this.loadLockedRooms();
+    await this.loadLabels();
   }
 
   async loadPreviews(): Promise<void> {
