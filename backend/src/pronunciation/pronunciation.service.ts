@@ -99,7 +99,7 @@ export class PronunciationService {
       language: 'en',
     };
   }
-  async processVoiceFeedback(
+  processVoiceFeedback(
     audio: Express.Multer.File,
     feedbackText: string,
   ): Promise<{ success: boolean }> {
@@ -107,5 +107,6 @@ export class PronunciationService {
     // In a real implementation, this could involve saving the audio and text to a database
     console.log('Received voice feedback:', feedbackText);
     console.log('Audio file size:', audio.size);
-    return { success: true };
+    return Promise.resolve({ success: true });
   }
+}

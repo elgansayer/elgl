@@ -4,10 +4,6 @@ import {
   UploadedFile,
   UseInterceptors,
   Body,
-  Body,
-  Post,
-  UploadedFile,
-  UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PronunciationService } from './pronunciation.service';
@@ -33,3 +29,4 @@ export class PronunciationController {
   ): Promise<{ success: boolean }> {
     return this.pronunciationService.processVoiceFeedback(audio, feedbackText);
   }
+}

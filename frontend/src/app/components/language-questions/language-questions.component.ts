@@ -1,5 +1,6 @@
 import { Component, computed, inject, input, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { UpperCasePipe } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -22,7 +23,7 @@ export interface LanguageQuestion {
 
 @Component({
   selector: 'app-language-questions',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, UpperCasePipe],
   template: `
     <section class="space-y-4" role="region" aria-label="{{ 'moments.questions' | t }}">
       <h2 class="text-lg font-bold text-gray-200">{{ 'moments.questions' | t }}</h2>

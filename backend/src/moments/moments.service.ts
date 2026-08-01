@@ -515,24 +515,25 @@ export class MomentsService {
   ): Promise<{ correct: boolean; correctAnswer: string }> {
     const supabase = this.supabaseService.getClient();
 
-    const { data: moment, error: fetchError } = await supabase
+    const { data: momentData, error: fetchError } = await supabase
       .from('moments')
       .select(
         'user_id, post_type, correct_answer, question_options, question_text',
       )
       .eq('id', momentId)
-      .returns<{
-        user_id: string;
-        post_type?: string;
-        correct_answer?: string;
-        question_options?: string[];
-        question_text?: string;
-      }>()
       .single();
 
-    if (fetchError || !moment) {
+    if (fetchError || !momentData) {
       throw new Error('Moment not found');
     }
+
+    const moment = momentData as {
+      user_id: string;
+      post_type?: string;
+      correct_answer?: string;
+      question_options?: string[];
+      question_text?: string;
+    };
 
     if (moment.post_type !== 'language_question') {
       throw new BadRequestException('Only language questions can be answered.');

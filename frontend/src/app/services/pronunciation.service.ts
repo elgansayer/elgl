@@ -22,20 +22,6 @@ export class PronunciationService {
     return this.http.post<{ success: boolean }>(`${this.apiUrl}/voice-feedback`, formData);
   }
 
-  async getUserAudioIntro(userId: string): Promise<string | null> {
-    const supabaseClient = inject(SupabaseService).getClient();
-    const { data, error } = await supabaseClient
-      .from('users')
-      .select<{ audio_intro_url: string }>('audio_intro_url')
-      .eq('id', userId)
-      .single();
-    if (error) {
-      console.warn('Failed to fetch audio_intro_url', error);
-      return null;
-    }
-    return data?.audio_intro_url ?? null;
-  }
-
   analyse(
     audioBlob: Blob,
     referenceText?: string,
