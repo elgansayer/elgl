@@ -194,7 +194,11 @@ export class AppComponent implements OnInit {
     if (!data || typeof data !== 'object') {
       return false;
     }
-    const candidate = data as Record<string, unknown>;
+    if (typeof data === 'object' && data !== null) {
+      const candidate = data as Record<string, unknown>;
+      return typeof candidate['type'] === 'string';
+    }
+    return false;
     return typeof candidate['type'] === 'string';
   }
 
@@ -202,7 +206,17 @@ export class AppComponent implements OnInit {
     if (!payload || typeof payload !== 'object') {
       return false;
     }
-    const candidate = payload as Record<string, unknown>;
+    if (typeof payload === 'object' && payload !== null) {
+      const candidate = payload as Record<string, unknown>;
+      return (
+        typeof candidate['callerId'] === 'string' &&
+        typeof candidate['callerName'] === 'string' &&
+        typeof candidate['callerAvatarUrl'] === 'string' &&
+        typeof candidate['roomName'] === 'string' &&
+        typeof candidate['isVideoCall'] === 'boolean'
+      );
+    }
+    return false;
     return (
       typeof candidate['callerId'] === 'string' &&
       typeof candidate['callerName'] === 'string' &&

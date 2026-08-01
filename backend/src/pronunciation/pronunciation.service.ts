@@ -99,4 +99,13 @@ export class PronunciationService {
       language: 'en',
     };
   }
-}
+  async processVoiceFeedback(
+    audio: Express.Multer.File,
+    feedbackText: string,
+  ): Promise<{ success: boolean }> {
+    // Placeholder logic for processing voice feedback
+    // In a real implementation, this could involve saving the audio and text to a database
+    console.log('Received voice feedback:', feedbackText);
+    console.log('Audio file size:', audio.size);
+    return { success: true };
+  }

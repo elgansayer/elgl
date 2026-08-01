@@ -4,6 +4,10 @@ import {
   UploadedFile,
   UseInterceptors,
   Body,
+  Body,
+  Post,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PronunciationService } from './pronunciation.service';
@@ -21,4 +25,11 @@ export class PronunciationController {
   ): Promise<PronunciationFeedbackResponseDto> {
     return this.pronunciationService.analyse(audio, referenceText);
   }
-}
+  @Post('voice-feedback')
+  @UseInterceptors(FileInterceptor('audio'))
+  async submitVoiceFeedback(
+    @UploadedFile() audio: Express.Multer.File,
+    @Body('feedbackText') feedbackText: string,
+  ): Promise<{ success: boolean }> {
+    return this.pronunciationService.processVoiceFeedback(audio, feedbackText);
+  }
