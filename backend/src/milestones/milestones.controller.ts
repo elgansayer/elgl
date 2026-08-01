@@ -27,10 +27,13 @@ export class MilestonesController {
   constructor(private readonly milestonesService: MilestonesService) {}
 
   @Post()
-  create(
+  async create(
     @Body() dto: CreateMilestoneDto,
     @Request() req: { user?: AuthenticatedUser },
   ): Promise<Milestone> {
+    if (!dto.title || dto.title.trim().length === 0) {
+      throw new Error('Validation failed');
+    }
     const userId = req.user?.sub ?? req.user?.id ?? '';
     return this.milestonesService.create(dto, userId);
   }
