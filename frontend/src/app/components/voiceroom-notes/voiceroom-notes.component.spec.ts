@@ -103,7 +103,8 @@ describe('VoiceroomNotesComponent', () => {
         const earlyReloadReq = httpMock.expectOne('/audio-rooms/room-1/notes');
         earlyReloadReq.flush([]);
         break;
-      } catch (e) {
+      } catch {
+        // Handle early reload request failure silently
       }
     }
     await fixture.whenStable();

@@ -104,7 +104,7 @@ export class AiConversationComponent {
 
   readonly scenarioList = toSignal(
     from(this.aiService.getScenarios()),
-    { initialValue: [] as Scenario[] },
+    { initialValue: [] },
   );
 
   readonly selectedScenario = signal<Scenario | null>(null);

@@ -1,7 +1,7 @@
 import { Component, computed, inject, OnInit, signal, viewChild, afterNextRender, effect, DestroyRef } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from './services/auth.service';
-import { EconomyStore, VirtualGift } from './services/economy.store';
+import { EconomyStore } from './services/economy.store';
 import { CentrifugeService } from './services/centrifuge.service';
 import { FcmService } from './services/fcm.service';
 import { SafetyService } from './services/safety.service';
