@@ -95,6 +95,18 @@ export class I18nService {
     'studyStreak.day': 'Day',
     'studyStreak.days': 'Days',
 
+    // Audio Intro Recorder
+    'audioIntro.title': 'Audio Introduction',
+    'audioIntro.noRecording': 'No recording yet.',
+    'audioIntro.record': 'Start recording',
+    'audioIntro.stop': 'Stop recording',
+    'audioIntro.play': 'Play',
+    'audioIntro.pause': 'Pause',
+    'audioIntro.recording': 'Recording... {{seconds}}s remaining',
+    'audioIntro.errorLoading': 'Could not load your audio introduction.',
+    'audioIntro.microphoneError': 'Microphone access denied or unavailable.',
+    'audioIntro.uploadError': 'Could not upload your recording.',
+
     // Milestone Tracking
     'milestones.title': 'Milestones',
     'milestones.progress': 'Progress',
