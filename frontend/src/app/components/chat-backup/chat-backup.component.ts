@@ -1,4 +1,4 @@
-import { Component, input, inject } from '@angular/core';
+import { Component, input, inject, signal } from '@angular/core';
 import { ChatBackupService } from '../../services/chat-backup.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -80,7 +80,11 @@ export class ChatBackupComponent {
   }
 
   onFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+    const input = target;
     if (!input.files || input.files.length === 0) return;
 
     const file = input.files[0];
@@ -88,7 +92,12 @@ export class ChatBackupComponent {
 
     reader.onload = async () => {
       try {
-        const messages = JSON.parse(reader.result as string);
+        const rawResult = reader.result;
+        if (typeof rawResult !== 'string') {
+          this.importError.set(true);
+          return;
+        }
+        const messages = JSON.parse(rawResult);
         if (!Array.isArray(messages)) {
           this.importError.set(true);
           return;
@@ -107,4 +116,3 @@ export class ChatBackupComponent {
   }
 }
 
-import { signal } from '@angular/core';

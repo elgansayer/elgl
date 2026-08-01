@@ -62,10 +62,9 @@ export class CoverPhotoCropperComponent {
 
   readonly croppedBlob = signal<Blob | null>(null);
 
-  onImageCropped(event: unknown) {
-    const e = event as { blob?: Blob };
-    if (e.blob) {
-      this.croppedBlob.set(e.blob);
+  onImageCropped(event: { blob?: Blob }): void {
+    if (event.blob) {
+      this.croppedBlob.set(event.blob);
     }
   }
 

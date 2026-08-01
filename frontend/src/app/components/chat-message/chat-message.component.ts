@@ -235,7 +235,7 @@ export class ChatMessageComponent {
       if (!res.ok) {
         throw new Error('Simplify request failed');
       }
-      const data = (await res.json()) as { original: string; simplified: string };
+      const data = await res.json();
       this.simplifiedText.set(data.simplified);
     } catch (err) {
       console.error('Simplify error:', err);

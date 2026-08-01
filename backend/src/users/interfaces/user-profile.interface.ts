@@ -94,5 +94,5 @@ export interface ProfileVisitor {
   visitor_id: string;
   viewed_id: string;
   created_at: string;
-  visitor?: ProfileVisitor['visitor'] | null;
+  visitor?: ProfileVisitor;
 }

@@ -114,6 +114,16 @@ export class ChatRoomComponent implements OnDestroy {
 
   private subscription: unknown = null;
 
+  private isChatEventPayload(
+    value: unknown,
+  ): value is { message?: ChatMessage; typing?: boolean } {
+    return (
+      !!value &&
+      typeof value === 'object' &&
+      ('message' in value || 'typing' in value)
+    );
+  }
+
   private async initializeRoom(): Promise<void> {
     await this.loadRoomDetails();
     if (this.isLocked()) {
@@ -227,7 +237,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.centrifugeService.unsubscribe(`chat:${this.roomId}`);
     }
     this.subscription = this.centrifugeService.subscribe(`chat:${this.roomId}`, (data: unknown) => {
-      const payload = data as { message?: ChatMessage; typing?: boolean } | null;
+      const payload = this.isChatEventPayload(data) ? data : null;
       if (payload?.message) {
         this.messages.update((list) => [...list, payload.message!]);
       } else if (payload?.typing) {
@@ -549,8 +559,8 @@ export class ChatRoomComponent implements OnDestroy {
       for (let i = currentIndex + 1; i < msgs.length; i++) {
         const nextMsg = msgs[i];
         if (nextMsg.message_type === 'voice' && nextMsg.media_url) {
-          const audioElement = document.getElementById(`audio-${nextMsg.id}`) as HTMLAudioElement;
-          if (audioElement) {
+          const audioElement = document.getElementById(`audio-${nextMsg.id}`);
+          if (audioElement instanceof HTMLAudioElement) {
             audioElement.play().catch((e) => console.error('Auto-play failed:', e));
           }
           break;

@@ -50,7 +50,8 @@ export class RestorePurchasesService {
         .from('subscriptions')
         .select('id, user_id, plan_id, status, created_at')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .returns<SubscriptionRow[]>();
 
       if (error) {
         throw error;
