@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return */
 import {
   BadRequestException,
   Injectable,
@@ -676,7 +675,8 @@ export class UsersService {
         .select('coins_balance')
         .eq('id', userId)
         .single();
-      const current = (cur?.coins_balance ?? 0) + amount;
+      const current =
+        ((cur as { coins_balance?: number })?.coins_balance ?? 0) + amount;
       await supabase
         .from('users')
         .update({ coins_balance: current } as never)
@@ -700,7 +700,10 @@ export class UsersService {
     if (error || !data) {
       return {};
     }
-    return data.message_filters ?? {};
+    return (
+      (data as { message_filters?: Record<string, unknown> })
+        ?.message_filters ?? {}
+    );
   }
 
   async setMessageFilters(

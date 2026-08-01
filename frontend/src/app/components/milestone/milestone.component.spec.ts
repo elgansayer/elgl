@@ -41,7 +41,7 @@ describe('MilestoneComponent', () => {
       providers: [{ provide: MilestoneService, useValue: serviceMock }],
     })
       .overrideComponent(MilestoneComponent, {
-        set: { declarations: [MockTranslatePipe] },
+        set: { imports: [MockTranslatePipe] },
       })
       .compileComponents();
 
