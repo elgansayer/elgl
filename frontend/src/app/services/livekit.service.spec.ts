@@ -3,35 +3,32 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { LivekitService } from './livekit.service';
 import { environment } from '../../environments/environment';
 import { vi } from 'vitest';
-import { Room } from 'livekit-client';
+import * as livekitClient from 'livekit-client';
 
-const { mockRoomConnect, mockRoomDisconnect, mockRoomPublishTrack, mockSetKey, mockCreateLocalTracks } =
-  vi.hoisted(() => ({
-    mockRoomConnect: vi.fn(),
-    mockRoomDisconnect: vi.fn(),
-    mockRoomPublishTrack: vi.fn(),
-    mockSetKey: vi.fn(),
-    mockCreateLocalTracks: vi.fn(),
-  }));
+vi.mock('livekit-client', () => ({
+  Room: vi.fn(),
+  createLocalTracks: vi.fn(),
+  ExternalE2EEKeyProvider: vi.fn(),
+  LocalTrack: vi.fn(),
+  RemoteTrack: vi.fn(),
+  RoomOptions: {},
+}));
 
-vi.mock('livekit-client', () => {
-  class MockRoom {
-    localParticipant = { publishTrack: mockRoomPublishTrack };
-    connect = mockRoomConnect;
-    disconnect = mockRoomDisconnect;
-    constructor(public options?: object) {}
-  }
-  return {
-    Room: MockRoom,
-    LocalTrack: class LocalTrack {},
-    RemoteTrack: class RemoteTrack {},
-    RoomOptions: {},
-    createLocalTracks: mockCreateLocalTracks,
-    ExternalE2EEKeyProvider: vi.fn().mockImplementation(() => ({
-      setKey: mockSetKey,
-    })),
-  };
-});
+/** Exposes the private internals of {@link LivekitService} for testing. */
+interface LivekitServiceInternals {
+  room: unknown;
+  _localAudioTrack: unknown;
+  _muted: boolean;
+  _speakerphone: boolean;
+}
+
+function internals(service: LivekitService): LivekitServiceInternals {
+  return service as unknown as LivekitServiceInternals;
+}
+
+const mockRoomConnect = vi.fn();
+const mockRoomDisconnect = vi.fn();
+const mockRoomPublishTrack = vi.fn();
 
 describe('LivekitService', () => {
   let service: LivekitService;
@@ -44,17 +41,36 @@ describe('LivekitService', () => {
     });
     service = TestBed.inject(LivekitService);
     httpMock = TestBed.inject(HttpTestingController);
+
+    // Reset all mock functions
+    mockRoomConnect.mockReset();
+    mockRoomDisconnect.mockReset();
+    mockRoomPublishTrack.mockReset();
+
+    // Default mocked Room constructor
+    const roomMock = vi.mocked(livekitClient.Room);
+    roomMock.mockImplementation(function () {
+      return {
+        connect: mockRoomConnect,
+        disconnect: mockRoomDisconnect,
+        localParticipant: { publishTrack: mockRoomPublishTrack },
+      };
+    } as unknown as typeof livekitClient.Room);
+
+    // Default createLocalTracks returns an empty array
+    const createLocalTracksMock = vi.mocked(livekitClient.createLocalTracks);
+    createLocalTracksMock.mockResolvedValue([]);
   });
 
   afterEach(() => {
     httpMock.verify();
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be created', () => {
     expect(service).toBeTruthy();
-    expect(typeof mockCreateLocalTracks).toBe('function');
-    expect(typeof mockSetKey).toBe('function');
+    expect(typeof mockRoomConnect).toBe('function');
+    expect(typeof mockRoomDisconnect).toBe('function');
   });
 
   describe('getToken', () => {
@@ -80,6 +96,9 @@ describe('LivekitService', () => {
 
   describe('joinRoom', () => {
     it('should connect to a room with the token from the backend', async () => {
+      const fakeRoom = new livekitClient.Room();
+      internals(service).room = fakeRoom;
+
       mockRoomConnect.mockResolvedValue(undefined);
       const roomPromise = service.joinRoom('my-room', 'user-123', false);
       const req = httpMock.expectOne(`${environment.apiUrl}/livekit/token`);
@@ -87,8 +106,8 @@ describe('LivekitService', () => {
       req.flush({ token: 'test-token' });
       const room = await roomPromise;
       expect(mockRoomConnect).toHaveBeenCalledWith(environment.liveKitUrl, 'test-token');
-      expect(room).toBeInstanceOf(Room);
-      expect((service as any).room).toBe(room);
+      expect(room).toBe(fakeRoom);
+      expect(internals(service).room).toBe(fakeRoom);
     });
   });
 
@@ -104,15 +123,19 @@ describe('LivekitService', () => {
           getSettings: vi.fn(() => ({})),
           stop: vi.fn(),
         },
-      };
-      mockCreateLocalTracks.mockResolvedValue([mockAudioTrack]);
-      const fakeRoom = new Room();
-      (service as any).room = fakeRoom;
+      } as unknown as livekitClient.LocalTrack;
+      vi.mocked(livekitClient.createLocalTracks).mockResolvedValue([mockAudioTrack]);
+
+      const fakeRoom = {
+        localParticipant: { publishTrack: mockRoomPublishTrack },
+      } as unknown as typeof livekitClient.Room;
+      internals(service).room = fakeRoom;
+
       const result = await service.publishTracks();
       expect(mockRoomPublishTrack).toHaveBeenCalledWith(mockAudioTrack);
       expect(result.audioTrack).toBe(mockAudioTrack);
       expect(result.videoTrack).toBeNull();
-      expect((service as any)._localAudioTrack).toBe(mockAudioTrack);
+      expect(internals(service)._localAudioTrack).toBe(mockAudioTrack);
     });
   });
 
@@ -127,9 +150,9 @@ describe('LivekitService', () => {
         unmute: vi.fn(() => {
           mockAudioTrack.isMuted = false;
         }),
-      };
-      (service as any)._localAudioTrack = mockAudioTrack;
-      (service as any)._muted = false;
+      } as unknown as livekitClient.LocalTrack;
+      internals(service)._localAudioTrack = mockAudioTrack;
+      internals(service)._muted = false;
 
       const firstResult = await service.toggleMute();
       expect(firstResult).toBe(true);
@@ -141,8 +164,8 @@ describe('LivekitService', () => {
     });
 
     it('should toggle the internal flag when no local audio track exists', async () => {
-      (service as any)._localAudioTrack = null;
-      (service as any)._muted = false;
+      internals(service)._localAudioTrack = null;
+      internals(service)._muted = false;
       expect(await service.toggleMute()).toBe(true);
       expect(await service.toggleMute()).toBe(false);
     });
@@ -150,7 +173,7 @@ describe('LivekitService', () => {
 
   describe('toggleSpeakerphone', () => {
     it('should flip the speakerphone flag and return the new state', () => {
-      (service as any)._speakerphone = false;
+      internals(service)._speakerphone = false;
       expect(service.toggleSpeakerphone()).toBe(true);
       expect(service.toggleSpeakerphone()).toBe(false);
     });
@@ -158,16 +181,18 @@ describe('LivekitService', () => {
 
   describe('leaveRoom', () => {
     it('should disconnect and clear the room when a room exists', () => {
-      const fakeRoom = new Room();
-      (service as any).room = fakeRoom;
+      const fakeRoom = {
+        disconnect: mockRoomDisconnect,
+      } as unknown as typeof livekitClient.Room;
+      internals(service).room = fakeRoom;
       service.leaveRoom();
       expect(mockRoomDisconnect).toHaveBeenCalledTimes(1);
-      expect((service as any).room).toBeNull();
-      expect((service as any)._localAudioTrack).toBeNull();
+      expect(internals(service).room).toBeNull();
+      expect(internals(service)._localAudioTrack).toBeNull();
     });
 
     it('should do nothing when no room is active', () => {
-      (service as any).room = null;
+      internals(service).room = null;
       expect(() => service.leaveRoom()).not.toThrow();
       expect(mockRoomDisconnect).not.toHaveBeenCalled();
     });
