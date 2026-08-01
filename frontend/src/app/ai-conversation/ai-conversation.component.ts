@@ -131,13 +131,7 @@ export class AiConversationComponent {
         text,
         this.currentScenarioId,
       );
-      if (this.isValidResponse(response)) {
-        const { reply } = response;
-        this.messages.update((msgs) => [...msgs, { from: 'ai', text: reply }]);
-      } else {
-        throw new Error('Invalid response format');
-      }
-      this.messages.update((msgs) => [...msgs, { from: 'ai', text: reply }]);
+      this.messages.update((msgs) => [...msgs, { from: 'ai', text: response.reply }]);
     } catch {
       this.messages.update((msgs) => [
         ...msgs,

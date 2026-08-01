@@ -1,7 +1,7 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { of, throwError } from 'rxjs';
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
 
 import { PronunciationFeedbackComponent } from './pronunciation-feedback.component';
 import {
@@ -13,13 +13,14 @@ import { I18nService } from '../../services/i18n.service';
 describe('PronunciationFeedbackComponent', () => {
   let component: PronunciationFeedbackComponent;
   let fixture: ComponentFixture<PronunciationFeedbackComponent>;
-  let pronunciationServiceMock: { analyse: vi.Mock };
-  let i18nServiceMock: { translate: vi.Mock };
+  let pronunciationServiceMock: { analyse: Mock };
+  let i18nServiceMock: { translate: Mock };
 
   const feedback: PronunciationFeedback = {
     score: 92,
     overallAssessment: 'Excellent',
     phonemeBreakdown: ['h', 'e', 'l', 'l', 'o'],
+    language: 'en',
   };
 
   beforeEach(async () => {
@@ -91,28 +92,30 @@ describe('PronunciationFeedbackComponent', () => {
   });
 
   describe('startRecording', () => {
-    it('should set isRecording to true after obtaining an audio stream', fakeAsync(() => {
-      component.startRecording();
-      tick();
+    it('should set isRecording to true after obtaining an audio stream', async () => {
+      await component.startRecording();
       expect(component.isRecording()).toBe(true);
-    }));
+    });
 
-    it('should clear any previous feedback when starting a new recording', fakeAsync(() => {
+    it('should clear any previous feedback when starting a new recording', async () => {
       component.feedback.set(feedback);
-      component.startRecording();
-      tick();
+      await component.startRecording();
       expect(component.feedback()).toBeNull();
-    }));
+    });
   });
 
   describe('stopRecording', () => {
-    it('should call pronunciationService.analyse with a Blob and the sentence', fakeAsync(() => {
-      component.sentence.set('Hello world');
-      component.startRecording();
-      tick();
+    afterEach(() => {
+      vi.useRealTimers();
+    });
 
+    it('should call pronunciationService.analyse with a Blob and the sentence', async () => {
+      component.sentence.set('Hello world');
+      await component.startRecording();
+
+      vi.useFakeTimers();
       component.stopRecording();
-      tick(200);
+      vi.advanceTimersByTime(200);
 
       expect(pronunciationServiceMock.analyse).toHaveBeenCalledTimes(1);
 
@@ -120,43 +123,48 @@ describe('PronunciationFeedbackComponent', () => {
         pronunciationServiceMock.analyse.mock.calls[0] as [Blob, string | undefined];
       expect(blobArg).toBeInstanceOf(Blob);
       expect(refArg).toBe('Hello world');
-    }));
+    });
 
-    it('should set feedback from the service result', fakeAsync(() => {
+    it('should set feedback from the service result', async () => {
       component.sentence.set('Hello');
-      component.startRecording();
-      tick();
+      await component.startRecording();
 
+      vi.useFakeTimers();
       component.stopRecording();
-      tick(200);
+      vi.advanceTimersByTime(200);
 
       expect(component.feedback()).toEqual(feedback);
-    }));
+    });
 
-    it('should not call analyse when there are no audio chunks', fakeAsync(() => {
+    it('should not call analyse when there are no audio chunks', () => {
       // No prior startRecording so mediaRecorder is null and audioChunks is empty.
+      vi.useFakeTimers();
       component.stopRecording();
-      tick(200);
+      vi.advanceTimersByTime(200);
 
       expect(pronunciationServiceMock.analyse).not.toHaveBeenCalled();
       expect(component.isRecording()).toBe(false);
-    }));
+    });
   });
 
   describe('error handling', () => {
-    it('should keep feedback null when the service throws an error', fakeAsync(() => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('should keep feedback null when the service throws an error', async () => {
       pronunciationServiceMock.analyse.mockReturnValue(
         throwError(() => new Error('network error')),
       );
 
-      component.startRecording();
-      tick();
+      await component.startRecording();
 
+      vi.useFakeTimers();
       component.stopRecording();
-      tick(200);
+      vi.advanceTimersByTime(200);
 
       expect(component.feedback()).toBeNull();
       expect(component.isRecording()).toBe(false);
-    }));
+    });
   });
 });

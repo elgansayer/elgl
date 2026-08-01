@@ -38,7 +38,6 @@ interface MomentLikeUser {
   id: string;
   display_name: string;
   avatar_url: string | null;
-  native_language?: string;
   native_languages?: string[];
   target_languages: string[];
 }
@@ -208,7 +207,8 @@ export class MomentsService {
 
     // 2) Get current user's native language for targeted visibility routing
     const profile = await this.usersService.getProfile(userId);
-    const userNativeLang = profile?.native_languages?.[0] ?? null;
+    const userNativeLang =
+      profile?.native_languages?.[0]?.toLowerCase() ?? null;
 
     let moments: MomentRecord[] = [];
 
@@ -264,7 +264,9 @@ export class MomentsService {
     // whose target_language matches the current user's native language.
     if (filter !== 'Classmates' && userNativeLang) {
       moments = moments.filter(
-        (m) => !m.target_language || m.target_language === userNativeLang,
+        (m) =>
+          !m.target_language ||
+          m.target_language.toLowerCase() === userNativeLang,
       );
     }
 
@@ -307,18 +309,17 @@ export class MomentsService {
 
       // Filter the generated mock data same as DB query
       if (filter === 'Classmates' && targetLang) {
-        return generated.filter((m) => m.target_language === targetLang);
-      }
-      // Targeted visibility for 'All' filter
-      if (filter === 'All' && userNativeLang) {
-        generated = generated.filter(
-          (m) => !m.target_language || m.target_language === userNativeLang,
+        return generated.filter(
+          (m) => m.target_language.toLowerCase() === targetLang.toLowerCase(),
         );
       }
-      // Targeted visibility for 'Following' filter
-      if (filter === 'Following' && userNativeLang) {
+      // Targeted visibility for non-Classmates filters: only show moments
+      // whose target_language matches the current user's native language.
+      if (filter !== 'Classmates' && userNativeLang) {
         generated = generated.filter(
-          (m) => !m.target_language || m.target_language === userNativeLang,
+          (m) =>
+            !m.target_language ||
+            m.target_language.toLowerCase() === userNativeLang,
         );
       }
       return generated.sort(
@@ -554,7 +555,7 @@ export class MomentsService {
           id,
           display_name,
           avatar_url,
-          native_language,
+          native_languages,
           target_languages
         )
       `,

@@ -13,6 +13,7 @@ import { R2Service } from '../cloudflare-r2/r2.service';
 describe('MomentsService', () => {
   let service: MomentsService;
   let timelineWorker: TimelineWorker;
+  let usersService: UsersService;
   let mockSupabaseClient: any;
   let mockRedisClient: any;
   let mockQueryBuilder: any;
@@ -99,6 +100,7 @@ describe('MomentsService', () => {
 
     service = module.get<MomentsService>(MomentsService);
     timelineWorker = module.get<TimelineWorker>(TimelineWorker);
+    usersService = module.get<UsersService>(UsersService);
   });
 
   afterEach(() => {
@@ -309,6 +311,101 @@ describe('MomentsService', () => {
 
       const result = await service.getFeed('user-1', 'Classmates', 'fr');
       expect(result).toHaveLength(1);
+    });
+
+    it("should only show moments targeted at the viewer's native language (or untargeted) for the All filter", async () => {
+      jest.spyOn(usersService, 'getProfile').mockResolvedValue({
+        id: 'user-1',
+        display_name: 'Serious Learner',
+        avatar_url: 'avatar.png',
+        native_languages: ['fr'],
+      } as any);
+
+      const moments = [
+        { id: 'm-fr', user_id: 'u-1', target_language: 'fr' },
+        { id: 'm-de', user_id: 'u-2', target_language: 'de' },
+        { id: 'm-none', user_id: 'u-3', target_language: null },
+      ];
+
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockImplementation((table: string) => {
+          if (table === 'moments') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              order: jest.fn().mockReturnThis(),
+              limit: jest.fn().mockResolvedValue({ data: moments }),
+            };
+          }
+          if (table === 'users') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              in: jest.fn().mockResolvedValue({
+                data: [
+                  { id: 'u-1', display_name: 'User 1' },
+                  { id: 'u-2', display_name: 'User 2' },
+                  { id: 'u-3', display_name: 'User 3' },
+                ],
+              }),
+            };
+          }
+          if (table === 'moment_likes') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              in: jest.fn().mockResolvedValue({ data: [] }),
+            };
+          }
+          return mockQueryBuilder;
+        });
+
+      const result = await service.getFeed('user-1', 'All');
+
+      expect(result.map((m) => m.id).sort()).toEqual(['m-fr', 'm-none']);
+    });
+
+    it('should match target_language to native_languages case-insensitively', async () => {
+      jest.spyOn(usersService, 'getProfile').mockResolvedValue({
+        id: 'user-1',
+        display_name: 'Serious Learner',
+        avatar_url: 'avatar.png',
+        native_languages: ['JA'],
+      } as any);
+
+      const moments = [{ id: 'm-ja', user_id: 'u-1', target_language: 'ja' }];
+
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockImplementation((table: string) => {
+          if (table === 'moments') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              order: jest.fn().mockReturnThis(),
+              limit: jest.fn().mockResolvedValue({ data: moments }),
+            };
+          }
+          if (table === 'users') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              in: jest.fn().mockResolvedValue({
+                data: [{ id: 'u-1', display_name: 'User 1' }],
+              }),
+            };
+          }
+          if (table === 'moment_likes') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              in: jest.fn().mockResolvedValue({ data: [] }),
+            };
+          }
+          return mockQueryBuilder;
+        });
+
+      const result = await service.getFeed('user-1', 'All');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('m-ja');
     });
 
     it('should return generated mock moments when DB returns no moments', async () => {

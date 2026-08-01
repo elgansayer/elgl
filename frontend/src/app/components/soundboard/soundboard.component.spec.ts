@@ -1,4 +1,4 @@
-import { TestBed, ComponentFixture, fakeAsync, tick } from '@angular/core/testing';
+import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { vi } from 'vitest';
 
@@ -117,7 +117,7 @@ describe('SoundboardComponent', () => {
     expect(component.canPlay()).toBe(false);
   });
 
-  it('should load sound items from the backend service', fakeAsync(() => {
+  it('should load sound items from the backend service', async () => {
     const mockSounds: SoundItem[] = [
       { id: 's1', name: 'Laugh', url: 'https://example.com/laugh.mp3', icon: '😂' },
       { id: 's2', name: 'Cheer', url: 'https://example.com/cheer.mp3', icon: '🎉' },
@@ -127,12 +127,12 @@ describe('SoundboardComponent', () => {
     fixture.componentRef.setInput('roomId', 'room-1');
     fixture.componentRef.setInput('hostUserId', 'host-1');
     fixture.detectChanges();
-    tick();
+    await fixture.whenStable();
 
     expect(component.sounds()).toEqual(mockSounds);
-  }));
+  });
 
-  it('should call backend playSound and haptic feedback when the host taps a sound', fakeAsync(() => {
+  it('should call backend playSound and haptic feedback when the host taps a sound', async () => {
     currentUser.set({ id: 'host-1' });
     fixture.componentRef.setInput('roomId', 'room-1');
     fixture.componentRef.setInput('hostUserId', 'host-1');
@@ -145,14 +145,13 @@ describe('SoundboardComponent', () => {
       icon: '😂',
     };
 
-    component.playSound(sound);
-    tick();
+    await component.playSound(sound);
 
     expect(playSoundMock).toHaveBeenCalledWith('room-1', 's1');
     expect((hapticFeedback as unknown as { tap: ReturnType<typeof vi.fn> }).tap).toHaveBeenCalled();
-  }));
+  });
 
-  it('should NOT call backend or haptic feedback when a non-host taps a sound', fakeAsync(() => {
+  it('should NOT call backend or haptic feedback when a non-host taps a sound', async () => {
     currentUser.set({ id: 'guest-9' });
     fixture.componentRef.setInput('roomId', 'room-1');
     fixture.componentRef.setInput('hostUserId', 'host-1');
@@ -165,18 +164,17 @@ describe('SoundboardComponent', () => {
       icon: '😂',
     };
 
-    component.playSound(sound);
-    tick();
+    await component.playSound(sound);
 
     expect(playSoundMock).not.toHaveBeenCalled();
     expect((hapticFeedback as unknown as { tap: ReturnType<typeof vi.fn> }).tap).not.toHaveBeenCalled();
-  }));
+  });
 
-  it('should play a remote sound when a soundboard_play Centrifugo event arrives', fakeAsync(() => {
+  it('should play a remote sound when a soundboard_play Centrifugo event arrives', async () => {
     fixture.componentRef.setInput('roomId', 'room-1');
     fixture.componentRef.setInput('hostUserId', 'host-1');
     fixture.detectChanges();
-    tick();
+    await fixture.whenStable();
 
     const channel = 'room_room-1';
     const subscription = subscribeCalls.find((c) => c.channel === channel);
@@ -184,12 +182,11 @@ describe('SoundboardComponent', () => {
 
     const soundUrl = 'https://example.com/remote.mp3';
     subscription?.cb({ type: 'soundboard_play', sound_url: soundUrl });
-    tick();
 
     // The component creates a new Audio element and sets volume to 0.6.
     expect(audioInstances).toHaveLength(1);
     expect(audioInstances[0].src).toBe(soundUrl);
     expect(audioInstances[0].volume).toBe(0.6);
     expect(audioInstances[0].play).toHaveBeenCalled();
-  }));
+  });
 });

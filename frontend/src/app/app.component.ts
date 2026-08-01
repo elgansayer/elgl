@@ -1,7 +1,7 @@
 import { Component, computed, inject, OnInit, signal, viewChild, afterNextRender, effect, DestroyRef } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from './services/auth.service';
-import { EconomyStore } from './services/economy.store';
+import { EconomyStore, VirtualGift } from './services/economy.store';
 import { CentrifugeService } from './services/centrifuge.service';
 import { FcmService } from './services/fcm.service';
 import { SafetyService } from './services/safety.service';
@@ -183,7 +183,7 @@ export class AppComponent implements OnInit {
 
   private isValidPayload(data: unknown): data is {
     type: string;
-    gift?: unknown;
+    gift?: VirtualGift;
     sender_name?: string;
     callerId?: string;
     callerName?: string;
@@ -195,7 +195,7 @@ export class AppComponent implements OnInit {
       return false;
     }
     const candidate = data as Record<string, unknown>;
-    return typeof candidate.type === 'string';
+    return typeof candidate['type'] === 'string';
   }
 
   private isIncomingCallPayload(payload: unknown): payload is IncomingCallData {
@@ -204,11 +204,11 @@ export class AppComponent implements OnInit {
     }
     const candidate = payload as Record<string, unknown>;
     return (
-      typeof candidate.callerId === 'string' &&
-      typeof candidate.callerName === 'string' &&
-      typeof candidate.callerAvatarUrl === 'string' &&
-      typeof candidate.roomName === 'string' &&
-      typeof candidate.isVideoCall === 'boolean'
+      typeof candidate['callerId'] === 'string' &&
+      typeof candidate['callerName'] === 'string' &&
+      typeof candidate['callerAvatarUrl'] === 'string' &&
+      typeof candidate['roomName'] === 'string' &&
+      typeof candidate['isVideoCall'] === 'boolean'
     );
   }
 

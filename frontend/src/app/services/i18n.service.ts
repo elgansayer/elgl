@@ -196,6 +196,8 @@ export class I18nService {
     'moments.chipLingq': '📚 LingQ saving',
     'moments.postPlaceholder': 'Share what you are practising today...',
     'moments.imageUrlPlaceholder': 'Image URL',
+    'moments.targetLanguageLabel': 'Visible to native speakers of',
+    'moments.targetLanguageBadge': 'For {{language}} native speakers',
     'moments.addImageBtn': 'Add image',
     'moments.addVoiceBtn': 'Add voice',
     'moments.postingBtn': 'Posting...',

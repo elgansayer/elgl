@@ -97,22 +97,18 @@ describe('VoiceroomNotesComponent', () => {
       vocabulary: 'word',
     });
     postReq.flush({});
-    for (let i = 0; i < 10; i++) {
+
+    let reloadReq;
+    for (let i = 0; i < 10 && !reloadReq; i++) {
       await new Promise((resolve) => setTimeout(resolve, 0));
-      try {
-        const earlyReloadReq = httpMock.expectOne('/audio-rooms/room-1/notes');
-        earlyReloadReq.flush([]);
-        break;
-      } catch {
-        // Handle early reload request failure silently
+      const pending = httpMock.match('/audio-rooms/room-1/notes');
+      if (pending.length) {
+        reloadReq = pending[0];
       }
     }
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const reloadReq = httpMock.expectOne('/audio-rooms/room-1/notes');
-    expect(reloadReq.request.method).toBe('GET');
-    reloadReq.flush([
+    expect(reloadReq).toBeDefined();
+    expect(reloadReq!.request.method).toBe('GET');
+    reloadReq!.flush([
       {
         id: 'n2',
         room_id: 'room-1',
