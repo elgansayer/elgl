@@ -13,12 +13,27 @@ describe('UsersService', () => {
     mockQueryBuilder = {
       select: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
+      upsert: jest.fn().mockResolvedValue({ error: null }),
+      delete: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
+      in: jest.fn().mockReturnThis(),
+      order: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockResolvedValue({ data: [], error: null }),
+      range: jest.fn().mockResolvedValue({ data: [], error: null }),
+      maybeSingle: jest.fn(),
       single: jest.fn(),
+      rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
     };
 
     mockSupabaseClient = {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
+      rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
+      auth: {
+        admin: {
+          getUserById: jest.fn(),
+          generateLink: jest.fn(),
+        },
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -306,6 +321,85 @@ describe('UsersService', () => {
       expect(result.data).toEqual([
         { id: 'g1', display_name: 'Following One', is_followed_by_me: false },
       ]);
+    });
+  });
+  describe('getVisitors', () => {
+    it('should return empty list when query succeeds', async () => {
+      mockSupabaseClient.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockResolvedValue({ data: [], error: null }),
+      });
+      await expect(service.getVisitors('user-1')).resolves.toEqual([]);
+    });
+  });
+
+  describe('getStatusViewers', () => {
+    it('should return empty list when query succeeds', async () => {
+      mockSupabaseClient.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockResolvedValue({ data: [], error: null }),
+      });
+      await expect(service.getStatusViewers('user-1')).resolves.toEqual([]);
+    });
+  });
+
+  describe('getUserXp', () => {
+    it('should return XP total', async () => {
+      await expect(service.getUserXp('user-1')).resolves.toBe(0);
+    });
+  });
+
+  describe('followUser', () => {
+    it('should reject self-follow', async () => {
+      await expect(service.followUser('same', 'same')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should resolve when database insert succeeds', async () => {
+      mockSupabaseClient.from.mockReturnValueOnce({
+        upsert: jest.fn().mockResolvedValue({ error: null }),
+      });
+      await expect(
+        service.followUser('follower', 'target'),
+      ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('scheduleDeletion', () => {
+    it('should return scheduled deletion date', async () => {
+      mockQueryBuilder.update.mockReturnThis();
+      mockQueryBuilder.eq.mockResolvedValue({ error: null });
+      const result = await service.scheduleDeletion('user-1');
+      expect(result).toHaveProperty('message');
+      expect(result).toHaveProperty('scheduled_for_deletion_at');
+    });
+  });
+
+  describe('getPrivacySettings', () => {
+    it('should return defaults when profile falls back to mock', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: null,
+        error: { message: 'not found' },
+      });
+      const result = await service.getPrivacySettings('user-1');
+      expect(result.privacy_hide_age).toBe(false);
+      expect(result.privacy_last_seen).toBe('everyone');
+    });
+  });
+
+  describe('getBadges', () => {
+    it('should include VIP badge when profile is VIP', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: null,
+        error: null,
+      });
+      const badges = await service.getBadges('user-1');
+      expect(badges.some((b) => b.id === 'vip')).toBe(true);
     });
   });
 });
