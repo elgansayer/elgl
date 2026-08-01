@@ -32,30 +32,22 @@ export class TokenisedTextComponent {
   }
 
   private parseText(): void {
+    if (typeof Intl === 'undefined' || !Intl.Segmenter) {
+      throw new Error('Intl.Segmenter is not available in this environment.');
+    }
+
     const segments: TokenSegment[] = [];
-    if (typeof Intl !== 'undefined' && Intl.Segmenter) {
-      const segmenter = new Intl.Segmenter(this.language(), { granularity: 'word' });
-      const rawSegments = segmenter.segment(this.text());
-      for (const item of rawSegments) {
-        segments.push({
-          segment: item.segment,
-          isWordLike: item.isWordLike ?? /\w/.test(item.segment),
-          index: item.index,
-        });
-      }
-    } else {
-      // Emergency fallback if browser environment lacks Intl.Segmenter (though Rule 3 notes baseline 2024 support)
-      const parts = this.text().split(/(\s+|[.,!?;:"'()]+)/);
-      parts.forEach((part: string, idx: number) => {
-        if (part) {
-          segments.push({
-            segment: part,
-            isWordLike: /^\w+$/.test(part),
-            index: idx,
-          });
-        }
+    const segmenter = new Intl.Segmenter(this.language(), { granularity: 'word' });
+    const rawSegments = segmenter.segment(this.text());
+
+    for (const item of rawSegments) {
+      segments.push({
+        segment: item.segment,
+        isWordLike: item.isWordLike ?? false,
+        index: item.index,
       });
     }
+
     this.tokens.set(segments);
   }
 

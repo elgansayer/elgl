@@ -37,9 +37,10 @@ describe('UploadService', () => {
     expect(req.request.body instanceof FormData).toBe(true);
 
     const formData = req.request.body as FormData;
-    expect(formData.get('file')).toBe(mockFile);
-    const file = formData.get('file') as File;
-    expect(file.name).toBe(mockFilename);
+    const uploaded = formData.get('file') as File;
+    expect(uploaded).toBeInstanceOf(File);
+    expect(uploaded.name).toBe(mockFilename);
+    expect(await uploaded.text()).toBe('test content');
 
     req.flush(mockResponse);
 

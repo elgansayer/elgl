@@ -52,7 +52,7 @@ export class UsersService {
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase
       .from('users')
-      .update({ proficiency_level: level })
+      .update({ proficiency_level: level } as never)
       .eq('id', userId);
 
     if (error) {
@@ -320,7 +320,7 @@ export class UsersService {
 
     const { error } = await supabase
       .from('users')
-      .update({ last_active_at: now })
+      .update({ last_active_at: now } as never)
       .eq('id', userId);
 
     if (error) {
@@ -344,7 +344,7 @@ export class UsersService {
       updatePayload.quiet_hours_end = dto.quiet_hours_end;
     const { error: dndUpdateError } = await supabase
       .from('users')
-      .update(updatePayload)
+      .update(updatePayload as never)
       .eq('id', userId);
     if (dndUpdateError) {
       Logger.warn(`DND update failed, falling back: ${dndUpdateError.message}`);
@@ -509,7 +509,7 @@ export class UsersService {
     const supabase = this.supabaseService.getClient();
     const { error: updateError } = await supabase
       .from('users')
-      .update(updatePayload)
+      .update(updatePayload as never)
       .eq('id', userId);
     if (updateError) {
       Logger.warn(
@@ -529,7 +529,9 @@ export class UsersService {
 
     const { error } = await supabase
       .from('users')
-      .update({ scheduled_for_deletion_at: deletionDate.toISOString() })
+      .update({
+        scheduled_for_deletion_at: deletionDate.toISOString(),
+      } as never)
       .eq('id', userId);
 
     if (error) {
@@ -548,7 +550,7 @@ export class UsersService {
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase
       .from('users')
-      .update({ scheduled_for_deletion_at: null })
+      .update({ scheduled_for_deletion_at: null } as never)
       .eq('id', userId);
 
     if (error) {
@@ -672,7 +674,7 @@ export class UsersService {
       const current = (cur?.coins_balance ?? 0) + amount;
       await supabase
         .from('users')
-        .update({ coins_balance: current })
+        .update({ coins_balance: current } as never)
         .eq('id', userId);
     }
   }
@@ -708,7 +710,7 @@ export class UsersService {
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase
       .from('users')
-      .update({ message_filters: filters })
+      .update({ message_filters: filters } as never)
       .eq('id', userId);
 
     if (error) {
@@ -752,9 +754,10 @@ export class UsersService {
     if (error) {
       throw new InternalServerErrorException('Failed to fetch followers');
     }
-    const users: UserProfile[] = (data ?? []).map(
-      (row) => row.follower as unknown as UserProfile,
-    );
+    const rows = (data ?? []) as unknown as Array<{
+      follower: UserProfile;
+    }>;
+    const users = rows.map((row) => row.follower);
     return { data: users, total };
   }
 
@@ -792,9 +795,10 @@ export class UsersService {
     if (error) {
       throw new InternalServerErrorException('Failed to fetch following');
     }
-    const users: UserProfile[] = (data ?? []).map(
-      (row) => row.following as unknown as UserProfile,
-    );
+    const rows = (data ?? []) as unknown as Array<{
+      following: UserProfile;
+    }>;
+    const users = rows.map((row) => row.following);
     return { data: users, total };
   }
 
@@ -854,7 +858,7 @@ export class UsersService {
 
     const { error: privacyUpdateError } = await supabase
       .from('users')
-      .update(updatePayload)
+      .update(updatePayload as never)
       .eq('id', userId);
     if (privacyUpdateError) {
       Logger.warn(
