@@ -123,8 +123,8 @@ export class AvatarUploadComponent {
       y = this.startY - size;
     }
 
-    const maxW = this.displayWidth();
-    const maxH = this.displayHeight();
+    const maxW = rect.width;
+    const maxH = rect.height;
     // Clamp to image bounds
     x = Math.max(0, Math.min(x, maxW - size));
     y = Math.max(0, Math.min(y, maxH - size));
