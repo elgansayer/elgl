@@ -46,7 +46,11 @@ export class MilestonesService {
 
   async create(dto: CreateMilestoneDto, userId: string): Promise<Milestone> {
     const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
+    const { error } = await this.validateDto(dto);
+    if (error) {
+      throw new Error(`Validation failed: ${error.message}`);
+    }
+    const { data, error: insertError } = await supabase
       .from('milestones')
       .insert({
         user_id: userId,
@@ -56,8 +60,8 @@ export class MilestonesService {
       .select()
       .single();
 
-    if (error || !data) {
-      throw new Error(`Failed to create milestone: ${error?.message}`);
+    if (insertError || !data) {
+      throw new Error(`Failed to create milestone: ${insertError?.message}`);
     }
     return this.toMilestone(data as MilestoneRow);
   }

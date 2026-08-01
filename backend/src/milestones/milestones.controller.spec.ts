@@ -81,4 +81,47 @@ describe('MilestonesController', () => {
     await controller.remove('m-1', { user: { sub: 'user-1' } });
     expect(service.remove).toHaveBeenCalledWith('m-1', 'user-1');
   });
+
+  it('throws an error when creating a milestone with invalid data', async () => {
+    await expect(
+      controller.create(
+        { title: '' }, // Invalid title
+        { user: { sub: 'user-1' } },
+      ),
+    ).rejects.toThrow('Validation failed');
+  });
+
+  it('returns an empty array when no milestones exist for the user', async () => {
+    jest.spyOn(service, 'findAllForUser').mockResolvedValueOnce([]);
+    const result = await controller.findAll({ user: { sub: 'user-1' } });
+    expect(result).toEqual([]);
+  });
+
+  it('handles progress calculation when no milestones exist', async () => {
+    jest.spyOn(service, 'getProgress').mockResolvedValueOnce({
+      total: 0,
+      completed: 0,
+      percentage: 0,
+    });
+    const result = await controller.getProgress({ user: { sub: 'user-1' } });
+    expect(result).toEqual({ total: 0, completed: 0, percentage: 0 });
+  });
+
+  it('throws an error when marking a non-existent milestone as completed', async () => {
+    jest
+      .spyOn(service, 'markCompleted')
+      .mockRejectedValueOnce(new Error('Milestone not found'));
+    await expect(
+      controller.markCompleted('non-existent-id', { user: { sub: 'user-1' } }),
+    ).rejects.toThrow('Milestone not found');
+  });
+
+  it('throws an error when removing a non-existent milestone', async () => {
+    jest
+      .spyOn(service, 'remove')
+      .mockRejectedValueOnce(new Error('Milestone not found'));
+    await expect(
+      controller.remove('non-existent-id', { user: { sub: 'user-1' } }),
+    ).rejects.toThrow('Milestone not found');
+  });
 });

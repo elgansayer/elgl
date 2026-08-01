@@ -1,8 +1,9 @@
-import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MaxLength, MinLength } from 'class-validator';
 
 export class CreateMilestoneDto {
   @IsString()
-  @MaxLength(200)
+  @MinLength(1)
+  @MaxLength(200, { message: 'Title must be between 1 and 200 characters.' })
   title!: string;
 
   @IsOptional()
