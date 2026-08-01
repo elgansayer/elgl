@@ -66,7 +66,7 @@ describe('UserStatisticsController', () => {
     it('should return the statistics provided by the service', async () => {
       mockService.getUserStatistics.mockResolvedValue(mockStats);
 
-      const result = await controller.getUserStatistics(userId, query);
+      const result = await controller.getStatistics(userId, query);
 
       expect(result).toEqual(mockStats);
     });
