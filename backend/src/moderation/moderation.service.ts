@@ -3,6 +3,21 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { ReportUserDto } from './dto/report-user.dto';
 import { ModerationActionDto } from './dto/moderation-action.dto';
 
+export interface Reporter {
+  id: string;
+  display_name: string;
+}
+
+export interface ModerationItem {
+  id: string;
+  status: string;
+  reason: string;
+  created_at: string;
+  description?: string;
+  reporter: Reporter | null;
+  reported_user: Reporter | null;
+}
+
 @Injectable()
 export class ModerationService {
   private readonly supabase;
@@ -11,24 +26,25 @@ export class ModerationService {
     this.supabase = this.supabaseService.getClient();
   }
 
-  async getItems(type: 'moment' | 'profile', status?: string) {
+  async getItems(
+    type: 'moment' | 'profile',
+    status?: string,
+  ): Promise<ModerationItem[]> {
     let query = this.supabase
       .from('reports')
       .select(
         `
         id,
         status,
-        reason,
+        reason_category,
         created_at,
         reporter_id,
         reported_user_id,
-        moment_id,
         description,
         reporter:reporter_id ( id, display_name ),
         reported_user:reported_user_id ( id, display_name )
       `,
       )
-      .eq('type', type)
       .order('created_at', { ascending: false });
 
     if (status) {
@@ -41,24 +57,35 @@ export class ModerationService {
       throw new NotFoundException('Failed to fetch moderation items');
     }
 
-    return (data ?? []).map((item: any) => ({
-      id: item.id,
-      type,
-      status: item.status,
-      created_at: item.created_at,
-      reason: item.reason,
-      reporter: item.reporter,
-      reported_user: item.reported_user,
-      moment_content: item.moment_id ? undefined : undefined,
-    }));
+    const rows = (data ?? []) as unknown[];
+
+    const items: ModerationItem[] = rows.map((row) => {
+      const obj = row as { [key: string]: unknown };
+      return {
+        id: obj.id as string,
+        status: obj.status as string,
+        reason: obj.reason_category as string,
+        created_at: obj.created_at as string,
+        description: obj.description as string | undefined,
+        reporter: obj.reporter as Reporter | null,
+        reported_user: obj.reported_user as Reporter | null,
+      };
+    });
+
+    if (type === 'profile') {
+      return items.filter((item) => item.reported_user != null);
+    }
+
+    // For moment reports we currently only support profiles, so return empty.
+    return [];
   }
 
-  async reportUser(dto: ReportUserDto) {
+  async reportUser(reporterId: string, dto: ReportUserDto) {
     const { data, error } = await this.supabase.from('reports').insert({
+      reporter_id: reporterId,
       reported_user_id: dto.reportedUserId,
-      reason: dto.reason,
-      description: dto.description,
-      type: 'profile',
+      reason_category: dto.reasonCategory,
+      description: dto.description ?? null,
       status: 'pending',
     });
 
@@ -87,7 +114,7 @@ export class ModerationService {
       .from('reports')
       .update({
         status: 'rejected',
-        reason: dto.reason ?? null,
+        reason_category: dto.reason ?? null,
       })
       .eq('id', dto.itemId);
 
@@ -103,7 +130,9 @@ export class ModerationService {
   ): Promise<{ riskScore: number; flags: string[] }> {
     const { data: userData, error: userError } = await this.supabase
       .from('users')
-      .select('display_name, bio_text, target_languages, native_language')
+      .select(
+        'display_name, bio_text, target_languages, native_language, status_text, greeting_message, away_message',
+      )
       .eq('id', userId)
       .single();
 
@@ -111,11 +140,24 @@ export class ModerationService {
       throw new NotFoundException('user not found');
     }
 
+    const u = userData as {
+      display_name: string;
+      bio_text: string;
+      native_language: string;
+      target_languages: string[];
+      status_text?: string;
+      greeting_message?: string;
+      away_message?: string;
+    };
+
     const combinedText = [
-      userData.display_name ?? '',
-      userData.bio_text ?? '',
-      userData.native_language ?? '',
-      userData.target_languages ? userData.target_languages.join(' ') : '',
+      u.display_name ?? '',
+      u.bio_text ?? '',
+      u.native_language ?? '',
+      (u.target_languages ?? []).join(' '),
+      u.status_text ?? '',
+      u.greeting_message ?? '',
+      u.away_message ?? '',
     ].join(' ');
 
     const { data: moments } = await this.supabase
@@ -123,10 +165,14 @@ export class ModerationService {
       .select('content_text')
       .eq('author_id', userId)
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(20);
 
-    const momentText = (moments ?? [])
-      .map((m) => m.content_text ?? '')
+    const momentRows = (moments ?? []) as unknown[];
+    const momentText = momentRows
+      .map((row) => {
+        const obj = row as { content_text?: string };
+        return obj.content_text ?? '';
+      })
       .join(' ');
 
     const fullText = (combinedText + ' ' + momentText).toLowerCase();
@@ -155,20 +201,51 @@ export class ModerationService {
       'romantically',
       'kiss',
       'kissing',
+      'date me',
+      'looking for a man',
+      'looking for a woman',
+      'man for me',
+      'woman for me',
+      'marry me',
+      'fwb',
+      'friends with benefits',
+      'casual sex',
+      'affair',
+      'dinner',
+      'coffee',
+      'drinks',
+      'hang out',
+      'meet up',
+      'hook up',
+      'one night',
+      'sexting',
+      'daddy',
+      'mommy',
+      'horny',
     ];
 
     const flags: string[] = [];
-    for (const flag of datingFlags) {
-      if (fullText.includes(flag)) {
+    const regexFlags = [...new Set(datingFlags)];
+
+    for (const flag of regexFlags) {
+      const escaped = flag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+      if (regex.test(fullText)) {
         flags.push(flag);
       }
     }
 
+    const uniqueFlags = [...new Set(flags)];
+    const hitRatio = uniqueFlags.length / regexFlags.length;
     const riskScore = Math.min(
       100,
-      Math.round((flags.length / datingFlags.length) * 100),
+      Math.round(
+        hitRatio * 100 +
+          (uniqueFlags.length > 5 ? 20 : 0) +
+          (uniqueFlags.length > 10 ? 10 : 0),
+      ),
     );
 
-    return { riskScore, flags: [...new Set(flags)] };
+    return { riskScore, flags: uniqueFlags };
   }
 }
