@@ -27,6 +27,7 @@ type QueryChainMock = {
   overlaps: jest.Mock;
   order: jest.Mock;
   limit: jest.Mock;
+  returns: jest.Mock;
   upsert: jest.Mock;
   update: jest.Mock;
   single: jest.Mock;
@@ -45,6 +46,7 @@ const createQueryChain = (): QueryChainMock => {
     'overlaps',
     'order',
     'limit',
+    'returns',
     'upsert',
     'update',
     'single',

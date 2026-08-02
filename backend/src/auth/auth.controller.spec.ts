@@ -1,7 +1,5 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
 
 describe('AuthController (unit)', () => {
   let controller: AuthController;
@@ -15,7 +13,7 @@ describe('AuthController (unit)', () => {
     checkTwoFactorStatus: jest.Mock;
   };
 
-  beforeEach(async () => {
+  beforeEach(() => {
     authService = {
       requestPasswordReset: jest.fn(),
       resetPassword: jest.fn(),
