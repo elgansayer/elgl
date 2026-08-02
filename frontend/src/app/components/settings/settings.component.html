@@ -115,6 +115,20 @@
             />
           </label>
 
+          <div class="flex items-center justify-between p-4">
+            <span class="text-sm font-medium text-text-primary">{{
+              'settings.autoDownloadPreference' | t
+            }}</span>
+            <select
+              [ngModel]="autoDownloadPreference()"
+              (ngModelChange)="autoDownloadPreference.set($event)"
+              class="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="wifi">{{ 'settings.autoDownloadWifiOnly' | t }}</option>
+              <option value="cellular">{{ 'settings.autoDownloadCellular' | t }}</option>
+            </select>
+          </div>
+
           <label
             class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-200 transition-colors"
           >

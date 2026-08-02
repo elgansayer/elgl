@@ -2,7 +2,7 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
-import { UserService, LinkedAccount, UserProfile } from '../../services/user.service';
+import { UserService, LinkedAccount } from '../../services/user.service';
 import { CacheService } from '../../services/cache.service';
 import { Router } from '@angular/router';
 import { FontScaleService } from '../../services/font-scale.service';
@@ -58,6 +58,7 @@ export class SettingsComponent implements OnInit {
   vibrationEnabled = false;
 
   readonly linkedAccounts = signal<LinkedAccount[]>([]);
+  readonly autoDownloadPreference = signal<'wifi' | 'cellular'>('wifi');
   protected chatEnterToSend = signal(false);
   protected chatTextSize = signal<'small' | 'medium' | 'large'>('medium');
 
@@ -67,7 +68,7 @@ export class SettingsComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     // Font scale is handled by FontScaleService and applied globally.
     try {
-      const profile: UserProfile | null = await this.userService.getMyProfile();
+      const profile = await this.userService.getMyProfile();
       if (profile) {
         this.isVip.set(Boolean(profile.is_vip));
         this.primaryAccentColor.set(profile.primary_accent_color || '#4f46e5');
@@ -83,12 +84,15 @@ export class SettingsComponent implements OnInit {
         this.soundEffectsEnabled = Boolean(profile.sound_effects_enabled);
         this.vibrationEnabled = Boolean(profile.vibration_enabled);
         this.interests.set(profile.interests ?? []);
+        this.autoDownloadPreference.set(profile.auto_download_preference ?? 'wifi');
       }
+
       // Load linked accounts
       const accounts: LinkedAccount[] | null = await this.userService.getLinkedAccounts();
       this.linkedAccounts.set(accounts ?? []);
     } catch {
-      this.errorMessage.set('Failed to load settings');
+      this.autoDownloadPreference.set('wifi'); // Default to Wi-Fi only
+      this.errorMessage.set('Failed to load profile or linked accounts');
     } finally {
       this.isLoading.set(false);
     }
@@ -209,6 +213,7 @@ export class SettingsComponent implements OnInit {
         auto_download_media: this.autoDownloadMedia,
         sound_effects_enabled: this.soundEffectsEnabled,
         vibration_enabled: this.vibrationEnabled,
+        auto_download_preference: this.autoDownloadPreference(),
         primary_accent_color: this.primaryAccentColor() ?? undefined,
         interests: this.interests(),
       });

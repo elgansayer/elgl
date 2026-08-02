@@ -44,6 +44,7 @@ export interface UserProfile {
   auto_play_voice_notes?: boolean;
   auto_download_media?: boolean;
   auto_download_wifi_only?: boolean;
+  auto_download_preference?: 'wifi' | 'cellular';
   sound_effects_enabled?: boolean;
   vibration_enabled?: boolean;
   chat_enter_to_send?: boolean;
@@ -154,6 +155,7 @@ export class UserService {
       chat_enter_to_send: false,
       chat_text_size: 'medium',
       auto_download_wifi_only: false,
+      auto_download_preference: 'wifi',
       last_active_at: new Date().toISOString(),
     };
     return firstValueFrom(

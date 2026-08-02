@@ -13,9 +13,9 @@ type Database = {
         Relationships: [];
       };
       users: {
-        Row: { id: string; audio_intro_url: string | null; is_vip: boolean; vip_tier: string; is_serious_learner?: boolean };
-        Insert: { id: string; audio_intro_url?: string | null; is_vip?: boolean; vip_tier?: string; is_serious_learner?: boolean };
-        Update: { id?: string; audio_intro_url?: string | null; is_vip?: boolean; vip_tier?: string; is_serious_learner?: boolean };
+        Row: { id: string; audio_intro_url: string | null; is_vip: boolean; vip_tier: string; is_serious_learner?: boolean; auto_download_preference: string };
+        Insert: { id: string; audio_intro_url?: string | null; is_vip?: boolean; vip_tier?: string; is_serious_learner?: boolean; auto_download_preference?: string };
+        Update: { id?: string; audio_intro_url?: string | null; is_vip?: boolean; vip_tier?: string; is_serious_learner?: boolean; auto_download_preference?: string };
         Relationships: [];
       };
     };
@@ -181,21 +181,25 @@ export class SupabaseService {
 
   async uploadAvatar(file: File): Promise<{ avatarUrl: string | null }> {
     const fileName = `avatars/${Date.now()}-${file.name}`;
-    const { error } = await this.supabase.storage
+    const uploadResponse = await this.supabase.storage
       .from('avatars')
       .upload(fileName, file, {
         cacheControl: '3600',
         upsert: false,
       });
 
-    if (error) {
-      throw new Error(`Failed to upload avatar: ${error.message}`);
+    if (uploadResponse.error) {
+      throw new Error(`Failed to upload avatar: ${uploadResponse.error.message}`);
     }
 
-    const { data } = this.supabase.storage.from('avatars').getPublicUrl(fileName);
-    if (!data || !data.publicUrl) {
+    const { data: publicUrlData } = this.supabase.storage.from('avatars').getPublicUrl(fileName);
+    if (!publicUrlData?.publicUrl) {
       throw new Error('Failed to retrieve public URL for avatar');
     }
-    return { avatarUrl: data.publicUrl };
+    return { avatarUrl: publicUrlData.publicUrl };
+  }
+
+  async getAutoDownloadPreference(): Promise<'wifi' | 'cellular'> {
+    return 'wifi';
   }
 }
