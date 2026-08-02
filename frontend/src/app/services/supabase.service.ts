@@ -164,6 +164,21 @@ export class SupabaseService {
     await db.delete('savedContent', id);
   }
 
+  async clearOfflineCache(): Promise<void> {
+    const db = await this.getOfflineDB();
+    await db.clear('savedContent');
+  }
+
+  async deleteOldMedia(thresholdDate: Date): Promise<void> {
+    const db = await this.getOfflineDB();
+    const allContent = await db.getAll('savedContent');
+    for (const content of allContent) {
+      if (content?.data?.timestamp && new Date(content.data.timestamp) < thresholdDate) {
+        await db.delete('savedContent', content.id);
+      }
+    }
+  }
+
   async uploadAvatar(file: File): Promise<{ avatarUrl: string | null }> {
     const fileName = `avatars/${Date.now()}-${file.name}`;
     const { error } = await this.supabase.storage

@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { ImageCompressionService } from './image-compression.service';
+import { SupabaseService } from './supabase.service';
 
 export interface AvatarUploadResponse {
   avatarUrl: string;
@@ -14,6 +15,7 @@ export interface AvatarUploadResponse {
 export class MediaService {
   private readonly http = inject(HttpClient);
   private readonly imageCompression = inject(ImageCompressionService);
+  private readonly supabaseService = inject(SupabaseService);
   private readonly baseUrl = `${environment.apiUrl}/media`;
 
   async uploadAvatar(file: File): Promise<AvatarUploadResponse> {
@@ -25,5 +27,9 @@ export class MediaService {
     return firstValueFrom(
       this.http.post<AvatarUploadResponse>(`${this.baseUrl}/avatar/upload`, formData),
     );
+  }
+
+  async clearMediaCache(): Promise<void> {
+    await this.supabaseService.clearOfflineCache();
   }
 }
