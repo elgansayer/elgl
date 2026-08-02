@@ -26,6 +26,23 @@
 
       <section class="space-y-4">
         <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+          {{ 'settings.subscriptionSection' | t }}
+        </h2>
+        <div
+          class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm"
+        >
+          <button
+            (click)="goToMySubscription()"
+            class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
+          >
+            <span>{{ 'settings.mySubscription' | t }}</span>
+            <span class="text-text-secondary" aria-hidden="true">→</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
           {{ 'settings.appearanceSection' | t }}
         </h2>
         <div

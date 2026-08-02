@@ -158,6 +158,10 @@ export class SettingsComponent implements OnInit {
     this.location.back();
   }
 
+  goToMySubscription(): void {
+    this.router.navigate(['/my-subscription']);
+  }
+
   onFontScaleChange(event: Event): void {
     const target = event.target;
     if (target instanceof HTMLInputElement) {
