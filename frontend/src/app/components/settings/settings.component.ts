@@ -6,6 +6,7 @@ import { UserService, LinkedAccount, UserProfile } from '../../services/user.ser
 import { CacheService } from '../../services/cache.service';
 import { Router } from '@angular/router';
 import { FontScaleService } from '../../services/font-scale.service';
+import { ChatSettingsService } from '../../services/chat-settings.service';
 
 @Component({
   selector: 'app-settings',
@@ -19,6 +20,7 @@ export class SettingsComponent implements OnInit {
   private location = inject(Location);
   private router = inject(Router);
   private fontScaleService = inject(FontScaleService);
+  private chatSettingsService = inject(ChatSettingsService);
 
   readonly isLoading = signal(true);
   readonly isDownloading = signal(false);
@@ -56,8 +58,8 @@ export class SettingsComponent implements OnInit {
   vibrationEnabled = false;
 
   readonly linkedAccounts = signal<LinkedAccount[]>([]);
-  protected chatEnterToSend = false;
-  protected chatTextSize: 'small' | 'medium' | 'large' = 'medium';
+  protected chatEnterToSend = signal(false);
+  protected chatTextSize = signal<'small' | 'medium' | 'large'>('medium');
 
   /** Providers we support linking */
   readonly supportedProviders: readonly string[] = ['google', 'facebook', 'twitter', 'apple'];
@@ -81,8 +83,6 @@ export class SettingsComponent implements OnInit {
         this.soundEffectsEnabled = Boolean(profile.sound_effects_enabled);
         this.vibrationEnabled = Boolean(profile.vibration_enabled);
         this.interests.set(profile.interests ?? []);
-        this.chatEnterToSend = Boolean(profile.chat_enter_to_send);
-        this.chatTextSize = profile.chat_text_size ?? 'medium';
       }
       // Load linked accounts
       const accounts: LinkedAccount[] | null = await this.userService.getLinkedAccounts();
@@ -91,6 +91,15 @@ export class SettingsComponent implements OnInit {
       this.errorMessage.set('Failed to load settings');
     } finally {
       this.isLoading.set(false);
+    }
+
+    // Load chat-specific settings
+    try {
+      await this.chatSettingsService.loadSettings();
+      this.chatEnterToSend.set(this.chatSettingsService.enterToSend());
+      this.chatTextSize.set(this.chatSettingsService.textSize());
+    } catch {
+      // keep service defaults
     }
   }
 
@@ -202,9 +211,14 @@ export class SettingsComponent implements OnInit {
         vibration_enabled: this.vibrationEnabled,
         primary_accent_color: this.primaryAccentColor() ?? undefined,
         interests: this.interests(),
-        chat_enter_to_send: this.chatEnterToSend,
-        chat_text_size: this.chatTextSize,
       });
+
+      await this.chatSettingsService.updateSetting(
+        'enterToSend',
+        this.chatEnterToSend(),
+      );
+      await this.chatSettingsService.updateSetting('textSize', this.chatTextSize());
+
       this.successMessage.set('Settings saved successfully');
     } catch {
       this.errorMessage.set('Failed to save settings');

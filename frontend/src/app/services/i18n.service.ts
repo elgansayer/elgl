@@ -1122,6 +1122,8 @@ export class I18nService {
     'settings.locationPrivacy.region': 'Region only',
     'settings.hideOnlineStatus': 'Hide online status',
     'settings.hideVipStatus': 'Hide VIP status',
+    'settings.on': 'On',
+    'settings.off': 'Off',
     'settings.fontScale': 'Text size',
     // Pill colour CSS class tokens (kept i18n so themes can override without recompiling templates)
     'pill.colour_primary': 'bg-indigo-500 text-white hover:bg-indigo-600',

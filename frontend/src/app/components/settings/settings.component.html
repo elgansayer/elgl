@@ -1,6 +1,6 @@
 <div class="app-screen bg-surface-50">
   <header class="app-header">
-    <button (click)="goBack()" class="app-button-icon" aria-label="Go back">
+    <button (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
       <span class="text-xl">←</span>
     </button>
     <h1 class="app-header-title">{{ 'settings.title' | t }}</h1>
@@ -222,7 +222,8 @@
             }}</span>
             <input
               type="checkbox"
-              [(ngModel)]="chatEnterToSend"
+              [ngModel]="chatEnterToSend()"
+              (ngModelChange)="chatEnterToSend.set($event)"
               class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"
             />
           </label>
@@ -232,7 +233,8 @@
               'settings.textSize' | t
             }}</span>
             <select
-              [(ngModel)]="chatTextSize"
+              [ngModel]="chatTextSize()"
+              (ngModelChange)="chatTextSize.set($event)"
               class="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
             >
               <option value="small">{{ 'settings.textSizeSmall' | t }}</option>
@@ -307,7 +309,7 @@
               'settings.soundEffects' | t
             }}</span>
             <span class="text-sm font-semibold text-primary">
-              {{ soundEffectsEnabled ? 'On' : 'Off' }}
+              {{ soundEffectsEnabled ? ('settings.on' | t) : ('settings.off' | t) }}
             </span>
           </button>
 
@@ -319,7 +321,7 @@
               'settings.vibration' | t
             }}</span>
             <span class="text-sm font-semibold text-primary">
-              {{ vibrationEnabled ? 'On' : 'Off' }}
+              {{ vibrationEnabled ? ('settings.on' | t) : ('settings.off' | t) }}
             </span>
           </button>
         </div>
