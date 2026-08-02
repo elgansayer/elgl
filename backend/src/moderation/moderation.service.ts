@@ -54,7 +54,7 @@ export class ModerationService {
     const { data, error } = await query;
 
     if (error) {
-      throw new NotFoundException('Failed to fetch moderation items');
+      throw new NotFoundException('Failed to fetch moderation items.');
     }
 
     const rows = (data ?? []) as unknown[];
@@ -137,7 +137,7 @@ export class ModerationService {
       .single();
 
     if (userError || !userData) {
-      throw new NotFoundException('user not found');
+      throw new NotFoundException('User not found');
     }
 
     const u = userData as {

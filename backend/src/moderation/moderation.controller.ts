@@ -9,6 +9,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  NotFoundException,
 } from '@nestjs/common';
 import { ModerationItem, ModerationService } from './moderation.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -25,7 +26,11 @@ export class ModerationController {
     @Query('type') type: 'moment' | 'profile',
     @Query('status') status?: string,
   ): Promise<ModerationItem[]> {
-    return this.moderationService.getItems(type, status);
+    const items = await this.moderationService.getItems(type, status);
+    if (!items.length) {
+      throw new NotFoundException('No moderation items found.');
+    }
+    return items;
   }
 
   @Post('report')

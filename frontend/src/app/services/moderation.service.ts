@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { firstValueFrom, of, catchError } from 'rxjs';
+import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface ModerationItem {
@@ -39,68 +39,53 @@ export class ModerationService {
     });
   }
 
-  getItems(type: 'moment' | 'profile', status?: string): Promise<ModerationItem[]> {
+  getItems(type: 'moment' | 'profile', status?: string): Observable<ModerationItem[]> {
     const params: Record<string, string> = { type };
     if (status) {
       params['status'] = status;
     }
-    return firstValueFrom(
-      this.http
-        .get<ModerationItem[]>(`${this.baseUrl}/items`, {
-          headers: this.getHeaders(),
-          params,
-        })
-        .pipe(catchError(() => of([]))),
+    return this.http.get<ModerationItem[]>(`${this.baseUrl}/items`, {
+      headers: this.getHeaders(),
+      params,
+    });
+  }
+
+  approveItem(itemId: string, type: string): Observable<unknown> {
+    return this.http.post(
+      `${this.baseUrl}/approve`,
+      { itemId, type },
+      { headers: this.getHeaders() },
     );
   }
 
-  approveItem(itemId: string, type: string): Promise<unknown> {
-    return firstValueFrom(
-      this.http
-        .post(
-          `${this.baseUrl}/approve`,
-          { itemId, type },
-          {
-            headers: this.getHeaders(),
-          },
-        )
-        .pipe(catchError(() => of(null))),
+  rejectItem(itemId: string, type: string, reason?: string): Observable<unknown> {
+    const body: Record<string, string> = { itemId, type };
+    if (reason) {
+      body['reason'] = reason;
+    }
+    return this.http.post(
+      `${this.baseUrl}/reject`,
+      body,
+      { headers: this.getHeaders() },
     );
   }
 
-  rejectItem(itemId: string, type: string, reason?: string): Promise<unknown> {
-    return firstValueFrom(
-      this.http
-        .post(
-          `${this.baseUrl}/reject`,
-          { itemId, type, reason },
-          {
-            headers: this.getHeaders(),
-          },
-        )
-        .pipe(catchError(() => of(null))),
+  reportUser(reportedUserId: string, reason: string, description?: string): Observable<unknown> {
+    const body: Record<string, string> = { reportedUserId, reason };
+    if (description) {
+      body['description'] = description;
+    }
+    return this.http.post(
+      `${this.baseUrl}/report`,
+      body,
+      { headers: this.getHeaders() },
     );
   }
 
-  reportUser(reportedUserId: string, reason: string, description?: string): Promise<unknown> {
-    return firstValueFrom(
-      this.http
-        .post(
-          `${this.baseUrl}/report`,
-          { reportedUserId, reason, description },
-          { headers: this.getHeaders() },
-        )
-        .pipe(catchError(() => of(null))),
-    );
-  }
-
-  getUserRiskAnalysis(userId: string): Promise<UserAnalysisResult> {
-    return firstValueFrom(
-      this.http
-        .get<UserAnalysisResult>(`${this.baseUrl}/analyse/${userId}`, {
-          headers: this.getHeaders(),
-        })
-        .pipe(catchError(() => of({ riskScore: 0, flags: [] }))),
+  getUserRiskAnalysis(userId: string): Observable<UserAnalysisResult> {
+    return this.http.get<UserAnalysisResult>(
+      `${this.baseUrl}/analyse/${userId}`,
+      { headers: this.getHeaders() },
     );
   }
 }
