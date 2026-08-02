@@ -45,7 +45,7 @@
     "joi": "^18.2.3",
     "jsdom": "^24.1.3",
     "jsonwebtoken": "^9.0.3",
-    "jwks-rsa": "^3.1.0",
+    "jwks-rsa": "^4.1.0",
     "livekit-server-sdk": "^2.17.0",
     "node-nlp": "^5.0.0-alpha.5",
     "nodemailer": "^9.0.3",
