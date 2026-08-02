@@ -15,6 +15,8 @@ import { GroupsService } from './groups.service';
 import { SystemMessageService } from './services/system-message.service';
 import { ChatSettingsController } from './chat-settings.controller';
 import { ChatSettingsService } from './chat-settings.service';
+import { ChatBackupController } from './chat-backup.controller';
+import { ChatBackupService } from './chat-backup.service';
 
 @Module({
   imports: [
@@ -24,7 +26,7 @@ import { ChatSettingsService } from './chat-settings.service';
     XpModule,
     LlmProxyModule,
   ],
-  controllers: [ChatController, ChatSettingsController],
+  controllers: [ChatController, ChatSettingsController, ChatBackupController],
   providers: [
     CentrifugoService,
     TranslationService,
@@ -35,6 +37,7 @@ import { ChatSettingsService } from './chat-settings.service';
     GroupsService,
     SystemMessageService,
     ChatSettingsService,
+    ChatBackupService,
   ],
   exports: [
     CentrifugoService,

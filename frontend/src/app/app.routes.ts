@@ -135,6 +135,14 @@ export const routes: Routes = [
       import('./components/settings/settings.component').then((m) => m.SettingsComponent),
   },
   {
+    path: 'settings/backup-restore',
+    loadComponent: () =>
+      import('./pages/settings/backup-restore.component').then(
+        (m) => m.BackupRestoreComponent,
+      ),
+    title: 'Chat Backup & Restore - HelloTalk',
+  },
+  {
     path: 'developer',
     loadComponent: () =>
       import('./components/developer-dashboard/developer-dashboard.component').then(

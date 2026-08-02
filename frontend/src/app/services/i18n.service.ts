@@ -1139,6 +1139,22 @@ export class I18nService {
     'daily_login_modal.message': 'Come back tomorrow to claim more coins!',
     'daily_login_modal.coins': '{{coins}} coins',
     'daily_login_modal.button': 'Claim',
+    'backupRestore.title': 'Chat Backup & Restore',
+    'backupRestore.subtitle': 'Export a JSON backup of your chat history or re-import it later.',
+    'backupRestore.selectRoom': 'Select chat room',
+    'backupRestore.exportBtn': 'Export Chat History',
+    'backupRestore.importBtn': 'Import Chat History',
+    'backupRestore.exportSuccess': 'Chat history exported successfully.',
+    'backupRestore.exportError': 'Failed to export chat history.',
+    'backupRestore.importSuccess': 'Imported {{count}} messages successfully.',
+    'backupRestore.importError': 'Failed to import chat history.',
+    'chat_backup.title': 'Chat Backup',
+    'chat_backup.export_button': 'Export Chat History',
+    'chat_backup.import_button': 'Import Chat History',
+    'chat_backup.exporting': 'Exporting...',
+    'chat_backup.importing': 'Importing...',
+    'chat_backup.export_error': 'Failed to export chat history.',
+    'chat_backup.import_error': 'Failed to import chat history.',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });
