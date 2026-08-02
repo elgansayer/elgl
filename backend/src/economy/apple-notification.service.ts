@@ -405,7 +405,10 @@ export class AppleNotificationService {
 
     void supabase
       .from('subscriptions')
-      .update({ auto_renew: autoRenew, updated_at: new Date().toISOString() })
+      .update({
+        auto_renew: autoRenew,
+        updated_at: new Date().toISOString(),
+      } as Partial<{ auto_renew: boolean; updated_at: string }>)
       .eq('user_id', userId)
       .then(({ error }) => {
         if (error) {
@@ -427,7 +430,7 @@ export class AppleNotificationService {
       .update({
         renewal_product_id: newProductId,
         updated_at: new Date().toISOString(),
-      })
+      } as Partial<{ renewal_product_id: string; updated_at: string }>)
       .eq('user_id', userId)
       .then(({ error }) => {
         if (error) {
