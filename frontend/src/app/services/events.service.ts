@@ -49,6 +49,24 @@ export class EventsService {
     return this.http.get<Event[]>(`${environment.apiUrl}/events`, { params });
   }
 
+  createGroupChat(dto: { name: string; description?: string; members: string[] }) {
+    return this.http.post<{ id: string }>(`${environment.apiUrl}/group-chats`, dto);
+  }
+
+  getGroupChat(chatId: string) {
+    return this.http.get<{ id: string; name: string; description?: string; members: string[] }>(
+      `${environment.apiUrl}/group-chats/${chatId}`
+    );
+  }
+
+  updateGroupChat(chatId: string, dto: { name?: string; description?: string; members?: string[] }) {
+    return this.http.patch<void>(`${environment.apiUrl}/group-chats/${chatId}`, dto);
+  }
+
+  deleteGroupChat(chatId: string) {
+    return this.http.delete<void>(`${environment.apiUrl}/group-chats/${chatId}`);
+  }
+
   addLabelToChat(chatId: string, label: string): Observable<void> {
     return this.http.post<void>(`${environment.apiUrl}/chats/${chatId}/labels`, { label });
   }
