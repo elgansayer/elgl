@@ -1117,6 +1117,9 @@ export class I18nService {
 
     'culturalGuide.title': 'Cultural Etiquette Guide',
     'settings.hideExactLocation': 'Hide exact location',
+    'settings.locationPrivacy': 'Location Privacy',
+    'settings.locationPrivacy.exact': 'Exact location',
+    'settings.locationPrivacy.region': 'Region only',
     'settings.hideOnlineStatus': 'Hide online status',
     'settings.hideVipStatus': 'Hide VIP status',
     'settings.fontScale': 'Text size',

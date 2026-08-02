@@ -35,6 +35,7 @@ export interface UserProfile {
   privacy_hide_from_search: boolean;
   privacy_hide_gender: boolean;
   privacy_hide_exact_location: boolean;
+  location_privacy?: 'exact' | 'region';
   privacy_hide_online_status: boolean;
   privacy_hide_vip_status: boolean;
   privacy_last_seen?: string;
