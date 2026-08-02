@@ -47,6 +47,14 @@ export class EventsService {
     return this.http.get<Event[]>(`${environment.apiUrl}/events`, { params });
   }
 
+  addLabelToChat(chatId: string, label: string): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/chats/${chatId}/labels`, { label });
+  }
+
+  removeLabelFromChat(chatId: string, label: string): Observable<void> {
+    return this.http.delete<void>(`${environment.apiUrl}/chats/${chatId}/labels/${label}`);
+  }
+
   getEvent(eventId: string) {
     return this.http.get<Event>(`${environment.apiUrl}/events/${eventId}`);
   }

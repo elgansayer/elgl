@@ -124,7 +124,10 @@ describe('DiscoveryService', () => {
         0.8,
       );
       expect(result).toEqual(
-        partners.map((p) => ({ ...p, is_partner_of_week: false })),
+        partners.map((p) => ({
+          ...p,
+          is_partner_of_week: false,
+        })),
       );
     });
 

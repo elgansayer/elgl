@@ -77,11 +77,11 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
           .from<{ user_id: string }>('event_rsvps')
           .select('user_id')
           .eq('event_id', event.id)
-          .eq('status', 'attending');
+          .eq('status' as keyof typeof rsvps, 'attending');
 
         if (rsvpError) {
           this.logger.warn(
-            `Could not fetch RSVPs for event ${event.id}`,
+            `Could not fetch RSVPs for event ${(event as any).id}`,
             rsvpError,
           );
           continue;
@@ -90,7 +90,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
         if (!rsvps) continue;
 
         for (const rsvp of rsvps) {
-          await this.sendReminder(event.id, event.title, rsvp.user_id);
+          await this.sendReminder((event as any).id, event.title, rsvp.user_id);
         }
       }
     } catch (err) {
