@@ -92,9 +92,10 @@ describe('ChatPageComponent', () => {
       const rooms = [room];
       chatServiceMock.getRooms.mockResolvedValue(rooms);
 
+      chatServiceMock.getRooms.mockResolvedValueOnce([]);
       await component.ngOnInit();
 
-      expect(chatServiceMock.getRooms).toHaveBeenCalledOnce();
+      expect(chatServiceMock.getRooms).toHaveBeenCalledTimes(1);
       expect(component.rooms()).toEqual(rooms);
     });
 

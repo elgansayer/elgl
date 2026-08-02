@@ -1010,7 +1010,9 @@ export class UsersService {
         .from('moments')
         .delete()
         .eq('author_id', userId)
-        .then((result) => ({ error: result.error })),
+        .then((result: { error: { message: string } | null }) => ({
+          error: result.error,
+        })),
       supabase
         .from('moment_comments')
         .delete()
