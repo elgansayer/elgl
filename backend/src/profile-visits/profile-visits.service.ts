@@ -149,7 +149,8 @@ export class ProfileVisitsService {
       throw new Error(`Failed to fetch visit count: ${response.error.message}`);
     }
 
-    return response.data?.visit_count ?? 0;
+    const data = response.data as unknown as { visit_count: number } | null;
+    return data?.visit_count ?? 0;
   }
 
   async deleteVisit(visitId: string): Promise<Record<string, unknown>> {

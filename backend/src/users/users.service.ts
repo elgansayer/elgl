@@ -961,7 +961,7 @@ export class UsersService {
     const profileVisitsCount = visitsCountRes.count ?? 0;
 
     return {
-      ...(user as Record<string, unknown>),
+      ...(user as unknown as Record<string, unknown>),
       momentsCount,
       commentsCount,
       followersCount,

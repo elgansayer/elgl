@@ -90,9 +90,9 @@ describe('ChatPageComponent', () => {
   describe('room and message loading', () => {
     it('should load rooms on init', async () => {
       const rooms = [room];
+      chatServiceMock.getRooms.mockReset();
       chatServiceMock.getRooms.mockResolvedValue(rooms);
 
-      chatServiceMock.getRooms.mockResolvedValueOnce([]);
       await component.ngOnInit();
 
       expect(chatServiceMock.getRooms).toHaveBeenCalledTimes(1);

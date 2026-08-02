@@ -726,13 +726,14 @@ export class MomentsService {
       `,
       )
       .eq('moment_id', momentId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .returns<MomentLikeQueryResult[]>();
 
     if (error) {
       throw new Error(`Failed to fetch likes: ${error.message}`);
     }
 
-    const rows = (data ?? []) as MomentLikeQueryResult[];
+    const rows = data ?? [];
     const fullUsers = rows
       .map((row) => row.users)
       .filter((user): user is MomentLikeUser => Boolean(user));
