@@ -64,6 +64,7 @@ export interface UserProfile {
   available_time_end?: string;
   is_admin?: boolean;
   created_at: string;
+  joined_at?: string; // Optional field for spotlighting recently joined users
   last_active_at?: string;
   distance_metres?: number;
   scheduled_for_deletion_at?: string;
