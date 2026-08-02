@@ -1151,7 +1151,7 @@ export class I18nService {
       const cached = localStorage.getItem(`hellotalk_dict_${code}`);
       if (cached) {
         try {
-          const parsed = JSON.parse(cached);
+          const parsed: Record<string, string> = JSON.parse(cached);
           this.translations.set({ ...this.baseDictionary, ...parsed });
           return;
         } catch {
@@ -1174,7 +1174,7 @@ export class I18nService {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data: { translations?: Record<string, string> } = await response.json();
         if (data && data.translations) {
           const merged = { ...this.baseDictionary, ...data.translations };
           this.translations.set(merged);

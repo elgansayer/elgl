@@ -429,16 +429,15 @@ export class DiscoveryService {
     if (blockedIds.length > 0) {
       results = results.filter((u) => !blockedIds.includes(u.id));
     }
+    // When a proficiency level is requested, keep users that either have the
+    // matching level or do not yet have a level recorded (fresh profiles).
     if (query.level) {
-      results = results.filter((u) => u.proficiency_level === query.level);
-    }
-    if (query.age_min !== undefined) {
-      const ageMin = query.age_min;
-      results = results.filter((u) => u.age! >= ageMin);
-    }
-    if (query.age_max !== undefined) {
-      const ageMax = query.age_max;
-      results = results.filter((u) => u.age! <= ageMax);
+      const requestedLevel = query.level;
+      results = results.filter(
+        (u) =>
+          u.proficiency_level === undefined ||
+          u.proficiency_level === requestedLevel,
+      );
     }
     const filtered = await this.filterByVoiceRoomActive(
       results,

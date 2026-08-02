@@ -166,6 +166,105 @@ export interface Database {
         Update: Partial<UsersRow>;
         Relationships: [];
       };
+      events: {
+        Row: {
+          id: string;
+          title: string;
+          description: string | null;
+          category: string | null;
+          date_time: string;
+          location: string | null;
+          language_pair: string | null;
+          max_participants: number | null;
+          host_id: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          title: string;
+          description?: string | null;
+          category?: string | null;
+          date_time: string;
+          location?: string | null;
+          language_pair?: string | null;
+          max_participants?: number | null;
+          host_id: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          title?: string;
+          description?: string | null;
+          category?: string | null;
+          date_time?: string;
+          location?: string | null;
+          language_pair?: string | null;
+          max_participants?: number | null;
+          host_id?: string;
+        }>;
+        Relationships: [];
+      };
+      event_rsvps: {
+        Row: {
+          id: string;
+          event_id: string;
+          user_id: string;
+          status: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          event_id: string;
+          user_id: string;
+          status: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          event_id?: string;
+          user_id?: string;
+          status?: string;
+        }>;
+        Relationships: [];
+      };
+      event_reminders_sent: {
+        Row: {
+          id: string;
+          event_id: string;
+          user_id: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          event_id: string;
+          user_id: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          event_id?: string;
+          user_id?: string;
+        }>;
+        Relationships: [];
+      };
+      audio_rooms: {
+        Row: {
+          id: string;
+          room_name: string;
+          title: string | null;
+          host_id: string;
+          party_type: string | null;
+        };
+        Insert: Partial<{
+          id?: string;
+          room_name: string;
+          title?: string | null;
+          host_id: string;
+          party_type?: string | null;
+        }>;
+        Update: Partial<{
+          id?: string;
+          room_name?: string;
+          title?: string | null;
+          host_id?: string;
+          party_type?: string | null;
+        }>;
+        Relationships: [];
+      };
       groups: {
         Row: GroupsRow;
         Insert: Partial<GroupsRow>;

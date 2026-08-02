@@ -71,17 +71,24 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
 
       if (!events || events.length === 0) return;
 
-      for (const event of events) {
+      const typedEvents = (events ?? []) as unknown as Array<{
+        id: string;
+        title: string;
+        host_id: string;
+        language_pair: string | null;
+      }>;
+
+      for (const event of typedEvents) {
         // Fetch attending users for this event
         const { data: rsvps, error: rsvpError } = await supabase
-          .from<{ user_id: string }>('event_rsvps')
+          .from('event_rsvps')
           .select('user_id')
           .eq('event_id', event.id)
-          .eq('status' as keyof typeof rsvps, 'attending');
+          .eq('status', 'attending');
 
         if (rsvpError) {
           this.logger.warn(
-            `Could not fetch RSVPs for event ${(event as any).id}`,
+            `Could not fetch RSVPs for event ${event.id}`,
             rsvpError,
           );
           continue;
@@ -90,7 +97,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
         if (!rsvps) continue;
 
         for (const rsvp of rsvps) {
-          await this.sendReminder((event as any).id, event.title, rsvp.user_id);
+          await this.sendReminder(event.id, event.title, rsvp.user_id);
         }
       }
     } catch (err) {
@@ -395,7 +402,15 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
 
       if (!events || events.length === 0) return;
 
-      for (const event of events) {
+      const typedEvents = (events ?? []) as unknown as Array<{
+        id: string;
+        title: string;
+        host_id: string;
+        language_pair: string;
+        category: string | null;
+      }>;
+
+      for (const event of typedEvents) {
         const roomName = `language_party-${event.id}`;
 
         // Check if a room already exists for this event
