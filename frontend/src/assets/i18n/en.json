@@ -559,5 +559,7 @@
   "forcedUpdateModal.message": "A new version of the app is available. Please update to continue.",
   "forcedUpdateModal.updateButton": "Update Now",
   "system.profileUpdated": "Profile updated",
-  "system.missedCall": "Missed call"
+  "system.missedCall": "Missed call",
+  "nav.notifications": "Notifications",
+  "nav.compose": "Compose"
 }
