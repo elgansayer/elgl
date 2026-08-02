@@ -1005,27 +1005,83 @@ export class UsersService {
     const supabase = this.supabaseService.getClient();
 
     // Delete related data from multiple tables
-    const deletions: Promise<{ error?: { message: string } }>[] = [
-      supabase.from('moments').delete().eq('author_id', userId),
-      supabase.from('moment_comments').delete().eq('author_id', userId),
-      supabase.from('moment_likes').delete().eq('user_id', userId),
-      supabase.from('flashcards').delete().eq('user_id', userId),
-      supabase.from('chat_messages').delete().eq('sender_id', userId),
-      supabase.from('favourites').delete().eq('user_id', userId),
-      supabase.from('profile_visits').delete().eq('visitor_id', userId),
-      supabase.from('profile_visits').delete().eq('viewed_id', userId),
-      supabase.from('user_follows').delete().eq('follower_id', userId),
-      supabase.from('user_follows').delete().eq('following_id', userId),
-      supabase.from('user_profile_likes').delete().eq('liker_id', userId),
-      supabase.from('user_profile_likes').delete().eq('liked_id', userId),
-      supabase.from('status_views').delete().eq('viewer_id', userId),
-      supabase.from('status_views').delete().eq('status_owner_id', userId),
+    const deletions: Promise<{ error?: { message: string } | null }>[] = [
+      supabase
+        .from('moments')
+        .delete()
+        .eq('author_id', userId)
+        .then((result) => ({ error: result.error })),
+      supabase
+        .from('moment_comments')
+        .delete()
+        .eq('author_id', userId)
+        .then((result) => ({ error: result.error })),
+      supabase
+        .from('moment_likes')
+        .delete()
+        .eq('user_id', userId)
+        .then((result) => ({ error: result.error })),
+      supabase
+        .from('flashcards')
+        .delete()
+        .eq('user_id', userId)
+        .then((result) => ({ error: result.error })),
+      supabase
+        .from('chat_messages')
+        .delete()
+        .eq('sender_id', userId)
+        .then((result) => ({ error: result.error })),
+      supabase
+        .from('favourites')
+        .delete()
+        .eq('user_id', userId)
+        .then((result) => ({ error: result.error })),
+      supabase
+        .from('profile_visits')
+        .delete()
+        .eq('visitor_id', userId)
+        .then((result) => ({ error: result.error })),
+      supabase
+        .from('profile_visits')
+        .delete()
+        .eq('viewed_id', userId)
+        .then((result) => ({ error: result.error })),
+      supabase
+        .from('user_follows')
+        .delete()
+        .eq('follower_id', userId)
+        .then((result) => ({ error: result.error })),
+      supabase
+        .from('user_follows')
+        .delete()
+        .eq('following_id', userId)
+        .then((result) => ({ error: result.error })),
+      supabase
+        .from('user_profile_likes')
+        .delete()
+        .eq('liker_id', userId)
+        .then((result) => ({ error: result.error })),
+      supabase
+        .from('user_profile_likes')
+        .delete()
+        .eq('liked_id', userId)
+        .then((result) => ({ error: result.error })),
+      supabase
+        .from('status_views')
+        .delete()
+        .eq('viewer_id', userId)
+        .then((result) => ({ error: result.error })),
+      supabase
+        .from('status_views')
+        .delete()
+        .eq('status_owner_id', userId)
+        .then((result) => ({ error: result.error })),
     ];
 
     const results = await Promise.all(deletions);
     const errors = results
-      .filter((r: { error?: { message: string } }) => r.error)
-      .map((r: { error?: { message: string } }) => r.error?.message);
+      .filter((r: { error?: { message: string } | null }) => r.error)
+      .map((r: { error?: { message: string } | null }) => r.error?.message);
     if (errors.length > 0) {
       Logger.warn(
         `Some deletions failed for user ${userId}: ${errors.join(', ')}`,
