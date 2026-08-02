@@ -90,7 +90,10 @@ describe('DiscoveryService', () => {
       );
       expect(mockQueryBuilder.limit).toHaveBeenCalledWith(50);
       expect(result).toEqual(
-        partners.map((p) => ({ ...p, is_partner_of_week: false })),
+        partners.map((p) => ({
+          ...p,
+          is_partner_of_week: false,
+        })),
       );
     });
 
@@ -119,6 +122,28 @@ describe('DiscoveryService', () => {
       expect(mockQueryBuilder.gte).toHaveBeenCalledWith(
         'correction_ratio',
         0.8,
+      );
+      expect(result).toEqual(
+        partners.map((p) => ({ ...p, is_partner_of_week: false })),
+      );
+    });
+
+    it('should apply proficiency level filter', async () => {
+      const partners = [
+        { id: 'partner-3', display_name: 'Proficient Partner' },
+      ];
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: partners,
+        error: null,
+      });
+
+      const result = await service.searchPartners('user-1', null, {
+        level: 'B2',
+      });
+
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'proficiency_level',
+        'B2',
       );
       expect(result).toEqual(
         partners.map((p) => ({ ...p, is_partner_of_week: false })),

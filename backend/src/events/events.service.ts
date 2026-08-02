@@ -74,7 +74,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       for (const event of events) {
         // Fetch attending users for this event
         const { data: rsvps, error: rsvpError } = await supabase
-          .from('event_rsvps')
+          .from<{ user_id: string }>('event_rsvps')
           .select('user_id')
           .eq('event_id', event.id)
           .eq('status', 'attending');
@@ -139,7 +139,10 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     // Record that we sent the reminder to avoid duplicates
     const { error: insertErr } = await supabase
       .from('event_reminders_sent')
-      .insert({ event_id: eventId, user_id: userId });
+      .insert<{ event_id: string; user_id: string }>({
+        event_id: eventId,
+        user_id: userId,
+      });
 
     if (insertErr) {
       this.logger.warn('Failed to record sent reminder', insertErr);
@@ -150,7 +153,16 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('events')
-      .insert({
+      .insert<{
+        title: string;
+        description: string | null;
+        category: string | null;
+        date_time: string;
+        location: string | null;
+        language_pair: string | null;
+        max_participants: number | null;
+        host_id: string;
+      }>({
         title: dto.title,
         description: dto.description ?? null,
         category: dto.category ?? null,
