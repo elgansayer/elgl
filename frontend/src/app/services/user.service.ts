@@ -499,13 +499,11 @@ export class UserService {
     );
   }
 
-  async getAvailableInterests(): Promise<string[]> {
+  async queryUsersByLanguagePairs(languagePairs: { native: string; target: string }[]): Promise<UserProfile[]> {
     return firstValueFrom(
-      this.http.get<string[]>(`${this.baseUrl}/interests`, { headers: this.getHeaders() })
-        .pipe(catchError(() => {
-          // fallback to mock
-          return of(['technology', 'fashion', 'food', 'travel', 'art', 'science', 'history', 'fitness']);
-        })),
+      this.http
+        .post<UserProfile[]>(`${this.baseUrl}/query-language-pairs`, { languagePairs }, { headers: this.getHeaders() })
+        .pipe(catchError(() => of([]))),
     );
   }
 

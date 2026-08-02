@@ -4,6 +4,10 @@ export interface UserProfile {
   native_languages: string[];
   target_languages: string[];
   /**
+   * Queryable language pairs for matching users.
+   */
+  language_pairs?: { native: string; target: string }[];
+  /**
    * Default language code for automatic translation (ISO 639-1).
    */
   default_translation_language?: string;
