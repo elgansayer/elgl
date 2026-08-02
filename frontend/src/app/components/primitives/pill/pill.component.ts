@@ -1,4 +1,4 @@
-import { Component, inject, input, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, input, computed } from '@angular/core';
 import { I18nService } from '../../../services/i18n.service';
 
 const PILL_COLOUR_KEYS: Record<string, string> = {
@@ -11,6 +11,7 @@ const PILL_COLOUR_KEYS: Record<string, string> = {
 };
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-pill',
   template: `
     <span [class]="pillClasses()">
