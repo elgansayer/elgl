@@ -133,7 +133,7 @@ describe('GroupsService', () => {
   it('removeMember deletes the member row', async () => {
     const deleteBuilder = {
       delete: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockResolvedValue({ data: null, error: null }),
+      match: jest.fn().mockResolvedValue({ data: null, error: null }),
     };
     (supabaseService.getClient as unknown as jest.Mock).mockReturnValue({
       from: jest.fn().mockReturnValue(deleteBuilder),
@@ -449,7 +449,7 @@ describe('GroupsService', () => {
         error: null,
       }),
     };
-    const deleteBuilder: any = {
+    const deleteBuilder = {
       delete: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
     };
