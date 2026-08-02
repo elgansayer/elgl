@@ -26,6 +26,7 @@ describe('ChatService', () => {
   let service: ChatService;
   let centrifugoService: any;
   let chatLlmService: any;
+  let eventEmitter: any;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
 
@@ -117,6 +118,7 @@ describe('ChatService', () => {
     service = module.get<ChatService>(ChatService);
     centrifugoService = module.get<CentrifugoService>(CentrifugoService) as any;
     chatLlmService = module.get<ChatLlmService>(ChatLlmService) as any;
+    eventEmitter = module.get<EventEmitter2>(EventEmitter2) as any;
   });
 
   afterEach(() => {
@@ -237,6 +239,116 @@ describe('ChatService', () => {
       expect(chatLlmService.proxyMessage).toHaveBeenCalled();
       expect(result.correction_payload.explanation).toBe(
         'The past tense of "go" is "went".',
+      );
+    }, 15000);
+
+    it('should emit a chat.mention event for each mentioned participant', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Hey @Alice check this out, cc @Bob',
+      };
+      const savedMessage = {
+        id: 'msg-1',
+        room_id: 'room-1',
+        sender_id: 'sender-1',
+        message_type: 'text',
+        text_content: dto.text_content,
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: savedMessage,
+        error: null,
+      });
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) => resolve({ data: [] }))
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: [
+              { user_id: 'alice-id', user: { display_name: 'Alice' } },
+              { user_id: 'bob-id', user: { display_name: 'Bob' } },
+              { user_id: 'sender-1', user: { display_name: 'SenderName' } },
+            ],
+          }),
+        );
+
+      await service.sendMessage('sender-1', dto);
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'chat.mention',
+        expect.objectContaining({
+          actorId: 'sender-1',
+          mentionedUserId: 'alice-id',
+          roomId: 'room-1',
+        }),
+      );
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'chat.mention',
+        expect.objectContaining({
+          actorId: 'sender-1',
+          mentionedUserId: 'bob-id',
+          roomId: 'room-1',
+        }),
+      );
+    }, 15000);
+
+    it('should not emit a mention event when the sender mentions themselves', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Note to @SenderName',
+      };
+      const savedMessage = {
+        id: 'msg-1',
+        room_id: 'room-1',
+        sender_id: 'sender-1',
+        message_type: 'text',
+        text_content: dto.text_content,
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: savedMessage,
+        error: null,
+      });
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) => resolve({ data: [] }))
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: [
+              { user_id: 'sender-1', user: { display_name: 'SenderName' } },
+            ],
+          }),
+        );
+
+      await service.sendMessage('sender-1', dto);
+
+      expect(eventEmitter.emit).not.toHaveBeenCalledWith(
+        'chat.mention',
+        expect.anything(),
+      );
+    }, 15000);
+
+    it('should not emit mention events when the message has no @mentions', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Just a normal message',
+      };
+      const savedMessage = {
+        id: 'msg-1',
+        room_id: 'room-1',
+        sender_id: 'sender-1',
+        message_type: 'text',
+        text_content: dto.text_content,
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: savedMessage,
+        error: null,
+      });
+
+      await service.sendMessage('sender-1', dto);
+
+      expect(eventEmitter.emit).not.toHaveBeenCalledWith(
+        'chat.mention',
+        expect.anything(),
       );
     }, 15000);
   });

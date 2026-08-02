@@ -21,7 +21,10 @@ import {
   ChatRoomRecord,
   FavouriteRecord,
 } from './interfaces/chat-message.interface';
-import { ChatMessageEvent } from '../notifications/events/notification.events';
+import {
+  ChatMessageEvent,
+  ChatMentionEvent,
+} from '../notifications/events/notification.events';
 import { SystemMessageService } from './services/system-message.service';
 import { XpService } from '../xp/xp.service';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
@@ -303,20 +306,21 @@ export class ChatService {
       message: messageForPublish,
     });
 
+    const preview = dto.text_content
+      ? dto.text_content.substring(0, 120)
+      : dto.message_type === 'voice'
+        ? '🎤 Voice message'
+        : dto.message_type === 'correction'
+          ? '📝 Correction'
+          : dto.message_type === 'doodle'
+            ? '🎨 Doodle'
+            : dto.message_type === 'correction_request'
+              ? '✏️ Correction request'
+              : '';
+
     // Emit push notification event
     if (roomMembers && roomMembers.length > 0) {
       const receiverId = (roomMembers as { user_id: string }[])[0].user_id;
-      const preview = dto.text_content
-        ? dto.text_content.substring(0, 120)
-        : dto.message_type === 'voice'
-          ? '🎤 Voice message'
-          : dto.message_type === 'correction'
-            ? '📝 Correction'
-            : dto.message_type === 'doodle'
-              ? '🎨 Doodle'
-              : dto.message_type === 'correction_request'
-                ? '✏️ Correction request'
-                : '';
 
       this.eventEmitter.emit(
         'chat.message',
@@ -329,6 +333,39 @@ export class ChatService {
           preview,
         ),
       );
+    }
+
+    // ---------- Parse @mentions and emit notifications ----------
+    if (dto.message_type === 'text' && dto.text_content) {
+      const mentionRegex = /@([\wÀ-ɏ؀-ۿ]+)/g;
+      const mentionedNames = [...dto.text_content.matchAll(mentionRegex)].map(
+        (m) => m[1],
+      );
+
+      if (mentionedNames.length > 0) {
+        const members = (await this.getGroupMembers(dto.room_id)) as {
+          user_id: string;
+          user?: { display_name?: string };
+        }[];
+
+        for (const member of members) {
+          if (
+            member.user_id !== senderId &&
+            member.user?.display_name &&
+            mentionedNames.includes(member.user.display_name)
+          ) {
+            this.eventEmitter.emit(
+              'chat.mention',
+              new ChatMentionEvent(
+                senderId,
+                member.user_id,
+                dto.room_id,
+                preview,
+              ),
+            );
+          }
+        }
+      }
     }
 
     return messageForPublish;

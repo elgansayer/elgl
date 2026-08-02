@@ -72,19 +72,20 @@ export class StudyBuddiesService {
     }
 
     const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from('study_buddy_requests')
-      .upsert(
-        {
-          requester_id: requesterId,
-          partner_id: dto.partnerId,
-          message: dto.message ?? null,
-          status: 'pending',
-        },
-        { onConflict: 'requester_id,partner_id' },
-      )
-      .select('*')
-      .single();
+    const { data, error }: { data: BuddyRequestRow[] | null; error: any } =
+      await supabase
+        .from('study_buddy_requests')
+        .upsert(
+          {
+            requester_id: requesterId,
+            partner_id: dto.partnerId,
+            message: dto.message ?? null,
+            status: 'pending',
+          },
+          { onConflict: 'requester_id,partner_id' },
+        )
+        .select('*')
+        .single();
 
     if (error || !data) {
       throw new Error(
@@ -134,7 +135,10 @@ export class StudyBuddiesService {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('study_buddy_requests')
-      .update({ status, updated_at: new Date().toISOString() })
+      .update({
+        status: status as BuddyRequestStatus,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', requestId)
       .eq('partner_id', userId)
       .select('*')
@@ -178,7 +182,9 @@ export class StudyBuddiesService {
       query = query.overlaps('target_languages', nativeLanguages);
     }
 
-    const { data } = await query.limit(20).returns<UserProfile[]>();
+    const { data }: { data: UserProfile[] | null } = await query
+      .limit(20)
+      .returns<UserProfile[]>();
     return data ?? [];
   }
 
