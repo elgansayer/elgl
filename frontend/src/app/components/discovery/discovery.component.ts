@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -33,11 +33,14 @@ import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
 })
-export class DiscoveryComponent implements OnInit {
+export class DiscoveryComponent implements OnInit, OnDestroy {
   private readonly discoveryService = inject(DiscoveryService);
   private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
+
+  private currentAudio: HTMLAudioElement | null = null;
+  readonly playingPartnerId = signal<string | null>(null);
 
   readonly partners = signal<
     (UserProfile & {
@@ -215,6 +218,39 @@ export class DiscoveryComponent implements OnInit {
       return `${metres.toFixed(0)} m (${miles.toFixed(2)} mi)`;
     }
     return `${km.toFixed(1)} km · ${miles.toFixed(1)} mi`;
+  }
+
+  toggleAudioIntro(partnerId: string, audioIntroUrl: string | undefined, event: Event): void {
+    event.stopPropagation();
+    if (!audioIntroUrl) return;
+
+    if (this.playingPartnerId() === partnerId) {
+      this.stopAudioIntro();
+      return;
+    }
+
+    this.stopAudioIntro();
+
+    const audio = new Audio(audioIntroUrl);
+    audio.addEventListener('ended', () => this.stopAudioIntro());
+    audio.addEventListener('error', () => this.stopAudioIntro());
+    this.currentAudio = audio;
+    this.playingPartnerId.set(partnerId);
+
+    void audio.play().catch(() => this.stopAudioIntro());
+  }
+
+  private stopAudioIntro(): void {
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio.currentTime = 0;
+      this.currentAudio = null;
+    }
+    this.playingPartnerId.set(null);
+  }
+
+  ngOnDestroy(): void {
+    this.stopAudioIntro();
   }
 
   resetFilters(): void {

@@ -64,6 +64,8 @@
   "discovery.matchCount": "{{count}} partner match(es)",
   "discovery.partnerFallback": "Language partner",
   "discovery.vipBadge": "VIP",
+  "discovery.playAudioIntro": "Play audio introduction",
+  "discovery.pauseAudioIntro": "Pause audio introduction",
   "discovery.startChat": "Start chat",
   "discovery.noBio": "No profile bio yet.",
   "discovery.streakBadge": "🔥 {{days}}d streak",
