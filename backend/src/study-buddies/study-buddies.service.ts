@@ -73,7 +73,7 @@ export class StudyBuddiesService {
 
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
-      .from('study_buddy_requests')
+      .from<BuddyRequestRow>('study_buddy_requests')
       .upsert(
         {
           requester_id: requesterId,
@@ -83,7 +83,7 @@ export class StudyBuddiesService {
         },
         { onConflict: 'requester_id,partner_id' },
       )
-      .select()
+      .select('*')
       .single();
 
     if (error || !data) {
@@ -133,11 +133,11 @@ export class StudyBuddiesService {
   ): Promise<BuddyRequest> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
-      .from('study_buddy_requests')
+      .from<BuddyRequestRow>('study_buddy_requests')
       .update({ status, updated_at: new Date().toISOString() })
       .eq('id', requestId)
       .eq('partner_id', userId)
-      .select()
+      .select('*')
       .maybeSingle();
 
     if (error) {
@@ -178,7 +178,7 @@ export class StudyBuddiesService {
       query = query.overlaps('target_languages', nativeLanguages);
     }
 
-    const { data } = await query.limit(20);
+    const { data } = await query.limit(20).returns<UserProfile[]>();
     return data ?? [];
   }
 
