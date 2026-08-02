@@ -136,6 +136,61 @@ describe('AudioRoomsService', () => {
       );
       warnSpy.mockRestore();
     });
+
+    describe('disableBiometricLock', () => {
+      it('should disable biometric lock for the room', async () => {
+        const roomRow: any = {
+          id: 'room-1',
+          host_id: 'host-1',
+          biometric_lock: true,
+        };
+        mockQueryBuilder.single.mockResolvedValue({
+          data: roomRow,
+          error: null,
+        });
+
+        const result = await service.disableBiometricLock('host-1', {
+          room_id: 'room-1',
+        });
+
+        expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+          biometric_lock: false,
+        });
+        expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'room-1');
+        expect(result.biometric_lock).toBe(false);
+      });
+
+      it('should throw ForbiddenException if non-host tries to disable biometric lock', async () => {
+        const roomRow: any = {
+          id: 'room-1',
+          host_id: 'host-1',
+          biometric_lock: true,
+        };
+        mockQueryBuilder.single.mockResolvedValue({
+          data: roomRow,
+          error: null,
+        });
+
+        await expect(
+          service.disableBiometricLock('other-user', { room_id: 'room-1' }),
+        ).rejects.toThrow(
+          new ForbiddenException(
+            'Only the host can disable biometric lock for this room.',
+          ),
+        );
+      });
+
+      it('should throw NotFoundException if room does not exist', async () => {
+        mockQueryBuilder.single.mockResolvedValue({
+          data: null,
+          error: null,
+        });
+
+        await expect(
+          service.disableBiometricLock('host-1', { room_id: 'non-existent' }),
+        ).rejects.toThrow(new NotFoundException('Room not found'));
+      });
+    });
   });
 
   describe('createRoom', () => {
@@ -845,6 +900,98 @@ describe('AudioRoomsService', () => {
         recording_url: 'https://r2.hellotalk.mock/test.webm',
       });
       expect(result.id).toBe('room-1');
+    });
+  });
+
+  describe('enableBiometricLock', () => {
+    it('should enable biometric lock for the room', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        biometric_lock: false,
+      };
+      mockQueryBuilder.single.mockResolvedValue({ data: roomRow, error: null });
+
+      const result = await service.enableBiometricLock('host-1', {
+        room_id: 'room-1',
+      });
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        biometric_lock: true,
+      });
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'room-1');
+      expect(result.biometric_lock).toBe(true);
+    });
+
+    it('should throw ForbiddenException if non-host tries to enable biometric lock', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        biometric_lock: false,
+      };
+      mockQueryBuilder.single.mockResolvedValue({ data: roomRow, error: null });
+
+      await expect(
+        service.enableBiometricLock('other-user', { room_id: 'room-1' }),
+      ).rejects.toThrow(
+        new ForbiddenException(
+          'Only the host can enable biometric lock for this room.',
+        ),
+      );
+    });
+
+    it('should throw NotFoundException if room does not exist', async () => {
+      mockQueryBuilder.single.mockResolvedValue({ data: null, error: null });
+
+      await expect(
+        service.enableBiometricLock('host-1', { room_id: 'non-existent' }),
+      ).rejects.toThrow(new NotFoundException('Room not found'));
+    });
+  });
+
+  describe('disableBiometricLock', () => {
+    it('should disable biometric lock for the room', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        biometric_lock: true,
+      };
+      mockQueryBuilder.single.mockResolvedValue({ data: roomRow, error: null });
+
+      const result = await service.disableBiometricLock('host-1', {
+        room_id: 'room-1',
+      });
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        biometric_lock: false,
+      });
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'room-1');
+      expect(result.biometric_lock).toBe(false);
+    });
+
+    it('should throw ForbiddenException if non-host tries to disable biometric lock', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        biometric_lock: true,
+      };
+      mockQueryBuilder.single.mockResolvedValue({ data: roomRow, error: null });
+
+      await expect(
+        service.disableBiometricLock('other-user', { room_id: 'room-1' }),
+      ).rejects.toThrow(
+        new ForbiddenException(
+          'Only the host can disable biometric lock for this room.',
+        ),
+      );
+    });
+
+    it('should throw NotFoundException if room does not exist', async () => {
+      mockQueryBuilder.single.mockResolvedValue({ data: null, error: null });
+
+      await expect(
+        service.disableBiometricLock('host-1', { room_id: 'non-existent' }),
+      ).rejects.toThrow(new NotFoundException('Room not found'));
     });
   });
 });
