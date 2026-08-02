@@ -71,12 +71,12 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
 
       if (!events || events.length === 0) return;
 
-      const typedEvents = (events ?? []) as unknown as Array<{
+      const typedEvents: Array<{
         id: string;
         title: string;
         host_id: string;
         language_pair: string | null;
-      }>;
+      }> = events ?? [];
 
       for (const event of typedEvents) {
         // Fetch attending users for this event
@@ -228,11 +228,17 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       this.logger.error('Failed to list events', error);
       throw error;
     }
-    return (data ?? []).map((ev: any) => ({
-      ...ev,
-      host_name: ev.host?.display_name ?? null,
-      host_avatar_url: ev.host?.avatar_url ?? null,
-    }));
+    return (data ?? []).map(
+      (
+        ev: {
+          host?: { display_name: string | null; avatar_url: string | null };
+        } & Record<string, unknown>,
+      ) => ({
+        ...ev,
+        host_name: ev.host?.display_name ?? null,
+        host_avatar_url: ev.host?.avatar_url ?? null,
+      }),
+    );
   }
 
   async getUserEvents(
@@ -250,7 +256,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     }
     if (!rsvps || rsvps.length === 0) return [];
 
-    const eventIds = rsvps.map((r: any) => r.event_id);
+    const eventIds = rsvps.map((r: { event_id: string }) => r.event_id);
     let q = supabase
       .from('events')
       .select('*, host:host_id(display_name, avatar_url)')

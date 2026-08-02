@@ -388,8 +388,7 @@ export class GooglePlayNotificationService {
     supabase
       .from('users')
       .update({
-        is_vip: false,
-        vip_tier: 'free',
+        status_visibility: 'free',
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId)
