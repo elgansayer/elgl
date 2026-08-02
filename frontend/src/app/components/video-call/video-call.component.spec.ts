@@ -54,7 +54,14 @@ describe('VideoCallComponent - screen sharing', () => {
   it('enters picture-in-picture mode when togglePip is called and PiP is available', async () => {
     const videoElement = document.createElement('video');
     (component.remoteVideoRef as any) = { nativeElement: videoElement };
-    document.pictureInPictureEnabled = true;
+    Object.defineProperty(document, 'pictureInPictureEnabled', {
+      configurable: true,
+      get: () => true,
+    });
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      configurable: true,
+      get: () => null,
+    });
     const requestPiPSpy = vi.spyOn(videoElement, 'requestPictureInPicture').mockResolvedValue();
 
     await component.togglePip();
@@ -66,8 +73,14 @@ describe('VideoCallComponent - screen sharing', () => {
   it('exits picture-in-picture mode when togglePip is called and already in PiP', async () => {
     const videoElement = document.createElement('video');
     (component.remoteVideoRef as any) = { nativeElement: videoElement };
-    document.pictureInPictureEnabled = true;
-    document.pictureInPictureElement = videoElement;
+    Object.defineProperty(document, 'pictureInPictureEnabled', {
+      configurable: true,
+      get: () => true,
+    });
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      configurable: true,
+      get: () => videoElement,
+    });
     const exitPiPSpy = vi.spyOn(document, 'exitPictureInPicture').mockResolvedValue();
 
     await component.togglePip();
@@ -77,7 +90,14 @@ describe('VideoCallComponent - screen sharing', () => {
   });
 
   it('does nothing if PiP is not available', async () => {
-    document.pictureInPictureEnabled = false;
+    Object.defineProperty(document, 'pictureInPictureEnabled', {
+      configurable: true,
+      get: () => false,
+    });
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      configurable: true,
+      get: () => null,
+    });
 
     await expect(component.togglePip()).resolves.toBeUndefined();
     expect(component.isInPip()).toBe(false);

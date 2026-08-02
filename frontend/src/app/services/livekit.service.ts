@@ -110,6 +110,13 @@ export class LivekitService {
     return this._speakerphone;
   }
 
+  /** Start or stop screen sharing based on the enabled flag. */
+  async toggleScreenShare(enabled: boolean, room?: Room): Promise<void> {
+    const targetRoom = room ?? this.room;
+    if (!targetRoom) return;
+    await targetRoom.localParticipant.setScreenShareEnabled(enabled);
+  }
+
   leaveRoom(): void {
     if (this.room) {
       this.room.disconnect();
