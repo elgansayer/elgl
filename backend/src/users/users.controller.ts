@@ -94,7 +94,7 @@ export class UsersController {
   ): Promise<{ level: string }> {
     if (!user) throw new UnauthorizedException();
     if (typeof score !== 'number' || score < 0 || score > 100) {
-      throw new BadRequestException('Score must be a number between 0 and 100');
+      throw new BadRequestException();
     }
     const level = await this.usersService.proficiencyAssessment(user.id, score);
     return { level };
@@ -148,9 +148,7 @@ export class UsersController {
     if (!user) throw new UnauthorizedException();
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(dto.contentType)) {
-      throw new BadRequestException(
-        'Only JPEG, PNG, and WebP images are allowed',
-      );
+      throw new BadRequestException();
     }
     return this.mediaService.generatePresignedUrl(user.id, {
       filename: dto.filename,

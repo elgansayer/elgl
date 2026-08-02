@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -71,6 +72,16 @@ export class MomentsController {
     @Body('filename') filename: string,
     @Body('contentType') contentType: string,
   ): Promise<{ uploadUrl: string; publicUrl: string }> {
+    const allowedTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'video/mp4',
+      'video/webm',
+    ];
+    if (!allowedTypes.includes(contentType)) {
+      throw new BadRequestException();
+    }
     // user is authenticated via guard, no VIP check needed for general media uploads
     return await this.momentsService.getMediaUploadUrl(filename, contentType);
   }
