@@ -1005,7 +1005,7 @@ export class UsersService {
     const supabase = this.supabaseService.getClient();
 
     // Delete related data from multiple tables
-    const deletions = [
+    const deletions: Promise<{ error?: { message: string } }>[] = [
       supabase.from('moments').delete().eq('author_id', userId),
       supabase.from('moment_comments').delete().eq('author_id', userId),
       supabase.from('moment_likes').delete().eq('user_id', userId),
@@ -1023,7 +1023,9 @@ export class UsersService {
     ];
 
     const results = await Promise.all(deletions);
-    const errors = results.filter((r) => r.error).map((r) => r.error?.message);
+    const errors = results
+      .filter((r: { error?: { message: string } }) => r.error)
+      .map((r: { error?: { message: string } }) => r.error?.message);
     if (errors.length > 0) {
       Logger.warn(
         `Some deletions failed for user ${userId}: ${errors.join(', ')}`,
