@@ -224,6 +224,11 @@ export class I18nService {
     'discovery.bannerView': 'View VIP',
     'discovery.partnerBioFallback':
       'I want to improve my language skills! Let us practice together.',
+    'discovery.genderLabel': 'Gender',
+    'discovery.genderAny': 'Any gender',
+    'discovery.genderMale': 'Male',
+    'discovery.genderFemale': 'Female',
+    'discovery.genderVipRequired': 'VIP required to filter by gender',
 
     // Moments Feed Component
     'moments.title': 'Moments',

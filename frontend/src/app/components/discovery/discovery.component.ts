@@ -221,6 +221,7 @@ export class DiscoveryComponent implements OnInit {
     this.selectedDistanceKm.set(50);
     this.selectedNativeLanguage.set('');
     this.selectedTargetLanguage.set('');
+    this.selectedGender.set('');
     this.seriousLearnerOnly.set(false);
     this.seriousLearnerMode.set(false);
     this.ageRangeMin.set(18);

@@ -283,6 +283,39 @@ describe('DiscoveryComponent', () => {
     expect(mockDiscoveryService.findPartners).toHaveBeenCalledTimes(1);
   });
 
+  it('should clear the selected gender when resetting filters', async () => {
+    mockAuthService.currentUser.set({ is_vip: true });
+    await init();
+    component.setGender('female');
+    await flush();
+
+    component.resetFilters();
+    await flush();
+
+    expect(component.selectedGender()).toBe('');
+  });
+
+  it('should disable the gender select and show a VIP note for non-VIP users', async () => {
+    await init();
+
+    const select: HTMLSelectElement = fixture.nativeElement.querySelector('#genderSelect');
+    const vipNote = fixture.nativeElement.querySelector('#genderVipNote');
+
+    expect(select.disabled).toBe(true);
+    expect(vipNote).toBeTruthy();
+  });
+
+  it('should enable the gender select and hide the VIP note for VIP users', async () => {
+    mockAuthService.currentUser.set({ is_vip: true });
+    await init();
+
+    const select: HTMLSelectElement = fixture.nativeElement.querySelector('#genderSelect');
+    const vipNote = fixture.nativeElement.querySelector('#genderVipNote');
+
+    expect(select.disabled).toBe(false);
+    expect(vipNote).toBeFalsy();
+  });
+
   it('should default to best_match sort and include it in the search call', async () => {
     await init();
 

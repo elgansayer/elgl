@@ -59,19 +59,32 @@
     </div>
 
     <!-- Gender Filter (VIP only) -->
-    @if (isVip()) {
-      <div class="flex overflow-x-auto hide-scrollbar gap-2 px-4 mt-3">
-        <select
-          class="bg-surface-200 text-text-primary px-4 py-1.5 rounded-full border border-surface-100 text-sm font-bold appearance-none cursor-pointer"
-          [value]="selectedGender()"
-          (change)="setGender($any($event.target).value)"
+    <div class="flex items-center gap-2 px-4 mt-3">
+      <label for="genderSelect" class="text-xs font-semibold text-text-secondary whitespace-nowrap">
+        {{ 'discovery.genderLabel' | t }}
+      </label>
+      <select
+        id="genderSelect"
+        class="bg-surface-200 text-text-primary px-4 py-1.5 rounded-full border border-surface-100 text-sm font-bold appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        [value]="selectedGender()"
+        [disabled]="!isVip()"
+        [attr.aria-describedby]="!isVip() ? 'genderVipNote' : null"
+        (change)="setGender($any($event.target).value)"
+      >
+        <option value="">{{ 'discovery.genderAny' | t }}</option>
+        <option value="male">{{ 'discovery.genderMale' | t }}</option>
+        <option value="female">{{ 'discovery.genderFemale' | t }}</option>
+      </select>
+      @if (!isVip()) {
+        <a
+          id="genderVipNote"
+          routerLink="/vip"
+          class="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded-md whitespace-nowrap"
         >
-          <option value="">{{ 'discovery.genderAny' | t }}</option>
-          <option value="male">{{ 'discovery.genderMale' | t }}</option>
-          <option value="female">{{ 'discovery.genderFemale' | t }}</option>
-        </select>
-      </div>
-    }
+          {{ 'discovery.genderVipRequired' | t }}
+        </a>
+      }
+    </div>
       <!-- Age range filter -->
       <div class="flex items-center gap-2 px-4 mt-3">
         <app-age-range-slider
