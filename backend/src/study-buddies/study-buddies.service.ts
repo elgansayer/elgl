@@ -73,7 +73,7 @@ export class StudyBuddiesService {
 
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
-      .from<BuddyRequestRow>('study_buddy_requests')
+      .from('study_buddy_requests')
       .upsert(
         {
           requester_id: requesterId,
@@ -91,7 +91,7 @@ export class StudyBuddiesService {
         `Failed to create study buddy request: ${error?.message}`,
       );
     }
-    return this.toBuddyRequest(data);
+    return this.toBuddyRequest(data as BuddyRequestRow);
   }
 
   async getIncomingRequests(userId: string): Promise<BuddyRequest[]> {
@@ -133,7 +133,7 @@ export class StudyBuddiesService {
   ): Promise<BuddyRequest> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
-      .from<BuddyRequestRow>('study_buddy_requests')
+      .from('study_buddy_requests')
       .update({ status, updated_at: new Date().toISOString() })
       .eq('id', requestId)
       .eq('partner_id', userId)
@@ -146,7 +146,7 @@ export class StudyBuddiesService {
     if (!data) {
       throw new NotFoundException('Study buddy request not found');
     }
-    return this.toBuddyRequest(data);
+    return this.toBuddyRequest(data as BuddyRequestRow);
   }
 
   async getPotentialBuddies(userId: string): Promise<UserProfile[]> {

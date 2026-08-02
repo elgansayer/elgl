@@ -53,6 +53,7 @@ export class CallsService {
       participantLimit: number | null;
       isGroup: boolean;
       calleeToken: string | null;
+      isVideo: boolean;
     }
   > {
     if (!this.activeCalls.has(userId)) {
@@ -89,9 +90,10 @@ export class CallsService {
   /* ---------- Public API for hold / resume / list ---------- */
 
   getActiveCalls(userId: string): Array<{
-    roomName: string;
-    isHeld: boolean;
-    e2eeKey: string | null;
+    room_name: string;
+    is_held: boolean;
+    e2ee_key: string | null;
+    is_video: boolean;
     participant_limit: number | null;
     is_group: boolean;
     callee_token: string | null;

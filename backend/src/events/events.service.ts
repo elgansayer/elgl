@@ -11,7 +11,7 @@ import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventsQueryDto } from './dto/events-query.dto';
 
-interface EventWithHost {
+export interface EventWithHost {
   id: string;
   title: string;
   description: string | null;
@@ -451,7 +451,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
             target_language:
               event.language_pair.split('-')[1] ?? event.language_pair,
             language_pair: event.language_pair,
-            topic_tag: event.category ?? null,
+            topic_tag: event.category ?? event.language_pair,
             is_video_stream: false,
           },
           roomName,

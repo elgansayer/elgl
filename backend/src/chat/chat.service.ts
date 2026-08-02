@@ -472,7 +472,7 @@ export class ChatService {
   async getSuggestedReplies(
     userId: string,
     dto: SuggestedRepliesRequestDto,
-  ): Promise<{ suggestions: string[] }> {
+  ): Promise<string[]> {
     const recentMessages = dto.recent_messages ?? [];
     const contextMessages = recentMessages.slice(-10);
 
@@ -499,20 +499,18 @@ export class ChatService {
       if (suggestions.length === 0) {
         throw new Error('Empty response from LLM');
       }
-      return { suggestions };
+      return suggestions;
     } catch (error) {
       console.error(
         'Failed to generate suggestions, using fallback:',
         (error as Error).message,
       );
       // fallback to static suggestions
-      return {
-        suggestions: [
-          'Sure, let’s talk about travel.',
-          'Could you help me with my pronunciation?',
-          'I enjoyed that conversation.',
-        ],
-      };
+      return [
+        'Sure, let’s talk about travel.',
+        'Could you help me with my pronunciation?',
+        'I enjoyed that conversation.',
+      ];
     }
   }
 
