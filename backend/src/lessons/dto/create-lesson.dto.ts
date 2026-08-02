@@ -8,6 +8,7 @@ import {
 
 export class CreateLessonDto {
   @IsString()
+  @IsNotEmpty()
   title!: string;
 
   @IsOptional()
