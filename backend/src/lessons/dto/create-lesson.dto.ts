@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsObject, IsNumber } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsObject,
+  IsNumber,
+  IsNotEmpty,
+} from 'class-validator';
 
 export class CreateLessonDto {
   @IsString()
@@ -13,6 +19,8 @@ export class CreateLessonDto {
   content_json?: Record<string, unknown>;
 
   @IsString()
+  @IsString()
+  @IsNotEmpty()
   language_code!: string;
 
   @IsOptional()
