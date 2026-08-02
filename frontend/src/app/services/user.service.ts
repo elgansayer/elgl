@@ -233,6 +233,8 @@ export class UserService {
       location?: { latitude: number; longitude: number };
       mock_location?: { latitude: number; longitude: number };
       serious_learner_mode?: boolean;
+      sound_effects_enabled?: boolean;
+      vibration_enabled?: boolean;
     },
   ): Promise<UserProfile> {
     return firstValueFrom(

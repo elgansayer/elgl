@@ -174,6 +174,14 @@ export class SettingsComponent implements OnInit {
     this.interests.update(arr => arr.filter((_, i) => i !== index));
   }
 
+  toggleSoundEffects(): void {
+    this.soundEffectsEnabled = !this.soundEffectsEnabled;
+  }
+
+  toggleVibration(): void {
+    this.vibrationEnabled = !this.vibrationEnabled;
+  }
+
   async saveSettings(): Promise<void> {
     this.errorMessage.set('');
     this.successMessage.set('');
