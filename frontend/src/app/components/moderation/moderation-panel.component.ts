@@ -37,7 +37,8 @@ export class ModerationPanelComponent {
     try {
       const type = this.currentFilter();
       const data$ = this.moderationService.getItems(type);
-      this.items = toSignal(data$, { initialValue: [] });
+      const itemsSignal = toSignal(data$, { initialValue: [] });
+      this.items.set(itemsSignal());
     } finally {
       this.loading.set(false);
     }
@@ -58,7 +59,8 @@ export class ModerationPanelComponent {
     this.analysisResult.set(null);
     try {
       const result$ = this.moderationService.getUserRiskAnalysis(userId);
-      this.analysisResult = toSignal(result$, { initialValue: null });
+      const analysisSignal = toSignal(result$, { initialValue: null });
+      this.analysisResult.set(analysisSignal());
     } finally {
       this.analysing.set(false);
     }

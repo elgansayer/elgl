@@ -23,7 +23,7 @@ export interface Event {
 
 export interface EventsQuery {
   language_pair?: string;
-  category?: string;
+  category?: 'Audio Rooms' | 'Learning Seminars' | 'In-person Meetups' | 'Cultural Exchanges';
   status?: 'upcoming' | 'past';
   from_date?: string;
   to_date?: string;
@@ -74,7 +74,11 @@ export class EventsService {
   }
 
   getCategories(): Observable<string[]> {
-    return this.http.get<string[]>(`${environment.apiUrl}/events/categories`);
+    const categories = ['Audio Rooms', 'Learning Seminars', 'In-person Meetups', 'Cultural Exchanges'];
+    return new Observable((observer) => {
+      observer.next(categories);
+      observer.complete();
+    });
   }
 
   getMyEvents(status?: string) {
