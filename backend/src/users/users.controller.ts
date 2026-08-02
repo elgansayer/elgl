@@ -46,6 +46,16 @@ export class UsersController {
   }
 
   @UseGuards(TwoFactorGuard)
+  @Delete('me/permanent')
+  async permanentlyDeleteMyAccount(
+    @CurrentUser() user: User | null,
+  ): Promise<{ message: string }> {
+    if (!user) throw new UnauthorizedException();
+    await this.usersService.permanentDeleteAccount(user.id);
+    return { message: 'Account permanently deleted.' };
+  }
+
+  @UseGuards(TwoFactorGuard)
   @Post('me/restore')
   async restoreMyAccount(
     @CurrentUser() user: User | null,
