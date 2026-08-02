@@ -444,7 +444,7 @@ export interface Database {
 @Global()
 @Injectable()
 export class SupabaseService implements OnModuleDestroy {
-  private readonly client: SupabaseClient;
+  private readonly client: SupabaseClient<Database>;
   private readonly redisClient: Redis;
 
   constructor(private readonly configService: ConfigService) {
@@ -457,7 +457,7 @@ export class SupabaseService implements OnModuleDestroy {
         'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required',
       );
     }
-    this.client = createClient(supabaseUrl, supabaseKey);
+    this.client = createClient<Database>(supabaseUrl, supabaseKey);
 
     const redisUrl =
       this.configService.get<string>('REDIS_URL') || 'redis://localhost:6379';
@@ -470,7 +470,7 @@ export class SupabaseService implements OnModuleDestroy {
     });
   }
 
-  getClient(): SupabaseClient {
+  getClient(): SupabaseClient<Database> {
     return this.client;
   }
 

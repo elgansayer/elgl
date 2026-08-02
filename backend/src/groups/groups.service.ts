@@ -348,8 +348,8 @@ export class GroupsService {
         interest:interests(name)`,
       )
       .eq('id', groupId)
-      .single()
-      .returns<GroupInfoRow>();
+      .returns<GroupInfoRow>()
+      .single();
 
     if (error || !data) {
       throw new NotFoundException('Group not found');

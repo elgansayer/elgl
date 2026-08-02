@@ -42,13 +42,7 @@ export class FavouritesService {
       .single();
 
     if (insertResponse.error) throw insertResponse.error;
-    return insertResponse.data as {
-      id: string;
-      user_id: string;
-      item_type: 'message';
-      item_payload: Record<string, unknown>;
-      notes: string | null;
-    };
+    return insertResponse.data;
   }
 
   async removeFavourite(userId: string, favouriteId: string) {
