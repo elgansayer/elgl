@@ -15400,3 +15400,87 @@ Errors:
 [2026-08-02T14:03:31Z]   OK    backend e2e
 [2026-08-02T14:04:15Z]   OK    frontend build
 [2026-08-02T14:04:42Z]   OK    backend build
+[2026-08-02T14:04:44Z] Committed: 2b6781d0 — feat: Add Support Centre and FAQ viewer.
+[2026-08-02T14:04:44Z] COMPLETED: Add Support Centre and FAQ viewer.
+[2026-08-02T14:04:45Z] Skipping duplicate task (matches /home/dev/hellotalk/.tasks/completed/0000-1286-code-review-finding-add-unit-tests-for-frontend-src-app-serv.task): Code review finding: Add unit tests for frontend/src/app/services/i18n.service (
+[2026-08-02T14:04:45Z] Self-review: created 1 improvement tasks from commit 2b6781d0
+[2026-08-02T14:04:45Z] Skipping duplicate task (matches /home/dev/hellotalk/.tasks/completed/0000-1543-periodic-audit-audit-backend-controllers-for-missing-authori.task): Periodic audit: Audit backend controllers for missing authorization guards
+[2026-08-02T14:04:45Z] Periodic review task created (cycle 190)
+[2026-08-02T14:04:45Z] Cooldown 15s...
+[2026-08-02T14:05:00Z] Task: Implement App Version display and update checker.
+[2026-08-02T14:05:00Z] Queue: 1432 pending, 430 done, 1 stuck
+[2026-08-02T14:05:00Z] Attempt 1/1
+[2026-08-02T14:05:00Z] Trying copilot...
+[2026-08-02T14:05:00Z] Running Aider/Copilot (https://api.githubcopilot.com)...
+[2026-08-02T14:05:31Z] Copilot: produced 6 file changes (or completed audit)
+[2026-08-02T14:05:31Z] SUCCESS: copilot produced 6 file changes
+[2026-08-02T14:05:31Z]   OK    swarmd syntax
+[2026-08-02T14:05:45Z]   OK    frontend lint
+[2026-08-02T14:06:41Z]   FAIL  backend lint
+[2026-08-02T14:07:29Z]   OK    frontend test
+[2026-08-02T14:08:42Z]   FAIL  backend test
+[2026-08-02T14:08:48Z]   FAIL  backend e2e
+[2026-08-02T14:09:33Z]   OK    frontend build
+[2026-08-02T14:09:58Z]   FAIL  backend build
+[2026-08-02T14:09:58Z] Tests have failures after copilot. Attempting AI fix...
+[2026-08-02T14:09:58Z]   Fix round 1/5: 1 files (0 remaining)
+[2026-08-02T14:09:58Z] Trying copilot...
+[2026-08-02T14:09:58Z] Running Aider/Copilot (https://api.githubcopilot.com)...
+[2026-08-02T14:10:13Z] Copilot: no file changes (exit=0, killed=False)
+[2026-08-02T14:10:13Z]   copilot failed: no_changes (exit=0)
+[2026-08-02T14:10:16Z] Trying deepseek...
+[2026-08-02T14:10:16Z] Running Aider/DeepSeek (deepseek/deepseek-reasoner)...
+[2026-08-02T14:10:16Z] Aider pass 1 (discover)...
+[2026-08-02T14:11:01Z] Pass 1: discovered 1 files
+[2026-08-02T14:11:01Z] Pass 2 round 1: 1 files in context
+[2026-08-02T14:12:47Z] Round 1: no changes, no further files discovered.
+[2026-08-02T14:12:47Z]   deepseek failed: no_changes (exit=0)
+[2026-08-02T14:12:50Z] Trying claude...
+[2026-08-02T14:12:50Z] Running Claude Code...
+[2026-08-02T14:16:32Z] Claude: no file changes (exit=0, killed=False)
+[2026-08-02T14:16:32Z]   claude failed:  (exit=0)
+[2026-08-02T14:16:35Z] Trying antigravity...
+[2026-08-02T14:16:35Z] Running Antigravity (agy)...
+[2026-08-02T14:16:50Z] Antigravity: no file changes (exit=0, killed=False)
+[2026-08-02T14:16:50Z]   antigravity failed:  (exit=0)
+[2026-08-02T14:16:53Z] All models exhausted in fallback chain.
+[2026-08-02T14:16:53Z]   Round 1: no changes.
+[2026-08-02T14:16:53Z] Trying copilot...
+[2026-08-02T14:16:53Z] Running Aider/Copilot (https://api.githubcopilot.com)...
+[2026-08-02T14:17:19Z] Copilot: no file changes (exit=0, killed=False)
+[2026-08-02T14:17:19Z]   copilot failed: no_changes (exit=0)
+[2026-08-02T14:17:22Z] Trying deepseek...
+[2026-08-02T14:17:22Z] Running Aider/DeepSeek (deepseek/deepseek-reasoner)...
+[2026-08-02T14:17:22Z] Aider pass 1 (discover)...
+[2026-08-02T14:19:28Z] Pass 1: discovered 2 files
+[2026-08-02T14:19:28Z] Pass 2 round 1: 2 files in context
+[2026-08-02T14:20:54Z] Round 1: no changes, no further files discovered.
+[2026-08-02T14:20:54Z]   deepseek failed: no_changes (exit=0)
+[2026-08-02T14:20:57Z] Trying claude...
+[2026-08-02T14:20:57Z] Running Claude Code...
+[2026-08-02T14:25:59Z] Process STUCK: 303s no output, no changes. Killing.
+[2026-08-02T14:26:02Z] Claude: no file changes (exit=143, killed=True)
+[2026-08-02T14:26:02Z]   claude failed: stuck (exit=143)
+[2026-08-02T14:26:05Z] Trying antigravity...
+[2026-08-02T14:26:05Z] Running Antigravity (agy)...
+[2026-08-02T14:26:20Z] Antigravity: no file changes (exit=0, killed=False)
+[2026-08-02T14:26:20Z]   antigravity failed:  (exit=0)
+[2026-08-02T14:26:23Z] All models exhausted in fallback chain.
+[2026-08-02T14:26:23Z]   5 fix rounds exhausted.
+[2026-08-02T14:26:23Z]   OK    swarmd syntax
+[2026-08-02T14:26:38Z]   OK    frontend lint
+[2026-08-02T14:27:34Z]   OK    backend lint
+[2026-08-02T14:28:25Z]   OK    frontend test
+[2026-08-02T14:29:38Z]   OK    backend test
+[2026-08-02T14:29:48Z]   OK    backend e2e
+[2026-08-02T14:30:36Z]   OK    frontend build
+[2026-08-02T14:31:03Z]   OK    backend build
+[2026-08-02T14:31:03Z]   OK    swarmd syntax
+[2026-08-02T14:31:18Z]   OK    frontend lint
+[2026-08-02T14:32:12Z]   OK    backend lint
+[2026-08-02T14:33:01Z]   OK    frontend test
+[2026-08-02T14:34:18Z]   OK    backend test
+[2026-08-02T14:34:27Z]   OK    backend e2e
+[2026-08-02T14:35:13Z]   OK    frontend build
+[2026-08-02T14:35:38Z]   OK    backend build
+[2026-08-02T14:35:38Z] Tests pass after AI fix.
