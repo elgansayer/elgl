@@ -6,6 +6,7 @@ import {
   IsInt,
   Min,
   IsIn,
+  Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -26,6 +27,7 @@ export class EventsQueryDto {
 
   @IsOptional()
   @IsString()
+  @Matches(/^(upcoming|past)$/)
   status?: 'upcoming' | 'past';
 
   @IsOptional()

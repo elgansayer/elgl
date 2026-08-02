@@ -74,6 +74,8 @@
   "discovery.radiusLabel": "Maximum Distance: {{radius}} km",
   "discovery.vipRadiusNote": "VIP users (8 UKP / $10 USD) get global discovery and location spoofing.",
   "discovery.searchPlaceholder": "Search by name, language, or bio...",
+  "discovery.countryPlaceholder": "Search country...",
+  "discovery.cityPlaceholder": "Search city...",
   "discovery.emptyState": "No language partners matched your current filter criteria.",
   "discovery.streakDays": "🔥 {{days}}d Streak",
   "discovery.ratio": "✨ {{ratio}}% Corrections",
