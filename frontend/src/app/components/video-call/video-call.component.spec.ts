@@ -51,6 +51,38 @@ describe('VideoCallComponent - screen sharing', () => {
     (component as unknown as { room: MockRoom | null }).room = mockRoom;
   });
 
+  it('enters picture-in-picture mode when togglePip is called and PiP is available', async () => {
+    const videoElement = document.createElement('video');
+    (component.remoteVideoRef as any) = { nativeElement: videoElement };
+    document.pictureInPictureEnabled = true;
+    const requestPiPSpy = vi.spyOn(videoElement, 'requestPictureInPicture').mockResolvedValue();
+
+    await component.togglePip();
+
+    expect(requestPiPSpy).toHaveBeenCalled();
+    expect(component.isInPip()).toBe(true);
+  });
+
+  it('exits picture-in-picture mode when togglePip is called and already in PiP', async () => {
+    const videoElement = document.createElement('video');
+    (component.remoteVideoRef as any) = { nativeElement: videoElement };
+    document.pictureInPictureEnabled = true;
+    document.pictureInPictureElement = videoElement;
+    const exitPiPSpy = vi.spyOn(document, 'exitPictureInPicture').mockResolvedValue();
+
+    await component.togglePip();
+
+    expect(exitPiPSpy).toHaveBeenCalled();
+    expect(component.isInPip()).toBe(false);
+  });
+
+  it('does nothing if PiP is not available', async () => {
+    document.pictureInPictureEnabled = false;
+
+    await expect(component.togglePip()).resolves.toBeUndefined();
+    expect(component.isInPip()).toBe(false);
+  });
+
   it('starts screen sharing via LiveKit setScreenShareEnabled when not currently sharing', async () => {
     await component.toggleScreenShare();
 

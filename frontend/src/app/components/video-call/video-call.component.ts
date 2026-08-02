@@ -321,6 +321,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   readonly callDuration = signal('00:00');
   readonly isInPip = signal(false);
   readonly pipAvailable = computed(() => typeof document !== 'undefined' && document.pictureInPictureEnabled);
+  readonly isInPip = signal(false);
   readonly isScreenSharing = signal(false);
   private callStartTime: number = 0;
   private durationInterval: ReturnType<typeof setInterval> | null = null;
@@ -373,6 +374,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
       });
     });
   }
+
 
   // Integration with LiveKit requires imperative setup; exception permitted per AGENTS.md 5.3
   async ngOnInit(): Promise<void> {

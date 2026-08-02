@@ -48,26 +48,6 @@ export class SupabaseService {
     this.supabase = createClient<Database>(environment.supabaseUrl, environment.supabaseAnonKey);
   }
 
-  public async uploadAvatar(file: File): Promise<{ avatarUrl: string }> {
-    const folder = 'avatars';
-    const fileName = `${folder}/${Date.now()}-${file.name}`;
-    const uploadResponse = await this.supabase.storage
-      .from('documents')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
-
-    if (uploadResponse.error) {
-      throw new Error(`Failed to upload avatar: ${uploadResponse.error.message}`);
-    }
-
-    const { data: publicUrlData } = this.supabase.storage.from('documents').getPublicUrl(fileName);
-    if (!publicUrlData?.publicUrl) {
-      throw new Error('Failed to retrieve public URL for avatar');
-    }
-    return { avatarUrl: publicUrlData.publicUrl };
-  }
 
   async getRecentlyJoinedNativeSpeakers(limit: number = 10): Promise<UserProfile[]> {
     const { data, error } = await this.supabase
@@ -250,13 +230,6 @@ export class SupabaseService {
     return { fileUrl: publicUrlData.publicUrl };
   }
 
-  async uploadAvatar(file: File): Promise<{ avatarUrl: string }> {
-    const result = await this.uploadFile(file, 'avatars');
-    if (!result.fileUrl) {
-      throw new Error('Failed to retrieve avatar URL');
-    }
-    return { avatarUrl: result.fileUrl };
-  }
 
   async listFiles(folder: string): Promise<string[]> {
     const { data, error } = await this.supabase.storage.from('documents').list(folder);
