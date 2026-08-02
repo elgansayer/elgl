@@ -46,4 +46,9 @@ export class EventsQueryDto {
   @Min(1)
   @Type(() => Number)
   limit?: number = 20;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['Beginner', 'Intermediate', 'Advanced'])
+  proficiency?: 'Beginner' | 'Intermediate' | 'Advanced';
 }

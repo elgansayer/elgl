@@ -29,6 +29,7 @@ export interface EventsQuery {
   to_date?: string;
   page?: number;
   limit?: number;
+  proficiency?: 'Beginner' | 'Intermediate' | 'Advanced';
 }
 
 @Injectable({ providedIn: 'root' })
@@ -44,6 +45,7 @@ export class EventsService {
     if (query?.to_date) params['to_date'] = query.to_date;
     if (query?.page) params['page'] = query.page;
     if (query?.limit) params['limit'] = query.limit;
+    if (query?.proficiency) params['proficiency'] = query.proficiency;
     return this.http.get<Event[]>(`${environment.apiUrl}/events`, { params });
   }
 

@@ -228,6 +228,9 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     if (query.from_date) {
       q = q.gte('date_time', query.from_date);
     }
+    if (query.proficiency) {
+      q = q.eq('proficiency', query.proficiency);
+    }
     if (query.to_date) {
       q = q.lte('date_time', query.to_date);
     }
