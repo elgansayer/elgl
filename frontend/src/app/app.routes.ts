@@ -480,4 +480,20 @@ export const routes: Routes = [
       import('./pages/join-group/join-group.component').then((m) => m.JoinGroupComponent),
     title: 'Join Group - HelloTalk',
   },
+  {
+    path: 'reset-password',
+    loadComponent: () =>
+      import('./components/reset-password/reset-password.component').then(
+        (m) => m.ResetPasswordComponent,
+      ),
+    title: 'Reset Password - HelloTalk',
+  },
+  {
+    path: 'change-password',
+    loadComponent: () =>
+      import('./components/change-password/change-password.component').then(
+        (m) => m.ChangePasswordComponent,
+      ),
+    title: 'Change Password - HelloTalk',
+  },
 ];

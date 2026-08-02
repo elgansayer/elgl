@@ -32,7 +32,9 @@ describe('AuthController (unit)', () => {
       const token = 'reset-token-123';
       authService.requestPasswordReset.mockResolvedValue(token);
 
-      const result = await controller.requestPasswordReset('user@example.com');
+      const result = await controller.requestPasswordReset({
+        email: 'user@example.com',
+      });
 
       expect(authService.requestPasswordReset).toHaveBeenCalledWith(
         'user@example.com',

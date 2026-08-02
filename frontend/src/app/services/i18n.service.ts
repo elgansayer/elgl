@@ -1052,6 +1052,34 @@ export class I18nService {
     'password.resetBtn': 'Reset Password',
     'password.sendResetLink': 'Send Reset Link',
 
+    // Forgot / Reset / Change Password workflow
+    'forgot_password.title': 'Forgot Password',
+    'forgot_password.email_label': 'Enter your email to receive a reset link',
+    'forgot_password.sending': 'Sending...',
+    'forgot_password.send_button': 'Send Reset Link',
+    'forgot_password.sent_message': 'Reset link sent. Check your inbox.',
+    'forgot_password.new_password_label': 'New password',
+    'forgot_password.reset_button': 'Reset Password',
+    'forgot_password.resetting': 'Resetting...',
+    'forgot_password.reset_success': 'Password reset successfully.',
+
+    'auth.resetPassword.title': 'Reset Password',
+    'auth.resetPassword.token': 'Token from your email',
+    'auth.resetPassword.newPassword': 'New password',
+    'auth.resetPassword.success': 'Password has been reset successfully.',
+    'auth.resetPassword.error': 'Failed to reset password. Please try again.',
+    'auth.resetPassword.backToHome': 'Back to Home',
+
+    'auth.changePassword.title': 'Change Password',
+    'auth.changePassword.currentPassword': 'Current password',
+    'auth.changePassword.newPassword': 'New password',
+    'auth.changePassword.success': 'Password changed successfully.',
+    'auth.changePassword.error': 'Failed to change password. Please try again.',
+    'auth.changePassword.backToSettings': 'Back to Settings',
+
+    'common.pleaseWait': 'Please wait...',
+    'common.submit': 'Submit',
+
     // Appearance settings
     'appearance.title': 'Appearance',
     'appearance.themeLabel': 'Theme',

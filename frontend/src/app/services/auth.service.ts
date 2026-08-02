@@ -512,5 +512,32 @@ export class AuthService {
     }
   }
 
+  async requestPasswordReset(email: string): Promise<void> {
+    await lastValueFrom(
+      this.http.post(`${this.apiUrl}/auth/request-password-reset`, { email }),
+    );
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    await lastValueFrom(
+      this.http.post(`${this.apiUrl}/auth/reset-password`, { token, newPassword }),
+    );
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const accessToken = this.getAccessToken();
+    await lastValueFrom(
+      this.http.post(
+        `${this.apiUrl}/auth/change-password`,
+        { currentPassword, newPassword },
+        {
+          headers: new HttpHeaders({
+            Authorization: `Bearer ${accessToken ?? ''}`,
+          }),
+        },
+      ),
+    );
+  }
+
   private http = inject(HttpClient);
 }
