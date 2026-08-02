@@ -1,5 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, computed, inject } from '@angular/core';
-import { I18nService } from '../../../services/i18n.service';
+import { Component, input, computed, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -12,7 +11,6 @@ import { I18nService } from '../../../services/i18n.service';
   },
 })
 export class AppCardComponent {
-  private readonly i18nService = inject(I18nService);
   readonly padding = input<'none' | 'sm' | 'md' | 'lg'>('md');
   readonly variant = input<'default' | 'elevated' | 'outlined' | 'interactive'>('default');
   readonly customClass = input<string>('');
@@ -26,7 +24,7 @@ export class AppCardComponent {
   });
 
   readonly hostClasses = computed(() => {
-    const base = this.i18nService.translate('card.base_classes');
+    const base = 'block rounded-2xl bg-surface-200 transition-all';
 
     let paddingClass = '';
     switch (this.padding()) {

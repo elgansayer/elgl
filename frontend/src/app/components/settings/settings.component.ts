@@ -2,11 +2,10 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
-import { UserService, LinkedAccount } from '../../services/user.service';
+import { UserService, LinkedAccount, UserProfile } from '../../services/user.service';
 import { CacheService } from '../../services/cache.service';
 import { Router } from '@angular/router';
 import { FontScaleService } from '../../services/font-scale.service';
-import { ChatSettingsService } from '../../services/chat-settings.service';
 
 @Component({
   selector: 'app-settings',
@@ -20,7 +19,6 @@ export class SettingsComponent implements OnInit {
   private location = inject(Location);
   private router = inject(Router);
   private fontScaleService = inject(FontScaleService);
-  private chatSettingsService = inject(ChatSettingsService);
 
   readonly isLoading = signal(true);
   readonly isDownloading = signal(false);
@@ -49,7 +47,6 @@ export class SettingsComponent implements OnInit {
   privacyHideSearch = false;
   privacyHideAge = false;
   privacyHideGender = false;
-  privacyHideExactLocation = false;
   privacyHideOnlineStatus = false;
   privacyHideVipStatus = false;
   autoPlayVoiceNotes = false;
@@ -58,9 +55,8 @@ export class SettingsComponent implements OnInit {
   vibrationEnabled = false;
 
   readonly linkedAccounts = signal<LinkedAccount[]>([]);
-  readonly autoDownloadPreference = signal<'wifi' | 'cellular'>('wifi');
-  protected chatEnterToSend = signal(false);
-  protected chatTextSize = signal<'small' | 'medium' | 'large'>('medium');
+  protected chatEnterToSend = false;
+  protected chatTextSize: 'small' | 'medium' | 'large' = 'medium';
 
   /** Providers we support linking */
   readonly supportedProviders: readonly string[] = ['google', 'facebook', 'twitter', 'apple'];
@@ -68,7 +64,7 @@ export class SettingsComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     // Font scale is handled by FontScaleService and applied globally.
     try {
-      const profile = await this.userService.getMyProfile();
+      const profile: UserProfile | null = await this.userService.getMyProfile();
       if (profile) {
         this.isVip.set(Boolean(profile.is_vip));
         this.primaryAccentColor.set(profile.primary_accent_color || '#4f46e5');
@@ -76,7 +72,6 @@ export class SettingsComponent implements OnInit {
         this.privacyHideSearch = Boolean(profile.privacy_hide_from_search);
         this.privacyHideAge = Boolean(profile.privacy_hide_age);
         this.privacyHideGender = Boolean(profile.privacy_hide_gender);
-        this.privacyHideExactLocation = Boolean(profile.privacy_hide_exact_location);
         this.privacyHideOnlineStatus = Boolean(profile.privacy_hide_online_status);
         this.privacyHideVipStatus = Boolean(profile.privacy_hide_vip_status);
         this.autoPlayVoiceNotes = Boolean(profile.auto_play_voice_notes);
@@ -84,26 +79,16 @@ export class SettingsComponent implements OnInit {
         this.soundEffectsEnabled = Boolean(profile.sound_effects_enabled);
         this.vibrationEnabled = Boolean(profile.vibration_enabled);
         this.interests.set(profile.interests ?? []);
-        this.autoDownloadPreference.set(profile.auto_download_preference ?? 'wifi');
+        this.chatEnterToSend = Boolean(profile.chat_enter_to_send);
+        this.chatTextSize = profile.chat_text_size ?? 'medium';
       }
-
       // Load linked accounts
       const accounts: LinkedAccount[] | null = await this.userService.getLinkedAccounts();
       this.linkedAccounts.set(accounts ?? []);
     } catch {
-      this.autoDownloadPreference.set('wifi'); // Default to Wi-Fi only
-      this.errorMessage.set('Failed to load profile or linked accounts');
+      this.errorMessage.set('Failed to load settings');
     } finally {
       this.isLoading.set(false);
-    }
-
-    // Load chat-specific settings
-    try {
-      await this.chatSettingsService.loadSettings();
-      this.chatEnterToSend.set(this.chatSettingsService.enterToSend());
-      this.chatTextSize.set(this.chatSettingsService.textSize());
-    } catch {
-      // keep service defaults
     }
   }
 
@@ -158,10 +143,6 @@ export class SettingsComponent implements OnInit {
     this.location.back();
   }
 
-  goToMySubscription(): void {
-    this.router.navigate(['/my-subscription']);
-  }
-
   onFontScaleChange(event: Event): void {
     const target = event.target;
     if (target instanceof HTMLInputElement) {
@@ -191,14 +172,6 @@ export class SettingsComponent implements OnInit {
     this.interests.update(arr => arr.filter((_, i) => i !== index));
   }
 
-  toggleSoundEffects(): void {
-    this.soundEffectsEnabled = !this.soundEffectsEnabled;
-  }
-
-  toggleVibration(): void {
-    this.vibrationEnabled = !this.vibrationEnabled;
-  }
-
   async saveSettings(): Promise<void> {
     this.errorMessage.set('');
     this.successMessage.set('');
@@ -210,24 +183,17 @@ export class SettingsComponent implements OnInit {
         privacy_hide_from_search: this.privacyHideSearch,
         privacy_hide_age: this.privacyHideAge,
         privacy_hide_gender: this.privacyHideGender,
-        privacy_hide_exact_location: this.privacyHideExactLocation,
         privacy_hide_online_status: this.privacyHideOnlineStatus,
         privacy_hide_vip_status: this.privacyHideVipStatus,
         auto_play_voice_notes: this.autoPlayVoiceNotes,
         auto_download_media: this.autoDownloadMedia,
         sound_effects_enabled: this.soundEffectsEnabled,
         vibration_enabled: this.vibrationEnabled,
-        auto_download_preference: this.autoDownloadPreference(),
         primary_accent_color: this.primaryAccentColor() ?? undefined,
         interests: this.interests(),
+        chat_enter_to_send: this.chatEnterToSend,
+        chat_text_size: this.chatTextSize,
       });
-
-      await this.chatSettingsService.updateSetting(
-        'enterToSend',
-        this.chatEnterToSend(),
-      );
-      await this.chatSettingsService.updateSetting('textSize', this.chatTextSize());
-
       this.successMessage.set('Settings saved successfully');
     } catch {
       this.errorMessage.set('Failed to save settings');

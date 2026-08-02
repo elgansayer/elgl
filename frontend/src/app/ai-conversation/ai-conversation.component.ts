@@ -104,7 +104,7 @@ export class AiConversationComponent {
 
   readonly scenarioList = toSignal(
     from(this.aiService.getScenarios()),
-    { initialValue: [] },
+    { initialValue: [] as Scenario[] },
   );
 
   readonly selectedScenario = signal<Scenario | null>(null);
@@ -127,11 +127,11 @@ export class AiConversationComponent {
     this.inputText.set('');
     this.isLoading.set(true);
     try {
-      const response = await this.aiService.sendMessage(
+      const { reply } = await this.aiService.sendMessage(
         text,
         this.currentScenarioId,
       );
-      this.messages.update((msgs) => [...msgs, { from: 'ai', text: response.reply }]);
+      this.messages.update((msgs) => [...msgs, { from: 'ai', text: reply }]);
     } catch {
       this.messages.update((msgs) => [
         ...msgs,

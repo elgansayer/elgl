@@ -68,17 +68,4 @@ export class DiscoveryController {
     if (!user) return [];
     return this.discoveryService.findByLanguagePair(user.id, query);
   }
-
-  @Get('search-by-location')
-  async searchByLocation(
-    @CurrentUser() user: User | null,
-    @Query('country') country?: string,
-    @Query('city') city?: string,
-  ): Promise<UserProfile[]> {
-    if (!user) return [];
-    return this.discoveryService.searchByCountryCity(user.id, {
-      country,
-      city,
-    });
-  }
 }

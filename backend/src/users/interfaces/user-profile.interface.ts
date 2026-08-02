@@ -4,10 +4,6 @@ export interface UserProfile {
   native_languages: string[];
   target_languages: string[];
   /**
-   * Queryable language pairs for matching users.
-   */
-  language_pairs?: { native: string; target: string }[];
-  /**
    * Default language code for automatic translation (ISO 639-1).
    */
   default_translation_language?: string;
@@ -39,7 +35,6 @@ export interface UserProfile {
   privacy_hide_from_search: boolean;
   privacy_hide_gender: boolean;
   privacy_hide_exact_location: boolean;
-  location_privacy?: 'exact' | 'region';
   privacy_hide_online_status: boolean;
   privacy_hide_vip_status: boolean;
   privacy_last_seen?: string;
@@ -64,7 +59,6 @@ export interface UserProfile {
   available_time_end?: string;
   is_admin?: boolean;
   created_at: string;
-  joined_at?: string; // Optional field for spotlighting recently joined users
   last_active_at?: string;
   distance_metres?: number;
   scheduled_for_deletion_at?: string;

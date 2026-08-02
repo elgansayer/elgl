@@ -1,4 +1,3 @@
-import 'reflect-metadata';
 import {
   IsOptional,
   IsString,
@@ -6,7 +5,6 @@ import {
   IsInt,
   Min,
   IsIn,
-  Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -27,7 +25,6 @@ export class EventsQueryDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^(upcoming|past)$/)
   status?: 'upcoming' | 'past';
 
   @IsOptional()
@@ -49,9 +46,4 @@ export class EventsQueryDto {
   @Min(1)
   @Type(() => Number)
   limit?: number = 20;
-
-  @IsOptional()
-  @IsString()
-  @IsIn(['Beginner', 'Intermediate', 'Advanced'])
-  proficiency?: 'Beginner' | 'Intermediate' | 'Advanced';
 }

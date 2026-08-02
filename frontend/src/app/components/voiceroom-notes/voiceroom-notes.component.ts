@@ -55,7 +55,7 @@ interface VoiceRoomNote {
             class="w-full border rounded p-2 bg-surface-2"
             rows="3"
             [value]="content()"
-            (input)="onContentInput($event)"
+            (input)="content.set($any($event.target).value)"
           ></textarea>
         </label>
 
@@ -64,7 +64,7 @@ interface VoiceRoomNote {
           <input
             class="w-full border rounded p-2 bg-surface-2"
             [value]="vocabulary()"
-            (input)="onVocabularyInput($event)"
+            (input)="vocabulary.set($any($event.target).value)"
           />
         </label>
 
@@ -96,33 +96,14 @@ export class VoiceroomNotesComponent {
   vocabulary = signal('');
   isPosting = signal(false);
 
-  private readonly refreshCounter = signal(0);
-
   readonly notesResource = resource({
-    params: () => ({
-      roomId: this.roomId(),
-      refreshKey: this.refreshCounter(),
-    }),
+    params: () => ({ roomId: this.roomId() }),
     loader: ({ params }) =>
       firstValueFrom(
         this.http.get<VoiceRoomNote[]>(`/audio-rooms/${params.roomId}/notes`)
       ),
     defaultValue: [],
   });
-
-  onContentInput(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLTextAreaElement) {
-      this.content.set(target.value);
-    }
-  }
-
-  onVocabularyInput(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLInputElement) {
-      this.vocabulary.set(target.value);
-    }
-  }
 
   async addNote(): Promise<void> {
     const c = this.content().trim();
@@ -137,7 +118,7 @@ export class VoiceroomNotesComponent {
       );
       this.content.set('');
       this.vocabulary.set('');
-      this.refreshCounter.update((value) => value + 1);
+      this.notesResource.reload();
     } catch {
       // handled by UI error display
     } finally {
@@ -150,7 +131,7 @@ export class VoiceroomNotesComponent {
       await firstValueFrom(
         this.http.delete(`/audio-rooms/${this.roomId()}/notes/${noteId}`)
       );
-      this.refreshCounter.update((value) => value + 1);
+      this.notesResource.reload();
     } catch {
       // handled by UI error display
     }

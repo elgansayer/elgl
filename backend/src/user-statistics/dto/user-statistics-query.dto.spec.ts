@@ -1,4 +1,3 @@
-import 'reflect-metadata';
 import { validateSync } from 'class-validator';
 import { UserStatisticsQueryDto } from './user-statistics-query.dto';
 

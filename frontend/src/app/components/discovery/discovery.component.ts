@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -33,14 +33,11 @@ import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
 })
-export class DiscoveryComponent implements OnInit, OnDestroy {
+export class DiscoveryComponent implements OnInit {
   private readonly discoveryService = inject(DiscoveryService);
   private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
-
-  private currentAudio: HTMLAudioElement | null = null;
-  readonly playingPartnerId = signal<string | null>(null);
 
   readonly partners = signal<
     (UserProfile & {
@@ -77,22 +74,6 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly showBanner = signal<boolean>(true);
   readonly ageRangeMin = signal<number>(18);
   readonly ageRangeMax = signal<number>(100);
-
-  readonly selectedSort = signal<string>('best_match');
-  readonly sortOptions = computed(() => {
-    this.i18n.translations();
-    return [
-      { id: 'best_match', label: this.i18n.translate('discovery.sortBestMatch') },
-      { id: 'online_now', label: this.i18n.translate('discovery.sortOnlineNow') },
-      { id: 'nearest', label: this.i18n.translate('discovery.sortNearest') },
-      { id: 'newest', label: this.i18n.translate('discovery.sortNewest') },
-    ];
-  });
-
-  setSort(sort: string): void {
-    this.selectedSort.set(sort);
-    void this.searchPartners();
-  }
 
   onAgeRangeChanged(range: AgeRange): void {
     this.ageRangeMin.set(range.min);
@@ -170,7 +151,6 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
           this.availableTimeStart() || undefined,
         available_time_end:
           this.availableTimeEnd() || undefined,
-        sort: this.selectedSort(),
       });
       // Filter out blocked users
       const blocked = this.blockedUserIds();
@@ -220,51 +200,16 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     return `${km.toFixed(1)} km · ${miles.toFixed(1)} mi`;
   }
 
-  toggleAudioIntro(partnerId: string, audioIntroUrl: string | undefined, event: Event): void {
-    event.stopPropagation();
-    if (!audioIntroUrl) return;
-
-    if (this.playingPartnerId() === partnerId) {
-      this.stopAudioIntro();
-      return;
-    }
-
-    this.stopAudioIntro();
-
-    const audio = new Audio(audioIntroUrl);
-    audio.addEventListener('ended', () => this.stopAudioIntro());
-    audio.addEventListener('error', () => this.stopAudioIntro());
-    this.currentAudio = audio;
-    this.playingPartnerId.set(partnerId);
-
-    void audio.play().catch(() => this.stopAudioIntro());
-  }
-
-  private stopAudioIntro(): void {
-    if (this.currentAudio) {
-      this.currentAudio.pause();
-      this.currentAudio.currentTime = 0;
-      this.currentAudio = null;
-    }
-    this.playingPartnerId.set(null);
-  }
-
-  ngOnDestroy(): void {
-    this.stopAudioIntro();
-  }
-
   resetFilters(): void {
     this.selectedDistanceKm.set(50);
     this.selectedNativeLanguage.set('');
     this.selectedTargetLanguage.set('');
-    this.selectedGender.set('');
     this.seriousLearnerOnly.set(false);
     this.seriousLearnerMode.set(false);
     this.ageRangeMin.set(18);
     this.ageRangeMax.set(100);
     this.availableTimeStart.set('');
     this.availableTimeEnd.set('');
-    this.selectedSort.set('best_match');
     void this.searchPartners();
   }
 }

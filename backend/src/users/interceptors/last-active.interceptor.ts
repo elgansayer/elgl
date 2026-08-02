@@ -90,7 +90,7 @@ export class LastActiveInterceptor implements NestInterceptor {
           user_id: userId,
           ip_address: ipAddress,
           user_agent: userAgent,
-        } as never);
+        });
 
       if (loginHistoryError) {
         this.logger.warn(

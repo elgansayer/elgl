@@ -1,7 +1,7 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class UpdateAudioIntroDto {
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  audio_url!: string;
+  audio_url?: string;
 }

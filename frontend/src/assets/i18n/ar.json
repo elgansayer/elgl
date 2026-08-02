@@ -63,8 +63,6 @@
   "discovery.matchCount": "{{count}} تطابق",
   "discovery.partnerFallback": "شريك لغة",
   "discovery.vipBadge": "VIP",
-  "discovery.playAudioIntro": "تشغيل المقدمة الصوتية",
-  "discovery.pauseAudioIntro": "إيقاف المقدمة الصوتية",
   "discovery.startChat": "بدء محادثة",
   "discovery.noBio": "لا توجد سيرة ذاتية بعد.",
   "discovery.streakBadge": "🔥 {{days}} يوم تسلسل",

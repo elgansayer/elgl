@@ -102,20 +102,6 @@ export const routes: Routes = [
       import('./components/user-detail/user-detail.component').then((m) => m.UserDetailComponent),
   },
   {
-    path: 'profile/:userId/followers',
-    loadComponent: () =>
-      import('./components/follow-list/follow-list.component').then((m) => m.FollowListComponent),
-    data: { mode: 'followers' },
-    title: 'Followers - HelloTalk',
-  },
-  {
-    path: 'profile/:userId/following',
-    loadComponent: () =>
-      import('./components/follow-list/follow-list.component').then((m) => m.FollowListComponent),
-    data: { mode: 'following' },
-    title: 'Following - HelloTalk',
-  },
-  {
     path: 'visitors',
     loadComponent: () =>
       import('./components/visitor-logs/visitor-logs.component').then(
@@ -133,14 +119,6 @@ export const routes: Routes = [
     path: 'settings',
     loadComponent: () =>
       import('./components/settings/settings.component').then((m) => m.SettingsComponent),
-  },
-  {
-    path: 'settings/backup-restore',
-    loadComponent: () =>
-      import('./pages/settings/backup-restore.component').then(
-        (m) => m.BackupRestoreComponent,
-      ),
-    title: 'Chat Backup & Restore - HelloTalk',
   },
   {
     path: 'developer',
@@ -487,21 +465,5 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/join-group/join-group.component').then((m) => m.JoinGroupComponent),
     title: 'Join Group - HelloTalk',
-  },
-  {
-    path: 'reset-password',
-    loadComponent: () =>
-      import('./components/reset-password/reset-password.component').then(
-        (m) => m.ResetPasswordComponent,
-      ),
-    title: 'Reset Password - HelloTalk',
-  },
-  {
-    path: 'change-password',
-    loadComponent: () =>
-      import('./components/change-password/change-password.component').then(
-        (m) => m.ChangePasswordComponent,
-      ),
-    title: 'Change Password - HelloTalk',
   },
 ];

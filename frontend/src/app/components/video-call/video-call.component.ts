@@ -298,7 +298,6 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   // Inputs
   readonly roomName = input.required<string>();
   readonly otherUserId = input.required<string>();
-  readonly currentUserId = input.required<string>();
   readonly otherUserName = input<string>('User');
   readonly otherUserInitials = input<string>('?');
 
@@ -375,11 +374,10 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     });
   }
 
-
   // Integration with LiveKit requires imperative setup; exception permitted per AGENTS.md 5.3
   async ngOnInit(): Promise<void> {
     try {
-      const token = await this.livekitService.getToken(this.roomName(), this.currentUserId());
+      const token = await this.livekitService.getToken(this.roomName(), this.otherUserId());
 
       this.room = new Room({
         adaptiveStream: true,
@@ -496,10 +494,11 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   async toggleScreenShare(): Promise<void> {
     if (!this.room) return;
     try {
-      await this.livekitService.toggleScreenShare(
-        !this.isScreenSharing(),
-        this.room,
-      );
+      // setScreenShareEnabled tags the published track with Track.Source.ScreenShare and,
+      // when the user stops sharing via the browser's native "Stop sharing" control rather
+      // than this button, automatically unpublishes it and fires LocalTrackUnpublished -
+      // onLocalTrackUnpublished() picks that up to reset isScreenSharing.
+      await this.room.localParticipant.setScreenShareEnabled(!this.isScreenSharing());
     } catch {
       // User cancelled the share picker or denied permission; state is unchanged.
     }
@@ -517,10 +516,8 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     try {
       if (document.pictureInPictureElement) {
         await document.exitPictureInPicture();
-        this.isInPip.set(false);
       } else {
         await videoEl.requestPictureInPicture();
-        this.isInPip.set(true);
       }
     } catch {
       // ignore

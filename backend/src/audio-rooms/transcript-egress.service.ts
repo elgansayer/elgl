@@ -23,12 +23,11 @@ export class TranscriptEgressService {
     const livekitUrl =
       this.configService.get<string>('LIVEKIT_URL') ||
       'https://mock.livekit.cloud';
-
-    const apiKey = this.configService.get<string>('LIVEKIT_API_KEY');
-    const secretKey = this.configService.get<string>('LIVEKIT_SECRET');
-    if (!apiKey || !secretKey) {
-      throw new Error('LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured');
-    }
+    const apiKey =
+      this.configService.get<string>('LIVEKIT_API_KEY') || 'devkey';
+    const secretKey =
+      this.configService.get<string>('LIVEKIT_SECRET') ||
+      'secretkey012345678901234567890123456789';
 
     this.egressClient = new EgressClient(livekitUrl, apiKey, secretKey);
   }

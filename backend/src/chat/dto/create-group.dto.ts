@@ -1,10 +1,4 @@
-import {
-  IsString,
-  IsArray,
-  MaxLength,
-  ArrayMaxSize,
-  IsOptional,
-} from 'class-validator';
+import { IsString, IsArray, MaxLength, ArrayMaxSize } from 'class-validator';
 
 export class CreateGroupDto {
   @IsString()
@@ -15,7 +9,4 @@ export class CreateGroupDto {
   @IsString({ each: true })
   @ArrayMaxSize(49)
   memberIds!: string[];
-  @IsOptional()
-  @IsString()
-  inviteCode?: string;
 }
