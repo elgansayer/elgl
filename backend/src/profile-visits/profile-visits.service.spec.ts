@@ -46,6 +46,77 @@ describe('ProfileVisitsService', () => {
     service = module.get<ProfileVisitsService>(ProfileVisitsService);
   });
 
+  describe('getVisitCount', () => {
+    it('should return the correct visit count for a user', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { visit_count: 5 },
+        error: null,
+      });
+
+      const result = await service.getVisitCount('user-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('profile_visits');
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
+        'count(*) as visit_count',
+      );
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('viewed_id', 'user-1');
+      expect(result).toEqual(5);
+    });
+
+    it('should return 0 if no visits are found', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      const result = await service.getVisitCount('user-1');
+
+      expect(result).toEqual(0);
+    });
+
+    it('should throw an error if the query fails', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'DB query error' },
+      });
+
+      await expect(service.getVisitCount('user-1')).rejects.toThrow(
+        'Failed to fetch visit count: DB query error',
+      );
+    });
+  });
+
+  describe('deleteVisit', () => {
+    it('should delete a visit record successfully', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { id: 'visit-1' },
+        error: null,
+      });
+
+      const result = await service.deleteVisit('visit-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('profile_visits');
+      expect(mockQueryBuilder.delete).toHaveBeenCalled();
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'visit-1');
+      expect(result).toEqual({ id: 'visit-1' });
+    });
+
+    it('should throw an error if the delete operation fails', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'Delete operation failed' },
+      });
+
+      await expect(service.deleteVisit('visit-1')).rejects.toThrow(
+        'Failed to delete visit: Delete operation failed',
+      );
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('profile_visits');
+      expect(mockQueryBuilder.delete).toHaveBeenCalled();
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'visit-1');
+    });
+  });
+
   afterEach(() => {
     jest.clearAllMocks();
   });
