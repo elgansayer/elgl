@@ -517,8 +517,10 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     try {
       if (document.pictureInPictureElement) {
         await document.exitPictureInPicture();
+        this.isInPip.set(false);
       } else {
         await videoEl.requestPictureInPicture();
+        this.isInPip.set(true);
       }
     } catch {
       // ignore

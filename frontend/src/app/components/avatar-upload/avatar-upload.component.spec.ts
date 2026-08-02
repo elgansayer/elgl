@@ -14,8 +14,8 @@ class MockI18nService {
 class MockMediaService {}
 
 class MockSupabaseService {
-  async uploadAvatar(_file: File): Promise<{ avatarUrl: string }> {
-    return { avatarUrl: 'https://example.com/avatar.png' };
+  async uploadAvatar(_file: File): Promise<string> {
+    return 'https://example.com/avatar.png';
   }
 }
 
@@ -205,7 +205,7 @@ describe('AvatarUploadComponent', () => {
     // Spy on the supabase upload call
     const uploadSpy = vi
       .spyOn(supabaseInstance, 'uploadAvatar')
-      .mockResolvedValue({ avatarUrl: 'https://example.com/uploaded.png' });
+      .mockResolvedValue('https://example.com/uploaded.png');
 
     const emittedValues: string[] = [];
     const sub = component.avatarUrl.subscribe((url) => emittedValues.push(url));

@@ -23,6 +23,9 @@ describe('VideoCallComponent - screen sharing', () => {
     mockLivekitService = {
       getToken: vi.fn().mockResolvedValue('fake-token'),
       getLiveKitUrl: vi.fn().mockReturnValue('wss://example.test'),
+      toggleScreenShare: vi.fn().mockImplementation(async (enabled: boolean, room) => {
+        await room.localParticipant.setScreenShareEnabled(enabled);
+      }),
     } as unknown as Mocked<LivekitService>;
 
     await TestBed.configureTestingModule({
@@ -53,7 +56,12 @@ describe('VideoCallComponent - screen sharing', () => {
 
   it('enters picture-in-picture mode when togglePip is called and PiP is available', async () => {
     const videoElement = document.createElement('video');
-    (component.remoteVideoRef as any) = { nativeElement: videoElement };
+    // jsdom does not implement the Picture-in-Picture API, so the stub methods
+    // must be assigned directly rather than spied on via vi.spyOn.
+    videoElement.requestPictureInPicture = vi.fn().mockResolvedValue({} as PictureInPictureWindow);
+    (component.remoteVideoRef as unknown as () => { nativeElement: HTMLVideoElement }) = () => ({
+      nativeElement: videoElement,
+    });
     Object.defineProperty(document, 'pictureInPictureEnabled', {
       configurable: true,
       get: () => true,
@@ -62,17 +70,19 @@ describe('VideoCallComponent - screen sharing', () => {
       configurable: true,
       get: () => null,
     });
-    const requestPiPSpy = vi.spyOn(videoElement, 'requestPictureInPicture').mockResolvedValue();
 
     await component.togglePip();
 
-    expect(requestPiPSpy).toHaveBeenCalled();
+    expect(videoElement.requestPictureInPicture).toHaveBeenCalled();
     expect(component.isInPip()).toBe(true);
   });
 
   it('exits picture-in-picture mode when togglePip is called and already in PiP', async () => {
     const videoElement = document.createElement('video');
-    (component.remoteVideoRef as any) = { nativeElement: videoElement };
+    document.exitPictureInPicture = vi.fn().mockResolvedValue(undefined);
+    (component.remoteVideoRef as unknown as () => { nativeElement: HTMLVideoElement }) = () => ({
+      nativeElement: videoElement,
+    });
     Object.defineProperty(document, 'pictureInPictureEnabled', {
       configurable: true,
       get: () => true,
@@ -81,11 +91,10 @@ describe('VideoCallComponent - screen sharing', () => {
       configurable: true,
       get: () => videoElement,
     });
-    const exitPiPSpy = vi.spyOn(document, 'exitPictureInPicture').mockResolvedValue();
 
     await component.togglePip();
 
-    expect(exitPiPSpy).toHaveBeenCalled();
+    expect(document.exitPictureInPicture).toHaveBeenCalled();
     expect(component.isInPip()).toBe(false);
   });
 

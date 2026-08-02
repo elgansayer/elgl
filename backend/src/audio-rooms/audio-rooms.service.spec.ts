@@ -45,6 +45,7 @@ describe('AudioRoomsService', () => {
       or: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
+      range: jest.fn().mockReturnThis(),
       single: jest.fn(),
     };
 
@@ -900,6 +901,67 @@ describe('AudioRoomsService', () => {
         recording_url: 'https://r2.hellotalk.mock/test.webm',
       });
       expect(result.id).toBe('room-1');
+    });
+  });
+
+  describe('getCallLogs', () => {
+    it('should return call logs involving the current user', async () => {
+      const logs: any[] = [
+        {
+          id: 'log-1',
+          caller_id: 'user-1',
+          receiver_id: 'user-2',
+          call_type: 'outgoing',
+        },
+      ];
+      mockQueryBuilder.range.mockResolvedValueOnce({ data: logs, error: null });
+
+      const result = await service.getCallLogs('user-1', {
+        limit: 20,
+        offset: 0,
+      });
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('call_logs');
+      expect(mockQueryBuilder.or).toHaveBeenCalledWith(
+        'caller_id.eq.user-1,receiver_id.eq.user-1',
+      );
+      expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 19);
+      expect(result).toEqual(logs);
+    });
+
+    it('should filter by callType when provided', async () => {
+      const logs: any[] = [
+        {
+          id: 'log-2',
+          caller_id: 'user-2',
+          receiver_id: 'user-1',
+          call_type: 'missed',
+        },
+      ];
+      mockQueryBuilder.eq.mockResolvedValueOnce({ data: logs, error: null });
+
+      const result = await service.getCallLogs('user-1', {
+        callType: 'missed',
+        limit: 20,
+        offset: 0,
+      });
+
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('call_type', 'missed');
+      expect(result).toEqual(logs);
+    });
+
+    it('should return an empty array and log a warning on error', async () => {
+      mockQueryBuilder.range.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'boom' },
+      });
+
+      const result = await service.getCallLogs('user-1', {
+        limit: 20,
+        offset: 0,
+      });
+
+      expect(result).toEqual([]);
     });
   });
 
