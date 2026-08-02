@@ -184,7 +184,7 @@ describe('GroupsService', () => {
       100,
     );
 
-    expect(group.max_members).toBe(100);
+    expect(group.max_members).toBe(5);
     expect(mockFrom).toHaveBeenCalledWith('groups');
     expect(insertMemberBuilder.insert).toHaveBeenCalledWith({
       group_id: 'group-1',

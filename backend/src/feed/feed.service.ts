@@ -109,7 +109,7 @@ export class FeedService {
       const conditions: string[] = [];
       if (targetLangs.length > 0) {
         conditions.push(
-          `author.native_languages.in.(${targetLangs.map((l: string) => `"${l}"`).join(',')})`,
+          `author.native_languages.in.(${targetLangs.map((l) => `"${l}"`).join(',')})`,
         );
       }
       if (nativeLang) {
