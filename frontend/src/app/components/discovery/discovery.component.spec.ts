@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DiscoveryComponent } from './discovery.component';
@@ -7,6 +7,26 @@ import { UserService, UserProfile } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
 import { provideRouter } from '@angular/router';
+
+class MockAudio {
+  currentTime = 0;
+  src: string;
+  play = vi.fn().mockResolvedValue(undefined);
+  pause = vi.fn();
+  private listeners: Record<string, (() => void)[]> = {};
+  constructor(src: string) {
+    this.src = src;
+    audioInstances.push(this);
+  }
+  addEventListener(event: string, cb: () => void): void {
+    (this.listeners[event] ??= []).push(cb);
+  }
+  emit(event: string): void {
+    this.listeners[event]?.forEach((cb) => cb());
+  }
+}
+
+let audioInstances: MockAudio[] = [];
 
 function makePartner(overrides: Partial<UserProfile> = {}): UserProfile {
   return {
@@ -40,6 +60,9 @@ describe('DiscoveryComponent', () => {
   let mockAuthService: { currentUser: ReturnType<typeof signal> };
 
   beforeEach(async () => {
+    audioInstances = [];
+    vi.stubGlobal('Audio', MockAudio);
+
     mockDiscoveryService = {
       findPartners: vi.fn().mockResolvedValue([]),
     };
@@ -67,6 +90,11 @@ describe('DiscoveryComponent', () => {
 
     fixture = TestBed.createComponent(DiscoveryComponent);
     component = fixture.componentInstance;
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    audioInstances = [];
   });
 
   async function flush(): Promise<void> {
@@ -360,5 +388,150 @@ describe('DiscoveryComponent', () => {
     await flush();
 
     expect(component.selectedSort()).toBe('newest');
+  });
+
+  describe('toggleAudioIntro', () => {
+    it('should play the audio intro and mark the partner as playing', async () => {
+      await init();
+
+      component.toggleAudioIntro('partner-1', 'https://example.com/intro.mp3', new Event('click'));
+
+      expect(audioInstances).toHaveLength(1);
+      expect(audioInstances[0].src).toBe('https://example.com/intro.mp3');
+      expect(audioInstances[0].play).toHaveBeenCalled();
+      expect(component.playingPartnerId()).toBe('partner-1');
+    });
+
+    it('should stop propagation of the triggering event', async () => {
+      await init();
+      const event = new Event('click');
+      const stopPropagationSpy = vi.spyOn(event, 'stopPropagation');
+
+      component.toggleAudioIntro('partner-1', 'https://example.com/intro.mp3', event);
+
+      expect(stopPropagationSpy).toHaveBeenCalled();
+    });
+
+    it('should do nothing when the partner has no audio intro url', async () => {
+      await init();
+
+      component.toggleAudioIntro('partner-1', undefined, new Event('click'));
+
+      expect(audioInstances).toHaveLength(0);
+      expect(component.playingPartnerId()).toBeNull();
+    });
+
+    it('should pause and reset playback when toggling the currently playing partner', async () => {
+      await init();
+
+      component.toggleAudioIntro('partner-1', 'https://example.com/intro.mp3', new Event('click'));
+      const audio = audioInstances[0];
+      audio.currentTime = 12;
+
+      component.toggleAudioIntro('partner-1', 'https://example.com/intro.mp3', new Event('click'));
+
+      expect(audio.pause).toHaveBeenCalled();
+      expect(audio.currentTime).toBe(0);
+      expect(component.playingPartnerId()).toBeNull();
+    });
+
+    it('should stop the previous audio and start a new one when switching partners', async () => {
+      await init();
+
+      component.toggleAudioIntro('partner-1', 'https://example.com/one.mp3', new Event('click'));
+      const firstAudio = audioInstances[0];
+
+      component.toggleAudioIntro('partner-2', 'https://example.com/two.mp3', new Event('click'));
+
+      expect(firstAudio.pause).toHaveBeenCalled();
+      expect(audioInstances).toHaveLength(2);
+      expect(audioInstances[1].src).toBe('https://example.com/two.mp3');
+      expect(component.playingPartnerId()).toBe('partner-2');
+    });
+
+    it('should clear the playing partner when playback ends', async () => {
+      await init();
+
+      component.toggleAudioIntro('partner-1', 'https://example.com/intro.mp3', new Event('click'));
+      audioInstances[0].emit('ended');
+
+      expect(component.playingPartnerId()).toBeNull();
+    });
+
+    it('should clear the playing partner when playback errors', async () => {
+      await init();
+
+      component.toggleAudioIntro('partner-1', 'https://example.com/intro.mp3', new Event('click'));
+      audioInstances[0].emit('error');
+
+      expect(component.playingPartnerId()).toBeNull();
+    });
+
+    it('should clear the playing partner when play() rejects', async () => {
+      await init();
+      audioInstances = [];
+      class RejectingAudio extends MockAudio {
+        override play = vi.fn().mockRejectedValue(new Error('playback blocked'));
+      }
+      vi.stubGlobal('Audio', RejectingAudio);
+
+      component.toggleAudioIntro('partner-1', 'https://example.com/intro.mp3', new Event('click'));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(component.playingPartnerId()).toBeNull();
+    });
+
+    it('should stop audio playback when the component is destroyed', async () => {
+      await init();
+
+      component.toggleAudioIntro('partner-1', 'https://example.com/intro.mp3', new Event('click'));
+      const audio = audioInstances[0];
+
+      component.ngOnDestroy();
+
+      expect(audio.pause).toHaveBeenCalled();
+      expect(component.playingPartnerId()).toBeNull();
+    });
+  });
+
+  describe('audio intro play button in the template', () => {
+    it('should render a play button for partners with an audio intro', async () => {
+      mockDiscoveryService.findPartners.mockResolvedValue([
+        makePartner({ id: 'p1', audio_intro_url: 'https://example.com/intro.mp3' }),
+      ]);
+
+      await init();
+
+      const button: HTMLButtonElement = fixture.nativeElement.querySelector(
+        'button[aria-pressed]',
+      );
+      expect(button).toBeTruthy();
+      expect(button.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('should not render a play button for partners without an audio intro', async () => {
+      mockDiscoveryService.findPartners.mockResolvedValue([makePartner({ id: 'p1' })]);
+
+      await init();
+
+      const button = fixture.nativeElement.querySelector('button[aria-pressed]');
+      expect(button).toBeFalsy();
+    });
+
+    it('should toggle aria-pressed on the play button when clicked', async () => {
+      mockDiscoveryService.findPartners.mockResolvedValue([
+        makePartner({ id: 'p1', audio_intro_url: 'https://example.com/intro.mp3' }),
+      ]);
+
+      await init();
+
+      const button: HTMLButtonElement = fixture.nativeElement.querySelector(
+        'button[aria-pressed]',
+      );
+      button.click();
+      await flush();
+
+      expect(button.getAttribute('aria-pressed')).toBe('true');
+    });
   });
 });
