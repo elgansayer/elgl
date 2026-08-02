@@ -10,6 +10,31 @@ import { XpService } from '../xp/xp.service';
 import { QuestsService } from '../quests/quests.service';
 import { R2Service } from '../cloudflare-r2/r2.service';
 
+// Deterministic stand-in for the real mock-data module, which assigns
+// languages via Math.random() and made fallback-feed assertions flaky.
+jest.mock('../mock-data', () => {
+  const langs = ['en', 'es', 'fr', 'de', 'ja', 'ko', 'zh', 'no'];
+  return {
+    MOCK_USERS: Array.from({ length: 150 }, (_, i) => {
+      const native = langs[i % langs.length];
+      const target = langs[(i + 1) % langs.length];
+      return {
+        id: `fake-${i + 1}`,
+        display_name: `User${i + 1}`,
+        native_languages: native,
+        target_languages: [target],
+        bio_text: `Hi! I want to learn ${target.toUpperCase()} and I can teach ${native.toUpperCase()}. Let's chat!`,
+        avatar_url: `https://i.pravatar.cc/150?u=fake-${i + 1}`,
+        is_vip: false,
+        study_streak_days: 0,
+        correction_ratio: 0.75,
+        is_serious_learner: false,
+        created_at: new Date().toISOString(),
+      };
+    }),
+  };
+});
+
 describe('MomentsService', () => {
   let service: MomentsService;
   let timelineWorker: TimelineWorker;

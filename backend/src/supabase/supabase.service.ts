@@ -143,7 +143,9 @@ type FlashcardRow = {
 type FavouriteRow = {
   id: string;
   user_id: string;
-  moment_id: string;
+  item_type: string;
+  item_payload: Record<string, unknown>;
+  notes: string | null;
   created_at: string;
 };
 
@@ -441,7 +443,7 @@ export interface Database {
 @Global()
 @Injectable()
 export class SupabaseService implements OnModuleDestroy {
-  private readonly client: SupabaseClient<Database>;
+  private readonly client: SupabaseClient;
   private readonly redisClient: Redis;
 
   constructor(private readonly configService: ConfigService) {
@@ -454,7 +456,7 @@ export class SupabaseService implements OnModuleDestroy {
         'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required',
       );
     }
-    this.client = createClient<Database>(supabaseUrl, supabaseKey);
+    this.client = createClient(supabaseUrl, supabaseKey);
 
     const redisUrl =
       this.configService.get<string>('REDIS_URL') || 'redis://localhost:6379';
@@ -467,7 +469,7 @@ export class SupabaseService implements OnModuleDestroy {
     });
   }
 
-  getClient(): SupabaseClient<Database> {
+  getClient(): SupabaseClient {
     return this.client;
   }
 
