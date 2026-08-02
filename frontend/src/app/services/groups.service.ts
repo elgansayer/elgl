@@ -31,6 +31,22 @@ export class GroupsService {
     return firstValueFrom(this.http.post<ChatGroup>(this.apiUrl, body));
   }
 
+  restrictSendMessages(groupId: string, canSendMessages: boolean): Promise<void> {
+    return firstValueFrom(
+      this.http.post<void>(`${this.apiUrl}/${groupId}/restrict-send-messages`, {
+        canSendMessages,
+      }),
+    );
+  }
+
+  restrictEditInfo(groupId: string, canEditInfo: boolean): Promise<void> {
+    return firstValueFrom(
+      this.http.post<void>(`${this.apiUrl}/${groupId}/restrict-edit-info`, {
+        canEditInfo,
+      }),
+    );
+  }
+
   renameGroup(groupId: string, name: string): Promise<ChatGroup> {
     return firstValueFrom(this.http.put<ChatGroup>(`${this.apiUrl}/${groupId}/rename`, { name }));
   }

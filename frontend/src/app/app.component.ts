@@ -154,24 +154,23 @@ export class AppComponent implements OnInit {
 
       await this.centrifugeService.connect();
       this.centrifugeService.subscribe(`user_${user.id}`, (data: unknown) => {
-        const payload = data as { type?: string; gift?: VirtualGift; sender_name?: string } | null;
-        if (payload && payload.type === 'virtual_gift' && payload.gift) {
+        const payload = this.isValidPayload(data) ? data : null;
+        if (payload && payload.type === 'virtual_gift' && payload.gift !== undefined) {
           this.economyStore.triggerGiftAnimation({
             gift: payload.gift,
-            sender_name: payload.sender_name || 'Language Partner',
+            sender_name: payload.sender_name ?? 'Language Partner',
             receiver_name: 'You',
           });
         }
 
         // Handle incoming call events
-        if (payload && payload.type === 'incoming_call') {
-          const callPayload = payload as IncomingCallData & { type: string };
+        if (payload && payload.type === 'incoming_call' && this.isIncomingCallPayload(payload)) {
           this.incomingCallData.set({
-            callerId: callPayload.callerId,
-            callerName: callPayload.callerName,
-            callerAvatarUrl: callPayload.callerAvatarUrl,
-            roomName: callPayload.roomName,
-            isVideoCall: callPayload.isVideoCall,
+            callerId: payload.callerId,
+            callerName: payload.callerName,
+            callerAvatarUrl: payload.callerAvatarUrl,
+            roomName: payload.roomName,
+            isVideoCall: payload.isVideoCall,
           });
         }
       });
@@ -180,6 +179,43 @@ export class AppComponent implements OnInit {
       await this.fcmService.requestPermission();
       await this.fcmService.persistFcmToken(user.id);
     }
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  private isValidPayload(data: unknown): data is {
+    type: string;
+    gift?: VirtualGift;
+    sender_name?: string;
+    callerId?: string;
+    callerName?: string;
+    callerAvatarUrl?: string;
+    roomName?: string;
+    isVideoCall?: boolean;
+  } {
+    if (!this.isRecord(data)) {
+      return false;
+    }
+    const type = data['type'];
+    if (typeof type === 'string') {
+      return true;
+    }
+    return false;
+  }
+
+  private isIncomingCallPayload(payload: unknown): payload is IncomingCallData {
+    if (!this.isRecord(payload)) {
+      return false;
+    }
+    return (
+      typeof payload['callerId'] === 'string' &&
+      typeof payload['callerName'] === 'string' &&
+      typeof payload['callerAvatarUrl'] === 'string' &&
+      typeof payload['roomName'] === 'string' &&
+      typeof payload['isVideoCall'] === 'boolean'
+    );
   }
 
   onAcceptCall(_callData: IncomingCallData): void {

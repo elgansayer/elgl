@@ -1,34 +1,39 @@
-import { Controller, Get, Post, Body, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Req,
+  UseGuards,
+  BadRequestException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SupabaseAuthGuard } from './supabase-auth.guard';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('request-password-reset')
-  async requestPasswordReset(@Body('email') email: string) {
-    const token = await this.authService.requestPasswordReset(email);
+  async requestPasswordReset(@Body() dto: ForgotPasswordDto) {
+    const token = await this.authService.requestPasswordReset(dto.email);
     return { token };
   }
 
   @Post('reset-password')
-  async resetPassword(@Body() body: { token: string; newPassword: string }) {
-    await this.authService.resetPassword(body.token, body.newPassword);
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    await this.authService.resetPassword(dto.token, dto.newPassword);
     return { message: 'Password successfully reset' };
   }
 
   @UseGuards(SupabaseAuthGuard)
   @Post('change-password')
-  async changePassword(
-    @Req() req: any,
-    @Body('newPassword') newPassword: string,
-  ) {
-    if (!req.user || !req.user.id) {
-      throw new Error('Unauthorized');
-    }
-    const userId: string = req.user.id;
-    await this.authService.changePassword(userId, newPassword);
+  async changePassword(@Req() req: any, @Body() dto: ChangePasswordDto) {
+    const userId = this.getUserIdFromReq(req);
+    await this.authService.changePassword(userId, dto);
     return { message: 'Password changed successfully' };
   }
 
@@ -48,8 +53,14 @@ export class AuthController {
     @Body('token') token: string,
   ): Promise<{ success: boolean }> {
     const userId = this.getUserIdFromReq(req);
-    const valid = await this.authService.verifyTwoFactor(userId, token);
-    return { success: valid };
+    try {
+      const valid = await this.authService.verifyTwoFactor(userId, token);
+      return { success: valid };
+    } catch (error) {
+      throw new BadRequestException(
+        error.message || 'Failed to verify 2FA token',
+      );
+    }
   }
 
   @UseGuards(SupabaseAuthGuard)

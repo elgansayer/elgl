@@ -23,6 +23,7 @@ describe('MomentsController', () => {
             addComment: jest.fn(),
             getComments: jest.fn(),
             pinMoment: jest.fn(),
+            getLifetimeCounts: jest.fn(),
           },
         },
         {
@@ -206,6 +207,25 @@ describe('MomentsController', () => {
         false,
         'm-1',
       );
+    });
+  });
+
+  describe('getLifetimeCounts', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.getLifetimeCounts(null);
+      expect(result).toBeNull();
+      expect(momentsService.getLifetimeCounts).not.toHaveBeenCalled();
+    });
+
+    it('should call service getLifetimeCounts when user is provided', async () => {
+      const counts = { translations: 42, corrections: 17 };
+      (momentsService.getLifetimeCounts as jest.Mock).mockResolvedValue(counts);
+
+      const result = await controller.getLifetimeCounts({
+        id: 'user-1',
+      } as any);
+      expect(momentsService.getLifetimeCounts).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(counts);
     });
   });
 });

@@ -82,9 +82,12 @@ async function runVerification() {
 
   // 3. Verify LiveKit & Centrifugo Token Cryptography
   try {
-    const lkSecret =
-      process.env.LIVEKIT_SECRET || 'secret-livekit-api-secret-change-in-prod';
-    const lkApiKey = process.env.LIVEKIT_API_KEY || 'devkey';
+    const lkSecret = process.env.LIVEKIT_SECRET;
+    const lkApiKey = process.env.LIVEKIT_API_KEY;
+    if (!lkApiKey || !lkSecret) {
+      throw new Error('LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured');
+    }
+
     const lkToken = jwt.sign(
       {
         sub: 'usr_test_123',

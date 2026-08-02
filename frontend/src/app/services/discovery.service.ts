@@ -167,6 +167,25 @@ export class DiscoveryService {
     return enriched;
   }
 
+  async searchByCountryCity(country?: string, city?: string): Promise<UserProfile[]> {
+    let params = new HttpParams();
+    if (country?.trim()) {
+      params = params.set('country', country.trim());
+    }
+    if (city?.trim()) {
+      params = params.set('city', city.trim());
+    }
+    const users = await firstValueFrom(
+      this.http
+        .get<UserProfile[]>(`${this.baseUrl}/search-by-location`, {
+          headers: this.getHeaders(),
+          params,
+        })
+        .pipe(catchError(() => of<UserProfile[]>(MOCK_PARTNERS))),
+    );
+    return users;
+  }
+
   async getAudioIntros(filters?: SearchFilterParams): Promise<UserProfile[]> {
     let params = new HttpParams();
     if (filters?.native_languages) params = params.set('native_languages', filters.native_languages);

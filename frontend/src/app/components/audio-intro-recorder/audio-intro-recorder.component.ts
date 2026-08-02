@@ -1,4 +1,4 @@
-import { Component, output, signal, inject } from '@angular/core';
+import { Component, output, signal, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { UserService } from '../../services/user.service';
@@ -10,7 +10,7 @@ import { UserService } from '../../services/user.service';
   templateUrl: './audio-intro-recorder.component.html',
   styleUrls: ['./audio-intro-recorder.component.scss'],
 })
-export class AudioIntroRecorderComponent {
+export class AudioIntroRecorderComponent implements OnDestroy {
   private userService = inject(UserService);
 
   // Outputs
@@ -27,10 +27,12 @@ export class AudioIntroRecorderComponent {
   private mediaRecorder: MediaRecorder | null = null;
   private chunks: Blob[] = [];
   private timer: ReturnType<typeof setInterval> | null = null;
+  private audioStream: MediaStream | null = null;
 
   async startRecording(): Promise<void> {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.audioStream = stream;
       this.mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm;codecs=opus',
       });
@@ -40,6 +42,7 @@ export class AudioIntroRecorderComponent {
       };
       this.mediaRecorder.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
+        this.audioStream = null;
         const blob = new Blob(this.chunks, { type: 'audio/webm;codecs=opus' });
         this.recordingBlob.set(blob);
         this.hasRecording.set(true);
@@ -96,5 +99,17 @@ export class AudioIntroRecorderComponent {
       this.isPlaying.set(true);
       audio.onended = () => this.isPlaying.set(false);
     });
+  }
+
+  ngOnDestroy(): void {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+    this.audioStream?.getTracks().forEach((t) => t.stop());
+    this.audioStream = null;
+    if (this.recordingUrl()) {
+      URL.revokeObjectURL(this.recordingUrl());
+    }
   }
 }

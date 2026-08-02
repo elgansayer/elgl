@@ -64,6 +64,8 @@
   "discovery.matchCount": "{{count}} partner match(es)",
   "discovery.partnerFallback": "Language partner",
   "discovery.vipBadge": "VIP",
+  "discovery.playAudioIntro": "Play audio introduction",
+  "discovery.pauseAudioIntro": "Pause audio introduction",
   "discovery.startChat": "Start chat",
   "discovery.noBio": "No profile bio yet.",
   "discovery.streakBadge": "🔥 {{days}}d streak",
@@ -74,6 +76,8 @@
   "discovery.radiusLabel": "Maximum Distance: {{radius}} km",
   "discovery.vipRadiusNote": "VIP users (8 UKP / $10 USD) get global discovery and location spoofing.",
   "discovery.searchPlaceholder": "Search by name, language, or bio...",
+  "discovery.countryPlaceholder": "Search country...",
+  "discovery.cityPlaceholder": "Search city...",
   "discovery.emptyState": "No language partners matched your current filter criteria.",
   "discovery.streakDays": "🔥 {{days}}d Streak",
   "discovery.ratio": "✨ {{ratio}}% Corrections",
@@ -559,5 +563,7 @@
   "forcedUpdateModal.message": "A new version of the app is available. Please update to continue.",
   "forcedUpdateModal.updateButton": "Update Now",
   "system.profileUpdated": "Profile updated",
-  "system.missedCall": "Missed call"
+  "system.missedCall": "Missed call",
+  "nav.notifications": "Notifications",
+  "nav.compose": "Compose"
 }

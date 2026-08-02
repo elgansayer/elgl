@@ -1,0 +1,1 @@
+Periodic audit: Check for dead buttons (no click handler or routerLink)

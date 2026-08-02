@@ -34,7 +34,10 @@ export class EventsController {
   async list(@Req() req: AuthenticatedRequest, @Query() query: EventsQueryDto) {
     if (!req.user) throw new UnauthorizedException();
     const userId = req.user.id;
-    return this.eventsService.listEvents(userId, query);
+    return this.eventsService.listEvents(userId, {
+      ...query,
+      proficiency: query.proficiency,
+    });
   }
 
   @UseGuards(SupabaseAuthGuard)

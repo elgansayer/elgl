@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { StudyBuddyService } from './study-buddy.service';
 
 describe('StudyBuddyService', () => {
@@ -52,18 +52,13 @@ describe('StudyBuddyService', () => {
       await expect(requestPromise).resolves.toBeUndefined();
     });
 
-    it('should swallow errors and resolve without throwing', async () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-
+    it('should propagate errors so the caller can surface them', async () => {
       const requestPromise = service.requestBuddy({ partnerId: 'partner-3' });
 
       const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/request');
       req.flush('Internal Server Error', { status: 500, statusText: 'Internal Server Error' });
 
-      await expect(requestPromise).resolves.toBeUndefined();
-      expect(warnSpy).toHaveBeenCalledWith('Study buddy request failed (fallback)');
-
-      warnSpy.mockRestore();
+      await expect(requestPromise).rejects.toBeTruthy();
     });
   });
 
@@ -136,6 +131,50 @@ describe('StudyBuddyService', () => {
       req.flush('Internal Server Error', { status: 500, statusText: 'Internal Server Error' });
 
       await expect(matchesPromise).resolves.toEqual([]);
+    });
+  });
+
+  describe('getIncomingRequests', () => {
+    it('should GET pending requests', async () => {
+      const requestsPromise = service.getIncomingRequests();
+
+      const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/requests');
+      expect(req.request.method).toBe('GET');
+      req.flush([{ id: 'req-1', requesterId: 'user-2', partnerId: 'user-1', status: 'pending', createdAt: '2026-08-01T00:00:00.000Z' }]);
+
+      await expect(requestsPromise).resolves.toEqual([
+        {
+          id: 'req-1',
+          requesterId: 'user-2',
+          partnerId: 'user-1',
+          status: 'pending',
+          createdAt: '2026-08-01T00:00:00.000Z',
+        },
+      ]);
+    });
+  });
+
+  describe('acceptRequest', () => {
+    it('should POST to the accept endpoint', async () => {
+      const promise = service.acceptRequest('req-1');
+
+      const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/requests/req-1/accept');
+      expect(req.request.method).toBe('POST');
+      req.flush({});
+
+      await expect(promise).resolves.toBeUndefined();
+    });
+  });
+
+  describe('declineRequest', () => {
+    it('should POST to the decline endpoint', async () => {
+      const promise = service.declineRequest('req-1');
+
+      const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/requests/req-1/decline');
+      expect(req.request.method).toBe('POST');
+      req.flush({});
+
+      await expect(promise).resolves.toBeUndefined();
     });
   });
 });

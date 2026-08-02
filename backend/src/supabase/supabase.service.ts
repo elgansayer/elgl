@@ -10,7 +10,26 @@ type UsersRow = {
   xp_total: number | null;
   last_active_at: string | null;
   is_serious_learner: boolean | null;
-  [key: string]: unknown;
+  totp_secret?: string | null;
+  two_factor_secret?: string | null;
+  two_factor_enabled?: boolean | null;
+  profile_visibility?: string | null;
+  status_visibility?: string | null;
+  message_filters?: Record<string, unknown> | null;
+  business_name?: string | null;
+  business_hours?: string | null;
+  website_url?: string | null;
+  catalog?: unknown[] | null;
+  greeting_message?: string | null;
+  away_message?: string | null;
+  coins_balance?: number | null;
+  is_vip?: boolean | null;
+  vip_tier?: string | null;
+  updated_at?: string | null;
+  target_languages?: string[] | null;
+  native_languages?: string[] | null;
+  privacy_hide_from_search?: boolean | null;
+  incognito_visits?: boolean | null;
 };
 
 type GroupsRow = {
@@ -81,6 +100,7 @@ type ProfileVisitRow = {
   id: string;
   visitor_id: string;
   viewed_id: string;
+  viewer_id?: string;
   created_at: string;
 };
 
@@ -124,7 +144,17 @@ type FlashcardRow = {
 type FavouriteRow = {
   id: string;
   user_id: string;
-  moment_id: string;
+  item_type: string;
+  item_payload: Record<string, unknown>;
+  notes: string | null;
+  created_at: string;
+};
+
+type LoginHistoryRow = {
+  id: string;
+  user_id: string;
+  ip_address?: string | null;
+  user_agent?: string | null;
   created_at: string;
 };
 
@@ -143,86 +173,269 @@ export interface Database {
         Row: UsersRow;
         Insert: Partial<UsersRow>;
         Update: Partial<UsersRow>;
+        Relationships: [];
+      };
+      events: {
+        Row: {
+          id: string;
+          title: string;
+          description: string | null;
+          category: string | null;
+          date_time: string;
+          location: string | null;
+          language_pair: string | null;
+          max_participants: number | null;
+          host_id: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          title: string;
+          description?: string | null;
+          category?: string | null;
+          date_time: string;
+          location?: string | null;
+          language_pair?: string | null;
+          max_participants?: number | null;
+          host_id: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          title?: string;
+          description?: string | null;
+          category?: string | null;
+          date_time?: string;
+          location?: string | null;
+          language_pair?: string | null;
+          max_participants?: number | null;
+          host_id?: string;
+        }>;
+        Relationships: [];
+      };
+      event_rsvps: {
+        Row: {
+          id: string;
+          event_id: string;
+          user_id: string;
+          status: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          event_id: string;
+          user_id: string;
+          status: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          event_id?: string;
+          user_id?: string;
+          status?: string;
+        }>;
+        Relationships: [];
+      };
+      event_reminders_sent: {
+        Row: {
+          id: string;
+          event_id: string;
+          user_id: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          event_id: string;
+          user_id: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          event_id?: string;
+          user_id?: string;
+        }>;
+        Relationships: [];
+      };
+      audio_rooms: {
+        Row: {
+          id: string;
+          room_name: string;
+          title: string | null;
+          host_id: string;
+          party_type: string | null;
+        };
+        Insert: Partial<{
+          id?: string;
+          room_name: string;
+          title?: string | null;
+          host_id: string;
+          party_type?: string | null;
+        }>;
+        Update: Partial<{
+          id?: string;
+          room_name?: string;
+          title?: string | null;
+          host_id?: string;
+          party_type?: string | null;
+        }>;
+        Relationships: [];
       };
       groups: {
         Row: GroupsRow;
         Insert: Partial<GroupsRow>;
         Update: Partial<GroupsRow>;
+        Relationships: [];
       };
       group_members: {
         Row: GroupMembersRow;
         Insert: Partial<GroupMembersRow>;
         Update: Partial<GroupMembersRow>;
+        Relationships: [];
       };
       group_announcements: {
         Row: GroupAnnouncementsRow;
         Insert: Partial<GroupAnnouncementsRow>;
         Update: Partial<GroupAnnouncementsRow>;
+        Relationships: [];
       };
       group_resources: {
         Row: GroupResourcesRow;
         Insert: Partial<GroupResourcesRow>;
         Update: Partial<GroupResourcesRow>;
+        Relationships: [];
       };
       interests: {
         Row: InterestsRow;
         Insert: Partial<InterestsRow>;
         Update: Partial<InterestsRow>;
+        Relationships: [];
       };
       xp_events: {
         Row: XpEventRow;
         Insert: Partial<XpEventRow>;
         Update: Partial<XpEventRow>;
+        Relationships: [];
       };
       user_follows: {
         Row: UserFollowRow;
         Insert: Partial<UserFollowRow>;
         Update: Partial<UserFollowRow>;
+        Relationships: [];
       };
       user_profile_likes: {
         Row: UserProfileLikeRow;
         Insert: Partial<UserProfileLikeRow>;
         Update: Partial<UserProfileLikeRow>;
+        Relationships: [];
       };
       profile_visits: {
         Row: ProfileVisitRow;
         Insert: Partial<ProfileVisitRow>;
         Update: Partial<ProfileVisitRow>;
+        Relationships: [];
       };
       status_views: {
         Row: StatusViewRow;
         Insert: Partial<StatusViewRow>;
         Update: Partial<StatusViewRow>;
+        Relationships: [];
       };
       moments: {
         Row: MomentRow;
         Insert: Partial<MomentRow>;
         Update: Partial<MomentRow>;
+        Relationships: [];
       };
       moment_comments: {
         Row: MomentCommentRow;
         Insert: Partial<MomentCommentRow>;
         Update: Partial<MomentCommentRow>;
+        Relationships: [];
       };
       moment_likes: {
         Row: MomentLikeRow;
         Insert: Partial<MomentLikeRow>;
         Update: Partial<MomentLikeRow>;
+        Relationships: [];
       };
       flashcards: {
         Row: FlashcardRow;
         Insert: Partial<FlashcardRow>;
         Update: Partial<FlashcardRow>;
+        Relationships: [];
       };
       favourites: {
         Row: FavouriteRow;
         Insert: Partial<FavouriteRow>;
         Update: Partial<FavouriteRow>;
+        Relationships: [];
       };
       chat_messages: {
         Row: ChatMessageRow;
         Insert: Partial<ChatMessageRow>;
         Update: Partial<ChatMessageRow>;
+        Relationships: [];
+      };
+      login_history: {
+        Row: LoginHistoryRow;
+        Insert: Partial<LoginHistoryRow>;
+        Update: Partial<LoginHistoryRow>;
+        Relationships: [];
+      };
+      subscriptions: {
+        Row: {
+          user_id: string;
+          product_id: string | null;
+          status: string;
+          transaction_id: string | null;
+          auto_renew: boolean;
+          renewal_product_id: string | null;
+          expires_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          product_id?: string | null;
+          status?: string;
+          transaction_id?: string | null;
+          auto_renew?: boolean;
+          renewal_product_id?: string | null;
+          expires_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          product_id?: string | null;
+          status?: string;
+          transaction_id?: string | null;
+          auto_renew?: boolean;
+          renewal_product_id?: string | null;
+          expires_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      coin_purchases: {
+        Row: {
+          user_id: string;
+          transaction_id: string;
+          coins_added: number;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          transaction_id: string;
+          coins_added: number;
+          created_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          transaction_id?: string;
+          coins_added?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: {
+      increment_xp: {
+        Args: { user_id: string; amount: number };
+        Returns: void;
       };
     };
   };

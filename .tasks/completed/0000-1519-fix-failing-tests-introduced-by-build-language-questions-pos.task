@@ -1,0 +1,45 @@
+Fix failing tests introduced by: Build Language Questions post type..
+
+Errors:
+==== frontend lint FAILED (exit 1) ====
+STDOUT:
+
+> frontend@0.0.0 lint
+> eslint "src/**/*.ts" --fix && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical
+
+
+/home/dev/hellotalk/frontend/src/app/app.component.ts
+  198:37  warning  Type assertions (as) are banned in production code. Use type narrowing, type guards, or schema validation (Zod) instead. Migrate existing casts before upgrading this to error  no-restricted-syntax
+  210:25  warning  Type assertions (as) are banned in production code. Use type narrowing, type guards, or schema validation (Zod) instead. Migrate existing casts before upgrading this to error  no-restricted-syntax
+
+/home/dev/hellotalk/frontend/src/app/components/language-questions/language-questions.component.ts
+  34:20  error  Expected `!==` but received `!=`  @angular-eslint/template/eqeqeq
+  34:55  error  Expected `!==` but received `!=`  @angular-eslint/template/eqeqeq
+
+✖ 4 problems (2 errors, 2 warnings)
+
+
+STDERR:
+
+
+==== backend lint FAILED (exit 1) ====
+STDOUT:
+ypescript-eslint/no-unsafe-member-access
+   89:12  warning  Unsafe member access .select on an `any` value  @typescript-eslint/no-unsafe-member-access
+   90:12  warning  Unsafe member access .in on an `any` value      @typescript-eslint/no-unsafe-member-access
+   95:9   warning  Unsafe assignment of an `any` value             @typescript-eslint/no-unsafe-assignment
+   95:22  warning  Unsafe call of an `any` typed value             @typescript-eslint/no-unsafe-call
+   95:22  warning  Unsafe call of an `any` typed value             @typescript-eslint/no-unsafe-call
+   95:22  warning  Unsafe call of an `any` typed value             @typescript-eslint/no-unsafe-call
+   96:8   warning  Unsafe member access .from on an `any` value    @typescript-eslint/no-unsafe-member-access
+   97:8   warning  Unsafe member access .select on an `any` value  @typescript-eslint/no-unsafe-member-access
+   98:8   warning  Unsafe member access .eq on an `any` value      @typescript-eslint/no-unsafe-member-access
+  100:7   warning  Unsafe assignment of an `any` value             @typescript-eslint/no-unsafe-assignment
+  100:20  warning  Unsafe call of an `any` typed value             @typescript-eslint/no-unsafe-call
+  100:31  warning  Unsafe member access .gte on an `any` value     @typescript-eslint/no-unsafe-member-access
+  103:7   warning  Unsafe assignment of an `any` value             @typescript-eslint/no-unsafe-assignment
+  103:20  warning  Unsafe call of an `any` typed value             @typescript-eslint/no-unsafe-call
+  103:31  warning  Unsafe member access .lte on an `any` value     @typescript-eslint/no-unsafe-member-access
+  105:11  warning  Unsafe assignment of an `any` value             @typescript-eslint/no-unsafe-assignment
+  114:7   warning  Unsafe assignment of an `any` value             @typescript-eslint/no-unsafe-assignment
+  115:7   warning  Unsafe assignment of an `any` value             @typescript-eslint/no-unsafe-assignment

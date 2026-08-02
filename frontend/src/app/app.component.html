@@ -84,14 +84,14 @@
   }
 
   <!-- Main Content Area (padding-bottom to account for bottom nav) -->
-  <main class="flex-1 pb-[72px]">
+  <main class="flex-1 pb-[72px] lg:pb-0">
     <div [@routeAnimations]="prepareRoute()">
       <router-outlet />
     </div>
   </main>
 
   <!-- Mobile Bottom Navigation Bar -->
-  <nav class="fixed bottom-0 inset-x-0 z-50 bg-surface-200 border-t border-surface-100 pb-safe">
+  <nav class="fixed bottom-0 inset-x-0 z-50 lg:hidden bg-surface-200 border-t border-surface-100 pb-safe">
     <div class="flex justify-around items-center h-[60px]">
       <a
         joyrideStep="chat"
