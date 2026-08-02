@@ -107,6 +107,23 @@ export class MomentsService {
     private readonly r2Service: R2Service,
   ) {}
 
+  private inferMediaType(dto: CreateStoryDto): string {
+    if (dto.media_type) {
+      return dto.media_type;
+    }
+    if (dto.voice_note_url) {
+      return 'audio';
+    }
+    const urls = dto.media_urls ?? [];
+    if (urls.length > 0) {
+      const isVideo = urls.some((u) =>
+        /\.(mp4|webm|mov|m4v|ogv)(\?.*)?$/i.test(u),
+      );
+      return isVideo ? 'video' : 'images';
+    }
+    return 'none';
+  }
+
   async createStory(
     userId: string,
     dto: CreateStoryDto,
@@ -119,13 +136,14 @@ export class MomentsService {
       Date.now() + expireHours * 3600 * 1000,
     ).toISOString();
 
+    const mediaType = this.inferMediaType(dto);
     const { data, error } = (await supabase
       .from('moments')
       .insert({
         user_id: userId,
         text_content: dto.text_content ?? null,
         media_urls: dto.media_urls ?? [],
-        media_type: dto.media_type ?? 'none',
+        media_type: mediaType,
         target_language: dto.target_language ?? null,
         voice_note_url: dto.voice_note_url ?? null,
         is_ephemeral: true,
@@ -347,6 +365,8 @@ export class MomentsService {
       if (data) moments = data;
     }
 
+    // Exclude ephemeral stories (they should only be visible via the stories endpoint)
+    moments = moments.filter((m) => !m.is_ephemeral);
     // Exclude post types that are not regular moments (questions/language questions)
     moments = moments.filter((m) => !m.post_type || m.post_type === 'moment');
 
@@ -551,6 +571,100 @@ export class MomentsService {
           avatar_url: p?.avatar_url ?? null,
         },
         is_liked_by_me: likedSet.has(m.id),
+      };
+    });
+  }
+
+  async getActiveStories(userId: string): Promise<MomentRecord[]> {
+    const supabase = this.supabaseService.getClient();
+
+    // Get IDs of users the current user follows, plus self
+    const { data: follows, error: followsError } = await supabase
+      .from('user_follows')
+      .select('following_id')
+      .eq('follower_id', userId);
+
+    if (followsError) {
+      throw new Error(`Failed to fetch follows: ${followsError.message}`);
+    }
+
+    const followRows = (follows ?? []) as UserFollowRow[];
+    const storyUserIds = followRows.map((f) => f.following_id);
+    storyUserIds.push(userId);
+
+    const { data, error } = await supabase
+      .from('moments')
+      .select('*')
+      .eq('is_ephemeral', true)
+      .gt('expires_at', new Date().toISOString())
+      .in('user_id', storyUserIds)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      throw new Error(`Failed to fetch stories: ${error.message}`);
+    }
+
+    let stories = (data ?? []) as MomentRecord[];
+    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
+
+    // Include mock stories if there are none
+    if (stories.length === 0) {
+      const eligibleUsers = MOCK_USERS.filter(
+        (u) => !blockedIds.includes(u.id),
+      );
+      const generated: MomentRecord[] = [];
+      for (let i = 0; i < Math.min(eligibleUsers.length, 50); i++) {
+        const u = eligibleUsers[i];
+        generated.push({
+          id: `mock-story-${i}`,
+          user_id: u.id,
+          text_content: `Just sharing my language learning update for today!`,
+          media_urls: [],
+          media_type: 'text',
+          target_language: undefined,
+          likes_count: 0,
+          comments_count: 0,
+          is_pinned: false,
+          created_at: new Date(
+            Date.now() - Math.random() * 86400000,
+          ).toISOString(),
+          author: {
+            id: u.id,
+            display_name: u.display_name,
+            avatar_url: u.avatar_url,
+          },
+          is_liked_by_me: false,
+        });
+      }
+      return generated;
+    }
+
+    // Filter out blocked users
+    if (blockedIds.length > 0) {
+      stories = stories.filter((s) => !blockedIds.includes(s.user_id));
+    }
+
+    // Hydrate author profiles
+    const authorIds = Array.from(new Set(stories.map((s) => s.user_id)));
+    const profilesResponse = await supabase
+      .from('users')
+      .select('id, display_name, avatar_url')
+      .in('id', authorIds);
+    const profiles = profilesResponse.data as UserProfileRow[] | null;
+    const profileMap = new Map<string, UserProfileRow>();
+    (profiles ?? []).forEach((p) => profileMap.set(p.id, p));
+
+    return stories.map((s) => {
+      const p = profileMap.get(s.user_id);
+      return {
+        ...s,
+        author: {
+          id: p?.id ?? s.user_id,
+          display_name: p?.display_name ?? 'Language Partner',
+          avatar_url: p?.avatar_url ?? null,
+        },
+        is_liked_by_me: false,
       };
     });
   }

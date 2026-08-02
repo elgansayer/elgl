@@ -113,8 +113,26 @@ type StatusViewRow = {
 
 type MomentRow = {
   id: string;
-  author_id: string;
-  content: string;
+  author_id?: string | null;
+  user_id?: string | null;
+  content?: string | null;
+  content_text?: string | null;
+  media_urls?: string[] | null;
+  media_type?: string | null;
+  voice_note_url?: string | null;
+  detected_language?: string | null;
+  target_language?: string | null;
+  post_type?: string | null;
+  question_text?: string | null;
+  question_options?: string[] | null;
+  correct_answer?: string | null;
+  is_pinned?: boolean | null;
+  likes_count?: number | null;
+  comments_count?: number | null;
+  correct_answers_count?: number | null;
+  total_answers_count?: number | null;
+  is_ephemeral?: boolean | null;
+  expires_at?: string | null;
   created_at: string;
 };
 

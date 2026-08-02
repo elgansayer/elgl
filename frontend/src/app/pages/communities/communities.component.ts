@@ -26,10 +26,10 @@ export class CommunitiesComponent {
 
   readonly selectedCommunityId = signal<string | null>(null);
 
-  readonly groupsResource = resource<CommunityGroup[]>({
-    params: () => this.selectedCommunityId(),
-    loader: ({ params }) => {
-      const id = params;
+  readonly groupsResource = resource<CommunityGroup[], string | null>({
+    request: () => this.selectedCommunityId(),
+    loader: ({ request }) => {
+      const id = request;
       if (!id) {
         return Promise.resolve([]);
       }

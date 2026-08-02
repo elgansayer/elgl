@@ -52,6 +52,14 @@ export class MomentsController {
     return await this.momentsService.getLifetimeCounts(user.id);
   }
 
+  @Get('stories')
+  async getActiveStories(
+    @CurrentUser() user: User | null,
+  ): Promise<MomentRecord[]> {
+    if (!user) return [];
+    return await this.momentsService.getActiveStories(user.id);
+  }
+
   @Post('upload-voice')
   async uploadVoice(
     @CurrentUser() user: User | null,

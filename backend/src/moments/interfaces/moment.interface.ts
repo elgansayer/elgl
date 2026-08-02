@@ -24,7 +24,7 @@ export interface MomentRecord {
   user_id: string;
   text_content?: string;
   media_urls?: string[];
-  media_type: 'none' | 'images' | 'audio';
+  media_type: 'none' | 'images' | 'audio' | 'video';
   target_language: string;
   post_type?: 'moment' | 'question' | 'language_question';
   question_text?: string;
@@ -36,6 +36,8 @@ export interface MomentRecord {
   likes_count: number;
   comments_count: number;
   created_at: string;
+  is_ephemeral?: boolean;
+  expires_at?: string;
   author?: {
     id: string;
     display_name?: string;
