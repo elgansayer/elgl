@@ -953,7 +953,7 @@ export class UsersService {
       throw new NotFoundException(`User stats not found for user ${userId}`);
     }
 
-    const user = userRes.data;
+    const user = userRes.data as UserProfile;
     const momentsCount = momentsCountRes.count ?? 0;
     const commentsCount = commentsCountRes.count ?? 0;
     const followersCount = followersCountRes.count ?? 0;
