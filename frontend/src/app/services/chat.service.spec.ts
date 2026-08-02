@@ -196,7 +196,7 @@ describe('ChatService', () => {
       const membersReq = httpMock.expectOne(`${baseUrl}/rooms/room-1/members`);
       membersReq.flush([{ user_id: 'user-1' }, { user_id: 'user-2' }]);
 
-      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       const sentMessage: ChatMessage = {
         id: 'm1',
