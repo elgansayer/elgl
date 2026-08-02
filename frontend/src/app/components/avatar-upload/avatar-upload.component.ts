@@ -4,9 +4,7 @@ import {
   signal,
   output,
 } from '@angular/core';
-import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { MediaService } from '../../services/media.service';
 import { SupabaseService } from '../../services/supabase.service';
 
 @Component({
@@ -17,8 +15,6 @@ import { SupabaseService } from '../../services/supabase.service';
   styleUrls: ['./avatar-upload.component.scss'],
 })
 export class AvatarUploadComponent {
-  private readonly i18n = inject(I18nService);
-  private readonly mediaService = inject(MediaService);
   private readonly supabaseService = inject(SupabaseService);
 
   readonly avatarUrl = output<string>();

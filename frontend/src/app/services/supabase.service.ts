@@ -48,6 +48,27 @@ export class SupabaseService {
     this.supabase = createClient<Database>(environment.supabaseUrl, environment.supabaseAnonKey);
   }
 
+  public async uploadAvatar(file: File): Promise<{ avatarUrl: string }> {
+    const folder = 'avatars';
+    const fileName = `${folder}/${Date.now()}-${file.name}`;
+    const uploadResponse = await this.supabase.storage
+      .from('documents')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (uploadResponse.error) {
+      throw new Error(`Failed to upload avatar: ${uploadResponse.error.message}`);
+    }
+
+    const { data: publicUrlData } = this.supabase.storage.from('documents').getPublicUrl(fileName);
+    if (!publicUrlData?.publicUrl) {
+      throw new Error('Failed to retrieve public URL for avatar');
+    }
+    return { avatarUrl: publicUrlData.publicUrl };
+  }
+
   async getRecentlyJoinedNativeSpeakers(limit: number = 10): Promise<UserProfile[]> {
     const { data, error } = await this.supabase
       .from('users')
@@ -209,24 +230,50 @@ export class SupabaseService {
     }
   }
 
-  async uploadAvatar(file: File): Promise<{ avatarUrl: string | null }> {
-    const fileName = `avatars/${Date.now()}-${file.name}`;
+  async uploadFile(file: File, folder: string): Promise<{ fileUrl: string | null }> {
+    const fileName = `${folder}/${Date.now()}-${file.name}`;
     const uploadResponse = await this.supabase.storage
-      .from('avatars')
+      .from('documents')
       .upload(fileName, file, {
         cacheControl: '3600',
         upsert: false,
       });
 
     if (uploadResponse.error) {
-      throw new Error(`Failed to upload avatar: ${uploadResponse.error.message}`);
+      throw new Error(`Failed to upload file: ${uploadResponse.error.message}`);
     }
 
-    const { data: publicUrlData } = this.supabase.storage.from('avatars').getPublicUrl(fileName);
+    const { data: publicUrlData } = this.supabase.storage.from('documents').getPublicUrl(fileName);
     if (!publicUrlData?.publicUrl) {
-      throw new Error('Failed to retrieve public URL for avatar');
+      throw new Error('Failed to retrieve public URL for file');
     }
-    return { avatarUrl: publicUrlData.publicUrl };
+    return { fileUrl: publicUrlData.publicUrl };
+  }
+
+  async uploadAvatar(file: File): Promise<{ avatarUrl: string }> {
+    const result = await this.uploadFile(file, 'avatars');
+    if (!result.fileUrl) {
+      throw new Error('Failed to retrieve avatar URL');
+    }
+    return { avatarUrl: result.fileUrl };
+  }
+
+  async listFiles(folder: string): Promise<string[]> {
+    const { data, error } = await this.supabase.storage.from('documents').list(folder);
+
+    if (error) {
+      throw new Error(`Failed to list files: ${error.message}`);
+    }
+
+    return data?.map((file) => file.name) ?? [];
+  }
+
+  async deleteFile(filePath: string): Promise<void> {
+    const { error } = await this.supabase.storage.from('documents').remove([filePath]);
+
+    if (error) {
+      throw new Error(`Failed to delete file: ${error.message}`);
+    }
   }
 
   async getAutoDownloadPreference(): Promise<'wifi' | 'cellular'> {
