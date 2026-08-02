@@ -12,6 +12,7 @@ describe('ProfileVisitsService', () => {
   beforeEach(async () => {
     mockQueryBuilder = {
       insert: jest.fn().mockReturnThis(),
+      delete: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),

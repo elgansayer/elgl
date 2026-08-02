@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { provideLocationMocks } from '@angular/router/testing';
+import { provideLocationMocks } from '@angular/common/testing';
 import { DOCUMENT } from '@angular/common';
 import { vi } from 'vitest';
 import { AppComponent } from './app.component';
@@ -24,6 +24,7 @@ describe('AppComponent', () => {
     isAuthenticated: vi.fn(() => true),
     isBiometricSupported: vi.fn(() => Promise.resolve(true)),
     biometricLockEnabled: vi.fn(() => false),
+    appLocked: vi.fn(() => false),
     lockApp: vi.fn(),
     enableBiometricLock: vi.fn(() => Promise.resolve()),
     disableBiometricLock: vi.fn(() => Promise.resolve()),

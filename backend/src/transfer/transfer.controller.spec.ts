@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TransferController } from './transfer.controller';
 import { TransferService } from './transfer.service';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 
 describe('TransferController', () => {
   let controller: TransferController;
@@ -26,7 +27,10 @@ describe('TransferController', () => {
           useValue: transferService,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .compile();
 
     controller = module.get<TransferController>(TransferController);
   });

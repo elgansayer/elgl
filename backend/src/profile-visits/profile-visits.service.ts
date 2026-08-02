@@ -11,22 +11,6 @@ export interface VisitorUser {
   target_languages: string[];
   bio_text?: string;
   is_vip?: boolean;
-  async deleteVisit(visitId: string): Promise<Record<string, unknown>> {
-    const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('profile_visits')
-      .delete()
-      .eq('id', visitId)
-      .select()
-      .single();
-
-    if (response.error || !response.data) {
-      const msg = response.error?.message ?? 'Unknown error';
-      throw new Error(`Failed to delete visit: ${msg}`);
-    }
-
-    return response.data;
-  }
 }
 
 export interface ProfileVisitRecord {
@@ -151,5 +135,37 @@ export class ProfileVisitsService {
       is_blurred: false,
       visitor: visit.visitor,
     }));
+  }
+
+  async getVisitCount(userId: string): Promise<number> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('profile_visits')
+      .select('count(*) as visit_count')
+      .eq('viewed_id', userId)
+      .single();
+
+    if (response.error) {
+      throw new Error(`Failed to fetch visit count: ${response.error.message}`);
+    }
+
+    return response.data?.visit_count ?? 0;
+  }
+
+  async deleteVisit(visitId: string): Promise<Record<string, unknown>> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('profile_visits')
+      .delete()
+      .eq('id', visitId)
+      .select()
+      .single();
+
+    if (response.error || !response.data) {
+      const msg = response.error?.message ?? 'Unknown error';
+      throw new Error(`Failed to delete visit: ${msg}`);
+    }
+
+    return response.data;
   }
 }
