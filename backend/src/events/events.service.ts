@@ -11,6 +11,19 @@ import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventsQueryDto } from './dto/events-query.dto';
 
+interface EventWithHost {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  date_time: string;
+  location: string | null;
+  language_pair: string | null;
+  max_participants: number | null;
+  host_id: string;
+  host?: { display_name: string | null; avatar_url: string | null };
+}
+
 @Injectable()
 export class EventsService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(EventsService.name);
@@ -228,23 +241,17 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       this.logger.error('Failed to list events', error);
       throw error;
     }
-    return (data ?? []).map(
-      (
-        ev: {
-          host?: { display_name: string | null; avatar_url: string | null };
-        } & Record<string, unknown>,
-      ) => ({
-        ...ev,
-        host_name: ev.host?.display_name ?? null,
-        host_avatar_url: ev.host?.avatar_url ?? null,
-      }),
-    );
+    return ((data ?? []) as EventWithHost[]).map((ev: EventWithHost) => ({
+      ...ev,
+      host_name: ev.host?.display_name ?? null,
+      host_avatar_url: ev.host?.avatar_url ?? null,
+    }));
   }
 
   async getUserEvents(
     userId: string,
     status?: 'upcoming' | 'past',
-  ): Promise<any[]> {
+  ): Promise<EventWithHost[]> {
     const supabase = this.supabaseService.getClient();
     const { data: rsvps, error: rsvpErr } = await supabase
       .from('event_rsvps')
@@ -275,7 +282,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       this.logger.error('Failed to fetch user events', error);
       throw error;
     }
-    return (data ?? []).map((ev: any) => ({
+    return ((data ?? []) as EventWithHost[]).map((ev: EventWithHost) => ({
       ...ev,
       host_name: ev.host?.display_name ?? null,
       host_avatar_url: ev.host?.avatar_url ?? null,
@@ -312,10 +319,11 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       this.logger.warn('Failed to fetch interested count', iErr);
     }
 
+    const eventRow = data as unknown as EventWithHost;
     return {
-      ...data,
-      host_name: data.host?.display_name ?? null,
-      host_avatar_url: data.host?.avatar_url ?? null,
+      ...eventRow,
+      host_name: eventRow.host?.display_name ?? null,
+      host_avatar_url: eventRow.host?.avatar_url ?? null,
       attendees_count: attendingCount ?? 0,
       interested_count: interestedCount ?? 0,
     };

@@ -524,7 +524,6 @@ export class AppleNotificationService {
       .update({
         is_vip: false,
         vip_tier: 'free',
-        updated_at: new Date().toISOString(),
       })
       .eq('id', userId)
       .then(({ error }) => {

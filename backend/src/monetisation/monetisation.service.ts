@@ -250,14 +250,14 @@ export class MonetisationService {
   }
 
   async handleAppleWebhook(
-    payload: any,
+    payload: string,
   ): Promise<{ received: boolean; status: string }> {
     this.logger.log('Received Apple App Store Server Notification');
     return await this.appleNotificationService.handleNotification(payload);
   }
 
   async handleGoogleWebhook(
-    payload: any,
+    payload: Record<string, unknown>,
     authorizationHeader?: string,
   ): Promise<{ received: boolean; status: string }> {
     this.logger.log('Received Google Play Developer Notification');

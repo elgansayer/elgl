@@ -26,17 +26,7 @@ describe('AuthController (unit)', () => {
       checkTwoFactorStatus: jest.fn(),
     };
 
-    const moduleRef: TestingModule = await Test.createTestingModule({
-      controllers: [AuthController],
-      providers: [
-        {
-          provide: AuthService,
-          useValue: authService,
-        },
-      ],
-    }).compile();
-
-    controller = moduleRef.get<AuthController>(AuthController);
+    controller = new (AuthController as any)(authService) as AuthController;
   });
 
   describe('requestPasswordReset', () => {

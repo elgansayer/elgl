@@ -23,6 +23,9 @@ type UsersRow = {
   greeting_message?: string | null;
   away_message?: string | null;
   coins_balance?: number | null;
+  is_vip?: boolean | null;
+  vip_tier?: string | null;
+  updated_at?: string | null;
   target_languages?: string[] | null;
   native_languages?: string[] | null;
   privacy_hide_from_search?: boolean | null;

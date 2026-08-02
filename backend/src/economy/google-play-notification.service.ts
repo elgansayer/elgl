@@ -125,7 +125,12 @@ export class GooglePlayNotificationService {
 
     this.logger.log(`User ${userId} subscription recovered: ${subscriptionId}`);
 
-    this.updateSubscriptionStatus(userId, subscriptionId, 'active');
+    this.updateSubscriptionStatus(
+      userId,
+      subscriptionId,
+      'active',
+      purchaseToken,
+    );
   }
 
   /**
@@ -142,7 +147,12 @@ export class GooglePlayNotificationService {
 
     this.logger.log(`User ${userId} subscription renewed: ${subscriptionId}`);
 
-    this.updateSubscriptionStatus(userId, subscriptionId, 'active');
+    this.updateSubscriptionStatus(
+      userId,
+      subscriptionId,
+      'active',
+      purchaseToken,
+    );
   }
 
   /**
@@ -159,7 +169,12 @@ export class GooglePlayNotificationService {
 
     this.logger.log(`User ${userId} subscription canceled: ${subscriptionId}`);
 
-    this.updateSubscriptionStatus(userId, subscriptionId, 'canceled');
+    this.updateSubscriptionStatus(
+      userId,
+      subscriptionId,
+      'canceled',
+      purchaseToken,
+    );
   }
 
   /**
@@ -176,7 +191,12 @@ export class GooglePlayNotificationService {
 
     this.logger.log(`User ${userId} purchased subscription: ${subscriptionId}`);
 
-    this.updateSubscriptionStatus(userId, subscriptionId, 'active');
+    this.updateSubscriptionStatus(
+      userId,
+      subscriptionId,
+      'active',
+      purchaseToken,
+    );
   }
 
   /**
@@ -193,7 +213,12 @@ export class GooglePlayNotificationService {
 
     this.logger.log(`User ${userId} subscription on hold: ${subscriptionId}`);
 
-    this.updateSubscriptionStatus(userId, subscriptionId, 'on_hold');
+    this.updateSubscriptionStatus(
+      userId,
+      subscriptionId,
+      'on_hold',
+      purchaseToken,
+    );
   }
 
   /**
@@ -212,7 +237,12 @@ export class GooglePlayNotificationService {
       `User ${userId} subscription in grace period: ${subscriptionId}`,
     );
 
-    this.updateSubscriptionStatus(userId, subscriptionId, 'grace_period');
+    this.updateSubscriptionStatus(
+      userId,
+      subscriptionId,
+      'grace_period',
+      purchaseToken,
+    );
   }
 
   /**
@@ -229,7 +259,12 @@ export class GooglePlayNotificationService {
 
     this.logger.log(`User ${userId} subscription restarted: ${subscriptionId}`);
 
-    this.updateSubscriptionStatus(userId, subscriptionId, 'active');
+    this.updateSubscriptionStatus(
+      userId,
+      subscriptionId,
+      'active',
+      purchaseToken,
+    );
   }
 
   /**
@@ -283,7 +318,12 @@ export class GooglePlayNotificationService {
 
     this.logger.log(`User ${userId} subscription revoked: ${subscriptionId}`);
 
-    this.updateSubscriptionStatus(userId, subscriptionId, 'revoked');
+    this.updateSubscriptionStatus(
+      userId,
+      subscriptionId,
+      'revoked',
+      purchaseToken,
+    );
     this.revokeSubscriptionBenefits(userId);
   }
 
@@ -301,7 +341,12 @@ export class GooglePlayNotificationService {
 
     this.logger.log(`User ${userId} subscription expired: ${subscriptionId}`);
 
-    this.updateSubscriptionStatus(userId, subscriptionId, 'expired');
+    this.updateSubscriptionStatus(
+      userId,
+      subscriptionId,
+      'expired',
+      purchaseToken,
+    );
     this.revokeSubscriptionBenefits(userId);
   }
 
@@ -316,7 +361,7 @@ export class GooglePlayNotificationService {
     const { data } = await supabase
       .from('subscriptions')
       .select('user_id')
-      .eq('purchase_token', purchaseToken)
+      .eq('transaction_id', purchaseToken)
       .single();
 
     const row = data as { user_id?: string } | null;
@@ -330,6 +375,7 @@ export class GooglePlayNotificationService {
     userId: string,
     subscriptionId: string,
     status: string,
+    transactionId?: string,
   ): void {
     const supabase = this.supabaseService.getClient();
 
@@ -340,6 +386,7 @@ export class GooglePlayNotificationService {
           user_id: userId,
           product_id: subscriptionId,
           status,
+          transaction_id: transactionId ?? null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id' },
@@ -388,8 +435,9 @@ export class GooglePlayNotificationService {
     supabase
       .from('users')
       .update({
+        is_vip: false,
+        vip_tier: 'free',
         status_visibility: 'free',
-        updated_at: new Date().toISOString(),
       })
       .eq('id', userId)
       .then(({ error }) => {
