@@ -190,7 +190,9 @@ export class AvatarUploadComponent {
       const result = await this.supabaseService.uploadAvatar(croppedFile);
 
       // 6. Emit the resulting URL
-      this.avatarUrl.emit(result.avatarUrl);
+      if (result.avatarUrl) {
+        this.avatarUrl.emit(result.avatarUrl);
+      }
     } catch (err) {
       console.error('Avatar upload failed:', err);
     } finally {

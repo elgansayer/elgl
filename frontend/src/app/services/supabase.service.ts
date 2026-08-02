@@ -3,7 +3,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { openDB, IDBPDatabase } from 'idb';
 import { environment } from '../../environments/environment';
 
-interface Database {
+type Database = {
   public: {
     Tables: {
       user_streaks: {
@@ -15,14 +15,14 @@ interface Database {
       users: {
         Row: { id: string; audio_intro_url: string | null; is_vip: boolean; vip_tier: string; is_serious_learner?: boolean };
         Insert: { id: string; audio_intro_url?: string | null; is_vip?: boolean; vip_tier?: string; is_serious_learner?: boolean };
-        Update: Partial<{ id: string; audio_intro_url: string | null; is_vip: boolean; vip_tier: string; is_serious_learner?: boolean }>;
+        Update: { id?: string; audio_intro_url?: string | null; is_vip?: boolean; vip_tier?: string; is_serious_learner?: boolean };
         Relationships: [];
       };
     };
     Views: Record<string, { Row: Record<string, unknown>; Relationships: [] }>;
     Functions: Record<string, { Args: Record<string, unknown>; Returns: unknown }>;
   };
-}
+};
 
 @Injectable({
   providedIn: 'root',
@@ -32,6 +32,39 @@ export class SupabaseService {
 
   constructor() {
     this.supabase = createClient<Database>(environment.supabaseUrl, environment.supabaseAnonKey);
+  }
+
+  async linkAccount(provider: 'google' | 'apple'): Promise<void> {
+    const { error } = await this.supabase.auth.signInWithOAuth({
+      provider,
+    });
+
+    if (error) {
+      throw new Error(`Failed to link account: ${error.message}`);
+    }
+  }
+
+  async unlinkAccount(provider: 'google' | 'apple'): Promise<void> {
+    const { error } = await this.supabase.rpc('unlink_provider', { provider });
+
+    if (error) {
+      throw new Error(`Failed to unlink account: ${error.message}`);
+    }
+  }
+
+  async getLinkedAccounts(): Promise<{ email: boolean; google: boolean; apple: boolean }> {
+    const { data, error } = await this.supabase.auth.getUser();
+
+    if (error || !data) {
+      throw new Error('Failed to fetch linked accounts');
+    }
+
+    const identities = data?.user?.identities ?? [];
+    return {
+      email: identities.some((id) => id.provider === 'email'),
+      google: identities.some((id) => id.provider === 'google'),
+      apple: identities.some((id) => id.provider === 'apple'),
+    };
   }
 
   async getDailyStreak(userId: string): Promise<number> {
@@ -101,9 +134,9 @@ export class SupabaseService {
     };
   }
 
-  private async getOfflineDB(): Promise<IDBPDatabase> {
+  private async getOfflineDB(): Promise<IDBPDatabase<unknown>> {
     return openDB('OfflineContentDB', 1, {
-      upgrade(db: IDBPDatabase) {
+      upgrade(db: IDBPDatabase<unknown>) {
         if (!db.objectStoreNames.contains('savedContent')) {
           db.createObjectStore('savedContent', { keyPath: 'id' });
         }
@@ -130,7 +163,8 @@ export class SupabaseService {
     const db = await this.getOfflineDB();
     await db.delete('savedContent', id);
   }
-  async uploadAvatar(file: File): Promise<{ avatarUrl: string }> {
+
+  async uploadAvatar(file: File): Promise<{ avatarUrl: string | null }> {
     const fileName = `avatars/${Date.now()}-${file.name}`;
     const { error } = await this.supabase.storage
       .from('avatars')
@@ -144,6 +178,9 @@ export class SupabaseService {
     }
 
     const { data } = this.supabase.storage.from('avatars').getPublicUrl(fileName);
+    if (!data || !data.publicUrl) {
+      throw new Error('Failed to retrieve public URL for avatar');
+    }
     return { avatarUrl: data.publicUrl };
   }
 }
