@@ -886,7 +886,7 @@ export class UsersService {
       return users;
     }
     const supabase = this.supabaseService.getClient();
-    const { data } = await supabase
+    const { data: followsData, error: followsError } = await supabase
       .from('user_follows')
       .select('following_id')
       .eq('follower_id', viewerId)
@@ -894,9 +894,14 @@ export class UsersService {
         'following_id',
         users.map((user) => user.id),
       );
+
+    if (followsError) {
+      throw new InternalServerErrorException('Failed to fetch follow data');
+    }
+
     const followedIds = new Set(
-      ((data ?? []) as Array<{ following_id: string }>).map(
-        (row) => row.following_id,
+      (followsData ?? []).map(
+        (row: { following_id: string }) => row.following_id,
       ),
     );
     return users.map((user) => ({

@@ -425,6 +425,7 @@ export class I18nService {
     'chatRoom.voiceBtn': 'Voice',
     'chatRoom.typePlaceholder': 'Type your message',
     'chatRoom.mentionListLabel': 'Mention a participant',
+    'chatRoom.mentionError': 'Failed to mention participant.',
     'chatRoom.replyingToLabel': 'Replying to a message in this conversation',
     'chatRoom.replyPreviewFallback': 'Original message unavailable',
     'chatRoom.sendBtn': 'Send',

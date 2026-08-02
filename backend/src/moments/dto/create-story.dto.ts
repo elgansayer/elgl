@@ -4,6 +4,7 @@ import {
   IsArray,
   IsNumber,
   IsEnum,
+  IsArray,
 } from 'class-validator';
 
 export class CreateStoryDto {
@@ -31,4 +32,8 @@ export class CreateStoryDto {
   @IsOptional()
   @IsString()
   voice_note_url?: string;
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  mentions?: string[];
 }

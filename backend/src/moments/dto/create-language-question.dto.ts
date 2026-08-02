@@ -5,6 +5,7 @@ import {
   IsString,
   ArrayMinSize,
   ArrayMaxSize,
+  IsArray,
 } from 'class-validator';
 
 export class CreateLanguageQuestionDto {
@@ -29,4 +30,8 @@ export class CreateLanguageQuestionDto {
   @IsString()
   @IsNotEmpty()
   correct_answer!: string;
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  mentions?: string[];
 }

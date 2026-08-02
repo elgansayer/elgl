@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  IsArray,
 } from 'class-validator';
 
 export class CreateMomentDto {
@@ -47,6 +48,10 @@ export class CreateMomentDto {
   @IsOptional()
   @IsString()
   voice_note_url?: string;
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  mentions?: string[];
 }
 
 export class CreateCommentDto {
