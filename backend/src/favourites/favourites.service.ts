@@ -34,9 +34,9 @@ export class FavouritesService {
       .from('favourites')
       .insert({
         user_id: userId,
-        item_type: 'message',
+        item_type: 'message' as const,
         item_payload: message,
-        notes: dto.note_text || null,
+        notes: dto.note_text ?? null,
       })
       .select()
       .single();
@@ -45,7 +45,7 @@ export class FavouritesService {
     return insertResponse.data as {
       id: string;
       user_id: string;
-      item_type: string;
+      item_type: 'message';
       item_payload: Record<string, unknown>;
       notes: string | null;
     };
