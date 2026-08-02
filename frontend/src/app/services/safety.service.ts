@@ -208,6 +208,7 @@ export class SafetyService {
     return firstValueFrom(
       this.http.get<ReportCategory[]>(`${this.apiUrl}/safety/report-categories`).pipe(
         catchError(() => {
+          console.warn('Failed to fetch report categories from backend, using static fallback.');
           return of(this.getStaticReportCategories());
         }),
       ),
