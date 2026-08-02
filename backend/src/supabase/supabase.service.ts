@@ -367,6 +367,60 @@ export interface Database {
         Update: Partial<LoginHistoryRow>;
         Relationships: [];
       };
+      subscriptions: {
+        Row: {
+          user_id: string;
+          product_id: string | null;
+          status: string;
+          transaction_id: string | null;
+          auto_renew: boolean;
+          renewal_product_id: string | null;
+          expires_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          product_id?: string | null;
+          status?: string;
+          transaction_id?: string | null;
+          auto_renew?: boolean;
+          renewal_product_id?: string | null;
+          expires_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          product_id?: string | null;
+          status?: string;
+          transaction_id?: string | null;
+          auto_renew?: boolean;
+          renewal_product_id?: string | null;
+          expires_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      coin_purchases: {
+        Row: {
+          user_id: string;
+          transaction_id: string;
+          coins_added: number;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          transaction_id: string;
+          coins_added: number;
+          created_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          transaction_id?: string;
+          coins_added?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
