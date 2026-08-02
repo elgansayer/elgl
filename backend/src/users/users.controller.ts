@@ -19,6 +19,7 @@ import { TwoFactorGuard } from '../two-factor/two-factor.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateBusinessProfileDto } from './dto/update-business-profile.dto';
 import { PrivacySettingsDto } from './dto/privacy-settings.dto';
+import { UpdateStatusVisibilityDto } from './dto/update-status-visibility.dto';
 import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
 import {
   UserProfile,
@@ -381,5 +382,21 @@ export class UsersController {
   ): Promise<UserProfile | null> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.updateDoNotDisturbSettings(user.id, dto);
+  }
+
+  @Patch('me/status-visibility')
+  async updateStatusVisibility(
+    @CurrentUser() user: User | null,
+    @Body() dto: UpdateStatusVisibilityDto,
+  ): Promise<UserProfile | null> {
+    if (!user) throw new UnauthorizedException();
+    const isVip = Boolean(
+      (await this.usersService.getProfile(user.id))?.is_vip ?? false,
+    );
+    return this.usersService.updatePrivacySettings(
+      user.id,
+      { status_visibility: dto.status_visibility },
+      isVip,
+    );
   }
 }

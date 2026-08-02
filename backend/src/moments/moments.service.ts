@@ -640,6 +640,37 @@ export class MomentsService {
       return generated;
     }
 
+    // Fetch status visibility for authors (privacy control)
+    if (stories.length > 0) {
+      const storyAuthorIds = Array.from(new Set(stories.map((s) => s.user_id)));
+      const { data: visRowsData, error: visErr } = await supabase
+        .from('users')
+        .select('id, status_visibility')
+        .in('id', storyAuthorIds);
+
+      if (visErr) {
+        throw new Error(`Failed to fetch status visibility: ${visErr.message}`);
+      }
+
+      const visMap = new Map<string, string>();
+      const visRows = (visRowsData ?? []) as Array<{
+        id: string;
+        status_visibility?: string;
+      }>;
+      visRows.forEach((row) => {
+        visMap.set(row.id, row.status_visibility ?? 'public');
+      });
+
+      stories = stories.filter((s) => {
+        const vis = visMap.get(s.user_id) ?? 'public';
+        if (s.user_id === userId) return true;
+        if (vis === 'only_me') return false;
+        // 'public' and 'followers' are both allowed because we only
+        // fetched stories from users the current user follows (plus self).
+        return true;
+      });
+    }
+
     // Filter out blocked users
     if (blockedIds.length > 0) {
       stories = stories.filter((s) => !blockedIds.includes(s.user_id));

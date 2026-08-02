@@ -19,19 +19,18 @@ export class CommunitiesComponent {
   readonly communityName = signal('');
   readonly communityDescription = signal('');
 
-  readonly communitiesResource = resource<Community[]>({
+  readonly communitiesResource = resource({
     loader: () => this.communitiesService.listMine(),
   });
   readonly communities = this.communitiesResource.value;
 
   readonly selectedCommunityId = signal<string | null>(null);
 
-  readonly groupsResource = resource<CommunityGroup[], string | null>({
-    request: () => this.selectedCommunityId(),
-    loader: ({ request }) => {
-      const id = request;
+  readonly groupsResource = resource({
+    loader: () => {
+      const id = this.selectedCommunityId();
       if (!id) {
-        return Promise.resolve([]);
+        return Promise.resolve<CommunityGroup[]>([]);
       }
       return this.communitiesService.getGroups(id);
     },
