@@ -75,6 +75,22 @@ export class DiscoveryComponent implements OnInit {
   readonly ageRangeMin = signal<number>(18);
   readonly ageRangeMax = signal<number>(100);
 
+  readonly selectedSort = signal<string>('best_match');
+  readonly sortOptions = computed(() => {
+    this.i18n.translations();
+    return [
+      { id: 'best_match', label: this.i18n.translate('discovery.sortBestMatch') },
+      { id: 'online_now', label: this.i18n.translate('discovery.sortOnlineNow') },
+      { id: 'nearest', label: this.i18n.translate('discovery.sortNearest') },
+      { id: 'newest', label: this.i18n.translate('discovery.sortNewest') },
+    ];
+  });
+
+  setSort(sort: string): void {
+    this.selectedSort.set(sort);
+    void this.searchPartners();
+  }
+
   onAgeRangeChanged(range: AgeRange): void {
     this.ageRangeMin.set(range.min);
     this.ageRangeMax.set(range.max);
@@ -151,6 +167,7 @@ export class DiscoveryComponent implements OnInit {
           this.availableTimeStart() || undefined,
         available_time_end:
           this.availableTimeEnd() || undefined,
+        sort: this.selectedSort(),
       });
       // Filter out blocked users
       const blocked = this.blockedUserIds();
@@ -210,6 +227,7 @@ export class DiscoveryComponent implements OnInit {
     this.ageRangeMax.set(100);
     this.availableTimeStart.set('');
     this.availableTimeEnd.set('');
+    this.selectedSort.set('best_match');
     void this.searchPartners();
   }
 }

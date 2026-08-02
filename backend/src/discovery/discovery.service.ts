@@ -892,8 +892,8 @@ export class DiscoveryService {
         });
       case 'nearest':
         return discoveryUsers.sort((a, b) => {
-          const aDist = a.distance ?? Number.MAX_VALUE;
-          const bDist = b.distance ?? Number.MAX_VALUE;
+          const aDist = a.distance_metres ?? Number.MAX_VALUE;
+          const bDist = b.distance_metres ?? Number.MAX_VALUE;
           if (aDist !== bDist) return aDist - bDist;
           return 0;
         });

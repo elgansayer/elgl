@@ -305,4 +305,88 @@ describe('DiscoveryService', () => {
       expect(result).toHaveLength(0);
     });
   });
+
+  describe('sort algorithms', () => {
+    it('best_match: promotes partner-of-week first, then study streak, then correction ratio', async () => {
+      mockRedisClient.get.mockResolvedValue(JSON.stringify(['partner-c']));
+      const partners = [
+        { id: 'partner-a', study_streak_days: 3, correction_ratio: 0.9 },
+        { id: 'partner-b', study_streak_days: 10, correction_ratio: 0.5 },
+        { id: 'partner-c', study_streak_days: 1, correction_ratio: 0.1 },
+      ];
+      mockQueryBuilder.limit.mockResolvedValue({ data: partners, error: null });
+
+      const result = await service.searchPartners('user-1', null, {
+        sort: 'best_match',
+      });
+
+      expect(result.map((u) => u.id)).toEqual([
+        'partner-c',
+        'partner-b',
+        'partner-a',
+      ]);
+    });
+
+    it('online_now: orders by most recent last_active_at first', async () => {
+      const partners = [
+        { id: 'partner-a', last_active_at: '2026-07-01T00:00:00.000Z' },
+        { id: 'partner-b', last_active_at: '2026-08-01T00:00:00.000Z' },
+        { id: 'partner-c', last_active_at: '2026-06-01T00:00:00.000Z' },
+      ];
+      mockQueryBuilder.limit.mockResolvedValue({ data: partners, error: null });
+
+      const result = await service.searchPartners('user-1', null, {
+        sort: 'online_now',
+      });
+
+      expect(result.map((u) => u.id)).toEqual([
+        'partner-b',
+        'partner-a',
+        'partner-c',
+      ]);
+    });
+
+    it('newest: orders by most recently created first', async () => {
+      const partners = [
+        { id: 'partner-a', created_at: '2026-01-01T00:00:00.000Z' },
+        { id: 'partner-b', created_at: '2026-06-01T00:00:00.000Z' },
+        { id: 'partner-c', created_at: '2026-03-01T00:00:00.000Z' },
+      ];
+      mockQueryBuilder.limit.mockResolvedValue({ data: partners, error: null });
+
+      const result = await service.searchPartners('user-1', null, {
+        sort: 'newest',
+      });
+
+      expect(result.map((u) => u.id)).toEqual([
+        'partner-b',
+        'partner-c',
+        'partner-a',
+      ]);
+    });
+
+    it('nearest: orders by ascending distance_metres even when the RPC response arrives out of order', async () => {
+      const nearbyPartners = [
+        { id: 'partner-far', distance_metres: 9000 },
+        { id: 'partner-near', distance_metres: 500 },
+        { id: 'partner-mid', distance_metres: 3000 },
+      ];
+      mockSupabaseClient.rpc.mockResolvedValue({
+        data: nearbyPartners,
+        error: null,
+      });
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 51.5074,
+        longitude: -0.1278,
+        sort: 'nearest',
+      });
+
+      expect(result.map((u) => u.id)).toEqual([
+        'partner-near',
+        'partner-mid',
+        'partner-far',
+      ]);
+    });
+  });
 });

@@ -265,6 +265,7 @@ describe('DiscoveryComponent', () => {
     await init();
     component.setLanguage('FR');
     component.onFilterSelect('nearby');
+    component.setSort('newest');
     await flush();
     mockDiscoveryService.findPartners.mockClear();
 
@@ -278,6 +279,53 @@ describe('DiscoveryComponent', () => {
     expect(component.seriousLearnerMode()).toBe(false);
     expect(component.ageRangeMin()).toBe(18);
     expect(component.ageRangeMax()).toBe(100);
+    expect(component.selectedSort()).toBe('best_match');
     expect(mockDiscoveryService.findPartners).toHaveBeenCalledTimes(1);
+  });
+
+  it('should default to best_match sort and include it in the search call', async () => {
+    await init();
+
+    const callArgs = mockDiscoveryService.findPartners.mock.calls.at(-1)?.[0];
+    expect(component.selectedSort()).toBe('best_match');
+    expect(callArgs.sort).toBe('best_match');
+  });
+
+  it('should expose translated sort options', async () => {
+    await init();
+
+    expect(component.sortOptions().map((o) => o.id)).toEqual([
+      'best_match',
+      'online_now',
+      'nearest',
+      'newest',
+    ]);
+  });
+
+  it('should update the selected sort and re-search when a sort option is chosen', async () => {
+    await init();
+    mockDiscoveryService.findPartners.mockClear();
+
+    component.setSort('nearest');
+    await flush();
+
+    expect(component.selectedSort()).toBe('nearest');
+    const callArgs = mockDiscoveryService.findPartners.mock.calls.at(-1)?.[0];
+    expect(callArgs.sort).toBe('nearest');
+    expect(mockDiscoveryService.findPartners).toHaveBeenCalledTimes(1);
+  });
+
+  it('should render a sort select bound to the selected sort option', async () => {
+    await init();
+
+    const select: HTMLSelectElement = fixture.nativeElement.querySelector('#sortBySelect');
+    expect(select).toBeTruthy();
+    expect(select.value).toBe('best_match');
+
+    select.value = 'newest';
+    select.dispatchEvent(new Event('change'));
+    await flush();
+
+    expect(component.selectedSort()).toBe('newest');
   });
 });

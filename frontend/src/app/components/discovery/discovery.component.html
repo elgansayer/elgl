@@ -41,6 +41,23 @@
         ></app-language-picker>
       </div>
     </div>
+    <!-- Sort By Selector -->
+    <div class="flex items-center gap-2 px-4 mt-3">
+      <label for="sortBySelect" class="text-xs font-semibold text-text-secondary whitespace-nowrap">
+        {{ 'discovery.sortLabel' | t }}
+      </label>
+      <select
+        id="sortBySelect"
+        class="bg-surface-200 text-text-primary px-4 py-1.5 rounded-full border border-surface-100 text-sm font-bold appearance-none cursor-pointer"
+        [value]="selectedSort()"
+        (change)="setSort($any($event.target).value)"
+      >
+        @for (option of sortOptions(); track option.id) {
+          <option [value]="option.id">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
     <!-- Gender Filter (VIP only) -->
     @if (isVip()) {
       <div class="flex overflow-x-auto hide-scrollbar gap-2 px-4 mt-3">

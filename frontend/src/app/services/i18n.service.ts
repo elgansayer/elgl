@@ -198,6 +198,11 @@ export class I18nService {
     'discovery.filterAll': 'All Users',
     'discovery.filterNearMe': 'Near Me (Radius)',
     'discovery.filterSerious': 'Serious Learners Only',
+    'discovery.sortLabel': 'Sort by',
+    'discovery.sortBestMatch': 'Best match',
+    'discovery.sortOnlineNow': 'Online now',
+    'discovery.sortNearest': 'Nearest',
+    'discovery.sortNewest': 'Newest',
     'discovery.radiusLabel': 'Maximum Distance: {{radius}} km',
     'discovery.vipRadiusNote':
       'VIP users (8 UKP / $10 USD) get global discovery and location spoofing.',
