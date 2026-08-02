@@ -58,6 +58,94 @@ describe('UsersService', () => {
     service = module.get<UsersService>(UsersService);
   });
 
+  describe('proficiencyAssessment', () => {
+    it('should return the correct CEFR level based on the score', async () => {
+      const mockUserId = 'user-1';
+      const mockScore = 85;
+      const expectedLevel = 'C1';
+
+      mockQueryBuilder.update.mockResolvedValue({ error: null });
+
+      const result = await service.proficiencyAssessment(mockUserId, mockScore);
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        proficiency_level: expectedLevel,
+      });
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', mockUserId);
+      expect(result).toBe(expectedLevel);
+    });
+
+    it('should log a warning if updating the proficiency level fails', async () => {
+      const mockUserId = 'user-1';
+      const mockScore = 50;
+      const expectedLevel = 'B1';
+
+      mockQueryBuilder.update.mockResolvedValue({
+        error: { message: 'Update failed' },
+      });
+
+      const result = await service.proficiencyAssessment(mockUserId, mockScore);
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        proficiency_level: expectedLevel,
+      });
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', mockUserId);
+      expect(result).toBe(expectedLevel);
+    });
+  });
+
+  describe('touchLastActiveAt', () => {
+    it('should update the last_active_at field for the user', async () => {
+      const mockUserId = 'user-1';
+      const mockDate = new Date().toISOString();
+
+      jest.spyOn(global, 'Date').mockImplementation(() => {
+        const OriginalDate = Date;
+        return new OriginalDate(mockDate);
+      });
+
+      mockQueryBuilder.update.mockResolvedValue({ error: null });
+
+      await service.touchLastActiveAt(mockUserId);
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        last_active_at: mockDate,
+      });
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', mockUserId);
+
+      jest.restoreAllMocks();
+    });
+
+    it('should log a warning if updating last_active_at fails', async () => {
+      const mockUserId = 'user-1';
+      const mockDate = new Date().toISOString();
+
+      jest.spyOn(global, 'Date').mockImplementation(
+        () =>
+          ({
+            toISOString: () => mockDate,
+          }) as unknown as string,
+      );
+
+      mockQueryBuilder.update.mockResolvedValue({
+        error: { message: 'Update failed' },
+      });
+
+      await service.touchLastActiveAt(mockUserId);
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        last_active_at: mockDate,
+      });
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', mockUserId);
+
+      jest.restoreAllMocks();
+    });
+  });
+
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -400,8 +488,11 @@ describe('UsersService', () => {
       mockQueryBuilder.update.mockReturnThis();
       mockQueryBuilder.eq.mockResolvedValue({ error: null });
       const result = await service.scheduleDeletion('user-1');
-      expect(result).toHaveProperty('message');
-      expect(result).toHaveProperty('scheduled_for_deletion_at');
+      expect(result).toHaveProperty(
+        'message',
+        'Account scheduled for deletion in 30 days.',
+      );
+      expect(result.scheduled_for_deletion_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
   });
 

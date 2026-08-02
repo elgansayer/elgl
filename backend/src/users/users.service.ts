@@ -324,7 +324,7 @@ export class UsersService {
 
     if (error) {
       Logger.warn(
-        `Failed to update last_active_at for user ${userId}: ${error.message}`,
+        `Failed to update last_active_at for user ${userId}: ${error?.message ?? 'Unknown error'}`,
       );
     }
   }
@@ -529,7 +529,7 @@ export class UsersService {
   ): Promise<{ message: string; scheduled_for_deletion_at: string }> {
     const supabase = this.supabaseService.getClient();
     const deletionDate = new Date();
-    deletionDate.setDate(deletionDate.getDate() + 30); // 30-day grace period
+    deletionDate.setDate(new Date().getDate() + 30); // 30-day grace period
 
     const { error } = await supabase
       .from('users')
