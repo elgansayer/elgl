@@ -600,21 +600,25 @@ export class UserService {
 
   async blockUser(userId: string): Promise<void> {
     return firstValueFrom(
-      this.http.post<void>(`${environment.apiUrl}/trust-safety/block`, { blocked_id: userId }, { headers: this.getHeaders() })
+      this.http.post<void>(`${this.baseUrl}/block/${userId}`, {}, { headers: this.getHeaders() })
         .pipe(catchError(() => of(undefined))),
     );
   }
 
   async unblockUser(userId: string): Promise<void> {
     return firstValueFrom(
-      this.http.delete<void>(`${environment.apiUrl}/trust-safety/block/${userId}`, { headers: this.getHeaders() })
+      this.http.delete<void>(`${this.baseUrl}/block/${userId}`, { headers: this.getHeaders() })
         .pipe(catchError(() => of(undefined))),
     );
   }
 
   async reportUser(reportedUserId: string, reasonCategory: string, description?: string, contextUrl?: string): Promise<void> {
     return firstValueFrom(
-      this.http.post<void>(`${environment.apiUrl}/trust-safety/report`, { reported_id: reportedUserId, reason_category: reasonCategory, description, context_url: contextUrl }, { headers: this.getHeaders() })
+      this.http.post<void>(
+        `${this.baseUrl}/report`,
+        { reported_id: reportedUserId, reason_category: reasonCategory, description, context_url: contextUrl },
+        { headers: this.getHeaders() },
+      )
         .pipe(catchError(() => of(undefined))),
     );
   }

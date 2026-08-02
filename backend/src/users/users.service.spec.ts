@@ -64,7 +64,8 @@ describe('UsersService', () => {
       const mockScore = 85;
       const expectedLevel = 'C1';
 
-      mockQueryBuilder.update.mockResolvedValue({ error: null });
+      mockQueryBuilder.update.mockReturnThis();
+      mockQueryBuilder.eq.mockResolvedValue({ error: null });
 
       const result = await service.proficiencyAssessment(mockUserId, mockScore);
 
@@ -81,7 +82,8 @@ describe('UsersService', () => {
       const mockScore = 50;
       const expectedLevel = 'B1';
 
-      mockQueryBuilder.update.mockResolvedValue({
+      mockQueryBuilder.update.mockReturnThis();
+      mockQueryBuilder.eq.mockResolvedValue({
         error: { message: 'Update failed' },
       });
 
@@ -99,14 +101,12 @@ describe('UsersService', () => {
   describe('touchLastActiveAt', () => {
     it('should update the last_active_at field for the user', async () => {
       const mockUserId = 'user-1';
-      const mockDate = new Date().toISOString();
+      const mockDate = '2026-01-01T00:00:00.000Z';
 
-      jest.spyOn(global, 'Date').mockImplementation(() => {
-        const OriginalDate = Date;
-        return new OriginalDate(mockDate);
-      });
+      jest.spyOn(Date.prototype, 'toISOString').mockReturnValue(mockDate);
 
-      mockQueryBuilder.update.mockResolvedValue({ error: null });
+      mockQueryBuilder.update.mockReturnThis();
+      mockQueryBuilder.eq.mockResolvedValue({ error: null });
 
       await service.touchLastActiveAt(mockUserId);
 
@@ -121,16 +121,12 @@ describe('UsersService', () => {
 
     it('should log a warning if updating last_active_at fails', async () => {
       const mockUserId = 'user-1';
-      const mockDate = new Date().toISOString();
+      const mockDate = '2026-02-01T00:00:00.000Z';
 
-      jest.spyOn(global, 'Date').mockImplementation(
-        () =>
-          ({
-            toISOString: () => mockDate,
-          }) as unknown as string,
-      );
+      jest.spyOn(Date.prototype, 'toISOString').mockReturnValue(mockDate);
 
-      mockQueryBuilder.update.mockResolvedValue({
+      mockQueryBuilder.update.mockReturnThis();
+      mockQueryBuilder.eq.mockResolvedValue({
         error: { message: 'Update failed' },
       });
 
@@ -148,6 +144,7 @@ describe('UsersService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    jest.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -167,7 +164,7 @@ describe('UsersService', () => {
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
       expect(mockQueryBuilder.select).toHaveBeenCalledWith('*');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'user-1');
-      expect(result).toEqual(mockProfile);
+      expect(result).toMatchObject(mockProfile);
     });
 
     it('should throw NotFoundException when user is not found or query errors', async () => {

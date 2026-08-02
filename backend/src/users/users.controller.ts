@@ -253,6 +253,43 @@ export class UsersController {
     return this.usersService.unfollowUser(user.id, id);
   }
 
+  @Post('block/:id')
+  async blockUser(
+    @CurrentUser() user: User | null,
+    @Param('id') targetId: string,
+  ): Promise<{ success: boolean }> {
+    if (!user) throw new UnauthorizedException();
+    if (user.id === targetId)
+      throw new BadRequestException('Cannot block yourself');
+    return this.usersService.blockUser(user.id, targetId);
+  }
+
+  @Delete('block/:id')
+  async unblockUser(
+    @CurrentUser() user: User | null,
+    @Param('id') targetId: string,
+  ): Promise<{ success: boolean }> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.unblockUser(user.id, targetId);
+  }
+
+  @Post('report')
+  async reportUser(
+    @CurrentUser() user: User | null,
+    @Body()
+    dto: {
+      reported_id: string;
+      reason_category: string;
+      description?: string;
+      context_url?: string;
+    },
+  ): Promise<{ success: boolean; message: string }> {
+    if (!user) throw new UnauthorizedException();
+    if (!dto.reported_id || !dto.reason_category)
+      throw new BadRequestException();
+    return this.usersService.reportUser(user.id, dto);
+  }
+
   @Get('me/privacy-settings')
   async getMyPrivacySettings(@CurrentUser() user: User | null): Promise<{
     privacy_hide_age: boolean;

@@ -138,6 +138,19 @@ export class SafetyService {
     return this._blockedUserIds().has(userId);
   }
 
+  /** Updates local block cache without contacting the server. */
+  setBlockedUserLocal(userId: string, blocked: boolean): void {
+    this._blockedUserIds.update(prev => {
+      const next = new Set(prev);
+      if (blocked) {
+        next.add(userId);
+      } else {
+        next.delete(userId);
+      }
+      return next;
+    });
+  }
+
   reportUser(dto: ReportUserDto): Promise<ReportResponse> {
     return firstValueFrom(this.http.post<ReportResponse>(`${this.apiUrl}/safety/report`, dto));
   }
