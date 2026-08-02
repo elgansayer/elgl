@@ -147,6 +147,10 @@ export class UserService {
     };
   }
 
+  async enableLocationSpoofing(enable: boolean): Promise<UserProfile> {
+    return this.updateMyProfile({ enable_location_spoofing: enable });
+  }
+
   async getMyProfile(): Promise<UserProfile | null> {
     void of;
     const fallbackProfile: UserProfile = {
@@ -234,6 +238,7 @@ export class UserService {
     update: Partial<UserProfile> & {
       location?: { latitude: number; longitude: number };
       mock_location?: { latitude: number; longitude: number };
+      enable_location_spoofing?: boolean;
       serious_learner_mode?: boolean;
       sound_effects_enabled?: boolean;
       vibration_enabled?: boolean;

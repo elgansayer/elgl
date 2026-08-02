@@ -138,6 +138,10 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsBoolean()
+  enable_location_spoofing?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
   privacy_hide_age?: boolean;
 
   @IsOptional()

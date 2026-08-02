@@ -424,7 +424,12 @@ export class UsersService {
       );
     }
 
+    // Build fix: declare before use to satisfy TS2448
     const updatePayload: Record<string, unknown> = {};
+
+    if (dto.enable_location_spoofing !== undefined) {
+      updatePayload.enable_location_spoofing = dto.enable_location_spoofing;
+    }
 
     if (dto.display_name !== undefined)
       updatePayload.display_name = dto.display_name;
