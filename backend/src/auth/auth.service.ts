@@ -81,9 +81,15 @@ export class AuthService {
 
   async verifyTwoFactor(userId: string, token: string): Promise<boolean> {
     try {
-      return await this.twoFactorService.verifyToken(userId, token);
-    } catch {
-      return false;
+      const isValid = await this.twoFactorService.verifyToken(userId, token);
+      if (!isValid) {
+        throw new BadRequestException('Invalid 2FA token');
+      }
+      return true;
+    } catch (error) {
+      throw new BadRequestException(
+        error.message || 'Failed to verify 2FA token',
+      );
     }
   }
 

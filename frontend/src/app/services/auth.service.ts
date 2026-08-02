@@ -336,18 +336,23 @@ export class AuthService {
 
   async verifyTwoFactor(token: string): Promise<boolean> {
     const accessToken = this.currentSession()?.access_token;
-    const res = await lastValueFrom(
-      this.http.post<{ success: boolean }>(
-        `${this.apiUrl}/auth/two-factor/verify`,
-        { token },
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
+    try {
+      const res = await lastValueFrom(
+        this.http.post<{ success: boolean }>(
+          `${this.apiUrl}/auth/two-factor/verify`,
+          { token },
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
           },
-        },
-      ),
-    );
-    return res.success;
+        ),
+      );
+      return res.success;
+    } catch (error) {
+      console.error('2FA verification failed', error);
+      return false;
+    }
   }
 
   async disableTwoFactor(token: string): Promise<boolean> {

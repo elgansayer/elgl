@@ -376,7 +376,13 @@ export class AppleNotificationService {
     return new Promise((resolve) => {
       supabase
         .from('subscriptions')
-        .upsert(
+        .upsert<{
+          user_id: string;
+          product_id: string | null;
+          status: string;
+          transaction_id: string | null;
+          updated_at: string;
+        }>(
           {
             user_id: userId,
             product_id: productId,
@@ -405,10 +411,13 @@ export class AppleNotificationService {
 
     void supabase
       .from('subscriptions')
-      .update({
+      .update<{
+        auto_renew: boolean;
+        updated_at: string;
+      }>({
         auto_renew: autoRenew,
         updated_at: new Date().toISOString(),
-      } as Partial<{ auto_renew: boolean; updated_at: string }>)
+      })
       .eq('user_id', userId)
       .then(({ error }) => {
         if (error) {

@@ -48,8 +48,14 @@ export class AuthController {
     @Body('token') token: string,
   ): Promise<{ success: boolean }> {
     const userId = this.getUserIdFromReq(req);
-    const valid = await this.authService.verifyTwoFactor(userId, token);
-    return { success: valid };
+    try {
+      const valid = await this.authService.verifyTwoFactor(userId, token);
+      return { success: valid };
+    } catch (error) {
+      throw new BadRequestException(
+        error.message || 'Failed to verify 2FA token',
+      );
+    }
   }
 
   @UseGuards(SupabaseAuthGuard)
