@@ -154,11 +154,10 @@ export class ChatService {
       ),
     );
 
-    // Annotate rooms with is_locked flag
-    rooms = rooms.map((r) => ({
-      ...r,
-      is_locked: lockedSet.has(r.id),
-    }));
+    // Hide rooms that have been locked by the current user
+    rooms = rooms
+      .filter((room) => !lockedSet.has(room.id))
+      .map((room) => ({ ...room, is_locked: false }));
 
     // Filter out rooms where the other participant is blocked
     if (blockedIds.length > 0) {

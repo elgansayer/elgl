@@ -111,7 +111,7 @@ export class AudioRoomsService implements OnModuleInit {
   async disableBiometricLock(
     hostId: string,
     dto: { room_id: string },
-  ): Promise<AudioRoomRecord> {
+  ): Promise<AudioRoomRecord & { biometric_lock: boolean }> {
     const supabase = this.supabaseService.getClient();
     const response = await supabase
       .from('audio_rooms')
@@ -137,6 +137,37 @@ export class AudioRoomsService implements OnModuleInit {
       .eq('id', room.id);
 
     return { ...room, biometric_lock: false };
+  }
+
+  async enableBiometricLock(
+    hostId: string,
+    dto: { room_id: string },
+  ): Promise<AudioRoomRecord & { biometric_lock: boolean }> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', dto.room_id)
+      .single();
+
+    if (!response.data) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const room = response.data as AudioRoomRow;
+
+    if (room.host_id !== hostId) {
+      throw new ForbiddenException(
+        'Only the host can enable biometric lock for this room.',
+      );
+    }
+
+    await supabase
+      .from('audio_rooms')
+      .update({ biometric_lock: true })
+      .eq('id', room.id);
+
+    return { ...room, biometric_lock: true };
   }
 
   async createRoom(
