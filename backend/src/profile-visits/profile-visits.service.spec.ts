@@ -8,6 +8,8 @@ describe('ProfileVisitsService', () => {
   let service: ProfileVisitsService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let mockNotificationsService: { sendVisitNotification: jest.Mock };
+  let mockEventEmitter: { emit: jest.Mock };
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -24,6 +26,14 @@ describe('ProfileVisitsService', () => {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
+    mockNotificationsService = {
+      sendVisitNotification: jest.fn(),
+    };
+
+    mockEventEmitter = {
+      emit: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProfileVisitsService,
@@ -35,11 +45,11 @@ describe('ProfileVisitsService', () => {
         },
         {
           provide: NotificationsService,
-          useValue: new Proxy({}, { get: () => jest.fn() }),
+          useValue: mockNotificationsService,
         },
         {
           provide: EventEmitter2,
-          useValue: { emit: jest.fn() },
+          useValue: mockEventEmitter,
         },
       ],
     }).compile();
@@ -144,6 +154,12 @@ describe('ProfileVisitsService', () => {
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
       expect(mockQueryBuilder.select).toHaveBeenCalledWith('incognito_visits');
       expect(result).toEqual({ incognito: true, ignored: true });
+      // No insert should be attempted, and no notification should be emitted
+      expect(mockQueryBuilder.insert).not.toHaveBeenCalled();
+      expect(
+        mockNotificationsService.sendVisitNotification,
+      ).not.toHaveBeenCalled();
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
 
     it('should record visit for VIP visitor when incognito mode is disabled', async () => {
@@ -194,7 +210,24 @@ describe('ProfileVisitsService', () => {
       expect(result).toEqual(visitRow);
     });
 
-    it('should throw Error when insert visit fails', async () => {
+    it('should throw Error when insert visit fails for VIP visitor', async () => {
+      // First call checks privacy setting
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { incognito_visits: false },
+        error: null,
+      });
+      // Second call fails to insert
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'Insert constraint violation' },
+      });
+
+      await expect(
+        service.recordVisit('vip-user', 'target-user', true),
+      ).rejects.toThrow('Failed to record visit: Insert constraint violation');
+    });
+
+    it('should throw Error when insert visit fails for non VIP visitor', async () => {
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: null,
         error: { message: 'Insert constraint violation' },
