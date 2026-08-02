@@ -246,7 +246,50 @@ export class GroupsService {
     });
   }
 
-  async sendAnnouncement(
+  async createAnnouncementGroup(
+    creatorId: string,
+    name: string,
+    memberIds: string[],
+  ): Promise<ChatRoomRecord> {
+    if (memberIds.length > 49) {
+      throw new Error('Group cannot exceed 50 members');
+    }
+    const supabase = this.supabaseService.getClient();
+
+    const response = await supabase
+      .from('chat_rooms')
+      .insert({
+        title: name,
+        is_announcement: true,
+        admin_id: creatorId,
+      })
+      .select()
+      .single();
+
+    if (response.error || !response.data) {
+      throw new Error('Failed to create announcement group');
+    }
+
+    const room = response.data as ChatRoomRecord;
+
+    const allMembers = [...new Set([creatorId, ...memberIds])];
+    const membersData = allMembers.map((id) => ({
+      room_id: room.id,
+      user_id: id,
+    }));
+
+    const { error: membersError } = await supabase
+      .from('chat_room_members')
+      .insert(membersData);
+
+    if (membersError) {
+      throw new Error('Failed to add members to announcement group');
+    }
+
+    return room;
+  }
+
+  async broadcastMessage(
     userId: string,
     roomId: string,
     message: string,
@@ -259,7 +302,7 @@ export class GroupsService {
       message,
     });
     if (error) {
-      throw new InternalServerErrorException('Failed to send announcement');
+      throw new InternalServerErrorException('Failed to broadcast message');
     }
     await this.systemMessageService.publishToRoom(roomId, 'announcement', {
       message,

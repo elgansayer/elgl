@@ -27,9 +27,9 @@ export class CommunitiesComponent {
   readonly selectedCommunityId = signal<string | null>(null);
 
   readonly groupsResource = resource<CommunityGroup[]>({
-    request: () => this.selectedCommunityId(),
-    loader: ({ request }) => {
-      const id = request;
+    params: () => this.selectedCommunityId(),
+    loader: ({ params }) => {
+      const id = params;
       if (!id) {
         return Promise.resolve([]);
       }

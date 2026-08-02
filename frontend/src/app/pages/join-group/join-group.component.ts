@@ -41,7 +41,7 @@ export class JoinGroupComponent {
     this.joinPending.set(true);
     this.joinFailed.set(false);
     try {
-      await this.groupsService.joinByInviteCode(code);
+      await this.groupsService.joinGroupByCode(code);
       await this.router.navigate(['/chat', roomId]);
     } catch {
       this.joinFailed.set(true);

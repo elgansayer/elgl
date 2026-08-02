@@ -149,7 +149,27 @@ export class FeedService {
       return [];
     }
 
-    return feedData as Moment[];
+    return feedData.map((item) => ({
+      id: item.id,
+      author_id: item.author_id,
+      content_text: item.content_text ?? null,
+      media_urls: item.media_urls ?? [],
+      voice_note_url: item.voice_note_url ?? null,
+      detected_language: item.detected_language ?? null,
+      is_pinned: false,
+      likes_count: 0,
+      comments_count: 0,
+      created_at: item.created_at,
+      author: item.author
+        ? {
+            id: item.author.id,
+            display_name: item.author.display_name,
+            avatar_url: item.author.avatar_url ?? null,
+            native_languages: item.author.native_languages ?? [],
+            target_languages: item.author.target_languages ?? [],
+          }
+        : null,
+    }));
   }
 
   async getMomentById(
@@ -183,7 +203,27 @@ export class FeedService {
       return null;
     }
 
-    const moment = momentResponse.data as Moment;
+    const moment = {
+      id: momentResponse.data.id,
+      author_id: momentResponse.data.author_id,
+      content_text: momentResponse.data.content_text ?? null,
+      media_urls: momentResponse.data.media_urls ?? [],
+      voice_note_url: momentResponse.data.voice_note_url ?? null,
+      detected_language: momentResponse.data.detected_language ?? null,
+      is_pinned: false,
+      likes_count: 0,
+      comments_count: 0,
+      created_at: momentResponse.data.created_at,
+      author: momentResponse.data.author
+        ? {
+            id: momentResponse.data.author.id,
+            display_name: momentResponse.data.author.display_name,
+            avatar_url: momentResponse.data.author.avatar_url ?? null,
+            native_languages: momentResponse.data.author.native_languages ?? [],
+            target_languages: momentResponse.data.author.target_languages ?? [],
+          }
+        : null,
+    } as Moment;
 
     // If author is blocked, return null
     if (blockedUserIds.includes(moment.author_id)) {
