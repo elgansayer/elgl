@@ -133,25 +133,23 @@ describe('ProfileVisitsService', () => {
       expect(mockSupabaseClient.from).not.toHaveBeenCalled();
     });
 
-    it('should ignore visit when VIP visitor has incognito mode (privacy_hide_from_search) enabled', async () => {
+    it('should ignore visit when VIP visitor has incognito mode (incognito_visits) enabled', async () => {
       mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { privacy_hide_from_search: true },
+        data: { incognito_visits: true },
         error: null,
       });
 
       const result = await service.recordVisit('vip-user', 'target-user', true);
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
-      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
-        'privacy_hide_from_search',
-      );
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith('incognito_visits');
       expect(result).toEqual({ incognito: true, ignored: true });
     });
 
     it('should record visit for VIP visitor when incognito mode is disabled', async () => {
       // 1st single call: user lookup for privacy setting
       mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { privacy_hide_from_search: false },
+        data: { incognito_visits: false },
         error: null,
       });
       // 2nd single call: profile_visits insert

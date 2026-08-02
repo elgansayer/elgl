@@ -29,6 +29,7 @@ type UsersRow = {
   target_languages?: string[] | null;
   native_languages?: string[] | null;
   privacy_hide_from_search?: boolean | null;
+  incognito_visits?: boolean | null;
 };
 
 type GroupsRow = {

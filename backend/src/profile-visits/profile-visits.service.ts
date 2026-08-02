@@ -45,7 +45,7 @@ export class ProfileVisitsService {
     if (isVipVisitor) {
       const { data: user, error: userError } = await supabase
         .from('users')
-        .select('privacy_hide_from_search')
+        .select('incognito_visits')
         .eq('id', visitorId)
         .single();
 
@@ -54,7 +54,7 @@ export class ProfileVisitsService {
         throw new Error(`Failed to load visitor privacy settings: ${msg}`);
       }
 
-      if (user.privacy_hide_from_search) {
+      if (user.incognito_visits) {
         return { incognito: true, ignored: true };
       }
     }

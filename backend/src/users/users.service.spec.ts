@@ -502,6 +502,64 @@ describe('UsersService', () => {
       const result = await service.getPrivacySettings('user-1');
       expect(result.privacy_hide_age).toBe(false);
       expect(result.privacy_last_seen).toBe('everyone');
+      expect(result.incognito_visits).toBe(false);
+    });
+  });
+
+  describe('updatePrivacySettings', () => {
+    it('should throw BadRequestException when a non-VIP user enables incognito_visits', async () => {
+      await expect(
+        service.updatePrivacySettings(
+          'user-1',
+          { incognito_visits: true },
+          false,
+        ),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Incognito profile visiting requires a VIP subscription (8 UKP / $10 USD per month).',
+        ),
+      );
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    });
+
+    it('should let a VIP user enable incognito_visits', async () => {
+      const updatedProfile = { id: 'user-1', incognito_visits: true };
+      mockQueryBuilder.eq.mockResolvedValueOnce({ error: null });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: updatedProfile,
+        error: null,
+      });
+
+      const result = await service.updatePrivacySettings(
+        'user-1',
+        { incognito_visits: true },
+        true,
+      );
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        incognito_visits: true,
+      });
+      expect(result).toMatchObject(updatedProfile);
+    });
+
+    it('should allow a non-VIP user to disable incognito_visits', async () => {
+      const updatedProfile = { id: 'user-1', incognito_visits: false };
+      mockQueryBuilder.eq.mockResolvedValueOnce({ error: null });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: updatedProfile,
+        error: null,
+      });
+
+      const result = await service.updatePrivacySettings(
+        'user-1',
+        { incognito_visits: false },
+        false,
+      );
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        incognito_visits: false,
+      });
+      expect(result).toMatchObject(updatedProfile);
     });
   });
 

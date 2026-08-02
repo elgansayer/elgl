@@ -666,6 +666,7 @@ export class UsersService {
     privacy_about_info?: string;
     privacy_status?: string;
     privacy_hide_vip_status?: boolean;
+    incognito_visits?: boolean;
   }> {
     const profile = await this.getProfile(userId);
     const privacyRecord = profile as unknown as Record<string, unknown>;
@@ -686,6 +687,7 @@ export class UsersService {
         (privacyRecord.privacy_status as string | undefined) ?? 'everyone',
       privacy_hide_vip_status:
         (privacyRecord.privacy_hide_vip_status as boolean | undefined) ?? false,
+      incognito_visits: profile.incognito_visits ?? false,
     };
   }
 
@@ -935,7 +937,14 @@ export class UsersService {
       incognito_visits?: boolean;
       privacy_hide_vip_status?: boolean;
     },
+    isVip: boolean,
   ): Promise<UserProfile> {
+    if (settings.incognito_visits && !isVip) {
+      throw new BadRequestException(
+        'Incognito profile visiting requires a VIP subscription (8 UKP / $10 USD per month).',
+      );
+    }
+
     const supabase = this.supabaseService.getClient();
 
     const updatePayload: Record<string, unknown> = {};

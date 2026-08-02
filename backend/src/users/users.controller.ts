@@ -300,6 +300,7 @@ export class UsersController {
     privacy_profile_photo?: string;
     privacy_about_info?: string;
     privacy_status?: string;
+    incognito_visits?: boolean;
   }> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.getPrivacySettings(user.id);
@@ -337,7 +338,10 @@ export class UsersController {
     @Body() dto: PrivacySettingsDto,
   ): Promise<UserProfile | null> {
     if (!user) throw new UnauthorizedException();
-    return this.usersService.updatePrivacySettings(user.id, dto);
+    const isVip = Boolean(
+      (await this.usersService.getProfile(user.id))?.is_vip ?? false,
+    );
+    return this.usersService.updatePrivacySettings(user.id, dto, isVip);
   }
 
   @Get('me/business')

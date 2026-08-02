@@ -645,8 +645,12 @@ describe('UsersController', () => {
       expect(usersService.updatePrivacySettings).not.toHaveBeenCalled();
     });
 
-    it('should call updatePrivacySettings with DTO', async () => {
+    it('should call updatePrivacySettings with DTO and the caller VIP status', async () => {
       const dto = { privacy_hide_age: true };
+      (usersService.getProfile as jest.Mock).mockResolvedValue({
+        id: 'user-1',
+        is_vip: true,
+      });
       (usersService.updatePrivacySettings as jest.Mock).mockResolvedValue({
         id: 'user-1',
       });
@@ -657,6 +661,7 @@ describe('UsersController', () => {
       expect(usersService.updatePrivacySettings).toHaveBeenCalledWith(
         'user-1',
         dto,
+        true,
       );
       expect(result).toEqual({ id: 'user-1' });
     });

@@ -177,6 +177,13 @@ export class ProfileComponent implements OnInit {
     }
   }
 
+  onIncognitoVisitsChange(event: Event): void {
+    const input = event.target;
+    if (input instanceof HTMLInputElement) {
+      this.incognitoVisits.set(input.checked);
+    }
+  }
+
   onAvatarFileSelected(event: Event): void {
     const input = event.target;
     if (!(input instanceof HTMLInputElement)) return;
@@ -242,7 +249,7 @@ export class ProfileComponent implements OnInit {
           privacy_profile_photo: this.privacyProfilePhoto,
           privacy_about_info: this.privacyAboutInfo,
           privacy_status: this.privacyStatus,
-          incognito_visits: this.incognitoVisits(),
+          incognito_visits: this.profile()?.is_vip ? this.incognitoVisits() : false,
         });
       } catch {
         // ignore privacy update errors

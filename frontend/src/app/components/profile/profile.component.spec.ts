@@ -11,6 +11,8 @@ describe('ProfileComponent', () => {
   let mockUserService: {
     getMyProfile: ReturnType<typeof vi.fn>;
     getMyVisitors: ReturnType<typeof vi.fn>;
+    updateMyProfile: ReturnType<typeof vi.fn>;
+    updatePrivacySettings: ReturnType<typeof vi.fn>;
   };
 
   function makeProfile(partial: Partial<UserProfile> = {}): UserProfile {
@@ -39,6 +41,8 @@ describe('ProfileComponent', () => {
     mockUserService = {
       getMyProfile: vi.fn().mockResolvedValue(makeProfile()),
       getMyVisitors: vi.fn().mockResolvedValue([]),
+      updateMyProfile: vi.fn().mockImplementation((partial) => Promise.resolve(makeProfile(partial))),
+      updatePrivacySettings: vi.fn().mockResolvedValue(makeProfile()),
     };
 
     await TestBed.configureTestingModule({
@@ -66,5 +70,49 @@ describe('ProfileComponent', () => {
     expect(hrefs).toContain('/profile/me-1/following');
     expect(fixture.nativeElement.textContent).toContain('12');
     expect(fixture.nativeElement.textContent).toContain('4');
+  });
+
+  it('should disable the incognito visits toggle for non-VIP users', async () => {
+    mockUserService.getMyProfile.mockResolvedValue(makeProfile({ is_vip: false }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.componentInstance.toggleEdit();
+    fixture.detectChanges();
+
+    const checkbox: HTMLInputElement | null = fixture.nativeElement.querySelector(
+      'input[name="incognitoVisits"]',
+    );
+    expect(checkbox).not.toBeNull();
+    expect(checkbox?.disabled).toBe(true);
+  });
+
+  it('should enable the incognito visits toggle for VIP users and reflect its saved state', async () => {
+    mockUserService.getMyProfile.mockResolvedValue(
+      makeProfile({ is_vip: true, incognito_visits: true }),
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.componentInstance.toggleEdit();
+    fixture.detectChanges();
+
+    const checkbox: HTMLInputElement | null = fixture.nativeElement.querySelector(
+      'input[name="incognitoVisits"]',
+    );
+    expect(checkbox).not.toBeNull();
+    expect(checkbox?.disabled).toBe(false);
+    expect(checkbox?.checked).toBe(true);
+  });
+
+  it('should not send incognito_visits=true for a non-VIP user on save', async () => {
+    mockUserService.getMyProfile.mockResolvedValue(makeProfile({ is_vip: false }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.componentInstance.incognitoVisits.set(true);
+    await fixture.componentInstance.saveProfile();
+
+    expect(mockUserService.updatePrivacySettings).toHaveBeenCalledWith(
+      expect.objectContaining({ incognito_visits: false }),
+    );
   });
 });
