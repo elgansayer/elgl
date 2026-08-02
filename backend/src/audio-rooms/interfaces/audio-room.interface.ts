@@ -16,7 +16,6 @@ export interface AudioRoomRecord {
   created_at: string;
   is_private?: boolean;
   invited_user_ids?: string[];
-  biometric_lock?: boolean;
   host?: {
     id: string;
     display_name?: string;

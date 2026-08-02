@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, output, signal, computed } from '@angular/core';
+import { Component, input, output, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 
 import { TranslatePipe } from '../../../services/translate.pipe';
 

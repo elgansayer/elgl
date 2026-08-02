@@ -75,11 +75,13 @@ describe('VersionService', () => {
     await service.onModuleInit();
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [calledUrl, calledOptions] = fetchMock.mock.calls[0];
-    expect(calledUrl).toBe(
+    expect(fetchMock).toHaveBeenCalledWith(
       'https://api.github.com/repos/username/repo/releases/latest',
+      {
+        method: 'GET',
+        headers: { Accept: 'application/vnd.github.v3+json' },
+      },
     );
-    expect(calledOptions.method).toBe('GET');
     expect(service.getVersion()).toEqual({
       current: '1.2.3',
       latest: '2.3.4',

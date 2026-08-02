@@ -251,10 +251,10 @@ export class DiscoveryService {
     }
 
     if (query.country) {
-      queryBuilder = queryBuilder.ilike('country', `%${query.country}%`);
+      queryBuilder = queryBuilder.eq('country', query.country);
     }
     if (query.city) {
-      queryBuilder = queryBuilder.ilike('city', `%${query.city}%`);
+      queryBuilder = queryBuilder.eq('city', query.city);
     }
 
     // Function that enriches and sorts results with Partner of the Week flag
@@ -429,15 +429,16 @@ export class DiscoveryService {
     if (blockedIds.length > 0) {
       results = results.filter((u) => !blockedIds.includes(u.id));
     }
-    // When a proficiency level is requested, keep users that either have the
-    // matching level or do not yet have a level recorded (fresh profiles).
     if (query.level) {
-      const requestedLevel = query.level;
-      results = results.filter(
-        (u) =>
-          u.proficiency_level === undefined ||
-          u.proficiency_level === requestedLevel,
-      );
+      results = results.filter((u) => u.proficiency_level === query.level);
+    }
+    if (query.age_min !== undefined) {
+      const ageMin = query.age_min;
+      results = results.filter((u) => u.age! >= ageMin);
+    }
+    if (query.age_max !== undefined) {
+      const ageMax = query.age_max;
+      results = results.filter((u) => u.age! <= ageMax);
     }
     const filtered = await this.filterByVoiceRoomActive(
       results,
@@ -511,10 +512,10 @@ export class DiscoveryService {
     }
 
     if (query.country) {
-      queryBuilder = queryBuilder.ilike('country', `%${query.country}%`);
+      queryBuilder = queryBuilder.eq('country', query.country);
     }
     if (query.city) {
-      queryBuilder = queryBuilder.ilike('city', `%${query.city}%`);
+      queryBuilder = queryBuilder.eq('city', query.city);
     }
 
     const response = await queryBuilder.limit(50);
@@ -646,10 +647,10 @@ export class DiscoveryService {
     }
 
     if (query.country) {
-      queryBuilder = queryBuilder.ilike('country', `%${query.country}%`);
+      queryBuilder = queryBuilder.eq('country', query.country);
     }
     if (query.city) {
-      queryBuilder = queryBuilder.ilike('city', `%${query.city}%`);
+      queryBuilder = queryBuilder.eq('city', query.city);
     }
 
     if (query.level) {
@@ -799,16 +800,10 @@ export class DiscoveryService {
     }
 
     if (query.country) {
-      const lowerCountry = query.country.toLowerCase();
-      filtered = filtered.filter((u) =>
-        (u.country ?? '').toLowerCase().includes(lowerCountry),
-      );
+      filtered = filtered.filter((u) => u.country === query.country);
     }
     if (query.city) {
-      const lowerCity = query.city.toLowerCase();
-      filtered = filtered.filter((u) =>
-        (u.city ?? '').toLowerCase().includes(lowerCity),
-      );
+      filtered = filtered.filter((u) => u.city === query.city);
     }
 
     return filtered.slice(0, 50);
@@ -898,8 +893,8 @@ export class DiscoveryService {
         });
       case 'nearest':
         return discoveryUsers.sort((a, b) => {
-          const aDist = a.distance_metres ?? Number.MAX_VALUE;
-          const bDist = b.distance_metres ?? Number.MAX_VALUE;
+          const aDist = a.distance ?? Number.MAX_VALUE;
+          const bDist = b.distance ?? Number.MAX_VALUE;
           if (aDist !== bDist) return aDist - bDist;
           return 0;
         });
@@ -912,40 +907,6 @@ export class DiscoveryService {
       default:
         return users;
     }
-  }
-
-  async searchByCountryCity(
-    currentUserId: string,
-    query: { country?: string; city?: string },
-  ): Promise<UserProfile[]> {
-    const supabase = this.supabaseService.getClient();
-    const blockedIds =
-      await this.safetyService.getBlockedAndBlockerIds(currentUserId);
-    let qb = supabase
-      .from('users')
-      .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
-      )
-      .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
-    if (blockedIds.length > 0) {
-      qb = qb.not('id', 'in', blockedIds);
-    }
-    if (query.country) {
-      qb = qb.ilike('country', `%${query.country}%`);
-    }
-    if (query.city) {
-      qb = qb.ilike('city', `%${query.city}%`);
-    }
-    const { data, error } = await qb.limit(50);
-    if (error || !data) {
-      return [];
-    }
-    let results = data as unknown as DiscoveryUser[];
-    if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
-    }
-    return results;
   }
 
   private parseStringArray(raw: string | null): string[] {

@@ -4,8 +4,9 @@ import {
   signal,
   output,
 } from '@angular/core';
+import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { SupabaseService } from '../../services/supabase.service';
+import { MediaService } from '../../services/media.service';
 
 @Component({
   selector: 'app-avatar-upload',
@@ -15,7 +16,8 @@ import { SupabaseService } from '../../services/supabase.service';
   styleUrls: ['./avatar-upload.component.scss'],
 })
 export class AvatarUploadComponent {
-  private readonly supabaseService = inject(SupabaseService);
+  private readonly i18n = inject(I18nService);
+  private readonly mediaService = inject(MediaService);
 
   readonly avatarUrl = output<string>();
 
@@ -27,10 +29,10 @@ export class AvatarUploadComponent {
   readonly cropY = signal(0);
   readonly cropSize = signal(0);
 
-  readonly displayWidth = signal(0);
-  readonly displayHeight = signal(0);
-  readonly naturalWidth = signal(0);
-  readonly naturalHeight = signal(0);
+  private readonly displayWidth = signal(0);
+  private readonly displayHeight = signal(0);
+  private readonly naturalWidth = signal(0);
+  private readonly naturalHeight = signal(0);
 
   private startX = 0;
   private startY = 0;
@@ -89,7 +91,7 @@ export class AvatarUploadComponent {
     this.startX = event.clientX - rect.left;
     this.startY = event.clientY - rect.top;
     this.isDragging = true;
-    event.preventDefault?.();
+    event.preventDefault();
   }
 
   onImageMouseMove(event: MouseEvent): void {
@@ -119,8 +121,8 @@ export class AvatarUploadComponent {
       y = this.startY - size;
     }
 
-    const maxW = rect.width;
-    const maxH = rect.height;
+    const maxW = this.displayWidth();
+    const maxH = this.displayHeight();
     // Clamp to image bounds
     x = Math.max(0, Math.min(x, maxW - size));
     y = Math.max(0, Math.min(y, maxH - size));
@@ -129,13 +131,13 @@ export class AvatarUploadComponent {
     this.cropY.set(y);
     this.cropSize.set(size);
 
-    event.preventDefault?.();
+    event.preventDefault();
   }
 
   onImageMouseUp(event: MouseEvent): void {
     if (this.isDragging) {
       this.isDragging = false;
-      event.preventDefault?.();
+      event.preventDefault();
     }
   }
 
@@ -182,13 +184,11 @@ export class AvatarUploadComponent {
         type: 'image/png',
       });
 
-      // 5. Upload via Supabase service
-      const url = await this.supabaseService.uploadAvatar(croppedFile);
+      // 5. Upload via media service
+      const result = await this.mediaService.uploadAvatar(croppedFile);
 
       // 6. Emit the resulting URL
-      if (url) {
-        this.avatarUrl.emit(url);
-      }
+      this.avatarUrl.emit(result.avatarUrl);
     } catch (err) {
       console.error('Avatar upload failed:', err);
     } finally {

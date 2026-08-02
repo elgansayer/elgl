@@ -89,15 +89,10 @@ export class AudioRoomsService implements OnModuleInit {
     this.livekitUrl =
       this.configService.get<string>('LIVEKIT_URL') ||
       'https://mock.livekit.cloud';
-
-    const apiKey = this.configService.get<string>('LIVEKIT_API_KEY');
-    const secretKey = this.configService.get<string>('LIVEKIT_SECRET');
-    if (!apiKey || !secretKey) {
-      throw new Error('LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured');
-    }
-
-    this.apiKey = apiKey;
-    this.secretKey = secretKey;
+    this.apiKey = this.configService.get<string>('LIVEKIT_API_KEY') || 'devkey';
+    this.secretKey =
+      this.configService.get<string>('LIVEKIT_SECRET') ||
+      'secretkey012345678901234567890123456789';
 
     try {
       this.roomServiceClient = new RoomServiceClient(
@@ -111,68 +106,6 @@ export class AudioRoomsService implements OnModuleInit {
         `Could not init LiveKit RoomServiceClient (${msg}). Will fall back to local/mock.`,
       );
     }
-  }
-
-  async disableBiometricLock(
-    hostId: string,
-    dto: { room_id: string },
-  ): Promise<AudioRoomRecord & { biometric_lock: boolean }> {
-    const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('audio_rooms')
-      .select('*')
-      .eq('id', dto.room_id)
-      .single();
-
-    if (!response.data) {
-      throw new NotFoundException('Room not found');
-    }
-
-    const room = response.data as AudioRoomRow;
-
-    if (room.host_id !== hostId) {
-      throw new ForbiddenException(
-        'Only the host can disable biometric lock for this room.',
-      );
-    }
-
-    await supabase
-      .from('audio_rooms')
-      .update({ biometric_lock: false })
-      .eq('id', room.id);
-
-    return { ...room, biometric_lock: false };
-  }
-
-  async enableBiometricLock(
-    hostId: string,
-    dto: { room_id: string },
-  ): Promise<AudioRoomRecord & { biometric_lock: boolean }> {
-    const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('audio_rooms')
-      .select('*')
-      .eq('id', dto.room_id)
-      .single();
-
-    if (!response.data) {
-      throw new NotFoundException('Room not found');
-    }
-
-    const room = response.data as AudioRoomRow;
-
-    if (room.host_id !== hostId) {
-      throw new ForbiddenException(
-        'Only the host can enable biometric lock for this room.',
-      );
-    }
-
-    await supabase
-      .from('audio_rooms')
-      .update({ biometric_lock: true })
-      .eq('id', room.id);
-
-    return { ...room, biometric_lock: true };
   }
 
   async createRoom(

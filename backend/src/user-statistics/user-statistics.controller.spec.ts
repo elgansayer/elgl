@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UserStatisticsController } from './user-statistics.controller';
 import { UserStatisticsService } from './user-statistics.service';
 import { UserStatisticsQueryDto } from './dto/user-statistics-query.dto';
-import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
 describe('UserStatisticsController', () => {
   let controller: UserStatisticsController;
@@ -32,10 +31,7 @@ describe('UserStatisticsController', () => {
           useValue: mockService,
         },
       ],
-    })
-      .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
-      .compile();
+    }).compile();
 
     controller = moduleRef.get<UserStatisticsController>(
       UserStatisticsController,

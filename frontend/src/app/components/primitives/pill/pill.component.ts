@@ -1,14 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, input, computed } from '@angular/core';
-import { I18nService } from '../../../services/i18n.service';
-
-const PILL_COLOUR_KEYS: Record<string, string> = {
-  primary: 'pill.colour_primary',
-  success: 'pill.colour_success',
-  warning: 'pill.colour_warning',
-  danger: 'pill.colour_danger',
-  info: 'pill.colour_info',
-  neutral: 'pill.colour_neutral',
-};
+import { Component, input, computed, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -27,7 +17,6 @@ const PILL_COLOUR_KEYS: Record<string, string> = {
   },
 })
 export class AppPillComponent {
-  private readonly i18n = inject(I18nService);
   readonly label = input<string>('');
   readonly colour = input<'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral'>(
     'neutral',
@@ -39,10 +28,33 @@ export class AppPillComponent {
     const base = 'inline-flex items-center justify-center font-extrabold rounded-full';
 
     const sizeClass =
-      this.size() === 'sm' ? 'ps-2 pe-2 py-0.5 text-xs' : 'ps-3 pe-3 py-1 text-sm';
+      this.size() === 'sm'
+        ? 'ps-2.5 pe-2.5 pt-0.5 pb-0.5 text-[10px]'
+        : 'ps-3 pe-3 pt-1 pb-1 text-xs';
+
+    let colourClass = '';
+    switch (this.colour()) {
+      case 'primary':
+        colourClass = 'bg-primary/10 text-primary border border-primary/20';
+        break;
+      case 'success':
+        colourClass = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+        break;
+      case 'warning':
+        colourClass = 'bg-amber-500/20 text-amber-400 border border-amber-500/30';
+        break;
+      case 'danger':
+        colourClass = 'bg-rose-100 text-rose-800 border border-rose-200';
+        break;
+      case 'info':
+        colourClass = 'bg-sky-100 text-sky-800 border border-sky-200';
+        break;
+      case 'neutral':
+        colourClass = 'bg-surface-100 text-text-primary border border-surface-100';
+        break;
+    }
 
     const extra = this.customClass();
-    const colourClass = this.i18n.translate(PILL_COLOUR_KEYS[this.colour()]);
     return `${base} ${sizeClass} ${colourClass}${extra ? ' ' + extra : ''}`.trim();
   });
 }

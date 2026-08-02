@@ -1,6 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-// Audit: this migration introduces no foreign keys, so no extra indexes required.
 export class CreateCuratedContent20260731000003 implements MigrationInterface {
   name = 'CreateCuratedContent20260731000003';
 

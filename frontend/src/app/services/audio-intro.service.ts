@@ -4,15 +4,6 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
-export interface AudioIntroResponse {
-  audio_url: string | null;
-}
-
-export interface PresignedUploadResponse {
-  uploadUrl: string;
-  mediaUrl: string;
-}
-
 @Injectable({ providedIn: 'root' })
 export class AudioIntroService {
   private http = inject(HttpClient);
@@ -29,39 +20,16 @@ export class AudioIntroService {
   async getPresignedUploadUrl(
     filename: string,
     contentType: string,
-  ): Promise<PresignedUploadResponse> {
+  ): Promise<{ uploadUrl: string; mediaUrl: string }> {
     const body = { filename, contentType };
     const result = await firstValueFrom(
-      this.http.post<PresignedUploadResponse>(
+      this.http.post<{ uploadUrl: string; mediaUrl: string }>(
         `${this.baseUrl}/presigned-upload`,
         body,
         { headers: this.getHeaders() },
       ),
     );
     return result;
-  }
-
-  async uploadAudioBlob(blob: Blob): Promise<string> {
-    const contentType = blob.type || 'audio/webm';
-    const filename = `audio-intro-${Date.now()}.${
-      contentType === 'audio/webm' ? 'webm' : 'mp3'
-    }`;
-    const { uploadUrl, mediaUrl } = await this.getPresignedUploadUrl(
-      filename,
-      contentType,
-    );
-
-    const response = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': contentType },
-      body: blob,
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to upload audio blob');
-    }
-
-    return mediaUrl;
   }
 
   async updateAudioIntro(userId: string, audioUrl: string): Promise<void> {
@@ -75,9 +43,9 @@ export class AudioIntroService {
 
   async getAudioIntro(
     userId: string,
-  ): Promise<AudioIntroResponse> {
+  ): Promise<{ audio_url: string | null }> {
     return firstValueFrom(
-      this.http.get<AudioIntroResponse>(
+      this.http.get<{ audio_url: string | null }>(
         `${this.baseUrl}/${userId}`,
         { headers: this.getHeaders() },
       ),

@@ -5,6 +5,7 @@ import { CallLogRecord, CallLogsService } from '../../services/call-logs.service
 
 @Component({
   selector: 'app-call-logs',
+  standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
     <div class="p-4">

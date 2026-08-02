@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { RouterLink } from '@angular/router';
 
 interface CartItem {
   itemId: string;
@@ -14,7 +15,7 @@ interface CartItem {
 @Component({
   selector: 'app-cart',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, RouterLink],
   template: `
     <div class="p-4">
       <h1 class="text-xl font-bold mb-4">{{ 'cart.title' | t }}</h1>

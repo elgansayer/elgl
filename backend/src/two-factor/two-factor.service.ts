@@ -82,16 +82,11 @@ export class TwoFactorService {
     const { data, error } = await this.supabaseService
       .getClient()
       .from('users')
-      .select('*')
+      .select('totp_secret, two_factor_secret')
       .eq('id', userId)
       .single();
 
     if (error) return false;
-
-    const secretRecord = data as {
-      totp_secret?: string;
-      two_factor_secret?: string;
-    } | null;
-    return !!(secretRecord?.totp_secret || secretRecord?.two_factor_secret);
+    return !!(data?.totp_secret || data?.two_factor_secret);
   }
 }

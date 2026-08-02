@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsUUID, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsUUID } from 'class-validator';
 
 export class ReplyToStatusUpdateDto {
   @IsString()
@@ -7,7 +7,6 @@ export class ReplyToStatusUpdateDto {
 
   @IsString()
   @IsNotEmpty()
-  @MaxLength(1000)
   status_text!: string;
 
   @IsUUID()

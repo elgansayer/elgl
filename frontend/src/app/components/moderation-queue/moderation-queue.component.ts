@@ -1,6 +1,5 @@
 import { Component, signal, inject, resource } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { firstValueFrom } from 'rxjs';
 import { ModerationService, ModerationItem } from '../../services/moderation.service';
 
 @Component({
@@ -26,28 +25,30 @@ export class ModerationQueueComponent {
     params: () => ({ tab: this.activeTab() }),
     loader: async ({ params }) => {
       this.error.set(null);
-      try {
-        if (params.tab === 'moment') {
-          this.loadingMoments.set(true);
-          const items = await firstValueFrom(this.moderationService.getItems('moment', 'pending'));
+      if (params.tab === 'moment') {
+        this.loadingMoments.set(true);
+        try {
+          const items = await this.moderationService.getItems('moment', 'pending');
           this.momentItems.set(items);
           return items;
-        } else {
-          this.loadingProfiles.set(true);
-          const items = await firstValueFrom(this.moderationService.getItems('profile', 'pending'));
+        } catch {
+          this.error.set('Failed to load flagged moments.');
+          return [];
+        } finally {
+          this.loadingMoments.set(false);
+        }
+      } else {
+        this.loadingProfiles.set(true);
+        try {
+          const items = await this.moderationService.getItems('profile', 'pending');
           this.profileItems.set(items);
           return items;
+        } catch {
+          this.error.set('Failed to load flagged profiles.');
+          return [];
+        } finally {
+          this.loadingProfiles.set(false);
         }
-      } catch {
-        this.error.set(
-          params.tab === 'moment'
-            ? 'Failed to load flagged moments.'
-            : 'Failed to load flagged profiles.'
-        );
-        return [];
-      } finally {
-        this.loadingMoments.set(false);
-        this.loadingProfiles.set(false);
       }
     },
     defaultValue: [],

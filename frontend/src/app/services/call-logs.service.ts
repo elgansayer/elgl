@@ -1,7 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { SupabaseService } from './supabase.service';
 
 export interface CallLogRecord {
   id: string;
@@ -19,19 +17,32 @@ export interface CallLogRecord {
 
 @Injectable({ providedIn: 'root' })
 export class CallLogsService {
-  private readonly http = inject(HttpClient);
-  private readonly baseUrl: string = `${environment.apiUrl}/audio-rooms`;
+  private supabase = inject(SupabaseService);
 
   async getCallLogs(options?: { callType?: string; limit?: number; offset?: number }): Promise<CallLogRecord[]> {
-    let params = new HttpParams()
-      .set('limit', String(options?.limit ?? 20))
-      .set('offset', String(options?.offset ?? 0));
+    const supabase = this.supabase.getClient();
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData?.user?.id;
+    if (!userId) return [];
+
+    const query = supabase
+      .from('call_logs')
+      .select('*')
+      .or(`caller_id.eq.${userId},receiver_id.eq.${userId}`)
+      .order('started_at', { ascending: false })
+      .range(
+        options?.offset ?? 0,
+        (options?.offset ?? 0) + (options?.limit ?? 20) - 1,
+      )
+      .returns<CallLogRecord[]>();
+
+    const { data } = await query;
+    const records = data ?? [];
+
     if (options?.callType) {
-      params = params.set('callType', options.callType);
+      return records.filter((r) => r.call_type === options.callType);
     }
 
-    return firstValueFrom(
-      this.http.get<CallLogRecord[]>(`${this.baseUrl}/call-logs`, { params }),
-    );
+    return records;
   }
 }

@@ -186,21 +186,11 @@ export class GroupsService {
     const supabase = this.supabaseService.getClient();
     const { data: room, error } = await supabase
       .from('chat_rooms')
-      .select('id, title, max_members')
+      .select('id, title')
       .eq('invite_code', code)
       .maybeSingle();
     if (error || !room) {
       throw new NotFoundException('Invalid or expired invite link');
-    }
-
-    // Check if the group is full
-    const { count: memberCount } = await supabase
-      .from('chat_room_members')
-      .select('*', { count: 'exact', head: true })
-      .eq('room_id', room.id);
-
-    if (memberCount !== null && memberCount >= room.max_members) {
-      throw new ForbiddenException('Group is full');
     }
     return { roomId: room.id, title: room.title };
   }
@@ -209,22 +199,11 @@ export class GroupsService {
     const supabase = this.supabaseService.getClient();
     const { data: room, error: roomErr } = await supabase
       .from('chat_rooms')
-      .select('id, title, max_members')
+      .select('id, title')
       .eq('invite_code', code)
       .single();
-    if (roomErr || !room) {
+    if (roomErr || !room)
       throw new NotFoundException('Invalid or expired invite code');
-    }
-
-    // Check if the group is full
-    const { count: memberCount } = await supabase
-      .from('chat_room_members')
-      .select('*', { count: 'exact', head: true })
-      .eq('room_id', room.id);
-
-    if (memberCount !== null && memberCount >= room.max_members) {
-      throw new ForbiddenException('Group is full');
-    }
     const roomId = room.id;
 
     const { data: member } = await supabase

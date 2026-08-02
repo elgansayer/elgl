@@ -8,7 +8,7 @@ import {
   RemoteTrack,
   RoomOptions,
   ExternalE2EEKeyProvider,
-  Track,
+  createLocalTracks,
 } from 'livekit-client';
 
 @Injectable({
@@ -22,10 +22,6 @@ export class LivekitService {
   private _localAudioTrack: LocalTrack | null = null;
   private _muted = false;
   private _speakerphone = false;
-
-  private createRoom(options: RoomOptions): Room {
-    return new Room(options);
-  }
 
   /**
    * Get a LiveKit access token from the backend.
@@ -69,20 +65,19 @@ export class LivekitService {
       await keyProvider.setKey(e2eeKey);
     }
 
-    const room = this.createRoom(roomOptions);
+    const room = new Room(roomOptions);
     this.room = room;
     await room.connect(this.getLiveKitUrl(), token);
     return room;
   }
 
   async publishTracks(): Promise<{ audioTrack: LocalTrack | null; videoTrack: LocalTrack | null }> {
-    if (!this.room) {
-      return { audioTrack: null, videoTrack: null };
+    const tracks = await createLocalTracks({ audio: true, video: false });
+    const audioTrack = tracks.find(t => t.kind === 'audio') ?? null;
+    if (audioTrack && this.room) {
+      await this.room.localParticipant.publishTrack(audioTrack);
+      this._localAudioTrack = audioTrack;
     }
-    await this.room.localParticipant.setMicrophoneEnabled(true);
-    const pub = this.room.localParticipant.getTrackPublication(Track.Source.Microphone);
-    const audioTrack = pub?.track ?? null;
-    this._localAudioTrack = audioTrack;
     return { audioTrack, videoTrack: null };
   }
 
@@ -108,13 +103,6 @@ export class LivekitService {
     // output device via navigator.mediaDevices.enumerateDevices(), but
     // for now we simply keep an internal flag so the UI can reflect it.
     return this._speakerphone;
-  }
-
-  /** Start or stop screen sharing based on the enabled flag. */
-  async toggleScreenShare(enabled: boolean, room?: Room): Promise<void> {
-    const targetRoom = room ?? this.room;
-    if (!targetRoom) return;
-    await targetRoom.localParticipant.setScreenShareEnabled(enabled);
   }
 
   leaveRoom(): void {

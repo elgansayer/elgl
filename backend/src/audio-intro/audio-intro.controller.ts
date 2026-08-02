@@ -26,7 +26,7 @@ export class AudioIntroController {
     @Param('userId') userId: string,
     @Body() dto: UpdateAudioIntroDto,
   ) {
-    return this.audioIntroService.updateAudioIntro(userId, dto.audio_url);
+    return this.audioIntroService.updateAudioIntro(userId, dto.audio_url!);
   }
 
   @UseGuards(SupabaseAuthGuard)

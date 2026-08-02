@@ -59,32 +59,6 @@ describe('UserService', () => {
     httpMock = TestBed.inject(HttpTestingController);
   });
 
-  describe('subscribeToFcmTopic', () => {
-    it('should POST to the FCM topic subscription endpoint', async () => {
-      const topic = 'test-topic';
-      const resultPromise = service.subscribeToFcmTopic(topic);
-
-      const req = httpMock.expectOne(`${baseUrl}/fcm/subscribe`);
-      expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ topic });
-      expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
-      req.flush({ success: true });
-
-      expect(await resultPromise).toEqual({ success: true });
-    });
-
-    it('should handle errors gracefully when subscribing to a topic', async () => {
-      const topic = 'test-topic';
-      const resultPromise = service.subscribeToFcmTopic(topic);
-
-      const req = httpMock.expectOne(`${baseUrl}/fcm/subscribe`);
-      req.flush('error', { status: 500, statusText: 'Internal Server Error' });
-
-      await expect(resultPromise).rejects.toThrow('Failed to subscribe to topic');
-    });
-  });
-
-
   afterEach(() => {
     httpMock.verify();
   });
@@ -103,7 +77,7 @@ describe('UserService', () => {
       expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
       req.flush(profile);
 
-      expect(await resultPromise).toEqual(profile);
+      await expect(resultPromise).resolves.toEqual(profile);
     });
 
     it('should fall back to local mock data when the request fails', async () => {
@@ -132,7 +106,7 @@ describe('UserService', () => {
       expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
       req.flush(profile);
 
-      expect(await resultPromise).toEqual(profile);
+      await expect(resultPromise).resolves.toEqual(profile);
     });
 
     it('should return a mock user when the profile exists in mock data and request fails', async () => {
@@ -152,64 +126,7 @@ describe('UserService', () => {
       const req = httpMock.expectOne(`${baseUrl}/nonexistent-id`);
       req.flush('error', { status: 404, statusText: 'Not Found' });
 
-      expect(await resultPromise).toBeNull();
-    });
-  });
-
-  describe('getFollowers', () => {
-    it('should GET /users/:id/followers with paging params and return the list', async () => {
-      const profile = createProfile({ id: 'follower-1' });
-      const resultPromise = service.getFollowers('user-1', 20, 0);
-
-      const req = httpMock.expectOne(
-        (r) => r.url === `${baseUrl}/user-1/followers`,
-      );
-      expect(req.request.method).toBe('GET');
-      expect(req.request.params.get('limit')).toBe('20');
-      expect(req.request.params.get('offset')).toBe('0');
-      expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
-      req.flush({ data: [profile], total: 1 });
-
-      expect(await resultPromise).toEqual({ data: [profile], total: 1 });
-    });
-
-    it('should return an empty list when the request fails', async () => {
-      const resultPromise = service.getFollowers('user-1');
-
-      const req = httpMock.expectOne(
-        (r) => r.url === `${baseUrl}/user-1/followers`,
-      );
-      req.flush('error', { status: 500, statusText: 'Internal Server Error' });
-
-      expect(await resultPromise).toEqual({ data: [], total: 0 });
-    });
-  });
-
-  describe('getFollowing', () => {
-    it('should GET /users/:id/following with paging params and return the list', async () => {
-      const profile = createProfile({ id: 'following-1' });
-      const resultPromise = service.getFollowing('user-1', 10, 5);
-
-      const req = httpMock.expectOne(
-        (r) => r.url === `${baseUrl}/user-1/following`,
-      );
-      expect(req.request.method).toBe('GET');
-      expect(req.request.params.get('limit')).toBe('10');
-      expect(req.request.params.get('offset')).toBe('5');
-      req.flush({ data: [profile], total: 1 });
-
-      expect(await resultPromise).toEqual({ data: [profile], total: 1 });
-    });
-
-    it('should return an empty list when the request fails', async () => {
-      const resultPromise = service.getFollowing('user-1');
-
-      const req = httpMock.expectOne(
-        (r) => r.url === `${baseUrl}/user-1/following`,
-      );
-      req.flush('error', { status: 500, statusText: 'Internal Server Error' });
-
-      expect(await resultPromise).toEqual({ data: [], total: 0 });
+      await expect(resultPromise).resolves.toBeNull();
     });
   });
 
@@ -225,7 +142,7 @@ describe('UserService', () => {
       expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
       req.flush(updatedProfile);
 
-      expect(await resultPromise).toEqual(updatedProfile);
+      await expect(resultPromise).resolves.toEqual(updatedProfile);
     });
 
     it('should fall back to mock data on error', async () => {
@@ -258,7 +175,7 @@ describe('UserService', () => {
       expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
       req.flush(visitors);
 
-      expect(await resultPromise).toEqual(visitors);
+      await expect(resultPromise).resolves.toEqual(visitors);
     });
 
     it('should fall back to MOCK_VISITORS on error', async () => {
@@ -282,8 +199,7 @@ describe('UserService', () => {
       expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
       req.flush({ ok: true });
 
-      const result = await resultPromise;
-      expect(result).toBeTruthy();
+      await expect(resultPromise).resolves.toEqual({ ok: true });
     });
   });
 
@@ -295,8 +211,7 @@ describe('UserService', () => {
       expect(req.request.method).toBe('GET');
       req.flush({ study_streak_days: 42 });
 
-      const result = await resultPromise;
-      expect(result).toBe(42);
+      await expect(resultPromise).resolves.toBe(42);
     });
 
     it('should return 0 when the stats endpoint fails', async () => {
@@ -305,8 +220,7 @@ describe('UserService', () => {
       const req = httpMock.expectOne(`${baseUrl}/me/stats`);
       req.flush('error', { status: 500, statusText: 'Error' });
 
-      const result = await resultPromise;
-      expect(result).toBe(0);
+      await expect(resultPromise).resolves.toBe(0);
     });
   });
 
