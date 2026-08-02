@@ -1,4 +1,6 @@
-import {Component, inject, signal} from '@angular/core';import { CommonModule } from '@angular/common';
+import {Component, inject, signal} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../../services/translate.pipe';
 import {
   ModerationService,
@@ -34,8 +36,8 @@ export class ModerationPanelComponent {
     this.loading.set(true);
     try {
       const type = this.currentFilter();
-      const data = await this.moderationService.getItems(type);
-      this.items.set(data);
+      const data$ = this.moderationService.getItems(type);
+      this.items = toSignal(data$, { initialValue: [] });
     } finally {
       this.loading.set(false);
     }
@@ -55,8 +57,8 @@ export class ModerationPanelComponent {
     this.analysing.set(true);
     this.analysisResult.set(null);
     try {
-      const result = await this.moderationService.getUserRiskAnalysis(userId);
-      this.analysisResult.set(result);
+      const result$ = this.moderationService.getUserRiskAnalysis(userId);
+      this.analysisResult = toSignal(result$, { initialValue: null });
     } finally {
       this.analysing.set(false);
     }
