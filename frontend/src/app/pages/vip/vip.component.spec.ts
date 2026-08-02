@@ -81,13 +81,14 @@ describe('VipComponent', () => {
   });
 
   it('scrolls to the plans section', () => {
+    const scrollSpy = vi.fn();
     vi.spyOn(document, 'getElementById').mockReturnValue({
-      scrollIntoView: vi.fn(),
+      scrollIntoView: scrollSpy,
     } as unknown as HTMLElement);
 
     component.scrollToPlans();
 
-    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' });
+    expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'smooth' });
 
     vi.restoreAllMocks();
   });

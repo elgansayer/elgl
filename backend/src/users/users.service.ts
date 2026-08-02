@@ -1005,85 +1005,57 @@ export class UsersService {
     const supabase = this.supabaseService.getClient();
 
     // Delete related data from multiple tables
-    const deletions: Promise<{ error?: { message: string } | null }>[] = [
-      supabase
-        .from('moments')
-        .delete()
-        .eq('author_id', userId)
-        .then((result: { error: { message: string } | null }) => ({
-          error: result.error,
-        })),
-      supabase
-        .from('moment_comments')
-        .delete()
-        .eq('author_id', userId)
-        .then((result) => ({ error: result.error })),
-      supabase
-        .from('moment_likes')
-        .delete()
-        .eq('user_id', userId)
-        .then((result) => ({ error: result.error })),
-      supabase
-        .from('flashcards')
-        .delete()
-        .eq('user_id', userId)
-        .then((result) => ({ error: result.error })),
-      supabase
-        .from('chat_messages')
-        .delete()
-        .eq('sender_id', userId)
-        .then((result) => ({ error: result.error })),
-      supabase
-        .from('favourites')
-        .delete()
-        .eq('user_id', userId)
-        .then((result) => ({ error: result.error })),
-      supabase
-        .from('profile_visits')
-        .delete()
-        .eq('visitor_id', userId)
-        .then((result) => ({ error: result.error })),
-      supabase
-        .from('profile_visits')
-        .delete()
-        .eq('viewed_id', userId)
-        .then((result) => ({ error: result.error })),
-      supabase
-        .from('user_follows')
-        .delete()
-        .eq('follower_id', userId)
-        .then((result) => ({ error: result.error })),
-      supabase
-        .from('user_follows')
-        .delete()
-        .eq('following_id', userId)
-        .then((result) => ({ error: result.error })),
-      supabase
-        .from('user_profile_likes')
-        .delete()
-        .eq('liker_id', userId)
-        .then((result) => ({ error: result.error })),
-      supabase
-        .from('user_profile_likes')
-        .delete()
-        .eq('liked_id', userId)
-        .then((result) => ({ error: result.error })),
-      supabase
-        .from('status_views')
-        .delete()
-        .eq('viewer_id', userId)
-        .then((result) => ({ error: result.error })),
-      supabase
-        .from('status_views')
-        .delete()
-        .eq('status_owner_id', userId)
-        .then((result) => ({ error: result.error })),
+    const deletionTasks: Array<{
+      table:
+        | 'moments'
+        | 'moment_comments'
+        | 'moment_likes'
+        | 'flashcards'
+        | 'chat_messages'
+        | 'favourites'
+        | 'profile_visits'
+        | 'user_follows'
+        | 'user_profile_likes'
+        | 'status_views';
+      column:
+        | 'author_id'
+        | 'user_id'
+        | 'sender_id'
+        | 'visitor_id'
+        | 'viewed_id'
+        | 'follower_id'
+        | 'following_id'
+        | 'liker_id'
+        | 'liked_id'
+        | 'viewer_id'
+        | 'status_owner_id';
+    }> = [
+      { table: 'moments', column: 'author_id' },
+      { table: 'moment_comments', column: 'author_id' },
+      { table: 'moment_likes', column: 'user_id' },
+      { table: 'flashcards', column: 'user_id' },
+      { table: 'chat_messages', column: 'sender_id' },
+      { table: 'favourites', column: 'user_id' },
+      { table: 'profile_visits', column: 'visitor_id' },
+      { table: 'profile_visits', column: 'viewed_id' },
+      { table: 'user_follows', column: 'follower_id' },
+      { table: 'user_follows', column: 'following_id' },
+      { table: 'user_profile_likes', column: 'liker_id' },
+      { table: 'user_profile_likes', column: 'liked_id' },
+      { table: 'status_views', column: 'viewer_id' },
+      { table: 'status_views', column: 'status_owner_id' },
     ];
 
-    const results = await Promise.all(deletions);
-    const errors = results
-      .filter((r: { error?: { message: string } | null }) => r.error)
-      .map((r: { error?: { message: string } | null }) => r.error?.message);
+    const results = await Promise.all(
+      deletionTasks.map(async ({ table, column }) => {
+        const { error } = await supabase
+          .from(table as never)
+          .delete()
+          .eq(column, userId);
+        return { error };
+      }),
+    );
+    const errors = results.filter((r) => r.error).map((r) => r.error?.message);
     if (errors.length > 0) {
       Logger.warn(
         `Some deletions failed for user ${userId}: ${errors.join(', ')}`,

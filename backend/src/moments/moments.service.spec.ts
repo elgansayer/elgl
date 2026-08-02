@@ -58,6 +58,7 @@ describe('MomentsService', () => {
       in: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
+      returns: jest.fn().mockReturnThis(),
       single: jest.fn(),
     };
 
@@ -1219,7 +1220,8 @@ describe('MomentsService', () => {
       mockSupabaseClient.from = jest.fn().mockImplementation(() => ({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockResolvedValue({
+        order: jest.fn().mockReturnThis(),
+        returns: jest.fn().mockResolvedValue({
           data: [
             {
               users: {
@@ -1252,7 +1254,8 @@ describe('MomentsService', () => {
       mockSupabaseClient.from = jest.fn().mockImplementation(() => ({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockResolvedValue({
+        order: jest.fn().mockReturnThis(),
+        returns: jest.fn().mockResolvedValue({
           data: [
             { users: { id: 'u-1', display_name: 'User 1' } },
             { users: { id: 'u-2', display_name: 'User 2' } },
@@ -1268,9 +1271,11 @@ describe('MomentsService', () => {
       mockSupabaseClient.from = jest.fn().mockImplementation(() => ({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        order: jest
-          .fn()
-          .mockResolvedValue({ data: null, error: { message: 'boom' } }),
+        order: jest.fn().mockReturnThis(),
+        returns: jest.fn().mockResolvedValue({
+          data: null,
+          error: { message: 'boom' },
+        }),
       }));
 
       await expect(service.getMomentLikes('m-1')).rejects.toThrow(

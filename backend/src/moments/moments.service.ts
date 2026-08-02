@@ -705,6 +705,11 @@ export class MomentsService {
       ? await this.safetyService.getBlockedAndBlockerIds(currentUserId)
       : [];
 
+    type MomentLikeQueryResult = {
+      user_id: string;
+      created_at: string;
+      users: MomentLikeUser | null;
+    };
     const { data, error } = await supabase
       .from('moment_likes')
       .select(
@@ -727,7 +732,7 @@ export class MomentsService {
       throw new Error(`Failed to fetch likes: ${error.message}`);
     }
 
-    const rows = (data ?? []) as unknown as Array<{ users: MomentLikeUser }>;
+    const rows = (data ?? []) as MomentLikeQueryResult[];
     const fullUsers = rows
       .map((row) => row.users)
       .filter((user): user is MomentLikeUser => Boolean(user));
