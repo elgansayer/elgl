@@ -1,7 +1,8 @@
-import { Component, input, computed, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, computed, inject } from '@angular/core';
 import { I18nService } from '../../../services/i18n.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-card',
   template: `<ng-content />`,
   host: {
