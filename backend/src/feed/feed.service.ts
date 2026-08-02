@@ -149,7 +149,7 @@ export class FeedService {
       return [];
     }
 
-    return feedData;
+    return feedData as Moment[];
   }
 
   async getMomentById(
