@@ -47,13 +47,21 @@ export class VersionService implements OnModuleInit {
       return;
     }
     try {
-      const res = await fetch(
-        `https://api.github.com/repos/${repo}/releases/latest`,
-        {
-          method: 'GET',
-          headers: { Accept: 'application/vnd.github.v3+json' },
-        },
-      );
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000); // 5-second timeout
+      let res: Response;
+      try {
+        res = await fetch(
+          `https://api.github.com/repos/${repo}/releases/latest`,
+          {
+            method: 'GET',
+            headers: { Accept: 'application/vnd.github.v3+json' },
+            signal: controller.signal,
+          },
+        );
+      } finally {
+        clearTimeout(timeout);
+      }
       if (!res.ok) {
         this.logger.warn(`GitHub API responded with ${res.status}`);
         this.latestVersion = this.currentVersion;
@@ -79,8 +87,11 @@ export class VersionService implements OnModuleInit {
       }
       this.logger.log(`Latest version fetched: ${this.latestVersion}`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error('Failed to fetch latest version from GitHub', message);
+      const message =
+        err instanceof Error ? err.stack || err.message : String(err);
+      this.logger.error('Failed to fetch latest version from GitHub', {
+        error: message,
+      });
       this.latestVersion = this.currentVersion;
     }
   }
