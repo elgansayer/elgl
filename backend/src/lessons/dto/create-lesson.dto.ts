@@ -19,7 +19,6 @@ export class CreateLessonDto {
   content_json?: Record<string, unknown>;
 
   @IsString()
-  @IsString()
   @IsNotEmpty()
   language_code!: string;
 
