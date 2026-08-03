@@ -220,6 +220,12 @@ export class UsersService {
     }));
   }
 
+  getDefaultStatusId(userId: string): Promise<string> {
+    // No dedicated statuses table exists: each user has a single current
+    // status (profile.status_text), so the status id is the user's own id.
+    return Promise.resolve(userId);
+  }
+
   async followUser(followerId: string, targetUserId: string): Promise<void> {
     if (followerId === targetUserId) {
       throw new BadRequestException('Cannot follow yourself');

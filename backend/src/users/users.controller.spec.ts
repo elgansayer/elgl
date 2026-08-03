@@ -31,6 +31,8 @@ describe('UsersController', () => {
             proficiencyAssessment: jest.fn(),
             getVisitors: jest.fn(),
             getStatusViewers: jest.fn(),
+            getStatusViewersByStatusId: jest.fn(),
+            getDefaultStatusId: jest.fn(),
             getAvailableHobbies: jest.fn(),
             getAvailableInterests: jest.fn(),
             getBadges: jest.fn(),
@@ -41,6 +43,14 @@ describe('UsersController', () => {
             getBusinessProfile: jest.fn(),
             updateBusinessProfile: jest.fn(),
             updateDoNotDisturbSettings: jest.fn(),
+            permanentDeleteAccount: jest.fn(),
+            getNotificationPreferences: jest.fn(),
+            updateGreetingMessage: jest.fn(),
+            updateAwayMessage: jest.fn(),
+            blockUser: jest.fn(),
+            unblockUser: jest.fn(),
+            reportUser: jest.fn(),
+            updateNotificationPreferences: jest.fn(),
           },
         },
         {
@@ -149,6 +159,59 @@ describe('UsersController', () => {
     });
   });
 
+  describe('updateGreetingMessage', () => {
+    it('should throw UnauthorizedException when no user', async () => {
+      await expect(
+        controller.updateGreetingMessage(null, { greetingMessage: 'Hi' }),
+      ).rejects.toThrow('Unauthorized');
+      expect(usersService.updateGreetingMessage).not.toHaveBeenCalled();
+    });
+
+    it('should call updateGreetingMessage with the user id and message', async () => {
+      const updatedProfile: any = {
+        id: 'user-1',
+        greeting_message: 'Hello!',
+      };
+      (usersService.updateGreetingMessage as jest.Mock).mockResolvedValue(
+        updatedProfile,
+      );
+      const result = await controller.updateGreetingMessage(
+        { id: 'user-1' } as any,
+        { greetingMessage: 'Hello!' },
+      );
+      expect(usersService.updateGreetingMessage).toHaveBeenCalledWith(
+        'user-1',
+        'Hello!',
+      );
+      expect(result).toEqual(updatedProfile);
+    });
+  });
+
+  describe('updateAwayMessage', () => {
+    it('should throw UnauthorizedException when no user', async () => {
+      await expect(
+        controller.updateAwayMessage(null, { awayMessage: 'Away' }),
+      ).rejects.toThrow('Unauthorized');
+      expect(usersService.updateAwayMessage).not.toHaveBeenCalled();
+    });
+
+    it('should call updateAwayMessage with the user id and message', async () => {
+      const updatedProfile: any = { id: 'user-1', away_message: 'Back soon' };
+      (usersService.updateAwayMessage as jest.Mock).mockResolvedValue(
+        updatedProfile,
+      );
+      const result = await controller.updateAwayMessage(
+        { id: 'user-1' } as any,
+        { awayMessage: 'Back soon' },
+      );
+      expect(usersService.updateAwayMessage).toHaveBeenCalledWith(
+        'user-1',
+        'Back soon',
+      );
+      expect(result).toEqual(updatedProfile);
+    });
+  });
+
   describe('getUserProfile', () => {
     it('should return profile for a specific user ID', async () => {
       const mockProfile: any = { id: 'target-user', display_name: 'Target' };
@@ -252,6 +315,126 @@ describe('UsersController', () => {
     });
   });
 
+  describe('blockUser', () => {
+    it('should throw UnauthorizedException when no user', async () => {
+      await expect(controller.blockUser(null, 'target-user')).rejects.toThrow(
+        'Unauthorized',
+      );
+      expect(usersService.blockUser).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when blocking yourself', async () => {
+      await expect(
+        controller.blockUser({ id: 'user-1' } as any, 'user-1'),
+      ).rejects.toThrow('Cannot block yourself');
+      expect(usersService.blockUser).not.toHaveBeenCalled();
+    });
+
+    it('should block the target user on behalf of the current user', async () => {
+      (usersService.blockUser as jest.Mock).mockResolvedValue({
+        success: true,
+      });
+      const result = await controller.blockUser(
+        { id: 'user-1' } as any,
+        'target-user',
+      );
+      expect(usersService.blockUser).toHaveBeenCalledWith(
+        'user-1',
+        'target-user',
+      );
+      expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe('unblockUser', () => {
+    it('should throw UnauthorizedException when no user', async () => {
+      await expect(controller.unblockUser(null, 'target-user')).rejects.toThrow(
+        'Unauthorized',
+      );
+      expect(usersService.unblockUser).not.toHaveBeenCalled();
+    });
+
+    it('should unblock the target user on behalf of the current user', async () => {
+      (usersService.unblockUser as jest.Mock).mockResolvedValue({
+        success: true,
+      });
+      const result = await controller.unblockUser(
+        { id: 'user-1' } as any,
+        'target-user',
+      );
+      expect(usersService.unblockUser).toHaveBeenCalledWith(
+        'user-1',
+        'target-user',
+      );
+      expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe('reportUser', () => {
+    it('should throw UnauthorizedException when no user', async () => {
+      await expect(
+        controller.reportUser(null, {
+          reported_id: 'target-user',
+          reason_category: 'spam',
+        }),
+      ).rejects.toThrow('Unauthorized');
+      expect(usersService.reportUser).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when required fields are missing', async () => {
+      await expect(
+        controller.reportUser({ id: 'user-1' } as any, {
+          reported_id: '',
+          reason_category: 'spam',
+        }),
+      ).rejects.toThrow('Bad Request');
+      await expect(
+        controller.reportUser({ id: 'user-1' } as any, {
+          reported_id: 'target-user',
+          reason_category: '',
+        }),
+      ).rejects.toThrow('Bad Request');
+      expect(usersService.reportUser).not.toHaveBeenCalled();
+    });
+
+    it('should call reportUser with the reporter id and normalised dto', async () => {
+      (usersService.reportUser as jest.Mock).mockResolvedValue({
+        success: true,
+        message: 'Report submitted',
+      });
+      const result = await controller.reportUser({ id: 'user-1' } as any, {
+        reported_id: 'target-user',
+        reason_category: 'spam',
+        description: 'unwanted messages',
+        context_url: 'https://example.com/chat',
+      });
+      expect(usersService.reportUser).toHaveBeenCalledWith('user-1', {
+        reported_id: 'target-user',
+        reason_category: 'spam',
+        description: 'unwanted messages',
+        context_url: 'https://example.com/chat',
+      });
+      expect(result).toEqual({ success: true, message: 'Report submitted' });
+    });
+
+    it('should omit optional fields when not provided', async () => {
+      (usersService.reportUser as jest.Mock).mockResolvedValue({
+        success: true,
+        message: 'Report submitted',
+      });
+      await controller.reportUser({ id: 'user-1' } as any, {
+        reported_id: 'target-user',
+        reason_category: 'spam',
+      });
+      expect(usersService.reportUser).toHaveBeenCalledWith('user-1', {
+        reported_id: 'target-user',
+        reason_category: 'spam',
+        description: undefined,
+        context_url: undefined,
+      });
+    });
+  });
+
   describe('deleteMyAccount', () => {
     it('should throw UnauthorizedException when no user', async () => {
       await expect(controller.deleteMyAccount(null)).rejects.toThrow(
@@ -271,6 +454,28 @@ describe('UsersController', () => {
       const result = await controller.deleteMyAccount({ id: 'user-1' } as any);
       expect(usersService.scheduleDeletion).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(mockResult);
+    });
+  });
+
+  describe('permanentlyDeleteMyAccount', () => {
+    it('should throw UnauthorizedException when no user', async () => {
+      await expect(controller.permanentlyDeleteMyAccount(null)).rejects.toThrow(
+        'Unauthorized',
+      );
+      expect(usersService.permanentDeleteAccount).not.toHaveBeenCalled();
+    });
+
+    it('should call permanentDeleteAccount with the user id', async () => {
+      (usersService.permanentDeleteAccount as jest.Mock).mockResolvedValue(
+        undefined,
+      );
+      const result = await controller.permanentlyDeleteMyAccount({
+        id: 'user-1',
+      } as any);
+      expect(usersService.permanentDeleteAccount).toHaveBeenCalledWith(
+        'user-1',
+      );
+      expect(result).toEqual({ message: 'Account permanently deleted.' });
     });
   });
 
@@ -306,6 +511,29 @@ describe('UsersController', () => {
       const result = await controller.exportMyData({ id: 'user-1' } as any);
       expect(usersService.exportUserData).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(mockExport);
+    });
+  });
+
+  describe('getMyNotificationPreferences', () => {
+    it('should throw UnauthorizedException when no user', async () => {
+      await expect(
+        controller.getMyNotificationPreferences(null),
+      ).rejects.toThrow('Unauthorized');
+      expect(usersService.getNotificationPreferences).not.toHaveBeenCalled();
+    });
+
+    it('should return notification preferences for current user', async () => {
+      const prefs = { custom_tone_url: 'https://example.com/tone.mp3' };
+      (usersService.getNotificationPreferences as jest.Mock).mockResolvedValue(
+        prefs,
+      );
+      const result = await controller.getMyNotificationPreferences({
+        id: 'user-1',
+      } as any);
+      expect(usersService.getNotificationPreferences).toHaveBeenCalledWith(
+        'user-1',
+      );
+      expect(result).toEqual(prefs);
     });
   });
 
@@ -513,16 +741,51 @@ describe('UsersController', () => {
       await expect(controller.getMyStatusViewers(null)).rejects.toThrow(
         'Unauthorized',
       );
-      expect(usersService.getStatusViewers).not.toHaveBeenCalled();
+      expect(usersService.getDefaultStatusId).not.toHaveBeenCalled();
+      expect(usersService.getStatusViewersByStatusId).not.toHaveBeenCalled();
     });
 
-    it('should return status viewers', async () => {
+    it('should resolve the default status id and return its viewers', async () => {
       const viewers = [{ id: 'v1', display_name: 'Viewer' }];
-      (usersService.getStatusViewers as jest.Mock).mockResolvedValue(viewers);
+      (usersService.getDefaultStatusId as jest.Mock).mockResolvedValue(
+        'status-1',
+      );
+      (usersService.getStatusViewersByStatusId as jest.Mock).mockResolvedValue(
+        viewers,
+      );
       const result = await controller.getMyStatusViewers({
         id: 'user-1',
       } as any);
-      expect(usersService.getStatusViewers).toHaveBeenCalledWith('user-1');
+      expect(usersService.getDefaultStatusId).toHaveBeenCalledWith('user-1');
+      expect(usersService.getStatusViewersByStatusId).toHaveBeenCalledWith(
+        'user-1',
+        'status-1',
+      );
+      expect(result).toEqual(viewers);
+    });
+  });
+
+  describe('getStatusViewers', () => {
+    it('should throw UnauthorizedException when no user', async () => {
+      await expect(
+        controller.getStatusViewers(null, 'status-1'),
+      ).rejects.toThrow('Unauthorized');
+      expect(usersService.getStatusViewersByStatusId).not.toHaveBeenCalled();
+    });
+
+    it('should return viewers for the given status id', async () => {
+      const viewers = [{ id: 'v1', display_name: 'Viewer' }];
+      (usersService.getStatusViewersByStatusId as jest.Mock).mockResolvedValue(
+        viewers,
+      );
+      const result = await controller.getStatusViewers(
+        { id: 'user-1' } as any,
+        'status-1',
+      );
+      expect(usersService.getStatusViewersByStatusId).toHaveBeenCalledWith(
+        'user-1',
+        'status-1',
+      );
       expect(result).toEqual(viewers);
     });
   });
@@ -734,6 +997,89 @@ describe('UsersController', () => {
         dto,
       );
       expect(result).toEqual({ id: 'user-1' });
+    });
+  });
+
+  describe('updateStatusVisibility', () => {
+    it('should throw UnauthorizedException when no user', async () => {
+      await expect(
+        controller.updateStatusVisibility(null, {
+          status_visibility: 'public',
+        }),
+      ).rejects.toThrow('Unauthorized');
+      expect(usersService.updatePrivacySettings).not.toHaveBeenCalled();
+    });
+
+    it('should update status visibility using the caller VIP status', async () => {
+      (usersService.getProfile as jest.Mock).mockResolvedValue({
+        id: 'user-1',
+        is_vip: true,
+      });
+      (usersService.updatePrivacySettings as jest.Mock).mockResolvedValue({
+        id: 'user-1',
+        status_visibility: 'followers',
+      });
+      const result = await controller.updateStatusVisibility(
+        { id: 'user-1' } as any,
+        { status_visibility: 'followers' },
+      );
+      expect(usersService.getProfile).toHaveBeenCalledWith('user-1');
+      expect(usersService.updatePrivacySettings).toHaveBeenCalledWith(
+        'user-1',
+        { status_visibility: 'followers' },
+        true,
+      );
+      expect(result).toEqual({
+        id: 'user-1',
+        status_visibility: 'followers',
+      });
+    });
+
+    it('should fall back to false when profile is_vip is undefined', async () => {
+      (usersService.getProfile as jest.Mock).mockResolvedValue({
+        id: 'user-2',
+      });
+      (usersService.updatePrivacySettings as jest.Mock).mockResolvedValue({
+        id: 'user-2',
+        status_visibility: 'only_me',
+      });
+      await controller.updateStatusVisibility({ id: 'user-2' } as any, {
+        status_visibility: 'only_me',
+      });
+      expect(usersService.updatePrivacySettings).toHaveBeenCalledWith(
+        'user-2',
+        { status_visibility: 'only_me' },
+        false,
+      );
+    });
+  });
+
+  describe('updateNotificationPreferences', () => {
+    it('should throw UnauthorizedException when no user', async () => {
+      await expect(
+        controller.updateNotificationPreferences(null, {}),
+      ).rejects.toThrow('Unauthorized');
+      expect(usersService.updateNotificationPreferences).not.toHaveBeenCalled();
+    });
+
+    it('should call updateNotificationPreferences with the user id and dto', async () => {
+      const dto = {
+        custom_tone_url: 'https://example.com/tone.mp3',
+        vibration_pattern: [100, 200, 100],
+      };
+      const updatedProfile: any = { id: 'user-1', ...dto };
+      (
+        usersService.updateNotificationPreferences as jest.Mock
+      ).mockResolvedValue(updatedProfile);
+      const result = await controller.updateNotificationPreferences(
+        { id: 'user-1' } as any,
+        dto,
+      );
+      expect(usersService.updateNotificationPreferences).toHaveBeenCalledWith(
+        'user-1',
+        dto,
+      );
+      expect(result).toEqual(updatedProfile);
     });
   });
 });
