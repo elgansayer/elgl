@@ -18,10 +18,12 @@ import { environment } from '../../../environments/environment';
     @if (showTranslation()) {
       @if (translationResource.isLoading()) {
         <p class="mt-1 text-xs text-gray-400">{{ 'common.loading' | t }}</p>
-      } @else if (translationResource.value()?.translation !== undefined; as translation) {
-        <p class="mt-1 text-sm text-gray-300 italic">{{ translation }}</p>
       } @else {
-        <p class="mt-1 text-xs text-rose-500">{{ 'moments.translationError' | t }}</p>
+        @if (translationResource.value()?.translation; as translation) {
+          <p class="mt-1 text-sm text-gray-300 italic">{{ translation }}</p>
+        } @else {
+          <p class="mt-1 text-xs text-rose-500">{{ 'moments.translationError' | t }}</p>
+        }
       }
     }
   `,
@@ -42,7 +44,7 @@ export class MomentTranslateComponent {
     };
   });
 
-  readonly translationResource = resource({
+  readonly translationResource = resource<{ translation?: string }>({
     loader: () => {
       const request = this.translateRequest();
       if (!request) {

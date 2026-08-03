@@ -8,6 +8,14 @@ export interface CentrifugoEvent {
   data: unknown;
 }
 
+export interface RoomLiveMessage {
+  type?: string;
+  content?: string;
+  sender_id?: string;
+  id?: string;
+  [key: string]: unknown;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -95,6 +103,25 @@ export class CentrifugoService {
         callback(data);
       }
     });
+  }
+
+  subscribeLiveRoom(
+    roomId: string,
+    callback: (data: RoomLiveMessage) => void,
+  ): void {
+    this.subscribe(`room_${roomId}`, (data: unknown) => {
+      if (this.isRoomMessage(data)) {
+        callback(data);
+      }
+    });
+  }
+
+  unsubscribeLiveRoom(roomId: string): void {
+    this.unsubscribe(`room_${roomId}`);
+  }
+
+  private isRoomMessage(data: unknown): data is RoomLiveMessage {
+    return typeof data === 'object' && data !== null;
   }
 
   private isVoiceRoomPayload(

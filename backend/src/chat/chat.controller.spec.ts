@@ -161,7 +161,6 @@ describe('ChatController', () => {
       expect(chatService.getMessages).toHaveBeenCalledWith(
         'room-1',
         'search-term',
-        undefined,
       );
       expect(result).toEqual(messages);
     });

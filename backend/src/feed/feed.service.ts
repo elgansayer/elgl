@@ -172,7 +172,8 @@ export class FeedService {
       query = query.in('author_id', matchedIds);
     }
 
-    const { data: momentRows, error: momentError } = await query;
+    const { data: momentRows, error: momentError } =
+      await query.returns<MomentRow[]>();
 
     if (momentError || !momentRows) {
       this.logger.error(`Failed to fetch moments: ${momentError?.message}`);
@@ -191,7 +192,8 @@ export class FeedService {
         .select(
           'id, display_name, avatar_url, native_languages, target_languages',
         )
-        .in('id', authorIds);
+        .in('id', authorIds)
+        .returns<AuthorRow[]>();
 
       if (authorError) {
         this.logger.error(`Failed to fetch authors: ${authorError.message}`);

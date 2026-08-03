@@ -34,6 +34,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+interface GroupMember {
+  user_id: string;
+  user?: {
+    display_name?: string;
+    avatar_url?: string | null;
+  };
+}
+
 @Injectable()
 export class ChatService {
   constructor(
@@ -48,7 +56,7 @@ export class ChatService {
     private readonly xpService: XpService,
   ) {}
 
-  async generateCentrifugoToken(userId: string): Promise<string> {
+  async generateConnectionToken(userId: string): Promise<string> {
     const payload = {
       sub: userId,
       exp: Math.floor(Date.now() / 1000) + 3600, // Token expires in 1 hour
@@ -725,7 +733,10 @@ export class ChatService {
     await this.systemMessageService.publishToRoom(roomId, 'memberRemoved', {});
   }
 
-  async getGroupMembers(roomId: string): Promise<any[]> {
+  async getGroupMembers(
+    roomId: string,
+    _currentUserId?: string,
+  ): Promise<GroupMember[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('chat_room_members')
@@ -742,7 +753,7 @@ export class ChatService {
       .eq('room_id', roomId);
 
     if (error) throw new Error('Failed to fetch group members');
-    return data || [];
+    return (data ?? []) as GroupMember[];
   }
 
   // ---- Chat Lock methods ----
@@ -1291,7 +1302,9 @@ export class ChatService {
       .select('room_id')
       .eq('user_id', userId);
 
-    const roomIds = (memberRows ?? []).map((r: any) => r.room_id);
+    const roomIds = (memberRows ?? []).map(
+      (r: { room_id: string }) => r.room_id,
+    );
     if (roomIds.length === 0) {
       return [];
     }

@@ -50,7 +50,7 @@ export class ChatController {
     @CurrentUser() user: User | null,
   ): Promise<{ token: string } | null> {
     if (!user) return null;
-    const token = await this.chatService.generateCentrifugoToken?.(user.id);
+    const token = await this.chatService.generateConnectionToken?.(user.id);
     return { token };
   }
 
@@ -75,10 +75,10 @@ export class ChatController {
     @Query('search') search?: string,
     @CurrentUser() user?: User | null,
   ): Promise<ChatMessage[]> {
-    if (user) {
-      return await this.chatService.getMessages(roomId, search, user.id);
+    if (!user) {
+      return await this.chatService.getMessages(roomId, search);
     }
-    return await this.chatService.getMessages(roomId, search);
+    return await this.chatService.getMessages(roomId, search, user.id);
   }
 
   @Post('favourites')
@@ -240,12 +240,17 @@ export class ChatController {
     { user_id: string; display_name?: string; avatar_url?: string | null }[]
   > {
     if (!user) return [];
-    const members = await this.chatService.getGroupMembers(roomId);
-    return members.map((m: any) => ({
-      user_id: m.user_id,
-      display_name: m.user?.display_name,
-      avatar_url: m.user?.avatar_url,
-    }));
+    const members = await this.chatService.getGroupMembers(roomId, user.id);
+    return members.map(
+      (m: {
+        user_id: string;
+        user?: { display_name?: string; avatar_url?: string | null };
+      }) => ({
+        user_id: m.user_id,
+        display_name: m.user?.display_name,
+        avatar_url: m.user?.avatar_url,
+      }),
+    );
   }
 
   // Chat Lock endpoints
