@@ -59,6 +59,13 @@ export class AudioRoomsController {
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
     return await this.audioRoomsService.createRoom(user.id, dto);
+  @Post('archive-recording')
+  async archiveRecording(
+    @CurrentUser() user: User | null,
+    @Body() dto: ArchiveRecordingDto,
+  ): Promise<AudioRoomRecord | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.archiveRecording(user.id, dto);
   }
 
   @Post('token')

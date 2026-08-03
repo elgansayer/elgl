@@ -722,7 +722,6 @@ export class UsersService {
         (privacyRecord.privacy_hide_vip_status as boolean | undefined) ?? false,
       incognito_visits: profile.incognito_visits ?? false,
       status_visibility: profile.status_visibility ?? 'public',
-        (privacyRecord.status_visibility as string | undefined) ?? 'public',
     };
   }
 

@@ -123,6 +123,52 @@ export class AudioRoomsService implements OnModuleInit {
     this.secretKey =
       this.configService.get<string>('LIVEKIT_SECRET') ||
       'secretkey012345678901234567890123456789';
+  async archiveRecording(
+    hostId: string,
+    dto: ArchiveRecordingDto,
+  ): Promise<AudioRoomRecord> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', dto.room_id)
+      .single();
+
+    if (!response.data) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const room = response.data as AudioRoomRecord;
+
+    if (room.host_id !== hostId) {
+      throw new ForbiddenException('Only the host can archive this room.');
+    }
+
+    // Upload the recording to Cloudflare R2
+    const recordingUrl = dto.recording_url;
+    const r2Key = `audio-rooms/${room.room_name}/recording.webm`;
+
+    try {
+      await this.supabaseService.uploadToR2(r2Key, recordingUrl);
+    } catch (error) {
+      this.logger.error('Failed to upload recording to R2', error);
+      throw new Error('Failed to upload recording to R2');
+    }
+
+    // Update the room record with the R2 URL
+    const r2RecordingUrl = `https://r2.hellotalk.mock/${r2Key}`;
+    await supabase
+      .from('audio_rooms')
+      .update({ recording_url: r2RecordingUrl, is_active: false })
+      .eq('id', room.id);
+
+    void this.centrifugoService.publish(`room_${room.id}`, {
+      type: 'room_archived',
+      room_id: room.id,
+      recording_url: r2RecordingUrl,
+    });
+
+    return this.getRoom(room.id);
   }
 
   onModuleInit() {
