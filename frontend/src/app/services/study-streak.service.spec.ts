@@ -39,9 +39,7 @@ describe('StudyStreakService', () => {
 
       const promise = firstValueFrom(service.getStreak());
 
-      const req = httpTesting.expectOne(
-        `${environment.apiUrl}/study-streak/me`,
-      );
+      const req = httpTesting.expectOne(`${environment.apiUrl}/study-streak/me`);
       expect(req.request.method).toBe('GET');
       req.flush(expected);
 

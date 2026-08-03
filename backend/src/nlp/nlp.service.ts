@@ -558,7 +558,7 @@ export class NlpService {
     const supabase = this.supabaseService.getClient();
     const { data: user, error } = await supabase
       .from('users')
-      .select<{ bio_text: string | null }>('bio_text')
+      .select('bio_text')
       .eq('id', dto.target_user_id)
       .single();
 

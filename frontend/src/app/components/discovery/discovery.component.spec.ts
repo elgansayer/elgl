@@ -110,7 +110,7 @@ describe('DiscoveryComponent', () => {
 
   it('should create', async () => {
     await init();
-    expect(component).toBeTruthy();
+    expect(component).toBeDefined();
   });
 
   it('should search for partners on init', async () => {

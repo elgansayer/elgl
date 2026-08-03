@@ -335,7 +335,7 @@ export class MonetisationService {
       user.is_vip && (user.vip_tier ?? '').startsWith('developer');
     if (!isDeveloperTier) {
       throw new ForbiddenException(
-        'Developer API Access is reserved for active Developer Tier subscribers (20 UKP / $26 USD per month). Upgrade to Developer Tier to generate programmatic API keys!',
+        'Developer API Access is reserved for active Developer Tier subscribers (20 UKP / $26 USD per month).',
       );
     }
 

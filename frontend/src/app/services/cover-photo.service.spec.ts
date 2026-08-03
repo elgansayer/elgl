@@ -25,7 +25,7 @@ describe('CoverPhotoService', () => {
 
     const uploadPromise = service.upload(fakeBlob);
 
-    const req = httpMock.expectOne('/api/users/cover-photo');
+    const req = httpMock.expectOne(`${environment.apiUrl}/users/cover-photo`);
     expect(req.request.method).toBe('POST');
     expect(req.request.body.has('cover')).toBe(true);
 
