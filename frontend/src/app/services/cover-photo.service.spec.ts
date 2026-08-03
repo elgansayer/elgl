@@ -41,6 +41,12 @@ describe('CoverPhotoService', () => {
     const req = httpMock.expectOne('/api/users/cover-photo');
     req.error(new ProgressEvent('Network error'));
 
-    await expect(uploadPromise).rejects.toThrow();
+    let caught: unknown;
+    try {
+      await uploadPromise;
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeDefined();
   });
 });

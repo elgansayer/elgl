@@ -114,6 +114,42 @@ export const COIN_PACKAGES: CoinPackage[] = [
   },
 ];
 
+function isCoinBalanceRow(value: unknown): value is { coins_balance: number } {
+  if (typeof value !== 'object' || value === null) return false;
+  if (!('coins_balance' in value)) return false;
+  return typeof value.coins_balance === 'number';
+}
+
+function isVirtualGiftRow(value: unknown): value is VirtualGiftRow {
+  if (typeof value !== 'object' || value === null) return false;
+  if (
+    !('id' in value) ||
+    !('name' in value) ||
+    !('icon' in value) ||
+    !('cost_coins' in value) ||
+    !('animation_type' in value)
+  )
+    return false;
+  return (
+    typeof value.id === 'string' &&
+    typeof value.name === 'string' &&
+    typeof value.icon === 'string' &&
+    typeof value.cost_coins === 'number' &&
+    typeof value.animation_type === 'string'
+  );
+}
+
+function isStickerPackRow(value: unknown): value is StickerPackRow {
+  if (typeof value !== 'object' || value === null) return false;
+  if (!('id' in value) || !('name' in value) || !('cost_coins' in value))
+    return false;
+  return (
+    typeof value.id === 'string' &&
+    typeof value.name === 'string' &&
+    typeof value.cost_coins === 'number'
+  );
+}
+
 @Injectable()
 export class EconomyService {
   private readonly logger = new Logger(EconomyService.name);
@@ -140,7 +176,20 @@ export class EconomyService {
       .from('virtual_gifts')
       .select('*')
       .order('cost_coins', { ascending: true });
-    return response.data ?? [];
+    const rows = response.data;
+    if (!Array.isArray(rows)) {
+      return [];
+    }
+    return rows.filter(
+      (item: unknown): item is VirtualGiftRow =>
+        typeof item === 'object' &&
+        item !== null &&
+        'id' in item &&
+        'name' in item &&
+        'icon' in item &&
+        'cost_coins' in item &&
+        'animation_type' in item,
+    );
   }
 
   getPackages(): CoinPackage[] {
@@ -210,7 +259,10 @@ export class EconomyService {
       const profile = await this.usersService.getProfile(userId);
       return { coins_balance: profile.coins_balance || 50 };
     }
-    const row = response.data as UserCoinRow;
+    const row = response.data;
+    if (!isCoinBalanceRow(row)) {
+      throw new BadRequestException('Invalid user coin balance');
+    }
     return { coins_balance: row.coins_balance };
   }
 
@@ -237,7 +289,7 @@ export class EconomyService {
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase
       .from('users')
-      .update({ coins_balance: newBalance } as never)
+      .update({ coins_balance: newBalance })
       .eq('id', userId);
 
     if (error) {
@@ -264,6 +316,13 @@ export class EconomyService {
 
     // 1. Determine platform and verify the receipt with the store
     const platform = this.detectPlatform(dto.receipt_token);
+
+    if (dto.platform && dto.platform !== platform) {
+      throw new BadRequestException(
+        `Receipt platform (${platform}) does not match provided platform (${dto.platform})`,
+      );
+    }
+
     const verifiedReceipt = await this.verifyReceipt(
       dto.receipt_token,
       platform,
@@ -312,7 +371,7 @@ export class EconomyService {
         platform,
         transaction_id: transactionId,
         status: 'completed',
-      } as never);
+      });
 
     if (insertError) {
       // Unique violation (race condition)
@@ -343,12 +402,19 @@ export class EconomyService {
       throw new BadRequestException('User not found');
     }
 
-    const user = userData as { coins_balance?: number };
-    const newBalance = (user.coins_balance ?? 0) + coinPackage.coins;
+    if (!isCoinBalanceRow(userData)) {
+      // Rollback the purchase record (best effort)
+      await supabase
+        .from('coin_purchases')
+        .delete()
+        .eq('transaction_id', transactionId);
+      throw new BadRequestException('User not found');
+    }
+    const newBalance = userData.coins_balance + coinPackage.coins;
 
     const { error: updateError } = await supabase
       .from('users')
-      .update({ coins_balance: newBalance } as never)
+      .update({ coins_balance: newBalance })
       .eq('id', userId);
 
     if (updateError) {
@@ -529,22 +595,19 @@ export class EconomyService {
 
     const sessionId = receiptToken.replace(/^stripe_/, '');
 
-    const response = await firstValueFrom(
-      this.httpService.get(
-        `https://api.stripe.com/v1/checkout/sessions/${sessionId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${stripeSecretKey}`,
-          },
-        },
-      ),
-    );
+    if (!sessionId) {
+      throw new BadRequestException('Invalid Stripe receipt token');
+    }
 
-    const session = response.data as {
-      payment_status: string;
-      metadata?: Record<string, string>;
-      payment_intent: string;
-    };
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await this.stripe.checkout.sessions.retrieve(sessionId);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unexpected error';
+      this.logger.warn(`Stripe session retrieve failed: ${errorMessage}`);
+      throw new BadRequestException('Invalid Stripe session ID');
+    }
 
     if (session.payment_status !== 'paid') {
       throw new BadRequestException('Stripe payment not completed');
@@ -571,10 +634,17 @@ export class EconomyService {
       );
     }
 
+    // Ensure the paid amount matches the package price to prevent partial payments
+    if (session.amount_total !== coinPackage.price) {
+      throw new BadRequestException(
+        'Stripe payment amount does not match the coin package price',
+      );
+    }
+
     return {
       valid: true,
       productId,
-      transactionId: session.payment_intent,
+      transactionId: session.id,
       platform: 'web',
     };
   }
@@ -610,7 +680,13 @@ export class EconomyService {
         `Gift '${dto.gift_id}' not found in catalog.`,
       );
     }
-    const gift = giftResponse.data as VirtualGiftRow;
+    const giftData = giftResponse.data;
+    if (!isVirtualGiftRow(giftData)) {
+      throw new NotFoundException(
+        `Gift '${dto.gift_id}' not found in catalog.`,
+      );
+    }
+    const gift = giftData;
 
     const { coins_balance: senderBalance } = await this.getBalance(senderId);
     if (senderBalance < gift.cost_coins) {
@@ -629,11 +705,11 @@ export class EconomyService {
 
     await supabase
       .from('users')
-      .update({ coins_balance: newSenderBalance } as never)
+      .update({ coins_balance: newSenderBalance })
       .eq('id', senderId);
     await supabase
       .from('users')
-      .update({ coins_balance: newReceiverBalance } as never)
+      .update({ coins_balance: newReceiverBalance })
       .eq('id', dto.receiver_id);
 
     await supabase.from('gift_transactions').insert({
@@ -642,7 +718,7 @@ export class EconomyService {
       gift_id: gift.id,
       room_id: dto.room_id || null,
       coins_spent: gift.cost_coins,
-    } as never);
+    });
 
     const senderProfile = await this.usersService.getProfile(senderId);
     const receiverProfile = await this.usersService.getProfile(dto.receiver_id);
@@ -688,7 +764,11 @@ export class EconomyService {
     if (!packResponse.data) {
       throw new NotFoundException(`Sticker pack '${dto.pack_id}' not found.`);
     }
-    const pack = packResponse.data as StickerPackRow;
+    const packData = packResponse.data;
+    if (!isStickerPackRow(packData)) {
+      throw new NotFoundException(`Sticker pack '${dto.pack_id}' not found.`);
+    }
+    const pack = packData;
 
     // 2. Check user's coin balance
     const { coins_balance } = await this.getBalance(userId);
@@ -702,7 +782,7 @@ export class EconomyService {
     const newBalance = coins_balance - pack.cost_coins;
     const { error: updateError } = await supabase
       .from('users')
-      .update({ coins_balance: newBalance } as never)
+      .update({ coins_balance: newBalance })
       .eq('id', userId);
 
     if (updateError) {
@@ -715,7 +795,7 @@ export class EconomyService {
       .insert({
         user_id: userId,
         pack_id: pack.id,
-      } as never);
+      });
 
     if (insertError) {
       // Note: In a robust system, you'd want to rollback the coin deduction here

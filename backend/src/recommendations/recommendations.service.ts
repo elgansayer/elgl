@@ -14,6 +14,10 @@ export interface RecommendedUserDto {
   correctionRatio: number;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 @Injectable()
 export class RecommendationsService {
   private readonly logger = new Logger(RecommendationsService.name);
@@ -89,7 +93,15 @@ export class RecommendationsService {
       throw new Error(tagsError.message);
     }
 
-    const tags = (ownTags ?? []).map((r) => r.tag as string);
+    const tags: string[] = [];
+    if (Array.isArray(ownTags)) {
+      for (const row of ownTags) {
+        if (isRecord(row)) {
+          const value = row['tag'];
+          if (typeof value === 'string') tags.push(value);
+        }
+      }
+    }
     if (tags.length === 0) {
       return [];
     }
@@ -107,8 +119,18 @@ export class RecommendationsService {
 
     // 3. Count how many tags each candidate has in common
     const sharedCount = new Map<string, number>();
-    for (const row of shared ?? []) {
-      sharedCount.set(row.user_id, (sharedCount.get(row.user_id) ?? 0) + 1);
+    if (Array.isArray(shared)) {
+      for (const row of shared) {
+        if (isRecord(row)) {
+          const userIdValue = row['user_id'];
+          if (typeof userIdValue === 'string') {
+            sharedCount.set(
+              userIdValue,
+              (sharedCount.get(userIdValue) ?? 0) + 1,
+            );
+          }
+        }
+      }
     }
 
     if (sharedCount.size === 0) {

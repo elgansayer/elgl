@@ -25,6 +25,7 @@ import { CreateLanguagePartyDto } from './dto/create-language-party.dto';
 import { CreatePrivatePartyDto } from './dto/create-private-party.dto';
 import {
   ApproveSpeakerDto,
+  ArchiveRecordingDto,
   ArchiveRoomDto,
   CreateAudioRoomDto,
   DemoteSpeakerDto,
@@ -123,6 +124,8 @@ export class AudioRoomsService implements OnModuleInit {
     this.secretKey =
       this.configService.get<string>('LIVEKIT_SECRET') ||
       'secretkey012345678901234567890123456789';
+  }
+
   async archiveRecording(
     hostId: string,
     dto: ArchiveRecordingDto,
@@ -487,7 +490,8 @@ export class AudioRoomsService implements OnModuleInit {
     const isSpeaker =
       isHost || (room.speakers && room.speakers.includes(userId));
 
-    const profile: UserProfileRow | null = await this.usersService.getProfile(userId);
+    const profile: UserProfileRow | null =
+      await this.usersService.getProfile(userId);
     const identity = profile?.display_name
       ? `${profile.display_name}_${userId.slice(0, 6)}`
       : userId;
