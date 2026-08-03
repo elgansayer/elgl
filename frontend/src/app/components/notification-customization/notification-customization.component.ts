@@ -35,13 +35,21 @@ export class NotificationCustomizationComponent {
   }
 
   onToneChange(event: Event): void {
-    const input = event.target as HTMLInputElement | null;
-    this.customToneUrl.set(input?.value ?? '');
+    const input = event.target;
+    if (input instanceof HTMLInputElement) {
+      this.customToneUrl.set(input.value);
+    } else {
+      this.customToneUrl.set('');
+    }
   }
 
   onVibrationChange(event: Event): void {
-    const input = event.target as HTMLInputElement | null;
-    this.vibrationPattern.set(input?.value ?? '');
+    const input = event.target;
+    if (input instanceof HTMLInputElement) {
+      this.vibrationPattern.set(input.value);
+    } else {
+      this.vibrationPattern.set('');
+    }
   }
 
   async save(): Promise<void> {

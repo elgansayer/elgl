@@ -18,6 +18,14 @@ export const routes: Routes = [
       import('./pages/home/home.component').then((m) => m.HomeComponent),
     title: 'Home - HelloTalk',
   },
+  {
+    path: 'business-profile',
+    loadComponent: () =>
+      import('./components/business-profile/business-profile.component').then(
+        (m) => m.BusinessProfileComponent,
+      ),
+    title: 'Business Profile - HelloTalk',
+  },
   { path: 'discovery', component: DiscoveryComponent },
   {
     path: 'proficiency',

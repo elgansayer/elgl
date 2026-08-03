@@ -48,10 +48,10 @@ export interface UserProfile {
   providedIn: 'root',
 })
 export class SupabaseService {
-  private supabase: SupabaseClient;
+  private supabase: SupabaseClient<Database>;
 
   constructor() {
-    this.supabase = createClient(environment.supabaseUrl, environment.supabaseAnonKey);
+    this.supabase = createClient<Database>(environment.supabaseUrl, environment.supabaseAnonKey);
   }
 
 
