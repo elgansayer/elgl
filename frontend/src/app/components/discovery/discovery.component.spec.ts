@@ -95,6 +95,7 @@ describe('DiscoveryComponent', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     audioInstances = [];
+    TestBed.resetTestingModule();
   });
 
   async function flush(): Promise<void> {

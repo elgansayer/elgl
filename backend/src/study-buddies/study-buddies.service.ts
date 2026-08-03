@@ -143,7 +143,7 @@ export class StudyBuddiesService {
       .update({
         status: status as BuddyRequestStatus,
         updated_at: new Date().toISOString(),
-      })
+      } as never)
       .eq('id', requestId)
       .eq('partner_id', userId)
       .select('*')

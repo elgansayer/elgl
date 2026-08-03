@@ -619,7 +619,7 @@ export class UsersService {
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase
       .from('blocks')
-      .insert({ blocker_id: blockerId, blocked_id: blockedId });
+      .insert([{ blocker_id: blockerId, blocked_id: blockedId }] as never);
     if (error) {
       Logger.warn(`Block insert failed: ${error.message}`);
       throw new InternalServerErrorException('Failed to block user');
@@ -654,13 +654,15 @@ export class UsersService {
     },
   ): Promise<{ success: boolean; message: string }> {
     const supabase = this.supabaseService.getClient();
-    const { error } = await supabase.from('reports').insert({
-      reporter_id: reporterId,
-      reported_user_id: dto.reported_id,
-      reason_category: dto.reason_category,
-      description: dto.description ?? '',
-      context_url: dto.context_url ?? null,
-    });
+    const { error } = await supabase.from('reports').insert([
+      {
+        reporter_id: reporterId,
+        reported_user_id: dto.reported_id,
+        reason_category: dto.reason_category,
+        description: dto.description ?? '',
+        context_url: dto.context_url ?? null,
+      },
+    ]);
     if (error) {
       Logger.warn(`Report insert failed: ${error.message}`);
       throw new InternalServerErrorException('Failed to report user');

@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { CoverPhotoService } from './cover-photo.service';
 
 describe('CoverPhotoService', () => {
@@ -8,8 +9,11 @@ describe('CoverPhotoService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
-      providers: [CoverPhotoService],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        CoverPhotoService,
+      ],
     });
     service = TestBed.inject(CoverPhotoService);
     httpMock = TestBed.inject(HttpTestingController);
