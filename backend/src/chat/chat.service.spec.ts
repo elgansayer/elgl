@@ -132,7 +132,7 @@ describe('ChatService', () => {
 
   describe('generateConnectionToken', () => {
     it('should generate connection token via CentrifugoService', () => {
-      const result = service.generateConnectionToken('user-1');
+      const result = await service.generateConnectionToken('user-1');
       expect(centrifugoService.generateConnectionToken).toHaveBeenCalledWith(
         'user-1',
       );

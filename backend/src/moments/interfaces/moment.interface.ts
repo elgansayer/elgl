@@ -32,7 +32,7 @@ export interface MomentRecord {
   correct_answer?: string;
   correct_answers_count?: number;
   total_answers_count?: number;
-  is_pinned: boolean;
+  is_pinned: boolean; // Indicates if the moment is pinned
   likes_count: number;
   comments_count: number;
   created_at: string;

@@ -80,7 +80,7 @@ export class FeedService {
       await this.safetyService.getBlockedAndBlockerIds(currentUserId);
 
     let query = supabase
-      .from('moments')
+      .from<MomentRow>('moments')
       .select(
         'id, author_id, content_text, media_urls, voice_note_url, detected_language, created_at',
       )
@@ -181,8 +181,8 @@ export class FeedService {
 
     if (authorIds.length > 0) {
       const { data: authorRows, error: authorError } = await supabase
-        .from('users')
-        .select<AuthorRow[]>(
+        .from<AuthorRow>('users')
+        .select(
           'id, display_name, avatar_url, native_languages, target_languages',
         )
         .in('id', authorIds);
