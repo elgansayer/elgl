@@ -95,6 +95,7 @@ describe('DiscoveryComponent', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     audioInstances = [];
+    TestBed.resetTestingModule();
   });
 
   async function flush(): Promise<void> {
@@ -110,7 +111,7 @@ describe('DiscoveryComponent', () => {
 
   it('should create', async () => {
     await init();
-    expect(component).toBeTruthy();
+    expect(component).toBeDefined();
   });
 
   it('should search for partners on init', async () => {

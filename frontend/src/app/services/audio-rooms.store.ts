@@ -510,6 +510,25 @@ private findRemoteVideoTrack(userId: string): RemoteVideoTrack | null {
     }
   }
 
+  async broadcastAICaption(text: string): Promise<void> {
+    const room = this.currentRoom();
+    if (!room || !text.trim()) return;
+    try {
+      await firstValueFrom(
+        this.http.post<void>(
+          `${this.baseUrl}/ai-captions`,
+          {
+            room_id: room.id,
+            text_content: text.trim(),
+          },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch (e) {
+      console.error('Broadcast AI caption error:', e);
+    }
+  }
+
   async sendRoomChatMessage(text: string): Promise<void> {
     const room = this.currentRoom();
     if (!room || !text.trim()) return;

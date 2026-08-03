@@ -46,7 +46,8 @@ describe('CallLogsService', () => {
 
     req.flush([record]);
 
-    await expect(resultPromise).resolves.toEqual([record]);
+    const result = await resultPromise;
+    expect(result).toEqual([record]);
   });
 
   it('includes the callType filter when provided', async () => {
@@ -57,7 +58,8 @@ describe('CallLogsService', () => {
     );
     req.flush([record]);
 
-    await expect(resultPromise).resolves.toEqual([record]);
+    const result = await resultPromise;
+    expect(result).toEqual([record]);
   });
 
   it('propagates errors from the backend', async () => {
@@ -66,6 +68,12 @@ describe('CallLogsService', () => {
     const req = httpMock.expectOne((r) => r.url === baseUrl);
     req.error(new ProgressEvent('Network error'));
 
-    await expect(resultPromise).rejects.toBeTruthy();
+    let threw = false;
+    try {
+      await resultPromise;
+    } catch {
+      threw = true;
+    }
+    expect(threw).toBeTrue();
   });
 });

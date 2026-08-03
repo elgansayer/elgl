@@ -29,7 +29,7 @@ describe('TransferController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: () => true })
       .compile();
 
     controller = module.get<TransferController>(TransferController);
@@ -45,7 +45,7 @@ describe('TransferController', () => {
 
   describe('generate', () => {
     it('should throw UnauthorizedException when user id is missing', async () => {
-      await expect(controller.generate({ user: {} } as any)).rejects.toThrow(
+      await expect(controller.generate({ user: {} })).rejects.toThrow(
         UnauthorizedException,
       );
     });

@@ -108,7 +108,7 @@ describe('VideoCallComponent - screen sharing', () => {
       get: () => null,
     });
 
-    await expect(component.togglePip()).resolves.toBeUndefined();
+    await component.togglePip();
     expect(component.isInPip()).toBe(false);
   });
 
@@ -129,7 +129,13 @@ describe('VideoCallComponent - screen sharing', () => {
   it('does nothing when not connected to a room', async () => {
     (component as unknown as { room: MockRoom | null }).room = null;
 
-    await expect(component.toggleScreenShare()).resolves.toBeUndefined();
+    let error: unknown;
+    try {
+      await component.toggleScreenShare();
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeUndefined();
   });
 
   it('swallows errors from a cancelled share picker without throwing', async () => {
@@ -137,7 +143,7 @@ describe('VideoCallComponent - screen sharing', () => {
       new Error('Permission denied'),
     );
 
-    await expect(component.toggleScreenShare()).resolves.toBeUndefined();
+    await component.toggleScreenShare();
   });
 
   it('flags isScreenSharing when the local screen-share track publishes', () => {

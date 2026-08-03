@@ -7,10 +7,24 @@ import { StudyBuddyComponent } from './components/study-buddy/study-buddy.compon
 export const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
   {
+    path: 'lock',
+    loadComponent: () =>
+      import('./components/device-lock/device-lock.component').then((m) => m.DeviceLockComponent),
+    title: 'App Lock - HelloTalk',
+  },
+  {
     path: 'home',
     loadComponent: () =>
       import('./pages/home/home.component').then((m) => m.HomeComponent),
     title: 'Home - HelloTalk',
+  },
+  {
+    path: 'business-profile',
+    loadComponent: () =>
+      import('./components/business-profile/business-profile.component').then(
+        (m) => m.BusinessProfileComponent,
+      ),
+    title: 'Business Profile - HelloTalk',
   },
   { path: 'discovery', component: DiscoveryComponent },
   {
@@ -46,7 +60,7 @@ export const routes: Routes = [
   {
     path: 'audio-rooms',
     loadComponent: () =>
-      import('./components/audio-room/audio-room.component').then((m) => m.AudioRoomComponent),
+      import('./audio-rooms/audio-room.component').then((m) => m.AudioRoomComponent),
   },
   {
     path: 'chat',
@@ -133,6 +147,22 @@ export const routes: Routes = [
     path: 'settings',
     loadComponent: () =>
       import('./components/settings/settings.component').then((m) => m.SettingsComponent),
+  },
+  {
+    path: 'settings/notification',
+    loadComponent: () =>
+      import('./pages/settings/notification-settings/notification-settings.component').then(
+        (m) => m.NotificationSettingsComponent,
+      ),
+    title: 'Notification Settings - HelloTalk',
+  },
+  {
+    path: 'settings/notification-customization',
+    loadComponent: () =>
+      import('./components/notification-customization/notification-customization.component').then(
+        (m) => m.NotificationCustomizationComponent,
+      ),
+    title: 'Notification Customisation - HelloTalk',
   },
   {
     path: 'settings/backup-restore',

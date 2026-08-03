@@ -8,6 +8,7 @@ import * as jwt from 'jsonwebtoken';
 import { GooglePlayNotificationService } from './google-play-notification.service';
 import { MonetisationService } from './monetisation.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { SubscriptionPlansService } from './services/subscription-plans.service';
 
 const AUDIENCE = 'https://api.hellotalk.app/monetisation/webhooks/google';
 const SERVICE_ACCOUNT_EMAIL =
@@ -65,6 +66,7 @@ describe('GooglePlayNotificationService', () => {
   let mockQueryBuilder: any;
   let monetisationService: { updateVipStatusFromWebhook: jest.Mock };
   let httpService: { get: jest.Mock };
+  let subscriptionPlansService: { getTierByProductId: jest.Mock };
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -80,6 +82,9 @@ describe('GooglePlayNotificationService', () => {
       updateVipStatusFromWebhook: jest.fn().mockResolvedValue(undefined),
     };
     httpService = { get: jest.fn() };
+    subscriptionPlansService = {
+      getTierByProductId: jest.fn((productId: string) => productId),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -94,6 +99,8 @@ describe('GooglePlayNotificationService', () => {
               if (key === 'GOOGLE_PUBSUB_AUDIENCE') return AUDIENCE;
               if (key === 'GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL')
                 return SERVICE_ACCOUNT_EMAIL;
+              if (key === 'GOOGLE_JWKS_URI')
+                return 'https://www.googleapis.com/oauth2/v3/certs';
               return undefined;
             }),
           },
@@ -106,6 +113,10 @@ describe('GooglePlayNotificationService', () => {
           },
         },
         { provide: MonetisationService, useValue: monetisationService },
+        {
+          provide: SubscriptionPlansService,
+          useValue: subscriptionPlansService,
+        },
       ],
     }).compile();
 
@@ -275,6 +286,10 @@ describe('GooglePlayNotificationService', () => {
             useValue: {
               getClient: jest.fn().mockReturnValue(mockSupabaseClient),
             },
+          },
+          {
+            provide: SubscriptionPlansService,
+            useValue: subscriptionPlansService,
           },
           { provide: MonetisationService, useValue: monetisationService },
         ],

@@ -13,19 +13,27 @@ export class AuthService {
   async requestPasswordReset(email: string): Promise<string> {
     const supabase = this.supabaseService.getClient();
 
-    const { data, error } = await supabase.auth.admin.generateLink({
+    const linkResult = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email,
       options: { redirectTo: '' },
     });
 
-    if (error || !data?.properties?.action_link) {
+    if (linkResult.error || !linkResult.data) {
       throw new BadRequestException(
-        error?.message ?? 'Unable to generate reset link',
+        linkResult.error?.message ?? 'Unable to generate reset link',
       );
     }
 
-    const actionLink = data.properties.action_link;
+    const data = linkResult.data as {
+      properties?: { action_link?: string };
+    } | null;
+
+    const actionLink = data?.properties?.action_link;
+    if (!actionLink) {
+      throw new BadRequestException('Unable to generate reset link');
+    }
+
     const url = new URL(actionLink);
     const hash = url.hash.slice(1);
     const params = new URLSearchParams(hash);
@@ -39,22 +47,19 @@ export class AuthService {
   async resetPassword(token: string, newPassword: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
     try {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser(token);
+      const userResult = await supabase.auth.getUser(token);
 
-      if (userError || !user || !user.id) {
+      if (userResult.error || !userResult.data?.user?.id) {
         throw new BadRequestException('Invalid or expired reset token');
       }
 
-      const userId = user.id;
+      const userId = userResult.data.user.id;
 
-      const { error } = await supabase.auth.admin.updateUserById(userId, {
+      const updateResult = await supabase.auth.admin.updateUserById(userId, {
         password: newPassword,
       });
-      if (error) {
-        throw new BadRequestException(error.message);
+      if (updateResult.error) {
+        throw new BadRequestException(updateResult.error.message);
       }
     } catch (err: unknown) {
       if (err instanceof BadRequestException) {
@@ -66,12 +71,11 @@ export class AuthService {
 
   async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    const { data: userResult, error: userError } =
-      await supabase.auth.admin.getUserById(userId);
-    if (userError || !userResult?.user?.email) {
+    const userResult = await supabase.auth.admin.getUserById(userId);
+    if (userResult.error || !userResult.data?.user?.email) {
       throw new BadRequestException('User not found');
     }
-    const email = userResult.user.email;
+    const email = userResult.data.user.email;
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password: dto.currentPassword,
@@ -120,6 +124,13 @@ export class AuthService {
   }
 
   async checkTwoFactorStatus(userId: string): Promise<boolean> {
-    return this.twoFactorService.isEnabled(userId);
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('two_factor_enabled')
+      .eq('id', userId)
+      .single();
+    if (error || !data) return false;
+    return data.two_factor_enabled === true;
   }
 }

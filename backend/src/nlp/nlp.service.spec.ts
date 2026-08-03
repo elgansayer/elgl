@@ -14,7 +14,12 @@ jest.mock('node-nlp', () => ({
 
 describe('NlpService', () => {
   let service: NlpService;
-  let mockRedisClient: any;
+  let mockRedisClient: {
+    get: jest.Mock;
+    incr: jest.Mock;
+    expire: jest.Mock;
+    set: jest.Mock;
+  };
 
   let mockConfigService: { get: jest.Mock };
 
@@ -119,7 +124,7 @@ describe('NlpService', () => {
 
       await expect(service.checkRateLimit('free-user', false)).rejects.toThrow(
         new BadRequestException(
-          'Daily AI request limit (10 requests/day) reached on Free Tier. Upgrade to VIP (8 UKP / $10 USD per month) for unlimited AI translations, grammar checks, and pronunciation scoring!',
+          'Daily AI request limit (10 requests/day) reached on Free Tier. Upgrade to VIP (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent) for unlimited AI translations, grammar checks, and pronunciation scoring!',
         ),
       );
       expect(mockRedisClient.incr).not.toHaveBeenCalled();

@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { ChatService, ChatMessage } from './chat.service';
@@ -41,6 +42,10 @@ describe('ChatService', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        {
+          provide: Router,
+          useValue: { navigate: vi.fn().mockResolvedValue(true) } as unknown as Router,
+        },
         {
           provide: AuthService,
           useValue: {

@@ -73,16 +73,16 @@ export class MomentsService {
 
     const { data: momentsData, error: momentsError } = await supabase
       .from('moments')
-      .select('id', { count: 'exact' });
+      .select('id');
 
     const { data: correctionsData, error: correctionsError } = await supabase
       .from('moment_comments')
-      .select('id', { count: 'exact' })
+      .select('id')
       .not('correction_payload', 'is', null);
 
     const { data: translationsData, error: translationsError } = await supabase
       .from('translations')
-      .select('id', { count: 'exact' });
+      .select('id');
 
     if (momentsError || correctionsError || translationsError) {
       throw new Error(
@@ -107,6 +107,23 @@ export class MomentsService {
     private readonly r2Service: R2Service,
   ) {}
 
+  private inferMediaType(dto: CreateStoryDto): string {
+    if (dto.media_type) {
+      return dto.media_type;
+    }
+    if (dto.voice_note_url) {
+      return 'audio';
+    }
+    const urls = dto.media_urls ?? [];
+    if (urls.length > 0) {
+      const isVideo = urls.some((u) =>
+        /\.(mp4|webm|mov|m4v|ogv)(\?.*)?$/i.test(u),
+      );
+      return isVideo ? 'video' : 'images';
+    }
+    return 'none';
+  }
+
   async createStory(
     userId: string,
     dto: CreateStoryDto,
@@ -119,13 +136,14 @@ export class MomentsService {
       Date.now() + expireHours * 3600 * 1000,
     ).toISOString();
 
+    const mediaType = this.inferMediaType(dto);
     const { data, error } = (await supabase
       .from('moments')
       .insert({
         user_id: userId,
         text_content: dto.text_content ?? null,
         media_urls: dto.media_urls ?? [],
-        media_type: dto.media_type ?? 'none',
+        media_type: mediaType,
         target_language: dto.target_language ?? null,
         voice_note_url: dto.voice_note_url ?? null,
         is_ephemeral: true,
@@ -347,6 +365,145 @@ export class MomentsService {
       if (data) moments = data;
     }
 
+    // Exclude ephemeral stories (they should only be visible via the stories endpoint)
+    moments = moments.filter((m) => !m.is_ephemeral);
+    // Exclude post types that are not regular moments (questions/language questions)
+    moments = moments.filter((m) => !m.post_type || m.post_type === 'moment');
+
+    // Apply targeted visibility for non-Classmates filters: only show moments
+    // whose target_language matches the current user's native language.
+    if (filter !== 'Classmates' && userNativeLang) {
+      moments = moments.filter(
+        (m) =>
+          !m.target_language ||
+          m.target_language.toLowerCase() === userNativeLang,
+      );
+    }
+
+    // Filter out blocked users
+    if (blockedIds.length > 0) {
+      moments = moments.filter((m) => !blockedIds.includes(m.user_id));
+    }
+
+    return moments;
+  }
+
+  async createLanguageQuestion(
+    userId: string,
+    dto: CreateLanguageQuestionDto,
+  ): Promise<MomentRecord> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = (await supabase
+      .from('moments')
+      .insert({
+        user_id: userId,
+        text_content: dto.text_content ?? null,
+        media_urls: [],
+        media_type: 'none',
+        target_language: dto.target_language,
+        post_type: 'language_question',
+        question_text: dto.question_text,
+        question_options: dto.question_options,
+        correct_answer: dto.correct_answer,
+      })
+      .select()
+      .single()) as unknown as {
+      data: MomentRecord | null;
+      error?: { message?: string } | null;
+    };
+
+    if (error || !data) {
+      throw new Error(
+        `Failed to create language question: ${error?.message ?? 'Unknown error'}`,
+      );
+    }
+    const moment = data as MomentRecord & { post_type?: string };
+    moment.post_type = 'language_question';
+    moment.media_type = 'none';
+    moment.is_pinned = false;
+    moment.likes_count = 0;
+    moment.comments_count = 0;
+    moment.correct_answers_count = 0;
+    moment.total_answers_count = 0;
+    void this.xpService.awardXpForActivity(userId, 'create_moment');
+    void this.questsService.incrementProgress(userId, 'post_moment', 1);
+    const profile = await this.usersService.getProfile(userId);
+    moment.author = {
+      id: profile?.id ?? userId,
+      display_name: profile?.display_name ?? 'Serious Learner',
+      avatar_url: profile?.avatar_url ?? null,
+    };
+    moment.is_liked_by_me = false;
+    return moment;
+  }
+
+  async getFeed(
+    userId: string,
+    filter: 'All' | 'Classmates' | 'Following',
+    targetLang?: string,
+  ): Promise<MomentRecord[]> {
+    const supabase = this.supabaseService.getClient();
+    const redis = this.supabaseService.getRedisClient();
+
+    // 1) Get blocked+blocker user IDs (bidirectional)
+    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
+
+    // 2) Get current user's native language for targeted visibility routing
+    const profile = await this.usersService.getProfile(userId);
+    const userNativeLang = profile?.native_languages?.[0] ?? null;
+
+    let moments: MomentRecord[] = [];
+
+    if (filter === 'Following') {
+      const queueKey = `timeline_queue:${userId}`;
+      const momentIds = await redis.lrange(queueKey, 0, 49);
+      if (momentIds.length > 0) {
+        const { data } = await supabase
+          .from('moments')
+          .select('*')
+          .in('id', momentIds)
+          .order('created_at', { ascending: false });
+        if (data) moments = data;
+      } else {
+        // Fallback: get followed users from DB
+        const { data: follows } = await supabase
+          .from('user_follows')
+          .select('following_id')
+          .eq('follower_id', userId);
+        const followRows = (follows ?? []) as UserFollowRow[];
+        const ids = followRows.map((f) => f.following_id);
+        ids.push(userId);
+        const { data } = await supabase
+          .from('moments')
+          .select('*')
+          .in('user_id', ids)
+          .order('created_at', { ascending: false })
+          .limit(50);
+        if (data) moments = data;
+      }
+    } else if (filter === 'Classmates') {
+      const lang = targetLang || 'en';
+      const { data } = await supabase
+        .from('moments')
+        .select('*')
+        .eq('target_language', lang)
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (data) moments = data;
+    } else {
+      // All
+      const { data } = await supabase
+        .from('moments')
+        .select('*')
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (data) moments = data;
+    }
+
+    // Exclude ephemeral stories (they should only be visible via the stories endpoint)
+    moments = moments.filter((m) => !m.is_ephemeral);
     // Exclude post types that are not regular moments (questions/language questions)
     moments = moments.filter((m) => !m.post_type || m.post_type === 'moment');
 
@@ -551,6 +708,131 @@ export class MomentsService {
           avatar_url: p?.avatar_url ?? null,
         },
         is_liked_by_me: likedSet.has(m.id),
+      };
+    });
+  }
+
+  async getActiveStories(userId: string): Promise<MomentRecord[]> {
+    const supabase = this.supabaseService.getClient();
+
+    // Get IDs of users the current user follows, plus self
+    const { data: follows, error: followsError } = await supabase
+      .from('user_follows')
+      .select('following_id')
+      .eq('follower_id', userId);
+
+    if (followsError) {
+      throw new Error(`Failed to fetch follows: ${followsError.message}`);
+    }
+
+    const followRows = (follows ?? []) as UserFollowRow[];
+    const storyUserIds = followRows.map((f) => f.following_id);
+    storyUserIds.push(userId);
+
+    const { data, error } = await supabase
+      .from('moments')
+      .select('*')
+      .eq('is_ephemeral', true)
+      .gt('expires_at', new Date().toISOString())
+      .in('user_id', storyUserIds)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      throw new Error(`Failed to fetch stories: ${error.message}`);
+    }
+
+    let stories = (data ?? []) as MomentRecord[];
+    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
+
+    // Include mock stories if there are none
+    if (stories.length === 0) {
+      const eligibleUsers = MOCK_USERS.filter(
+        (u) => !blockedIds.includes(u.id),
+      );
+      const generated: MomentRecord[] = [];
+      for (let i = 0; i < Math.min(eligibleUsers.length, 50); i++) {
+        const u = eligibleUsers[i];
+        generated.push({
+          id: `mock-story-${i}`,
+          user_id: u.id,
+          text_content: `Just sharing my language learning update for today!`,
+          media_urls: [],
+          media_type: 'text',
+          target_language: undefined,
+          likes_count: 0,
+          comments_count: 0,
+          is_pinned: false,
+          created_at: new Date(
+            Date.now() - Math.random() * 86400000,
+          ).toISOString(),
+          author: {
+            id: u.id,
+            display_name: u.display_name,
+            avatar_url: u.avatar_url,
+          },
+          is_liked_by_me: false,
+        });
+      }
+      return generated;
+    }
+
+    // Fetch status visibility for authors (privacy control)
+    if (stories.length > 0) {
+      const storyAuthorIds = Array.from(new Set(stories.map((s) => s.user_id)));
+      const { data: visRowsData, error: visErr } = await supabase
+        .from('users')
+        .select('id, status_visibility')
+        .in('id', storyAuthorIds);
+
+      if (visErr) {
+        throw new Error(`Failed to fetch status visibility: ${visErr.message}`);
+      }
+
+      const visMap = new Map<string, string>();
+      const visRows = (visRowsData ?? []) as Array<{
+        id: string;
+        status_visibility?: string;
+      }>;
+      visRows.forEach((row) => {
+        visMap.set(row.id, row.status_visibility ?? 'public');
+      });
+
+      stories = stories.filter((s) => {
+        const vis = visMap.get(s.user_id) ?? 'public';
+        if (s.user_id === userId) return true;
+        if (vis === 'only_me') return false;
+        // 'public' and 'followers' are both allowed because we only
+        // fetched stories from users the current user follows (plus self).
+        return true;
+      });
+    }
+
+    // Filter out blocked users
+    if (blockedIds.length > 0) {
+      stories = stories.filter((s) => !blockedIds.includes(s.user_id));
+    }
+
+    // Hydrate author profiles
+    const authorIds = Array.from(new Set(stories.map((s) => s.user_id)));
+    const profilesResponse = await supabase
+      .from('users')
+      .select('id, display_name, avatar_url')
+      .in('id', authorIds);
+    const profiles = profilesResponse.data as UserProfileRow[] | null;
+    const profileMap = new Map<string, UserProfileRow>();
+    (profiles ?? []).forEach((p) => profileMap.set(p.id, p));
+
+    return stories.map((s) => {
+      const p = profileMap.get(s.user_id);
+      return {
+        ...s,
+        author: {
+          id: p?.id ?? s.user_id,
+          display_name: p?.display_name ?? 'Language Partner',
+          avatar_url: p?.avatar_url ?? null,
+        },
+        is_liked_by_me: false,
       };
     });
   }

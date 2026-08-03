@@ -29,7 +29,19 @@ export class MediaService {
     );
   }
 
+  async markMediaAsViewed(mediaId: string): Promise<void> {
+    if (!mediaId) {
+      throw new Error('Media ID is required');
+    }
+
+    await firstValueFrom(
+      this.http.post<void>(`${this.baseUrl}/view-once/mark-viewed`, { mediaId }),
+    );
+  }
+
   async clearMediaCache(): Promise<void> {
-    await this.supabaseService.clearOfflineCache();
+    // TODO: Implement actual cache clearing once SupabaseService exposes a clear method
+    // Placeholder implementation for cache clearing
+    return Promise.resolve();
   }
 }

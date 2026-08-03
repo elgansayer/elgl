@@ -254,6 +254,7 @@ export class NotificationsService {
       | 'reply_comment'
       | 'profile_visit'
       | 'mention_comment'
+      | 'mention_chat'
       | 'system',
     entityId?: string,
     message?: string,
@@ -280,6 +281,7 @@ export class NotificationsService {
         reply_comment: 'New Reply',
         profile_visit: 'Profile Visited',
         mention_comment: 'Mentioned in Comment',
+        mention_chat: 'Mentioned in Chat',
         system: 'System Alert',
       };
       const bodyMap: Record<string, string> = {
@@ -290,6 +292,7 @@ export class NotificationsService {
         reply_comment: message || 'Someone replied to your comment',
         profile_visit: 'Someone viewed your profile',
         mention_comment: message || 'Someone mentioned you in a comment',
+        mention_chat: message || 'Someone mentioned you in a chat',
         system: message || 'You have a new system alert',
       };
 
@@ -306,6 +309,9 @@ export class NotificationsService {
         case 'reply_comment':
         case 'mention_comment':
           pushCategory = 'groups';
+          break;
+        case 'mention_chat':
+          pushCategory = 'direct_messages';
           break;
         default:
           // system / other – always send

@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { AudioRoomsService } from './audio-rooms.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
@@ -46,6 +50,7 @@ describe('AudioRoomsService', () => {
       order: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
       range: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn(),
       single: jest.fn(),
     };
 
@@ -1054,6 +1059,89 @@ describe('AudioRoomsService', () => {
       await expect(
         service.disableBiometricLock('host-1', { room_id: 'non-existent' }),
       ).rejects.toThrow(new NotFoundException('Room not found'));
+    });
+  });
+
+  describe('tipHost', () => {
+    it('should throw NotFoundException when room not found', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      await expect(
+        service.tipHost('user-1', { room_id: 'room-1', amount_coins: 10 }),
+      ).rejects.toThrow(new NotFoundException('Room not found'));
+    });
+
+    it('should throw BadRequestException when tipping yourself', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        is_active: true,
+      };
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: roomRow,
+        error: null,
+      });
+
+      await expect(
+        service.tipHost('host-1', { room_id: 'room-1', amount_coins: 10 }),
+      ).rejects.toThrow(new BadRequestException('You cannot tip yourself'));
+    });
+
+    it('should throw BadRequestException when insufficient coins', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        is_active: true,
+      };
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: roomRow,
+        error: null,
+      });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { coins_balance: 5 },
+        error: null,
+      });
+
+      await expect(
+        service.tipHost('user-1', { room_id: 'room-1', amount_coins: 10 }),
+      ).rejects.toThrow('Insufficient coins');
+    });
+
+    it('should process tip and return success details', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        is_active: true,
+      };
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: roomRow,
+        error: null,
+      });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { coins_balance: 100 },
+        error: null,
+      });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { coins_balance: 50 },
+        error: null,
+      });
+      const tipRow = { id: 'tip-1', amount_coins: 10 };
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: tipRow,
+        error: null,
+      });
+
+      const result = await service.tipHost('user-1', {
+        room_id: 'room-1',
+        amount_coins: 10,
+      });
+
+      expect(result.tip_id).toBe('tip-1');
+      expect(result.receiver_new_balance).toBe(60);
+      expect(mockQueryBuilder.update).toHaveBeenCalledTimes(2);
     });
   });
 });

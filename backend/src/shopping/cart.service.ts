@@ -27,12 +27,15 @@ export class CartService {
   }
 
   addItem(userId: string, itemId: string, quantity: number): CartItem[] {
+    if (quantity <= 0 || !Number.isInteger(quantity)) {
+      throw new BadRequestException('Quantity must be a positive integer');
+    }
     const item = this.shoppingService.getItem(itemId);
     if (!item) {
-      throw new NotFoundException(`Item ${itemId} not found`);
+      throw new NotFoundException('Item not found');
     }
     if (item.stock < quantity) {
-      throw new BadRequestException(`Insufficient stock for item ${itemId}`);
+      throw new BadRequestException('Insufficient stock');
     }
 
     const items = this.carts.get(userId) ?? [];
@@ -52,14 +55,19 @@ export class CartService {
   }
 
   removeItem(userId: string, itemId: string, quantity: number): CartItem[] {
+    if (quantity <= 0 || !Number.isInteger(quantity)) {
+      throw new BadRequestException('Quantity must be a positive integer');
+    }
     const items = this.carts.get(userId) ?? [];
     const existing = items.find((i) => i.itemId === itemId);
-    if (existing) {
+    if (!existing) {
+      return items; // nothing to remove
+    }
+    if (quantity >= existing.quantity) {
+      const idx = items.indexOf(existing);
+      if (idx !== -1) items.splice(idx, 1);
+    } else {
       existing.quantity -= quantity;
-      if (existing.quantity <= 0) {
-        const idx = items.indexOf(existing);
-        if (idx !== -1) items.splice(idx, 1);
-      }
     }
     return items;
   }
@@ -72,19 +80,31 @@ export class CartService {
       return { success: false, message: 'Cart is empty.' };
     }
 
+    // Validate stock availability before any deduction
+    for (const item of items) {
+      const catalogItem = this.shoppingService.getItem(item.itemId);
+      if (!catalogItem || catalogItem.stock < item.quantity) {
+        throw new BadRequestException(
+          `Insufficient stock for item ${item.name}`,
+        );
+      }
+    }
+
     const total = items.reduce(
       (sum, item) => sum + item.unitPrice * item.quantity,
       0,
     );
     await this.monetisationService.deductCoins(userId, total);
 
-    // Decrement stock for each purchased item
+    // Decrement stock after successful coin deduction
     for (const item of items) {
       const ok = this.shoppingService.decrementStock(
         item.itemId,
         item.quantity,
       );
       if (!ok) {
+        // This should not happen because we validated earlier,
+        // but keep guard for safety.
         throw new BadRequestException(
           `Insufficient stock for item ${item.name}`,
         );

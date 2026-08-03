@@ -445,15 +445,12 @@ describe('UsersService', () => {
     });
   });
 
-  describe('getStatusViewers', () => {
+  describe('getStatusViewersByStatusId', () => {
     it('should return empty list when query succeeds', async () => {
-      mockSupabaseClient.from.mockReturnValueOnce({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({ data: [], error: null }),
-      });
-      await expect(service.getStatusViewers('user-1')).resolves.toEqual([]);
+      mockQueryBuilder.limit.mockResolvedValue({ data: [], error: null });
+      await expect(
+        service.getStatusViewersByStatusId('user-1', 'status-1'),
+      ).resolves.toEqual([]);
     });
   });
 
@@ -566,7 +563,7 @@ describe('UsersService', () => {
   describe('getBadges', () => {
     it('should include VIP badge when profile is VIP', async () => {
       mockQueryBuilder.single.mockResolvedValue({
-        data: null,
+        data: { id: 'user-1', is_vip: true },
         error: null,
       });
       const badges = await service.getBadges('user-1');

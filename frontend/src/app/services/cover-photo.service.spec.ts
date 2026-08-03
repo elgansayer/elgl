@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { CoverPhotoService } from './cover-photo.service';
 
 describe('CoverPhotoService', () => {
@@ -8,8 +9,11 @@ describe('CoverPhotoService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
-      providers: [CoverPhotoService],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        CoverPhotoService,
+      ],
     });
     service = TestBed.inject(CoverPhotoService);
     httpMock = TestBed.inject(HttpTestingController);
@@ -25,13 +29,13 @@ describe('CoverPhotoService', () => {
 
     const uploadPromise = service.upload(fakeBlob);
 
-    const req = httpMock.expectOne('/api/users/cover-photo');
+    const req = httpMock.expectOne(`${environment.apiUrl}/users/cover-photo`);
     expect(req.request.method).toBe('POST');
     expect(req.request.body.has('cover')).toBe(true);
 
     req.flush({ url: expectedUrl });
 
-    await expect(uploadPromise).resolves.toBe(expectedUrl);
+    await expectAsync(uploadPromise).toBeResolvedTo(expectedUrl);
   });
 
   it('should reject on network error', async () => {
@@ -41,6 +45,12 @@ describe('CoverPhotoService', () => {
     const req = httpMock.expectOne('/api/users/cover-photo');
     req.error(new ProgressEvent('Network error'));
 
-    await expect(uploadPromise).rejects.toThrow();
+    let caught: unknown;
+    try {
+      await uploadPromise;
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeDefined();
   });
 });

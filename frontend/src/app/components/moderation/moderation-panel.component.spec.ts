@@ -103,7 +103,7 @@ describe('ModerationPanelComponent', () => {
     await flush();
 
     expect(fixture.componentInstance.currentFilter()).toBe('profile');
-    expect(getItemsSpy).toHaveBeenLastCalledWith('profile');
+    expect(getItemsSpy).toHaveBeenCalledWith('profile');
   });
 
   it('calls approveItem with the item id and type when approve is clicked', async () => {

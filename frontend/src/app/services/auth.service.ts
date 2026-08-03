@@ -355,12 +355,14 @@ export class AuthService {
     }
   }
 
-  async disableTwoFactor(token: string): Promise<boolean> {
+
+
+  async disableTwoFactor(): Promise<boolean> {
     const accessToken = this.currentSession()?.access_token;
     const res = await lastValueFrom(
       this.http.post<{ success: boolean }>(
         `${this.apiUrl}/auth/two-factor/disable`,
-        { token },
+        {},
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -455,7 +457,7 @@ export class AuthService {
     const accessToken = this.currentSession()?.access_token;
     const res = await lastValueFrom(
       this.http.post<{ url: string }>(
-        `${this.apiUrl}/transfer/generate`,
+        `${this.apiUrl}/auth/transfer/generate`,
         {},
         {
           headers: {
@@ -474,8 +476,8 @@ export class AuthService {
   async consumeDeviceLink(token: string): Promise<{ swapToken: string }> {
     return await lastValueFrom(
       this.http.post<{ swapToken: string }>(
-        `${this.apiUrl}/transfer/consume`,
-        { token },
+        `${this.apiUrl}/auth/transfer/consume`,
+        { token: token },
       ),
     );
   }
@@ -491,7 +493,7 @@ export class AuthService {
           refresh_token: string;
           user_id: string;
         }>(
-          `${this.apiUrl}/transfer/swap`,
+          `${this.apiUrl}/auth/transfer/swap`,
           { swapToken },
         ),
       );
@@ -520,7 +522,7 @@ export class AuthService {
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
     await lastValueFrom(
-      this.http.post(`${this.apiUrl}/auth/reset-password`, { token, newPassword }),
+      this.http.post(`${this.apiUrl}/auth/reset-password`, { token: token, newPassword: newPassword }),
     );
   }
 

@@ -93,6 +93,12 @@ export class GroupsService {
     );
   }
 
+  joinGroupByCode(code: string): Promise<{ success: boolean }> {
+    return firstValueFrom(
+      this.http.post<{ success: boolean }>(`${this.apiUrl}/join-by-code`, { code }),
+    );
+  }
+
   sendAnnouncement(groupId: string, message: string): Promise<{ success: boolean }> {
     return firstValueFrom(
       this.http.post<{ success: boolean }>(`${this.apiUrl}/${groupId}/announcement`, { message }),
@@ -105,9 +111,20 @@ export class GroupsService {
     );
   }
 
-  joinByInviteCode(code: string): Promise<{ success: boolean }> {
+  createAnnouncementGroup(name: string, memberIds: string[]): Promise<ChatGroup> {
     return firstValueFrom(
-      this.http.post<{ success: boolean }>(`${this.apiUrl}/join-by-code`, { code }),
+      this.http.post<ChatGroup>(`${this.apiUrl}/announcement-group`, {
+        name,
+        memberIds,
+      }),
+    );
+  }
+
+  broadcastMessage(groupId: string, message: string): Promise<{ success: boolean }> {
+    return firstValueFrom(
+      this.http.post<{ success: boolean }>(`${this.apiUrl}/${groupId}/broadcast`, {
+        message,
+      }),
     );
   }
 }

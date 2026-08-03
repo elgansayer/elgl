@@ -26,3 +26,12 @@ export class ChatMessageEvent {
     public readonly preview: string,
   ) {}
 }
+
+export class ChatMentionEvent {
+  constructor(
+    public readonly actorId: string,
+    public readonly mentionedUserId: string,
+    public readonly roomId: string,
+    public readonly messagePreview?: string,
+  ) {}
+}

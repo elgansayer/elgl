@@ -172,6 +172,83 @@ describe('ChatRoomComponent (threaded replies)', () => {
     vi.useRealTimers();
   });
 
+  describe('@mentions', () => {
+    beforeEach(async () => {
+      // Let the component's own async initialisation (loadParticipants, etc.) settle first,
+      // otherwise it can overwrite the participants we set below for the test.
+      await fixture.whenStable();
+      component.participants.set([
+        { user_id: 'user-2', user: { id: 'user-2', display_name: 'Alice', avatar_url: null } },
+        { user_id: 'user-3', user: { id: 'user-3', display_name: 'Alistair', avatar_url: null } },
+        { user_id: 'user-1', user: { id: 'user-1', display_name: 'Me', avatar_url: null } },
+      ]);
+    });
+
+    function inputEvent(value: string, cursor: number): Event {
+      const target = document.createElement('input');
+      target.value = value;
+      target.setSelectionRange(cursor, cursor);
+      return { target } as unknown as Event;
+    }
+
+    it('shows matching participants once an "@" trigger is typed, excluding the current user', () => {
+      component.onComposerInput(inputEvent('Hi @Al', 6));
+
+      const suggestions = component.mentionSuggestions();
+      expect(suggestions.map((s) => s.user?.display_name)).toEqual(['Alice', 'Alistair']);
+    });
+
+    it('clears suggestions once the trigger is no longer active', () => {
+      component.onComposerInput(inputEvent('Hi @Al', 6));
+      expect(component.mentionSuggestions().length).toBeGreaterThan(0);
+
+      component.onComposerInput(inputEvent('Hi @Al ', 7));
+      expect(component.mentionSuggestions()).toEqual([]);
+    });
+
+    it('selectMention replaces the in-progress query with the chosen display name', () => {
+      component.textInput = 'Hi @Al';
+      component.onComposerInput(inputEvent('Hi @Al', 6));
+
+      component.selectMention(component.mentionSuggestions()[0]);
+
+      expect(component.textInput).toBe('Hi @Alice ');
+      expect(component.mentionSuggestions()).toEqual([]);
+    });
+
+    it('ArrowDown/ArrowUp move the active suggestion without sending the message', () => {
+      component.onComposerInput(inputEvent('Hi @Al', 6));
+
+      component.onComposerKeydown({ key: 'ArrowDown', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+      expect(component.mentionActiveIndex()).toBe(1);
+
+      component.onComposerKeydown({ key: 'ArrowUp', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+      expect(component.mentionActiveIndex()).toBe(0);
+
+      expect(mockChatService.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('Enter selects the active suggestion instead of sending when the list is open', () => {
+      component.textInput = 'Hi @Al';
+      component.onComposerInput(inputEvent('Hi @Al', 6));
+
+      component.onComposerKeydown({ key: 'Enter', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+
+      expect(component.textInput).toBe('Hi @Alice ');
+      expect(mockChatService.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('Enter sends the message when no mention list is open', () => {
+      component.textInput = 'Just a message';
+
+      component.onComposerKeydown({ key: 'Enter', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+
+      expect(mockChatService.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ text_content: 'Just a message' }),
+      );
+    });
+  });
+
   describe('chat lock', () => {
     it('opening a locked room hides the conversation behind pendingUnlock', async () => {
       mockChatService.getRooms.mockResolvedValue([

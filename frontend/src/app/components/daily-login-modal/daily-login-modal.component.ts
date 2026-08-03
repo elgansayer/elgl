@@ -10,10 +10,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
         class="bg-surface-200 rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-surface-100 text-center space-y-4"
       >
         <div class="text-6xl mb-2">🎁</div>
-        <h3 class="text-2xl font-black text-text-primary">{{ 'dailyLoginModal.title' | t }}</h3>
-        <p class="text-text-secondary">
-          {{ 'dailyLoginModal.body' | t: { coins: coins() } }}
-        </p>
+        <h3 class="text-2xl font-black text-text-primary">{{ 'daily_login_modal.title' | t }}</h3>
+        <p class="text-text-secondary">{{ 'daily_login_modal.message' | t }}</p>
+        <p class="text-amber-500 text-xl font-extrabold">{{ coins() }} coins</p>
         <button
           (click)="closed.emit()"
           class="w-full py-3 mt-4 bg-primary hover:bg-primary-dark text-white rounded-xl font-extrabold shadow transition-all"

@@ -313,7 +313,13 @@ describe('EconomyService', () => {
     });
 
     it('should throw BadRequestException when sender has insufficient coins', async () => {
-      const giftRow = { id: 'gift-1', name: 'Rocket', cost_coins: 1000 };
+      const giftRow = {
+        id: 'gift-1',
+        name: 'Rocket',
+        cost_coins: 1000,
+        icon: 'rocket.png',
+        animation_type: 'launch',
+      };
       // 1st single() call: get gift
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: giftRow,

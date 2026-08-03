@@ -18,6 +18,12 @@ type Database = {
         Update: { id?: string; audio_intro_url?: string | null; is_vip?: boolean; vip_tier?: string; is_serious_learner?: boolean; auto_download_preference?: string };
         Relationships: [];
       };
+      status_views: {
+        Row: { id: string; status_id: string; viewer_id: string; created_at?: string };
+        Insert: { id?: string; status_id: string; viewer_id: string; created_at?: string };
+        Update: { id?: string; status_id?: string; viewer_id?: string; created_at?: string };
+        Relationships: [];
+      };
     };
     Views: Record<string, { Row: Record<string, unknown>; Relationships: [] }>;
     Functions: Record<string, { Args: Record<string, unknown>; Returns: unknown }>;
@@ -55,7 +61,6 @@ export class SupabaseService {
       .select('*')
       .order('joined_at', { ascending: false })
       .limit(limit)
-      .returns<UserProfile[]>();
 
     if (error) {
       console.warn('Failed to fetch recently joined native speakers', error);
@@ -86,15 +91,22 @@ export class SupabaseService {
   async getLinkedAccounts(): Promise<{ email: boolean; google: boolean; apple: boolean }> {
     const { data, error } = await this.supabase.auth.getUser();
 
-    if (error || !data) {
+    if (error || !data?.user) {
       throw new Error('Failed to fetch linked accounts');
     }
 
-    const identities = data?.user?.identities ?? [];
+    const identities: unknown[] = data.user.identities ?? [];
+
+    const hasProvider = (provider: string): boolean =>
+      identities.some((id) => {
+        if (id === null || typeof id !== 'object') return false;
+        return 'provider' in id && id.provider === provider;
+      });
+
     return {
-      email: identities.some((id) => id.provider === 'email'),
-      google: identities.some((id) => id.provider === 'google'),
-      apple: identities.some((id) => id.provider === 'apple'),
+      email: hasProvider('email'),
+      google: hasProvider('google'),
+      apple: hasProvider('apple'),
     };
   }
 
@@ -103,14 +115,18 @@ export class SupabaseService {
       .from('user_streaks')
       .select('streak_count')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.warn('Failed to fetch daily streak', error);
       return 0;
     }
 
-    return data?.streak_count ?? 0;
+    if (data && typeof data.streak_count === 'number') {
+      return data.streak_count;
+    }
+
+    return 0;
   }
 
   async updateDailyStreak(userId: string, streakCount: number): Promise<void> {
@@ -132,7 +148,8 @@ export class SupabaseService {
       .from('users')
       .select('audio_intro_url')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
+
     if (error) {
       console.warn('Failed to fetch audio_intro_url', error);
       return null;
@@ -147,7 +164,7 @@ export class SupabaseService {
       .from('users')
       .select('is_vip, vip_tier, is_serious_learner')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.warn('Failed to fetch earned badges', error);
@@ -269,6 +286,36 @@ export class SupabaseService {
   }
 
   async getAutoDownloadPreference(): Promise<'wifi' | 'cellular'> {
-    return 'wifi';
+    return Promise.resolve('wifi');
+  }
+
+  async getStatusViewers(statusId: string): Promise<UserProfile[]> {
+    const { data: statusViews, error: statusError } = await this.supabase
+      .from('status_views')
+      .select('viewer_id')
+      .eq('status_id', statusId)
+      .returns<{ viewer_id: string }[]>();
+
+    if (statusError) {
+      console.warn('Failed to fetch status viewers', statusError);
+      return [];
+    }
+
+    const viewerIds = (statusViews ?? []).map((row) => row.viewer_id);
+    if (viewerIds.length === 0) {
+      return [];
+    }
+
+    const { data: users, error: usersError } = await this.supabase
+      .from('users')
+      .select('*')
+      .in('id', viewerIds)
+      .returns<UserProfile[]>();
+
+    if (usersError) {
+      console.warn('Failed to fetch viewer profiles', usersError);
+      return [];
+    }
+    return users ?? [];
   }
 }

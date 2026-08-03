@@ -1,15 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { vi } from 'vitest';
 import { CentrifugeService } from './centrifuge.service';
 import { AuthService } from './auth.service';
 
 class MockSubscription {
   private listeners = new Map<string, Array<(...args: unknown[]) => void>>();
 
-  subscribe = vi.fn();
-  unsubscribe = vi.fn();
-  publish = vi.fn().mockResolvedValue(undefined);
+  subscribe = jasmine.createSpy('subscribe');
+  unsubscribe = jasmine.createSpy('unsubscribe');
+  publish = jasmine.createSpy('publish').and.returnValue(Promise.resolve());
 
   on(event: string, cb: (...args: unknown[]) => void): this {
     const existing = this.listeners.get(event) ?? [];
@@ -40,10 +39,10 @@ class MockSubscription {
 
 class MockCentrifuge {
   state = 'connected';
-  on = vi.fn();
-  connect = vi.fn();
-  disconnect = vi.fn();
-  publish = vi.fn();
+  on = jasmine.createSpy('on');
+  connect = jasmine.createSpy('connect');
+  disconnect = jasmine.createSpy('disconnect');
+  publish = jasmine.createSpy('publish');
   private subs = new Map<string, MockSubscription>();
 
   newSubscription(channel: string): MockSubscription {
@@ -53,12 +52,8 @@ class MockCentrifuge {
   }
 }
 
-vi.mock('centrifuge', () => ({
-  Centrifuge: vi.fn(),
-}));
-
 class MockAuthService {
-  getAccessToken = vi.fn().mockReturnValue('token');
+  getAccessToken = jasmine.createSpy('getAccessToken').and.returnValue('token');
 }
 
 describe('CentrifugeService', () => {
@@ -91,8 +86,8 @@ describe('CentrifugeService', () => {
   });
 
   it('does not stack duplicate publication handlers when re-subscribing to the same channel', () => {
-    const first = vi.fn();
-    const second = vi.fn();
+    const first = jasmine.createSpy('first');
+    const second = jasmine.createSpy('second');
 
     const sub = service.subscribe('chat:room-1', first) as unknown as MockSubscription;
     service.subscribe('chat:room-1', second);
@@ -106,14 +101,13 @@ describe('CentrifugeService', () => {
   });
 
   it('only calls the message handler once per publication', () => {
-    const handler = vi.fn();
+    const handler = jasmine.createSpy('handler');
     const sub = service.subscribe('chat:room-1', handler) as unknown as MockSubscription;
 
     sub.emit('publication', { data: 'first' });
     sub.emit('publication', { data: 'second' });
 
     expect(handler).toHaveBeenCalledTimes(2);
-    expect(handler).toHaveBeenNthCalledWith(1, 'first');
-    expect(handler).toHaveBeenNthCalledWith(2, 'second');
+    expect(handler.calls.allArgs()).toEqual([['first'], ['second']]);
   });
 });

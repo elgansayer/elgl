@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { AppleNotificationService } from './apple-notification.service';
 import { MonetisationService } from './monetisation.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { SubscriptionPlansService } from './services/subscription-plans.service';
 
 function base64url(input: object | string): string {
   const json = typeof input === 'string' ? input : JSON.stringify(input);
@@ -34,11 +35,18 @@ function buildSignedPayload(
 
 describe('AppleNotificationService', () => {
   let service: AppleNotificationService;
-  let mockSupabaseClient: any;
-  let mockQueryBuilder: any;
+  let mockSupabaseClient: { from: jest.Mock };
+  let mockQueryBuilder: { upsert: jest.Mock };
   let monetisationService: { updateVipStatusFromWebhook: jest.Mock };
 
-  const transactionInfo = {
+  const transactionInfo: {
+    originalTransactionId: string;
+    productId: string;
+    appAccountToken: string;
+    transactionId: string;
+    expiresDate: number;
+    purchaseDate: number;
+  } = {
     originalTransactionId: 'orig-txn-1',
     productId: 'com.hellotalk.consumer.monthly',
     appAccountToken: 'user-1',
@@ -58,6 +66,15 @@ describe('AppleNotificationService', () => {
       updateVipStatusFromWebhook: jest.fn().mockResolvedValue(undefined),
     };
 
+    const subscriptionPlansService = {
+      getTierByProductId: jest.fn((productId: string) => {
+        if (productId.includes('developer')) {
+          return 'developer_20_ukp_26_usd';
+        }
+        return undefined;
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AppleNotificationService,
@@ -72,6 +89,10 @@ describe('AppleNotificationService', () => {
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
           },
+        },
+        {
+          provide: SubscriptionPlansService,
+          useValue: subscriptionPlansService,
         },
         {
           provide: MonetisationService,

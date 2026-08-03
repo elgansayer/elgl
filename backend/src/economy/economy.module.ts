@@ -4,21 +4,11 @@ import { ChatModule } from '../chat/chat.module';
 import { UsersModule } from '../users/users.module';
 import { EconomyController } from './economy.controller';
 import { EconomyService } from './economy.service';
-import { AppleNotificationService } from './apple-notification.service';
-import { GooglePlayNotificationService } from './google-play-notification.service';
 
 @Module({
   imports: [UsersModule, ChatModule, HttpModule],
   controllers: [EconomyController],
-  providers: [
-    EconomyService,
-    AppleNotificationService,
-    GooglePlayNotificationService,
-  ],
-  exports: [
-    EconomyService,
-    AppleNotificationService,
-    GooglePlayNotificationService,
-  ],
+  providers: [EconomyService],
+  exports: [EconomyService],
 })
 export class EconomyModule {}

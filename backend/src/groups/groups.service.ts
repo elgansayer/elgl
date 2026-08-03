@@ -82,6 +82,14 @@ export interface GroupResource {
   created_at: string;
 }
 
+export interface CommunityRecord {
+  id: string;
+  name: string;
+  description: string | null;
+  owner_id: string;
+  created_at: string;
+}
+
 @Injectable()
 export class GroupsService {
   constructor(
@@ -143,8 +151,7 @@ export class GroupsService {
     const { error } = await supabase
       .from('group_members')
       .delete()
-      .eq('group_id', groupId)
-      .eq('user_id', memberId);
+      .match({ group_id: groupId, user_id: memberId });
     if (error) {
       throw new NotFoundException('Failed to remove member');
     }
@@ -348,8 +355,8 @@ export class GroupsService {
         interest:interests(name)`,
       )
       .eq('id', groupId)
-      .single()
-      .returns<GroupInfoRow>();
+      .returns<GroupInfoRow>()
+      .single();
 
     if (error || !data) {
       throw new NotFoundException('Group not found');
@@ -548,5 +555,132 @@ export class GroupsService {
     if (error) {
       throw new NotFoundException('Failed to delete resource');
     }
+  }
+
+  // --- Community management helpers ---
+  async createCommunity(
+    ownerId: string,
+    name: string,
+    description?: string,
+  ): Promise<CommunityRecord> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('communities')
+      .insert({
+        name,
+        description: description ?? null,
+        owner_id: ownerId,
+      })
+      .select()
+      .single();
+    if (error || !data) {
+      throw new NotFoundException('Failed to create community');
+    }
+    return data;
+  }
+
+  async getMyCommunities(userId: string): Promise<CommunityRecord[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('communities')
+      .select('*')
+      .eq('owner_id', userId)
+      .returns<CommunityRecord[]>();
+    if (error) {
+      throw new NotFoundException('Failed to fetch communities');
+    }
+    return data || [];
+  }
+
+  async getCommunity(communityId: string): Promise<CommunityRecord> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('communities')
+      .select('*')
+      .eq('id', communityId)
+      .returns<CommunityRecord>()
+      .single();
+    if (error || !data) {
+      throw new NotFoundException('Community not found');
+    }
+    return data;
+  }
+
+  async updateCommunity(
+    communityId: string,
+    updates: { name?: string; description?: string },
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const patch: Record<string, unknown> = {};
+    if (updates.name !== undefined) patch.name = updates.name;
+    if (updates.description !== undefined) {
+      patch.description = updates.description;
+    }
+    const { error } = await supabase
+      .from('communities')
+      .update(patch)
+      .eq('id', communityId);
+    if (error) {
+      throw new NotFoundException('Failed to update community');
+    }
+  }
+
+  async deleteCommunity(communityId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    // Detach all groups that belong to this community
+    const { error: groupError } = await supabase
+      .from('groups')
+      .update({ community_id: null })
+      .eq('community_id', communityId);
+    if (groupError) {
+      throw new NotFoundException('Failed to detach community groups');
+    }
+    const { error } = await supabase
+      .from('communities')
+      .delete()
+      .eq('id', communityId);
+    if (error) {
+      throw new NotFoundException('Failed to delete community');
+    }
+  }
+
+  async addGroupToCommunity(
+    communityId: string,
+    groupId: string,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { data: community } = await supabase
+      .from('communities')
+      .select('id')
+      .eq('id', communityId)
+      .maybeSingle();
+    if (!community) {
+      throw new NotFoundException('Community not found');
+    }
+    const { data: group } = await supabase
+      .from('groups')
+      .select('id')
+      .eq('id', groupId)
+      .maybeSingle();
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+    await this.setCommunityId(groupId, communityId);
+  }
+
+  async removeGroupFromCommunity(
+    communityId: string,
+    groupId: string,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { data: group } = await supabase
+      .from('groups')
+      .select('community_id')
+      .eq('id', groupId)
+      .maybeSingle();
+    if (!group || group.community_id !== communityId) {
+      throw new NotFoundException('Group not in this community');
+    }
+    await this.setCommunityId(groupId, null);
   }
 }

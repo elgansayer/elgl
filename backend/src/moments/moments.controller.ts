@@ -42,6 +42,17 @@ export class MomentsController {
     return await this.momentsService.createMoment(user.id, dto);
   }
 
+  @Get('feed')
+  async getFeed(
+    @CurrentUser() user: User | null,
+    @Query('filter') filter?: 'All' | 'Classmates' | 'Following',
+    @Query('lang') lang?: string,
+  ): Promise<MomentRecord[]> {
+    if (!user) return [];
+    const activeFilter = filter ?? 'All';
+    return await this.momentsService.getFeed(user.id, activeFilter, lang);
+  }
+
   @Get('lifetime-counts')
   async getLifetimeCounts(@CurrentUser() user: User | null): Promise<{
     translations: number;
@@ -50,6 +61,14 @@ export class MomentsController {
   } | null> {
     if (!user) return null;
     return await this.momentsService.getLifetimeCounts(user.id);
+  }
+
+  @Get('stories')
+  async getActiveStories(
+    @CurrentUser() user: User | null,
+  ): Promise<MomentRecord[]> {
+    if (!user) return [];
+    return await this.momentsService.getActiveStories(user.id);
   }
 
   @Post('upload-voice')

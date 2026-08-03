@@ -107,7 +107,7 @@ describe('ChatController', () => {
 
       const result = controller.getConnectionToken(mockUser());
       expect(chatService.generateConnectionToken).toHaveBeenCalledWith(
-        'user-1',
+        mockUser().id,
       );
       expect(result).toEqual(mockToken);
     });
@@ -515,7 +515,10 @@ describe('ChatController', () => {
       (chatService.getGroupMembers as jest.Mock).mockResolvedValue(members);
 
       const result = await controller.getRoomMembers('room-1', mockUser());
-      expect(chatService.getGroupMembers).toHaveBeenCalledWith('room-1');
+      expect(chatService.getGroupMembers).toHaveBeenCalledWith(
+        'room-1',
+        expect.any(String),
+      );
       expect(result).toEqual([
         { user_id: 'u1', display_name: 'Alice', avatar_url: 'url-alice' },
         { user_id: 'u2', display_name: 'Bob', avatar_url: null },

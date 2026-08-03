@@ -42,10 +42,10 @@ export interface UserProfile {
   location_privacy?: 'exact' | 'region';
   privacy_hide_online_status: boolean;
   privacy_hide_vip_status: boolean;
-  privacy_last_seen?: string;
-  privacy_profile_photo?: string;
-  privacy_about_info?: string;
-  privacy_status?: string;
+  privacy_last_seen?: 'everyone' | 'vips_only' | 'hidden';
+  privacy_profile_photo?: 'everyone' | 'vips_only' | 'hidden';
+  privacy_about_info?: 'everyone' | 'vips_only' | 'hidden';
+  privacy_status?: 'everyone' | 'vips_only' | 'hidden';
   incognito_visits?: boolean;
   do_not_disturb?: boolean;
   quiet_hours_start?: string;
@@ -84,6 +84,13 @@ export interface UserProfile {
   away_message?: string;
   followers_count?: number;
   following_count?: number;
+  ai_usage_count?: number; // Tracks AI usage for non-VIP users
+  max_target_languages?: number; // Maximum target languages for non-VIP users
+  location_spoofing_enabled?: boolean; // Indicates if location spoofing is enabled
+  incognito_profile_views?: boolean; // Indicates if incognito profile views are enabled
+  custom_avatar_url?: string; // Custom profile picture URL
+  about_status?: string; // Custom About status
+  notification_preferences?: NotificationPreferences;
 }
 
 export interface BusinessCatalogItem {
@@ -93,6 +100,11 @@ export interface BusinessCatalogItem {
   price?: string;
   currency?: string;
   image_url?: string;
+}
+
+export interface NotificationPreferences {
+  custom_tone_url?: string;
+  vibration_pattern?: number[];
 }
 
 export interface ProfileVisitorSummary {

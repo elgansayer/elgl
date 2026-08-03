@@ -11,6 +11,7 @@ import { SubscriptionPlansController } from './controllers/subscription-plans.co
 import { SubscriptionPlansService } from './services/subscription-plans.service';
 import { StripeController } from './controllers/stripe.controller';
 import { StripeService } from './services/stripe.service';
+import { VipGuard } from './guards/vip.guard';
 
 @Module({
   imports: [HttpModule],
@@ -28,6 +29,7 @@ import { StripeService } from './services/stripe.service';
     GooglePlayNotificationService,
     SubscriptionPlansService,
     StripeService,
+    VipGuard,
   ],
   exports: [
     MonetisationService,

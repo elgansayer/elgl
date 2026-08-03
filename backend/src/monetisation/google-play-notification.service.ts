@@ -12,6 +12,7 @@ import * as jwt from 'jsonwebtoken';
 import jwksClient from 'jwks-rsa';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MonetisationService } from './monetisation.service';
+import { SubscriptionPlansService } from './services/subscription-plans.service';
 
 // Google signs every Cloud Pub/Sub push request with an OIDC ID token in the
 // `Authorization: Bearer <token>` header - see
@@ -68,12 +69,13 @@ export class GooglePlayNotificationService {
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
     private readonly supabaseService: SupabaseService,
+    private readonly subscriptionPlansService: SubscriptionPlansService,
     @Inject(forwardRef(() => MonetisationService))
     private readonly monetisationService: MonetisationService,
   ) {}
 
   async handleNotification(
-    payload: any,
+    payload: unknown,
     authorizationHeader?: string,
   ): Promise<{ received: boolean; status: string }> {
     this.logger.log('Received Google Play Developer Notification');
@@ -124,9 +126,9 @@ export class GooglePlayNotificationService {
       } else {
         this.logger.log('Unhandled Google Play notification type');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error(
-        `Failed to process Google notification: ${(error as Error).message}`,
+        `Failed to process Google notification: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
       // Don't throw - return success to avoid retries
       return { received: true, status: 'error' };
@@ -353,9 +355,9 @@ export class GooglePlayNotificationService {
       );
 
       return response.data as GooglePlaySubscriptionPurchase;
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error(
-        `Failed to get subscription purchase details: ${(error as Error).message}`,
+        `Failed to get subscription purchase details: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
       return null;
     }
@@ -404,12 +406,9 @@ export class GooglePlayNotificationService {
   }
 
   private mapSubscriptionIdToTier(subscriptionId: string): string {
-    if (
-      subscriptionId.includes('developer') ||
-      subscriptionId.includes('Developer')
-    ) {
-      return 'developer_20_ukp_26_usd';
-    }
-    return 'consumer_8_ukp_10_usd';
+    return (
+      this.subscriptionPlansService.getTierByProductId(subscriptionId) ??
+      'consumer_8_ukp_10_usd'
+    );
   }
 }

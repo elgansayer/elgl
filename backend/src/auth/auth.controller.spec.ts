@@ -1,4 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 
 describe('AuthController (unit)', () => {
@@ -60,17 +59,18 @@ describe('AuthController (unit)', () => {
       authService.changePassword.mockResolvedValue(undefined);
 
       const req = { user: { id: 'user-123' } };
-      const dto = { currentPassword: 'oldPass123', newPassword: 'newPass123' };
-      const result = await controller.changePassword(req, dto);
+      const result = await controller.changePassword(req, 'newPass123');
 
-      expect(authService.changePassword).toHaveBeenCalledWith('user-123', dto);
+      expect(authService.changePassword).toHaveBeenCalledWith(
+        'user-123',
+        'newPass123',
+      );
       expect(result).toEqual({ message: 'Password changed successfully' });
     });
 
     it('should throw an Unauthorized error when no user is present', async () => {
       const req = {};
-      const dto = { currentPassword: 'oldPass', newPassword: 'somePass' };
-      await expect(controller.changePassword(req, dto)).rejects.toThrow(
+      await expect(controller.changePassword(req, 'somePass')).rejects.toThrow(
         'Unauthorized',
       );
     });
@@ -127,12 +127,12 @@ describe('AuthController (unit)', () => {
       expect(result).toEqual({ success: false });
     });
 
-    it('should throw BadRequestException when the auth service throws', async () => {
+    it('should propagate the error when the auth service throws', async () => {
       authService.verifyTwoFactor.mockRejectedValue(new Error('Invalid token'));
 
-      await expect(
-        controller.verifyTwoFactor(req, '000000'),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(controller.verifyTwoFactor(req, '000000')).rejects.toThrow(
+        'Invalid token',
+      );
     });
   });
 

@@ -33,6 +33,16 @@ export class CreateAudioRoomDto {
   level?: string;
 }
 
+export class ArchiveRecordingDto {
+  @IsString()
+  @IsNotEmpty()
+  room_id!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  recording_url!: string;
+}
+
 export class JoinRoomDto {
   @IsString()
   @IsNotEmpty()

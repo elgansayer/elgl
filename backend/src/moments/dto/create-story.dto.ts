@@ -4,6 +4,7 @@ import {
   IsArray,
   IsNumber,
   IsEnum,
+  IsArray,
 } from 'class-validator';
 
 export class CreateStoryDto {
@@ -25,10 +26,18 @@ export class CreateStoryDto {
   target_language?: string;
 
   @IsOptional()
+  @IsEnum(['vip', 'non-vip'])
+  user_type?: 'vip' | 'non-vip'; // Enforce target language limits for non-VIP users
+
+  @IsOptional()
   @IsNumber()
   expireInHours?: number; // defaults to 24 in service
 
   @IsOptional()
   @IsString()
   voice_note_url?: string;
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  mentions?: string[];
 }

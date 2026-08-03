@@ -1,8 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { PATH_METADATA } from '@nestjs/common/constants';
 import { MonetisationController } from './monetisation.controller';
 import { MonetisationService } from './monetisation.service';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { VipGuard } from './guards/vip.guard';
 import { BadRequestException } from '@nestjs/common';
 
 describe('MonetisationController', () => {
@@ -41,6 +43,8 @@ describe('MonetisationController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .overrideGuard(VipGuard)
       .useValue({ canActivate: jest.fn().mockReturnValue(true) })
       .compile();
 
@@ -445,5 +449,27 @@ describe('MonetisationController', () => {
       ).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(response);
     });
+  });
+});
+
+describe('MonetisationController VIP upgrade lockdown (regression guard)', () => {
+  it('should never register a route path named "upgrade": VIP status must only change via verified payment webhooks', () => {
+    const routePaths = Object.getOwnPropertyNames(
+      MonetisationController.prototype,
+    )
+      .filter((name) => name !== 'constructor')
+      .map((name) =>
+        Reflect.getMetadata(
+          PATH_METADATA,
+          MonetisationController.prototype[
+            name as keyof typeof MonetisationController.prototype
+          ],
+        ),
+      );
+
+    expect(routePaths).not.toContain('upgrade');
+    expect(
+      Object.getOwnPropertyNames(MonetisationController.prototype),
+    ).not.toContain('upgrade');
   });
 });

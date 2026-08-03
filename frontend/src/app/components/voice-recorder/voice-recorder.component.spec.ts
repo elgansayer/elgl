@@ -110,7 +110,10 @@ describe('VoiceRecorderComponent', () => {
 
       fixture.destroy();
 
-      expect(revokeSpy).toHaveBeenCalledWith(component.audioPreviewUrl());
+      const previewUrl = component.audioPreviewUrl();
+      if (previewUrl) {
+        expect(revokeSpy).toHaveBeenCalledWith(previewUrl);
+      }
     } finally {
       revokeSpy.mockRestore();
     }

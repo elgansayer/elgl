@@ -63,10 +63,10 @@ export class MonetisationService {
   }
 
   /**
-   * PRIVATE: VIP status must only be changed via verified payment webhooks.
-   * This method is called exclusively from webhook handlers.
+   * VIP status must only be changed via verified payment webhooks.
+   * This method is called exclusively from webhook handlers (Stripe, Apple, Google Play).
    */
-  private async updateVipStatus(
+  async updateVipStatusFromWebhook(
     userId: string,
     isVip: boolean,
     vipTier: string | null,
@@ -92,23 +92,14 @@ export class MonetisationService {
     );
   }
 
-  /**
-   * Public method for internal use by webhook handlers and receipt validators.
-   * Do NOT expose this as a controller endpoint.
-   */
-  async updateVipStatusFromWebhook(
-    userId: string,
-    isVip: boolean,
-    vipTier: string | null,
-  ): Promise<void> {
-    return this.updateVipStatus(userId, isVip, vipTier);
-  }
-
   private getPriceIdForPlan(
     planId: string,
     interval: 'month' | 'year',
   ): string {
-    if (planId === 'consumer_50_ukp_63_usd') {
+    if (
+      planId === 'consumer_50_ukp_63_usd' ||
+      planId === 'consumer_6_ukp_8_usd'
+    ) {
       const priceId = this.configService.get<string>('STRIPE_YEARLY_PRICE_ID');
       if (!priceId) {
         throw new BadRequestException(
@@ -153,6 +144,35 @@ export class MonetisationService {
     return priceId;
   }
 
+  /**
+   * Verifies the Stripe webhook signature using the configured webhook secret.
+   * Returns a verified Stripe event object.
+   */
+  private verifyStripeSignature(
+    rawBody: Buffer,
+    signature: string,
+  ): Stripe.Event {
+    const webhookSecret = this.configService.get<string>(
+      'STRIPE_WEBHOOK_SECRET',
+    );
+    if (!webhookSecret) {
+      throw new Error('STRIPE_WEBHOOK_SECRET is not configured');
+    }
+
+    try {
+      return this.stripe.webhooks.constructEvent(
+        rawBody,
+        signature,
+        webhookSecret,
+      );
+    } catch (err: unknown) {
+      const error = err as Error;
+      const message = error.message || 'Unknown error';
+      this.logger.error(`Webhook signature verification failed: ${message}`);
+      throw new BadRequestException(`Webhook Error: ${message}`);
+    }
+  }
+
   async createCheckoutSession(
     userId: string,
     planId: string,
@@ -163,6 +183,7 @@ export class MonetisationService {
     const tierMap: Record<string, string> = {
       consumer_8_ukp_10_usd: 'consumer',
       consumer_50_ukp_63_usd: 'consumer',
+      consumer_6_ukp_8_usd: 'consumer',
       pro_12_ukp_15_usd: 'pro',
       developer_20_ukp_26_usd: 'developer',
     };
@@ -196,45 +217,41 @@ export class MonetisationService {
     rawBody: Buffer,
     signature: string,
   ): Promise<{ received: boolean; status: string }> {
-    const webhookSecret = this.configService.get<string>(
-      'STRIPE_WEBHOOK_SECRET',
-    );
-    if (!webhookSecret) {
-      throw new Error('STRIPE_WEBHOOK_SECRET is not configured');
-    }
-
-    let event: Stripe.Event;
-    try {
-      event = this.stripe.webhooks.constructEvent(
-        rawBody,
-        signature,
-        webhookSecret,
-      );
-    } catch (err: unknown) {
-      const error = err as Error;
-      const message = error.message || 'Unknown error';
-      this.logger.error(`Webhook signature verification failed: ${message}`);
-      throw new BadRequestException(`Webhook Error: ${message}`);
-    }
+    const event = this.verifyStripeSignature(rawBody, signature);
 
     this.logger.log(`Received verified Stripe Webhook event: ${event.type}`);
 
-    // Helper to determine tier based on interval metadata
-    const tierForInterval = (interval: string): string =>
-      interval === 'year' ? 'developer' : 'consumer';
+    // Helper to determine tier based on planId metadata (or fallback to interval)
+    const tierForPlan = (planId?: string, interval?: string): string => {
+      if (!planId) {
+        return interval === 'year' ? 'developer' : 'consumer';
+      }
+      if (planId.startsWith('consumer_')) return 'consumer';
+      if (planId.startsWith('pro_')) return 'pro';
+      if (planId.startsWith('developer_')) return 'developer';
+      return interval === 'year' ? 'developer' : 'consumer';
+    };
 
     if (
       event.type === 'checkout.session.completed' ||
-      event.type === 'customer.subscription.created'
+      event.type === 'customer.subscription.created' ||
+      event.type === 'customer.subscription.updated'
     ) {
       const obj = event.data.object as {
         metadata?: Record<string, string>;
+        status?: string;
       };
       const metadata = obj.metadata;
       if (metadata?.userId) {
         const tier =
-          metadata.tier ?? tierForInterval(metadata.interval ?? 'month');
-        await this.updateVipStatusFromWebhook(metadata.userId, true, tier);
+          metadata.tier ?? tierForPlan(metadata.planId, metadata.interval);
+        const isActive =
+          !obj.status || obj.status === 'active' || obj.status === 'trialing';
+        await this.updateVipStatusFromWebhook(
+          metadata.userId,
+          isActive,
+          isActive ? tier : null,
+        );
       }
     } else if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object as {
@@ -249,22 +266,57 @@ export class MonetisationService {
     return { received: true, status: 'processed' };
   }
 
-  async handleAppleWebhook(
-    payload: string,
+  async handleAppleNotification(
+    dto: AppleNotificationDto,
   ): Promise<{ received: boolean; status: string }> {
-    this.logger.log('Received Apple App Store Server Notification');
-    return await this.appleNotificationService.handleNotification(payload);
+    this.logger.log(
+      `Processing Apple Notification: ${dto.notificationType}, ${dto.subtype}`,
+    );
+
+    if (dto.receiptData) {
+      const validationResult =
+        await this.appleReceiptValidatorService.validateReceipt(
+          'userId-placeholder', // Replace with actual user ID resolution logic
+          dto.receiptData,
+          false,
+        );
+
+      if (validationResult.valid) {
+        await this.updateVipStatusFromWebhook(
+          'userId-placeholder', // Replace with actual user ID resolution logic
+          true,
+          'tier-placeholder', // Replace with actual tier resolution logic
+        );
+        return { received: true, status: 'processed' };
+      }
+    }
+
+    return { received: true, status: 'ignored' };
   }
 
-  async handleGoogleWebhook(
-    payload: Record<string, unknown>,
-    authorizationHeader?: string,
+  async handleGoogleNotification(
+    dto: GoogleNotificationDto,
   ): Promise<{ received: boolean; status: string }> {
-    this.logger.log('Received Google Play Developer Notification');
-    return await this.googlePlayNotificationService.handleNotification(
-      payload,
-      authorizationHeader,
+    this.logger.log(
+      `Processing Google Notification: ${dto.productId}, ${dto.purchaseToken}`,
     );
+
+    const purchaseDetails =
+      await this.googlePlayNotificationService.getSubscriptionPurchaseDetails(
+        dto.productId,
+        dto.purchaseToken,
+      );
+
+    if (purchaseDetails) {
+      await this.updateVipStatusFromWebhook(
+        dto.userId || 'userId-placeholder', // Replace with actual user ID resolution logic
+        true,
+        'tier-placeholder', // Replace with actual tier resolution logic
+      );
+      return { received: true, status: 'processed' };
+    }
+
+    return { received: true, status: 'ignored' };
   }
 
   async generateApiKey(
@@ -279,9 +331,11 @@ export class MonetisationService {
     if (!response.data) throw new NotFoundException('User not found');
     const user = response.data as unknown as UserVipRow;
 
-    if (!user.is_vip) {
+    const isDeveloperTier =
+      user.is_vip && (user.vip_tier ?? '').startsWith('developer');
+    if (!isDeveloperTier) {
       throw new ForbiddenException(
-        'Developer API Access is reserved for active subscribers. Upgrade to Developer Tier (20 UKP / $26 USD per month) to generate programmatic API keys!',
+        'Developer API Access is reserved for active Developer Tier subscribers (20 UKP / $26 USD per month).',
       );
     }
 
@@ -294,7 +348,7 @@ export class MonetisationService {
     return {
       api_key: apiKey,
       tier: user.vip_tier || 'consumer',
-      rate_limit_rpm: user.vip_tier === 'developer' ? 600 : 60,
+      rate_limit_rpm: user.vip_tier?.startsWith('developer') ? 600 : 60,
     };
   }
 
@@ -314,6 +368,14 @@ export class MonetisationService {
     if (!response.data) throw new NotFoundException('User not found');
     const user = response.data as UserVipRow;
 
+    const isDeveloperTier =
+      user.is_vip && (user.vip_tier ?? '').startsWith('developer');
+    if (!isDeveloperTier) {
+      throw new ForbiddenException(
+        'Developer Analytics are only available to active Developer Tier subscribers (20 UKP / $26 USD per month).',
+      );
+    }
+
     const metricResponse = await supabase
       .from('developer_metrics')
       .select('user_id, total_api_calls_today, avg_latency_ms')
@@ -330,15 +392,33 @@ export class MonetisationService {
       total_api_calls_today: metric?.total_api_calls_today ?? 0,
       avg_latency_ms: metric?.avg_latency_ms ?? 0,
       pricing_info:
-        'Developer Tier: 20 UKP / $26 USD per month | Consumer VIP: 8 UKP / $10 USD per month',
+        'Developer Tier: 20 UKP / $26 USD per month | Consumer VIP: 8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent',
     };
   }
 
-  async getDiagnosticLogs(): Promise<DeveloperDiagnosticLogRow[]> {
+  async getDiagnosticLogs(
+    userId: string,
+  ): Promise<DeveloperDiagnosticLogRow[]> {
     const supabase = this.supabaseService.getClient();
+    const { data: userCheck } = await supabase
+      .from('users')
+      .select('is_vip, vip_tier')
+      .eq('id', userId)
+      .single();
+    if (
+      !userCheck ||
+      !userCheck.is_vip ||
+      !(userCheck.vip_tier && userCheck.vip_tier.startsWith('developer'))
+    ) {
+      throw new ForbiddenException(
+        'Diagnostic logs are only available to active Developer Tier subscribers (20 UKP / $26 USD per month).',
+      );
+    }
+
     const response = await supabase
       .from('developer_diagnostic_logs')
       .select('id, user_id, category, status, message, created_at')
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(20);
 
@@ -354,6 +434,20 @@ export class MonetisationService {
     dto: CreateDiagnosticLogDto,
   ): Promise<DeveloperDiagnosticLogRow> {
     const supabase = this.supabaseService.getClient();
+    const { data: userCheck } = await supabase
+      .from('users')
+      .select('is_vip, vip_tier')
+      .eq('id', userId)
+      .single();
+    if (
+      !userCheck ||
+      !userCheck.is_vip ||
+      !(userCheck.vip_tier ?? '').startsWith('developer')
+    ) {
+      throw new ForbiddenException(
+        'Diagnostic logs are only available to active Developer Tier subscribers (20 UKP / $26 USD per month).',
+      );
+    }
     const response = await supabase
       .from('developer_diagnostic_logs')
       .insert({

@@ -87,6 +87,7 @@ export class EventsService {
     location?: string;
     language_pair?: string;
     max_participants?: number;
+    mentions?: string[];
   }) {
     return this.http.post<Event>(`${environment.apiUrl}/events`, dto);
   }

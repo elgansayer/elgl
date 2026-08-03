@@ -202,6 +202,33 @@ export class SafetyService {
     return this.getBlockedIds();
   }
 
+  async setSilenceUnknownCallers(userId: string, silence: boolean): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.http.post<void>(`${this.apiUrl}/safety/silence-unknown-callers`, {
+          userId,
+          silence,
+        }),
+      );
+    } catch (e) {
+      console.error('Failed to update silence unknown callers setting:', e);
+    }
+  }
+
+  async getSilenceUnknownCallers(userId: string): Promise<boolean> {
+    try {
+      const { silenceUnknownCallers } = await firstValueFrom(
+        this.http.get<{ silenceUnknownCallers: boolean }>(
+          `${this.apiUrl}/safety/silence-unknown-callers/${userId}`,
+        ),
+      );
+      return silenceUnknownCallers;
+    } catch (e) {
+      console.error('Failed to fetch silence unknown callers setting:', e);
+      return false;
+    }
+  }
+
   /** Returns report categories from the backend.
    *  The response must be localised using the Accept-Language header. */
   getReportCategories(): Promise<ReportCategory[]> {

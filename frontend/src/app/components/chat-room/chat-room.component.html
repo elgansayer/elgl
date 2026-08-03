@@ -384,14 +384,45 @@
       </div>
     }
 
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 relative">
+      @if (mentionSuggestions().length > 0) {
+        <div
+          id="mention-listbox"
+          role="listbox"
+          [attr.aria-label]="'chatRoom.mentionListLabel' | t"
+          class="absolute bottom-full start-0 mb-2 w-56 max-h-48 overflow-y-auto rounded-xl border border-surface-100 bg-surface-200 shadow-xl z-40"
+        >
+          @for (member of mentionSuggestions(); track member.user_id; let i = $index) {
+            <button
+              type="button"
+              role="option"
+              [id]="'mention-option-' + i"
+              [attr.aria-selected]="i === mentionActiveIndex()"
+              class="flex w-full items-center gap-2 px-3 py-2 text-start text-sm hover:bg-surface-300"
+              [class.bg-surface-300]="i === mentionActiveIndex()"
+              (mousedown)="$event.preventDefault()"
+              (click)="selectMention(member)"
+            >
+              <span class="font-semibold">{{ member.user?.display_name }}</span>
+            </button>
+          }
+        </div>
+      }
       <input
         type="text"
         data-testid="chat-message-input"
         [(ngModel)]="textInput"
-        (keyup.enter)="sendTextMessage()"
+        (input)="onComposerInput($event)"
+        (keydown)="onComposerKeydown($event)"
         [placeholder]="'chatRoom.typePlaceholder' | t"
         class="app-input flex-1 pt-3 pb-3"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-controls="mention-listbox"
+        [attr.aria-expanded]="mentionSuggestions().length > 0"
+        [attr.aria-activedescendant]="
+          mentionSuggestions().length > 0 ? 'mention-option-' + mentionActiveIndex() : null
+        "
       />
       <button
         (click)="sendTextMessage()"

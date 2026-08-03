@@ -1,0 +1,49 @@
+name: Hourly Agent Automations
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: write
+
+jobs:
+  queue-tasks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Queue Hourly Tasks for AI Swarm
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Queueing hourly tasks..."
+          
+          tasks=(
+            "task-hourly-lint-fix.md"
+            "task-hourly-type-check.md"
+            "task-hourly-test-watch.md"
+            "task-hourly-dead-code.md"
+            "task-hourly-i18n-sync.md"
+            "task-hourly-primitive-parity.md"
+            "task-hourly-signal-refactor.md"
+            "task-hourly-api-dto-validation.md"
+            "task-hourly-commit-hygiene.md"
+            "task-hourly-style-enforce.md"
+          )
+          
+          for task in "${tasks[@]}"; do
+            title=$(head -n 1 "$task" | sed 's/^# //')
+            
+            # Check if an issue with this title is already open to prevent spam
+            existing=$(gh issue list --state open --search "$title" --json number -q '.[0].number')
+            
+            if [ -z "$existing" ]; then
+              echo "Creating new issue for: $title"
+              gh issue create --title "[Hourly] $title" --body-file "$task" --label "ai-agent-task,hourly"
+            else
+              echo "Issue already open for $title (#$existing). Skipping."
+            fi
+          done

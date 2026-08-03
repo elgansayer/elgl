@@ -9,7 +9,8 @@ export interface InAppNotification {
     | 'comment_moment'
     | 'reply_comment'
     | 'profile_visit'
-    | 'mention_comment';
+    | 'mention_comment'
+    | 'mention_chat';
   entity_id?: string;
   message?: string;
   is_read: boolean;

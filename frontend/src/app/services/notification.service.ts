@@ -16,6 +16,7 @@ export interface InAppNotification {
     | 'reply_comment'
     | 'profile_visit'
     | 'mention_comment'
+    | 'mention_chat'
     | 'system';
   entity_id?: string;
   message?: string;

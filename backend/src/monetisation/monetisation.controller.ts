@@ -14,6 +14,8 @@ import type { Request } from 'express';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { RequireVip } from './decorators/require-vip.decorator';
+import { VipGuard } from './guards/vip.guard';
 import {
   CreateDiagnosticLogDto,
   AppleReceiptValidationDto,
@@ -51,44 +53,43 @@ export class MonetisationController {
 
   @Post('webhooks/apple')
   @HttpCode(200)
-  async handleAppleWebhook(@Body() payload: any) {
-    return await this.monetisationService.handleAppleWebhook(payload);
+  async handleAppleWebhook(@Body() dto: AppleNotificationDto) {
+    return await this.monetisationService.handleAppleNotification(dto);
   }
 
   @Post('webhooks/google')
   @HttpCode(200)
-  async handleGoogleWebhook(
-    @Body() payload: any,
-    @Headers('authorization') authorization?: string,
-  ) {
-    return await this.monetisationService.handleGoogleWebhook(
-      payload,
-      authorization,
-    );
+  async handleGoogleWebhook(@Body() dto: GoogleNotificationDto) {
+    return await this.monetisationService.handleGoogleNotification(dto);
   }
 
   @Post('generate-api-key')
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, VipGuard)
+  @RequireVip('developer')
   async generateApiKey(@CurrentUser() user: User | null) {
     if (!user) return null;
     return await this.monetisationService.generateApiKey(user.id);
   }
 
   @Get('analytics')
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, VipGuard)
+  @RequireVip('developer')
   async getAnalytics(@CurrentUser() user: User | null) {
     if (!user) return null;
     return await this.monetisationService.getDeveloperAnalytics(user.id);
   }
 
   @Get('diagnostics/logs')
-  @UseGuards(SupabaseAuthGuard)
-  async getDiagnosticLogs() {
-    return await this.monetisationService.getDiagnosticLogs();
+  @UseGuards(SupabaseAuthGuard, VipGuard)
+  @RequireVip('developer')
+  async getDiagnosticLogs(@CurrentUser() user: User | null) {
+    if (!user) return null;
+    return await this.monetisationService.getDiagnosticLogs(user.id);
   }
 
   @Post('diagnostics/logs')
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, VipGuard)
+  @RequireVip('developer')
   async createDiagnosticLog(
     @CurrentUser() user: User | null,
     @Body() dto: CreateDiagnosticLogDto,

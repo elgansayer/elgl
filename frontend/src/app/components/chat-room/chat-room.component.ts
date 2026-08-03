@@ -97,6 +97,25 @@ export class ChatRoomComponent implements OnDestroy {
   readonly activeWordToken = signal<string | null>(null);
   readonly activeWordContext = signal<string>('');
 
+  // @mention autocomplete state for the message composer
+  readonly mentionQuery = signal<string | null>(null);
+  readonly mentionActiveIndex = signal(0);
+  readonly mentionSuggestions = computed<GroupMember[]>(() => {
+    const query = this.mentionQuery();
+    if (query === null) return [];
+    const currentUserId = this.authService.currentUser()?.id;
+    const lowerQuery = query.toLowerCase();
+    return this.participants()
+      .filter(
+        (member) =>
+          member.user_id !== currentUserId &&
+          (member.user?.display_name ?? '').toLowerCase().startsWith(lowerQuery),
+      )
+      .slice(0, 5);
+  });
+  private mentionRangeStart = 0;
+  private mentionRangeEnd = 0;
+
   roomId = '';
   roomDetails: ChatRoom | null = null;
   searchQuery = '';
@@ -138,6 +157,7 @@ export class ChatRoomComponent implements OnDestroy {
     await this.loadBlockedUsers();
     await this.loadMessages();
     await this.setupRealTime();
+    await this.loadParticipants();
     await this.resolvePartnerLanguage();
   }
 
@@ -175,8 +195,7 @@ export class ChatRoomComponent implements OnDestroy {
     const currentUserId = this.authService.currentUser()?.id;
     if (!currentUserId) return;
     try {
-      const members = await this.chatService.getGroupMembers(this.roomId);
-      const partner = members.find((m) => m.user_id !== currentUserId);
+      const partner = this.participants().find((m) => m.user_id !== currentUserId);
       if (!partner) return;
       const profile = await this.userService.getUserProfile(partner.user_id);
       this.partnerLanguage.set(profile?.native_languages?.[0] ?? null);
@@ -252,11 +271,71 @@ export class ChatRoomComponent implements OnDestroy {
     this.activeWordContext.set(event.context);
   }
 
+  /** Detects an in-progress "@name" trigger before the cursor and updates mention suggestions. */
+  onComposerInput(event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    const cursor = target.selectionStart ?? target.value.length;
+    const textBeforeCursor = target.value.slice(0, cursor);
+    const match = /@([\wÀ-ɏ؀-ۿ]*)$/.exec(textBeforeCursor);
+    if (match) {
+      this.mentionRangeStart = match.index;
+      this.mentionRangeEnd = cursor;
+      this.mentionQuery.set(match[1]);
+      this.mentionActiveIndex.set(0);
+    } else {
+      this.mentionQuery.set(null);
+    }
+  }
+
+  onComposerKeydown(event: KeyboardEvent): void {
+    const suggestions = this.mentionSuggestions();
+    if (suggestions.length > 0) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        this.mentionActiveIndex.update((i) => Math.min(i + 1, suggestions.length - 1));
+        return;
+      }
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        this.mentionActiveIndex.update((i) => Math.max(i - 1, 0));
+        return;
+      }
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        this.selectMention(suggestions[this.mentionActiveIndex()]);
+        return;
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        this.mentionQuery.set(null);
+        return;
+      }
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.sendTextMessage();
+    }
+  }
+
+  /** Replaces the in-progress "@query" with the chosen participant's display name. */
+  selectMention(member: GroupMember | undefined): void {
+    const displayName = member?.user?.display_name;
+    if (!displayName) return;
+    const mentionText = `@${displayName} `;
+    this.textInput =
+      this.textInput.slice(0, this.mentionRangeStart) +
+      mentionText +
+      this.textInput.slice(this.mentionRangeEnd);
+    this.mentionQuery.set(null);
+  }
+
   async sendTextMessage(): Promise<void> {
     if (!this.textInput.trim()) return;
     const text = this.textInput.trim();
     const replyToId = this.replyingTo()?.id;
     this.textInput = '';
+    this.mentionQuery.set(null);
 
     try {
       const sent = await this.chatService.sendMessage({

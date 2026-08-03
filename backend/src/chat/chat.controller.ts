@@ -21,6 +21,7 @@ import { LlmProxyDto } from './dto/llm-proxy.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { AddLabelDto, RemoveLabelDto } from './dto/label.dto';
 import { FixMessageDto } from './dto/fix-message.dto';
+import { SetWallpaperDto } from './dto/set-wallpaper.dto';
 import {
   ChatMessage,
   ChatRoomRecord,
@@ -45,11 +46,12 @@ export class ChatController {
   // which is not part of this codebase and has its own rate limiting).
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('token')
-  getConnectionToken(
+  async getConnectionToken(
     @CurrentUser() user: User | null,
-  ): { token: string } | null {
+  ): Promise<{ token: string } | null> {
     if (!user) return null;
-    return this.chatService.generateConnectionToken(user.id);
+    const token = await this.chatService.generateConnectionToken?.(user.id);
+    return { token };
   }
 
   @Post('messages')
@@ -73,10 +75,10 @@ export class ChatController {
     @Query('search') search?: string,
     @CurrentUser() user?: User | null,
   ): Promise<ChatMessage[]> {
-    if (user) {
-      return await this.chatService.getMessages(roomId, search, user.id);
+    if (!user) {
+      return await this.chatService.getMessages(roomId, search);
     }
-    return await this.chatService.getMessages(roomId, search);
+    return await this.chatService.getMessages(roomId, search, user.id);
   }
 
   @Post('favourites')
@@ -238,12 +240,17 @@ export class ChatController {
     { user_id: string; display_name?: string; avatar_url?: string | null }[]
   > {
     if (!user) return [];
-    const members = await this.chatService.getGroupMembers(roomId);
-    return members.map((m: any) => ({
-      user_id: m.user_id,
-      display_name: m.user?.display_name,
-      avatar_url: m.user?.avatar_url,
-    }));
+    const members = await this.chatService.getGroupMembers(roomId, user.id);
+    return members.map(
+      (m: {
+        user_id: string;
+        user?: { display_name?: string; avatar_url?: string | null };
+      }) => ({
+        user_id: m.user_id,
+        display_name: m.user?.display_name,
+        avatar_url: m.user?.avatar_url,
+      }),
+    );
   }
 
   // Chat Lock endpoints
@@ -326,5 +333,26 @@ export class ChatController {
   ): Promise<{ greetingMessage?: string; awayMessage?: string }> {
     if (!user) return {};
     return await this.chatService.getRoomGreeting(roomId, user.id);
+  }
+
+  @Post('rooms/:roomId/wallpaper')
+  async setWallpaper(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+    @Body() dto: SetWallpaperDto,
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.chatService.setWallpaper(user.id, roomId, dto);
+    return { success: true };
+  }
+
+  @Get('rooms/:roomId/wallpaper')
+  async getWallpaper(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+  ): Promise<{ wallpaperUrl: string | null } | null> {
+    if (!user) return null;
+    const wallpaperUrl = await this.chatService.getWallpaper(roomId);
+    return { wallpaperUrl };
   }
 }

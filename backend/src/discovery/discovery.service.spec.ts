@@ -23,6 +23,12 @@ describe('DiscoveryService', () => {
       contains: jest.fn().mockReturnThis(),
       gt: jest.fn().mockReturnThis(),
       gte: jest.fn().mockReturnThis(),
+      not: jest.fn().mockReturnThis(),
+      in: jest.fn().mockReturnThis(),
+      range: jest.fn().mockReturnThis(),
+      order: jest.fn().mockReturnThis(),
+      ilike: jest.fn().mockReturnThis(),
+      overlaps: jest.fn().mockReturnThis(),
       limit: jest.fn(),
     };
 

@@ -21,13 +21,25 @@ import {
   ChatRoomRecord,
   FavouriteRecord,
 } from './interfaces/chat-message.interface';
-import { ChatMessageEvent } from '../notifications/events/notification.events';
+import {
+  ChatMessageEvent,
+  ChatMentionEvent,
+} from '../notifications/events/notification.events';
 import { SystemMessageService } from './services/system-message.service';
 import { XpService } from '../xp/xp.service';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
+import { randomUUID } from 'crypto';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+interface GroupMember {
+  user_id: string;
+  user?: {
+    display_name?: string;
+    avatar_url?: string | null;
+  };
 }
 
 @Injectable()
@@ -44,8 +56,18 @@ export class ChatService {
     private readonly xpService: XpService,
   ) {}
 
-  generateConnectionToken(userId: string): { token: string } {
-    return this.centrifugoService.generateConnectionToken(userId);
+  async generateConnectionToken(userId: string): Promise<string> {
+    const payload = {
+      sub: userId,
+      exp: Math.floor(Date.now() / 1000) + 3600, // Token expires in 1 hour
+    };
+
+    try {
+      const token = await this.centrifugoService.signJwt(payload);
+      return token;
+    } catch (error) {
+      throw new Error(`Failed to generate Centrifugo token: ${error.message}`);
+    }
   }
 
   private async generateCorrectionPayloadIfNeeded(
@@ -132,10 +154,6 @@ export class ChatService {
         },
       ] as ChatRoomRecord[];
 
-      // Filter out blocked users from mock data
-      if (blockedIds.length > 0) {
-        return mockRooms.filter((room) => !blockedIds.includes(room.id));
-      }
       return mockRooms;
     }
 
@@ -198,8 +216,16 @@ export class ChatService {
       .eq('room_id', dto.room_id)
       .neq('user_id', senderId);
 
+    const receiverId =
+      roomMembers && roomMembers.length > 0
+        ? roomMembers[0].user_id
+        : undefined;
+
     if (roomMembers && roomMembers.length > 0) {
-      const receiverId = (roomMembers as { user_id: string }[])[0].user_id;
+      if (!receiverId) {
+        // This should never happen because we already checked the length above.
+        throw new Error('Unable to determine receiver');
+      }
       // Check if the receiver has blocked the sender
       const receiverBlockedIds =
         await this.safetyService.getBlockedAndBlockerIds(receiverId);
@@ -303,21 +329,22 @@ export class ChatService {
       message: messageForPublish,
     });
 
-    // Emit push notification event
-    if (roomMembers && roomMembers.length > 0) {
-      const receiverId = (roomMembers as { user_id: string }[])[0].user_id;
-      const preview = dto.text_content
-        ? dto.text_content.substring(0, 120)
-        : dto.message_type === 'voice'
-          ? '🎤 Voice message'
-          : dto.message_type === 'correction'
-            ? '📝 Correction'
-            : dto.message_type === 'doodle'
-              ? '🎨 Doodle'
-              : dto.message_type === 'correction_request'
-                ? '✏️ Correction request'
+    const preview = dto.text_content
+      ? dto.text_content.substring(0, 120)
+      : dto.message_type === 'voice'
+        ? '🎤 Voice message'
+        : dto.message_type === 'correction'
+          ? '📝 Correction'
+          : dto.message_type === 'doodle'
+            ? '🎨 Doodle'
+            : dto.message_type === 'correction_request'
+              ? '✏️ Correction request'
+              : dto.message_type === 'status_reply'
+                ? '✉️ Status reply'
                 : '';
 
+    // Emit push notification event
+    if (roomMembers && roomMembers.length > 0) {
       this.eventEmitter.emit(
         'chat.message',
 
@@ -329,6 +356,44 @@ export class ChatService {
           preview,
         ),
       );
+    }
+
+    // ---------- Parse @mentions and emit notifications ----------
+    if (dto.message_type === 'text' && dto.text_content) {
+      const mentionRegex = /@([\wÀ-ɏ؀-ۿ]+)/g;
+      const mentionedNames = [...dto.text_content.matchAll(mentionRegex)].map(
+        (m) => m[1],
+      );
+
+      if (mentionedNames.length > 0) {
+        const members = (await this.getGroupMembers(dto.room_id)) as {
+          user_id: string;
+          user?: { display_name?: string };
+        }[];
+
+        for (const member of members) {
+          if (
+            member.user_id !== senderId &&
+            member.user?.display_name &&
+            mentionedNames.includes(member.user.display_name)
+          ) {
+            this.eventEmitter.emit(
+              'chat.mention',
+              new ChatMentionEvent(
+                senderId,
+                member.user_id,
+                dto.room_id,
+                preview,
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    // Send an automatic away reply if the receiver has configured one
+    if (receiverId && dto.message_type !== 'system') {
+      await this.sendAwayReplyIfNeeded(senderId, dto.room_id, receiverId);
     }
 
     return messageForPublish;
@@ -345,6 +410,11 @@ export class ChatService {
     const blockedIds = currentUserId
       ? await this.safetyService.getBlockedAndBlockerIds(currentUserId)
       : [];
+
+    // Automatically seed a greeting message when the room is first opened
+    if (currentUserId && currentUserId.length > 0 && !search) {
+      await this.ensureGreetingMessage(currentUserId, roomId);
+    }
 
     let query = supabase
       .from('chat_messages')
@@ -659,7 +729,10 @@ export class ChatService {
     await this.systemMessageService.publishToRoom(roomId, 'memberRemoved', {});
   }
 
-  async getGroupMembers(roomId: string): Promise<any[]> {
+  async getGroupMembers(
+    roomId: string,
+    _currentUserId?: string,
+  ): Promise<GroupMember[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('chat_room_members')
@@ -676,7 +749,7 @@ export class ChatService {
       .eq('room_id', roomId);
 
     if (error) throw new Error('Failed to fetch group members');
-    return data || [];
+    return (data ?? []) as GroupMember[];
   }
 
   // ---- Chat Lock methods ----
@@ -774,23 +847,50 @@ export class ChatService {
   ): Promise<ChatMessage> {
     const supabase = this.supabaseService.getClient();
 
-    // Determine deterministic room id
-    const ids = [userId, dto.target_user_id].sort();
-    const roomId = `chat_${ids.join('_')}`;
+    // Try to reuse an existing 1-to-1 chat between the two users.
+    let roomId: string | undefined;
 
-    // Check if room exists
-    const { data: existingRoom } = await supabase
-      .from('chat_rooms')
-      .select('id')
-      .eq('id', roomId)
-      .maybeSingle();
+    const { data: myRooms } = await supabase
+      .from('chat_room_members')
+      .select('room_id')
+      .eq('user_id', userId);
 
-    if (!existingRoom) {
-      // Create room
+    const myRoomIds = (myRooms ?? []).map(
+      (r: { room_id: string }) => r.room_id,
+    );
+
+    if (myRoomIds.length > 0) {
+      const { data: mutualRooms } = await supabase
+        .from('chat_room_members')
+        .select('room_id')
+        .eq('user_id', dto.target_user_id)
+        .in('room_id', myRoomIds);
+
+      const mutualRoomIds = (mutualRooms ?? []).map(
+        (r: { room_id: string }) => r.room_id,
+      );
+
+      for (const candidateRoomId of mutualRoomIds) {
+        const { data: members } = await supabase
+          .from('chat_room_members')
+          .select('user_id')
+          .eq('room_id', candidateRoomId);
+
+        if (members && members.length === 2) {
+          roomId = candidateRoomId;
+          break;
+        }
+      }
+    }
+
+    if (!roomId) {
+      // Create a new room when no existing 1-to-1 chat exists.
+      const newRoomId = randomUUID();
+
       const { error: roomError } = await supabase.from('chat_rooms').insert({
-        id: roomId,
-        title: '',
-        subtitle: '',
+        id: newRoomId,
+        title: 'Status reply',
+        subtitle: dto.status_text.slice(0, 80),
         avatar: '',
         is_online: false,
         is_pinned: false,
@@ -800,24 +900,27 @@ export class ChatService {
         throw new Error(`Failed to create room: ${roomError.message}`);
       }
 
-      // Add both members
-      const members = ids.map((uid) => ({
-        room_id: roomId,
+      const members = [userId, dto.target_user_id].map((uid) => ({
+        room_id: newRoomId,
         user_id: uid,
       }));
+
       const { error: memberError } = await supabase
         .from('chat_room_members')
         .insert(members);
+
       if (memberError) {
         throw new Error(`Failed to add room members: ${memberError.message}`);
       }
+
+      roomId = newRoomId;
     }
 
-    // Reuse sendMessage logic
+    // Reuse sendMessage logic, passing the user’s reply as the text content.
     const msgDto: SendMessageDto = {
       room_id: roomId,
       message_type: 'status_reply',
-      text_content: undefined,
+      text_content: dto.text ?? undefined,
       media_url: undefined,
       correction_payload: undefined,
       reply_to_id: undefined,
@@ -874,7 +977,7 @@ export class ChatService {
       throw new Error('Original message not found');
     }
 
-    if ((originalMsg as any).message_type !== 'text') {
+    if (!isRecord(originalMsg) || originalMsg.message_type !== 'text') {
       throw new BadRequestException('Only text messages can be corrected');
     }
 
@@ -914,7 +1017,7 @@ export class ChatService {
       throw new Error('Message not found');
     }
 
-    if (originalMsg.message_type !== 'text') {
+    if (!isRecord(originalMsg) || originalMsg.message_type !== 'text') {
       throw new BadRequestException('Only text messages can be fixed');
     }
 
@@ -1195,7 +1298,9 @@ export class ChatService {
       .select('room_id')
       .eq('user_id', userId);
 
-    const roomIds = (memberRows ?? []).map((r: any) => r.room_id);
+    const roomIds = (memberRows ?? []).map(
+      (r: { room_id: string }) => r.room_id,
+    );
     if (roomIds.length === 0) {
       return [];
     }
@@ -1256,9 +1361,19 @@ export class ChatService {
       return {};
     }
 
+    if (!isRecord(profile)) {
+      return {};
+    }
+
     return {
-      greetingMessage: (profile as any).greeting_message ?? undefined,
-      awayMessage: (profile as any).away_message ?? undefined,
+      greetingMessage:
+        typeof profile.greeting_message === 'string'
+          ? profile.greeting_message
+          : undefined,
+      awayMessage:
+        typeof profile.away_message === 'string'
+          ? profile.away_message
+          : undefined,
     };
   }
 
@@ -1279,5 +1394,165 @@ export class ChatService {
     ].join('\n');
     const result = await this.chatLlmService.proxyMessage(prompt);
     return { response: result.response };
+  }
+
+  private async ensureGreetingMessage(
+    currentUserId: string,
+    roomId: string,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+
+    // Get room members to find the other user in a private chat
+    const { data: members } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', roomId)
+      .neq('user_id', currentUserId);
+
+    if (!members || members.length !== 1) {
+      return;
+    }
+
+    const otherUserId = (members as { user_id: string }[])[0].user_id;
+
+    // Fetch the other user's greeting message, if any
+    const { data: otherProfile, error: profileError } = await supabase
+      .from('users')
+      .select('greeting_message')
+      .eq('id', otherUserId)
+      .maybeSingle();
+
+    if (profileError || !otherProfile) {
+      return;
+    }
+
+    const greeting =
+      typeof otherProfile.greeting_message === 'string'
+        ? otherProfile.greeting_message.trim()
+        : '';
+
+    if (!greeting) {
+      return;
+    }
+
+    // Check if there are already messages in the room
+    const { count, error: countError } = await supabase
+      .from('chat_messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('room_id', roomId);
+
+    if (countError) return;
+    if ((count ?? 0) > 0) return;
+
+    // Insert the automated greeting message from the other user
+    const { data: inserted, error: insertError } = await supabase
+      .from('chat_messages')
+      .insert({
+        room_id: roomId,
+        sender_id: otherUserId,
+        message_type: 'text',
+        text_content: greeting,
+        media_url: null,
+        correction_payload: null,
+        reply_to_id: null,
+        correction_request_payload: null,
+        status_reply_payload: null,
+        is_view_once: false,
+      })
+      .select()
+      .single();
+
+    if (insertError || !inserted) {
+      return;
+    }
+
+    const greetingMessage = inserted as ChatMessage;
+
+    // Publish the greeting so all connected clients receive it
+    await this.centrifugoService.publish(`chat:${roomId}`, {
+      message: greetingMessage,
+    });
+  }
+
+  private async sendAwayReplyIfNeeded(
+    messageSenderId: string,
+    roomId: string,
+    receiverId?: string,
+  ): Promise<void> {
+    if (!receiverId || messageSenderId === receiverId) {
+      return;
+    }
+
+    const supabase = this.supabaseService.getClient();
+
+    // Fetch receiver's away_message from users
+    const { data: receiverProfile, error: profileError } = await supabase
+      .from('users')
+      .select('away_message')
+      .eq('id', receiverId)
+      .maybeSingle();
+
+    if (profileError || !receiverProfile) {
+      return;
+    }
+
+    const awayMessage =
+      typeof receiverProfile.away_message === 'string'
+        ? receiverProfile.away_message.trim()
+        : '';
+
+    if (!awayMessage) {
+      return;
+    }
+
+    // Check the last message in room from receiver to avoid sending repeated away replies too often
+    const { data: lastReceiverMsg, error: lastMsgError } = await supabase
+      .from('chat_messages')
+      .select('created_at')
+      .eq('room_id', roomId)
+      .eq('sender_id', receiverId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (lastMsgError) return;
+
+    if (lastReceiverMsg) {
+      const lastMsgTime = new Date(lastReceiverMsg.created_at).getTime();
+      const now = Date.now();
+      const fiveMinutesMs = 5 * 60 * 1000;
+      if (now - lastMsgTime < fiveMinutesMs) {
+        return;
+      }
+    }
+
+    // Insert the away reply as a message from the receiver
+    const { data: awayMessageRecord, error: insertError } = await supabase
+      .from('chat_messages')
+      .insert({
+        room_id: roomId,
+        sender_id: receiverId,
+        message_type: 'text',
+        text_content: awayMessage,
+        media_url: null,
+        correction_payload: null,
+        reply_to_id: null,
+        correction_request_payload: null,
+        status_reply_payload: null,
+        is_view_once: false,
+      })
+      .select()
+      .single();
+
+    if (insertError || !awayMessageRecord) {
+      return;
+    }
+
+    const awayMessageChat = awayMessageRecord as ChatMessage;
+
+    // Publish the away reply
+    await this.centrifugoService.publish(`chat:${roomId}`, {
+      message: awayMessageChat,
+    });
   }
 }

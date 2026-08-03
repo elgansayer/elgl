@@ -10,10 +10,13 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { AudioRoomsService } from './audio-rooms.service';
+import {
+  AudioRoomsService,
+  SoundboardSound,
+  StageInfo,
+} from './audio-rooms.service';
 import { CreatePollDto } from './dto/create-poll.dto';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
 import { PlaySoundDto } from './dto/play-sound.dto';
@@ -23,11 +26,11 @@ import {
   CreateAudioRoomDto,
   DemoteSpeakerDto,
   InviteCoHostDto,
-  JoinRoomDto,
   RaiseHandDto,
   RemoveCoHostDto,
   SendCaptionDto,
 } from './dto/audio-room.dto';
+import { AudioRoomTokenDto } from './dto/audio-room-token.dto';
 import {
   AudioRoomRecord,
   CaptionRecord,
@@ -40,6 +43,14 @@ import { GetCallLogsQueryDto } from './dto/get-call-logs-query.dto';
 import { CreateLanguagePartyDto } from './dto/create-language-party.dto';
 import { CreatePrivatePartyDto } from './dto/create-private-party.dto';
 import { SendReactionDto } from './dto/send-reaction.dto';
+import { TipHostDto } from './dto/tip-host.dto';
+import { ReorderStageDto } from './dto/reorder-stage.dto';
+
+// Type representing the authenticated user fields used in the controller.
+interface AuthUser {
+  id: string;
+  email?: string;
+}
 
 @Controller('audio-rooms')
 @UseGuards(SupabaseAuthGuard)
@@ -47,18 +58,28 @@ export class AudioRoomsController {
   constructor(private readonly audioRoomsService: AudioRoomsService) {}
 
   @Post('create')
+  @HttpCode(HttpStatus.CREATED)
   async createRoom(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: CreateAudioRoomDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
     return await this.audioRoomsService.createRoom(user.id, dto);
   }
 
+  @Post('archive-recording')
+  async archiveRecording(
+    @CurrentUser() user: AuthUser | null,
+    @Body() dto: ArchiveRoomDto,
+  ): Promise<AudioRoomRecord | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.archiveRecording(user.id, dto);
+  }
+
   @Post('token')
   async generateToken(
-    @CurrentUser() user: User | null,
-    @Body() dto: JoinRoomDto,
+    @CurrentUser() user: AuthUser | null,
+    @Body() dto: AudioRoomTokenDto,
   ): Promise<RoomTokenResponse | null> {
     if (!user) return null;
     return await this.audioRoomsService.generateToken(user.id, dto);
@@ -89,10 +110,28 @@ export class AudioRoomsController {
 
   @Get('private')
   async getPrivateRooms(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
   ): Promise<AudioRoomRecord[]> {
     if (!user) return [];
     return this.audioRoomsService.getInvitedPrivateRooms(user.id);
+  }
+
+  @Get('call-logs')
+  async getCallLogs(
+    @CurrentUser() user: AuthUser | null,
+    @Query() query: GetCallLogsQueryDto,
+  ): Promise<CallLogRecord[]> {
+    if (!user) return [];
+    return this.audioRoomsService.getCallLogs(user.id, query);
+  }
+
+  @Get('exclusive-emojis')
+  getExclusiveEmojis(): {
+    emojiId: string;
+    name: string;
+    animationUrl: string;
+  }[] {
+    return this.audioRoomsService.getExclusiveEmojis();
   }
 
   @Get(':id')
@@ -100,9 +139,37 @@ export class AudioRoomsController {
     return await this.audioRoomsService.getRoom(id);
   }
 
+  @Get(':id/stage')
+  async getStage(@Param('id') roomId: string): Promise<StageInfo> {
+    return this.audioRoomsService.getStage(roomId);
+  }
+
+  @Post(':id/stage/reorder')
+  async reorderSpeakers(
+    @CurrentUser() user: AuthUser | null,
+    @Param('id') roomId: string,
+    @Body() dto: ReorderStageDto,
+  ): Promise<AudioRoomRecord | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.reorderSpeakers(
+      user.id,
+      roomId,
+      dto.speaker_order,
+    );
+  }
+
+  @Post(':id/stage/clear')
+  async clearStage(
+    @CurrentUser() user: AuthUser | null,
+    @Param('id') roomId: string,
+  ): Promise<AudioRoomRecord | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.clearStage(user.id, roomId);
+  }
+
   @Post('language-parties')
   async createLanguageParty(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: CreateLanguagePartyDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -111,7 +178,7 @@ export class AudioRoomsController {
 
   @Post('private')
   async createPrivateParty(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: CreatePrivatePartyDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -120,7 +187,7 @@ export class AudioRoomsController {
 
   @Post('raise-hand')
   async raiseHand(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: RaiseHandDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -129,7 +196,7 @@ export class AudioRoomsController {
 
   @Post('approve-speaker')
   async approveSpeaker(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: ApproveSpeakerDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -138,7 +205,7 @@ export class AudioRoomsController {
 
   @Post('mute-speaker')
   async muteSpeaker(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: DemoteSpeakerDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -147,7 +214,7 @@ export class AudioRoomsController {
 
   @Post('demote-speaker')
   async demoteSpeaker(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: DemoteSpeakerDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -156,7 +223,7 @@ export class AudioRoomsController {
 
   @Post('invite-co-host')
   async inviteCoHost(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: InviteCoHostDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -165,7 +232,7 @@ export class AudioRoomsController {
 
   @Post('remove-co-host')
   async removeCoHost(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: RemoveCoHostDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -174,16 +241,21 @@ export class AudioRoomsController {
 
   @Post('captions')
   async sendCaption(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: SendCaptionDto,
   ): Promise<CaptionRecord | null> {
     if (!user) return null;
     return await this.audioRoomsService.sendCaption(user.id, dto);
   }
 
+  @Post('ai-captions')
+  async broadcastAICaption(@Body() dto: SendCaptionDto): Promise<void> {
+    await this.audioRoomsService.broadcastAICaption(dto);
+  }
+
   @Post('archive')
   async archiveRoom(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: ArchiveRoomDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -192,7 +264,7 @@ export class AudioRoomsController {
 
   @Post(':roomId/notes')
   async addNote(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Param('roomId') roomId: string,
     @Body() dto: CreateVoiceRoomNoteDto,
   ): Promise<VoiceRoomNote | null> {
@@ -207,7 +279,7 @@ export class AudioRoomsController {
 
   @Delete(':roomId/notes/:noteId')
   async deleteNote(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Param('roomId') _roomId: string,
     @Param('noteId') noteId: string,
   ): Promise<void> {
@@ -230,18 +302,9 @@ export class AudioRoomsController {
     return this.audioRoomsService.getTranscript(roomId);
   }
 
-  @Get('call-logs')
-  async getCallLogs(
-    @CurrentUser() user: User | null,
-    @Query() query: GetCallLogsQueryDto,
-  ): Promise<CallLogRecord[]> {
-    if (!user) return [];
-    return this.audioRoomsService.getCallLogs(user.id, query);
-  }
-
   @Post(':roomId/polls')
   async createPoll(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Param('roomId') roomId: string,
     @Body() dto: CreatePollDto,
   ): Promise<{ poll_id: string } | null> {
@@ -251,7 +314,7 @@ export class AudioRoomsController {
 
   @Post('polls/vote')
   async submitVote(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: SubmitVoteDto,
   ): Promise<void> {
     if (!user) return;
@@ -272,13 +335,13 @@ export class AudioRoomsController {
   }
 
   @Get('soundboard/list')
-  listSoundboardSounds(): { sounds: any[] } {
+  listSoundboardSounds(): { sounds: SoundboardSound[] } {
     return this.audioRoomsService.getSoundboardSounds();
   }
 
   @Post('soundboard/play')
   async playSound(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: PlaySoundDto,
   ): Promise<{ success: boolean; soundUrl: string | null } | null> {
     if (!user) return null;
@@ -287,7 +350,7 @@ export class AudioRoomsController {
 
   @Post(':roomId/reactions')
   async sendReaction(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Param('roomId') roomId: string,
     @Body() dto: SendReactionDto,
   ): Promise<{ emojiId: string; animationUrl: string } | null> {
@@ -295,12 +358,21 @@ export class AudioRoomsController {
     return await this.audioRoomsService.sendReaction(user.id, roomId, dto);
   }
 
-  @Get('exclusive-emojis')
-  getExclusiveEmojis(): {
-    emojiId: string;
-    name: string;
-    animationUrl: string;
-  }[] {
-    return this.audioRoomsService.getExclusiveEmojis();
+  @Post(':roomId/tip')
+  async tipHost(
+    @CurrentUser() user: AuthUser | null,
+    @Param('roomId') roomId: string,
+    @Body() dto: TipHostDto,
+  ): Promise<{
+    tip_id: string;
+    amount_coins: number;
+    receiver_id: string;
+    receiver_new_balance: number;
+  } | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.tipHost(user.id, {
+      room_id: roomId,
+      amount_coins: dto.amount_coins,
+    });
   }
 }

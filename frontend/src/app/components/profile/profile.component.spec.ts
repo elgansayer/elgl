@@ -112,7 +112,7 @@ describe('ProfileComponent', () => {
     await fixture.componentInstance.saveProfile();
 
     expect(mockUserService.updatePrivacySettings).toHaveBeenCalledWith(
-      expect.objectContaining({ incognito_visits: false }),
+      expect(expect.objectContaining({ incognito_visits: false }))
     );
   });
 });

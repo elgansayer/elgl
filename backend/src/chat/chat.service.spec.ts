@@ -26,6 +26,7 @@ describe('ChatService', () => {
   let service: ChatService;
   let centrifugoService: any;
   let chatLlmService: any;
+  let eventEmitter: any;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
 
@@ -44,6 +45,7 @@ describe('ChatService', () => {
       update: jest.fn().mockReturnThis(),
       delete: jest.fn().mockReturnThis(),
       single: jest.fn(),
+      maybeSingle: jest.fn().mockReturnThis(),
       // Make the builder thenable so that `await supabase.from(...)` calls resolve
       then: jest.fn((resolve) => resolve({ data: [] })),
     };
@@ -64,9 +66,7 @@ describe('ChatService', () => {
         {
           provide: CentrifugoService,
           useValue: {
-            generateConnectionToken: jest
-              .fn()
-              .mockReturnValue({ token: 'mock-token' }),
+            signJwt: jest.fn().mockResolvedValue('mock-token'),
             publish: jest.fn().mockResolvedValue(true),
           },
         },
@@ -117,6 +117,7 @@ describe('ChatService', () => {
     service = module.get<ChatService>(ChatService);
     centrifugoService = module.get<CentrifugoService>(CentrifugoService) as any;
     chatLlmService = module.get<ChatLlmService>(ChatLlmService) as any;
+    eventEmitter = module.get<EventEmitter2>(EventEmitter2) as any;
   });
 
   afterEach(() => {
@@ -127,13 +128,14 @@ describe('ChatService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('generateConnectionToken', () => {
-    it('should generate connection token via CentrifugoService', () => {
-      const result = service.generateConnectionToken('user-1');
-      expect(centrifugoService.generateConnectionToken).toHaveBeenCalledWith(
-        'user-1',
-      );
-      expect(result).toEqual({ token: 'mock-token' });
+  describe('generateCentrifugoToken', () => {
+    it('should generate token via CentrifugoService', async () => {
+      const result = await service.generateCentrifugoToken('user-1', 'room-1');
+      expect(centrifugoService.signJwt).toHaveBeenCalledWith({
+        sub: 'user-1',
+        exp: expect.any(Number),
+      });
+      expect(result).toBe('mock-token');
     });
   });
 
@@ -237,6 +239,116 @@ describe('ChatService', () => {
       expect(chatLlmService.proxyMessage).toHaveBeenCalled();
       expect(result.correction_payload.explanation).toBe(
         'The past tense of "go" is "went".',
+      );
+    }, 15000);
+
+    it('should emit a chat.mention event for each mentioned participant', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Hey @Alice check this out, cc @Bob',
+      };
+      const savedMessage = {
+        id: 'msg-1',
+        room_id: 'room-1',
+        sender_id: 'sender-1',
+        message_type: 'text',
+        text_content: dto.text_content,
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: savedMessage,
+        error: null,
+      });
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) => resolve({ data: [] }))
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: [
+              { user_id: 'alice-id', user: { display_name: 'Alice' } },
+              { user_id: 'bob-id', user: { display_name: 'Bob' } },
+              { user_id: 'sender-1', user: { display_name: 'SenderName' } },
+            ],
+          }),
+        );
+
+      await service.sendMessage('sender-1', dto);
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'chat.mention',
+        expect.objectContaining({
+          actorId: 'sender-1',
+          mentionedUserId: 'alice-id',
+          roomId: 'room-1',
+        }),
+      );
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'chat.mention',
+        expect.objectContaining({
+          actorId: 'sender-1',
+          mentionedUserId: 'bob-id',
+          roomId: 'room-1',
+        }),
+      );
+    }, 15000);
+
+    it('should not emit a mention event when the sender mentions themselves', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Note to @SenderName',
+      };
+      const savedMessage = {
+        id: 'msg-1',
+        room_id: 'room-1',
+        sender_id: 'sender-1',
+        message_type: 'text',
+        text_content: dto.text_content,
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: savedMessage,
+        error: null,
+      });
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) => resolve({ data: [] }))
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: [
+              { user_id: 'sender-1', user: { display_name: 'SenderName' } },
+            ],
+          }),
+        );
+
+      await service.sendMessage('sender-1', dto);
+
+      expect(eventEmitter.emit).not.toHaveBeenCalledWith(
+        'chat.mention',
+        expect.anything(),
+      );
+    }, 15000);
+
+    it('should not emit mention events when the message has no @mentions', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Just a normal message',
+      };
+      const savedMessage = {
+        id: 'msg-1',
+        room_id: 'room-1',
+        sender_id: 'sender-1',
+        message_type: 'text',
+        text_content: dto.text_content,
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: savedMessage,
+        error: null,
+      });
+
+      await service.sendMessage('sender-1', dto);
+
+      expect(eventEmitter.emit).not.toHaveBeenCalledWith(
+        'chat.mention',
+        expect.anything(),
       );
     }, 15000);
   });
@@ -561,6 +673,67 @@ describe('ChatService', () => {
 
       await expect(service.getLockedChats('user-1')).rejects.toThrow(
         'Failed to get locked chats: Query failed',
+      );
+    });
+  });
+
+  describe('exportChatHistory', () => {
+    it('should return the list of messages for a room when the user is a member', async () => {
+      const roomId = 'room-export-1';
+      const memberRows = { data: [{ user_id: 'user-1' }], error: null };
+      const messages = [
+        { id: 'msg-1', room_id: roomId, text_content: 'Hello' },
+        { id: 'msg-2', room_id: roomId, text_content: 'World' },
+      ];
+
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) => resolve(memberRows))
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: messages, error: null }),
+        );
+
+      const result = await service.exportChatHistory('user-1', roomId);
+
+      expect(mockSupabaseClient.from).toHaveBeenNthCalledWith(
+        1,
+        'chat_room_members',
+      );
+      expect(mockSupabaseClient.from).toHaveBeenNthCalledWith(
+        2,
+        'chat_messages',
+      );
+      expect(mockQueryBuilder.select).toHaveBeenCalled();
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('room_id', roomId);
+      expect(mockQueryBuilder.order).toHaveBeenCalledWith('created_at', {
+        ascending: true,
+      });
+      expect(mockQueryBuilder.limit).toHaveBeenCalledWith(1000);
+      expect(result).toEqual(messages);
+    });
+
+    it('should throw ForbiddenException when the user is not a member', async () => {
+      const roomId = 'private-room';
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({ data: null, error: null }),
+      );
+
+      await expect(service.exportChatHistory('user-1', roomId)).rejects.toThrow(
+        'You are not a member of this room',
+      );
+    });
+
+    it('should throw an Error when fetching messages fails', async () => {
+      const roomId = 'room-error';
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: [{ user_id: 'user-1' }], error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: null, error: { message: 'DB failed' } }),
+        );
+
+      await expect(service.exportChatHistory('user-1', roomId)).rejects.toThrow(
+        'Failed to fetch messages: DB failed',
       );
     });
   });

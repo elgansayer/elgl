@@ -108,6 +108,12 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
           >
             Broadcast caption
           </button>
+          <button
+            (click)="broadcastAICaption()"
+            class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow"
+          >
+            Broadcast AI Caption
+          </button>
         </div>
       }
     </div>
@@ -129,6 +135,12 @@ export class RoomChatComponent {
   async sendSubtitle(): Promise<void> {
     if (!this.inputCaption.trim()) return;
     await this.store.sendCaption(this.inputCaption);
+    this.inputCaption = '';
+  }
+
+  async broadcastAICaption(): Promise<void> {
+    if (!this.inputCaption.trim()) return;
+    await this.store.broadcastAICaption(this.inputCaption);
     this.inputCaption = '';
   }
 }

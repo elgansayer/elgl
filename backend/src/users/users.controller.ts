@@ -19,6 +19,10 @@ import { TwoFactorGuard } from '../two-factor/two-factor.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateBusinessProfileDto } from './dto/update-business-profile.dto';
 import { PrivacySettingsDto } from './dto/privacy-settings.dto';
+import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
+import { UpdateGreetingMessageDto } from './dto/update-greeting-message.dto';
+import { UpdateAwayMessageDto } from './dto/update-away-message.dto';
+import { UpdateStatusVisibilityDto } from './dto/update-status-visibility.dto';
 import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
 import {
   UserProfile,
@@ -72,6 +76,17 @@ export class UsersController {
     return this.usersService.exportUserData(user.id);
   }
 
+  @Get('me/notification-preferences')
+  async getMyNotificationPreferences(
+    @CurrentUser() user: User | null,
+  ): Promise<{
+    custom_tone_url?: string;
+    vibration_pattern?: number[];
+  } | null> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.getNotificationPreferences(user.id);
+  }
+
   @Get('me')
   async getMyProfile(
     @CurrentUser() user: User | null,
@@ -122,6 +137,27 @@ export class UsersController {
       dto,
       Boolean((await this.usersService.getProfile(user.id))?.is_vip ?? false),
     );
+  }
+
+  @Patch('me/greeting')
+  async updateGreetingMessage(
+    @CurrentUser() user: User | null,
+    @Body() dto: UpdateGreetingMessageDto,
+  ): Promise<UserProfile | null> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.updateGreetingMessage(
+      user.id,
+      dto.greetingMessage,
+    );
+  }
+
+  @Patch('me/away')
+  async updateAwayMessage(
+    @CurrentUser() user: User | null,
+    @Body() dto: UpdateAwayMessageDto,
+  ): Promise<UserProfile | null> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.updateAwayMessage(user.id, dto.awayMessage);
   }
 
   @Post('me/cover-photo/presigned-url')
@@ -177,6 +213,20 @@ export class UsersController {
     return this.usersService.getVisitors(user.id);
   }
 
+  @Get('status/:statusId/viewers')
+  async getStatusViewers(
+    @CurrentUser() user: User | null,
+    @Param('statusId') statusId: string,
+  ): Promise<ProfileVisitor[]> {
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    return await this.usersService.getStatusViewersByStatusId(
+      user.id,
+      statusId,
+    );
+  }
+
   @Get('me/status-viewers')
   async getMyStatusViewers(
     @CurrentUser() user: User | null,
@@ -184,7 +234,10 @@ export class UsersController {
     if (!user) {
       throw new UnauthorizedException();
     }
-    return this.usersService.getStatusViewers(user.id);
+    return await this.usersService.getStatusViewersByStatusId(
+      user.id,
+      'default-status-id', // Replace with actual logic to fetch the statusId if needed
+    );
   }
 
   @Get('hobbies')
@@ -381,5 +434,30 @@ export class UsersController {
   ): Promise<UserProfile | null> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.updateDoNotDisturbSettings(user.id, dto);
+  }
+
+  @Patch('me/status-visibility')
+  async updateStatusVisibility(
+    @CurrentUser() user: User | null,
+    @Body() dto: UpdateStatusVisibilityDto,
+  ): Promise<UserProfile | null> {
+    if (!user) throw new UnauthorizedException();
+    const isVip = Boolean(
+      (await this.usersService.getProfile(user.id))?.is_vip ?? false,
+    );
+    return this.usersService.updatePrivacySettings(
+      user.id,
+      { status_visibility: dto.status_visibility },
+      isVip,
+    );
+  }
+
+  @Patch('me/notification-preferences')
+  async updateNotificationPreferences(
+    @CurrentUser() user: User | null,
+    @Body() dto: UpdateNotificationPreferencesDto,
+  ): Promise<UserProfile | null> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.updateNotificationPreferences(user.id, dto);
   }
 }

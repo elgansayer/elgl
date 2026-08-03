@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -24,15 +25,17 @@ import { CreateLanguagePartyDto } from './dto/create-language-party.dto';
 import { CreatePrivatePartyDto } from './dto/create-private-party.dto';
 import {
   ApproveSpeakerDto,
+  ArchiveRecordingDto,
   ArchiveRoomDto,
   CreateAudioRoomDto,
   DemoteSpeakerDto,
   InviteCoHostDto,
-  JoinRoomDto,
   RaiseHandDto,
   RemoveCoHostDto,
   SendCaptionDto,
 } from './dto/audio-room.dto';
+import { AudioRoomTokenDto } from './dto/audio-room-token.dto';
+import { TipHostDto } from './dto/tip-host.dto';
 import {
   AudioRoomRecord,
   CaptionRecord,
@@ -68,13 +71,44 @@ interface UserProfileRow {
   avatar_url?: string | null;
 }
 
+export interface SoundboardSound {
+  id: string;
+  name: string;
+  url: string;
+  icon: string;
+}
+
+interface ExclusiveEmoji {
+  emojiId: string;
+  name: string;
+  animationUrl: string;
+}
+
+export interface StageInfo {
+  room_id: string;
+  room_name: string;
+  host: {
+    id: string;
+    display_name: string;
+    avatar_url: string | null;
+  } | null;
+  co_host_id: string | null;
+  speakers: Array<{
+    user_id: string;
+    display_name: string;
+    avatar_url: string | null;
+  }>;
+  raised_hands: string[];
+  listeners_count: number;
+}
+
 @Injectable()
 export class AudioRoomsService implements OnModuleInit {
   private readonly logger = new Logger(AudioRoomsService.name);
-  private roomServiceClient!: RoomServiceClient;
   private livekitUrl = '';
   private apiKey = '';
   private secretKey = '';
+  private roomServiceClient?: RoomServiceClient;
 
   constructor(
     private readonly configService: ConfigService,
@@ -83,9 +117,7 @@ export class AudioRoomsService implements OnModuleInit {
     private readonly centrifugoService: CentrifugoService,
     private readonly transcriptEgress: TranscriptEgressService,
     private readonly nlpService: NlpService,
-  ) {}
-
-  onModuleInit() {
+  ) {
     this.livekitUrl =
       this.configService.get<string>('LIVEKIT_URL') ||
       'https://mock.livekit.cloud';
@@ -98,7 +130,57 @@ export class AudioRoomsService implements OnModuleInit {
 
     this.apiKey = apiKey;
     this.secretKey = secretKey;
+  }
 
+  async archiveRecording(
+    hostId: string,
+    dto: ArchiveRecordingDto,
+  ): Promise<AudioRoomRecord> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', dto.room_id)
+      .single();
+
+    if (!response.data) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const room = response.data as AudioRoomRecord;
+
+    if (room.host_id !== hostId) {
+      throw new ForbiddenException('Only the host can archive this room.');
+    }
+
+    // Upload the recording to Cloudflare R2
+    const recordingUrl = dto.recording_url;
+    const r2Key = `audio-rooms/${room.room_name}/recording.webm`;
+
+    try {
+      await this.supabaseService.uploadToR2(r2Key, recordingUrl);
+    } catch (error) {
+      this.logger.error('Failed to upload recording to R2', error);
+      throw new Error('Failed to upload recording to R2');
+    }
+
+    // Update the room record with the R2 URL
+    const r2RecordingUrl = `https://r2.hellotalk.mock/${r2Key}`;
+    await supabase
+      .from('audio_rooms')
+      .update({ recording_url: r2RecordingUrl, is_active: false })
+      .eq('id', room.id);
+
+    void this.centrifugoService.publish(`room_${room.id}`, {
+      type: 'room_archived',
+      room_id: room.id,
+      recording_url: r2RecordingUrl,
+    });
+
+    return this.getRoom(room.id);
+  }
+
+  onModuleInit() {
     try {
       this.roomServiceClient = new RoomServiceClient(
         this.livekitUrl,
@@ -106,9 +188,9 @@ export class AudioRoomsService implements OnModuleInit {
         this.secretKey,
       );
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const message = e instanceof Error ? e.message : String(e);
       this.logger.warn(
-        `Could not init LiveKit RoomServiceClient (${msg}). Will fall back to local/mock.`,
+        `Could not init LiveKit RoomServiceClient (${message}). Will fall back to local/mock.`,
       );
     }
   }
@@ -128,7 +210,7 @@ export class AudioRoomsService implements OnModuleInit {
       throw new NotFoundException('Room not found');
     }
 
-    const room = response.data as AudioRoomRow;
+    const room: AudioRoomRow = response.data as AudioRoomRow;
 
     if (room.host_id !== hostId) {
       throw new ForbiddenException(
@@ -181,6 +263,11 @@ export class AudioRoomsService implements OnModuleInit {
     roomNameOverride?: string,
   ): Promise<AudioRoomRecord> {
     const supabase = this.supabaseService.getClient();
+    if (!dto.title?.trim() || !dto.language_pair?.trim()) {
+      throw new BadRequestException(
+        'Title and language pair are required to create an audio room.',
+      );
+    }
     const cleanTitle = dto.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
@@ -260,6 +347,11 @@ export class AudioRoomsService implements OnModuleInit {
     roomNameOverride?: string,
   ): Promise<AudioRoomRecord> {
     const supabase = this.supabaseService.getClient();
+    if (!dto.title?.trim() || !dto.language_pair?.trim()) {
+      throw new BadRequestException(
+        'Title and language pair are required to create a language party.',
+      );
+    }
     const cleanTitle = dto.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
@@ -285,7 +377,7 @@ export class AudioRoomsService implements OnModuleInit {
     const languagePair = String(dto.language_pair);
     const targetLanguage = languagePair.split('-')[1] ?? languagePair;
 
-    const insertPayload: any = {
+    const insertPayload = {
       room_name: roomName,
       title: dto.title,
       party_type: 'language_party',
@@ -377,7 +469,7 @@ export class AudioRoomsService implements OnModuleInit {
 
   async generateToken(
     userId: string,
-    dto: JoinRoomDto,
+    dto: AudioRoomTokenDto,
   ): Promise<RoomTokenResponse> {
     const supabase = this.supabaseService.getClient();
     const response = await supabase
@@ -392,8 +484,8 @@ export class AudioRoomsService implements OnModuleInit {
     const room = response.data as AudioRoomRow;
     // Private room access check
     if (
-      (room as any).is_private &&
-      !(room as any).invited_user_ids?.includes(userId) &&
+      room.is_private &&
+      !room.invited_user_ids?.includes(userId) &&
       room.host_id !== userId
     ) {
       throw new ForbiddenException(
@@ -404,10 +496,13 @@ export class AudioRoomsService implements OnModuleInit {
     const isSpeaker =
       isHost || (room.speakers && room.speakers.includes(userId));
 
-    const profile = await this.usersService.getProfile(userId);
+    const profile: UserProfileRow | null =
+      await this.usersService.getProfile(userId);
     const identity = profile?.display_name
       ? `${profile.display_name}_${userId.slice(0, 6)}`
       : userId;
+
+    const canPublish = isSpeaker; // listeners (non-speakers) receive canPublish = false
 
     const token = new AccessToken(this.apiKey, this.secretKey, {
       identity,
@@ -417,7 +512,7 @@ export class AudioRoomsService implements OnModuleInit {
     token.addGrant({
       roomJoin: true,
       room: dto.room_name,
-      canPublish: isSpeaker,
+      canPublish,
       canSubscribe: true,
       canPublishData: true,
     });
@@ -511,6 +606,111 @@ export class AudioRoomsService implements OnModuleInit {
         avatar_url: profile?.avatar_url ?? null,
       },
     };
+  }
+
+  async getStage(roomId: string): Promise<StageInfo> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', roomId)
+      .single();
+    if (!response.data) throw new NotFoundException('Room not found');
+    const row = response.data as AudioRoomRow;
+
+    const userIds = Array.from(new Set([...(row.speakers ?? []), row.host_id]));
+    const { data: profiles } = await supabase
+      .from('users')
+      .select('id, display_name, avatar_url')
+      .in('id', userIds);
+    const profileRows = (profiles ?? []) as UserProfileRow[];
+    const profileMap = new Map<string, UserProfileRow>();
+    profileRows.forEach((p) => profileMap.set(p.id, p));
+
+    const speakers = (row.speakers ?? []).map((uid) => {
+      const p = profileMap.get(uid);
+      return {
+        user_id: uid,
+        display_name: p?.display_name ?? 'Unknown',
+        avatar_url: p?.avatar_url ?? null,
+      };
+    });
+
+    const hostProfile = profileMap.get(row.host_id);
+    return {
+      room_id: row.id,
+      room_name: row.room_name,
+      host: hostProfile
+        ? {
+            id: hostProfile.id,
+            display_name: hostProfile.display_name ?? 'Room Host',
+            avatar_url: hostProfile.avatar_url ?? null,
+          }
+        : null,
+      co_host_id: row.co_host_id ?? null,
+      speakers,
+      raised_hands: row.raised_hands ?? [],
+      listeners_count: row.listeners_count ?? 0,
+    };
+  }
+
+  async reorderSpeakers(
+    hostId: string,
+    roomId: string,
+    speakerOrder: string[],
+  ): Promise<AudioRoomRecord> {
+    const room = await this.getRoom(roomId);
+    if (room.host_id !== hostId) {
+      throw new ForbiddenException('Only the host can reorder the stage.');
+    }
+    const currentSpeakers = room.speakers ?? [];
+    if (
+      currentSpeakers.length !== speakerOrder.length ||
+      !currentSpeakers.every((id) => speakerOrder.includes(id))
+    ) {
+      throw new BadRequestException(
+        'Speaker order must contain exactly the current speakers.',
+      );
+    }
+    if (new Set(speakerOrder).size !== speakerOrder.length) {
+      throw new BadRequestException('Speaker order cannot contain duplicates.');
+    }
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('audio_rooms')
+      .update({ speakers: speakerOrder })
+      .eq('id', roomId);
+    if (error) {
+      this.logger.error('Failed to reorder speakers', error);
+      throw new Error('Failed to reorder speakers.');
+    }
+    void this.centrifugoService.publish(`room_${roomId}`, {
+      type: 'stage_reordered',
+      speaker_order: speakerOrder,
+      room_id: roomId,
+    });
+    return this.getRoom(roomId);
+  }
+
+  async clearStage(hostId: string, roomId: string): Promise<AudioRoomRecord> {
+    const room = await this.getRoom(roomId);
+    if (room.host_id !== hostId) {
+      throw new ForbiddenException('Only the host can clear the stage.');
+    }
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('audio_rooms')
+      .update({ speakers: [hostId], raised_hands: [] })
+      .eq('id', roomId);
+    if (error) {
+      this.logger.error('Failed to clear stage', error);
+      throw new Error('Failed to clear stage.');
+    }
+    void this.centrifugoService.publish(`room_${roomId}`, {
+      type: 'stage_cleared',
+      room_id: roomId,
+    });
+    return this.getRoom(roomId);
   }
 
   async raiseHand(userId: string, dto: RaiseHandDto): Promise<AudioRoomRecord> {
@@ -781,7 +981,7 @@ export class AudioRoomsService implements OnModuleInit {
       );
     }
 
-    const caption = response.data as CaptionRecord;
+    const caption: CaptionRecord = response.data as CaptionRecord;
 
     // Broadcast AI speech-to-text subtitle to everyone in room via Centrifugo
     void this.centrifugoService.publish(`room_${dto.room_id}`, {
@@ -790,6 +990,34 @@ export class AudioRoomsService implements OnModuleInit {
     });
 
     return caption;
+  }
+
+  async broadcastAICaption(dto: SendCaptionDto): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_room_captions')
+      .insert({
+        room_id: dto.room_id,
+        speaker_id: 'ai_system',
+        speaker_name: 'AI',
+        text_content: dto.text_content,
+      })
+      .select()
+      .single();
+
+    if (response.error || !response.data) {
+      throw new Error(
+        `Failed to save AI caption: ${response.error?.message ?? 'Unknown error'}`,
+      );
+    }
+
+    const caption = response.data as CaptionRecord;
+
+    // Broadcast AI-generated subtitle to everyone in room via Centrifugo
+    void this.centrifugoService.publish(`room_${dto.room_id}`, {
+      type: 'subtitle',
+      caption,
+    });
   }
 
   async archiveRoom(
@@ -1241,7 +1469,7 @@ export class AudioRoomsService implements OnModuleInit {
     return data ?? [];
   }
 
-  private readonly soundboardSounds = [
+  private readonly soundboardSounds: SoundboardSound[] = [
     {
       id: 'applause',
       name: 'Applause',
@@ -1274,11 +1502,7 @@ export class AudioRoomsService implements OnModuleInit {
     },
   ];
 
-  private readonly exclusiveEmojiList: {
-    emojiId: string;
-    name: string;
-    animationUrl: string;
-  }[] = [
+  private readonly exclusiveEmojiList: ExclusiveEmoji[] = [
     {
       emojiId: 'star',
       name: '🌟 Star',
@@ -1301,15 +1525,11 @@ export class AudioRoomsService implements OnModuleInit {
     },
   ];
 
-  getExclusiveEmojis(): {
-    emojiId: string;
-    name: string;
-    animationUrl: string;
-  }[] {
+  getExclusiveEmojis(): ExclusiveEmoji[] {
     return this.exclusiveEmojiList;
   }
 
-  getSoundboardSounds(): { sounds: any[] } {
+  getSoundboardSounds(): { sounds: SoundboardSound[] } {
     return { sounds: this.soundboardSounds };
   }
 
@@ -1344,5 +1564,109 @@ export class AudioRoomsService implements OnModuleInit {
       triggered_by: userId,
     });
     return { success: true, soundUrl: sound.url };
+  }
+
+  async tipHost(
+    userId: string,
+    dto: TipHostDto,
+  ): Promise<{
+    tip_id: string;
+    amount_coins: number;
+    receiver_id: string;
+    receiver_new_balance: number;
+  }> {
+    const supabase = this.supabaseService.getClient();
+    const roomResponse = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', dto.room_id)
+      .single();
+
+    if (!roomResponse.data) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const room = roomResponse.data as AudioRoomRow;
+
+    if (!room.is_active) {
+      throw new BadRequestException('Room is not active');
+    }
+
+    if (room.host_id === userId) {
+      throw new BadRequestException('You cannot tip yourself');
+    }
+
+    const senderResponse = await supabase
+      .from('users')
+      .select('coins_balance')
+      .eq('id', userId)
+      .single();
+
+    if (!senderResponse.data) {
+      throw new NotFoundException('Sender not found');
+    }
+
+    const senderBalance = senderResponse.data.coins_balance ?? 0;
+    const amount = dto.amount_coins;
+
+    if (senderBalance < amount) {
+      throw new BadRequestException(
+        `Insufficient coins. You have ${senderBalance} coins but need ${amount}.`,
+      );
+    }
+
+    const newSenderBalance = senderBalance - amount;
+    await supabase
+      .from('users')
+      .update({ coins_balance: newSenderBalance })
+      .eq('id', userId);
+
+    const receiverResponse = await supabase
+      .from('users')
+      .select('coins_balance')
+      .eq('id', room.host_id)
+      .single();
+
+    const currentReceiverBalance = receiverResponse.data?.coins_balance ?? 0;
+    const newReceiverBalance = currentReceiverBalance + amount;
+
+    await supabase
+      .from('users')
+      .update({ coins_balance: newReceiverBalance })
+      .eq('id', room.host_id);
+
+    const tipResponse = await supabase
+      .from('audio_room_tips')
+      .insert({
+        room_id: room.id,
+        sender_user_id: userId,
+        receiver_user_id: room.host_id,
+        amount_coins: amount,
+      })
+      .select()
+      .single();
+
+    if (tipResponse.error || !tipResponse.data) {
+      throw new Error(
+        `Failed to record tip: ${tipResponse.error?.message ?? 'Unknown error'}`,
+      );
+    }
+
+    const tipRow = tipResponse.data as { id: string };
+
+    void this.centrifugoService.publish(`room_${room.id}`, {
+      type: 'host_tip',
+      tip: {
+        amount_coins: amount,
+        sender_user_id: userId,
+      },
+    });
+
+    return {
+      tip_id: tipRow.id,
+      amount_coins: amount,
+      receiver_id: room.host_id,
+      receiver_new_balance: newReceiverBalance,
+    };
   }
 }

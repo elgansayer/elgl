@@ -25,6 +25,7 @@ export interface VirtualGiftRow {
   icon: string;
   cost_coins: number;
   animation_type: string;
+  animation_url?: string;
 }
 
 export interface StickerPackRow {
@@ -36,6 +37,49 @@ export interface StickerPackRow {
 export interface UserCoinRow {
   id: string;
   coins_balance: number;
+}
+
+export interface CoinPurchaseRecord {
+  id: string;
+  user_id: string;
+  package_id: string;
+  coins_added: number;
+  amount_paid: number;
+  currency: string;
+  receipt_token: string;
+  platform: string;
+  transaction_id: string | null;
+  status: string;
+}
+
+function isCoinPurchaseRecord(value: unknown): value is CoinPurchaseRecord {
+  if (typeof value !== 'object' || value === null) return false;
+  if (
+    !('id' in value) ||
+    !('user_id' in value) ||
+    !('package_id' in value) ||
+    !('coins_added' in value) ||
+    !('amount_paid' in value) ||
+    !('currency' in value) ||
+    !('receipt_token' in value) ||
+    !('platform' in value) ||
+    !('transaction_id' in value) ||
+    !('status' in value)
+  )
+    return false;
+  return (
+    typeof value.id === 'string' &&
+    typeof value.user_id === 'string' &&
+    typeof value.package_id === 'string' &&
+    typeof value.coins_added === 'number' &&
+    typeof value.amount_paid === 'number' &&
+    typeof value.currency === 'string' &&
+    typeof value.receipt_token === 'string' &&
+    typeof value.platform === 'string' &&
+    (typeof value.transaction_id === 'string' ||
+      value.transaction_id === null) &&
+    typeof value.status === 'string'
+  );
 }
 
 export interface CoinPackage {
@@ -114,6 +158,55 @@ export const COIN_PACKAGES: CoinPackage[] = [
   },
 ];
 
+function isCoinBalanceRow(value: unknown): value is { coins_balance: number } {
+  if (typeof value !== 'object' || value === null) return false;
+  if (!('coins_balance' in value)) return false;
+  return typeof value.coins_balance === 'number';
+}
+
+function isVirtualGiftRow(value: unknown): value is VirtualGiftRow {
+  if (typeof value !== 'object' || value === null) return false;
+  if (
+    !('id' in value) ||
+    !('name' in value) ||
+    !('icon' in value) ||
+    !('cost_coins' in value) ||
+    !('animation_type' in value)
+  )
+    return false;
+  return (
+    typeof value.id === 'string' &&
+    typeof value.name === 'string' &&
+    typeof value.icon === 'string' &&
+    typeof value.cost_coins === 'number' &&
+    typeof value.animation_type === 'string'
+  );
+}
+
+function isStickerPackRow(value: unknown): value is StickerPackRow {
+  if (typeof value !== 'object' || value === null) return false;
+  if (!('id' in value) || !('name' in value) || !('cost_coins' in value))
+    return false;
+  return (
+    typeof value.id === 'string' &&
+    typeof value.name === 'string' &&
+    typeof value.cost_coins === 'number'
+  );
+}
+
+export interface GiftEventPayload {
+  type: 'virtual_gift';
+  gift_id: string;
+  gift_name: string;
+  icon: string;
+  animation_url: string;
+  animation_type: string;
+  coin_value: number;
+  sender_name: string | null;
+  receiver_name: string | null;
+  room_id?: string;
+}
+
 @Injectable()
 export class EconomyService {
   private readonly logger = new Logger(EconomyService.name);
@@ -140,7 +233,45 @@ export class EconomyService {
       .from('virtual_gifts')
       .select('*')
       .order('cost_coins', { ascending: true });
-    return response.data ?? [];
+    const rows = response.data;
+    if (!Array.isArray(rows)) {
+      return this.getDefaultGiftCatalog();
+    }
+    const gifts = rows.filter(
+      (item: unknown): item is VirtualGiftRow =>
+        typeof item === 'object' &&
+        item !== null &&
+        'id' in item &&
+        'name' in item &&
+        'icon' in item &&
+        'cost_coins' in item &&
+        'animation_type' in item,
+    );
+    if (gifts.length === 0) {
+      return this.getDefaultGiftCatalog();
+    }
+    return gifts;
+  }
+
+  private getDefaultGiftCatalog(): VirtualGiftRow[] {
+    return [
+      {
+        id: 'gift_rose',
+        name: 'Rose',
+        icon: '🌹',
+        cost_coins: 10,
+        animation_type: 'float',
+        animation_url: 'https://r2.example.com/rose.json',
+      },
+      {
+        id: 'gift_heart',
+        name: 'Heart',
+        icon: '❤️',
+        cost_coins: 20,
+        animation_type: 'float',
+        animation_url: 'https://r2.example.com/heart.json',
+      },
+    ];
   }
 
   getPackages(): CoinPackage[] {
@@ -170,6 +301,8 @@ export class EconomyService {
       );
     }
 
+    const supabase = this.supabaseService.getClient();
+
     const frontendUrl =
       this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4200';
 
@@ -193,6 +326,29 @@ export class EconomyService {
       cancel_url: `${frontendUrl}/coins/cancel`,
     });
 
+    const { error: insertPendingError } = await supabase
+      .from('coin_purchases')
+      .insert({
+        user_id: userId,
+        package_id: coinPackage.id,
+        coins_added: coinPackage.coins,
+        amount_paid: coinPackage.price,
+        currency: 'usd',
+        receipt_token: session.id,
+        platform: 'web',
+        transaction_id: session.id,
+        status: 'pending',
+      });
+
+    if (insertPendingError) {
+      this.logger.error(
+        `Failed to create pending purchase record for user ${userId}: ${insertPendingError.message}`,
+      );
+      throw new InternalServerErrorException(
+        'Failed to initialize purchase session.',
+      );
+    }
+
     return {
       sessionUrl: session.url || '',
       sessionId: session.id,
@@ -208,9 +364,12 @@ export class EconomyService {
       .single();
     if (response.error || !response.data) {
       const profile = await this.usersService.getProfile(userId);
-      return { coins_balance: profile.coins_balance || 50 };
+      return { coins_balance: profile.coins_balance ?? 50 };
     }
-    const row = response.data as UserCoinRow;
+    const row = response.data;
+    if (!isCoinBalanceRow(row)) {
+      throw new BadRequestException('Invalid user coin balance');
+    }
     return { coins_balance: row.coins_balance };
   }
 
@@ -256,14 +415,73 @@ export class EconomyService {
     return { claimed: true, coins_rewarded: reward, new_balance: newBalance };
   }
 
+  async verifyPurchaseReceipt(dto: {
+    receipt_token: string;
+    platform: string;
+  }): Promise<boolean> {
+    // Implement server-side receipt verification logic here
+    // This is a placeholder implementation
+    const isValid = true; // Replace with actual verification logic
+    return isValid;
+  }
+
   async purchaseCoins(
     userId: string,
     dto: PurchaseCoinsDto,
-  ): Promise<{ coins: number; newBalance: number }> {
+  ): Promise<{ coins: number; new_balance: number }> {
     const supabase = this.supabaseService.getClient();
 
-    // 1. Determine platform and verify the receipt with the store
     const platform = this.detectPlatform(dto.receipt_token);
+
+    if (dto.platform && dto.platform !== platform) {
+      throw new BadRequestException(
+        `Receipt platform (${platform}) does not match provided platform (${dto.platform})`,
+      );
+    }
+
+    const isReceiptValid = await this.verifyPurchaseReceipt({
+      receipt_token: dto.receipt_token,
+      platform,
+    });
+
+    if (!isReceiptValid) {
+      throw new BadRequestException('Invalid purchase receipt');
+    }
+
+    // For web (Stripe) ensure a pending purchase record was created server-side
+    if (platform === 'web') {
+      const sessionId = this.extractStripeSessionId(dto.receipt_token);
+      const { data: pendingRecord, error: pendingError } = await supabase
+        .from('coin_purchases')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('receipt_token', sessionId)
+        .maybeSingle();
+
+      if (pendingError) {
+        throw new InternalServerErrorException(
+          'Failed to look up purchase record',
+        );
+      }
+
+      if (!pendingRecord || !isCoinPurchaseRecord(pendingRecord)) {
+        throw new BadRequestException(
+          'No purchase receipt record found for this transaction. Please start a checkout session first.',
+        );
+      }
+
+      if (pendingRecord.status === 'completed') {
+        throw new ConflictException(
+          'This transaction has already been processed',
+        );
+      }
+
+      if (pendingRecord.status !== 'pending') {
+        throw new BadRequestException('Invalid purchase receipt status');
+      }
+    }
+
+    // 1. Verify with the store/provider
     const verifiedReceipt = await this.verifyReceipt(
       dto.receipt_token,
       platform,
@@ -287,47 +505,90 @@ export class EconomyService {
       throw new BadRequestException(`Unknown product ID: ${productId}.`);
     }
 
-    // 3. Check if this transaction has already been processed (unique index)
-    const { data: existing } = await supabase
-      .from('coin_purchases')
-      .select('id')
-      .eq('transaction_id', transactionId)
-      .maybeSingle();
-    if (existing) {
-      throw new ConflictException(
-        'This transaction has already been processed',
-      );
-    }
+    if (platform === 'web') {
+      // Update the existing pending record to completed
+      const sessionId = this.extractStripeSessionId(dto.receipt_token);
+      const { data: existingWeb, error: existingWebError } = await supabase
+        .from('coin_purchases')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('receipt_token', sessionId)
+        .maybeSingle();
 
-    // 4. Insert the coin_purchases record
-    const { error: insertError } = await supabase
-      .from('coin_purchases')
-      .insert({
-        user_id: userId,
-        package_id: coinPackage.id,
-        coins_added: coinPackage.coins,
-        amount_paid: coinPackage.price,
-        currency: 'usd',
-        receipt_token: dto.receipt_token,
-        platform,
-        transaction_id: transactionId,
-        status: 'completed',
-      });
+      if (existingWebError) {
+        throw new InternalServerErrorException(
+          'Failed to look up purchase record',
+        );
+      }
 
-    if (insertError) {
-      // Unique violation (race condition)
-      if (insertError.code === '23505') {
+      if (!existingWeb || !isCoinPurchaseRecord(existingWeb)) {
+        throw new BadRequestException('Purchase record not found');
+      }
+
+      if (existingWeb.status === 'completed') {
         throw new ConflictException(
           'This transaction has already been processed',
         );
       }
-      this.logger.error(
-        `Failed to record coin purchase for user ${userId}: ${insertError.message}`,
-      );
-      throw new InternalServerErrorException('Failed to record purchase');
+
+      const { error: updateWebError } = await supabase
+        .from('coin_purchases')
+        .update({
+          status: 'completed',
+          transaction_id: transactionId || sessionId,
+        })
+        .eq('user_id', userId)
+        .eq('receipt_token', sessionId);
+
+      if (updateWebError) {
+        this.logger.error(
+          `Failed to finalize purchase record for user ${userId}: ${updateWebError.message}`,
+        );
+        throw new InternalServerErrorException(
+          'Failed to finalize purchase record',
+        );
+      }
+    } else {
+      // ios / android flow: insert a new completed record
+      const { data: existing } = await supabase
+        .from('coin_purchases')
+        .select('id')
+        .eq('transaction_id', transactionId)
+        .maybeSingle();
+      if (existing) {
+        throw new ConflictException(
+          'This transaction has already been processed',
+        );
+      }
+
+      const { error: insertError } = await supabase
+        .from('coin_purchases')
+        .insert({
+          user_id: userId,
+          package_id: coinPackage.id,
+          coins_added: coinPackage.coins,
+          amount_paid: coinPackage.price,
+          currency: 'usd',
+          receipt_token: dto.receipt_token,
+          platform,
+          transaction_id: transactionId,
+          status: 'completed',
+        });
+
+      if (insertError) {
+        if (insertError.code === '23505') {
+          throw new ConflictException(
+            'This transaction has already been processed',
+          );
+        }
+        this.logger.error(
+          `Failed to record coin purchase for user ${userId}: ${insertError.message}`,
+        );
+        throw new InternalServerErrorException('Failed to record purchase');
+      }
     }
 
-    // 5. Read current balance and credit coins
+    // Read current balance and credit coins
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('coins_balance')
@@ -335,16 +596,23 @@ export class EconomyService {
       .single();
 
     if (userError || !userData) {
-      // Rollback the purchase record (best effort)
-      await supabase
-        .from('coin_purchases')
-        .delete()
-        .eq('transaction_id', transactionId);
+      // For non-web platforms roll back the purchase record; for web the record
+      // is already finalised but we log and return a helpful error.
+      if (platform !== 'web') {
+        await supabase
+          .from('coin_purchases')
+          .delete()
+          .eq('transaction_id', transactionId);
+      }
+      this.logger.error(
+        `Failed to retrieve user balance during purchase for ${userId}.`,
+      );
       throw new BadRequestException('User not found');
     }
 
-    const user = userData as { coins_balance?: number };
-    const newBalance = (user.coins_balance ?? 0) + coinPackage.coins;
+    const currentBalance =
+      typeof userData.coins_balance === 'number' ? userData.coins_balance : 0;
+    const newBalance = currentBalance + coinPackage.coins;
 
     const { error: updateError } = await supabase
       .from('users')
@@ -352,11 +620,12 @@ export class EconomyService {
       .eq('id', userId);
 
     if (updateError) {
-      // Rollback the purchase record
-      await supabase
-        .from('coin_purchases')
-        .delete()
-        .eq('transaction_id', transactionId);
+      if (platform !== 'web') {
+        await supabase
+          .from('coin_purchases')
+          .delete()
+          .eq('transaction_id', transactionId);
+      }
       this.logger.error(
         `Failed to credit coin balance for user ${userId}: ${updateError.message}`,
       );
@@ -371,7 +640,7 @@ export class EconomyService {
 
     return {
       coins: coinPackage.coins,
-      newBalance,
+      new_balance: newBalance,
     };
   }
 
@@ -396,6 +665,10 @@ export class EconomyService {
       return null;
     }
     return { productId, purchaseToken };
+  }
+
+  private extractStripeSessionId(receiptToken: string): string {
+    return receiptToken.replace(/^stripe_/, '');
   }
 
   private async verifyReceipt(
@@ -529,22 +802,19 @@ export class EconomyService {
 
     const sessionId = receiptToken.replace(/^stripe_/, '');
 
-    const response = await firstValueFrom(
-      this.httpService.get(
-        `https://api.stripe.com/v1/checkout/sessions/${sessionId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${stripeSecretKey}`,
-          },
-        },
-      ),
-    );
+    if (!sessionId) {
+      throw new BadRequestException('Invalid Stripe receipt token');
+    }
 
-    const session = response.data as {
-      payment_status: string;
-      metadata?: Record<string, string>;
-      payment_intent: string;
-    };
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await this.stripe.checkout.sessions.retrieve(sessionId);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unexpected error';
+      this.logger.warn(`Stripe session retrieve failed: ${errorMessage}`);
+      throw new BadRequestException('Invalid Stripe session ID');
+    }
 
     if (session.payment_status !== 'paid') {
       throw new BadRequestException('Stripe payment not completed');
@@ -571,10 +841,17 @@ export class EconomyService {
       );
     }
 
+    // Ensure the paid amount matches the package price to prevent partial payments
+    if (session.amount_total !== coinPackage.price) {
+      throw new BadRequestException(
+        'Stripe payment amount does not match the coin package price',
+      );
+    }
+
     return {
       valid: true,
       productId,
-      transactionId: session.payment_intent,
+      transactionId: session.id,
       platform: 'web',
     };
   }
@@ -598,25 +875,47 @@ export class EconomyService {
     coins_remaining: number;
     gift: VirtualGiftRow;
   }> {
+    if (senderId === dto.receiver_id) {
+      throw new BadRequestException('You cannot send a gift to yourself');
+    }
+
     const supabase = this.supabaseService.getClient();
 
     const giftResponse = await supabase
       .from('virtual_gifts')
       .select('*')
       .eq('id', dto.gift_id)
-      .single();
-    if (!giftResponse.data) {
+      .maybeSingle();
+    if (giftResponse.error || !giftResponse.data) {
       throw new NotFoundException(
         `Gift '${dto.gift_id}' not found in catalog.`,
       );
     }
-    const gift = giftResponse.data as VirtualGiftRow;
+    const giftData = giftResponse.data;
+    if (!isVirtualGiftRow(giftData)) {
+      throw new NotFoundException(
+        `Gift '${dto.gift_id}' not found in catalog.`,
+      );
+    }
+    const gift = giftData;
 
     const { coins_balance: senderBalance } = await this.getBalance(senderId);
     if (senderBalance < gift.cost_coins) {
       throw new BadRequestException(
-        `Insufficient coin balance (${senderBalance} available, ${gift.cost_coins} required). Purchase coins to support your language partners and room hosts!`,
+        `Insufficient coin balance (${senderBalance} available, ${
+          gift.cost_coins
+        } required). Purchase coins to support your language partners and room hosts!`,
       );
+    }
+
+    // Verify the receiver exists before crediting coins
+    const receiverCheck = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', dto.receiver_id)
+      .maybeSingle();
+    if (receiverCheck.error || !receiverCheck.data) {
+      throw new NotFoundException('Receiver user not found.');
     }
 
     const { coins_balance: receiverBalance } = await this.getBalance(
@@ -627,38 +926,79 @@ export class EconomyService {
     const newSenderBalance = senderBalance - gift.cost_coins;
     const newReceiverBalance = receiverBalance + gift.cost_coins;
 
-    await supabase
+    const { error: senderUpdateError } = await supabase
       .from('users')
       .update({ coins_balance: newSenderBalance })
       .eq('id', senderId);
-    await supabase
+
+    if (senderUpdateError) {
+      throw new InternalServerErrorException(
+        'Failed to update sender coin balance.',
+      );
+    }
+
+    const { error: receiverUpdateError } = await supabase
       .from('users')
       .update({ coins_balance: newReceiverBalance })
       .eq('id', dto.receiver_id);
 
-    await supabase.from('gift_transactions').insert({
-      sender_id: senderId,
-      receiver_id: dto.receiver_id,
-      gift_id: gift.id,
-      room_id: dto.room_id || null,
-      coins_spent: gift.cost_coins,
-    });
+    if (receiverUpdateError) {
+      // Roll back sender's balance
+      await supabase
+        .from('users')
+        .update({ coins_balance: senderBalance })
+        .eq('id', senderId);
+      throw new InternalServerErrorException(
+        'Failed to credit receiver coin balance.',
+      );
+    }
+
+    const { error: insertError } = await supabase
+      .from('gift_transactions')
+      .insert({
+        sender_id: senderId,
+        receiver_id: dto.receiver_id,
+        gift_id: gift.id,
+        room_id: dto.room_id || null,
+        coins_spent: gift.cost_coins,
+      });
+
+    if (insertError) {
+      // Rollback both balances
+      await supabase
+        .from('users')
+        .update({ coins_balance: senderBalance })
+        .eq('id', senderId);
+      await supabase
+        .from('users')
+        .update({ coins_balance: receiverBalance })
+        .eq('id', dto.receiver_id);
+      throw new InternalServerErrorException(
+        'Failed to record gift transaction.',
+      );
+    }
 
     const senderProfile = await this.usersService.getProfile(senderId);
     const receiverProfile = await this.usersService.getProfile(dto.receiver_id);
 
-    const giftEvent = {
+    const giftEvent: GiftEventPayload = {
       type: 'virtual_gift',
-      gift,
-      sender_name: senderProfile?.display_name ?? 'Language Partner',
-      receiver_name: receiverProfile?.display_name ?? 'Room Host',
+      gift_id: gift.id,
+      gift_name: gift.name,
+      icon: gift.icon,
+      animation_url: gift.animation_url ?? '',
+      animation_type: gift.animation_type,
+      coin_value: gift.cost_coins,
+      sender_name: senderProfile?.display_name ?? null,
+      receiver_name: receiverProfile?.display_name ?? null,
       room_id: dto.room_id,
     };
 
+    // Broadcast the animated gift to the recipient's user channel
+    // and, when applicable, the room channel for the live feed.
+    void this.centrifugoService.publish(`user_${dto.receiver_id}`, giftEvent);
     if (dto.room_id) {
       void this.centrifugoService.publish(`room_${dto.room_id}`, giftEvent);
-    } else {
-      void this.centrifugoService.publish(`user_${dto.receiver_id}`, giftEvent);
     }
 
     return {
@@ -688,7 +1028,11 @@ export class EconomyService {
     if (!packResponse.data) {
       throw new NotFoundException(`Sticker pack '${dto.pack_id}' not found.`);
     }
-    const pack = packResponse.data as StickerPackRow;
+    const packData = packResponse.data;
+    if (!isStickerPackRow(packData)) {
+      throw new NotFoundException(`Sticker pack '${dto.pack_id}' not found.`);
+    }
+    const pack = packData;
 
     // 2. Check user's coin balance
     const { coins_balance } = await this.getBalance(userId);

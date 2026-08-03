@@ -1,0 +1,54 @@
+<div class="max-w-md mx-auto ps-4 pe-4 pt-6 pb-10">
+  <h1 class="text-2xl font-semibold text-slate-200 mb-4">
+    {{ 'notification_settings.title' | t }}
+  </h1>
+  <p class="text-slate-400 mb-6">
+    {{ 'notification_settings.subtitle' | t }}
+  </p>
+
+  <div class="mb-5">
+    <label class="block text-slate-300 mb-2" for="customToneUrl">
+      {{ 'notification_settings.custom_tone_label' | t }}
+    </label>
+    <input
+      id="customToneUrl"
+      type="url"
+      class="w-full rounded-md border border-slate-700 bg-slate-900 ps-3 pe-3 py-2 text-slate-200 focus:border-indigo-400 focus:outline-none"
+      [attr.placeholder]="'notification_settings.custom_tone_placeholder' | t"
+      [value]="customToneUrl()"
+      (input)="onToneInput($event)"
+    />
+  </div>
+
+  <div class="mb-5">
+    <label class="block text-slate-300 mb-2" for="vibrationPattern">
+      {{ 'notification_settings.vibration_pattern_label' | t }}
+    </label>
+    <input
+      id="vibrationPattern"
+      type="text"
+      class="w-full rounded-md border border-slate-700 bg-slate-900 ps-3 pe-3 py-2 text-slate-200 focus:border-indigo-400 focus:outline-none"
+      [attr.placeholder]="'notification_settings.vibration_pattern_placeholder' | t"
+      [value]="vibrationPatternText()"
+      (input)="onVibrationInput($event)"
+    />
+    <p class="text-xs text-slate-500 mt-1">
+      {{ 'notification_settings.vibration_pattern_hint' | t }}
+    </p>
+  </div>
+
+  <button
+    type="button"
+    class="w-full rounded-md bg-indigo-600 ps-4 pe-4 py-2 font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+    [disabled]="!saveAvailable()"
+    (click)="savePreferences()"
+  >
+    {{ 'common.save' | t }}
+  </button>
+
+  @if (saved()) {
+    <p class="mt-4 text-green-400">
+      {{ 'notification_settings.saved_message' | t }}
+    </p>
+  }
+</div>

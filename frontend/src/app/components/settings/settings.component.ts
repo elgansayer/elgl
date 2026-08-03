@@ -53,11 +53,11 @@ export class SettingsComponent implements OnInit {
   privacyHideOnlineStatus = false;
   privacyHideVipStatus = false;
   autoPlayVoiceNotes = false;
-  autoDownloadMedia = false;
   soundEffectsEnabled = false;
   vibrationEnabled = false;
 
   readonly linkedAccounts = signal<LinkedAccount[]>([]);
+  readonly autoDownloadMedia = signal(false);
   readonly autoDownloadPreference = signal<'wifi' | 'cellular'>('wifi');
   protected chatEnterToSend = signal(false);
   protected chatTextSize = signal<'small' | 'medium' | 'large'>('medium');
@@ -80,11 +80,14 @@ export class SettingsComponent implements OnInit {
         this.privacyHideOnlineStatus = Boolean(profile.privacy_hide_online_status);
         this.privacyHideVipStatus = Boolean(profile.privacy_hide_vip_status);
         this.autoPlayVoiceNotes = Boolean(profile.auto_play_voice_notes);
-        this.autoDownloadMedia = Boolean(profile.auto_download_media);
+        this.autoDownloadMedia.set(Boolean(profile.auto_download_media));
         this.soundEffectsEnabled = Boolean(profile.sound_effects_enabled);
         this.vibrationEnabled = Boolean(profile.vibration_enabled);
         this.interests.set(profile.interests ?? []);
         this.autoDownloadPreference.set(profile.auto_download_preference ?? 'wifi');
+        if (this.autoDownloadMedia() && profile.auto_download_wifi_only === true) {
+          this.autoDownloadPreference.set('wifi');
+        }
       }
 
       // Load linked accounts
@@ -199,6 +202,15 @@ export class SettingsComponent implements OnInit {
     this.vibrationEnabled = !this.vibrationEnabled;
   }
 
+  updateAutoDownloadMode(mode: 'off' | 'wifi' | 'cellular'): void {
+    if (mode === 'off') {
+      this.autoDownloadMedia.set(false);
+    } else {
+      this.autoDownloadMedia.set(true);
+      this.autoDownloadPreference.set(mode);
+    }
+  }
+
   async saveSettings(): Promise<void> {
     this.errorMessage.set('');
     this.successMessage.set('');
@@ -214,10 +226,11 @@ export class SettingsComponent implements OnInit {
         privacy_hide_online_status: this.privacyHideOnlineStatus,
         privacy_hide_vip_status: this.privacyHideVipStatus,
         auto_play_voice_notes: this.autoPlayVoiceNotes,
-        auto_download_media: this.autoDownloadMedia,
+        auto_download_media: this.autoDownloadMedia(),
         sound_effects_enabled: this.soundEffectsEnabled,
         vibration_enabled: this.vibrationEnabled,
         auto_download_preference: this.autoDownloadPreference(),
+        auto_download_wifi_only: this.autoDownloadMedia() && this.autoDownloadPreference() === 'wifi',
         primary_accent_color: this.primaryAccentColor() ?? undefined,
         interests: this.interests(),
       });

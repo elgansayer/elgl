@@ -84,6 +84,8 @@ export class NotificationsInboxComponent implements OnInit {
       notif.type === 'reply_comment'
     ) {
       void this.router.navigate(['/moments']);
+    } else if (notif.type === 'mention_chat') {
+      void this.router.navigate(['/chat', notif.entity_id]);
     } else if (notif.type === 'system') {
       void this.router.navigate(['/help']);
     } else {
@@ -99,6 +101,8 @@ export class NotificationsInboxComponent implements OnInit {
       case 'comment_moment':
       case 'reply_comment':
         return '💬';
+      case 'mention_chat':
+        return '📣';
       case 'follow':
         return '👤';
       case 'profile_visit':
@@ -120,6 +124,8 @@ export class NotificationsInboxComponent implements OnInit {
         return 'notifications.commentedMoment';
       case 'reply_comment':
         return 'notifications.repliedComment';
+      case 'mention_chat':
+        return 'notifications.mentionedInChat';
       case 'follow':
         return 'notifications.followedYou';
       case 'profile_visit':

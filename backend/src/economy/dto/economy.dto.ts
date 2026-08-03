@@ -1,4 +1,10 @@
-import { IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 
 export class PurchaseCoinsDto {
   @IsString()
@@ -9,6 +15,30 @@ export class PurchaseCoinsDto {
   @IsString()
   @IsIn(['ios', 'android', 'web'])
   platform?: 'ios' | 'android' | 'web';
+}
+
+export class VerifyReceiptDto {
+  @IsString()
+  @IsNotEmpty()
+  receipt_token!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  platform!: 'ios' | 'android' | 'web';
+}
+
+export class VerifiedPurchaseDto {
+  @IsString()
+  @IsNotEmpty()
+  transaction_id!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  product_id!: string;
+
+  @IsString()
+  @IsIn(['ios', 'android', 'web'])
+  platform!: 'ios' | 'android' | 'web';
 }
 
 export class CreateCoinCheckoutSessionDto {
@@ -24,15 +54,13 @@ export class UnlockStickerPackDto {
 }
 
 export class SendGiftDto {
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   receiver_id!: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   gift_id!: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   room_id?: string;
 }

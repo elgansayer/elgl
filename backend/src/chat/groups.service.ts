@@ -11,6 +11,15 @@ import { SystemMessageService } from './services/system-message.service';
 import { ChatRoomRecord } from './interfaces/chat-message.interface';
 import { randomBytes } from 'crypto';
 
+export interface GroupMember {
+  user_id: string;
+  user: {
+    id: string;
+    display_name: string;
+    avatar_url: string | null;
+  } | null;
+}
+
 @Injectable()
 export class GroupsService {
   constructor(
@@ -136,7 +145,7 @@ export class GroupsService {
     await this.systemMessageService.publishToRoom(roomId, 'memberRemoved', {});
   }
 
-  async getGroupMembers(roomId: string): Promise<any[]> {
+  async getGroupMembers(roomId: string): Promise<GroupMember[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('chat_room_members')
@@ -153,7 +162,7 @@ export class GroupsService {
       .eq('room_id', roomId);
 
     if (error) throw new Error('Failed to fetch group members');
-    return data || [];
+    return (data ?? []) as GroupMember[];
   }
 
   async generateInviteCode(userId: string, roomId: string): Promise<string> {
@@ -246,6 +255,49 @@ export class GroupsService {
     });
   }
 
+  async createAnnouncementGroup(
+    creatorId: string,
+    name: string,
+    memberIds: string[],
+  ): Promise<ChatRoomRecord> {
+    if (memberIds.length > 49) {
+      throw new Error('Group cannot exceed 50 members');
+    }
+    const supabase = this.supabaseService.getClient();
+
+    const response = await supabase
+      .from('chat_rooms')
+      .insert({
+        title: name,
+        is_announcement: true,
+        admin_id: creatorId,
+      })
+      .select()
+      .single();
+
+    if (response.error || !response.data) {
+      throw new Error('Failed to create announcement group');
+    }
+
+    const room = response.data as ChatRoomRecord;
+
+    const allMembers = [...new Set([creatorId, ...memberIds])];
+    const membersData = allMembers.map((id) => ({
+      room_id: room.id,
+      user_id: id,
+    }));
+
+    const { error: membersError } = await supabase
+      .from('chat_room_members')
+      .insert(membersData);
+
+    if (membersError) {
+      throw new Error('Failed to add members to announcement group');
+    }
+
+    return room;
+  }
+
   async sendAnnouncement(
     userId: string,
     roomId: string,
@@ -264,6 +316,14 @@ export class GroupsService {
     await this.systemMessageService.publishToRoom(roomId, 'announcement', {
       message,
     });
+  }
+
+  async sendAnnouncement(
+    userId: string,
+    roomId: string,
+    message: string,
+  ): Promise<void> {
+    await this.broadcastMessage(userId, roomId, message);
   }
 
   async getAnnouncements(

@@ -4,8 +4,6 @@ import { ChatModule } from '../chat/chat.module';
 import { UsersModule } from '../users/users.module';
 import { EconomyController } from './economy.controller';
 import { EconomyService } from './economy.service';
-import { AppleNotificationService } from './apple-notification.service';
-import { GooglePlayNotificationService } from './google-play-notification.service';
 
 describe('EconomyModule', () => {
   it('should be defined', () => {
@@ -28,21 +26,17 @@ describe('EconomyModule', () => {
     expect(controllersMetadata).toContain(EconomyController);
   });
 
-  it('should register EconomyService, AppleNotificationService and GooglePlayNotificationService in its providers metadata', () => {
+  it('should register EconomyService in its providers metadata', () => {
     const providersMetadata =
       (Reflect.getMetadata('providers', EconomyModule) as unknown[]) ?? [];
 
     expect(providersMetadata).toContain(EconomyService);
-    expect(providersMetadata).toContain(AppleNotificationService);
-    expect(providersMetadata).toContain(GooglePlayNotificationService);
   });
 
-  it('should export EconomyService, AppleNotificationService and GooglePlayNotificationService', () => {
+  it('should export EconomyService', () => {
     const exportsMetadata =
       (Reflect.getMetadata('exports', EconomyModule) as unknown[]) ?? [];
 
     expect(exportsMetadata).toContain(EconomyService);
-    expect(exportsMetadata).toContain(AppleNotificationService);
-    expect(exportsMetadata).toContain(GooglePlayNotificationService);
   });
 });

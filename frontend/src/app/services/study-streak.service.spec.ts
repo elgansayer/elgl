@@ -39,13 +39,11 @@ describe('StudyStreakService', () => {
 
       const promise = firstValueFrom(service.getStreak());
 
-      const req = httpTesting.expectOne(
-        `${environment.apiUrl}/study-streak/me`,
-      );
+      const req = httpTesting.expectOne(`${environment.apiUrl}/study-streak/me`);
       expect(req.request.method).toBe('GET');
       req.flush(expected);
 
-      await expect(promise).resolves.toEqual(expected);
+      await promise.then((result) => expect(result).toEqual(expected));
     });
   });
 
@@ -62,7 +60,7 @@ describe('StudyStreakService', () => {
       expect(req.request.body).toEqual({});
       req.flush(expected);
 
-      await expect(promise).resolves.toEqual(expected);
+      await promise.then((result) => expect(result).toEqual(expected));
     });
   });
 });

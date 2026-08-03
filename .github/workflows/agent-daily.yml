@@ -1,0 +1,48 @@
+name: Daily Agent Automations
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: write
+
+jobs:
+  queue-tasks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Queue Daily Tasks for AI Swarm
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Queueing daily tasks..."
+          
+          tasks=(
+            "task-daily-mock-data-refresh.md"
+            "task-daily-e2e-suite.md"
+            "task-daily-supabase-migration-audit.md"
+            "task-daily-performance-audit.md"
+            "task-daily-security-webhook-check.md"
+            "task-daily-design-system-sync.md"
+            "task-daily-centrifugo-stress-test.md"
+            "task-daily-livekit-room-cleanup.md"
+            "task-daily-accessibility-axe.md"
+            "task-daily-documentation-sync.md"
+          )
+          
+          for task in "${tasks[@]}"; do
+            title=$(head -n 1 "$task" | sed 's/^# //')
+            
+            existing=$(gh issue list --state open --search "$title" --json number -q '.[0].number')
+            
+            if [ -z "$existing" ]; then
+              echo "Creating new issue for: $title"
+              gh issue create --title "[Daily] $title" --body-file "$task" --label "ai-agent-task,daily"
+            else
+              echo "Issue already open for $title (#$existing). Skipping."
+            fi
+          done

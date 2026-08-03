@@ -18,6 +18,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object';
 }
 
+type PrivacyVisibility = 'everyone' | 'vips_only' | 'hidden';
+
 @Component({
   selector: 'app-profile',
   imports: [
@@ -82,10 +84,10 @@ export class ProfileComponent implements OnInit {
 
   // Privacy fields
   incognitoVisits = signal<boolean>(false);
-  privacyLastSeen = 'everyone';
-  privacyProfilePhoto = 'everyone';
-  privacyAboutInfo = 'everyone';
-  privacyStatus = 'everyone';
+  privacyLastSeen: PrivacyVisibility = 'everyone';
+  privacyProfilePhoto: PrivacyVisibility = 'everyone';
+  privacyAboutInfo: PrivacyVisibility = 'everyone';
+  privacyStatus: PrivacyVisibility = 'everyone';
 
   // Celebration state
   readonly showConfetti = signal<boolean>(false);
@@ -112,10 +114,10 @@ export class ProfileComponent implements OnInit {
         this.statusText = data.status_text || '';
         this.profileVisibility.set(data.profile_visibility || 'everyone');
         this.incognitoVisits.set(data?.incognito_visits ?? false);
-        this.privacyLastSeen = data.privacy_last_seen ?? 'everyone';
-        this.privacyProfilePhoto = data.privacy_profile_photo ?? 'everyone';
-        this.privacyAboutInfo = data.privacy_about_info ?? 'everyone';
-        this.privacyStatus = data.privacy_status ?? 'everyone';
+        this.privacyLastSeen = this.sanitizePrivacyVisibility(data.privacy_last_seen);
+        this.privacyProfilePhoto = this.sanitizePrivacyVisibility(data.privacy_profile_photo);
+        this.privacyAboutInfo = this.sanitizePrivacyVisibility(data.privacy_about_info);
+        this.privacyStatus = this.sanitizePrivacyVisibility(data.privacy_status);
         this.proficiencyLevel.set(data.proficiency_level || 'B1');
         this.learningGoals.set(data.learning_goals || '');
         this.statusText = data.status_text || '';
@@ -165,6 +167,13 @@ export class ProfileComponent implements OnInit {
     }
   }
 
+  private sanitizePrivacyVisibility(value: string | undefined): PrivacyVisibility {
+    if (value === 'vips_only' || value === 'hidden') {
+      return value;
+    }
+    return 'everyone';
+  }
+
   toggleEdit(): void {
     this.isEditing.set(!this.isEditing());
     this.errorMessage.set('');
@@ -200,6 +209,10 @@ export class ProfileComponent implements OnInit {
     }
   }
 
+  onCustomAvatarFileSelected(event: Event): void {
+    this.onAvatarFileSelected(event);
+  }
+
   onAvatarClick(): void {
     const fileInputEl = this.fileInput();
     if (fileInputEl) {
@@ -223,6 +236,11 @@ export class ProfileComponent implements OnInit {
       if (this.selectedAvatarFile) {
         this.avatarUrl = await this.userService.uploadAvatar(this.selectedAvatarFile);
         this.selectedAvatarFile = null;
+      }
+
+      // Update About status
+      if (this.statusText) {
+        await this.userService.updateAboutStatus(this.statusText);
       }
 
       const updated = await this.userService.updateMyProfile({

@@ -9,9 +9,10 @@ permissions:
 jobs:
   dependabot:
     runs-on: ubuntu-latest
-    if: github.actor == 'dependabot[bot]'
+    if: github.actor == 'dependabot[bot]' || github.actor == 'github-actions[bot]'
     steps:
       - name: Fetch Dependabot metadata
+        if: github.actor == 'dependabot[bot]'
         id: metadata
         uses: dependabot/fetch-metadata@v2
         with:

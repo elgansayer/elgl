@@ -21,6 +21,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { XpService } from '../xp/xp.service';
 import { PREDEFINED_HOBBIES, PREDEFINED_INTERESTS } from './constants';
 import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
+import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 
 @Injectable()
 export class UsersService {
@@ -116,7 +117,7 @@ export class UsersService {
   async getVisitors(userId: string): Promise<ProfileVisitor[]> {
     const supabase = this.supabaseService.getClient();
 
-    const response = await supabase
+    const response = (await supabase
       .from('profile_visits')
       .select(
         `
@@ -135,13 +136,17 @@ export class UsersService {
       )
       .eq('viewed_id', userId)
       .order('created_at', { ascending: false })
-      .limit(50);
+      .limit(50)) as unknown as { data: any[]; error: any };
 
     if (response.error) {
       throw new InternalServerErrorException('Failed to fetch visitors');
     }
 
-    const rows = (response.data ?? []) as Array<{
+    const rawData = response.data ?? [];
+    if (!Array.isArray(rawData)) {
+      throw new InternalServerErrorException('Unexpected response shape');
+    }
+    const rows = rawData as unknown as Array<{
       id: string;
       visitor_id: string;
       viewed_id: string;
@@ -160,7 +165,10 @@ export class UsersService {
     }));
   }
 
-  async getStatusViewers(userId: string): Promise<ProfileVisitor[]> {
+  async getStatusViewersByStatusId(
+    userId: string,
+    statusId: string,
+  ): Promise<ProfileVisitor[]> {
     const supabase = this.supabaseService.getClient();
 
     const response = await supabase
@@ -181,6 +189,7 @@ export class UsersService {
       `,
       )
       .eq('status_owner_id', userId)
+      .eq('status_id' as never, statusId)
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -188,49 +197,27 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to fetch status viewers');
     }
 
-    type Viewer = {
-      id: string;
-      display_name: string;
-      avatar_url: string;
-      native_languages: string[];
-      target_languages: string[];
-    };
-
-    const rows: Array<{
+    const rawData = response.data ?? [];
+    if (!Array.isArray(rawData)) {
+      throw new InternalServerErrorException('Unexpected response shape');
+    }
+    const rows = rawData as unknown as Array<{
       id: string;
       viewer_id: string;
       status_owner_id: string;
       created_at: string;
-      viewer: Viewer | Viewer[] | null;
-    }> = response.data ?? [];
+      viewer: ProfileVisitorSummary | ProfileVisitorSummary[] | null;
+    }>;
 
-    return rows.map((row) => {
-      // Status views may flatten the viewer relationship into an array
-      // depending on the Supabase client version.  Normalise to a single
-      // object to keep the mapping type-safe.
-      const viewer: Viewer = Array.isArray(row.viewer)
-        ? row.viewer[0]
-        : (row.viewer ?? {
-            id: '',
-            display_name: '',
-            avatar_url: '',
-            native_languages: [],
-            target_languages: [],
-          });
-      return {
-        id: row.id,
-        visitor_id: row.viewer_id,
-        viewed_id: row.status_owner_id,
-        created_at: row.created_at,
-        visitor: {
-          id: viewer.id,
-          display_name: viewer.display_name,
-          avatar_url: viewer.avatar_url,
-          native_languages: viewer.native_languages,
-          target_languages: viewer.target_languages,
-        },
-      };
-    });
+    return rows.map((row) => ({
+      id: row.id,
+      visitor_id: row.viewer_id,
+      viewed_id: row.status_owner_id,
+      created_at: row.created_at,
+      visitor: Array.isArray(row.viewer)
+        ? (row.viewer[0] ?? undefined)
+        : (row.viewer ?? undefined),
+    }));
   }
 
   async followUser(followerId: string, targetUserId: string): Promise<void> {
@@ -329,6 +316,14 @@ export class UsersService {
     }
   }
 
+  async getNotificationPreferences(userId: string): Promise<{
+    custom_tone_url?: string;
+    vibration_pattern?: number[];
+  }> {
+    const profile = await this.getProfile(userId);
+    return profile.notification_preferences ?? {};
+  }
+
   async updateDoNotDisturbSettings(
     userId: string,
     dto: DoNotDisturbDto,
@@ -389,6 +384,7 @@ export class UsersService {
       scheduled_for_deletion_at: undefined,
       mock_country: undefined,
       mock_city: undefined,
+      notification_preferences: undefined,
       xp_total: 100,
       business_name: 'My Mock Shop',
       business_hours: 'Mon-Fri 9AM-5PM',
@@ -529,6 +525,48 @@ export class UsersService {
     return { ...profile, ...updatePayload };
   }
 
+  async updateNotificationPreferences(
+    userId: string,
+    dto: UpdateNotificationPreferencesDto,
+  ): Promise<UserProfile> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('users')
+      .update({ notification_preferences: dto } as never)
+      .eq('id', userId);
+    if (error) {
+      Logger.warn(
+        `Supabase update for notification preferences failed, falling back to mock: ${error.message}`,
+      );
+      const mock = this.getMockProfile(userId);
+      return {
+        ...mock,
+        notification_preferences: dto,
+      };
+    }
+    return this.getProfile(userId);
+  }
+
+  async updateGreetingMessage(
+    userId: string,
+    greetingMessage: string,
+  ): Promise<UserProfile> {
+    const isVip = Boolean((await this.getProfile(userId))?.is_vip ?? false);
+    return this.updateProfile(
+      userId,
+      { greeting_message: greetingMessage },
+      isVip,
+    );
+  }
+
+  async updateAwayMessage(
+    userId: string,
+    awayMessage: string,
+  ): Promise<UserProfile> {
+    const isVip = Boolean((await this.getProfile(userId))?.is_vip ?? false);
+    return this.updateProfile(userId, { away_message: awayMessage }, isVip);
+  }
+
   async scheduleDeletion(
     userId: string,
   ): Promise<{ message: string; scheduled_for_deletion_at: string }> {
@@ -581,7 +619,7 @@ export class UsersService {
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase
       .from('blocks')
-      .insert({ blocker_id: blockerId, blocked_id: blockedId });
+      .insert([{ blocker_id: blockerId, blocked_id: blockedId }] as never);
     if (error) {
       Logger.warn(`Block insert failed: ${error.message}`);
       throw new InternalServerErrorException('Failed to block user');
@@ -616,13 +654,15 @@ export class UsersService {
     },
   ): Promise<{ success: boolean; message: string }> {
     const supabase = this.supabaseService.getClient();
-    const { error } = await supabase.from('reports').insert({
-      reporter_id: reporterId,
-      reported_user_id: dto.reported_id,
-      reason_category: dto.reason_category,
-      description: dto.description ?? '',
-      context_url: dto.context_url ?? null,
-    });
+    const { error } = await supabase.from('reports').insert([
+      {
+        reporter_id: reporterId,
+        reported_user_id: dto.reported_id,
+        reason_category: dto.reason_category,
+        description: dto.description ?? '',
+        context_url: dto.context_url ?? null,
+      },
+    ]);
     if (error) {
       Logger.warn(`Report insert failed: ${error.message}`);
       throw new InternalServerErrorException('Failed to report user');
@@ -672,6 +712,7 @@ export class UsersService {
     privacy_status?: string;
     privacy_hide_vip_status?: boolean;
     incognito_visits?: boolean;
+    status_visibility?: string;
   }> {
     const profile = await this.getProfile(userId);
     const privacyRecord = profile as unknown as Record<string, unknown>;
@@ -693,6 +734,9 @@ export class UsersService {
       privacy_hide_vip_status:
         (privacyRecord.privacy_hide_vip_status as boolean | undefined) ?? false,
       incognito_visits: profile.incognito_visits ?? false,
+      status_visibility:
+        (profile as unknown as { status_visibility?: string })
+          .status_visibility ?? 'public',
     };
   }
 
@@ -886,7 +930,7 @@ export class UsersService {
       return users;
     }
     const supabase = this.supabaseService.getClient();
-    const { data } = await supabase
+    const { data: followsData, error: followsError } = await supabase
       .from('user_follows')
       .select('following_id')
       .eq('follower_id', viewerId)
@@ -894,9 +938,14 @@ export class UsersService {
         'following_id',
         users.map((user) => user.id),
       );
+
+    if (followsError) {
+      throw new InternalServerErrorException('Failed to fetch follow data');
+    }
+
     const followedIds = new Set(
-      ((data ?? []) as Array<{ following_id: string }>).map(
-        (row) => row.following_id,
+      (followsData ?? []).map(
+        (row: { following_id: string }) => row.following_id,
       ),
     );
     return users.map((user) => ({
@@ -941,6 +990,7 @@ export class UsersService {
       privacy_status?: string;
       incognito_visits?: boolean;
       privacy_hide_vip_status?: boolean;
+      status_visibility?: string;
     },
     isVip: boolean,
   ): Promise<UserProfile> {
@@ -965,6 +1015,8 @@ export class UsersService {
       updatePayload.incognito_visits = settings.incognito_visits;
     if (settings.privacy_hide_vip_status !== undefined)
       updatePayload.privacy_hide_vip_status = settings.privacy_hide_vip_status;
+    if (settings.status_visibility !== undefined)
+      updatePayload.status_visibility = settings.status_visibility;
 
     const { error: privacyUpdateError } = await supabase
       .from('users')
@@ -1061,7 +1113,7 @@ export class UsersService {
         id: 'vip',
         name: 'VIP User',
         description:
-          'This user has a VIP subscription (8 UKP / $10 USD per month)',
+          'This user has a VIP subscription (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent)',
       });
     }
     if (profile.is_serious_learner) {
