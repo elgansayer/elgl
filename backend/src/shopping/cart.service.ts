@@ -32,16 +32,10 @@ export class CartService {
     }
     const item = this.shoppingService.getItem(itemId);
     if (!item) {
-      throw new NotFoundException(
-        this.monetisationService.translate('cart.itemNotFound', { itemId }),
-      );
+      throw new NotFoundException('Item not found');
     }
     if (item.stock < quantity) {
-      throw new BadRequestException(
-        this.monetisationService.translate('cart.insufficientStock', {
-          itemId,
-        }),
-      );
+      throw new BadRequestException('Insufficient stock');
     }
 
     const items = this.carts.get(userId) ?? [];

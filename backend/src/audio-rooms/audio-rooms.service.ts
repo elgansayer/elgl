@@ -29,11 +29,11 @@ import {
   CreateAudioRoomDto,
   DemoteSpeakerDto,
   InviteCoHostDto,
-  JoinRoomDto,
   RaiseHandDto,
   RemoveCoHostDto,
   SendCaptionDto,
 } from './dto/audio-room.dto';
+import { AudioRoomTokenDto } from './dto/audio-room-token.dto';
 import {
   AudioRoomRecord,
   CaptionRecord,
@@ -382,7 +382,7 @@ export class AudioRoomsService {
 
   async generateToken(
     userId: string,
-    dto: JoinRoomDto,
+    dto: AudioRoomTokenDto,
   ): Promise<RoomTokenResponse> {
     const supabase = this.supabaseService.getClient();
     const response = await supabase
@@ -414,6 +414,8 @@ export class AudioRoomsService {
       ? `${profile.display_name}_${userId.slice(0, 6)}`
       : userId;
 
+    const canPublish = isSpeaker; // listeners (non-speakers) receive canPublish = false
+
     const token = new AccessToken(this.apiKey, this.secretKey, {
       identity,
       name: profile?.display_name || 'Language Partner',
@@ -422,7 +424,7 @@ export class AudioRoomsService {
     token.addGrant({
       roomJoin: true,
       room: dto.room_name,
-      canPublish: isSpeaker,
+      canPublish,
       canSubscribe: true,
       canPublishData: true,
     });

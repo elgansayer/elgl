@@ -72,20 +72,25 @@ export class StudyBuddiesService {
     }
 
     const supabase = this.supabaseService.getClient();
-    const { data, error }: { data: BuddyRequestRow[] | null; error: any } =
-      await supabase
-        .from('study_buddy_requests')
-        .upsert(
-          {
-            requester_id: requesterId,
-            partner_id: dto.partnerId,
-            message: dto.message ?? null,
-            status: 'pending',
-          },
-          { onConflict: 'requester_id,partner_id' },
-        )
-        .select('*')
-        .single();
+    const {
+      data,
+      error,
+    }: {
+      data: BuddyRequestRow[] | null;
+      error: { message?: string } | null;
+    } = await supabase
+      .from('study_buddy_requests')
+      .upsert(
+        {
+          requester_id: requesterId,
+          partner_id: dto.partnerId,
+          message: dto.message ?? null,
+          status: 'pending',
+        },
+        { onConflict: 'requester_id,partner_id' },
+      )
+      .select('*')
+      .single();
 
     if (error || !data) {
       throw new Error(

@@ -23,11 +23,11 @@ import {
   CreateAudioRoomDto,
   DemoteSpeakerDto,
   InviteCoHostDto,
-  JoinRoomDto,
   RaiseHandDto,
   RemoveCoHostDto,
   SendCaptionDto,
 } from './dto/audio-room.dto';
+import { AudioRoomTokenDto } from './dto/audio-room-token.dto';
 import {
   AudioRoomRecord,
   CaptionRecord,
@@ -59,7 +59,7 @@ export class AudioRoomsController {
   @Post('token')
   async generateToken(
     @CurrentUser() user: User | null,
-    @Body() dto: JoinRoomDto,
+    @Body() dto: AudioRoomTokenDto,
   ): Promise<RoomTokenResponse | null> {
     if (!user) return null;
     return await this.audioRoomsService.generateToken(user.id, dto);
