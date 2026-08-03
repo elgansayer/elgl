@@ -1041,7 +1041,8 @@ export class SupabaseService implements OnModuleDestroy {
         );
         return;
       }
-      const current = (data.xp_total ?? 0) + points;
+      const row = data as { xp_total: number | null };
+      const current = (row.xp_total ?? 0) + points;
       await supabase
         .from('users')
         .update({ xp_total: current })
@@ -1076,6 +1077,7 @@ export class SupabaseService implements OnModuleDestroy {
       );
       return false;
     }
-    return data.is_vip ?? false;
+    const row = data as { is_vip: boolean | null };
+    return row.is_vip ?? false;
   }
 }

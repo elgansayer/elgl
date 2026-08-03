@@ -870,6 +870,7 @@ export class UsersService {
     userId: string,
     limit = 20,
     offset = 0,
+    viewerId?: string,
   ): Promise<{ data: UserProfile[]; total: number }> {
     const supabase = this.supabaseService.getClient();
     const { count, error: countError } = await supabase

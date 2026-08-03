@@ -752,7 +752,7 @@ export class ChatService {
       .eq('room_id', roomId);
 
     if (error) throw new Error('Failed to fetch group members');
-    return (data ?? []) as GroupMember[];
+    return data ?? [];
   }
 
   // ---- Chat Lock methods ----

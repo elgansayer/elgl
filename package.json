@@ -24,6 +24,10 @@
     "verify:node": "node --version && npm --version && echo '✅ Node.js and npm verified'",
     "prepare": "if [ -d .git ]; then npx husky || true; fi"
   },
+  "dependencies": {
+    "@ngx-translate/core": "^15.0.0",
+    "@ngx-translate/http-loader": "^9.0.0"
+  },
   "devDependencies": {
     "husky": "^9.1.7"
   }
