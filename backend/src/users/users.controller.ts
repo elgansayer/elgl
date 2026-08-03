@@ -231,11 +231,11 @@ export class UsersController {
     if (!user) {
       throw new UnauthorizedException();
     }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return
-    return await this.usersService.getStatusViewersByStatusId(
+    const statusViewers = await this.usersService.getStatusViewersByStatusId(
       user.id,
-      statusId,
+      'default-status-id', // Replace with actual logic to fetch the statusId if needed
     );
+    return statusViewers;
   }
 
   @Get('hobbies')

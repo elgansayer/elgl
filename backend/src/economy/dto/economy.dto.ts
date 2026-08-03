@@ -15,6 +15,18 @@ export class PurchaseCoinsDto {
   @IsString()
   @IsIn(['ios', 'android', 'web'])
   platform?: 'ios' | 'android' | 'web';
+export class VerifiedPurchaseDto {
+  @IsString()
+  @IsNotEmpty()
+  transaction_id!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  product_id!: string;
+
+  @IsString()
+  @IsIn(['ios', 'android', 'web'])
+  platform!: 'ios' | 'android' | 'web';
 }
 
 export class CreateCoinCheckoutSessionDto {
