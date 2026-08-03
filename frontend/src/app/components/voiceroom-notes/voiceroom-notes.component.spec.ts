@@ -75,7 +75,7 @@ describe('VoiceroomNotesComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(component.notesResource.value()).toHaveLength(1);
+    expect(component.notesResource.value()?.length).toBe(1);
     expect(component.notesResource.value()[0].author_name).toBe('Alice');
     expect(fixture.nativeElement.textContent).toContain('Alice');
   });
@@ -123,7 +123,7 @@ describe('VoiceroomNotesComponent', () => {
 
     expect(component.content()).toBe('');
     expect(component.vocabulary()).toBe('');
-    expect(component.notesResource.value()).toHaveLength(1);
+    expect(component.notesResource.value()?.length).toBe(1);
   });
 
   it('should delete a note and reload the list', async () => {

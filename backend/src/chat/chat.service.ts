@@ -154,10 +154,6 @@ export class ChatService {
         },
       ] as ChatRoomRecord[];
 
-      // Filter out blocked users from mock data
-      if (blockedIds.length > 0) {
-        return mockRooms.filter((room) => !blockedIds.includes(room.id));
-      }
       return mockRooms;
     }
 

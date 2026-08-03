@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { PostgrestError } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
@@ -55,7 +60,7 @@ export class SafetyService {
 
     // Prevent self-reporting
     if (reporterId === dto.reported_id) {
-      throw new Error('Cannot report yourself');
+      throw new BadRequestException('Cannot report yourself');
     }
 
     // Verify reported user exists
@@ -110,6 +115,21 @@ export class SafetyService {
   ): Promise<{ success: boolean; blocked_id: string }> {
     const supabase = this.supabaseService.getClient();
 
+    if (blockerId === dto.blocked_id) {
+      throw new BadRequestException('You cannot block yourself');
+    }
+
+    // Verify the target user exists
+    const { data: targetUser, error: targetError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', dto.blocked_id)
+      .maybeSingle();
+
+    if (targetError || !targetUser) {
+      throw new NotFoundException('User to block not found');
+    }
+
     // Check if already blocked
     const { data: existing } = await supabase
       .from('blocks')
@@ -119,7 +139,7 @@ export class SafetyService {
       .maybeSingle();
 
     if (existing) {
-      throw new Error('User is already blocked');
+      throw new BadRequestException('User is already blocked');
     }
 
     const { error } = await supabase.from('blocks').insert({

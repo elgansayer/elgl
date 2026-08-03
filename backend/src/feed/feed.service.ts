@@ -89,7 +89,7 @@ export class FeedService {
 
     // Exclude blocked users' moments (both directions)
     if (blockedIds.length > 0) {
-      query = query.not('author_id', 'in', `(${blockedIds.join(',')})`);
+      query = query.not('author_id', 'in', blockedIds);
     }
 
     if (filter === 'following') {

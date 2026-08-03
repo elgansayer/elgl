@@ -142,7 +142,11 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to fetch visitors');
     }
 
-    const rows = (response.data ?? []) as Array<{
+    const rawData = response.data ?? [];
+    if (!Array.isArray(rawData)) {
+      throw new InternalServerErrorException('Unexpected response shape');
+    }
+    const rows = rawData as unknown as Array<{
       id: string;
       visitor_id: string;
       viewed_id: string;
@@ -191,7 +195,11 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to fetch status viewers');
     }
 
-    const rows = (response.data ?? []) as Array<{
+    const rawData = response.data ?? [];
+    if (!Array.isArray(rawData)) {
+      throw new InternalServerErrorException('Unexpected response shape');
+    }
+    const rows = rawData as unknown as Array<{
       id: string;
       viewer_id: string;
       status_id: string;

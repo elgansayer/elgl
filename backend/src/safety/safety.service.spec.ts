@@ -16,7 +16,7 @@ describe('SafetyService', () => {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       single: jest.fn(),
-      maybeSingle: jest.fn(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
       delete: jest.fn().mockReturnThis(),
       then: jest.fn((resolve: any) => resolve(mockQueryBuilder._response)),
     };
@@ -121,6 +121,11 @@ describe('SafetyService', () => {
 
   describe('blockUser', () => {
     it('should block a user successfully', async () => {
+      // user existence check
+      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
+        data: { id: 'blocked-user' },
+        error: null,
+      });
       // existing block check returns null
       mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
         data: null,
@@ -155,6 +160,11 @@ describe('SafetyService', () => {
     });
 
     it('should throw when the user is already blocked', async () => {
+      // user existence check
+      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
+        data: { id: 'blocked-user' },
+        error: null,
+      });
       // existing block exists
       mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
         data: { id: 'existing-block' },
