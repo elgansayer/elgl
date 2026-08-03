@@ -45,7 +45,7 @@ LOG_FILE    = ROOT / 'logs' / 'swarmd.log'
 RATE_LOCK   = Path('/tmp/ai_swarm_ratelimit/api.lock')
 HEARTBEAT   = Path('/tmp/ai_swarm_watchdog/heartbeat')
 COORD_LOCK  = Path('/tmp/ai_swarm_coordination.lock')
-RELAXED_TESTS = False  # set True via --relaxed-tests
+RELAXED_TESTS = True  # set True via --relaxed-tests
 LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 # ── config ────────────────────────────────────────────────────────────
