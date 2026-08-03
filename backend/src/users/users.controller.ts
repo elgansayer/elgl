@@ -20,6 +20,8 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateBusinessProfileDto } from './dto/update-business-profile.dto';
 import { PrivacySettingsDto } from './dto/privacy-settings.dto';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
+import { UpdateGreetingMessageDto } from './dto/update-greeting-message.dto';
+import { UpdateAwayMessageDto } from './dto/update-away-message.dto';
 import { UpdateStatusVisibilityDto } from './dto/update-status-visibility.dto';
 import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
 import {
@@ -137,6 +139,27 @@ export class UsersController {
     );
   }
 
+  @Patch('me/greeting')
+  async updateGreetingMessage(
+    @CurrentUser() user: User | null,
+    @Body() dto: UpdateGreetingMessageDto,
+  ): Promise<UserProfile | null> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.updateGreetingMessage(
+      user.id,
+      dto.greetingMessage,
+    );
+  }
+
+  @Patch('me/away')
+  async updateAwayMessage(
+    @CurrentUser() user: User | null,
+    @Body() dto: UpdateAwayMessageDto,
+  ): Promise<UserProfile | null> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.updateAwayMessage(user.id, dto.awayMessage);
+  }
+
   @Post('me/cover-photo/presigned-url')
   async getCoverPhotoPresignedUrl(
     @CurrentUser() user: User | null,
@@ -202,7 +225,7 @@ export class UsersController {
   }
 
   @Get('me/status-viewers')
-  async getMyStatusViewers(
+  getMyStatusViewers(
     @CurrentUser() user: User | null,
   ): Promise<ProfileVisitor[]> {
     if (!user) {

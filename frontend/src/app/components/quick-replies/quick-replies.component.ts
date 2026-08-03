@@ -26,7 +26,7 @@ export class QuickRepliesComponent {
   readonly quickRepliesInput = input<QuickReply[] | null>(null);
 
   private readonly quickRepliesService = inject(QuickRepliesService);
-  private readonly quickRepliesResource = resource<QuickReply[]>({
+  private readonly quickRepliesResource = resource<QuickReply[], unknown>({
     loader: () => this.quickRepliesService.getQuickReplies(),
   });
 

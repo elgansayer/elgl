@@ -537,6 +537,26 @@ export class UsersService {
     return this.getProfile(userId);
   }
 
+  async updateGreetingMessage(
+    userId: string,
+    greetingMessage: string,
+  ): Promise<UserProfile> {
+    const isVip = Boolean((await this.getProfile(userId))?.is_vip ?? false);
+    return this.updateProfile(
+      userId,
+      { greeting_message: greetingMessage },
+      isVip,
+    );
+  }
+
+  async updateAwayMessage(
+    userId: string,
+    awayMessage: string,
+  ): Promise<UserProfile> {
+    const isVip = Boolean((await this.getProfile(userId))?.is_vip ?? false);
+    return this.updateProfile(userId, { away_message: awayMessage }, isVip);
+  }
+
   async scheduleDeletion(
     userId: string,
   ): Promise<{ message: string; scheduled_for_deletion_at: string }> {
