@@ -162,7 +162,7 @@ export class GroupsService {
       .eq('room_id', roomId);
 
     if (error) throw new Error('Failed to fetch group members');
-    return data || [];
+    return (data ?? []) as GroupMember[];
   }
 
   async generateInviteCode(userId: string, roomId: string): Promise<string> {

@@ -25,6 +25,7 @@ export interface VirtualGiftRow {
   icon: string;
   cost_coins: number;
   animation_type: string;
+  animation_url?: string;
 }
 
 export interface StickerPackRow {
@@ -148,6 +149,19 @@ function isStickerPackRow(value: unknown): value is StickerPackRow {
     typeof value.name === 'string' &&
     typeof value.cost_coins === 'number'
   );
+}
+
+export interface GiftEventPayload {
+  type: 'virtual_gift';
+  gift_id: string;
+  gift_name: string;
+  icon: string;
+  animation_url: string;
+  animation_type: string;
+  coin_value: number;
+  sender_name: string | null;
+  receiver_name: string | null;
+  room_id?: string;
 }
 
 @Injectable()
@@ -662,14 +676,18 @@ export class EconomyService {
     coins_remaining: number;
     gift: VirtualGiftRow;
   }> {
+    if (senderId === dto.receiver_id) {
+      throw new BadRequestException('You cannot send a gift to yourself');
+    }
+
     const supabase = this.supabaseService.getClient();
 
     const giftResponse = await supabase
       .from('virtual_gifts')
       .select('*')
       .eq('id', dto.gift_id)
-      .single();
-    if (!giftResponse.data) {
+      .maybeSingle();
+    if (giftResponse.error || !giftResponse.data) {
       throw new NotFoundException(
         `Gift '${dto.gift_id}' not found in catalog.`,
       );
@@ -689,6 +707,16 @@ export class EconomyService {
       );
     }
 
+    // Verify the receiver exists before crediting coins
+    const receiverCheck = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', dto.receiver_id)
+      .maybeSingle();
+    if (receiverCheck.error || !receiverCheck.data) {
+      throw new NotFoundException('Receiver user not found.');
+    }
+
     const { coins_balance: receiverBalance } = await this.getBalance(
       dto.receiver_id,
     );
@@ -697,38 +725,79 @@ export class EconomyService {
     const newSenderBalance = senderBalance - gift.cost_coins;
     const newReceiverBalance = receiverBalance + gift.cost_coins;
 
-    await supabase
+    const { error: senderUpdateError } = await supabase
       .from('users')
       .update({ coins_balance: newSenderBalance })
       .eq('id', senderId);
-    await supabase
+
+    if (senderUpdateError) {
+      throw new InternalServerErrorException(
+        'Failed to update sender coin balance.',
+      );
+    }
+
+    const { error: receiverUpdateError } = await supabase
       .from('users')
       .update({ coins_balance: newReceiverBalance })
       .eq('id', dto.receiver_id);
 
-    await supabase.from('gift_transactions').insert({
-      sender_id: senderId,
-      receiver_id: dto.receiver_id,
-      gift_id: gift.id,
-      room_id: dto.room_id || null,
-      coins_spent: gift.cost_coins,
-    });
+    if (receiverUpdateError) {
+      // Roll back sender's balance
+      await supabase
+        .from('users')
+        .update({ coins_balance: senderBalance })
+        .eq('id', senderId);
+      throw new InternalServerErrorException(
+        'Failed to credit receiver coin balance.',
+      );
+    }
+
+    const { error: insertError } = await supabase
+      .from('gift_transactions')
+      .insert({
+        sender_id: senderId,
+        receiver_id: dto.receiver_id,
+        gift_id: gift.id,
+        room_id: dto.room_id || null,
+        coins_spent: gift.cost_coins,
+      });
+
+    if (insertError) {
+      // Rollback both balances
+      await supabase
+        .from('users')
+        .update({ coins_balance: senderBalance })
+        .eq('id', senderId);
+      await supabase
+        .from('users')
+        .update({ coins_balance: receiverBalance })
+        .eq('id', dto.receiver_id);
+      throw new InternalServerErrorException(
+        'Failed to record gift transaction.',
+      );
+    }
 
     const senderProfile = await this.usersService.getProfile(senderId);
     const receiverProfile = await this.usersService.getProfile(dto.receiver_id);
 
-    const giftEvent = {
+    const giftEvent: GiftEventPayload = {
       type: 'virtual_gift',
-      gift,
-      sender_name: senderProfile?.display_name ?? 'Language Partner',
-      receiver_name: receiverProfile?.display_name ?? 'Room Host',
+      gift_id: gift.id,
+      gift_name: gift.name,
+      icon: gift.icon,
+      animation_url: gift.animation_url ?? '',
+      animation_type: gift.animation_type,
+      coin_value: gift.cost_coins,
+      sender_name: senderProfile?.display_name ?? null,
+      receiver_name: receiverProfile?.display_name ?? null,
       room_id: dto.room_id,
     };
 
+    // Broadcast the animated gift to the recipient's user channel
+    // and, when applicable, the room channel for the live feed.
+    void this.centrifugoService.publish(`user_${dto.receiver_id}`, giftEvent);
     if (dto.room_id) {
       void this.centrifugoService.publish(`room_${dto.room_id}`, giftEvent);
-    } else {
-      void this.centrifugoService.publish(`user_${dto.receiver_id}`, giftEvent);
     }
 
     return {

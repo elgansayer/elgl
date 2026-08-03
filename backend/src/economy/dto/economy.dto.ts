@@ -1,4 +1,10 @@
-import { IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 
 export class PurchaseCoinsDto {
   @IsString()
@@ -24,15 +30,13 @@ export class UnlockStickerPackDto {
 }
 
 export class SendGiftDto {
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   receiver_id!: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   gift_id!: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   room_id?: string;
 }
