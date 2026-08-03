@@ -1,4 +1,10 @@
-import { IsString, IsNotEmpty, IsUUID, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsUUID,
+  MaxLength,
+  IsOptional,
+} from 'class-validator';
 
 export class ReplyToStatusUpdateDto {
   @IsString()
@@ -13,4 +19,9 @@ export class ReplyToStatusUpdateDto {
   @IsUUID()
   @IsNotEmpty()
   target_user_id!: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(2000)
+  text?: string;
 }

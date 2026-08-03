@@ -28,6 +28,7 @@ import {
 import { SystemMessageService } from './services/system-message.service';
 import { XpService } from '../xp/xp.service';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
+import { randomUUID } from 'crypto';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -316,7 +317,9 @@ export class ChatService {
             ? '🎨 Doodle'
             : dto.message_type === 'correction_request'
               ? '✏️ Correction request'
-              : '';
+              : dto.message_type === 'status_reply'
+                ? '✉️ Status reply'
+                : '';
 
     // Emit push notification event
     if (roomMembers && roomMembers.length > 0) {
@@ -811,23 +814,50 @@ export class ChatService {
   ): Promise<ChatMessage> {
     const supabase = this.supabaseService.getClient();
 
-    // Determine deterministic room id
-    const ids = [userId, dto.target_user_id].sort();
-    const roomId = `chat_${ids.join('_')}`;
+    // Try to reuse an existing 1-to-1 chat between the two users.
+    let roomId: string | undefined;
 
-    // Check if room exists
-    const { data: existingRoom } = await supabase
-      .from('chat_rooms')
-      .select('id')
-      .eq('id', roomId)
-      .maybeSingle();
+    const { data: myRooms } = await supabase
+      .from('chat_room_members')
+      .select('room_id')
+      .eq('user_id', userId);
 
-    if (!existingRoom) {
-      // Create room
+    const myRoomIds = (myRooms ?? []).map(
+      (r: { room_id: string }) => r.room_id,
+    );
+
+    if (myRoomIds.length > 0) {
+      const { data: mutualRooms } = await supabase
+        .from('chat_room_members')
+        .select('room_id')
+        .eq('user_id', dto.target_user_id)
+        .in('room_id', myRoomIds);
+
+      const mutualRoomIds = (mutualRooms ?? []).map(
+        (r: { room_id: string }) => r.room_id,
+      );
+
+      for (const candidateRoomId of mutualRoomIds) {
+        const { data: members } = await supabase
+          .from('chat_room_members')
+          .select('user_id')
+          .eq('room_id', candidateRoomId);
+
+        if (members && members.length === 2) {
+          roomId = candidateRoomId;
+          break;
+        }
+      }
+    }
+
+    if (!roomId) {
+      // Create a new room when no existing 1-to-1 chat exists.
+      const newRoomId = randomUUID();
+
       const { error: roomError } = await supabase.from('chat_rooms').insert({
-        id: roomId,
-        title: '',
-        subtitle: '',
+        id: newRoomId,
+        title: 'Status reply',
+        subtitle: dto.status_text.slice(0, 80),
         avatar: '',
         is_online: false,
         is_pinned: false,
@@ -837,24 +867,27 @@ export class ChatService {
         throw new Error(`Failed to create room: ${roomError.message}`);
       }
 
-      // Add both members
-      const members = ids.map((uid) => ({
-        room_id: roomId,
+      const members = [userId, dto.target_user_id].map((uid) => ({
+        room_id: newRoomId,
         user_id: uid,
       }));
+
       const { error: memberError } = await supabase
         .from('chat_room_members')
         .insert(members);
+
       if (memberError) {
         throw new Error(`Failed to add room members: ${memberError.message}`);
       }
+
+      roomId = newRoomId;
     }
 
-    // Reuse sendMessage logic
+    // Reuse sendMessage logic, passing the user’s reply as the text content.
     const msgDto: SendMessageDto = {
       room_id: roomId,
       message_type: 'status_reply',
-      text_content: undefined,
+      text_content: dto.text ?? undefined,
       media_url: undefined,
       correction_payload: undefined,
       reply_to_id: undefined,

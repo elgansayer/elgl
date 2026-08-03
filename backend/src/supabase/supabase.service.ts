@@ -382,6 +382,45 @@ export interface Database {
         Update: Partial<FavouriteRow>;
         Relationships: [];
       };
+      user_quests: {
+        Row: {
+          id: string;
+          user_id: string;
+          quest_type: string;
+          quest_key: string;
+          progress: number;
+          target: number;
+          reward_coins: number;
+          completed: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          user_id: string;
+          quest_type: string;
+          quest_key: string;
+          progress?: number;
+          target: number;
+          reward_coins: number;
+          completed?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          user_id?: string;
+          quest_type?: string;
+          quest_key?: string;
+          progress?: number;
+          target?: number;
+          reward_coins?: number;
+          completed?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        }>;
+        Relationships: [];
+      };
       chat_messages: {
         Row: ChatMessageRow;
         Insert: Partial<ChatMessageRow>;

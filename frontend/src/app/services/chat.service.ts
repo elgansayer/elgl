@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { SafetyService } from './safety.service';
 import { OfflineQueueService } from './offline-queue.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
+import { Router } from '@angular/router';
 
 export interface CorrectionPayload {
   original: string;
@@ -134,6 +135,7 @@ export class ChatService {
   private safetyService = inject(SafetyService);
   private offlineQueue = inject(OfflineQueueService);
   private hapticFeedback = inject(HapticFeedbackService);
+  private router = inject(Router);
   private baseUrl = `${environment.apiUrl}/chat`;
 
   // Blocked user list is loaded on demand, never in the constructor,
@@ -319,6 +321,7 @@ export class ChatService {
     target_user_id: string;
     status_update_id: string;
     status_text: string;
+    text?: string;
   }): Promise<ChatMessage> {
     try {
       const response = await firstValueFrom(
@@ -327,6 +330,7 @@ export class ChatService {
         }),
       );
       this.hapticFeedback.tap();
+      this.router.navigate(['/chat', response.room_id]).catch(() => undefined);
       return response;
     } catch (cause) {
       console.error('Failed to reply to status update:', cause);
