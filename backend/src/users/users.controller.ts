@@ -236,7 +236,7 @@ export class UsersController {
     }
     return await this.usersService.getStatusViewersByStatusId(
       user.id,
-      'default-status-id', // Replace with actual logic to fetch the statusId if needed
+      await this.usersService.getDefaultStatusId(user.id),
     );
   }
 

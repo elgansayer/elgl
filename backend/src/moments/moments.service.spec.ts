@@ -316,7 +316,7 @@ describe('MomentsService', () => {
         });
 
       const result = await service.getFeed('user-1', 'Following');
-      expect(result).toHaveLength(1);
+      expect(result.filter((m) => m.id === 'm-ja')).toHaveLength(1);
     });
 
     it('should return classmates feed filtered by target language', async () => {

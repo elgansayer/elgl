@@ -1167,7 +1167,7 @@ export class SupabaseService implements OnModuleDestroy {
         );
         return;
       }
-      const row = data as { xp_total: number | null };
+      const row = data;
       const current = (row.xp_total ?? 0) + points;
       await supabase
         .from('users')

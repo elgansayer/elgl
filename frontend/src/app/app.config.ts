@@ -5,6 +5,7 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideServiceWorker } from '@angular/service-worker';
 import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
 import { TranslateHttpLoader } from '@ngx-translate/http-loader';
+import { environment } from '../environments/environment';
 import { routes } from './app.routes';
 
 export function createTranslateLoader(http: HttpClient) {
