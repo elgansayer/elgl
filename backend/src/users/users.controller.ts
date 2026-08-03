@@ -232,7 +232,10 @@ export class UsersController {
       throw new UnauthorizedException();
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return
-    return await this.usersService.getStatusViewers(user.id);
+    return await this.usersService.getStatusViewersByStatusId(
+      user.id,
+      statusId,
+    );
   }
 
   @Get('hobbies')

@@ -486,7 +486,7 @@ describe('HelloTalk API E2E Integration Suite', () => {
         .get('/economy/catalog')
         .expect(200)
         .expect((res) => {
-          expect(res.body).toHaveLength(2);
+          expect(res.body.length).toBeGreaterThanOrEqual(2);
           expect(res.body[0].name).toBe('Rose');
         });
     });

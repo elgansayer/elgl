@@ -24,19 +24,6 @@ export class CreateCheckoutSessionDto {
 export class StripeController {
   constructor(private readonly stripeService: StripeService) {}
 
-  @Post('create-checkout-session')
-  @UseGuards(SupabaseAuthGuard)
-  async createCheckoutSession(
-    @Body() dto: CreateCheckoutSessionDto,
-    @CurrentUser() user: { id: string },
-  ) {
-    // Map planType to planId and interval
-    const planId = dto.planType === 'yearly' ? 'yearly_vip' : 'monthly_vip';
-    const interval = dto.planType === 'yearly' ? 'year' : 'month';
-
-    return this.stripeService.createCheckoutSession(planId, user.id, interval);
-  }
-
   @Post('webhook')
   async handleWebhook(
     @Req() req: Request & { rawBody?: Buffer },

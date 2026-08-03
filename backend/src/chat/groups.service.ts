@@ -298,7 +298,7 @@ export class GroupsService {
     return room;
   }
 
-  async broadcastMessage(
+  async sendAnnouncement(
     userId: string,
     roomId: string,
     message: string,
@@ -311,7 +311,7 @@ export class GroupsService {
       message,
     });
     if (error) {
-      throw new InternalServerErrorException('Failed to broadcast message');
+      throw new InternalServerErrorException('Failed to send announcement');
     }
     await this.systemMessageService.publishToRoom(roomId, 'announcement', {
       message,

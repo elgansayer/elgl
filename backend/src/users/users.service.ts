@@ -165,59 +165,6 @@ export class UsersService {
     }));
   }
 
-  async getStatusViewersByStatusId(
-    userId: string,
-    statusId: string,
-  ): Promise<ProfileVisitor[]> {
-    const supabase = this.supabaseService.getClient();
-
-    const response = await supabase
-      .from('status_views')
-      .select(
-        `
-        id,
-        viewer_id,
-        status_id,
-        created_at,
-        viewer:viewer_id (
-          id,
-          display_name,
-          avatar_url,
-          native_languages,
-          target_languages
-        )
-      `,
-      )
-      .eq('id', statusId)
-      .order('created_at', { ascending: false });
-
-    if (response.error) {
-      throw new InternalServerErrorException('Failed to fetch status viewers');
-    }
-
-    const rawData = response.data ?? [];
-    if (!Array.isArray(rawData)) {
-      throw new InternalServerErrorException('Unexpected response shape');
-    }
-    const rows = rawData as unknown as Array<{
-      id: string;
-      viewer_id: string;
-      status_id: string;
-      created_at: string;
-      viewer: ProfileVisitorSummary | ProfileVisitorSummary[] | null;
-    }>;
-
-    return rows.map((row) => ({
-      id: row.id,
-      visitor_id: row.viewer_id,
-      viewed_id: row.status_id,
-      created_at: row.created_at,
-      visitor: Array.isArray(row.viewer)
-        ? (row.viewer[0] ?? undefined)
-        : (row.viewer ?? undefined),
-    }));
-  }
-
   async followUser(followerId: string, targetUserId: string): Promise<void> {
     if (followerId === targetUserId) {
       throw new BadRequestException('Cannot follow yourself');

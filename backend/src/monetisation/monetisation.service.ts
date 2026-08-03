@@ -93,15 +93,33 @@ export class MonetisationService {
   }
 
   /**
-   * Public method for internal use by webhook handlers and receipt validators.
-   * Do NOT expose this as a controller endpoint.
+   * PRIVATE: VIP status must only be changed via verified payment webhooks.
+   * This method is called exclusively from webhook handlers.
    */
-  async updateVipStatusFromWebhook(
+  private async updateVipStatus(
     userId: string,
     isVip: boolean,
     vipTier: string | null,
   ): Promise<void> {
-    return this.updateVipStatus(userId, isVip, vipTier);
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('users')
+      .update({
+        is_vip: isVip,
+        vip_tier: vipTier,
+      })
+      .eq('id', userId);
+
+    if (error) {
+      this.logger.error(
+        `Failed to update VIP status for user ${userId}: ${error.message}`,
+      );
+      throw new Error('Failed to update VIP status');
+    }
+
+    this.logger.log(
+      `VIP status updated for user ${userId}: isVip=${isVip}, tier=${vipTier}`,
+    );
   }
 
   private getPriceIdForPlan(

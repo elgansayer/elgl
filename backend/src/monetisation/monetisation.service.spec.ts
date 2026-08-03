@@ -268,6 +268,11 @@ describe('MonetisationService', () => {
       await expect(service.generateApiKey('unknown-id')).rejects.toThrow(
         new NotFoundException('User not found'),
       );
+      // Ensure mockQueryBuilder.single is properly mocked for this test
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'log-1', category: 'REDIS' },
+        error: null,
+      });
     });
 
     it('should throw ForbiddenException when non-VIP tries to generate API key (verifying dual currency format)', async () => {

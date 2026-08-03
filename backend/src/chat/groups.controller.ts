@@ -111,7 +111,7 @@ export class GroupsController {
     @Body() body: { message: string },
   ): Promise<{ success: boolean } | null> {
     if (!user) return null;
-    await this.groupsService.broadcastMessage(user.id, roomId, body.message);
+    await this.groupsService.sendAnnouncement(user.id, roomId, body.message);
     return { success: true };
   }
 
