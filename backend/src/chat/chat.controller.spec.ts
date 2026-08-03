@@ -106,7 +106,9 @@ describe('ChatController', () => {
       );
 
       const result = controller.getConnectionToken(mockUser());
-      expect(chatService.generateConnectionToken).toHaveBeenCalled();
+      expect(chatService.generateConnectionToken).toHaveBeenCalledWith(
+        mockUser().id,
+      );
       expect(result).toEqual(mockToken);
     });
   });

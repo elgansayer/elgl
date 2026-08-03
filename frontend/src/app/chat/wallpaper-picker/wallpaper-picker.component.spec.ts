@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WallpaperPickerComponent } from './wallpaper-picker.component';
-import * as jasmine from 'jasmine-core';
+import 'jasmine';
 import { ChatService } from '../../services/chat.service';
 
 describe('WallpaperPickerComponent', () => {

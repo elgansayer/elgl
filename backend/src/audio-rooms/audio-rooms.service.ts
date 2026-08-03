@@ -936,6 +936,34 @@ export class AudioRoomsService implements OnModuleInit {
     return caption;
   }
 
+  async broadcastAICaption(dto: SendCaptionDto): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_room_captions')
+      .insert({
+        room_id: dto.room_id,
+        speaker_id: 'ai_system',
+        speaker_name: 'AI',
+        text_content: dto.text_content,
+      })
+      .select()
+      .single();
+
+    if (response.error || !response.data) {
+      throw new Error(
+        `Failed to save AI caption: ${response.error?.message ?? 'Unknown error'}`,
+      );
+    }
+
+    const caption = response.data as CaptionRecord;
+
+    // Broadcast AI-generated subtitle to everyone in room via Centrifugo
+    void this.centrifugoService.publish(`room_${dto.room_id}`, {
+      type: 'subtitle',
+      caption,
+    });
+  }
+
   async archiveRoom(
     hostId: string,
     dto: ArchiveRoomDto,

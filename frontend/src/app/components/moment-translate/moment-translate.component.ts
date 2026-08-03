@@ -44,7 +44,7 @@ export class MomentTranslateComponent {
     };
   });
 
-  readonly translationResource = resource<{ translation?: string }>({
+  readonly translationResource = resource<{ translation?: string }, void>({
     loader: () => {
       const request = this.translateRequest();
       if (!request) {

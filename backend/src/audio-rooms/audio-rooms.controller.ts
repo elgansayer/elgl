@@ -233,6 +233,11 @@ export class AudioRoomsController {
     return await this.audioRoomsService.sendCaption(user.id, dto);
   }
 
+  @Post('ai-captions')
+  async broadcastAICaption(@Body() dto: SendCaptionDto): Promise<void> {
+    await this.audioRoomsService.broadcastAICaption(dto);
+  }
+
   @Post('archive')
   async archiveRoom(
     @CurrentUser() user: User | null,

@@ -130,7 +130,7 @@ describe('ChatService', () => {
 
   describe('generateCentrifugoToken', () => {
     it('should generate token via CentrifugoService', async () => {
-      const result = await service.generateCentrifugoToken('user-1');
+      const result = await service.generateCentrifugoToken('user-1', 'room-1');
       expect(centrifugoService.signJwt).toHaveBeenCalledWith({
         sub: 'user-1',
         exp: expect.any(Number),
