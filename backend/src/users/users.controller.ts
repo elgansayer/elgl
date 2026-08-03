@@ -221,7 +221,10 @@ export class UsersController {
     if (!user) {
       throw new UnauthorizedException();
     }
-    return this.usersService.getStatusViewersByStatusId(user.id, statusId);
+    return await this.usersService.getStatusViewersByStatusId(
+      user.id,
+      statusId,
+    );
   }
 
   @Get('me/status-viewers')
@@ -231,11 +234,10 @@ export class UsersController {
     if (!user) {
       throw new UnauthorizedException();
     }
-    const statusViewers = await this.usersService.getStatusViewersByStatusId(
+    return await this.usersService.getStatusViewersByStatusId(
       user.id,
       'default-status-id', // Replace with actual logic to fetch the statusId if needed
     );
-    return statusViewers;
   }
 
   @Get('hobbies')
