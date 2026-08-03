@@ -4,13 +4,13 @@ import { validate } from 'class-validator';
 import { EventsQueryDto } from './events-query.dto';
 
 describe('EventsQueryDto', () => {
-  const validateDto = async (dto: Partial<EventsQueryDto>) => {
+  const validateDto = async (dto: Record<string, unknown>) => {
     const instance = plainToInstance(EventsQueryDto, dto);
     return validate(instance);
   };
 
   it('should validate a valid DTO', async () => {
-    const dto: Partial<EventsQueryDto> = {
+    const dto: Record<string, unknown> = {
       language_pair: 'en-es',
       category: 'audio_room',
       status: 'upcoming',
@@ -26,7 +26,7 @@ describe('EventsQueryDto', () => {
   });
 
   it('should fail if category is invalid', async () => {
-    const dto: Partial<EventsQueryDto> = {
+    const dto: Record<string, unknown> = {
       category: 'invalid_category',
     };
 
@@ -36,7 +36,7 @@ describe('EventsQueryDto', () => {
   });
 
   it('should fail if status is invalid', async () => {
-    const dto: Partial<EventsQueryDto> = {
+    const dto: Record<string, unknown> = {
       status: 'invalid_status',
     };
 
@@ -46,7 +46,7 @@ describe('EventsQueryDto', () => {
   });
 
   it('should fail if from_date is not ISO8601', async () => {
-    const dto: Partial<EventsQueryDto> = {
+    const dto: Record<string, unknown> = {
       from_date: 'not-a-date',
     };
 
@@ -56,7 +56,7 @@ describe('EventsQueryDto', () => {
   });
 
   it('should fail if to_date is not ISO8601', async () => {
-    const dto: Partial<EventsQueryDto> = {
+    const dto: Record<string, unknown> = {
       to_date: 'not-a-date',
     };
 
@@ -66,7 +66,7 @@ describe('EventsQueryDto', () => {
   });
 
   it('should fail if page is less than 1', async () => {
-    const dto: Partial<EventsQueryDto> = {
+    const dto: Record<string, unknown> = {
       page: 0,
     };
 
@@ -76,7 +76,7 @@ describe('EventsQueryDto', () => {
   });
 
   it('should fail if limit is less than 1', async () => {
-    const dto: Partial<EventsQueryDto> = {
+    const dto: Record<string, unknown> = {
       limit: 0,
     };
 
@@ -86,7 +86,7 @@ describe('EventsQueryDto', () => {
   });
 
   it('should fail if proficiency is invalid', async () => {
-    const dto: Partial<EventsQueryDto> = {
+    const dto: Record<string, unknown> = {
       proficiency: 'Expert',
     };
 
@@ -98,8 +98,8 @@ describe('EventsQueryDto', () => {
   it.each(['upcoming', 'past'])(
     'should validate status value "%s"',
     async (status) => {
-      const dto: Partial<EventsQueryDto> = {
-        status: status as 'upcoming' | 'past',
+      const dto: Record<string, unknown> = {
+        status: status,
       };
 
       const errors = await validateDto(dto);

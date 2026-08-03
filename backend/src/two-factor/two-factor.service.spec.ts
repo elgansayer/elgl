@@ -13,7 +13,7 @@ jest.mock('qrcode');
 
 describe('TwoFactorService', () => {
   let service: TwoFactorService;
-  let supabaseService: jest.Mocked<SupabaseService>;
+  let supabaseService: { getClient: jest.Mock };
 
   beforeEach(async () => {
     supabaseService = {
@@ -24,7 +24,7 @@ describe('TwoFactorService', () => {
         eq: jest.fn().mockReturnThis(),
         single: jest.fn(),
       }),
-    } as unknown as jest.Mocked<SupabaseService>;
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

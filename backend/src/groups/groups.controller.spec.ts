@@ -1,4 +1,5 @@
 import { UnauthorizedException } from '@nestjs/common';
+import { User } from '@supabase/supabase-js';
 import { GroupsController } from './groups.controller';
 import {
   GroupsService,
@@ -34,7 +35,9 @@ describe('GroupsController', () => {
     joinGroup: jest.fn(),
     getGroupResources: jest.fn(),
     deleteGroupResource: jest.fn(),
-  } as jest.Mocked<GroupsService>;
+    restrictSendMessages: jest.fn(),
+    restrictEditInfo: jest.fn(),
+  } as unknown as jest.Mocked<GroupsService>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -164,7 +167,7 @@ describe('GroupsController', () => {
 
   describe('getMyAdminGroups', () => {
     it('should call getMyAdminGroups with the current user id', async () => {
-      const user = { id: 'user-1' };
+      const user = { id: 'user-1' } as User;
       mockGroupsService.getMyAdminGroups.mockResolvedValue([]);
 
       await controller.getMyAdminGroups(user);

@@ -572,7 +572,7 @@ describe('MomentsService', () => {
 
       const result = await service.addComment('user-1', 'm-1', dto);
       expect(result.id).toBe('c-1');
-      expect(result.author.display_name).toBe('Serious Learner');
+      expect(result.author?.display_name).toBe('Serious Learner');
     });
 
     it('should return comments list with populated authors', async () => {
@@ -600,7 +600,7 @@ describe('MomentsService', () => {
 
       const result = await service.getComments('m-1');
       expect(result).toHaveLength(1);
-      expect(result[0].author.display_name).toBe('Commenter');
+      expect(result[0].author?.display_name).toBe('Commenter');
     });
   });
 
@@ -1030,7 +1030,7 @@ describe('MomentsService', () => {
 
       const result = await service.getQuestions('user-1', 'ja');
       expect(result).toHaveLength(1);
-      expect(result[0].author.display_name).toBe('User 1');
+      expect(result[0].author?.display_name).toBe('User 1');
     });
 
     it('should exclude questions from blocked users', async () => {

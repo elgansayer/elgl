@@ -6,14 +6,14 @@ import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 
 describe('EventsService', () => {
   let service: EventsService;
-  let supabaseService: jest.Mocked<SupabaseService>;
+  let supabaseService: { getClient: jest.Mock };
   let notificationsService: jest.Mocked<NotificationsService>;
   let audioRoomsService: jest.Mocked<AudioRoomsService>;
 
   beforeEach(async () => {
     supabaseService = {
       getClient: jest.fn(),
-    } as unknown as jest.Mocked<SupabaseService>;
+    };
 
     notificationsService = {
       sendPushNotification: jest.fn(),

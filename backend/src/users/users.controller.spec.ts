@@ -646,7 +646,7 @@ describe('UsersController', () => {
     });
 
     it('should call updatePrivacySettings with DTO and the caller VIP status', async () => {
-      const dto = { privacy_hide_age: true };
+      const dto = { incognito_visits: true };
       (usersService.getProfile as jest.Mock).mockResolvedValue({
         id: 'user-1',
         is_vip: true,
@@ -721,7 +721,7 @@ describe('UsersController', () => {
     });
 
     it('should call updateDoNotDisturbSettings', async () => {
-      const dto = { dnd_enabled: true };
+      const dto = { do_not_disturb: true };
       (usersService.updateDoNotDisturbSettings as jest.Mock).mockResolvedValue({
         id: 'user-1',
       });

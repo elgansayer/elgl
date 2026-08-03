@@ -60,18 +60,17 @@ describe('AuthController (unit)', () => {
       authService.changePassword.mockResolvedValue(undefined);
 
       const req = { user: { id: 'user-123' } };
-      const result = await controller.changePassword(req, 'newPass123');
+      const dto = { currentPassword: 'oldPass123', newPassword: 'newPass123' };
+      const result = await controller.changePassword(req, dto);
 
-      expect(authService.changePassword).toHaveBeenCalledWith(
-        'user-123',
-        'newPass123',
-      );
+      expect(authService.changePassword).toHaveBeenCalledWith('user-123', dto);
       expect(result).toEqual({ message: 'Password changed successfully' });
     });
 
     it('should throw an Unauthorized error when no user is present', async () => {
       const req = {};
-      await expect(controller.changePassword(req, 'somePass')).rejects.toThrow(
+      const dto = { currentPassword: 'oldPass', newPassword: 'somePass' };
+      await expect(controller.changePassword(req, dto)).rejects.toThrow(
         'Unauthorized',
       );
     });
