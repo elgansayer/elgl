@@ -76,6 +76,10 @@ export class CentrifugeService {
       this.subscriptions.set(channel, sub);
       sub.subscribe();
     }
+    // Reusing an existing subscription would otherwise stack another
+    // 'publication' listener on top of any previous one, leaking closures
+    // and delivering each message to every stale handler.
+    sub.removeAllListeners('publication');
     sub.on('publication', (ctx) => {
       onMessage(ctx.data);
     });

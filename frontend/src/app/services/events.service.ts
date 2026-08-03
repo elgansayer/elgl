@@ -23,12 +23,13 @@ export interface Event {
 
 export interface EventsQuery {
   language_pair?: string;
-  category?: string;
+  category?: 'Audio Rooms' | 'Learning Seminars' | 'In-person Meetups' | 'Cultural Exchanges';
   status?: 'upcoming' | 'past';
   from_date?: string;
   to_date?: string;
   page?: number;
   limit?: number;
+  proficiency?: 'Beginner' | 'Intermediate' | 'Advanced';
 }
 
 @Injectable({ providedIn: 'root' })
@@ -44,7 +45,34 @@ export class EventsService {
     if (query?.to_date) params['to_date'] = query.to_date;
     if (query?.page) params['page'] = query.page;
     if (query?.limit) params['limit'] = query.limit;
+    if (query?.proficiency) params['proficiency'] = query.proficiency;
     return this.http.get<Event[]>(`${environment.apiUrl}/events`, { params });
+  }
+
+  createGroupChat(dto: { name: string; description?: string; members: string[] }) {
+    return this.http.post<{ id: string }>(`${environment.apiUrl}/group-chats`, dto);
+  }
+
+  getGroupChat(chatId: string) {
+    return this.http.get<{ id: string; name: string; description?: string; members: string[] }>(
+      `${environment.apiUrl}/group-chats/${chatId}`
+    );
+  }
+
+  updateGroupChat(chatId: string, dto: { name?: string; description?: string; members?: string[] }) {
+    return this.http.patch<void>(`${environment.apiUrl}/group-chats/${chatId}`, dto);
+  }
+
+  deleteGroupChat(chatId: string) {
+    return this.http.delete<void>(`${environment.apiUrl}/group-chats/${chatId}`);
+  }
+
+  addLabelToChat(chatId: string, label: string): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/chats/${chatId}/labels`, { label });
+  }
+
+  removeLabelFromChat(chatId: string, label: string): Observable<void> {
+    return this.http.delete<void>(`${environment.apiUrl}/chats/${chatId}/labels/${label}`);
   }
 
   getEvent(eventId: string) {
@@ -65,7 +93,11 @@ export class EventsService {
   }
 
   getCategories(): Observable<string[]> {
-    return this.http.get<string[]>(`${environment.apiUrl}/events/categories`);
+    const categories = ['Audio Rooms', 'Learning Seminars', 'In-person Meetups', 'Cultural Exchanges'];
+    return new Observable((observer) => {
+      observer.next(categories);
+      observer.complete();
+    });
   }
 
   getMyEvents(status?: string) {

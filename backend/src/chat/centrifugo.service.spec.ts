@@ -65,6 +65,19 @@ describe('CentrifugoService', () => {
       );
       expect(result).toEqual({ token: 'mock-jwt-token' });
     });
+
+    it('should set expiry to 24 hours in the future', () => {
+      const now = Math.floor(Date.now() / 1000);
+      (jwt.sign as jest.Mock).mockReturnValue('token');
+      service.generateConnectionToken('user-abc');
+      const payload = (jwt.sign as jest.Mock).mock.calls[0][0] as {
+        sub: string;
+        exp: number;
+      };
+      expect(payload.sub).toEqual('user-abc');
+      expect(payload.exp).toBeGreaterThanOrEqual(now + 86400 - 5);
+      expect(payload.exp).toBeLessThanOrEqual(now + 86400 + 5);
+    });
   });
 
   describe('publish', () => {
@@ -127,6 +140,56 @@ describe('CentrifugoService', () => {
         expect.any(Error),
       );
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('publishTranslated', () => {
+    let publishSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      publishSpy = jest.spyOn(service, 'publish').mockResolvedValue(true);
+    });
+
+    afterEach(() => {
+      publishSpy.mockRestore();
+    });
+
+    it('should include extraData and translation fields, and call publish', async () => {
+      const extraData = { channel_type: 'voice_room' };
+      const result = await service.publishTranslated(
+        'chat:room-1',
+        'Hello there',
+        'es',
+        extraData,
+      );
+
+      expect(publishSpy).toHaveBeenCalledWith('chat:room-1', {
+        ...extraData,
+        text_content: 'Hello there',
+        original_text: 'Hello there',
+        translated_text: 'Hello there',
+        detected_language: 'en',
+      });
+      expect(result).toBe(true);
+    });
+
+    it('should return false when publish returns false', async () => {
+      publishSpy.mockResolvedValue(false);
+
+      const result = await service.publishTranslated(
+        'chat:room-1',
+        'Hello there',
+        'es',
+        {},
+      );
+
+      expect(result).toBe(false);
+      expect(publishSpy).toHaveBeenCalledWith('chat:room-1', {
+        text_content: 'Hello there',
+        original_text: 'Hello there',
+        translated_text: 'Hello there',
+        detected_language: 'en',
+      });
     });
   });
 });

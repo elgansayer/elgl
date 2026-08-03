@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { openDB, IDBPDatabase } from 'idb';
 import { environment } from '../../environments/environment';
 
 type Database = {
@@ -47,7 +48,7 @@ export interface UserProfile {
   providedIn: 'root',
 })
 export class SupabaseService {
-  private supabase: SupabaseClient;
+  private supabase: SupabaseClient<Database>;
 
   constructor() {
     this.supabase = createClient<Database>(environment.supabaseUrl, environment.supabaseAnonKey);

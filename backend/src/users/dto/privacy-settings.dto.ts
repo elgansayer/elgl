@@ -1,4 +1,4 @@
-import { IsIn, IsOptional } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional } from 'class-validator';
 
 const visibilityValues = ['everyone', 'contacts', 'nobody'] as const;
 const statusVisibilityValues = ['public', 'followers', 'only_me'] as const;

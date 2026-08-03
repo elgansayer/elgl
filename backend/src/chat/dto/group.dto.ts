@@ -1,9 +1,12 @@
-import { IsString, IsNotEmpty, IsUUID } from 'class-validator';
+import { IsString, IsNotEmpty, IsUUID, IsOptional } from 'class-validator';
 
 export class CreateGroupDto {
   @IsString()
   @IsNotEmpty()
   name!: string;
+  @IsOptional()
+  @IsString()
+  inviteCode?: string;
 }
 
 export class RenameGroupDto {

@@ -1,0 +1,1 @@
+Code review finding: Add unit tests for backend/src/events/dto/events-query.dto (from commit e299fc01: Implement specific Country and City manual search.)

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return */
 import {
   BadRequestException,
   Injectable,
@@ -312,7 +311,7 @@ export class UsersService {
 
     if (error) {
       Logger.warn(
-        `Failed to update last_active_at for user ${userId}: ${error.message}`,
+        `Failed to update last_active_at for user ${userId}: ${error?.message ?? 'Unknown error'}`,
       );
     }
   }
@@ -421,7 +420,12 @@ export class UsersService {
       );
     }
 
+    // Build fix: declare before use to satisfy TS2448
     const updatePayload: Record<string, unknown> = {};
+
+    if (dto.enable_location_spoofing !== undefined) {
+      updatePayload.enable_location_spoofing = dto.enable_location_spoofing;
+    }
 
     if (dto.display_name !== undefined)
       updatePayload.display_name = dto.display_name;
@@ -445,6 +449,11 @@ export class UsersService {
       updatePayload.privacy_hide_from_search = dto.privacy_hide_from_search;
     if (dto.privacy_hide_gender !== undefined)
       updatePayload.privacy_hide_gender = dto.privacy_hide_gender;
+    if (dto.privacy_hide_exact_location !== undefined)
+      updatePayload.privacy_hide_exact_location =
+        dto.privacy_hide_exact_location;
+    if (dto.privacy_hide_online_status !== undefined)
+      updatePayload.privacy_hide_online_status = dto.privacy_hide_online_status;
     if (dto.gender !== undefined) updatePayload.gender = dto.gender;
     if (dto.profile_visibility !== undefined)
       updatePayload.profile_visibility = dto.profile_visibility;
@@ -563,7 +572,7 @@ export class UsersService {
   ): Promise<{ message: string; scheduled_for_deletion_at: string }> {
     const supabase = this.supabaseService.getClient();
     const deletionDate = new Date();
-    deletionDate.setDate(deletionDate.getDate() + 30); // 30-day grace period
+    deletionDate.setDate(new Date().getDate() + 30); // 30-day grace period
 
     const { error } = await supabase
       .from('users')
@@ -766,7 +775,7 @@ export class UsersService {
 
   async awardCoins(userId: string, amount: number): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    const { error } = await supabase.rpc('increment_coins', {
+    const { error } = await supabase.rpc('increment_xp', {
       user_id: userId,
       amount,
     });
@@ -776,7 +785,8 @@ export class UsersService {
         .select('coins_balance')
         .eq('id', userId)
         .single();
-      const current = (cur?.coins_balance ?? 0) + amount;
+      const current =
+        ((cur as { coins_balance?: number })?.coins_balance ?? 0) + amount;
       await supabase
         .from('users')
         .update({ coins_balance: current } as never)
@@ -800,7 +810,10 @@ export class UsersService {
     if (error || !data) {
       return {};
     }
-    return data.message_filters ?? {};
+    return (
+      (data as { message_filters?: Record<string, unknown> })
+        ?.message_filters ?? {}
+    );
   }
 
   async setMessageFilters(
@@ -829,6 +842,7 @@ export class UsersService {
     userId: string,
     limit = 20,
     offset = 0,
+    viewerId?: string,
   ): Promise<{ data: UserProfile[]; total: number }> {
     const supabase = this.supabaseService.getClient();
     const { count, error: countError } = await supabase
@@ -863,13 +877,14 @@ export class UsersService {
       follower: UserProfile;
     }>;
     const users = rows.map((row) => row.follower);
-    return { data: users, total };
+    return { data: await this.attachIsFollowedByMe(users, viewerId), total };
   }
 
   async getFollowing(
     userId: string,
     limit = 20,
     offset = 0,
+    viewerId?: string,
   ): Promise<{ data: UserProfile[]; total: number }> {
     const supabase = this.supabaseService.getClient();
     const { count, error: countError } = await supabase
@@ -977,7 +992,14 @@ export class UsersService {
       privacy_hide_vip_status?: boolean;
       status_visibility?: string;
     },
+    isVip: boolean,
   ): Promise<UserProfile> {
+    if (settings.incognito_visits && !isVip) {
+      throw new BadRequestException(
+        'Incognito profile visiting requires a VIP subscription (8 UKP / $10 USD per month).',
+      );
+    }
+
     const supabase = this.supabaseService.getClient();
 
     const updatePayload: Record<string, unknown> = {};
@@ -1056,7 +1078,7 @@ export class UsersService {
       throw new NotFoundException(`User stats not found for user ${userId}`);
     }
 
-    const user = userRes.data;
+    const user = userRes.data as UserProfile;
     const momentsCount = momentsCountRes.count ?? 0;
     const commentsCount = commentsCountRes.count ?? 0;
     const followersCount = followersCountRes.count ?? 0;
@@ -1064,7 +1086,7 @@ export class UsersService {
     const profileVisitsCount = visitsCountRes.count ?? 0;
 
     return {
-      ...(user as Record<string, unknown>),
+      ...(user as unknown as Record<string, unknown>),
       momentsCount,
       commentsCount,
       followersCount,
@@ -1108,24 +1130,56 @@ export class UsersService {
     const supabase = this.supabaseService.getClient();
 
     // Delete related data from multiple tables
-    const deletions = [
-      supabase.from('moments').delete().eq('author_id', userId),
-      supabase.from('moment_comments').delete().eq('author_id', userId),
-      supabase.from('moment_likes').delete().eq('user_id', userId),
-      supabase.from('flashcards').delete().eq('user_id', userId),
-      supabase.from('chat_messages').delete().eq('sender_id', userId),
-      supabase.from('favourites').delete().eq('user_id', userId),
-      supabase.from('profile_visits').delete().eq('viewer_id', userId),
-      supabase.from('profile_visits').delete().eq('viewed_id', userId),
-      supabase.from('user_follows').delete().eq('follower_id', userId),
-      supabase.from('user_follows').delete().eq('following_id', userId),
-      supabase.from('user_profile_likes').delete().eq('liker_id', userId),
-      supabase.from('user_profile_likes').delete().eq('liked_id', userId),
-      supabase.from('status_views').delete().eq('viewer_id', userId),
-      supabase.from('status_views').delete().eq('status_owner_id', userId),
+    const deletionTasks: Array<{
+      table:
+        | 'moments'
+        | 'moment_comments'
+        | 'moment_likes'
+        | 'flashcards'
+        | 'chat_messages'
+        | 'favourites'
+        | 'profile_visits'
+        | 'user_follows'
+        | 'user_profile_likes'
+        | 'status_views';
+      column:
+        | 'author_id'
+        | 'user_id'
+        | 'sender_id'
+        | 'visitor_id'
+        | 'viewed_id'
+        | 'follower_id'
+        | 'following_id'
+        | 'liker_id'
+        | 'liked_id'
+        | 'viewer_id'
+        | 'status_owner_id';
+    }> = [
+      { table: 'moments', column: 'author_id' },
+      { table: 'moment_comments', column: 'author_id' },
+      { table: 'moment_likes', column: 'user_id' },
+      { table: 'flashcards', column: 'user_id' },
+      { table: 'chat_messages', column: 'sender_id' },
+      { table: 'favourites', column: 'user_id' },
+      { table: 'profile_visits', column: 'visitor_id' },
+      { table: 'profile_visits', column: 'viewed_id' },
+      { table: 'user_follows', column: 'follower_id' },
+      { table: 'user_follows', column: 'following_id' },
+      { table: 'user_profile_likes', column: 'liker_id' },
+      { table: 'user_profile_likes', column: 'liked_id' },
+      { table: 'status_views', column: 'viewer_id' },
+      { table: 'status_views', column: 'status_owner_id' },
     ];
 
-    const results = await Promise.all(deletions);
+    const results = await Promise.all(
+      deletionTasks.map(async ({ table, column }) => {
+        const { error } = await supabase
+          .from(table as never)
+          .delete()
+          .eq(column, userId);
+        return { error };
+      }),
+    );
     const errors = results.filter((r) => r.error).map((r) => r.error?.message);
     if (errors.length > 0) {
       Logger.warn(

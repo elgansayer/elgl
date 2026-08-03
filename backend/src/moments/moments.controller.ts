@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -16,10 +17,12 @@ import { CreateCommentDto, CreateMomentDto } from './dto/moment.dto';
 import { CreateStoryDto } from './dto/create-story.dto';
 import { EditTextDto } from './dto/edit-text.dto';
 import { VoteCorrectionDto } from './dto/vote-correction.dto';
+import { CreateLanguageQuestionDto } from './dto/create-language-question.dto';
+import { AnswerLanguageQuestionDto } from './dto/answer-language-question.dto';
 import { R2Service } from '../cloudflare-r2/r2.service';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { StoryResponse } from './interfaces/story.interface';
-import { MomentsService } from './moments.service';
+import { MomentsService, MomentLikeUser } from './moments.service';
 
 @Controller('moments')
 @UseGuards(SupabaseAuthGuard)
@@ -88,6 +91,16 @@ export class MomentsController {
     @Body('filename') filename: string,
     @Body('contentType') contentType: string,
   ): Promise<{ uploadUrl: string; publicUrl: string }> {
+    const allowedTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'video/mp4',
+      'video/webm',
+    ];
+    if (!allowedTypes.includes(contentType)) {
+      throw new BadRequestException();
+    }
     // user is authenticated via guard, no VIP check needed for general media uploads
     return await this.momentsService.getMediaUploadUrl(filename, contentType);
   }
@@ -99,6 +112,29 @@ export class MomentsController {
   ): Promise<StoryResponse | null> {
     if (!user) return null;
     return await this.momentsService.createStory(user.id, dto);
+  }
+
+  @Post('language-questions')
+  async createLanguageQuestion(
+    @CurrentUser() user: User | null,
+    @Body() dto: CreateLanguageQuestionDto,
+  ): Promise<MomentRecord | null> {
+    if (!user) return null;
+    return await this.momentsService.createLanguageQuestion(user.id, dto);
+  }
+
+  @Post(':id/answer')
+  async answerLanguageQuestion(
+    @CurrentUser() user: User | null,
+    @Param('id') id: string,
+    @Body() dto: AnswerLanguageQuestionDto,
+  ): Promise<{ correct: boolean; correctAnswer: string } | null> {
+    if (!user) return null;
+    return await this.momentsService.answerLanguageQuestion(
+      user.id,
+      id,
+      dto.answer,
+    );
   }
 
   @Get('feed')
@@ -131,7 +167,7 @@ export class MomentsController {
   }
 
   @Get(':id/likes')
-  async getMomentLikes(@Param('id') id: string): Promise<any[]> {
+  async getMomentLikes(@Param('id') id: string): Promise<MomentLikeUser[]> {
     return await this.momentsService.getMomentLikes(id);
   }
 

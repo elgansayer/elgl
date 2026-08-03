@@ -13,6 +13,7 @@ export class ReplyToStatusUpdateDto {
 
   @IsString()
   @IsNotEmpty()
+  @MaxLength(1000)
   status_text!: string;
 
   @IsUUID()

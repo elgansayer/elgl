@@ -6,7 +6,7 @@ export class VersionController {
   constructor(private readonly versionService: VersionService) {}
 
   @Get()
-  getVersion(): { current: string; latest: string } {
+  getVersion(): { current: string; latest: string; updateUrl?: string } {
     return this.versionService.getVersion();
   }
 }

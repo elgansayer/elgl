@@ -135,6 +135,7 @@ type ProfileVisitRow = {
   id: string;
   visitor_id: string;
   viewed_id: string;
+  viewer_id?: string;
   created_at: string;
 };
 
@@ -264,7 +265,17 @@ type FlashcardRow = {
 type FavouriteRow = {
   id: string;
   user_id: string;
-  moment_id: string;
+  item_type: string;
+  item_payload: Record<string, unknown>;
+  notes: string | null;
+  created_at: string;
+};
+
+type LoginHistoryRow = {
+  id: string;
+  user_id: string;
+  ip_address?: string | null;
+  user_agent?: string | null;
   created_at: string;
 };
 
@@ -301,71 +312,184 @@ export interface Database {
         Row: UsersRow;
         Insert: Partial<UsersRow>;
         Update: Partial<UsersRow>;
+        Relationships: [];
+      };
+      events: {
+        Row: {
+          id: string;
+          title: string;
+          description: string | null;
+          category: string | null;
+          date_time: string;
+          location: string | null;
+          language_pair: string | null;
+          max_participants: number | null;
+          host_id: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          title: string;
+          description?: string | null;
+          category?: string | null;
+          date_time: string;
+          location?: string | null;
+          language_pair?: string | null;
+          max_participants?: number | null;
+          host_id: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          title?: string;
+          description?: string | null;
+          category?: string | null;
+          date_time?: string;
+          location?: string | null;
+          language_pair?: string | null;
+          max_participants?: number | null;
+          host_id?: string;
+        }>;
+        Relationships: [];
+      };
+      event_rsvps: {
+        Row: {
+          id: string;
+          event_id: string;
+          user_id: string;
+          status: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          event_id: string;
+          user_id: string;
+          status: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          event_id?: string;
+          user_id?: string;
+          status?: string;
+        }>;
+        Relationships: [];
+      };
+      event_reminders_sent: {
+        Row: {
+          id: string;
+          event_id: string;
+          user_id: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          event_id: string;
+          user_id: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          event_id?: string;
+          user_id?: string;
+        }>;
+        Relationships: [];
+      };
+      audio_rooms: {
+        Row: {
+          id: string;
+          room_name: string;
+          title: string | null;
+          host_id: string;
+          party_type: string | null;
+        };
+        Insert: Partial<{
+          id?: string;
+          room_name: string;
+          title?: string | null;
+          host_id: string;
+          party_type?: string | null;
+        }>;
+        Update: Partial<{
+          id?: string;
+          room_name?: string;
+          title?: string | null;
+          host_id?: string;
+          party_type?: string | null;
+        }>;
+        Relationships: [];
       };
       groups: {
         Row: GroupsRow;
         Insert: Partial<GroupsRow>;
         Update: Partial<GroupsRow>;
+        Relationships: [];
       };
       group_members: {
         Row: GroupMembersRow;
         Insert: Partial<GroupMembersRow>;
         Update: Partial<GroupMembersRow>;
+        Relationships: [];
       };
       group_announcements: {
         Row: GroupAnnouncementsRow;
         Insert: Partial<GroupAnnouncementsRow>;
         Update: Partial<GroupAnnouncementsRow>;
+        Relationships: [];
       };
       group_resources: {
         Row: GroupResourcesRow;
         Insert: Partial<GroupResourcesRow>;
         Update: Partial<GroupResourcesRow>;
+        Relationships: [];
       };
       interests: {
         Row: InterestsRow;
         Insert: Partial<InterestsRow>;
         Update: Partial<InterestsRow>;
+        Relationships: [];
       };
       xp_events: {
         Row: XpEventRow;
         Insert: Partial<XpEventRow>;
         Update: Partial<XpEventRow>;
+        Relationships: [];
       };
       user_follows: {
         Row: UserFollowRow;
         Insert: Partial<UserFollowRow>;
         Update: Partial<UserFollowRow>;
+        Relationships: [];
       };
       user_profile_likes: {
         Row: UserProfileLikeRow;
         Insert: Partial<UserProfileLikeRow>;
         Update: Partial<UserProfileLikeRow>;
+        Relationships: [];
       };
       profile_visits: {
         Row: ProfileVisitRow;
         Insert: Partial<ProfileVisitRow>;
         Update: Partial<ProfileVisitRow>;
+        Relationships: [];
       };
       status_views: {
         Row: StatusViewRow;
         Insert: Partial<StatusViewRow>;
         Update: Partial<StatusViewRow>;
+        Relationships: [];
       };
       moments: {
         Row: MomentRow;
         Insert: Partial<MomentRow>;
         Update: Partial<MomentRow>;
+        Relationships: [];
       };
       moment_comments: {
         Row: MomentCommentRow;
         Insert: Partial<MomentCommentRow>;
         Update: Partial<MomentCommentRow>;
+        Relationships: [];
       };
       moment_likes: {
         Row: MomentLikeRow;
         Insert: Partial<MomentLikeRow>;
         Update: Partial<MomentLikeRow>;
+        Relationships: [];
       };
       moment_comment_votes: {
         Row: MomentCommentVotesRow;
@@ -389,11 +513,13 @@ export interface Database {
         Row: FlashcardRow;
         Insert: Partial<FlashcardRow>;
         Update: Partial<FlashcardRow>;
+        Relationships: [];
       };
       favourites: {
         Row: FavouriteRow;
         Insert: Partial<FavouriteRow>;
         Update: Partial<FavouriteRow>;
+        Relationships: [];
       };
       user_quests: {
         Row: {

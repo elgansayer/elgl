@@ -8,10 +8,13 @@ describe('ProfileVisitsService', () => {
   let service: ProfileVisitsService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let mockNotificationsService: { sendVisitNotification: jest.Mock };
+  let mockEventEmitter: { emit: jest.Mock };
 
   beforeEach(async () => {
     mockQueryBuilder = {
       insert: jest.fn().mockReturnThis(),
+      delete: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
@@ -21,6 +24,14 @@ describe('ProfileVisitsService', () => {
 
     mockSupabaseClient = {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
+    };
+
+    mockNotificationsService = {
+      sendVisitNotification: jest.fn(),
+    };
+
+    mockEventEmitter = {
+      emit: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -34,16 +45,87 @@ describe('ProfileVisitsService', () => {
         },
         {
           provide: NotificationsService,
-          useValue: new Proxy({}, { get: () => jest.fn() }),
+          useValue: mockNotificationsService,
         },
         {
           provide: EventEmitter2,
-          useValue: { emit: jest.fn() },
+          useValue: mockEventEmitter,
         },
       ],
     }).compile();
 
     service = module.get<ProfileVisitsService>(ProfileVisitsService);
+  });
+
+  describe('getVisitCount', () => {
+    it('should return the correct visit count for a user', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { visit_count: 5 },
+        error: null,
+      });
+
+      const result = await service.getVisitCount('user-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('profile_visits');
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
+        'count(*) as visit_count',
+      );
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('viewed_id', 'user-1');
+      expect(result).toEqual(5);
+    });
+
+    it('should return 0 if no visits are found', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      const result = await service.getVisitCount('user-1');
+
+      expect(result).toEqual(0);
+    });
+
+    it('should throw an error if the query fails', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'DB query error' },
+      });
+
+      await expect(service.getVisitCount('user-1')).rejects.toThrow(
+        'Failed to fetch visit count: DB query error',
+      );
+    });
+  });
+
+  describe('deleteVisit', () => {
+    it('should delete a visit record successfully', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { id: 'visit-1' },
+        error: null,
+      });
+
+      const result = await service.deleteVisit('visit-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('profile_visits');
+      expect(mockQueryBuilder.delete).toHaveBeenCalled();
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'visit-1');
+      expect(result).toEqual({ id: 'visit-1' });
+    });
+
+    it('should throw an error if the delete operation fails', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'Delete operation failed' },
+      });
+
+      await expect(service.deleteVisit('visit-1')).rejects.toThrow(
+        'Failed to delete visit: Delete operation failed',
+      );
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('profile_visits');
+      expect(mockQueryBuilder.delete).toHaveBeenCalled();
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'visit-1');
+    });
   });
 
   afterEach(() => {
@@ -61,25 +143,29 @@ describe('ProfileVisitsService', () => {
       expect(mockSupabaseClient.from).not.toHaveBeenCalled();
     });
 
-    it('should ignore visit when VIP visitor has incognito mode (privacy_hide_from_search) enabled', async () => {
+    it('should ignore visit when VIP visitor has incognito mode (incognito_visits) enabled', async () => {
       mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { privacy_hide_from_search: true },
+        data: { incognito_visits: true },
         error: null,
       });
 
       const result = await service.recordVisit('vip-user', 'target-user', true);
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
-      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
-        'privacy_hide_from_search',
-      );
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith('incognito_visits');
       expect(result).toEqual({ incognito: true, ignored: true });
+      // No insert should be attempted, and no notification should be emitted
+      expect(mockQueryBuilder.insert).not.toHaveBeenCalled();
+      expect(
+        mockNotificationsService.sendVisitNotification,
+      ).not.toHaveBeenCalled();
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
 
     it('should record visit for VIP visitor when incognito mode is disabled', async () => {
       // 1st single call: user lookup for privacy setting
       mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { privacy_hide_from_search: false },
+        data: { incognito_visits: false },
         error: null,
       });
       // 2nd single call: profile_visits insert
@@ -124,7 +210,24 @@ describe('ProfileVisitsService', () => {
       expect(result).toEqual(visitRow);
     });
 
-    it('should throw Error when insert visit fails', async () => {
+    it('should throw Error when insert visit fails for VIP visitor', async () => {
+      // First call checks privacy setting
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { incognito_visits: false },
+        error: null,
+      });
+      // Second call fails to insert
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'Insert constraint violation' },
+      });
+
+      await expect(
+        service.recordVisit('vip-user', 'target-user', true),
+      ).rejects.toThrow('Failed to record visit: Insert constraint violation');
+    });
+
+    it('should throw Error when insert visit fails for non VIP visitor', async () => {
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: null,
         error: { message: 'Insert constraint violation' },

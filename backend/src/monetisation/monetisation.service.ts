@@ -657,11 +657,40 @@ export class MonetisationService {
   }
 
   /**
-   * Return subscription details for the given user.
+   * Locate the Stripe subscription belonging to this user.
+   * NOTE: lists a bounded window of recent subscriptions and filters by metadata,
+   * matching the approach already used by cancelSubscription (no stripe_customer_id
+   * column exists on the users table to query by directly).
    */
-  async getSubscriptionDetails(
+  private async findActiveStripeSubscription(
     userId: string,
-  ): Promise<{ isVip: boolean; vipTier: string | null; email?: string }> {
+  ): Promise<Stripe.Subscription | null> {
+    const subscriptions = await this.stripe.subscriptions.list({
+      limit: 10,
+    });
+    return (
+      subscriptions.data.find(
+        (sub) => sub.metadata?.userId === userId && sub.status === 'active',
+      ) ?? null
+    );
+  }
+
+  /**
+   * Return subscription details for the given user, including live billing
+   * information from Stripe when an active subscription exists.
+   */
+  async getSubscriptionDetails(userId: string): Promise<{
+    isVip: boolean;
+    vipTier: string | null;
+    email?: string;
+    billing: {
+      cancelAtPeriodEnd: boolean;
+      currentPeriodEnd: string;
+      nextBillingAmount: number | null;
+      currency: string | null;
+      interval: string | null;
+    } | null;
+  }> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('users')
@@ -673,10 +702,29 @@ export class MonetisationService {
         `Failed to fetch subscription details: ${error?.message ?? 'user not found'}`,
       );
     }
+
+    const subscription = await this.findActiveStripeSubscription(userId);
+    const item = subscription?.items.data[0];
+    const billing = subscription
+      ? {
+          cancelAtPeriodEnd: subscription.cancel_at_period_end,
+          currentPeriodEnd: new Date(
+            subscription.current_period_end * 1000,
+          ).toISOString(),
+          nextBillingAmount:
+            item?.price?.unit_amount != null
+              ? item.price.unit_amount / 100
+              : null,
+          currency: item?.price?.currency ?? null,
+          interval: item?.price?.recurring?.interval ?? null,
+        }
+      : null;
+
     return {
       isVip: data.is_vip ?? false,
       vipTier: data.vip_tier ?? null,
       email: data.email ?? undefined,
+      billing,
     };
   }
 
@@ -685,15 +733,7 @@ export class MonetisationService {
    * Uses Stripe's API to list subscriptions by metadata user ID and cancels the first active one.
    */
   async cancelSubscription(userId: string): Promise<{ message: string }> {
-    // Locate the Stripe subscriptions that belong to this user
-    const subscriptions = await this.stripe.subscriptions.list({
-      limit: 10,
-    });
-
-    // Iterate through subscriptions to find the one with matching metadata
-    const userSubscription = subscriptions.data.find((sub) => {
-      return sub.metadata?.userId === userId && sub.status === 'active';
-    });
+    const userSubscription = await this.findActiveStripeSubscription(userId);
 
     if (!userSubscription) {
       throw new BadRequestException(
@@ -714,5 +754,96 @@ export class MonetisationService {
       message:
         'Your subscription will be cancelled at the end of the current billing period. You will retain VIP benefits until that date.',
     };
+  }
+
+  /**
+   * Resume a subscription that was previously set to cancel at period end.
+   */
+  async resumeSubscription(userId: string): Promise<{ message: string }> {
+    const userSubscription = await this.findActiveStripeSubscription(userId);
+
+    if (!userSubscription) {
+      throw new BadRequestException(
+        'No active subscription found for this user.',
+      );
+    }
+
+    if (!userSubscription.cancel_at_period_end) {
+      throw new BadRequestException(
+        'Subscription is not scheduled for cancellation.',
+      );
+    }
+
+    await this.stripe.subscriptions.update(userSubscription.id, {
+      cancel_at_period_end: false,
+    });
+
+    this.logger.log(
+      `Subscription ${userSubscription.id} resumed for user ${userId}`,
+    );
+
+    return {
+      message:
+        'Your subscription has been resumed and will renew automatically.',
+    };
+  }
+
+  /**
+   * List billing history (invoices) for the user's Stripe customer.
+   * Returns an empty list when the user has no active subscription.
+   */
+  async listInvoices(userId: string): Promise<
+    Array<{
+      id: string;
+      amountPaid: number;
+      currency: string;
+      status: string | null;
+      created: string;
+      invoicePdf: string | null;
+      hostedInvoiceUrl: string | null;
+    }>
+  > {
+    const userSubscription = await this.findActiveStripeSubscription(userId);
+    if (!userSubscription || typeof userSubscription.customer !== 'string') {
+      return [];
+    }
+
+    const invoices = await this.stripe.invoices.list({
+      customer: userSubscription.customer,
+      limit: 12,
+    });
+
+    return invoices.data.map((invoice) => ({
+      id: invoice.id,
+      amountPaid: invoice.amount_paid / 100,
+      currency: invoice.currency,
+      status: invoice.status,
+      created: new Date(invoice.created * 1000).toISOString(),
+      invoicePdf: invoice.invoice_pdf ?? null,
+      hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
+    }));
+  }
+
+  /**
+   * Create a Stripe Billing Portal session so the user can manage their
+   * payment method and view invoices directly through Stripe.
+   */
+  async createBillingPortalSession(userId: string): Promise<{ url: string }> {
+    const userSubscription = await this.findActiveStripeSubscription(userId);
+    if (!userSubscription || typeof userSubscription.customer !== 'string') {
+      throw new BadRequestException(
+        'No active subscription found for this user.',
+      );
+    }
+
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4200';
+
+    const session = await this.stripe.billingPortal.sessions.create({
+      customer: userSubscription.customer,
+      return_url: `${frontendUrl}/my-subscription`,
+    });
+
+    return { url: session.url };
   }
 }

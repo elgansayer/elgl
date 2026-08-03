@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AudioRoomsController } from './audio-rooms.controller';
 import { AudioRoomsService } from './audio-rooms.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { CallLogRecord } from './interfaces/call-log.interface';
 
 describe('AudioRoomsController', () => {
   let controller: AudioRoomsController;

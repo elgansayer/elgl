@@ -50,6 +50,16 @@ export class UsersController {
   }
 
   @UseGuards(TwoFactorGuard)
+  @Delete('me/permanent')
+  async permanentlyDeleteMyAccount(
+    @CurrentUser() user: User | null,
+  ): Promise<{ message: string }> {
+    if (!user) throw new UnauthorizedException();
+    await this.usersService.permanentDeleteAccount(user.id);
+    return { message: 'Account permanently deleted.' };
+  }
+
+  @UseGuards(TwoFactorGuard)
   @Post('me/restore')
   async restoreMyAccount(
     @CurrentUser() user: User | null,
@@ -109,7 +119,7 @@ export class UsersController {
   ): Promise<{ level: string }> {
     if (!user) throw new UnauthorizedException();
     if (typeof score !== 'number' || score < 0 || score > 100) {
-      throw new BadRequestException('Score must be a number between 0 and 100');
+      throw new BadRequestException();
     }
     const level = await this.usersService.proficiencyAssessment(user.id, score);
     return { level };
@@ -184,9 +194,7 @@ export class UsersController {
     if (!user) throw new UnauthorizedException();
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(dto.contentType)) {
-      throw new BadRequestException(
-        'Only JPEG, PNG, and WebP images are allowed',
-      );
+      throw new BadRequestException();
     }
     return this.mediaService.generatePresignedUrl(user.id, {
       filename: dto.filename,
@@ -263,19 +271,86 @@ export class UsersController {
   @Get(':id/followers')
   async getFollowers(
     @Param('id') id: string,
-    @Query('limit') limit?: number,
-    @Query('offset') offset?: number,
+    @Query('limit') limit: number | undefined,
+    @Query('offset') offset: number | undefined,
+    @CurrentUser() user: User | null,
   ): Promise<{ data: UserProfile[]; total: number }> {
-    return this.usersService.getFollowers(id, limit ?? 20, offset ?? 0);
+    return this.usersService.getFollowers(
+      id,
+      limit ?? 20,
+      offset ?? 0,
+      user?.id,
+    );
   }
 
   @Get(':id/following')
   async getFollowing(
     @Param('id') id: string,
-    @Query('limit') limit?: number,
-    @Query('offset') offset?: number,
+    @Query('limit') limit: number | undefined,
+    @Query('offset') offset: number | undefined,
+    @CurrentUser() user: User | null,
   ): Promise<{ data: UserProfile[]; total: number }> {
-    return this.usersService.getFollowing(id, limit ?? 20, offset ?? 0);
+    return this.usersService.getFollowing(
+      id,
+      limit ?? 20,
+      offset ?? 0,
+      user?.id,
+    );
+  }
+
+  @Post(':id/follow')
+  async followUser(
+    @Param('id') id: string,
+    @CurrentUser() user: User | null,
+  ): Promise<void> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.followUser(user.id, id);
+  }
+
+  @Delete(':id/follow')
+  async unfollowUser(
+    @Param('id') id: string,
+    @CurrentUser() user: User | null,
+  ): Promise<void> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.unfollowUser(user.id, id);
+  }
+
+  @Post('block/:id')
+  async blockUser(
+    @CurrentUser() user: User | null,
+    @Param('id') targetId: string,
+  ): Promise<{ success: boolean }> {
+    if (!user) throw new UnauthorizedException();
+    if (user.id === targetId)
+      throw new BadRequestException('Cannot block yourself');
+    return this.usersService.blockUser(user.id, targetId);
+  }
+
+  @Delete('block/:id')
+  async unblockUser(
+    @CurrentUser() user: User | null,
+    @Param('id') targetId: string,
+  ): Promise<{ success: boolean }> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.unblockUser(user.id, targetId);
+  }
+
+  @Post('report')
+  async reportUser(
+    @CurrentUser() user: User | null,
+    @Body()
+    dto: {
+      reported_id: string;
+      reason_category: string;
+      description?: string;
+      context_url?: string;
+    },
+  ): Promise<{ success: boolean; message: string }> {
+    if (!user) throw new UnauthorizedException();
+    if (!dto.reported_id || !dto.reason_category)
+      throw new BadRequestException();
+    return this.usersService.reportUser(user.id, dto);
   }
 
   @Get('me/privacy-settings')
@@ -288,6 +363,7 @@ export class UsersController {
     privacy_profile_photo?: string;
     privacy_about_info?: string;
     privacy_status?: string;
+    incognito_visits?: boolean;
   }> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.getPrivacySettings(user.id);
@@ -325,7 +401,10 @@ export class UsersController {
     @Body() dto: PrivacySettingsDto,
   ): Promise<UserProfile | null> {
     if (!user) throw new UnauthorizedException();
-    return this.usersService.updatePrivacySettings(user.id, dto);
+    const isVip = Boolean(
+      (await this.usersService.getProfile(user.id))?.is_vip ?? false,
+    );
+    return this.usersService.updatePrivacySettings(user.id, dto, isVip);
   }
 
   @Get('me/business')
