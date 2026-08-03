@@ -2,9 +2,6 @@ import { Component, computed, input, resource, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { environment } from '../../../environments/environment';
 
-interface TranslationResponse {
-  translation?: string;
-}
 
 @Component({
   selector: 'app-moment-translate',
@@ -68,12 +65,9 @@ export class MomentTranslateComponent {
           }
           return response.json();
         })
-        .then((data: unknown) => {
-          if (typeof data === 'object' && data !== null && 'translation' in data) {
-            const maybeTranslation: unknown = data.translation;
-            if (typeof maybeTranslation === 'string') {
-              return { translation: maybeTranslation };
-            }
+        .then((data: { translation?: string }) => {
+          if (data.translation) {
+            return { translation: data.translation };
           }
           return {};
         })

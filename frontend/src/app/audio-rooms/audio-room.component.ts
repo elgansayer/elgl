@@ -1,46 +1,31 @@
-import { Component, computed, input, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Component, computed, input } from '@angular/core';
 import { TranslatePipe } from '../services/translate.pipe';
 
-export interface RoomParticipant {
+export interface AudioRoomParticipant {
   id: string;
   displayName: string;
-  avatarUrl?: string;
+  avatarUrl: string | null;
+  isSpeaking: boolean;
+  isMuted: boolean;
   isHost?: boolean;
-  isSpeaking?: boolean;
+  isCoHost?: boolean;
 }
 
 @Component({
-  standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe],
   selector: 'app-audio-room',
+  standalone: true,
+  imports: [TranslatePipe],
   templateUrl: './audio-room.component.html',
   styleUrl: './audio-room.component.scss',
 })
 export class AudioRoomComponent {
-  readonly roomId = input<string>('');
+  readonly host = input.required<AudioRoomParticipant>();
+  readonly speakers = input<AudioRoomParticipant[]>([]);
+  readonly listeners = input<AudioRoomParticipant[]>([]);
+  readonly isVideoStream = input<boolean>(false);
 
-  private readonly mockedParticipants: RoomParticipant[] = [
-    { id: 'host-1', displayName: 'Host Name', avatarUrl: 'https://r2.example.com/avatars/host.png', isHost: true, isSpeaking: true },
-    { id: 'speaker-1', displayName: 'Speaker A', avatarUrl: 'https://r2.example.com/avatars/speaker1.png', isSpeaking: false },
-    { id: 'speaker-2', displayName: 'Speaker B', avatarUrl: 'https://r2.example.com/avatars/speaker2.png', isSpeaking: false },
-    { id: 'listener-1', displayName: 'Listener 1', avatarUrl: 'https://r2.example.com/avatars/listener1.png' },
-    { id: 'listener-2', displayName: 'Listener 2', avatarUrl: 'https://r2.example.com/avatars/listener2.png' },
-    { id: 'listener-3', displayName: 'Listener 3', avatarUrl: 'https://r2.example.com/avatars/listener3.png' },
-  ];
+  readonly speakerCount = computed(() => this.speakers().length);
+  readonly listenerCount = computed(() => this.listeners().length);
 
-  readonly participants = signal<RoomParticipant[]>(this.mockedParticipants);
-
-  readonly host = computed(() => this.participants().filter((p) => p.isHost));
-  readonly speakers = computed(() =>
-    this.participants().filter((p) => !p.isHost && p.isSpeaking !== undefined),
-  );
-  readonly listeners = computed(() =>
-    this.participants().filter((p) => !p.isHost && p.isSpeaking === undefined),
-  );
-
-  leave(): void {
-    // TODO: implement backend call to leave the room
-  }
+  readonly stageParticipants = computed(() => [this.host(), ...this.speakers()]);
 }
