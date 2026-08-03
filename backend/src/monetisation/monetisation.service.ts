@@ -298,9 +298,11 @@ export class MonetisationService {
     if (!response.data) throw new NotFoundException('User not found');
     const user = response.data as unknown as UserVipRow;
 
-    if (!user.is_vip) {
+    const isDeveloperTier =
+      user.is_vip && (user.vip_tier ?? '').startsWith('developer');
+    if (!isDeveloperTier) {
       throw new ForbiddenException(
-        'Developer API Access is reserved for active subscribers. Upgrade to Developer Tier (20 UKP / $26 USD per month) to generate programmatic API keys!',
+        'Developer API Access is reserved for active Developer Tier subscribers (20 UKP / $26 USD per month). Upgrade to Developer Tier to generate programmatic API keys!',
       );
     }
 
@@ -313,7 +315,7 @@ export class MonetisationService {
     return {
       api_key: apiKey,
       tier: user.vip_tier || 'consumer',
-      rate_limit_rpm: user.vip_tier === 'developer' ? 600 : 60,
+      rate_limit_rpm: user.vip_tier?.startsWith('developer') ? 600 : 60,
     };
   }
 
@@ -332,6 +334,14 @@ export class MonetisationService {
       .single();
     if (!response.data) throw new NotFoundException('User not found');
     const user = response.data as UserVipRow;
+
+    const isDeveloperTier =
+      user.is_vip && (user.vip_tier ?? '').startsWith('developer');
+    if (!isDeveloperTier) {
+      throw new ForbiddenException(
+        'Developer Analytics are only available to active Developer Tier subscribers (20 UKP / $26 USD per month).',
+      );
+    }
 
     const metricResponse = await supabase
       .from('developer_metrics')
@@ -353,11 +363,29 @@ export class MonetisationService {
     };
   }
 
-  async getDiagnosticLogs(): Promise<DeveloperDiagnosticLogRow[]> {
+  async getDiagnosticLogs(
+    userId: string,
+  ): Promise<DeveloperDiagnosticLogRow[]> {
     const supabase = this.supabaseService.getClient();
+    const { data: userCheck } = await supabase
+      .from('users')
+      .select('is_vip, vip_tier')
+      .eq('id', userId)
+      .single();
+    if (
+      !userCheck ||
+      !userCheck.is_vip ||
+      !(userCheck.vip_tier ?? '').startsWith('developer')
+    ) {
+      throw new ForbiddenException(
+        'Diagnostic logs are only available to active Developer Tier subscribers (20 UKP / $26 USD per month).',
+      );
+    }
+
     const response = await supabase
       .from('developer_diagnostic_logs')
       .select('id, user_id, category, status, message, created_at')
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(20);
 
@@ -373,6 +401,20 @@ export class MonetisationService {
     dto: CreateDiagnosticLogDto,
   ): Promise<DeveloperDiagnosticLogRow> {
     const supabase = this.supabaseService.getClient();
+    const { data: userCheck } = await supabase
+      .from('users')
+      .select('is_vip, vip_tier')
+      .eq('id', userId)
+      .single();
+    if (
+      !userCheck ||
+      !userCheck.is_vip ||
+      !(userCheck.vip_tier ?? '').startsWith('developer')
+    ) {
+      throw new ForbiddenException(
+        'Diagnostic logs are only available to active Developer Tier subscribers (20 UKP / $26 USD per month).',
+      );
+    }
     const response = await supabase
       .from('developer_diagnostic_logs')
       .insert({

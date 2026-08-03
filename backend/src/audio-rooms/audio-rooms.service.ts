@@ -201,7 +201,7 @@ export class AudioRoomsService implements OnModuleInit {
       throw new NotFoundException('Room not found');
     }
 
-    const room = response.data as AudioRoomRow;
+    const room: AudioRoomRow = response.data as AudioRoomRow;
 
     if (room.host_id !== hostId) {
       throw new ForbiddenException(
@@ -487,7 +487,7 @@ export class AudioRoomsService implements OnModuleInit {
     const isSpeaker =
       isHost || (room.speakers && room.speakers.includes(userId));
 
-    const profile = await this.usersService.getProfile(userId);
+    const profile: UserProfileRow | null = await this.usersService.getProfile(userId);
     const identity = profile?.display_name
       ? `${profile.display_name}_${userId.slice(0, 6)}`
       : userId;
@@ -971,7 +971,7 @@ export class AudioRoomsService implements OnModuleInit {
       );
     }
 
-    const caption = response.data as CaptionRecord;
+    const caption: CaptionRecord = response.data as CaptionRecord;
 
     // Broadcast AI speech-to-text subtitle to everyone in room via Centrifugo
     void this.centrifugoService.publish(`room_${dto.room_id}`, {

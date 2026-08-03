@@ -45,7 +45,7 @@ describe('StudyStreakService', () => {
       expect(req.request.method).toBe('GET');
       req.flush(expected);
 
-      await expect(promise).resolves.toEqual(expected);
+      await promise.then((result) => expect(result).toEqual(expected));
     });
   });
 
@@ -62,7 +62,7 @@ describe('StudyStreakService', () => {
       expect(req.request.body).toEqual({});
       req.flush(expected);
 
-      await expect(promise).resolves.toEqual(expected);
+      await promise.then((result) => expect(result).toEqual(expected));
     });
   });
 });
