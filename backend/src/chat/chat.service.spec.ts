@@ -45,6 +45,7 @@ describe('ChatService', () => {
       update: jest.fn().mockReturnThis(),
       delete: jest.fn().mockReturnThis(),
       single: jest.fn(),
+      maybeSingle: jest.fn().mockReturnThis(),
       // Make the builder thenable so that `await supabase.from(...)` calls resolve
       then: jest.fn((resolve) => resolve({ data: [] })),
     };
@@ -673,6 +674,67 @@ describe('ChatService', () => {
 
       await expect(service.getLockedChats('user-1')).rejects.toThrow(
         'Failed to get locked chats: Query failed',
+      );
+    });
+  });
+
+  describe('exportChatHistory', () => {
+    it('should return the list of messages for a room when the user is a member', async () => {
+      const roomId = 'room-export-1';
+      const memberRows = { data: [{ user_id: 'user-1' }], error: null };
+      const messages = [
+        { id: 'msg-1', room_id: roomId, text_content: 'Hello' },
+        { id: 'msg-2', room_id: roomId, text_content: 'World' },
+      ];
+
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) => resolve(memberRows))
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: messages, error: null }),
+        );
+
+      const result = await service.exportChatHistory('user-1', roomId);
+
+      expect(mockSupabaseClient.from).toHaveBeenNthCalledWith(
+        1,
+        'chat_room_members',
+      );
+      expect(mockSupabaseClient.from).toHaveBeenNthCalledWith(
+        2,
+        'chat_messages',
+      );
+      expect(mockQueryBuilder.select).toHaveBeenCalled();
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('room_id', roomId);
+      expect(mockQueryBuilder.order).toHaveBeenCalledWith('created_at', {
+        ascending: true,
+      });
+      expect(mockQueryBuilder.limit).toHaveBeenCalledWith(1000);
+      expect(result).toEqual(messages);
+    });
+
+    it('should throw ForbiddenException when the user is not a member', async () => {
+      const roomId = 'private-room';
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({ data: null, error: null }),
+      );
+
+      await expect(service.exportChatHistory('user-1', roomId)).rejects.toThrow(
+        'You are not a member of this room',
+      );
+    });
+
+    it('should throw an Error when fetching messages fails', async () => {
+      const roomId = 'room-error';
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: [{ user_id: 'user-1' }], error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: null, error: { message: 'DB failed' } }),
+        );
+
+      await expect(service.exportChatHistory('user-1', roomId)).rejects.toThrow(
+        'Failed to fetch messages: DB failed',
       );
     });
   });
