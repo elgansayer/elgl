@@ -43,3 +43,11 @@ export class UnblockUserDto {
   @IsNotEmpty()
   blocked_id!: string;
 }
+export class SilenceUnknownCallersDto {
+  @IsString()
+  @IsNotEmpty()
+  userId!: string;
+
+  @IsNotEmpty()
+  silence!: boolean;
+}

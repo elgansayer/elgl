@@ -545,11 +545,11 @@ export class SupabaseService implements OnModuleDestroy {
     const supabase = this.getClient();
     // Fetch current study_streak_days and correction_ratio to compute is_serious_learner
     const { data, error: fetchError } = await supabase
-      .from<{
+      .from('users')
+      .select<{
         study_streak_days: number | null;
         correction_ratio: number | null;
-      }>('users')
-      .select('study_streak_days, correction_ratio')
+      }>('study_streak_days, correction_ratio')
       .eq('id', userId)
       .single();
 
@@ -611,8 +611,8 @@ export class SupabaseService implements OnModuleDestroy {
   async getUserXp(userId: string): Promise<number> {
     const supabase = this.getClient();
     const { data, error } = await supabase
-      .from<{ xp_total: number | null }>('users')
-      .select('xp_total')
+      .from('users')
+      .select<{ xp_total: number | null }>('xp_total')
       .eq('id', userId)
       .single();
     if (error || !data) {

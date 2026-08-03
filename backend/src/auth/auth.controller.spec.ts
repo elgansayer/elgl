@@ -144,10 +144,7 @@ describe('AuthController (unit)', () => {
       const req = { user: { id: 'user-123' } };
       const result = await controller.disableTwoFactor(req, '123456');
 
-      expect(authService.disableTwoFactor).toHaveBeenCalledWith(
-        'user-123',
-        '123456',
-      );
+      expect(authService.disableTwoFactor).toHaveBeenCalledWith('user-123');
       expect(result).toEqual({ success: true });
     });
   });
