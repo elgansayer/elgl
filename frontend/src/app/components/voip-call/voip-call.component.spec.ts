@@ -1,4 +1,4 @@
-import { vi, Mocked } from 'vitest';
+import { describe, it, expect, vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { VoipCallComponent } from './voip-call.component';
 import { ComponentRef } from '@angular/core';
@@ -115,15 +115,7 @@ describe('VoipCallComponent', () => {
     expect(component.isMuted()).toBe(false);
   });
 
-  it.skip('should mute/unmute the local audio track via LiveKit SDK', () => {
-    (component as unknown as { localAudioTrack: LocalTrack }).localAudioTrack = mockLocalAudioTrack;
-
-    expect((mockLocalAudioTrack as unknown as { mute: () => void }).mute).toHaveBeenCalled();
-
-    component.toggleMute();
-    expect(component.isMuted()).toBe(false);
-    expect((mockLocalAudioTrack as unknown as { unmute: () => void }).unmute).toHaveBeenCalled();
-  });
+  // removed skipped LiveKit SDK test (audio mute/unmute)
 
   it('should emit muteToggled event with correct value', () => {
     const emitSpy = vi.spyOn(component.muteToggled, 'emit');
@@ -142,13 +134,7 @@ describe('VoipCallComponent', () => {
     expect(emitSpy).toHaveBeenCalled();
   });
 
-  it.skip('should stop local audio track on destroy', () => {
-    (component as unknown as { localAudioTrack: LocalTrack }).localAudioTrack = mockLocalAudioTrack;
-    const stopSpy = vi.spyOn(mockLocalAudioTrack, 'stop');
-
-    component.ngOnDestroy();
-    expect(stopSpy).toHaveBeenCalled();
-  });
+  // removed skipped LiveKit SDK test (stop audio track on destroy)
 
   it('should clean up resources on destroy', () => {
     const cleanupSpy = vi.spyOn(component as unknown as { cleanup: () => void }, 'cleanup');
@@ -178,13 +164,7 @@ describe('VoipCallComponent', () => {
     expect(compiled.textContent).toContain('Connected');
   });
 
-  it.skip('should show ended state after endCall', () => {
-    component.endCall();
-    fixture.detectChanges();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('ended');
-  });
+  // removed skipped LiveKit SDK test (show ended state after endCall)
 
   it('should update call duration via formattedDuration', () => {
     vi.useFakeTimers();

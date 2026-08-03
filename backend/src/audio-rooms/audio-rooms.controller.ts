@@ -43,6 +43,7 @@ import { GetCallLogsQueryDto } from './dto/get-call-logs-query.dto';
 import { CreateLanguagePartyDto } from './dto/create-language-party.dto';
 import { CreatePrivatePartyDto } from './dto/create-private-party.dto';
 import { SendReactionDto } from './dto/send-reaction.dto';
+import { TipHostDto } from './dto/tip-host.dto';
 import { ReorderStageDto } from './dto/reorder-stage.dto';
 
 // Type representing the authenticated user fields used in the controller.
@@ -355,5 +356,23 @@ export class AudioRoomsController {
   ): Promise<{ emojiId: string; animationUrl: string } | null> {
     if (!user) return null;
     return await this.audioRoomsService.sendReaction(user.id, roomId, dto);
+  }
+
+  @Post(':roomId/tip')
+  async tipHost(
+    @CurrentUser() user: AuthUser | null,
+    @Param('roomId') roomId: string,
+    @Body() dto: TipHostDto,
+  ): Promise<{
+    tip_id: string;
+    amount_coins: number;
+    receiver_id: string;
+    receiver_new_balance: number;
+  } | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.tipHost(user.id, {
+      room_id: roomId,
+      amount_coins: dto.amount_coins,
+    });
   }
 }

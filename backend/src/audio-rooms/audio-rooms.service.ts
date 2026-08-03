@@ -35,6 +35,7 @@ import {
   SendCaptionDto,
 } from './dto/audio-room.dto';
 import { AudioRoomTokenDto } from './dto/audio-room-token.dto';
+import { TipHostDto } from './dto/tip-host.dto';
 import {
   AudioRoomRecord,
   CaptionRecord,
@@ -1558,5 +1559,109 @@ export class AudioRoomsService implements OnModuleInit {
       triggered_by: userId,
     });
     return { success: true, soundUrl: sound.url };
+  }
+
+  async tipHost(
+    userId: string,
+    dto: TipHostDto,
+  ): Promise<{
+    tip_id: string;
+    amount_coins: number;
+    receiver_id: string;
+    receiver_new_balance: number;
+  }> {
+    const supabase = this.supabaseService.getClient();
+    const roomResponse = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', dto.room_id)
+      .single();
+
+    if (!roomResponse.data) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const room = roomResponse.data as AudioRoomRow;
+
+    if (!room.is_active) {
+      throw new BadRequestException('Room is not active');
+    }
+
+    if (room.host_id === userId) {
+      throw new BadRequestException('You cannot tip yourself');
+    }
+
+    const senderResponse = await supabase
+      .from('users')
+      .select('coins_balance')
+      .eq('id', userId)
+      .single();
+
+    if (!senderResponse.data) {
+      throw new NotFoundException('Sender not found');
+    }
+
+    const senderBalance = senderResponse.data.coins_balance ?? 0;
+    const amount = dto.amount_coins;
+
+    if (senderBalance < amount) {
+      throw new BadRequestException(
+        `Insufficient coins. You have ${senderBalance} coins but need ${amount}.`,
+      );
+    }
+
+    const newSenderBalance = senderBalance - amount;
+    await supabase
+      .from('users')
+      .update({ coins_balance: newSenderBalance })
+      .eq('id', userId);
+
+    const receiverResponse = await supabase
+      .from('users')
+      .select('coins_balance')
+      .eq('id', room.host_id)
+      .single();
+
+    const currentReceiverBalance = receiverResponse.data?.coins_balance ?? 0;
+    const newReceiverBalance = currentReceiverBalance + amount;
+
+    await supabase
+      .from('users')
+      .update({ coins_balance: newReceiverBalance })
+      .eq('id', room.host_id);
+
+    const tipResponse = await supabase
+      .from('audio_room_tips')
+      .insert({
+        room_id: room.id,
+        sender_user_id: userId,
+        receiver_user_id: room.host_id,
+        amount_coins: amount,
+      })
+      .select()
+      .single();
+
+    if (tipResponse.error || !tipResponse.data) {
+      throw new Error(
+        `Failed to record tip: ${tipResponse.error?.message ?? 'Unknown error'}`,
+      );
+    }
+
+    const tipRow = tipResponse.data as { id: string };
+
+    void this.centrifugoService.publish(`room_${room.id}`, {
+      type: 'host_tip',
+      tip: {
+        amount_coins: amount,
+        sender_user_id: userId,
+      },
+    });
+
+    return {
+      tip_id: tipRow.id,
+      amount_coins: amount,
+      receiver_id: room.host_id,
+      receiver_new_balance: newReceiverBalance,
+    };
   }
 }

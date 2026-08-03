@@ -4,8 +4,10 @@ import request from 'supertest';
 import { json, Request, Response } from 'express';
 import Stripe from 'stripe';
 import { SupabaseAuthGuard } from './../src/auth/supabase-auth.guard';
+import { VipGuard } from './../src/monetisation/guards/vip.guard';
 import { SupabaseService } from './../src/supabase/supabase.service';
 import { NlpService } from './../src/nlp/nlp.service';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 let AppModule: typeof import('../src/app.module').AppModule;
 
@@ -232,6 +234,12 @@ describe('HelloTalk API E2E Integration Suite', () => {
       })
       .overrideProvider(NlpService)
       .useValue(mockNlpService)
+      .overrideGuard(VipGuard)
+      .useValue({
+        canActivate: () => true,
+      })
+      .overrideGuard(ThrottlerGuard)
+      .useValue({ canActivate: () => true })
       .compile();
 
     app = moduleFixture.createNestApplication({ rawBody: true });

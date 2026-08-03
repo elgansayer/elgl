@@ -30,6 +30,41 @@ type UsersRow = {
   native_languages?: string[] | null;
   privacy_hide_from_search?: boolean | null;
   incognito_visits?: boolean | null;
+  display_name?: string | null;
+  avatar_url?: string | null;
+  bio_text?: string | null;
+  status_text?: string | null;
+  proficiency_level?: string | null;
+  email?: string | null;
+  created_at?: string | null;
+  mock_country?: string | null;
+  mock_city?: string | null;
+  privacy_hide_age?: boolean | null;
+  privacy_hide_location?: boolean | null;
+  privacy_hide_gender?: boolean | null;
+  privacy_hide_exact_location?: boolean | null;
+  privacy_hide_online_status?: boolean | null;
+  privacy_hide_vip_status?: boolean | null;
+  privacy_last_seen?: string | null;
+  privacy_profile_photo?: string | null;
+  privacy_about_info?: string | null;
+  privacy_status?: string | null;
+  sound_effects_enabled?: boolean | null;
+  vibration_enabled?: boolean | null;
+  chat_enter_to_send?: boolean | null;
+  chat_text_size?: string | null;
+  silence_unknown_callers?: boolean | null;
+  scheduled_for_deletion_at?: string | null;
+  learning_goals?: string[] | null;
+  interests?: string[] | null;
+  gender?: string | null;
+  location?: string | null;
+  mock_location?: string | null;
+  enable_location_spoofing?: boolean | null;
+  audio_intro_url?: string | null;
+  cover_photo_url?: string | null;
+  serious_learner_mode?: boolean | null;
+  notification_preferences?: Record<string, unknown> | null;
 };
 
 type GroupsRow = {
@@ -230,6 +265,7 @@ type ReportRow = {
   reporter_id: string;
   reported_user_id: string;
   reason_category: string;
+  status: string;
   description?: string | null;
   context_url?: string | null;
   created_at?: string;
@@ -575,6 +611,10 @@ export interface Database {
           is_pinned: boolean | null;
           is_locked?: boolean | null;
           created_at?: string;
+          admin_id?: string;
+          invite_code?: string | null;
+          is_announcement?: boolean | null;
+          max_members?: number;
         };
         Insert: Partial<{
           id?: string;
@@ -583,6 +623,10 @@ export interface Database {
           is_pinned?: boolean | null;
           is_locked?: boolean | null;
           created_at?: string;
+          admin_id?: string;
+          invite_code?: string | null;
+          is_announcement?: boolean | null;
+          max_members?: number;
         }>;
         Update: Partial<{
           id?: string;
@@ -591,6 +635,10 @@ export interface Database {
           is_pinned?: boolean | null;
           is_locked?: boolean | null;
           created_at?: string;
+          admin_id?: string;
+          invite_code?: string | null;
+          is_announcement?: boolean | null;
+          max_members?: number;
         }>;
         Relationships: [];
       };
@@ -613,6 +661,78 @@ export interface Database {
           is_locked?: boolean;
           created_at?: string;
         }>;
+        Relationships: [];
+      };
+      developer_metrics: {
+        Row: {
+          user_id: string;
+          total_api_calls_today?: number;
+          avg_latency_ms?: number;
+          updated_at?: string;
+        };
+        Insert: {
+          user_id: string;
+          total_api_calls_today?: number;
+          avg_latency_ms?: number;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          total_api_calls_today?: number;
+          avg_latency_ms?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      developer_diagnostic_logs: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          category: 'POSTGIS' | 'CENTRIFUGO' | 'REDIS' | 'LIVEKIT';
+          status: 'info' | 'success' | 'warn';
+          message: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string | null;
+          category: 'POSTGIS' | 'CENTRIFUGO' | 'REDIS' | 'LIVEKIT';
+          status: 'info' | 'success' | 'warn';
+          message: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string | null;
+          category?: 'POSTGIS' | 'CENTRIFUGO' | 'REDIS' | 'LIVEKIT';
+          status?: 'info' | 'success' | 'warn';
+          message?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      chat_room_announcements: {
+        Row: {
+          id: string;
+          room_id: string;
+          admin_id: string;
+          message: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          room_id: string;
+          admin_id: string;
+          message: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          room_id?: string;
+          admin_id?: string;
+          message?: string;
+          created_at?: string;
+        };
         Relationships: [];
       };
       login_history: {
@@ -715,6 +835,7 @@ export interface Database {
           reporter_id: string;
           reported_user_id: string;
           reason_category: string;
+          status?: string;
           description?: string | null;
           context_url?: string | null;
           created_at?: string;
@@ -724,6 +845,7 @@ export interface Database {
           reporter_id?: string;
           reported_user_id?: string;
           reason_category?: string;
+          status?: string;
           description?: string | null;
           context_url?: string | null;
           created_at?: string;

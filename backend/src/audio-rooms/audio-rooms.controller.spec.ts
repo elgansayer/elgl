@@ -47,6 +47,7 @@ describe('AudioRoomsController', () => {
             playSound: jest.fn(),
             sendReaction: jest.fn(),
             getExclusiveEmojis: jest.fn(),
+            tipHost: jest.fn(),
           },
         },
       ],
@@ -300,6 +301,33 @@ describe('AudioRoomsController', () => {
       const result = await controller.archiveRoom({ id: 'user-1' }, dto);
       expect(audioRoomsService.archiveRoom).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual(room);
+    });
+  });
+
+  describe('tipHost', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.tipHost(null, 'room-1', {} as any);
+      expect(result).toBeNull();
+      expect(audioRoomsService.tipHost).not.toHaveBeenCalled();
+    });
+
+    it('should call service tipHost when user is provided', async () => {
+      const dto: any = { amount_coins: 10 };
+      const resultPayload: any = {
+        tip_id: 'tip-1',
+        amount_coins: 10,
+        receiver_id: 'host-1',
+        receiver_new_balance: 60,
+      };
+      (audioRoomsService.tipHost as jest.Mock).mockResolvedValue(resultPayload);
+
+      const result = await controller.tipHost({ id: 'user-1' }, 'room-1', dto);
+
+      expect(audioRoomsService.tipHost).toHaveBeenCalledWith('user-1', {
+        room_id: 'room-1',
+        amount_coins: 10,
+      });
+      expect(result).toEqual(resultPayload);
     });
   });
 });
