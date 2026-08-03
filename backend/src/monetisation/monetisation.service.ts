@@ -385,7 +385,7 @@ export class MonetisationService {
     if (
       !userCheck ||
       !userCheck.is_vip ||
-      !(userCheck.vip_tier ?? '').startsWith('developer')
+      !(userCheck.vip_tier && userCheck.vip_tier.startsWith('developer'))
     ) {
       throw new ForbiddenException(
         'Diagnostic logs are only available to active Developer Tier subscribers (20 UKP / $26 USD per month).',

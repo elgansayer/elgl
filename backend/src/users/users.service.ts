@@ -188,7 +188,7 @@ export class UsersService {
         )
       `,
       )
-      .eq('status_id', statusId)
+      .eq('id', statusId)
       .order('created_at', { ascending: false });
 
     if (response.error) {

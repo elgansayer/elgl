@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { PATH_METADATA } from '@nestjs/common/constants';
 import { MonetisationController } from './monetisation.controller';
 import { MonetisationService } from './monetisation.service';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
@@ -445,5 +446,27 @@ describe('MonetisationController', () => {
       ).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(response);
     });
+  });
+});
+
+describe('MonetisationController VIP upgrade lockdown (regression guard)', () => {
+  it('should never register a route path named "upgrade": VIP status must only change via verified payment webhooks', () => {
+    const routePaths = Object.getOwnPropertyNames(
+      MonetisationController.prototype,
+    )
+      .filter((name) => name !== 'constructor')
+      .map((name) =>
+        Reflect.getMetadata(
+          PATH_METADATA,
+          MonetisationController.prototype[
+            name as keyof typeof MonetisationController.prototype
+          ],
+        ),
+      );
+
+    expect(routePaths).not.toContain('upgrade');
+    expect(
+      Object.getOwnPropertyNames(MonetisationController.prototype),
+    ).not.toContain('upgrade');
   });
 });

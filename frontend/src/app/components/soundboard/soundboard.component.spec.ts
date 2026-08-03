@@ -184,7 +184,7 @@ describe('SoundboardComponent', () => {
     subscription?.cb({ type: 'soundboard_play', sound_url: soundUrl });
 
     // The component creates a new Audio element and sets volume to 0.6.
-    expect(audioInstances).toHaveLength(1);
+    expect(audioInstances.length).toBe(1);
     expect(audioInstances[0].src).toBe(soundUrl);
     expect(audioInstances[0].volume).toBe(0.6);
     expect(audioInstances[0].play).toHaveBeenCalled();

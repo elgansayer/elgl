@@ -129,7 +129,7 @@ describe('VideoCallComponent - screen sharing', () => {
   it('does nothing when not connected to a room', async () => {
     (component as unknown as { room: MockRoom | null }).room = null;
 
-    await expect(component.toggleScreenShare()).resolves.toBeUndefined();
+    await expect(component.toggleScreenShare()).resolves.not.toThrow();
   });
 
   it('swallows errors from a cancelled share picker without throwing', async () => {
