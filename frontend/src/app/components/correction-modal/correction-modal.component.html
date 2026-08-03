@@ -16,7 +16,7 @@
           {{ 'moments.correctSentenceTitle' | t }}
         </h2>
       </div>
-      <button
+      <button aria-label="Close modal"
         (click)="closeModal()"
         class="p-1 rounded-full text-text-secondary hover:text-text-primary hover:bg-surface-300 transition-colors"
       >
@@ -92,7 +92,7 @@
     <footer
       class="p-4 bg-surface-400 border-t border-surface-100 flex items-center justify-end gap-3"
     >
-      <button
+      <button aria-label="Close modal"
         (click)="closeModal()"
         class="px-4 py-2 text-xs font-bold text-text-secondary hover:text-text-primary rounded-full hover:bg-surface-300 transition-colors"
       >
