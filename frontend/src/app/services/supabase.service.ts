@@ -297,17 +297,21 @@ export class SupabaseService {
       return [];
     }
 
-    const { data: users, error: usersError } = await this.supabase
-      .from<'users'>('users')
-      .select('*')
-      .in('id', viewerIds)
-      .returns<UserProfile[]>();
-
-    if (usersError) {
-      console.warn('Failed to fetch viewer profiles', usersError);
-      return [];
+    const userProfiles: UserProfile[] = [];
+    for (const id of viewerIds) {
+      const { data: user, error: userError } = await this.supabase
+        .from<'users'>('users')
+        .select('*')
+        .eq('id', id)
+        .single<UserProfile>();
+      if (userError) {
+        console.warn('Failed to fetch viewer profile', userError);
+        continue;
+      }
+      if (user) {
+        userProfiles.push(user);
+      }
     }
-
-    return users ?? [];
+    return userProfiles;
   }
 }

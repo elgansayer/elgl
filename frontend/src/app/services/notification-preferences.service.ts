@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface CategoryPreference {
   push: boolean;
@@ -55,6 +56,29 @@ export class NotificationPreferencesService {
 
   updatePreferences(dto: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
     return firstValueFrom(this.http.put<NotificationPreferences>(this.baseUrl, dto));
+  }
+
+  updateCustomizationPreferences(
+    customToneUrl?: string,
+    vibrationPattern?: number[],
+  ): Promise<void> {
+    return firstValueFrom(
+      this.http.patch<void>(`${environment.apiUrl}/users/me/notification-preferences`, {
+        custom_tone_url: customToneUrl,
+        vibration_pattern: vibrationPattern,
+      }),
+    );
+  }
+
+  getCustomizationPreferences(): Promise<{
+    customToneUrl?: string;
+    vibrationPattern?: number[];
+  }> {
+    return firstValueFrom(
+      this.http.get<{ custom_tone_url?: string; vibration_pattern?: number[] }>(
+        `${environment.apiUrl}/users/me/notification-preferences`,
+      ),
+    );
   }
 
   resetToDefaults(): Promise<NotificationPreferences> {

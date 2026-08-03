@@ -141,6 +141,22 @@ export const routes: Routes = [
       import('./components/settings/settings.component').then((m) => m.SettingsComponent),
   },
   {
+    path: 'settings/notification',
+    loadComponent: () =>
+      import('./pages/settings/notification-settings/notification-settings.component').then(
+        (m) => m.NotificationSettingsComponent,
+      ),
+    title: 'Notification Settings - HelloTalk',
+  },
+  {
+    path: 'settings/notification-customization',
+    loadComponent: () =>
+      import('./components/notification-customization/notification-customization.component').then(
+        (m) => m.NotificationCustomizationComponent,
+      ),
+    title: 'Notification Customisation - HelloTalk',
+  },
+  {
     path: 'settings/backup-restore',
     loadComponent: () =>
       import('./pages/settings/backup-restore.component').then(

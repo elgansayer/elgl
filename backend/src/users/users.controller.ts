@@ -19,6 +19,7 @@ import { TwoFactorGuard } from '../two-factor/two-factor.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateBusinessProfileDto } from './dto/update-business-profile.dto';
 import { PrivacySettingsDto } from './dto/privacy-settings.dto';
+import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 import { UpdateStatusVisibilityDto } from './dto/update-status-visibility.dto';
 import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
 import {
@@ -71,6 +72,17 @@ export class UsersController {
   ): Promise<Record<string, unknown>> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.exportUserData(user.id);
+  }
+
+  @Get('me/notification-preferences')
+  async getMyNotificationPreferences(
+    @CurrentUser() user: User | null,
+  ): Promise<{
+    custom_tone_url?: string;
+    vibration_pattern?: number[];
+  } | null> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.getNotificationPreferences(user.id);
   }
 
   @Get('me')
@@ -187,6 +199,16 @@ export class UsersController {
       throw new UnauthorizedException();
     }
     return this.usersService.getStatusViewersByStatusId(user.id, statusId);
+  }
+
+  @Get('me/status-viewers')
+  async getMyStatusViewers(
+    @CurrentUser() user: User | null,
+  ): Promise<ProfileVisitor[]> {
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    return this.usersService.getStatusViewers(user.id);
   }
 
   @Get('hobbies')
@@ -399,5 +421,14 @@ export class UsersController {
       { status_visibility: dto.status_visibility },
       isVip,
     );
+  }
+
+  @Patch('me/notification-preferences')
+  async updateNotificationPreferences(
+    @CurrentUser() user: User | null,
+    @Body() dto: UpdateNotificationPreferencesDto,
+  ): Promise<UserProfile | null> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.updateNotificationPreferences(user.id, dto);
   }
 }

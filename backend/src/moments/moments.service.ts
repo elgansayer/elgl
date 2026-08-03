@@ -73,16 +73,16 @@ export class MomentsService {
 
     const { data: momentsData, error: momentsError } = await supabase
       .from('moments')
-      .select('id', { count: 'exact' });
+      .select('id');
 
     const { data: correctionsData, error: correctionsError } = await supabase
       .from('moment_comments')
-      .select('id', { count: 'exact' })
+      .select('id')
       .not('correction_payload', 'is', null);
 
     const { data: translationsData, error: translationsError } = await supabase
       .from('translations')
-      .select('id', { count: 'exact' });
+      .select('id');
 
     if (momentsError || correctionsError || translationsError) {
       throw new Error(

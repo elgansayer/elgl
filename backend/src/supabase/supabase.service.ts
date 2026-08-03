@@ -138,9 +138,17 @@ type MomentRow = {
 
 type MomentCommentRow = {
   id: string;
-  author_id: string;
+  user_id: string;
+  author_id?: string;
   moment_id: string;
   content: string;
+  correction_payload?: {
+    original: string;
+    corrected: string;
+    explanation?: string;
+  } | null;
+  parent_comment_id?: string | null;
+  reply_to_user_id?: string | null;
   created_at: string;
 };
 
@@ -149,6 +157,32 @@ type MomentLikeRow = {
   user_id: string;
   moment_id: string;
   created_at: string;
+};
+
+type MomentCommentVotesRow = {
+  id: string;
+  comment_id: string;
+  user_id: string;
+  vote: string;
+  created_at?: string;
+};
+
+type MomentQuestionAnswersRow = {
+  id?: string;
+  moment_id: string;
+  user_id: string;
+  answer: string;
+  is_correct: boolean;
+  created_at?: string;
+};
+
+type TranslationRow = {
+  id: string;
+  source_text?: string | null;
+  translated_text?: string | null;
+  source_language?: string | null;
+  target_language?: string | null;
+  created_at?: string;
 };
 
 type FlashcardRow = {
@@ -174,6 +208,23 @@ type LoginHistoryRow = {
   ip_address?: string | null;
   user_agent?: string | null;
   created_at: string;
+};
+
+type BlockRow = {
+  id: string;
+  blocker_id: string;
+  blocked_id: string;
+  created_at?: string;
+};
+
+type ReportRow = {
+  id: string;
+  reporter_id: string;
+  reported_user_id: string;
+  reason_category: string;
+  description?: string | null;
+  context_url?: string | null;
+  created_at?: string;
 };
 
 type ChatMessageRow = {
@@ -370,6 +421,24 @@ export interface Database {
         Update: Partial<MomentLikeRow>;
         Relationships: [];
       };
+      moment_comment_votes: {
+        Row: MomentCommentVotesRow;
+        Insert: Partial<MomentCommentVotesRow>;
+        Update: Partial<MomentCommentVotesRow>;
+        Relationships: [];
+      };
+      moment_question_answers: {
+        Row: MomentQuestionAnswersRow;
+        Insert: Partial<MomentQuestionAnswersRow>;
+        Update: Partial<MomentQuestionAnswersRow>;
+        Relationships: [];
+      };
+      translations: {
+        Row: TranslationRow;
+        Insert: Partial<TranslationRow>;
+        Update: Partial<TranslationRow>;
+        Relationships: [];
+      };
       flashcards: {
         Row: FlashcardRow;
         Insert: Partial<FlashcardRow>;
@@ -502,6 +571,57 @@ export interface Database {
           transaction_id?: string;
           status?: string;
           created_at?: string;
+        }>;
+        Relationships: [];
+      };
+      blocks: {
+        Row: {
+          id: string;
+          blocker_id: string;
+          blocked_id: string;
+          created_at?: string;
+        };
+        Insert: {
+          blocker_id: string;
+          blocked_id: string;
+          created_at?: string;
+          id?: string;
+        };
+        Update: Partial<{
+          blocker_id?: string;
+          blocked_id?: string;
+          created_at?: string;
+          id?: string;
+        }>;
+        Relationships: [];
+      };
+      reports: {
+        Row: {
+          id: string;
+          reporter_id: string;
+          reported_user_id: string;
+          reason_category: string;
+          description?: string | null;
+          context_url?: string | null;
+          created_at?: string;
+        };
+        Insert: {
+          reporter_id: string;
+          reported_user_id: string;
+          reason_category: string;
+          description?: string | null;
+          context_url?: string | null;
+          created_at?: string;
+          id?: string;
+        };
+        Update: Partial<{
+          reporter_id?: string;
+          reported_user_id?: string;
+          reason_category?: string;
+          description?: string | null;
+          context_url?: string | null;
+          created_at?: string;
+          id?: string;
         }>;
         Relationships: [];
       };

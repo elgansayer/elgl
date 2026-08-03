@@ -21,6 +21,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { XpService } from '../xp/xp.service';
 import { PREDEFINED_HOBBIES, PREDEFINED_INTERESTS } from './constants';
 import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
+import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 
 @Injectable()
 export class UsersService {
@@ -305,6 +306,14 @@ export class UsersService {
     }
   }
 
+  async getNotificationPreferences(userId: string): Promise<{
+    custom_tone_url?: string;
+    vibration_pattern?: number[];
+  }> {
+    const profile = await this.getProfile(userId);
+    return profile.notification_preferences ?? {};
+  }
+
   async updateDoNotDisturbSettings(
     userId: string,
     dto: DoNotDisturbDto,
@@ -365,6 +374,7 @@ export class UsersService {
       scheduled_for_deletion_at: undefined,
       mock_country: undefined,
       mock_city: undefined,
+      notification_preferences: undefined,
       xp_total: 100,
       business_name: 'My Mock Shop',
       business_hours: 'Mon-Fri 9AM-5PM',
@@ -503,6 +513,28 @@ export class UsersService {
     }
     const profile = await this.getProfile(userId);
     return { ...profile, ...updatePayload };
+  }
+
+  async updateNotificationPreferences(
+    userId: string,
+    dto: UpdateNotificationPreferencesDto,
+  ): Promise<UserProfile> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('users')
+      .update({ notification_preferences: dto } as never)
+      .eq('id', userId);
+    if (error) {
+      Logger.warn(
+        `Supabase update for notification preferences failed, falling back to mock: ${error.message}`,
+      );
+      const mock = this.getMockProfile(userId);
+      return {
+        ...mock,
+        notification_preferences: dto,
+      };
+    }
+    return this.getProfile(userId);
   }
 
   async scheduleDeletion(
