@@ -66,6 +66,8 @@ export interface UserProfile {
   followers_count?: number;
   following_count?: number;
   corrector_score?: number;
+  custom_avatar_url?: string; // Custom profile picture URL
+  about_status?: string; // Custom About status
   privacy_last_seen?: string;
   privacy_profile_photo?: string;
   privacy_about_info?: string;
@@ -263,6 +265,8 @@ export class UserService {
       serious_learner_mode?: boolean;
       sound_effects_enabled?: boolean;
       vibration_enabled?: boolean;
+      custom_avatar_url?: string;
+      about_status?: string;
     },
   ): Promise<UserProfile> {
     return firstValueFrom(

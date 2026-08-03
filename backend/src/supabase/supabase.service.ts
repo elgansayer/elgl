@@ -469,22 +469,40 @@ export interface Database {
       coin_purchases: {
         Row: {
           user_id: string;
-          transaction_id: string;
+          package_id: string;
           coins_added: number;
+          amount_paid: number;
+          currency: string;
+          receipt_token: string;
+          platform: string;
+          transaction_id: string;
+          status: string;
           created_at: string;
         };
-        Insert: {
+        Insert: Partial<{
           user_id: string;
-          transaction_id: string;
+          package_id: string;
           coins_added: number;
+          amount_paid: number;
+          currency: string;
+          receipt_token: string;
+          platform: string;
+          transaction_id: string;
+          status: string;
           created_at?: string;
-        };
-        Update: {
+        }>;
+        Update: Partial<{
           user_id?: string;
-          transaction_id?: string;
+          package_id?: string;
           coins_added?: number;
+          amount_paid?: number;
+          currency?: string;
+          receipt_token?: string;
+          platform?: string;
+          transaction_id?: string;
+          status?: string;
           created_at?: string;
-        };
+        }>;
         Relationships: [];
       };
     };

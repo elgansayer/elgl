@@ -237,7 +237,7 @@ export class EconomyService {
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase
       .from('users')
-      .update({ coins_balance: newBalance })
+      .update({ coins_balance: newBalance } as never)
       .eq('id', userId);
 
     if (error) {
@@ -312,7 +312,7 @@ export class EconomyService {
         platform,
         transaction_id: transactionId,
         status: 'completed',
-      });
+      } as never);
 
     if (insertError) {
       // Unique violation (race condition)
@@ -348,7 +348,7 @@ export class EconomyService {
 
     const { error: updateError } = await supabase
       .from('users')
-      .update({ coins_balance: newBalance })
+      .update({ coins_balance: newBalance } as never)
       .eq('id', userId);
 
     if (updateError) {
@@ -629,11 +629,11 @@ export class EconomyService {
 
     await supabase
       .from('users')
-      .update({ coins_balance: newSenderBalance })
+      .update({ coins_balance: newSenderBalance } as never)
       .eq('id', senderId);
     await supabase
       .from('users')
-      .update({ coins_balance: newReceiverBalance })
+      .update({ coins_balance: newReceiverBalance } as never)
       .eq('id', dto.receiver_id);
 
     await supabase.from('gift_transactions').insert({
@@ -642,7 +642,7 @@ export class EconomyService {
       gift_id: gift.id,
       room_id: dto.room_id || null,
       coins_spent: gift.cost_coins,
-    });
+    } as never);
 
     const senderProfile = await this.usersService.getProfile(senderId);
     const receiverProfile = await this.usersService.getProfile(dto.receiver_id);
@@ -702,7 +702,7 @@ export class EconomyService {
     const newBalance = coins_balance - pack.cost_coins;
     const { error: updateError } = await supabase
       .from('users')
-      .update({ coins_balance: newBalance })
+      .update({ coins_balance: newBalance } as never)
       .eq('id', userId);
 
     if (updateError) {
@@ -715,7 +715,7 @@ export class EconomyService {
       .insert({
         user_id: userId,
         pack_id: pack.id,
-      });
+      } as never);
 
     if (insertError) {
       // Note: In a robust system, you'd want to rollback the coin deduction here

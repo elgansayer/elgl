@@ -445,15 +445,16 @@ describe('UsersService', () => {
     });
   });
 
-  describe('getStatusViewers', () => {
+  describe('getStatusViewersByStatusId', () => {
     it('should return empty list when query succeeds', async () => {
       mockSupabaseClient.from.mockReturnValueOnce({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({ data: [], error: null }),
+        order: jest.fn().mockResolvedValue({ data: [], error: null }),
       });
-      await expect(service.getStatusViewers('user-1')).resolves.toEqual([]);
+      await expect(
+        service.getStatusViewersByStatusId('user-1', 'status-1'),
+      ).resolves.toEqual([]);
     });
   });
 

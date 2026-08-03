@@ -21,6 +21,7 @@ import { LlmProxyDto } from './dto/llm-proxy.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { AddLabelDto, RemoveLabelDto } from './dto/label.dto';
 import { FixMessageDto } from './dto/fix-message.dto';
+import { SetWallpaperDto } from './dto/set-wallpaper.dto';
 import {
   ChatMessage,
   ChatRoomRecord,
@@ -326,5 +327,26 @@ export class ChatController {
   ): Promise<{ greetingMessage?: string; awayMessage?: string }> {
     if (!user) return {};
     return await this.chatService.getRoomGreeting(roomId, user.id);
+  }
+
+  @Post('rooms/:roomId/wallpaper')
+  async setWallpaper(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+    @Body() dto: SetWallpaperDto,
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.chatService.setWallpaper(user.id, roomId, dto);
+    return { success: true };
+  }
+
+  @Get('rooms/:roomId/wallpaper')
+  async getWallpaper(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+  ): Promise<{ wallpaperUrl: string | null } | null> {
+    if (!user) return null;
+    const wallpaperUrl = await this.chatService.getWallpaper(roomId);
+    return { wallpaperUrl };
   }
 }

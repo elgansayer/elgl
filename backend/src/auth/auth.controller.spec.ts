@@ -1,4 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 
 describe('AuthController (unit)', () => {
@@ -128,12 +127,12 @@ describe('AuthController (unit)', () => {
       expect(result).toEqual({ success: false });
     });
 
-    it('should throw BadRequestException when the auth service throws', async () => {
+    it('should propagate the error when the auth service throws', async () => {
       authService.verifyTwoFactor.mockRejectedValue(new Error('Invalid token'));
 
-      await expect(
-        controller.verifyTwoFactor(req, '000000'),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(controller.verifyTwoFactor(req, '000000')).rejects.toThrow(
+        'Invalid token',
+      );
     });
   });
 

@@ -76,6 +76,7 @@ export interface ChatRoom {
   is_locked?: boolean;
   created_at: string;
   admin_id?: string;
+  wallpaper_url?: string | null;
 }
 
 export interface GroupMember {
@@ -593,5 +594,31 @@ export class ChatService {
     anchor.download = `chat-history-${roomId}.json`;
     anchor.click();
     window.URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Set a custom wallpaper for a chat room.
+   */
+  async setChatWallpaper(roomId: string, wallpaperUrl: string): Promise<void> {
+    await firstValueFrom(
+      this.http.post<void>(
+        `${this.baseUrl}/rooms/${roomId}/wallpaper`,
+        { wallpaperUrl },
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
+  /**
+   * Retrieve the custom wallpaper URL for a chat room (or null if none set).
+   */
+  async getChatWallpaper(roomId: string): Promise<string | null> {
+    const response = await firstValueFrom(
+      this.http.get<{ wallpaperUrl: string | null }>(
+        `${this.baseUrl}/rooms/${roomId}/wallpaper`,
+        { headers: this.getHeaders() },
+      ),
+    );
+    return response.wallpaperUrl;
   }
 }
