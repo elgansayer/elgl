@@ -68,12 +68,8 @@ export class CartComponent {
   message = signal<string>('');
 
   private cartResource = resource<CartItem[], { version: number; token: string | null }>({
-    request: () => ({
-      version: this.reload(),
-      token: this.authService.getAccessToken(),
-    }),
-    loader: async ({ request }) => {
-      const token = request.token;
+    loader: async () => {
+      const token = this.authService.getAccessToken();
       return firstValueFrom(
         this.http.get<CartItem[]>(`${environment.apiUrl}/shopping/cart`, {
           headers: { Authorization: `Bearer ${token ?? ''}` },

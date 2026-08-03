@@ -43,7 +43,6 @@ export class MomentTranslateComponent {
   });
 
   readonly translationResource = resource({
-    request: this.translateRequest,
     loader: () => {
       const request = this.translateRequest();
       if (!request) {

@@ -13,7 +13,11 @@ import {
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { AudioRoomsService, SoundboardSound } from './audio-rooms.service';
+import {
+  AudioRoomsService,
+  SoundboardSound,
+  StageInfo,
+} from './audio-rooms.service';
 import { CreatePollDto } from './dto/create-poll.dto';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
 import { PlaySoundDto } from './dto/play-sound.dto';
@@ -40,6 +44,7 @@ import { GetCallLogsQueryDto } from './dto/get-call-logs-query.dto';
 import { CreateLanguagePartyDto } from './dto/create-language-party.dto';
 import { CreatePrivatePartyDto } from './dto/create-private-party.dto';
 import { SendReactionDto } from './dto/send-reaction.dto';
+import { ReorderStageDto } from './dto/reorder-stage.dto';
 
 @Controller('audio-rooms')
 @UseGuards(SupabaseAuthGuard)
@@ -99,6 +104,34 @@ export class AudioRoomsController {
   @Get(':id')
   async getRoom(@Param('id') id: string): Promise<AudioRoomRecord> {
     return await this.audioRoomsService.getRoom(id);
+  }
+
+  @Get(':id/stage')
+  async getStage(@Param('id') roomId: string): Promise<StageInfo> {
+    return this.audioRoomsService.getStage(roomId);
+  }
+
+  @Post(':id/stage/reorder')
+  async reorderSpeakers(
+    @CurrentUser() user: User | null,
+    @Param('id') roomId: string,
+    @Body() dto: ReorderStageDto,
+  ): Promise<AudioRoomRecord | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.reorderSpeakers(
+      user.id,
+      roomId,
+      dto.speaker_order,
+    );
+  }
+
+  @Post(':id/stage/clear')
+  async clearStage(
+    @CurrentUser() user: User | null,
+    @Param('id') roomId: string,
+  ): Promise<AudioRoomRecord | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.clearStage(user.id, roomId);
   }
 
   @Post('language-parties')

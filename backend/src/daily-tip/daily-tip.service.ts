@@ -17,7 +17,11 @@ export class DailyTipService {
 
   async getTodayTipForUser(userId: string): Promise<string> {
     const supabase = this.supabaseService.getClient();
-    const { data: user } = await supabase
+    const {
+      data: user,
+    }: {
+      data: { target_languages: string[]; native_language: string } | null;
+    } = await supabase
       .from('users')
       .select('target_languages, native_language')
       .eq('id', userId)
@@ -37,7 +41,15 @@ export class DailyTipService {
     this.logger.log('Starting daily learning tip generation…');
     const supabase = this.supabaseService.getClient();
 
-    const { data: users, error } = await supabase
+    const {
+      data: users,
+      error,
+    }: {
+      data:
+        | { id: string; target_languages: string[]; native_language: string }[]
+        | null;
+      error: any;
+    } = await supabase
       .from('users')
       .select('id, target_languages, native_language');
 

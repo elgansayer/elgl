@@ -1,0 +1,54 @@
+Fix failing tests introduced by: Implement Stage Management API & UI:.
+
+Errors:
+==== backend lint FAILED (exit 1) ====
+STDOUT:
+ warning  Unsafe member access .user on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  13:59  warning  Unsafe member access .user on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  14:37  warning  Unsafe argument of type `any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+  22:11  warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  22:33  warning  Unsafe member access .user on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  22:59  warning  Unsafe member access .user on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  23:37  warning  Unsafe argument of type `any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+  31:11  warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  31:33  warning  Unsafe member access .user on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  31:59  warning  Unsafe member access .user on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  32:40  warning  Unsafe argument of type `any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+  37:11  warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  37:33  warning  Unsafe member access .user on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  37:59  warning  Unsafe member access .user on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  38:38  warning  Unsafe argument of type `any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+
+✖ 319 problems (5 errors, 314 warnings)
+
+
+STDERR:
+
+
+==== frontend test FAILED (exit 1) ====
+STDOUT:
+
+> frontend@0.0.0 test
+> ng test --no-watch
+
+❯ Building...
+✔ Building...
+Application bundle generation failed. [33.134 seconds] - 2026-08-03T10:32:18.030Z
+
+
+STDERR:
+mERROR[41;31m][0m [1mTS2503: Cannot find namespace 'jasmine'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/chat/wallpaper-picker/wallpaper-picker.component.spec.ts:8:22:
+[37m      8 │   let chatServiceSpy: [32mjasmine[37m.SpyObj<ChatService>;
+        ╵                       [32m~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'jasmine'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/chat/wallpaper-picker/wallpaper-picker.component.spec.ts:11:21:
+[37m      11 │     chatServiceSpy = [32mjasmine[37m.createSpyObj<ChatService>('ChatServic...
+         ╵                      [32m~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find n

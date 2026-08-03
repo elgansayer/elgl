@@ -82,6 +82,24 @@ interface ExclusiveEmoji {
   animationUrl: string;
 }
 
+export interface StageInfo {
+  room_id: string;
+  room_name: string;
+  host: {
+    id: string;
+    display_name: string;
+    avatar_url: string | null;
+  } | null;
+  co_host_id: string | null;
+  speakers: Array<{
+    user_id: string;
+    display_name: string;
+    avatar_url: string | null;
+  }>;
+  raised_hands: string[];
+  listeners_count: number;
+}
+
 @Injectable()
 export class AudioRoomsService implements OnModuleInit {
   private readonly logger = new Logger(AudioRoomsService.name);
@@ -532,6 +550,113 @@ export class AudioRoomsService implements OnModuleInit {
         avatar_url: profile?.avatar_url ?? null,
       },
     };
+  }
+
+  async getStage(roomId: string): Promise<StageInfo> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', roomId)
+      .single();
+    if (!response.data) throw new NotFoundException('Room not found');
+    const row = response.data as AudioRoomRow;
+
+    const userIds = Array.from(new Set([...(row.speakers ?? []), row.host_id]));
+    const { data: profiles } = await supabase
+      .from('users')
+      .select('id, display_name, avatar_url')
+      .in('id', userIds);
+    const profileRows = (profiles ?? []) as UserProfileRow[];
+    const profileMap = new Map<string, UserProfileRow>();
+    profileRows.forEach((p) => profileMap.set(p.id, p));
+
+    const speakers = (row.speakers ?? []).map((uid) => {
+      const p = profileMap.get(uid);
+      return {
+        user_id: uid,
+        display_name: p?.display_name ?? 'Unknown',
+        avatar_url: p?.avatar_url ?? null,
+      };
+    });
+
+    const hostProfile = profileMap.get(row.host_id);
+    return {
+      room_id: row.id,
+      room_name: row.room_name,
+      host: hostProfile
+        ? {
+            id: hostProfile.id,
+            display_name: hostProfile.display_name ?? 'Room Host',
+            avatar_url: hostProfile.avatar_url ?? null,
+          }
+        : null,
+      co_host_id: row.co_host_id ?? null,
+      speakers,
+      raised_hands: row.raised_hands ?? [],
+      listeners_count: row.listeners_count ?? 0,
+    };
+  }
+
+  async reorderSpeakers(
+    hostId: string,
+    roomId: string,
+    speakerOrder: string[],
+  ): Promise<AudioRoomRecord> {
+    const room = await this.getRoom(roomId);
+    if (room.host_id !== hostId) {
+      throw new ForbiddenException('Only the host can reorder the stage.');
+    }
+    const currentSpeakers = room.speakers ?? [];
+    if (
+      currentSpeakers.length !== speakerOrder.length ||
+      !currentSpeakers.every((id) => speakerOrder.includes(id))
+    ) {
+      throw new BadRequestException(
+        'Speaker order must contain exactly the current speakers.',
+      );
+    }
+    if (new Set(speakerOrder).size !== speakerOrder.length) {
+      throw new BadRequestException('Speaker order cannot contain duplicates.');
+    }
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('audio_rooms')
+      .update({ speakers: speakerOrder })
+      .eq('id', roomId);
+    if (error) {
+      this.logger.error('Failed to reorder speakers', error);
+      throw new Error('Failed to reorder speakers.');
+    }
+    void this.centrifugoService.publish(`room_${roomId}`, {
+      type: 'stage_reordered',
+      speaker_order: speakerOrder,
+      room_id: roomId,
+      updated_at: new Date().toISOString(),
+    });
+    return this.getRoom(roomId);
+  }
+
+  async clearStage(hostId: string, roomId: string): Promise<AudioRoomRecord> {
+    const room = await this.getRoom(roomId);
+    if (room.host_id !== hostId) {
+      throw new ForbiddenException('Only the host can clear the stage.');
+    }
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('audio_rooms')
+      .update({ speakers: [hostId], raised_hands: [] })
+      .eq('id', roomId);
+    if (error) {
+      this.logger.error('Failed to clear stage', error);
+      throw new Error('Failed to clear stage.');
+    }
+    void this.centrifugoService.publish(`room_${roomId}`, {
+      type: 'stage_cleared',
+      room_id: roomId,
+      updated_at: new Date().toISOString(),
+    });
+    return this.getRoom(roomId);
   }
 
   async raiseHand(userId: string, dto: RaiseHandDto): Promise<AudioRoomRecord> {
