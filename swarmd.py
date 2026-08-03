@@ -363,7 +363,20 @@ def git_commit(message: str) -> str:
                     subprocess.run(['git', 'rebase', '--abort'], check=False)
                     # Strategy 2: merge-based pull
                     log("Rebase failed, falling back to merge...")
-                    subprocess.run(['git', 'pull', 'origin', 'main'], check=True, timeout=60)
+                    try:
+                        subprocess.run(['git', 'pull', '--no-edit', 'origin', 'main'], check=True, timeout=60)
+                    except subprocess.CalledProcessError:
+                        subprocess.run(['git', 'merge', '--abort'], check=False)
+                        log("Merge failed, attempting auto-resolve favoring ours...")
+                        subprocess.run(['git', 'pull', '--no-edit', 'origin', 'main', '-X', 'ours'], check=False, timeout=60)
+                        unmerged = subprocess.run(['git', 'diff', '--name-only', '--diff-filter=U'], capture_output=True, text=True).stdout.splitlines()
+                        for f in unmerged:
+                            f = f.strip()
+                            if f:
+                                if subprocess.run(['git', 'checkout', '--ours', '--', f], stderr=subprocess.DEVNULL).returncode != 0:
+                                    subprocess.run(['git', 'rm', '--cached', f], check=False)
+                        subprocess.run(['git', 'add', '-A'], check=True)
+                        subprocess.run(['git', 'commit', '--no-edit'], check=False)
                 subprocess.run(['git', 'push', 'origin', 'main'], check=True, timeout=60)
             except subprocess.CalledProcessError:
                 subprocess.run(['git', 'rebase', '--abort'], check=False)
