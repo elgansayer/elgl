@@ -23,9 +23,6 @@ describe('VideoCallComponent - screen sharing', () => {
     mockLivekitService = {
       getToken: vi.fn().mockResolvedValue('fake-token'),
       getLiveKitUrl: vi.fn().mockReturnValue('wss://example.test'),
-      toggleScreenShare: vi.fn().mockImplementation(async (enabled: boolean, room) => {
-        await room.localParticipant.setScreenShareEnabled(enabled);
-      }),
     } as unknown as Mocked<LivekitService>;
 
     await TestBed.configureTestingModule({

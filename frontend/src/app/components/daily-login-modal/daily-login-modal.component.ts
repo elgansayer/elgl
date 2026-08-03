@@ -17,7 +17,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           (click)="closed.emit()"
           class="w-full py-3 mt-4 bg-primary hover:bg-primary-dark text-white rounded-xl font-extrabold shadow transition-all"
         >
-          {{ 'daily_login_modal.button' | t }}
+          {{ 'dailyLoginModal.cta' | t }}
         </button>
       </div>
     </div>

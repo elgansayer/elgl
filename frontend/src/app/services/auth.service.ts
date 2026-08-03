@@ -8,7 +8,6 @@ import { FcmService } from './fcm.service';
 export interface AppUser extends User {
   is_vip?: boolean;
   vip_tier?: string | null;
-  is_serious_learner?: boolean;
   developer_api_key?: string | null;
 }
 
@@ -31,9 +30,6 @@ export class AuthService {
 
   readonly biometricLockEnabled = signal<boolean>(this.loadBiometricLockPreference());
 
-  /** Latest earned badge status (VIP, serious learner) loaded from Supabase. */
-  readonly earnedBadges = signal<{ isVip: boolean; vipTier: string; isSeriousLearner: boolean } | null>(null);
-
   private loadBiometricLockPreference(): boolean {
     if (typeof localStorage === 'undefined') return false;
     return localStorage.getItem(this.LOCK_ENABLED_KEY) === 'true';
@@ -48,9 +44,6 @@ export class AuthService {
       data: { session },
     } = await this.supabase.auth.getSession();
     this.updateAuthState(session);
-    if (session) {
-      void this.refreshEarnedBadges(session.user.id);
-    }
     if (!session) {
       import('./mock-data').then((m) => {
         this.currentUser.set(m.MOCK_CURRENT_USER);
@@ -60,11 +53,6 @@ export class AuthService {
 
     this.supabase.auth.onAuthStateChange((_event, session) => {
       this.updateAuthState(session);
-      if (session) {
-        void this.refreshEarnedBadges(session.user.id);
-      } else {
-        this.earnedBadges.set(null);
-      }
       if (!session) {
         import('./mock-data').then((m) => {
           this.currentUser.set(m.MOCK_CURRENT_USER);
@@ -208,25 +196,6 @@ export class AuthService {
     await this.requestBiometric();
   }
 
-  private async refreshEarnedBadges(userId: string): Promise<void> {
-    try {
-      const badges = await this.supabaseService.getEarnedBadges(userId);
-      this.earnedBadges.set(badges);
-      const user = this.currentUser();
-      if (user) {
-        this.currentUser.set({
-          ...user,
-          is_vip: badges.isVip,
-          vip_tier: badges.vipTier,
-          is_serious_learner: badges.isSeriousLearner,
-        });
-      }
-    } catch (error) {
-      console.warn('Failed to load earned badges', error);
-      this.earnedBadges.set(null);
-    }
-  }
-
   async enableBiometricLock(): Promise<boolean> {
     if (!(await this.isBiometricSupported())) {
       return false;
@@ -248,11 +217,7 @@ export class AuthService {
 
   private toAppUser(user: User | null): AppUser | null {
     if (!user) return null;
-    const appUser: AppUser = { ...user };
-    appUser.is_vip = appUser.is_vip ?? false;
-    appUser.vip_tier = appUser.vip_tier ?? 'free';
-    appUser.is_serious_learner = appUser.is_serious_learner ?? false;
-    return appUser;
+    return { ...user };
   }
 
   private updateAuthState(session: Session | null): void {
@@ -310,7 +275,6 @@ export class AuthService {
 
     const { error } = await this.supabase.auth.signOut();
     if (!error) {
-      this.earnedBadges.set(null);
       this.updateAuthState(null);
     }
     return { error };
@@ -336,23 +300,18 @@ export class AuthService {
 
   async verifyTwoFactor(token: string): Promise<boolean> {
     const accessToken = this.currentSession()?.access_token;
-    try {
-      const res = await lastValueFrom(
-        this.http.post<{ success: boolean }>(
-          `${this.apiUrl}/auth/two-factor/verify`,
-          { token },
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
+    const res = await lastValueFrom(
+      this.http.post<{ success: boolean }>(
+        `${this.apiUrl}/auth/two-factor/verify`,
+        { token },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
           },
-        ),
-      );
-      return res.success;
-    } catch (error) {
-      console.error('2FA verification failed', error);
-      return false;
-    }
+        },
+      ),
+    );
+    return res.success;
   }
 
 

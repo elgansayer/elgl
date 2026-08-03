@@ -76,8 +76,7 @@ export class ReportUserModalComponent {
         this.categories.set(cats);
         this.loadingCategories.set(false);
       })
-      .catch((err) => {
-        console.error('Error loading categories:', err);
+      .catch(() => {
         this.loadError.set(true);
         this.loadingCategories.set(false);
       });

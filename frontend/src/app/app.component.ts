@@ -26,6 +26,13 @@ import { I18nService } from './services/i18n.service';
 import { AppLanguageSelectorComponent } from './components/app-language-selector/app-language-selector.component';
 import { AppLockService } from './services/app-lock.service';
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null;
+}
+
+function isVirtualGift(v: unknown): v is VirtualGift {
+  return isRecord(v) && 'id' in v && 'name' in v && 'icon' in v;
+}
 
 @Component({
   selector: 'app-root',
@@ -168,23 +175,30 @@ export class AppComponent implements OnInit {
 
       await this.centrifugeService.connect();
       this.centrifugeService.subscribe(`user_${user.id}`, (data: unknown) => {
-        const payload = this.isValidPayload(data) ? data : null;
-        if (payload && payload.type === 'virtual_gift' && payload.gift !== undefined) {
+        if (!isRecord(data)) return;
+        const eventType = typeof data['type'] === 'string' ? data['type'] : null;
+
+        if (eventType === 'virtual_gift' && isVirtualGift(data['gift'])) {
           this.economyStore.triggerGiftAnimation({
-            gift: payload.gift,
-            sender_name: payload.sender_name ?? 'Language Partner',
+            gift: data['gift'],
+            sender_name: typeof data['sender_name'] === 'string' ? data['sender_name'] : 'Language Partner',
             receiver_name: 'You',
           });
         }
 
         // Handle incoming call events
-        if (payload && payload.type === 'incoming_call' && this.isIncomingCallPayload(payload)) {
+        if (eventType === 'incoming_call') {
+          const callerId = typeof data['callerId'] === 'string' ? data['callerId'] : '';
+          const callerName = typeof data['callerName'] === 'string' ? data['callerName'] : '';
+          const callerAvatarUrl = typeof data['callerAvatarUrl'] === 'string' ? data['callerAvatarUrl'] : undefined;
+          const roomName = typeof data['roomName'] === 'string' ? data['roomName'] : '';
+          const isVideoCall = typeof data['isVideoCall'] === 'boolean' ? data['isVideoCall'] : false;
           this.incomingCallData.set({
-            callerId: payload.callerId,
-            callerName: payload.callerName,
-            callerAvatarUrl: payload.callerAvatarUrl,
-            roomName: payload.roomName,
-            isVideoCall: payload.isVideoCall,
+            callerId,
+            callerName,
+            callerAvatarUrl,
+            roomName,
+            isVideoCall,
           });
         }
       });
@@ -193,43 +207,6 @@ export class AppComponent implements OnInit {
       await this.fcmService.requestPermission();
       await this.fcmService.persistFcmToken(user.id);
     }
-  }
-
-  private isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-  }
-
-  private isValidPayload(data: unknown): data is {
-    type: string;
-    gift?: VirtualGift;
-    sender_name?: string;
-    callerId?: string;
-    callerName?: string;
-    callerAvatarUrl?: string;
-    roomName?: string;
-    isVideoCall?: boolean;
-  } {
-    if (!this.isRecord(data)) {
-      return false;
-    }
-    const type = data['type'];
-    if (typeof type === 'string') {
-      return true;
-    }
-    return false;
-  }
-
-  private isIncomingCallPayload(payload: unknown): payload is IncomingCallData {
-    if (!this.isRecord(payload)) {
-      return false;
-    }
-    return (
-      typeof payload['callerId'] === 'string' &&
-      typeof payload['callerName'] === 'string' &&
-      typeof payload['callerAvatarUrl'] === 'string' &&
-      typeof payload['roomName'] === 'string' &&
-      typeof payload['isVideoCall'] === 'boolean'
-    );
   }
 
   onAcceptCall(_callData: IncomingCallData): void {

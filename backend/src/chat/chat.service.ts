@@ -172,10 +172,11 @@ export class ChatService {
       ),
     );
 
-    // Hide rooms that have been locked by the current user
-    rooms = rooms
-      .filter((room) => !lockedSet.has(room.id))
-      .map((room) => ({ ...room, is_locked: false }));
+    // Annotate rooms with is_locked flag
+    rooms = rooms.map((r) => ({
+      ...r,
+      is_locked: lockedSet.has(r.id),
+    }));
 
     // Filter out rooms where the other participant is blocked
     if (blockedIds.length > 0) {
@@ -541,7 +542,7 @@ export class ChatService {
   async getSuggestedReplies(
     userId: string,
     dto: SuggestedRepliesRequestDto,
-  ): Promise<string[]> {
+  ): Promise<{ suggestions: string[] }> {
     const recentMessages = dto.recent_messages ?? [];
     const contextMessages = recentMessages.slice(-10);
 
@@ -568,18 +569,20 @@ export class ChatService {
       if (suggestions.length === 0) {
         throw new Error('Empty response from LLM');
       }
-      return suggestions;
+      return { suggestions };
     } catch (error) {
       console.error(
         'Failed to generate suggestions, using fallback:',
         (error as Error).message,
       );
       // fallback to static suggestions
-      return [
-        'Sure, let’s talk about travel.',
-        'Could you help me with my pronunciation?',
-        'I enjoyed that conversation.',
-      ];
+      return {
+        suggestions: [
+          'Sure, let’s talk about travel.',
+          'Could you help me with my pronunciation?',
+          'I enjoyed that conversation.',
+        ],
+      };
     }
   }
 

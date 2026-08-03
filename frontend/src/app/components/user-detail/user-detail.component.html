@@ -3,7 +3,7 @@
     class="sticky top-0 z-10 bg-surface-500/90 backdrop-blur border-b border-surface-100 p-4 flex items-center justify-between"
   >
     <div class="flex items-center gap-4">
-      <button
+      <button aria-label="Go back"
         (click)="goBack()"
         class="p-2 -ms-2 rounded-full hover:bg-surface-300 transition-colors"
       >
@@ -75,17 +75,6 @@
       <div class="mb-6">
         <h2 class="text-2xl font-black">{{ profile()?.display_name }}</h2>
         <p class="text-text-secondary text-sm">ID: {{ profile()?.id }}</p>
-
-        <div class="flex gap-4 mt-2 text-sm">
-          <a [routerLink]="['/profile', profile()?.id, 'followers']" class="hover:underline">
-            <span class="font-bold text-text-primary">{{ profile()?.followers_count ?? 0 }}</span>
-            <span class="text-text-secondary ms-1">{{ 'userProfile.followersLabel' | t }}</span>
-          </a>
-          <a [routerLink]="['/profile', profile()?.id, 'following']" class="hover:underline">
-            <span class="font-bold text-text-primary">{{ profile()?.following_count ?? 0 }}</span>
-            <span class="text-text-secondary ms-1">{{ 'userProfile.followingLabel' | t }}</span>
-          </a>
-        </div>
 
         @if (profile()?.is_vip) {
           <div

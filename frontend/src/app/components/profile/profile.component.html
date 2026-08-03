@@ -75,16 +75,6 @@
             <p class="app-muted">
               {{ 'profile.joinedPrefix' | t }} {{ profile()?.created_at | date: 'mediumDate' }}
             </p>
-            <div class="flex gap-3 mt-1 text-xs">
-              <a [routerLink]="['/profile', profile()?.id, 'followers']" class="hover:underline">
-                <span class="font-bold text-text-primary">{{ profile()?.followers_count ?? 0 }}</span>
-                <span class="app-muted ms-1">{{ 'profile.followersLabel' | t }}</span>
-              </a>
-              <a [routerLink]="['/profile', profile()?.id, 'following']" class="hover:underline">
-                <span class="font-bold text-text-primary">{{ profile()?.following_count ?? 0 }}</span>
-                <span class="app-muted ms-1">{{ 'profile.followingLabel' | t }}</span>
-              </a>
-            </div>
           </div>
         </div>
 
@@ -188,32 +178,6 @@
       </div>
 
       @if (profile()?.proficiency_level) {
-        <div
-          class="mt-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-2 pb-2 text-center text-sm text-text-primary"
-        >
-          {{ 'profile.nationality' | t }}: {{ nationality }}
-        </div>
-        <div
-          class="mt-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-2 pb-2 text-center text-sm text-text-primary"
-        >
-          {{ 'profile.region' | t }}: {{ region }}
-        </div>
-        <div
-          class="mt-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-2 pb-2 text-center text-sm text-text-primary"
-        >
-          {{ 'profile.age' | t }}: {{ age || ('common.unknown' | t) }}
-        </div>
-        <div
-          class="mt-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-2 pb-2 text-center text-sm text-text-primary"
-        >
-          {{ 'profile.gender' | t }}: {{
-            gender === 'male'
-              ? ('profile.gender.male' | t)
-              : gender === 'female'
-              ? ('profile.gender.female' | t)
-              : ('profile.gender.other' | t)
-          }}
-        </div>
         <div
           class="mt-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-2 pb-2 text-center text-sm text-text-primary"
         >
@@ -559,31 +523,6 @@
               <option value="contacts">{{ 'privacy.contacts' | t }}</option>
               <option value="nobody">{{ 'privacy.nobody' | t }}</option>
             </select>
-          </div>
-
-          <div class="mt-4 rounded-card border border-surface-100 p-3">
-            <label class="flex items-center justify-between gap-3" [class.cursor-not-allowed]="!profile()?.is_vip">
-              <span class="flex flex-col">
-                <span class="flex items-center gap-2 text-sm font-medium text-text-primary">
-                  {{ 'privacy.incognitoVisits' | t }}
-                  @if (!profile()?.is_vip) {
-                    <span class="app-chip text-[10px]">{{ 'profile.vipBadge' | t }}</span>
-                  }
-                </span>
-                <span id="incognito-visits-hint" class="mt-1 text-xs text-text-secondary">
-                  {{ (profile()?.is_vip ? 'privacy.incognitoVisitsHint' : 'privacy.incognitoVisitsVipRequired') | t }}
-                </span>
-              </span>
-              <input
-                type="checkbox"
-                [checked]="incognitoVisits()"
-                (change)="onIncognitoVisitsChange($event)"
-                name="incognitoVisits"
-                [disabled]="!profile()?.is_vip"
-                aria-describedby="incognito-visits-hint"
-                class="h-5 w-5 shrink-0 rounded border-surface-300 text-primary focus:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-            </label>
           </div>
 
           <div class="mt-4">

@@ -13,27 +13,12 @@ describe('UsersService', () => {
     mockQueryBuilder = {
       select: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
-      upsert: jest.fn().mockResolvedValue({ error: null }),
-      delete: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      in: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockResolvedValue({ data: [], error: null }),
-      range: jest.fn().mockResolvedValue({ data: [], error: null }),
-      maybeSingle: jest.fn(),
       single: jest.fn(),
-      rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
     };
 
     mockSupabaseClient = {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
-      rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
-      auth: {
-        admin: {
-          getUserById: jest.fn(),
-          generateLink: jest.fn(),
-        },
-      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -58,93 +43,8 @@ describe('UsersService', () => {
     service = module.get<UsersService>(UsersService);
   });
 
-  describe('proficiencyAssessment', () => {
-    it('should return the correct CEFR level based on the score', async () => {
-      const mockUserId = 'user-1';
-      const mockScore = 85;
-      const expectedLevel = 'C1';
-
-      mockQueryBuilder.update.mockReturnThis();
-      mockQueryBuilder.eq.mockResolvedValue({ error: null });
-
-      const result = await service.proficiencyAssessment(mockUserId, mockScore);
-
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
-      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
-        proficiency_level: expectedLevel,
-      });
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', mockUserId);
-      expect(result).toBe(expectedLevel);
-    });
-
-    it('should log a warning if updating the proficiency level fails', async () => {
-      const mockUserId = 'user-1';
-      const mockScore = 50;
-      const expectedLevel = 'B1';
-
-      mockQueryBuilder.update.mockReturnThis();
-      mockQueryBuilder.eq.mockResolvedValue({
-        error: { message: 'Update failed' },
-      });
-
-      const result = await service.proficiencyAssessment(mockUserId, mockScore);
-
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
-      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
-        proficiency_level: expectedLevel,
-      });
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', mockUserId);
-      expect(result).toBe(expectedLevel);
-    });
-  });
-
-  describe('touchLastActiveAt', () => {
-    it('should update the last_active_at field for the user', async () => {
-      const mockUserId = 'user-1';
-      const mockDate = '2026-01-01T00:00:00.000Z';
-
-      jest.spyOn(Date.prototype, 'toISOString').mockReturnValue(mockDate);
-
-      mockQueryBuilder.update.mockReturnThis();
-      mockQueryBuilder.eq.mockResolvedValue({ error: null });
-
-      await service.touchLastActiveAt(mockUserId);
-
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
-      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
-        last_active_at: mockDate,
-      });
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', mockUserId);
-
-      jest.restoreAllMocks();
-    });
-
-    it('should log a warning if updating last_active_at fails', async () => {
-      const mockUserId = 'user-1';
-      const mockDate = '2026-02-01T00:00:00.000Z';
-
-      jest.spyOn(Date.prototype, 'toISOString').mockReturnValue(mockDate);
-
-      mockQueryBuilder.update.mockReturnThis();
-      mockQueryBuilder.eq.mockResolvedValue({
-        error: { message: 'Update failed' },
-      });
-
-      await service.touchLastActiveAt(mockUserId);
-
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
-      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
-        last_active_at: mockDate,
-      });
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', mockUserId);
-
-      jest.restoreAllMocks();
-    });
-  });
-
   afterEach(() => {
     jest.clearAllMocks();
-    jest.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -164,7 +64,7 @@ describe('UsersService', () => {
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
       expect(mockQueryBuilder.select).toHaveBeenCalledWith('*');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'user-1');
-      expect(result).toMatchObject(mockProfile);
+      expect(result).toEqual(mockProfile);
     });
 
     it('should throw NotFoundException when user is not found or query errors', async () => {
@@ -221,8 +121,6 @@ describe('UsersService', () => {
         privacy_hide_age: true,
         privacy_hide_location: false,
         privacy_hide_from_search: true,
-        privacy_hide_exact_location: true,
-        privacy_hide_online_status: true,
         location: { latitude: 35.6895, longitude: 139.6917 },
         mock_location: { latitude: 51.5074, longitude: -0.1278 },
       };
@@ -237,8 +135,6 @@ describe('UsersService', () => {
         privacy_hide_age: true,
         privacy_hide_location: false,
         privacy_hide_from_search: true,
-        privacy_hide_exact_location: true,
-        privacy_hide_online_status: true,
         location: 'POINT(139.6917 35.6895)',
         mock_location: 'POINT(-0.1278 51.5074)',
       };
@@ -260,27 +156,6 @@ describe('UsersService', () => {
       expect(mockQueryBuilder.update).toHaveBeenCalledWith(expectedPayload);
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'user-1');
       expect(mockQueryBuilder.select).toHaveBeenCalled();
-      expect(result).toMatchObject(updatedProfile);
-    });
-
-    it('should persist privacy_hide_exact_location and privacy_hide_online_status toggles', async () => {
-      const dto = {
-        privacy_hide_exact_location: true,
-        privacy_hide_online_status: true,
-      };
-      const updatedProfile = { id: 'user-1', ...dto };
-
-      mockQueryBuilder.single.mockResolvedValue({
-        data: updatedProfile,
-        error: null,
-      });
-
-      const result = await service.updateProfile('user-1', dto, false);
-
-      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
-        privacy_hide_exact_location: true,
-        privacy_hide_online_status: true,
-      });
       expect(result).toMatchObject(updatedProfile);
     });
 

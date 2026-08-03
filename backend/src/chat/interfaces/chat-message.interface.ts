@@ -51,10 +51,7 @@ export interface ChatMessage {
     display_name?: string;
     avatar_url?: string | null;
   };
-  /**
-   * Contains data when the message is a reply to a status update.
-   * Includes the ID of the status update and the reply text.
-   */
+  /** Contains data when the message is a reply to a status update */
   status_reply_payload?: {
     status_update_id: string;
     status_text: string;

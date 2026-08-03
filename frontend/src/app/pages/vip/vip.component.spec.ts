@@ -81,16 +81,18 @@ describe('VipComponent', () => {
   });
 
   it('scrolls to the plans section', () => {
-    const scrollSpy = vi.fn();
+    const scrollIntoView = vi.fn();
+    const plansSection = document.getElementById('plans');
     vi.spyOn(document, 'getElementById').mockReturnValue({
-      scrollIntoView: scrollSpy,
+      scrollIntoView,
     } as unknown as HTMLElement);
 
     component.scrollToPlans();
 
-    expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'smooth' });
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' });
 
     vi.restoreAllMocks();
+    void plansSection;
   });
 
   it('navigates home when starting the free plan', () => {

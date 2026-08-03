@@ -30,7 +30,6 @@ export interface AgeRange {
           step="1"
           class="absolute inset-0 w-full h-full z-10 appearance-none bg-transparent cursor-pointer"
           aria-label="{{ 'age_min' | t }}"
-          [style.zIndex]="minAge() < maxAge() ? 10 : 20"
         />
         <!-- max thumb -->
         <input
@@ -42,7 +41,6 @@ export interface AgeRange {
           step="1"
           class="absolute inset-0 w-full h-full z-20 appearance-none bg-transparent cursor-pointer"
           aria-label="{{ 'age_max' | t }}"
-          [style.zIndex]="maxAge() > minAge() ? 20 : 10"
         />
         <!-- visual bar -->
         <div class="absolute bottom-1 w-full h-2 bg-surface-container pointer-events-none">
@@ -128,8 +126,8 @@ export class AgeRangeSliderComponent {
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) return;
     const value = Number(target.value);
-    // Clamp to maxAge and ensure it doesn't exceed maxLimit
-    const clamped = Math.min(value, this.maxAge(), this.maxLimit());
+    // clamp to maxAge
+    const clamped = Math.min(value, this.maxAge());
     this.minAge.set(clamped);
   }
 
@@ -137,8 +135,7 @@ export class AgeRangeSliderComponent {
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) return;
     const value = Number(target.value);
-    // Clamp to minAge and ensure it doesn't go below minLimit
-    const clamped = Math.max(value, this.minAge(), this.minLimit());
+    const clamped = Math.max(value, this.minAge());
     this.maxAge.set(clamped);
   }
 }

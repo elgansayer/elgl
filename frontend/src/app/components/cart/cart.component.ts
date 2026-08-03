@@ -15,7 +15,6 @@ interface CartItem {
 
 @Component({
   selector: 'app-cart',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="p-4">

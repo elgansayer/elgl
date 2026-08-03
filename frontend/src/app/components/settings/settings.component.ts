@@ -2,11 +2,10 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
-import { UserService, LinkedAccount } from '../../services/user.service';
+import { UserService, LinkedAccount, UserProfile } from '../../services/user.service';
 import { CacheService } from '../../services/cache.service';
 import { Router } from '@angular/router';
 import { FontScaleService } from '../../services/font-scale.service';
-import { ChatSettingsService } from '../../services/chat-settings.service';
 
 @Component({
   selector: 'app-settings',
@@ -20,7 +19,6 @@ export class SettingsComponent implements OnInit {
   private location = inject(Location);
   private router = inject(Router);
   private fontScaleService = inject(FontScaleService);
-  private chatSettingsService = inject(ChatSettingsService);
 
   readonly isLoading = signal(true);
   readonly isDownloading = signal(false);
@@ -49,7 +47,6 @@ export class SettingsComponent implements OnInit {
   privacyHideSearch = false;
   privacyHideAge = false;
   privacyHideGender = false;
-  privacyHideExactLocation = false;
   privacyHideOnlineStatus = false;
   privacyHideVipStatus = false;
   autoPlayVoiceNotes = false;
@@ -68,7 +65,7 @@ export class SettingsComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     // Font scale is handled by FontScaleService and applied globally.
     try {
-      const profile = await this.userService.getMyProfile();
+      const profile: UserProfile | null = await this.userService.getMyProfile();
       if (profile) {
         this.isVip.set(Boolean(profile.is_vip));
         this.primaryAccentColor.set(profile.primary_accent_color || '#4f46e5');
@@ -76,7 +73,6 @@ export class SettingsComponent implements OnInit {
         this.privacyHideSearch = Boolean(profile.privacy_hide_from_search);
         this.privacyHideAge = Boolean(profile.privacy_hide_age);
         this.privacyHideGender = Boolean(profile.privacy_hide_gender);
-        this.privacyHideExactLocation = Boolean(profile.privacy_hide_exact_location);
         this.privacyHideOnlineStatus = Boolean(profile.privacy_hide_online_status);
         this.privacyHideVipStatus = Boolean(profile.privacy_hide_vip_status);
         this.autoPlayVoiceNotes = Boolean(profile.auto_play_voice_notes);
@@ -89,24 +85,13 @@ export class SettingsComponent implements OnInit {
           this.autoDownloadPreference.set('wifi');
         }
       }
-
       // Load linked accounts
       const accounts: LinkedAccount[] | null = await this.userService.getLinkedAccounts();
       this.linkedAccounts.set(accounts ?? []);
     } catch {
-      this.autoDownloadPreference.set('wifi'); // Default to Wi-Fi only
-      this.errorMessage.set('Failed to load profile or linked accounts');
+      this.errorMessage.set('Failed to load settings');
     } finally {
       this.isLoading.set(false);
-    }
-
-    // Load chat-specific settings
-    try {
-      await this.chatSettingsService.loadSettings();
-      this.chatEnterToSend.set(this.chatSettingsService.enterToSend());
-      this.chatTextSize.set(this.chatSettingsService.textSize());
-    } catch {
-      // keep service defaults
     }
   }
 
@@ -159,10 +144,6 @@ export class SettingsComponent implements OnInit {
 
   goBack(): void {
     this.location.back();
-  }
-
-  goToMySubscription(): void {
-    this.router.navigate(['/my-subscription']);
   }
 
   onFontScaleChange(event: Event): void {
@@ -222,7 +203,6 @@ export class SettingsComponent implements OnInit {
         privacy_hide_from_search: this.privacyHideSearch,
         privacy_hide_age: this.privacyHideAge,
         privacy_hide_gender: this.privacyHideGender,
-        privacy_hide_exact_location: this.privacyHideExactLocation,
         privacy_hide_online_status: this.privacyHideOnlineStatus,
         privacy_hide_vip_status: this.privacyHideVipStatus,
         auto_play_voice_notes: this.autoPlayVoiceNotes,
@@ -233,14 +213,9 @@ export class SettingsComponent implements OnInit {
         auto_download_wifi_only: this.autoDownloadMedia() && this.autoDownloadPreference() === 'wifi',
         primary_accent_color: this.primaryAccentColor() ?? undefined,
         interests: this.interests(),
+        chat_enter_to_send: this.chatEnterToSend,
+        chat_text_size: this.chatTextSize,
       });
-
-      await this.chatSettingsService.updateSetting(
-        'enterToSend',
-        this.chatEnterToSend(),
-      );
-      await this.chatSettingsService.updateSetting('textSize', this.chatTextSize());
-
       this.successMessage.set('Settings saved successfully');
     } catch {
       this.errorMessage.set('Failed to save settings');

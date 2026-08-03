@@ -44,7 +44,6 @@ export interface UserProfile {
   auto_play_voice_notes?: boolean;
   auto_download_media?: boolean;
   auto_download_wifi_only?: boolean;
-  auto_download_preference?: 'wifi' | 'cellular';
   sound_effects_enabled?: boolean;
   vibration_enabled?: boolean;
   chat_enter_to_send?: boolean;
@@ -63,8 +62,6 @@ export interface UserProfile {
   last_active_at?: string;
   is_followed_by_me?: boolean;
   is_liked_by_me?: boolean;
-  followers_count?: number;
-  following_count?: number;
   corrector_score?: number;
   custom_avatar_url?: string; // Custom profile picture URL
   about_status?: string; // Custom About status
@@ -149,10 +146,6 @@ export class UserService {
     };
   }
 
-  async enableLocationSpoofing(enable: boolean): Promise<UserProfile> {
-    return this.updateMyProfile({ enable_location_spoofing: enable });
-  }
-
   async getMyProfile(): Promise<UserProfile | null> {
     void of;
     const fallbackProfile: UserProfile = {
@@ -161,7 +154,6 @@ export class UserService {
       chat_enter_to_send: false,
       chat_text_size: 'medium',
       auto_download_wifi_only: false,
-      auto_download_preference: 'wifi',
       last_active_at: new Date().toISOString(),
     };
     return firstValueFrom(
@@ -198,36 +190,6 @@ export class UserService {
     );
   }
 
-  async getFollowers(
-    userId: string,
-    limit = 20,
-    offset = 0,
-  ): Promise<{ data: UserProfile[]; total: number }> {
-    return firstValueFrom(
-      this.http
-        .get<{ data: UserProfile[]; total: number }>(`${this.baseUrl}/${userId}/followers`, {
-          headers: this.getHeaders(),
-          params: { limit: String(limit), offset: String(offset) },
-        })
-        .pipe(catchError(() => of({ data: [], total: 0 }))),
-    );
-  }
-
-  async getFollowing(
-    userId: string,
-    limit = 20,
-    offset = 0,
-  ): Promise<{ data: UserProfile[]; total: number }> {
-    return firstValueFrom(
-      this.http
-        .get<{ data: UserProfile[]; total: number }>(`${this.baseUrl}/${userId}/following`, {
-          headers: this.getHeaders(),
-          params: { limit: String(limit), offset: String(offset) },
-        })
-        .pipe(catchError(() => of({ data: [], total: 0 }))),
-    );
-  }
-
   async likeProfile(userId: string): Promise<void> {
     return firstValueFrom(
       this.http
@@ -261,7 +223,6 @@ export class UserService {
     update: Partial<UserProfile> & {
       location?: { latitude: number; longitude: number };
       mock_location?: { latitude: number; longitude: number };
-      enable_location_spoofing?: boolean;
       serious_learner_mode?: boolean;
       sound_effects_enabled?: boolean;
       vibration_enabled?: boolean;
@@ -529,11 +490,13 @@ export class UserService {
     );
   }
 
-  async queryUsersByLanguagePairs(languagePairs: { native: string; target: string }[]): Promise<UserProfile[]> {
+  async getAvailableInterests(): Promise<string[]> {
     return firstValueFrom(
-      this.http
-        .post<UserProfile[]>(`${this.baseUrl}/query-language-pairs`, { languagePairs }, { headers: this.getHeaders() })
-        .pipe(catchError(() => of([]))),
+      this.http.get<string[]>(`${this.baseUrl}/interests`, { headers: this.getHeaders() })
+        .pipe(catchError(() => {
+          // fallback to mock
+          return of(['technology', 'fashion', 'food', 'travel', 'art', 'science', 'history', 'fitness']);
+        })),
     );
   }
 
@@ -632,58 +595,22 @@ export class UserService {
 
   async blockUser(userId: string): Promise<void> {
     return firstValueFrom(
-      this.http.post<void>(`${this.baseUrl}/block/${userId}`, {}, { headers: this.getHeaders() })
+      this.http.post<void>(`${environment.apiUrl}/trust-safety/block`, { blocked_id: userId }, { headers: this.getHeaders() })
         .pipe(catchError(() => of(undefined))),
     );
   }
 
   async unblockUser(userId: string): Promise<void> {
     return firstValueFrom(
-      this.http.delete<void>(`${this.baseUrl}/block/${userId}`, { headers: this.getHeaders() })
+      this.http.delete<void>(`${environment.apiUrl}/trust-safety/block/${userId}`, { headers: this.getHeaders() })
         .pipe(catchError(() => of(undefined))),
     );
   }
 
   async reportUser(reportedUserId: string, reasonCategory: string, description?: string, contextUrl?: string): Promise<void> {
     return firstValueFrom(
-      this.http.post<void>(
-        `${this.baseUrl}/report`,
-        { reported_id: reportedUserId, reason_category: reasonCategory, description, context_url: contextUrl },
-        { headers: this.getHeaders() },
-      )
+      this.http.post<void>(`${environment.apiUrl}/trust-safety/report`, { reported_id: reportedUserId, reason_category: reasonCategory, description, context_url: contextUrl }, { headers: this.getHeaders() })
         .pipe(catchError(() => of(undefined))),
-    );
-  }
-
-  async subscribeToFcmTopic(topic: string): Promise<{ success: boolean }> {
-    return firstValueFrom(
-      this.http
-        .post<{ success: boolean }>(
-          `${this.baseUrl}/fcm/subscribe`,
-          { topic },
-          { headers: this.getHeaders() },
-        )
-        .pipe(
-          catchError(() => {
-            throw new Error('Failed to subscribe to topic');
-          }),
-        ),
-    );
-  }
-
-  async unsubscribeFromFcmTopic(topic: string): Promise<{ success: boolean }> {
-    return firstValueFrom(
-      this.http
-        .post<{ success: boolean }>(
-          `${this.baseUrl}/fcm/unsubscribe`,
-          { topic },
-          { headers: this.getHeaders() },
-        )
-        .pipe(
-          catchError(() => {
-            throw new Error('Failed to unsubscribe from topic');
-          }),
-        ),
     );
   }
 

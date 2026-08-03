@@ -3,7 +3,7 @@
     <h3 class="app-section-title flex items-center gap-2">
       <span>🎨 Interactive Doodle Pad</span>
     </h3>
-    <button (click)="cancel()" class="text-text-muted hover:text-text-secondary font-bold text-xl">
+    <button aria-label="Cancel doodle" (click)="cancel()" class="text-text-muted hover:text-text-secondary font-bold text-xl">
       ✕
     </button>
   </div>
@@ -32,7 +32,7 @@
         'doodle.colorLabel' | t
       }}</span>
       @for (color of colors; track color) {
-        <button
+        <button [attr.aria-label]="'Select ' + color"
           (click)="setColor(color)"
           [class]="
             'w-7 h-7 rounded-full border-2 transition-transform hover:scale-110 ' +

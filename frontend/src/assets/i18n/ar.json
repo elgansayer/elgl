@@ -63,8 +63,6 @@
   "discovery.matchCount": "{{count}} تطابق",
   "discovery.partnerFallback": "شريك لغة",
   "discovery.vipBadge": "VIP",
-  "discovery.playAudioIntro": "تشغيل المقدمة الصوتية",
-  "discovery.pauseAudioIntro": "إيقاف المقدمة الصوتية",
   "discovery.startChat": "بدء محادثة",
   "discovery.noBio": "لا توجد سيرة ذاتية بعد.",
   "discovery.streakBadge": "🔥 {{days}} يوم تسلسل",
@@ -470,5 +468,8 @@
   "voip.dismiss": "رفض",
   "voip.incomingVoiceCall": "مكالمة صوتية واردة...",
   "voip.incomingVideoCall": "مكالمة فيديو واردة...",
-  "common.unknownCaller": "متصل غير معروف"
+  "common.unknownCaller": "متصل غير معروف",
+  "dailyLoginModal.title": "مكافأة يومية!",
+  "dailyLoginModal.body": "لقد حصلت على {coins} عملة لتسجيل دخولك اليوم.",
+  "dailyLoginModal.cta": "رائع!"
 }

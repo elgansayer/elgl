@@ -92,9 +92,6 @@ export class User {
   @Column({ type: 'boolean', default: false })
   privacy_hide_from_search!: boolean;
 
-  @Column({ type: 'boolean', default: false })
-  incognito_visits!: boolean;
-
   @Column({ type: 'varchar', length: 2, nullable: true })
   proficiency_level!: string | null;
 

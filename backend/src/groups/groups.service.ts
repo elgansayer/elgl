@@ -231,17 +231,6 @@ export class GroupsService {
     }
   }
 
-  async restrictSendMessages(
-    groupId: string,
-    canSendMessages: boolean,
-  ): Promise<void> {
-    await this.updateSettings(groupId, { can_send_messages: canSendMessages });
-  }
-
-  async restrictEditInfo(groupId: string, canEditInfo: boolean): Promise<void> {
-    await this.updateSettings(groupId, { can_edit_info: canEditInfo });
-  }
-
   async getGroupMembers(groupId: string): Promise<GroupMemberRecord[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase

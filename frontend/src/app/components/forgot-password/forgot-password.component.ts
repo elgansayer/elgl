@@ -3,7 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { map, lastValueFrom } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { environment } from '../../../environments/environment';
 
@@ -110,7 +110,7 @@ export class ForgotPasswordComponent {
   resetError = signal<string | null>(null);
   resetSuccess = signal(false);
 
-  async sendResetRequest(): Promise<void> {
+  sendResetRequest(): void {
     if (this.emailForm.invalid) return;
     this.isSending.set(true);
     this.sendError.set(null);
@@ -118,23 +118,25 @@ export class ForgotPasswordComponent {
 
     const email = this.emailForm.controls.email.value;
 
-    try {
-      const res = await lastValueFrom(
-        this.http.post<{ token: string }>(`${environment.apiUrl}/auth/request-password-reset`, { email }),
-      );
-      this.isSending.set(false);
-      this.sendSuccess.set(true);
-      this.router.navigate([], {
-        queryParams: { token: res.token },
-        queryParamsHandling: 'merge',
+    this.http
+      .post<{ token: string }>(`${environment.apiUrl}/auth/request-password-reset`, { email })
+      .subscribe({
+        next: (res) => {
+          this.isSending.set(false);
+          this.sendSuccess.set(true);
+          this.router.navigate([], {
+            queryParams: { token: res.token },
+            queryParamsHandling: 'merge',
+          });
+        },
+        error: (err) => {
+          this.isSending.set(false);
+          this.sendError.set(err?.error?.message ?? 'Failed to send reset request');
+        },
       });
-    } catch {
-      this.isSending.set(false);
-      this.sendError.set('Failed to send reset request');
-    }
   }
 
-  async doPasswordReset(): Promise<void> {
+  doPasswordReset(): void {
     if (this.resetForm.invalid) return;
 
     const token = this.tokenQuery();
@@ -146,16 +148,18 @@ export class ForgotPasswordComponent {
 
     const newPassword = this.resetForm.controls.newPassword.value;
 
-    try {
-      await lastValueFrom(
-        this.http.post<{ message: string }>(`${environment.apiUrl}/auth/reset-password`, { token, newPassword }),
-      );
-      this.isResetting.set(false);
-      this.resetSuccess.set(true);
-      this.router.navigate(['/home']);
-    } catch {
-      this.isResetting.set(false);
-      this.resetError.set('Failed to reset password');
-    }
+    this.http
+      .post<{ message: string }>(`${environment.apiUrl}/auth/reset-password`, { token, newPassword })
+      .subscribe({
+        next: () => {
+          this.isResetting.set(false);
+          this.resetSuccess.set(true);
+          setTimeout(() => this.router.navigate(['/login']), 2000);
+        },
+        error: (err) => {
+          this.isResetting.set(false);
+          this.resetError.set(err?.error?.message ?? 'Failed to reset password');
+        },
+      });
   }
 }

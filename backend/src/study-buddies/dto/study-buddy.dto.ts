@@ -1,11 +1,10 @@
-import { IsString, IsOptional, IsUUID, MaxLength } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
 
 export class StudyBuddyRequestDto {
-  @IsUUID()
+  @IsString()
   partnerId!: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(500)
   message?: string;
 }

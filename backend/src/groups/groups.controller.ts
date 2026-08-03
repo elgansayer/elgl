@@ -131,42 +131,6 @@ export class GroupsController {
     return this.groupsService.updateSettings(groupId, dto);
   }
 
-  @Post(':groupId/restrict-send-messages')
-  @UseGuards(SupabaseAuthGuard)
-  async restrictSendMessages(
-    @Param('groupId') groupId: string,
-    @Body() dto: { canSendMessages: boolean },
-    @Req() req: any,
-  ) {
-    const requesterId = req.user.id;
-    const isAdmin = await this.groupsService.isAdmin(requesterId, groupId);
-    if (!isAdmin)
-      throw new UnauthorizedException(
-        'Only the group admin can restrict sending messages',
-      );
-    return this.groupsService.updateSettings(groupId, {
-      can_send_messages: dto.canSendMessages,
-    });
-  }
-
-  @Post(':groupId/restrict-edit-info')
-  @UseGuards(SupabaseAuthGuard)
-  async restrictEditInfo(
-    @Param('groupId') groupId: string,
-    @Body() dto: { canEditInfo: boolean },
-    @Req() req: any,
-  ) {
-    const requesterId = req.user.id;
-    const isAdmin = await this.groupsService.isAdmin(requesterId, groupId);
-    if (!isAdmin)
-      throw new UnauthorizedException(
-        'Only the group admin can restrict editing group info',
-      );
-    return this.groupsService.updateSettings(groupId, {
-      can_edit_info: dto.canEditInfo,
-    });
-  }
-
   @Post(':groupId/announcement')
   @UseGuards(SupabaseAuthGuard)
   async sendAnnouncement(

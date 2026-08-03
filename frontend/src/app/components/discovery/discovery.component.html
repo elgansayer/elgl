@@ -41,50 +41,20 @@
         ></app-language-picker>
       </div>
     </div>
-    <!-- Sort By Selector -->
-    <div class="flex items-center gap-2 px-4 mt-3">
-      <label for="sortBySelect" class="text-xs font-semibold text-text-secondary whitespace-nowrap">
-        {{ 'discovery.sortLabel' | t }}
-      </label>
-      <select
-        id="sortBySelect"
-        class="bg-surface-200 text-text-primary px-4 py-1.5 rounded-full border border-surface-100 text-sm font-bold appearance-none cursor-pointer"
-        [value]="selectedSort()"
-        (change)="setSort($any($event.target).value)"
-      >
-        @for (option of sortOptions(); track option.id) {
-          <option [value]="option.id">{{ option.label }}</option>
-        }
-      </select>
-    </div>
-
     <!-- Gender Filter (VIP only) -->
-    <div class="flex items-center gap-2 px-4 mt-3">
-      <label for="genderSelect" class="text-xs font-semibold text-text-secondary whitespace-nowrap">
-        {{ 'discovery.genderLabel' | t }}
-      </label>
-      <select
-        id="genderSelect"
-        class="bg-surface-200 text-text-primary px-4 py-1.5 rounded-full border border-surface-100 text-sm font-bold appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-        [value]="selectedGender()"
-        [disabled]="!isVip()"
-        [attr.aria-describedby]="!isVip() ? 'genderVipNote' : null"
-        (change)="setGender($any($event.target).value)"
-      >
-        <option value="">{{ 'discovery.genderAny' | t }}</option>
-        <option value="male">{{ 'discovery.genderMale' | t }}</option>
-        <option value="female">{{ 'discovery.genderFemale' | t }}</option>
-      </select>
-      @if (!isVip()) {
-        <a
-          id="genderVipNote"
-          routerLink="/vip"
-          class="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded-md whitespace-nowrap"
+    @if (isVip()) {
+      <div class="flex overflow-x-auto hide-scrollbar gap-2 px-4 mt-3">
+        <select
+          class="bg-surface-200 text-text-primary px-4 py-1.5 rounded-full border border-surface-100 text-sm font-bold appearance-none cursor-pointer"
+          [value]="selectedGender()"
+          (change)="setGender($any($event.target).value)"
         >
-          {{ 'discovery.genderVipRequired' | t }}
-        </a>
-      }
-    </div>
+          <option value="">{{ 'discovery.genderAny' | t }}</option>
+          <option value="male">{{ 'discovery.genderMale' | t }}</option>
+          <option value="female">{{ 'discovery.genderFemale' | t }}</option>
+        </select>
+      </div>
+    }
       <!-- Age range filter -->
       <div class="flex items-center gap-2 px-4 mt-3">
         <app-age-range-slider
@@ -132,7 +102,7 @@
           <p class="text-white/90 text-xs font-semibold mt-0.5">{{ 'discovery.bannerDesc' | t }}</p>
         </div>
         <div class="flex flex-col items-end gap-2">
-          <button
+          <button aria-label="Close banner"
             (click)="showBanner.set(false)"
             class="text-white/60 hover:text-white absolute -top-2 -end-2 p-1"
           >
@@ -191,22 +161,6 @@
                       class="rounded bg-yellow-400 px-1.5 py-0.5 text-[9px] font-black uppercase text-black italic"
                       >{{ 'discovery.vipBadge' | t }}</span
                     >
-                  }
-                  @if (partner.audio_intro_url) {
-                    <button
-                      type="button"
-                      (click)="toggleAudioIntro(partner.id, partner.audio_intro_url, $event)"
-                      [attr.aria-pressed]="playingPartnerId() === partner.id"
-                      [attr.aria-label]="
-                        (playingPartnerId() === partner.id
-                          ? 'discovery.pauseAudioIntro'
-                          : 'discovery.playAudioIntro'
-                        ) | t
-                      "
-                      class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-accent-500/20 text-accent-500 hover:bg-accent-500/30 transition-colors"
-                    >
-                      <span aria-hidden="true">{{ playingPartnerId() === partner.id ? '⏸️' : '▶️' }}</span>
-                    </button>
                   }
                 </div>
 

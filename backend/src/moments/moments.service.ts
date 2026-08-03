@@ -10,7 +10,6 @@ import { SafetyService } from '../safety/safety.service';
 import { XpService } from '../xp/xp.service';
 import { QuestsService } from '../quests/quests.service';
 import { CreateCommentDto, CreateMomentDto } from './dto/moment.dto';
-import { CreateLanguageQuestionDto } from './dto/create-language-question.dto';
 import { CreateStoryDto } from './dto/create-story.dto';
 import { EditTextDto } from './dto/edit-text.dto';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
@@ -35,10 +34,11 @@ interface MomentLikeRow {
   moment_id: string;
 }
 
-export interface MomentLikeUser {
+interface MomentLikeUser {
   id: string;
   display_name: string;
   avatar_url: string | null;
+  native_language?: string;
   native_languages?: string[];
   target_languages: string[];
 }
@@ -228,11 +228,7 @@ export class MomentsService {
       );
     }
 
-    const moment = response.data as MomentRecord & { post_type?: string };
-    moment.post_type = dto.post_type ?? 'moment';
-    moment.media_type = dto.media_type ?? 'none';
-    if (!moment.correct_answers_count) moment.correct_answers_count = 0;
-    if (!moment.total_answers_count) moment.total_answers_count = 0;
+    const moment = response.data;
     // Award XP for creating a Moment
     void this.xpService.awardXpForActivity(userId, 'create_moment');
     // Award quest progress for posting a Moment
@@ -401,8 +397,7 @@ export class MomentsService {
 
     // 2) Get current user's native language for targeted visibility routing
     const profile = await this.usersService.getProfile(userId);
-    const userNativeLang =
-      profile?.native_languages?.[0]?.toLowerCase() ?? null;
+    const userNativeLang = profile?.native_languages?.[0] ?? null;
 
     let moments: MomentRecord[] = [];
 
@@ -463,9 +458,7 @@ export class MomentsService {
     // whose target_language matches the current user's native language.
     if (filter !== 'Classmates' && userNativeLang) {
       moments = moments.filter(
-        (m) =>
-          !m.target_language ||
-          m.target_language.toLowerCase() === userNativeLang,
+        (m) => !m.target_language || m.target_language === userNativeLang,
       );
     }
 
@@ -508,17 +501,18 @@ export class MomentsService {
 
       // Filter the generated mock data same as DB query
       if (filter === 'Classmates' && targetLang) {
-        return generated.filter(
-          (m) => m.target_language.toLowerCase() === targetLang.toLowerCase(),
+        return generated.filter((m) => m.target_language === targetLang);
+      }
+      // Targeted visibility for 'All' filter
+      if (filter === 'All' && userNativeLang) {
+        generated = generated.filter(
+          (m) => !m.target_language || m.target_language === userNativeLang,
         );
       }
-      // Targeted visibility for non-Classmates filters: only show moments
-      // whose target_language matches the current user's native language.
-      if (filter !== 'Classmates' && userNativeLang) {
+      // Targeted visibility for 'Following' filter
+      if (filter === 'Following' && userNativeLang) {
         generated = generated.filter(
-          (m) =>
-            !m.target_language ||
-            m.target_language.toLowerCase() === userNativeLang,
+          (m) => !m.target_language || m.target_language === userNativeLang,
         );
       }
       return generated.sort(
@@ -573,7 +567,7 @@ export class MomentsService {
     let query = supabase
       .from('moments')
       .select('*')
-      .in('post_type', ['question', 'language_question'])
+      .eq('post_type', 'question')
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -939,11 +933,6 @@ export class MomentsService {
       ? await this.safetyService.getBlockedAndBlockerIds(currentUserId)
       : [];
 
-    type MomentLikeQueryResult = {
-      user_id: string;
-      created_at: string;
-      users: MomentLikeUser | null;
-    };
     const { data, error } = await supabase
       .from('moment_likes')
       .select(
@@ -954,20 +943,19 @@ export class MomentsService {
           id,
           display_name,
           avatar_url,
-          native_languages,
+          native_language,
           target_languages
         )
       `,
       )
       .eq('moment_id', momentId)
-      .order('created_at', { ascending: false })
-      .returns<MomentLikeQueryResult[]>();
+      .order('created_at', { ascending: false });
 
     if (error) {
       throw new Error(`Failed to fetch likes: ${error.message}`);
     }
 
-    const rows = data ?? [];
+    const rows = (data ?? []) as unknown as Array<{ users: MomentLikeUser }>;
     const fullUsers = rows
       .map((row) => row.users)
       .filter((user): user is MomentLikeUser => Boolean(user));

@@ -40,7 +40,6 @@
     "@ngx-translate/http-loader": "^16.0.0",
     "ng2-charts": "^5.0.4",
     "ngx-image-cropper": "^9.1.6",
-    "ngx-joyride": "^3.0.0",
     "ngx-skeleton-loader": "^13.0.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
@@ -56,7 +55,7 @@
     "@types/node": "^26.1.1",
     "angular-eslint": "^22.1.0",
     "autoprefixer": "^10.5.4",
-    "cypress": "^13.6.0",
+    "cypress": "^15.19.0",
     "eslint": "^10.8.0",
     "eslint-formatter-compact": "^9.0.1",
     "jsdom": "^28.0.0",

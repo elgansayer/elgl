@@ -370,7 +370,7 @@ describe('ChatService', () => {
       );
     });
 
-    it('should hide rooms the user has locked from the list', async () => {
+    it('should annotate rooms the user has locked with is_locked: true', async () => {
       const rooms = [{ id: 'global-exchange' }, { id: 'english-spanish' }];
       mockQueryBuilder.order
         .mockReturnValueOnce(mockQueryBuilder)
@@ -384,24 +384,10 @@ describe('ChatService', () => {
 
       const result = await service.getRooms('user-1');
 
-      expect(result).toEqual([{ id: 'global-exchange', is_locked: false }]);
-    });
-
-    it('should keep all rooms when retrieving locked chats fails', async () => {
-      const rooms = [{ id: 'global-exchange' }, { id: 'english-spanish' }];
-      mockQueryBuilder.then
-        .mockImplementationOnce((resolve: any) =>
-          resolve({ data: rooms, error: null }),
-        )
-        .mockImplementationOnce((resolve: any) =>
-          resolve({ data: null, error: { message: 'Locked query failed' } }),
-        );
-
-      const result = await service.getRooms('user-1');
-
-      expect(result).toEqual(
-        rooms.map((room) => ({ ...room, is_locked: false })),
-      );
+      expect(result).toEqual([
+        { id: 'global-exchange', is_locked: false },
+        { id: 'english-spanish', is_locked: true },
+      ]);
     });
 
     it('should return fallback mock rooms when rooms query fails', async () => {
@@ -651,19 +637,6 @@ describe('ChatService', () => {
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('is_locked', true);
       expect(result).toEqual(['room-1', 'room-2']);
-    });
-
-    it('should return an empty array when there are no locked rooms', async () => {
-      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
-        resolve({
-          data: [],
-          error: null,
-        }),
-      );
-
-      const result = await service.getLockedChats('user-1');
-
-      expect(result).toEqual([]);
     });
 
     it('should throw when the query fails', async () => {

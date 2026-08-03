@@ -1,5 +1,5 @@
 import { showToast } from '../../services/toast.service';
-import { Component, output, signal, inject, OnDestroy } from '@angular/core';
+import { Component, output, signal, inject } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -12,7 +12,7 @@ import { AudioCompressionService } from '../../services/audio-compression.servic
   templateUrl: './voice-recorder.component.html',
   styleUrls: ['./voice-recorder.component.scss'],
 })
-export class VoiceRecorderComponent implements OnDestroy {
+export class VoiceRecorderComponent {
   private userService = inject(UserService);
   private audioCompressionService = inject(AudioCompressionService);
 
@@ -28,12 +28,10 @@ export class VoiceRecorderComponent implements OnDestroy {
   private audioChunks: Blob[] = [];
   private timerInterval: ReturnType<typeof setInterval> | null = null;
   private recordedBlob: Blob | null = null;
-  private audioStream: MediaStream | null = null;
 
   async startRecording(): Promise<void> {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      this.audioStream = stream;
       this.audioChunks = [];
       this.mediaRecorder = new MediaRecorder(stream);
 
@@ -47,7 +45,6 @@ export class VoiceRecorderComponent implements OnDestroy {
         this.recordedBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
         this.audioPreviewUrl.set(URL.createObjectURL(this.recordedBlob));
         stream.getTracks().forEach((track) => track.stop());
-        this.audioStream = null;
       };
 
       this.mediaRecorder.start();
@@ -116,17 +113,5 @@ export class VoiceRecorderComponent implements OnDestroy {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
-
-  ngOnDestroy(): void {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
-    }
-    this.audioStream?.getTracks().forEach((track) => track.stop());
-    this.audioStream = null;
-    if (this.audioPreviewUrl()) {
-      URL.revokeObjectURL(this.audioPreviewUrl()!);
-    }
   }
 }
