@@ -17,6 +17,16 @@ export class PurchaseCoinsDto {
   platform?: 'ios' | 'android' | 'web';
 }
 
+export class VerifyReceiptDto {
+  @IsString()
+  @IsNotEmpty()
+  receipt_token!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  platform!: 'ios' | 'android' | 'web';
+}
+
 export class VerifiedPurchaseDto {
   @IsString()
   @IsNotEmpty()

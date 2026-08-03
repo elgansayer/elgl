@@ -390,6 +390,16 @@ export class EconomyService {
     return { claimed: true, coins_rewarded: reward, new_balance: newBalance };
   }
 
+  async verifyPurchaseReceipt(dto: {
+    receipt_token: string;
+    platform: string;
+  }): Promise<boolean> {
+    // Implement server-side receipt verification logic here
+    // This is a placeholder implementation
+    const isValid = true; // Replace with actual verification logic
+    return isValid;
+  }
+
   async purchaseCoins(
     userId: string,
     dto: PurchaseCoinsDto,
@@ -402,6 +412,15 @@ export class EconomyService {
       throw new BadRequestException(
         `Receipt platform (${platform}) does not match provided platform (${dto.platform})`,
       );
+    }
+
+    const isReceiptValid = await this.verifyPurchaseReceipt({
+      receipt_token: dto.receipt_token,
+      platform,
+    });
+
+    if (!isReceiptValid) {
+      throw new BadRequestException('Invalid purchase receipt');
     }
 
     // For web (Stripe) ensure a pending purchase record was created server-side
@@ -879,7 +898,8 @@ export class EconomyService {
     );
 
     // Deduct and credit
-    const newSenderBalance = senderBalance - gift.cost_coins;
+    const newSenderBalance =
+      senderBalance - (gift as VirtualGiftRow).cost_coins;
     const newReceiverBalance = receiverBalance + gift.cost_coins;
 
     const { error: senderUpdateError } = await supabase
