@@ -160,7 +160,10 @@ export class UsersService {
     }));
   }
 
-  async getStatusViewers(userId: string): Promise<ProfileVisitor[]> {
+  async getStatusViewersByStatusId(
+    userId: string,
+    statusId: string,
+  ): Promise<ProfileVisitor[]> {
     const supabase = this.supabaseService.getClient();
 
     const response = await supabase
@@ -169,7 +172,7 @@ export class UsersService {
         `
         id,
         viewer_id,
-        status_owner_id,
+        status_id,
         created_at,
         viewer:viewer_id (
           id,
@@ -180,57 +183,30 @@ export class UsersService {
         )
       `,
       )
-      .eq('status_owner_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(50);
+      .eq('status_id', statusId)
+      .order('created_at', { ascending: false });
 
     if (response.error) {
       throw new InternalServerErrorException('Failed to fetch status viewers');
     }
 
-    type Viewer = {
-      id: string;
-      display_name: string;
-      avatar_url: string;
-      native_languages: string[];
-      target_languages: string[];
-    };
-
-    const rows: Array<{
+    const rows = (response.data ?? []) as Array<{
       id: string;
       viewer_id: string;
-      status_owner_id: string;
+      status_id: string;
       created_at: string;
-      viewer: Viewer | Viewer[] | null;
-    }> = response.data ?? [];
+      viewer: ProfileVisitorSummary | ProfileVisitorSummary[] | null;
+    }>;
 
-    return rows.map((row) => {
-      // Status views may flatten the viewer relationship into an array
-      // depending on the Supabase client version.  Normalise to a single
-      // object to keep the mapping type-safe.
-      const viewer: Viewer = Array.isArray(row.viewer)
-        ? row.viewer[0]
-        : (row.viewer ?? {
-            id: '',
-            display_name: '',
-            avatar_url: '',
-            native_languages: [],
-            target_languages: [],
-          });
-      return {
-        id: row.id,
-        visitor_id: row.viewer_id,
-        viewed_id: row.status_owner_id,
-        created_at: row.created_at,
-        visitor: {
-          id: viewer.id,
-          display_name: viewer.display_name,
-          avatar_url: viewer.avatar_url,
-          native_languages: viewer.native_languages,
-          target_languages: viewer.target_languages,
-        },
-      };
-    });
+    return rows.map((row) => ({
+      id: row.id,
+      visitor_id: row.viewer_id,
+      viewed_id: row.status_id,
+      created_at: row.created_at,
+      visitor: Array.isArray(row.viewer)
+        ? (row.viewer[0] ?? undefined)
+        : (row.viewer ?? undefined),
+    }));
   }
 
   async followUser(followerId: string, targetUserId: string): Promise<void> {

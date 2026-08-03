@@ -18,6 +18,12 @@ type Database = {
         Update: { id?: string; audio_intro_url?: string | null; is_vip?: boolean; vip_tier?: string; is_serious_learner?: boolean; auto_download_preference?: string };
         Relationships: [];
       };
+      status_views: {
+        Row: { id: string; status_id: string; viewer_id: string; created_at?: string };
+        Insert: { id?: string; status_id: string; viewer_id: string; created_at?: string };
+        Update: { id?: string; status_id?: string; viewer_id?: string; created_at?: string };
+        Relationships: [];
+      };
     };
     Views: Record<string, { Row: Record<string, unknown>; Relationships: [] }>;
     Functions: Record<string, { Args: Record<string, unknown>; Returns: unknown }>;
@@ -51,7 +57,7 @@ export class SupabaseService {
 
   async getRecentlyJoinedNativeSpeakers(limit: number = 10): Promise<UserProfile[]> {
     const { data, error } = await this.supabase
-      .from('users')
+      .from<'users'>('users')
       .select('*')
       .order('joined_at', { ascending: false })
       .limit(limit)
@@ -90,7 +96,7 @@ export class SupabaseService {
       throw new Error('Failed to fetch linked accounts');
     }
 
-    const identities = data?.user?.identities ?? [];
+    const identities: Array<{ provider: string }> = data?.user?.identities ?? [];
     return {
       email: identities.some((id) => id.provider === 'email'),
       google: identities.some((id) => id.provider === 'google'),
@@ -100,10 +106,10 @@ export class SupabaseService {
 
   async getDailyStreak(userId: string): Promise<number> {
     const { data, error } = await this.supabase
-      .from('user_streaks')
+      .from<'user_streaks'>('user_streaks')
       .select('streak_count')
       .eq('user_id', userId)
-      .single();
+      .single<{ streak_count: number }>();
 
     if (error) {
       console.warn('Failed to fetch daily streak', error);
@@ -115,7 +121,7 @@ export class SupabaseService {
 
   async updateDailyStreak(userId: string, streakCount: number): Promise<void> {
     const { error } = await this.supabase
-      .from('user_streaks')
+      .from<'user_streaks'>('user_streaks')
       .upsert({ user_id: userId, streak_count: streakCount });
 
     if (error) {
@@ -129,10 +135,10 @@ export class SupabaseService {
 
   async getUserAudioIntro(userId: string): Promise<string | null> {
     const { data, error } = await this.supabase
-      .from('users')
+      .from<'users'>('users')
       .select('audio_intro_url')
       .eq('id', userId)
-      .single();
+      .single<{ audio_intro_url: string | null }>();
     if (error) {
       console.warn('Failed to fetch audio_intro_url', error);
       return null;
@@ -144,10 +150,10 @@ export class SupabaseService {
     userId: string,
   ): Promise<{ isVip: boolean; vipTier: string; isSeriousLearner: boolean }> {
     const { data, error } = await this.supabase
-      .from('users')
+      .from<'users'>('users')
       .select('is_vip, vip_tier, is_serious_learner')
       .eq('id', userId)
-      .single();
+      .single<{ is_vip: boolean; vip_tier: string; is_serious_learner: boolean }>();
 
     if (error) {
       console.warn('Failed to fetch earned badges', error);
@@ -269,6 +275,37 @@ export class SupabaseService {
   }
 
   async getAutoDownloadPreference(): Promise<'wifi' | 'cellular'> {
-    return 'wifi';
+    return Promise.resolve('wifi');
+  }
+
+  async getStatusViewers(statusId: string): Promise<UserProfile[]> {
+    const { data: statusViews, error: statusError } = await this.supabase
+      .from<'status_views'>('status_views')
+      .select('viewer_id')
+      .eq('status_id', statusId)
+      .returns<{ viewer_id: string }[]>();
+
+    if (statusError) {
+      console.warn('Failed to fetch status viewers', statusError);
+      return [];
+    }
+
+    const viewerIds = (statusViews ?? []).map((row: { viewer_id: string }) => row.viewer_id);
+    if (viewerIds.length === 0) {
+      return [];
+    }
+
+    const { data: users, error: usersError } = await this.supabase
+      .from<'users'>('users')
+      .select('*')
+      .in('id', viewerIds)
+      .returns<UserProfile[]>();
+
+    if (usersError) {
+      console.warn('Failed to fetch viewer profiles', usersError);
+      return [];
+    }
+
+    return users ?? [];
   }
 }

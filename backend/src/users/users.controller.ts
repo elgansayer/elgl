@@ -178,14 +178,15 @@ export class UsersController {
     return this.usersService.getVisitors(user.id);
   }
 
-  @Get('me/status-viewers')
-  async getMyStatusViewers(
+  @Get('status/:statusId/viewers')
+  async getStatusViewers(
     @CurrentUser() user: User | null,
+    @Param('statusId') statusId: string,
   ): Promise<ProfileVisitor[]> {
     if (!user) {
       throw new UnauthorizedException();
     }
-    return this.usersService.getStatusViewers(user.id);
+    return this.usersService.getStatusViewersByStatusId(user.id, statusId);
   }
 
   @Get('hobbies')
