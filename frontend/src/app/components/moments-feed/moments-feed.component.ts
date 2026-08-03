@@ -39,6 +39,9 @@ import {
   styleUrls: ['./moments-feed.component.scss'],
 })
 export class MomentsFeedComponent implements OnInit {
+  private readonly MAX_IMAGES = 9;
+  private readonly MAX_VOICE_SECONDS = 60;
+
   readonly momentsStore = inject(MomentsStore);
   readonly vocabStore = inject(VocabularyStore);
   readonly authService = inject(AuthService);
@@ -66,10 +69,11 @@ export class MomentsFeedComponent implements OnInit {
   readonly showComposeForm = signal<boolean>(false);
 
   // New Moment form state
-  newText = '';
-  newMediaUrls: string[] = [];
-  newMediaType: 'none' | 'images' | 'audio' = 'none';
+  readonly newText = signal('');
+  readonly newMediaUrls = signal<string[]>([]);
+  readonly newMediaType = signal<'none' | 'images' | 'audio'>('none');
   readonly newTargetLanguage = signal<string>('en');
+  private newVoiceDurationSec: number | null = null;
   tempImageUrlInput = '';
 
   // New Comment / Correction form states per momentId
@@ -116,41 +120,70 @@ export class MomentsFeedComponent implements OnInit {
 
   addTempImageUrl(): void {
     if (!this.tempImageUrlInput.trim()) return;
-    if (this.newMediaUrls.length >= 9) {
+    if (this.newMediaUrls().length >= this.MAX_IMAGES) {
       showToast(this.i18n.translate('moments.maxMediaAlert'));
       return;
     }
-    this.newMediaUrls.push(this.tempImageUrlInput.trim());
-    this.newMediaType = 'images';
+    this.newMediaUrls.update(urls => [...urls, this.tempImageUrlInput.trim()]);
+    this.newMediaType.set('images');
     this.tempImageUrlInput = '';
   }
 
   removeMedia(index: number): void {
-    this.newMediaUrls.splice(index, 1);
-    if (this.newMediaUrls.length === 0) {
-      this.newMediaType = 'none';
+    this.newMediaUrls.update(urls => {
+      const copy = [...urls];
+      copy.splice(index, 1);
+      return copy;
+    });
+    if (this.newMediaUrls().length === 0) {
+      this.newMediaType.set('none');
     }
   }
 
-  onVoiceUploaded(url: string): void {
-    this.newMediaUrls = [url];
-    this.newMediaType = 'audio';
+  onVoiceUploaded(payload: string | { url: string; durationSec?: number }): void {
+    const url = typeof payload === 'string' ? payload : payload.url;
+    const durationSec = typeof payload === 'string' ? undefined : payload.durationSec;
+    if (!url || !url.trim()) return;
+    if (durationSec !== undefined && durationSec > this.MAX_VOICE_SECONDS) {
+      showToast(
+        this.i18n.translate('moments.voiceTooLongAlert', {
+          max: this.MAX_VOICE_SECONDS,
+        }),
+      );
+      return;
+    }
+    this.newVoiceDurationSec = durationSec ?? null;
+    this.newMediaUrls.set([url]);
+    this.newMediaType.set('audio');
     this.showVoiceRecorder.set(false);
   }
 
   async submitMoment(): Promise<void> {
-    if (!this.newText.trim() && this.newMediaUrls.length === 0) return;
+    if (!this.newText().trim() && this.newMediaUrls().length === 0) return;
+    if (
+      this.newMediaType() === 'audio' &&
+      this.newVoiceDurationSec !== null &&
+      this.newVoiceDurationSec > this.MAX_VOICE_SECONDS
+    ) {
+      showToast(
+        this.i18n.translate('moments.voiceTooLongAlert', {
+          max: this.MAX_VOICE_SECONDS,
+        }),
+      );
+      return;
+    }
     this.isCreating.set(true);
     try {
       await this.momentsStore.createMoment({
-        text_content: this.newText.trim() || undefined,
-        media_urls: this.newMediaUrls,
-        media_type: this.newMediaType,
+        text_content: this.newText().trim() || undefined,
+        media_urls: this.newMediaUrls(),
+        media_type: this.newMediaType(),
         target_language: this.newTargetLanguage(),
       });
-      this.newText = '';
-      this.newMediaUrls = [];
-      this.newMediaType = 'none';
+      this.newText.set('');
+      this.newMediaUrls.set([]);
+      this.newMediaType.set('none');
+      this.newVoiceDurationSec = null;
     } catch (e) {
       console.error('Error submitting moment:', e);
       showToast(this.i18n.translate('moments.publishError'));

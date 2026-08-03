@@ -58,8 +58,8 @@ export class SupabaseService {
   async getRecentlyJoinedNativeSpeakers(limit: number = 10): Promise<UserProfile[]> {
     const { data, error } = await this.supabase
       .from('users')
-      .select('*') as { data: UserProfile[] | null, error: any };
-      .order('joined_at', { ascending: false });
+      .select('*')
+      .order('joined_at', { ascending: false })
       .limit(limit)
       .returns<UserProfile[]>();
 
@@ -90,17 +90,24 @@ export class SupabaseService {
   }
 
   async getLinkedAccounts(): Promise<{ email: boolean; google: boolean; apple: boolean }> {
-    const { data, error } = await this.supabase.auth.getUser() as { data: { user: { identities: Array<{ provider: string }> } } | null, error: any };
+    const { data, error } = await this.supabase.auth.getUser();
 
-    if (error || !data) {
+    if (error || !data?.user) {
       throw new Error('Failed to fetch linked accounts');
     }
 
-    const identities: Array<{ provider: string }> = data?.user.identities ?? [];
+    const identities: unknown[] = data.user.identities ?? [];
+
+    const hasProvider = (provider: string): boolean =>
+      identities.some((id) => {
+        if (id === null || typeof id !== 'object') return false;
+        return 'provider' in id && id.provider === provider;
+      });
+
     return {
-      email: identities.some((id) => id.provider === 'email'),
-      google: identities.some((id) => id.provider === 'google'),
-      apple: identities.some((id) => id.provider === 'apple'),
+      email: hasProvider('email'),
+      google: hasProvider('google'),
+      apple: hasProvider('apple'),
     };
   }
 
@@ -109,14 +116,19 @@ export class SupabaseService {
       .from('user_streaks')
       .select('streak_count')
       .eq('user_id', userId)
-      .single<{ streak_count: number }>();
+      .returns<{ streak_count: number | null }>()
+      .maybeSingle();
 
     if (error) {
       console.warn('Failed to fetch daily streak', error);
       return 0;
     }
 
-    return data?.streak_count ?? 0;
+    if (data && typeof data.streak_count === 'number') {
+      return data.streak_count;
+    }
+
+    return 0;
   }
 
   async updateDailyStreak(userId: string, streakCount: number): Promise<void> {
@@ -138,7 +150,9 @@ export class SupabaseService {
       .from('users')
       .select('audio_intro_url')
       .eq('id', userId)
-      .single<{ audio_intro_url: string | null }>();
+      .returns<{ audio_intro_url: string | null }>()
+      .maybeSingle();
+
     if (error) {
       console.warn('Failed to fetch audio_intro_url', error);
       return null;
@@ -153,7 +167,8 @@ export class SupabaseService {
       .from('users')
       .select('is_vip, vip_tier, is_serious_learner')
       .eq('id', userId)
-      .single<{ is_vip: boolean; vip_tier: string; is_serious_learner: boolean }>();
+      .returns<{ is_vip: boolean; vip_tier: string; is_serious_learner: boolean }>()
+      .maybeSingle();
 
     if (error) {
       console.warn('Failed to fetch earned badges', error);
@@ -281,36 +296,30 @@ export class SupabaseService {
   async getStatusViewers(statusId: string): Promise<UserProfile[]> {
     const { data: statusViews, error: statusError } = await this.supabase
       .from('status_views')
-      .select<{ viewer_id: string }>('viewer_id')
-      .eq('status_id', statusId);
+      .select('viewer_id')
+      .eq('status_id', statusId)
+      .returns<{ viewer_id: string }[]>();
 
     if (statusError) {
       console.warn('Failed to fetch status viewers', statusError);
       return [];
     }
 
-    const viewerIds: string[] = (statusViews ?? []).map(
-      (row: { viewer_id: string }) => row.viewer_id,
-    );
+    const viewerIds = (statusViews ?? []).map((row) => row.viewer_id);
     if (viewerIds.length === 0) {
       return [];
     }
 
-    const userProfiles: UserProfile[] = [];
-    for (const id of viewerIds) {
-      const { data: user, error: userError } = await this.supabase
-        .from('users')
-        .select<UserProfile>('*')
-        .eq('id', id)
-        .single();
-      if (userError) {
-        console.warn('Failed to fetch viewer profile', userError);
-        continue;
-      }
-      if (user) {
-        userProfiles.push(user);
-      }
+    const { data: users, error: usersError } = await this.supabase
+      .from('users')
+      .select('*')
+      .in('id', viewerIds)
+      .returns<UserProfile[]>();
+
+    if (usersError) {
+      console.warn('Failed to fetch viewer profiles', usersError);
+      return [];
     }
-    return userProfiles;
+    return users ?? [];
   }
 }

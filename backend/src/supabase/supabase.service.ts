@@ -1,5 +1,5 @@
 // @ts-nocheck
-// eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Global, Injectable, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -686,11 +686,12 @@ export class SupabaseService implements OnModuleDestroy {
     // Fetch current study_streak_days and correction_ratio to compute is_serious_learner
     const { data, error: fetchError } = await supabase
       .from('users')
-      .select<{
+      .select('study_streak_days, correction_ratio')
+      .eq('id', userId)
+      .returns<{
         study_streak_days: number | null;
         correction_ratio: number | null;
-      }>('study_streak_days, correction_ratio')
-      .eq('id', userId)
+      }>()
       .single();
 
     if (fetchError) {
@@ -732,6 +733,7 @@ export class SupabaseService implements OnModuleDestroy {
         .from('users')
         .select('xp_total')
         .eq('id', userId)
+        .returns<{ xp_total: number | null }>()
         .single();
       if (fetchError || !data) {
         console.error(
@@ -752,8 +754,9 @@ export class SupabaseService implements OnModuleDestroy {
     const supabase = this.getClient();
     const { data, error } = await supabase
       .from('users')
-      .select<{ xp_total: number | null }>('xp_total')
+      .select('xp_total')
       .eq('id', userId)
+      .returns<{ xp_total: number | null }>()
       .single();
     if (error || !data) {
       return 0;
