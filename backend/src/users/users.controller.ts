@@ -202,7 +202,7 @@ export class UsersController {
   }
 
   @Get('me/status-viewers')
-  async getMyStatusViewers(
+  getMyStatusViewers(
     @CurrentUser() user: User | null,
   ): Promise<ProfileVisitor[]> {
     if (!user) {
