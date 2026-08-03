@@ -426,28 +426,41 @@ export class NlpService {
 
     const text = dto.text.trim();
 
-    // Simple word‑replacement based simplification (example for English)
-    const replacements: Record<string, string> = {
-      utilise: 'use',
-      commence: 'start',
-      terminate: 'end',
-      sufficient: 'enough',
-      endeavour: 'try',
-      obtain: 'get',
-      demonstrate: 'show',
-      substantial: 'big',
-      facilitate: 'help',
-    };
-
-    let simplifiedText = text;
-    for (const [complex, simple] of Object.entries(replacements)) {
-      const regex = new RegExp(`\\b${complex}\\b`, 'gi');
-      simplifiedText = simplifiedText.replace(regex, simple);
+    const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
+    if (!deepLKey) {
+      throw new BadRequestException('DeepL API key not configured');
     }
+
+    const detected = this.detectLanguage(text).language;
+
+    const res = await fetch('https://api-free.deepl.com/v2/translate', {
+      method: 'POST',
+      headers: {
+        Authorization: `DeepL-Auth-Key ${deepLKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: [text],
+        target_lang: 'EN',
+        source_lang: detected.toUpperCase(),
+      }),
+    });
+
+    if (!res.ok) {
+      const errorBody = await res.text();
+      throw new BadRequestException(
+        `DeepL API error: ${res.status} ${errorBody}`,
+      );
+    }
+
+    const json = (await res.json()) as {
+      translations: Array<{ text: string }>;
+    };
+    const simplified = json.translations?.[0]?.text ?? text;
 
     return {
       original: text,
-      simplified: simplifiedText,
+      simplified,
     };
   }
 

@@ -189,7 +189,7 @@ export class UsersService {
       `,
       )
       .eq('status_owner_id', userId)
-      .eq('status_id', statusId)
+      .eq('status_id' as never, statusId)
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -710,6 +710,7 @@ export class UsersService {
     privacy_status?: string;
     privacy_hide_vip_status?: boolean;
     incognito_visits?: boolean;
+    status_visibility?: string;
   }> {
     const profile = await this.getProfile(userId);
     const privacyRecord = profile as unknown as Record<string, unknown>;
@@ -731,7 +732,9 @@ export class UsersService {
       privacy_hide_vip_status:
         (privacyRecord.privacy_hide_vip_status as boolean | undefined) ?? false,
       incognito_visits: profile.incognito_visits ?? false,
-      status_visibility: profile.status_visibility ?? 'public',
+      status_visibility:
+        (profile as unknown as { status_visibility?: string })
+          .status_visibility ?? 'public',
     };
   }
 

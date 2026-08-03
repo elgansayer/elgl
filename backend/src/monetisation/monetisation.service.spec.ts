@@ -556,10 +556,15 @@ describe('MonetisationService', () => {
   describe('getDiagnosticLogs', () => {
     it('should return diagnostic logs when query succeeds', async () => {
       const logs = [{ id: 'log-1', category: 'POSTGIS' }];
-      mockQueryBuilder.limit.mockResolvedValue({
-        data: logs,
-        error: null,
-      });
+      const chain = {
+        select: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockResolvedValue({
+          data: logs,
+          error: null,
+        }),
+      };
+      mockSupabaseClient.from.mockReturnValueOnce(chain);
 
       const result = await service.getDiagnosticLogs();
       expect(mockSupabaseClient.from).toHaveBeenCalledWith(
@@ -569,10 +574,16 @@ describe('MonetisationService', () => {
     });
 
     it('should return empty array when query fails', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({
-        data: null,
-        error: { message: 'failed' },
-      });
+      const chain = {
+        select: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockResolvedValue({
+          data: null,
+          error: { message: 'failed' },
+        }),
+      };
+      mockSupabaseClient.from.mockReturnValueOnce(chain);
+
       const result = await service.getDiagnosticLogs();
       expect(result).toEqual([]);
     });

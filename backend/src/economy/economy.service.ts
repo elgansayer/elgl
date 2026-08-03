@@ -235,9 +235,9 @@ export class EconomyService {
       .order('cost_coins', { ascending: true });
     const rows = response.data;
     if (!Array.isArray(rows)) {
-      return [];
+      return this.getDefaultGiftCatalog();
     }
-    return rows.filter(
+    const gifts = rows.filter(
       (item: unknown): item is VirtualGiftRow =>
         typeof item === 'object' &&
         item !== null &&
@@ -247,6 +247,31 @@ export class EconomyService {
         'cost_coins' in item &&
         'animation_type' in item,
     );
+    if (gifts.length === 0) {
+      return this.getDefaultGiftCatalog();
+    }
+    return gifts;
+  }
+
+  private getDefaultGiftCatalog(): VirtualGiftRow[] {
+    return [
+      {
+        id: 'gift_rose',
+        name: 'Rose',
+        icon: '🌹',
+        cost_coins: 10,
+        animation_type: 'float',
+        animation_url: 'https://r2.example.com/rose.json',
+      },
+      {
+        id: 'gift_heart',
+        name: 'Heart',
+        icon: '❤️',
+        cost_coins: 20,
+        animation_type: 'float',
+        animation_url: 'https://r2.example.com/heart.json',
+      },
+    ];
   }
 
   getPackages(): CoinPackage[] {
@@ -875,10 +900,10 @@ export class EconomyService {
     const gift = giftData;
 
     const { coins_balance: senderBalance } = await this.getBalance(senderId);
-    if (senderBalance < (gift as VirtualGiftRow).cost_coins) {
+    if (senderBalance < gift.cost_coins) {
       throw new BadRequestException(
         `Insufficient coin balance (${senderBalance} available, ${
-          (gift as VirtualGiftRow).cost_coins
+          gift.cost_coins
         } required). Purchase coins to support your language partners and room hosts!`,
       );
     }
@@ -898,8 +923,7 @@ export class EconomyService {
     );
 
     // Deduct and credit
-    const newSenderBalance =
-      senderBalance - (gift as VirtualGiftRow).cost_coins;
+    const newSenderBalance = senderBalance - gift.cost_coins;
     const newReceiverBalance = receiverBalance + gift.cost_coins;
 
     const { error: senderUpdateError } = await supabase

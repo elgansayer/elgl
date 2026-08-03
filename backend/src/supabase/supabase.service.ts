@@ -143,7 +143,41 @@ type StatusViewRow = {
   id: string;
   viewer_id: string;
   status_owner_id: string;
+  status_id?: string | null;
   created_at: string;
+};
+
+type VirtualGiftRow = {
+  id: string;
+  name: string;
+  icon: string;
+  cost_coins: number;
+  animation_type: string;
+  animation_url?: string | null;
+};
+
+type StickerPackRow = {
+  id: string;
+  name: string;
+  cost_coins: number;
+  icon_url?: string | null;
+  description?: string | null;
+};
+
+type GiftTransactionRow = {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  gift_id: string;
+  room_id?: string | null;
+  coins_spent: number;
+  created_at?: string;
+};
+
+type UserStickerPackRow = {
+  user_id: string;
+  pack_id: string;
+  created_at?: string;
 };
 
 type MomentRow = {
@@ -733,6 +767,30 @@ export interface Database {
           message?: string;
           created_at?: string;
         };
+        Relationships: [];
+      };
+      virtual_gifts: {
+        Row: VirtualGiftRow;
+        Insert: Partial<VirtualGiftRow>;
+        Update: Partial<VirtualGiftRow>;
+        Relationships: [];
+      };
+      sticker_packs: {
+        Row: StickerPackRow;
+        Insert: Partial<StickerPackRow>;
+        Update: Partial<StickerPackRow>;
+        Relationships: [];
+      };
+      gift_transactions: {
+        Row: GiftTransactionRow;
+        Insert: Partial<GiftTransactionRow>;
+        Update: Partial<GiftTransactionRow>;
+        Relationships: [];
+      };
+      user_sticker_packs: {
+        Row: UserStickerPackRow;
+        Insert: Partial<UserStickerPackRow>;
+        Update: Partial<UserStickerPackRow>;
         Relationships: [];
       };
       login_history: {

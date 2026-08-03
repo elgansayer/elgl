@@ -447,11 +447,7 @@ describe('UsersService', () => {
 
   describe('getStatusViewersByStatusId', () => {
     it('should return empty list when query succeeds', async () => {
-      mockSupabaseClient.from.mockReturnValueOnce({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockResolvedValue({ data: [], error: null }),
-      });
+      mockQueryBuilder.limit.mockResolvedValue({ data: [], error: null });
       await expect(
         service.getStatusViewersByStatusId('user-1', 'status-1'),
       ).resolves.toEqual([]);
