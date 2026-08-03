@@ -46,6 +46,7 @@ describe('AudioRoomsService', () => {
       order: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
       range: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn(),
       single: jest.fn(),
     };
 

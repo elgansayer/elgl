@@ -101,6 +101,24 @@ export class AudioRoomsController {
     return this.audioRoomsService.getInvitedPrivateRooms(user.id);
   }
 
+  @Get('call-logs')
+  async getCallLogs(
+    @CurrentUser() user: User | null,
+    @Query() query: GetCallLogsQueryDto,
+  ): Promise<CallLogRecord[]> {
+    if (!user) return [];
+    return this.audioRoomsService.getCallLogs(user.id, query);
+  }
+
+  @Get('exclusive-emojis')
+  getExclusiveEmojis(): {
+    emojiId: string;
+    name: string;
+    animationUrl: string;
+  }[] {
+    return this.audioRoomsService.getExclusiveEmojis();
+  }
+
   @Get(':id')
   async getRoom(@Param('id') id: string): Promise<AudioRoomRecord> {
     return await this.audioRoomsService.getRoom(id);
@@ -264,15 +282,6 @@ export class AudioRoomsController {
     return this.audioRoomsService.getTranscript(roomId);
   }
 
-  @Get('call-logs')
-  async getCallLogs(
-    @CurrentUser() user: User | null,
-    @Query() query: GetCallLogsQueryDto,
-  ): Promise<CallLogRecord[]> {
-    if (!user) return [];
-    return this.audioRoomsService.getCallLogs(user.id, query);
-  }
-
   @Post(':roomId/polls')
   async createPoll(
     @CurrentUser() user: User | null,
@@ -327,14 +336,5 @@ export class AudioRoomsController {
   ): Promise<{ emojiId: string; animationUrl: string } | null> {
     if (!user) return null;
     return await this.audioRoomsService.sendReaction(user.id, roomId, dto);
-  }
-
-  @Get('exclusive-emojis')
-  getExclusiveEmojis(): {
-    emojiId: string;
-    name: string;
-    animationUrl: string;
-  }[] {
-    return this.audioRoomsService.getExclusiveEmojis();
   }
 }

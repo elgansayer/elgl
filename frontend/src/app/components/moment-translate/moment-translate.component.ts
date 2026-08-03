@@ -18,7 +18,7 @@ import { environment } from '../../../environments/environment';
     @if (showTranslation()) {
       @if (translationResource.isLoading()) {
         <p class="mt-1 text-xs text-gray-400">{{ 'common.loading' | t }}</p>
-      } @else if (translationResource.value()?.translation; as translation) {
+      } @else if (translationResource.value()?.translation !== undefined; as translation) {
         <p class="mt-1 text-sm text-gray-300 italic">{{ translation }}</p>
       } @else {
         <p class="mt-1 text-xs text-rose-500">{{ 'moments.translationError' | t }}</p>
@@ -64,7 +64,7 @@ export class MomentTranslateComponent {
           }
           return response.json();
         })
-        .then((data: { translation?: string }) => {
+        .then((data: { translation: string | undefined }) => {
           if (data.translation) {
             return { translation: data.translation };
           }

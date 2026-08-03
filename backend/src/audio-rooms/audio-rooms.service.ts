@@ -632,7 +632,6 @@ export class AudioRoomsService implements OnModuleInit {
       type: 'stage_reordered',
       speaker_order: speakerOrder,
       room_id: roomId,
-      updated_at: new Date().toISOString(),
     });
     return this.getRoom(roomId);
   }
@@ -654,7 +653,6 @@ export class AudioRoomsService implements OnModuleInit {
     void this.centrifugoService.publish(`room_${roomId}`, {
       type: 'stage_cleared',
       room_id: roomId,
-      updated_at: new Date().toISOString(),
     });
     return this.getRoom(roomId);
   }
