@@ -234,9 +234,12 @@ export class UsersController {
     if (!user) {
       throw new UnauthorizedException();
     }
+    const userId = String(user.id);
+    const defaultStatusId: string =
+      await this.usersService.getDefaultStatusId(userId);
     return await this.usersService.getStatusViewersByStatusId(
-      user.id,
-      await this.usersService.getDefaultStatusId(user.id),
+      userId,
+      defaultStatusId,
     );
   }
 
