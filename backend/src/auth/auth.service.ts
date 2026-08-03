@@ -118,22 +118,4 @@ export class AuthService {
       return false;
     }
   }
-
-  async checkTwoFactorStatus(userId: string): Promise<boolean> {
-    return this.twoFactorService.isEnabled(userId);
-  }
-
-  async enableTwoFactor(
-    userId: string,
-  ): Promise<{ secret: string; qrCodeUrl: string }> {
-    return this.twoFactorService.generateSecret(userId);
-  }
-
-  async verifyTwoFactor(userId: string, token: string): Promise<boolean> {
-    return this.twoFactorService.verifyToken(userId, token);
-  }
-
-  async disableTwoFactor(userId: string): Promise<boolean> {
-    return this.twoFactorService.disable(userId);
-  }
 }

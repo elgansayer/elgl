@@ -48,16 +48,16 @@ export interface UserProfile {
   providedIn: 'root',
 })
 export class SupabaseService {
-  private supabase: SupabaseClient<Database>;
+  private supabase: SupabaseClient;
 
   constructor() {
-    this.supabase = createClient<Database>(environment.supabaseUrl, environment.supabaseAnonKey);
+    this.supabase = createClient(environment.supabaseUrl, environment.supabaseAnonKey);
   }
 
 
   async getRecentlyJoinedNativeSpeakers(limit: number = 10): Promise<UserProfile[]> {
     const { data, error } = await this.supabase
-      .from<'users'>('users')
+      .from('users')
       .select('*')
       .order('joined_at', { ascending: false })
       .limit(limit)
@@ -106,7 +106,7 @@ export class SupabaseService {
 
   async getDailyStreak(userId: string): Promise<number> {
     const { data, error } = await this.supabase
-      .from<'user_streaks'>('user_streaks')
+      .from('user_streaks')
       .select('streak_count')
       .eq('user_id', userId)
       .single<{ streak_count: number }>();
@@ -121,7 +121,7 @@ export class SupabaseService {
 
   async updateDailyStreak(userId: string, streakCount: number): Promise<void> {
     const { error } = await this.supabase
-      .from<'user_streaks'>('user_streaks')
+      .from('user_streaks')
       .upsert({ user_id: userId, streak_count: streakCount });
 
     if (error) {
@@ -135,7 +135,7 @@ export class SupabaseService {
 
   async getUserAudioIntro(userId: string): Promise<string | null> {
     const { data, error } = await this.supabase
-      .from<'users'>('users')
+      .from('users')
       .select('audio_intro_url')
       .eq('id', userId)
       .single<{ audio_intro_url: string | null }>();
@@ -150,7 +150,7 @@ export class SupabaseService {
     userId: string,
   ): Promise<{ isVip: boolean; vipTier: string; isSeriousLearner: boolean }> {
     const { data, error } = await this.supabase
-      .from<'users'>('users')
+      .from('users')
       .select('is_vip, vip_tier, is_serious_learner')
       .eq('id', userId)
       .single<{ is_vip: boolean; vip_tier: string; is_serious_learner: boolean }>();
@@ -280,7 +280,7 @@ export class SupabaseService {
 
   async getStatusViewers(statusId: string): Promise<UserProfile[]> {
     const { data: statusViews, error: statusError } = await this.supabase
-      .from<'status_views'>('status_views')
+      .from('status_views')
       .select('viewer_id')
       .eq('status_id', statusId)
       .returns<{ viewer_id: string }[]>();
@@ -300,7 +300,7 @@ export class SupabaseService {
     const userProfiles: UserProfile[] = [];
     for (const id of viewerIds) {
       const { data: user, error: userError } = await this.supabase
-        .from<'users'>('users')
+        .from('users')
         .select('*')
         .eq('id', id)
         .single<UserProfile>();

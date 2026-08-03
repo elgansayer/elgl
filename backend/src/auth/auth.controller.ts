@@ -8,6 +8,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { TransferService } from '../transfer/transfer.service';
 import { SupabaseAuthGuard } from './supabase-auth.guard';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -19,7 +20,10 @@ interface RequestWithUser {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly transferService: TransferService,
+  ) {}
 
   @Post('request-password-reset')
   async requestPasswordReset(@Body() dto: ForgotPasswordDto) {
@@ -89,6 +93,42 @@ export class AuthController {
     const userId = this.getUserIdFromReq(req);
     const enabled = await this.authService.checkTwoFactorStatus(userId);
     return { enabled };
+  }
+
+  @UseGuards(SupabaseAuthGuard)
+  @Post('transfer/generate')
+  async generateTransferLink(
+    @Req() req: RequestWithUser,
+  ): Promise<{ url: string }> {
+    const userId = this.getUserIdFromReq(req);
+    const token = await this.transferService.generateTransferToken(userId);
+    const baseUrl = process.env.APP_URL ?? 'http://localhost:4200';
+    const url = `${baseUrl}/device-transfer?token=${encodeURIComponent(token)}`;
+    return { url };
+  }
+
+  @Post('transfer/consume')
+  async consumeTransferLink(
+    @Body('token') token: string,
+  ): Promise<{ swapToken: string }> {
+    const swapToken = await this.transferService.consumeTransferToken(token);
+    if (!swapToken) {
+      throw new BadRequestException('Invalid or expired transfer token');
+    }
+    return { swapToken };
+  }
+
+  @Post('transfer/swap')
+  async swapTransferLink(@Body('swapToken') swapToken: string): Promise<{
+    access_token: string;
+    refresh_token: string;
+    user_id: string;
+  }> {
+    const result = await this.transferService.swapTokenForSession(swapToken);
+    if (!result) {
+      throw new BadRequestException('Invalid or expired swap token');
+    }
+    return result;
   }
 
   private getUserIdFromReq(req: RequestWithUser): string {

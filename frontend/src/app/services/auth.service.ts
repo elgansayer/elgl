@@ -355,37 +355,7 @@ export class AuthService {
     }
   }
 
-  async enableTwoFactor(): Promise<{ secret: string; qrCodeUrl: string }> {
-    const accessToken = this.getAccessToken();
-    const res = await lastValueFrom(
-      this.http.post<{ secret: string; qrCodeUrl: string }>(
-        `${this.apiUrl}/auth/two-factor/enable`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        },
-      ),
-    );
-    return res;
-  }
 
-  async verifyTwoFactor(token: string): Promise<boolean> {
-    const accessToken = this.getAccessToken();
-    const res = await lastValueFrom(
-      this.http.post<{ success: boolean }>(
-        `${this.apiUrl}/auth/two-factor/verify`,
-        { token },
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        },
-      ),
-    );
-    return res.success;
-  }
 
   async disableTwoFactor(): Promise<boolean> {
     const accessToken = this.currentSession()?.access_token;
@@ -487,7 +457,7 @@ export class AuthService {
     const accessToken = this.currentSession()?.access_token;
     const res = await lastValueFrom(
       this.http.post<{ url: string }>(
-        `${this.apiUrl}/transfer/generate`,
+        `${this.apiUrl}/auth/transfer/generate`,
         {},
         {
           headers: {
@@ -506,7 +476,7 @@ export class AuthService {
   async consumeDeviceLink(token: string): Promise<{ swapToken: string }> {
     return await lastValueFrom(
       this.http.post<{ swapToken: string }>(
-        `${this.apiUrl}/transfer/consume`,
+        `${this.apiUrl}/auth/transfer/consume`,
         { token },
       ),
     );
@@ -523,7 +493,7 @@ export class AuthService {
           refresh_token: string;
           user_id: string;
         }>(
-          `${this.apiUrl}/transfer/swap`,
+          `${this.apiUrl}/auth/transfer/swap`,
           { swapToken },
         ),
       );
