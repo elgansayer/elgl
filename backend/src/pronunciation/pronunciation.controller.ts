@@ -21,4 +21,12 @@ export class PronunciationController {
   ): Promise<PronunciationFeedbackResponseDto> {
     return this.pronunciationService.analyse(audio, referenceText);
   }
+  @Post('voice-feedback')
+  @UseInterceptors(FileInterceptor('audio'))
+  async submitVoiceFeedback(
+    @UploadedFile() audio: Express.Multer.File,
+    @Body('feedbackText') feedbackText: string,
+  ): Promise<{ success: boolean }> {
+    return this.pronunciationService.processVoiceFeedback(audio, feedbackText);
+  }
 }

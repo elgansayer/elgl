@@ -1,7 +1,18 @@
-import { Controller, Get, Post, Body, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Req,
+  UseGuards,
+  BadRequestException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { TransferService } from '../transfer/transfer.service';
 import { SupabaseAuthGuard } from './supabase-auth.guard';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 interface RequestWithUser {
   user?: { id: string };
@@ -15,14 +26,14 @@ export class AuthController {
   ) {}
 
   @Post('request-password-reset')
-  async requestPasswordReset(@Body('email') email: string) {
-    const token = await this.authService.requestPasswordReset(email);
+  async requestPasswordReset(@Body() dto: ForgotPasswordDto) {
+    const token = await this.authService.requestPasswordReset(dto.email);
     return { token };
   }
 
   @Post('reset-password')
-  async resetPassword(@Body() body: { token: string; newPassword: string }) {
-    await this.authService.resetPassword(body.token, body.newPassword);
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    await this.authService.resetPassword(dto.token, dto.newPassword);
     return { message: 'Password successfully reset' };
   }
 

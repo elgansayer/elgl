@@ -169,4 +169,34 @@ export class MonetisationController {
     if (!user) return null;
     return await this.monetisationService.cancelSubscription(user.id);
   }
+
+  /**
+   * Resume a subscription previously scheduled to cancel at period end.
+   */
+  @Post('subscription/resume')
+  @UseGuards(SupabaseAuthGuard)
+  async resumeSubscription(@CurrentUser() user: User | null) {
+    if (!user) return null;
+    return await this.monetisationService.resumeSubscription(user.id);
+  }
+
+  /**
+   * List billing history (invoices) for the authenticated user.
+   */
+  @Get('subscription/invoices')
+  @UseGuards(SupabaseAuthGuard)
+  async getInvoices(@CurrentUser() user: User | null) {
+    if (!user) return null;
+    return await this.monetisationService.listInvoices(user.id);
+  }
+
+  /**
+   * Create a Stripe Billing Portal session for managing payment methods.
+   */
+  @Post('subscription/billing-portal')
+  @UseGuards(SupabaseAuthGuard)
+  async createBillingPortalSession(@CurrentUser() user: User | null) {
+    if (!user) return null;
+    return await this.monetisationService.createBillingPortalSession(user.id);
+  }
 }

@@ -8,12 +8,17 @@ import { I18nService } from '../../services/i18n.service';
 import { MomentsStore, MomentRecord, MomentComment } from '../../services/moments.store';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { AuthService } from '../../services/auth.service';
+import { UserService } from '../../services/user.service';
 import { TokenisedTextComponent } from '../tokenised-text/tokenised-text.component';
 import { WordDefinitionModalComponent } from '../word-definition-modal/word-definition-modal.component';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.component';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { CorrectionModalComponent } from '../correction-modal/correction-modal.component';
+import {
+  LanguagePickerComponent,
+  getLanguageFlag,
+} from '../primitives/language-picker/language-picker.component';
 
 @Component({
   selector: 'app-moments-feed',
@@ -28,6 +33,7 @@ import { CorrectionModalComponent } from '../correction-modal/correction-modal.c
     VoiceRecorderComponent,
     ScrollablePillsComponent,
     CorrectionModalComponent,
+    LanguagePickerComponent,
   ],
   templateUrl: './moments-feed.component.html',
   styleUrls: ['./moments-feed.component.scss'],
@@ -39,6 +45,7 @@ export class MomentsFeedComponent implements OnInit {
   readonly momentsStore = inject(MomentsStore);
   readonly vocabStore = inject(VocabularyStore);
   readonly authService = inject(AuthService);
+  private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
 
   readonly isCreating = signal<boolean>(false);
@@ -78,6 +85,33 @@ export class MomentsFeedComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.momentsStore.loadFeed('All');
+    const profile = await this.userService.getMyProfile();
+    const preferredTarget = profile?.target_languages?.[0];
+    if (preferredTarget) {
+      this.newTargetLanguage.set(preferredTarget);
+    }
+  }
+
+  onTargetLanguageSelected(code: string): void {
+    this.newTargetLanguage.set(code);
+  }
+
+  getLanguageDisplayName(code: string): string {
+    try {
+      return new Intl.DisplayNames(['en'], { type: 'language' }).of(code) || code;
+    } catch {
+      return code;
+    }
+  }
+
+  getLanguageFlag(code: string): string {
+    return getLanguageFlag(code);
+  }
+
+  getTargetLanguageTitle(code: string): string {
+    return this.i18n.translate('moments.targetLanguageBadge', {
+      language: this.getLanguageDisplayName(code),
+    });
   }
 
   async setFilter(filter: 'All' | 'Classmates' | 'Following'): Promise<void> {

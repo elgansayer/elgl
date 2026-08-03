@@ -16,7 +16,7 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
     @if (showCallUI()) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
         <div
-          class="bg-surface-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center border border-slate-700"
+          class="bg-surface-800 rounded-2xl shadow-2xl w-full max-w-sm ps-6 pe-6 pt-6 pb-6 text-center border border-slate-700"
         >
           <!-- Caller/Callee Info -->
           <div class="mb-6">

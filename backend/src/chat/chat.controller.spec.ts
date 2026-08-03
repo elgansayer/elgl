@@ -4,10 +4,21 @@ import { ChatService } from './chat.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
+import type { User } from '@supabase/supabase-js';
+import { AiGenerateReplyDto, SendMessageDto } from './dto/send-message.dto';
+import { AddFavouriteDto } from './dto/add-favourite.dto';
+import { ConversationStarterDto } from './dto/conversation-starter.dto';
+import { ReplyToStatusUpdateDto } from './dto/reply-to-status-update.dto';
+import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
+import { FixMessageDto } from './dto/fix-message.dto';
+import { AddLabelDto, RemoveLabelDto } from './dto/label.dto';
+import { LlmProxyDto } from './dto/llm-proxy.dto';
 
 describe('ChatController', () => {
   let controller: ChatController;
   let chatService: ChatService;
+  let conversationStarterService: ConversationStarterService;
+  let translationService: TranslationService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -17,14 +28,28 @@ describe('ChatController', () => {
           provide: ChatService,
           useValue: {
             generateConnectionToken: jest.fn(),
-            getRooms: jest.fn(),
             sendMessage: jest.fn(),
+            getRooms: jest.fn(),
             getMessages: jest.fn(),
             addFavourite: jest.fn(),
             getFavourites: jest.fn(),
+            llmProxy: jest.fn(),
+            generateAiReply: jest.fn(),
+            getSuggestedReplies: jest.fn(),
+            replyToStatusUpdate: jest.fn(),
+            correctMessage: jest.fn(),
+            fixMessage: jest.fn(),
+            viewMessageMedia: jest.fn(),
+            getGroupMembers: jest.fn(),
             lockChat: jest.fn(),
             unlockChat: jest.fn(),
             getLockedChats: jest.fn(),
+            addLabel: jest.fn(),
+            removeLabel: jest.fn(),
+            getUserLabels: jest.fn(),
+            getRoomsByLabel: jest.fn(),
+            exportChatHistory: jest.fn(),
+            getRoomGreeting: jest.fn(),
           },
         },
         {
@@ -36,7 +61,9 @@ describe('ChatController', () => {
         {
           provide: TranslationService,
           useValue: {
+            detectLanguage: jest.fn(),
             translate: jest.fn(),
+            translateWithDetection: jest.fn(),
           },
         },
       ],
@@ -47,11 +74,19 @@ describe('ChatController', () => {
 
     controller = module.get<ChatController>(ChatController);
     chatService = module.get<ChatService>(ChatService);
+    conversationStarterService = module.get<ConversationStarterService>(
+      ConversationStarterService,
+    );
+    translationService = module.get<TranslationService>(TranslationService);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
+
+  function mockUser(): User {
+    return { id: 'user-1' } as unknown as User;
+  }
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
@@ -70,7 +105,7 @@ describe('ChatController', () => {
         mockToken,
       );
 
-      const result = controller.getConnectionToken({ id: 'user-1' } as any);
+      const result = controller.getConnectionToken(mockUser());
       expect(chatService.generateConnectionToken).toHaveBeenCalledWith(
         mockUser().id,
       );
@@ -80,25 +115,48 @@ describe('ChatController', () => {
 
   describe('sendMessage', () => {
     it('should return null if user is not provided', async () => {
-      const result = await controller.sendMessage(null, {} as any);
+      const result = await controller.sendMessage(
+        null,
+        {} as unknown as SendMessageDto,
+      );
       expect(result).toBeNull();
       expect(chatService.sendMessage).not.toHaveBeenCalled();
     });
 
     it('should call chatService.sendMessage when user is provided', async () => {
-      const dto: any = { room_id: 'room-1', text_content: 'Hello' };
-      const savedMessage: any = { id: 'msg-1', ...dto };
+      const dto = {
+        roomId: 'room-1',
+        text: 'Hello',
+      } as unknown as SendMessageDto;
+      const savedMessage = { id: 'msg-1' };
       (chatService.sendMessage as jest.Mock).mockResolvedValue(savedMessage);
 
-      const result = await controller.sendMessage({ id: 'user-1' } as any, dto);
+      const result = await controller.sendMessage(mockUser(), dto);
       expect(chatService.sendMessage).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual(savedMessage);
     });
   });
 
+  describe('getRooms', () => {
+    it('should return empty array if user is not provided', async () => {
+      const result = await controller.getRooms(null);
+      expect(result).toEqual([]);
+      expect(chatService.getRooms).not.toHaveBeenCalled();
+    });
+
+    it('should call chatService.getRooms when user is provided', async () => {
+      const rooms = [{ id: 'global-exchange' }];
+      (chatService.getRooms as jest.Mock).mockResolvedValue(rooms);
+
+      const result = await controller.getRooms(mockUser());
+      expect(chatService.getRooms).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(rooms);
+    });
+  });
+
   describe('getMessages', () => {
-    it('should call chatService.getMessages with room ID and search query', async () => {
-      const messages: any[] = [{ id: 'msg-1' }];
+    it('should call chatService.getMessages without user when omitted', async () => {
+      const messages = [{ id: 'msg-1' }];
       (chatService.getMessages as jest.Mock).mockResolvedValue(messages);
 
       const result = await controller.getMessages('room-1', 'search-term');
@@ -108,34 +166,34 @@ describe('ChatController', () => {
       );
       expect(result).toEqual(messages);
     });
-  });
 
-  describe('getRooms', () => {
-    it('should call chatService.getRooms', async () => {
-      const rooms: any[] = [{ id: 'global-exchange' }];
-      (chatService.getRooms as jest.Mock).mockResolvedValue(rooms);
-
-      const result = await controller.getRooms({ id: 'user-1' } as any);
-      expect(chatService.getRooms).toHaveBeenCalledWith('user-1');
-      expect(result).toEqual(rooms);
+    it('should pass user id when user is provided', async () => {
+      (chatService.getMessages as jest.Mock).mockResolvedValue([]);
+      const result = await controller.getMessages('room-1', '', mockUser());
+      expect(chatService.getMessages).toHaveBeenCalledWith(
+        'room-1',
+        '',
+        'user-1',
+      );
+      expect(result).toEqual([]);
     });
   });
 
   describe('addFavourite', () => {
     it('should return null if user is not provided', async () => {
-      const result = await controller.addFavourite(null, {} as any);
+      const result = await controller.addFavourite(
+        null,
+        {} as unknown as AddFavouriteDto,
+      );
       expect(result).toBeNull();
       expect(chatService.addFavourite).not.toHaveBeenCalled();
     });
 
     it('should call chatService.addFavourite when user is provided', async () => {
-      const dto: any = { message_id: 'msg-1' };
+      const dto = { messageId: 'msg-1' } as unknown as AddFavouriteDto;
       (chatService.addFavourite as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await controller.addFavourite(
-        { id: 'user-1' } as any,
-        dto,
-      );
+      const result = await controller.addFavourite(mockUser(), dto);
       expect(chatService.addFavourite).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual({ success: true });
     });
@@ -149,10 +207,10 @@ describe('ChatController', () => {
     });
 
     it('should call chatService.getFavourites when user is provided', async () => {
-      const favourites: any[] = [{ id: 'fav-1' }];
+      const favourites = [{ id: 'fav-1' }];
       (chatService.getFavourites as jest.Mock).mockResolvedValue(favourites);
 
-      const result = await controller.getFavourites({ id: 'user-1' } as any);
+      const result = await controller.getFavourites(mockUser());
       expect(chatService.getFavourites).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(favourites);
     });
@@ -478,10 +536,7 @@ describe('ChatController', () => {
     it('should call chatService.lockChat when user is provided', async () => {
       (chatService.lockChat as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await controller.lockChat(
-        { id: 'user-1' } as any,
-        'room-1',
-      );
+      const result = await controller.lockChat(mockUser(), 'room-1');
       expect(chatService.lockChat).toHaveBeenCalledWith('user-1', 'room-1');
       expect(result).toEqual({ success: true });
     });
@@ -497,10 +552,7 @@ describe('ChatController', () => {
     it('should call chatService.unlockChat when user is provided', async () => {
       (chatService.unlockChat as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await controller.unlockChat(
-        { id: 'user-1' } as any,
-        'room-1',
-      );
+      const result = await controller.unlockChat(mockUser(), 'room-1');
       expect(chatService.unlockChat).toHaveBeenCalledWith('user-1', 'room-1');
       expect(result).toEqual({ success: true });
     });
@@ -517,9 +569,139 @@ describe('ChatController', () => {
       const roomIds = ['room-1', 'room-2'];
       (chatService.getLockedChats as jest.Mock).mockResolvedValue(roomIds);
 
-      const result = await controller.getLockedRooms({ id: 'user-1' } as any);
+      const result = await controller.getLockedRooms(mockUser());
       expect(chatService.getLockedChats).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(roomIds);
+    });
+  });
+
+  describe('Labels', () => {
+    describe('addLabel', () => {
+      it('should return null if user is not provided', async () => {
+        const result = await controller.addLabel(
+          null,
+          {} as unknown as AddLabelDto,
+        );
+        expect(result).toBeNull();
+        expect(chatService.addLabel).not.toHaveBeenCalled();
+      });
+
+      it('should call chatService.addLabel', async () => {
+        const dto = { room_id: 'room-1', label: 'work' };
+        (chatService.addLabel as jest.Mock).mockResolvedValue(undefined);
+
+        const result = await controller.addLabel(mockUser(), dto);
+        expect(chatService.addLabel).toHaveBeenCalledWith(
+          'user-1',
+          'room-1',
+          'work',
+        );
+        expect(result).toEqual({ success: true });
+      });
+    });
+
+    describe('removeLabel', () => {
+      it('should return null if user is not provided', async () => {
+        const result = await controller.removeLabel(
+          null,
+          {} as unknown as RemoveLabelDto,
+        );
+        expect(result).toBeNull();
+        expect(chatService.removeLabel).not.toHaveBeenCalled();
+      });
+
+      it('should call chatService.removeLabel', async () => {
+        const dto = { room_id: 'room-1', label: 'work' };
+        (chatService.removeLabel as jest.Mock).mockResolvedValue(undefined);
+
+        const result = await controller.removeLabel(mockUser(), dto);
+        expect(chatService.removeLabel).toHaveBeenCalledWith(
+          'user-1',
+          'room-1',
+          'work',
+        );
+        expect(result).toEqual({ success: true });
+      });
+    });
+
+    describe('getUserLabels', () => {
+      it('should return empty array if user is not provided', async () => {
+        const result = await controller.getUserLabels(null);
+        expect(result).toEqual([]);
+        expect(chatService.getUserLabels).not.toHaveBeenCalled();
+      });
+
+      it('should call chatService.getUserLabels', async () => {
+        const labels = ['work', 'family'];
+        (chatService.getUserLabels as jest.Mock).mockResolvedValue(labels);
+
+        const result = await controller.getUserLabels(mockUser());
+        expect(chatService.getUserLabels).toHaveBeenCalledWith('user-1');
+        expect(result).toEqual(labels);
+      });
+    });
+
+    describe('getRoomsByLabel', () => {
+      it('should return empty array if user is not provided', async () => {
+        const result = await controller.getRoomsByLabel(null, 'work');
+        expect(result).toEqual([]);
+        expect(chatService.getRoomsByLabel).not.toHaveBeenCalled();
+      });
+
+      it('should call chatService.getRoomsByLabel', async () => {
+        const rooms = [{ id: 'room-1' }];
+        (chatService.getRoomsByLabel as jest.Mock).mockResolvedValue(rooms);
+
+        const result = await controller.getRoomsByLabel(mockUser(), 'work');
+        expect(chatService.getRoomsByLabel).toHaveBeenCalledWith(
+          'user-1',
+          'work',
+        );
+        expect(result).toEqual(rooms);
+      });
+    });
+  });
+
+  describe('exportChatHistory', () => {
+    it('should return empty array if user is not provided', async () => {
+      const result = await controller.exportChatHistory(null, 'room-1');
+      expect(result).toEqual([]);
+      expect(chatService.exportChatHistory).not.toHaveBeenCalled();
+    });
+
+    it('should call chatService.exportChatHistory', async () => {
+      const messages = [{ id: 'msg-1' }];
+      (chatService.exportChatHistory as jest.Mock).mockResolvedValue(messages);
+
+      const result = await controller.exportChatHistory(mockUser(), 'room-1');
+      expect(chatService.exportChatHistory).toHaveBeenCalledWith(
+        'user-1',
+        'room-1',
+      );
+      expect(result).toEqual(messages);
+    });
+  });
+
+  describe('getRoomGreeting', () => {
+    it('should return empty object if user is not provided', async () => {
+      const result = await controller.getRoomGreeting(null, 'room-1');
+      expect(result).toEqual({});
+      expect(chatService.getRoomGreeting).not.toHaveBeenCalled();
+    });
+
+    it('should call chatService.getRoomGreeting', async () => {
+      const greeting = {
+        greetingMessage: 'Welcome!',
+        awayMessage: 'Please leave a message.',
+      };
+      (chatService.getRoomGreeting as jest.Mock).mockResolvedValue(greeting);
+
+      const result = await controller.getRoomGreeting(mockUser(), 'room-1');
+      expect(chatService.getRoomGreeting).toHaveBeenCalledWith(
+        'room-1',
+        'user-1',
+      );
+      expect(result).toEqual(greeting);
     });
   });
 });

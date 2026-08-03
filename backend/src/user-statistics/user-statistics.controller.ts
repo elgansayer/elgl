@@ -1,8 +1,10 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { UserStatisticsService } from './user-statistics.service';
 import { UserStatisticsQueryDto } from './dto/user-statistics-query.dto';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
 @Controller('user-statistics')
+@UseGuards(SupabaseAuthGuard)
 export class UserStatisticsController {
   constructor(private readonly userStatisticsService: UserStatisticsService) {}
 

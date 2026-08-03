@@ -22,7 +22,10 @@ export class CommunitiesController {
 
   @Post()
   @UseGuards(SupabaseAuthGuard)
-  async create(@Body() dto: CreateCommunityDto, @Req() req: any) {
+  async create(
+    @Body() dto: CreateCommunityDto,
+    @Req() req: { user: { id: string } },
+  ) {
     const ownerId = req.user.id;
     return this.communitiesService.create(ownerId, dto);
   }
@@ -35,7 +38,7 @@ export class CommunitiesController {
 
   @Get()
   @UseGuards(SupabaseAuthGuard)
-  async listMine(@Req() req: any) {
+  async listMine(@Req() req: { user: { id: string } }) {
     const ownerId = req.user.id;
     return this.communitiesService.listByOwner(ownerId);
   }
@@ -45,7 +48,7 @@ export class CommunitiesController {
   async update(
     @Param('communityId') communityId: string,
     @Body() dto: UpdateCommunityDto,
-    @Req() req: any,
+    @Req() req: { user: { id: string } },
   ) {
     const userId = req.user.id;
     await this.communitiesService.update(communityId, dto, userId);
@@ -55,7 +58,10 @@ export class CommunitiesController {
   @Delete(':communityId')
   @HttpCode(204)
   @UseGuards(SupabaseAuthGuard)
-  async remove(@Param('communityId') communityId: string, @Req() req: any) {
+  async remove(
+    @Param('communityId') communityId: string,
+    @Req() req: { user: { id: string } },
+  ) {
     const userId = req.user.id;
     await this.communitiesService.delete(communityId, userId);
   }
@@ -71,10 +77,7 @@ export class CommunitiesController {
 
   @Delete(':communityId/groups/:groupId')
   @UseGuards(SupabaseAuthGuard)
-  async removeGroup(
-    @Param('communityId') communityId: string,
-    @Param('groupId') groupId: string,
-  ) {
+  async removeGroup(@Param('groupId') groupId: string) {
     return this.communitiesService.removeGroup(groupId);
   }
 

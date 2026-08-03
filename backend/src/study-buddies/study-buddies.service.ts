@@ -1,40 +1,64 @@
 import {
   Injectable,
-  Logger,
   BadRequestException,
-  InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { StudyBuddyRequestDto } from './dto/study-buddy.dto';
 import { SupabaseService } from '../supabase/supabase.service';
+import { UsersService } from '../users/users.service';
 import { UserProfile } from '../users/interfaces/user-profile.interface';
+
+export type BuddyRequestStatus = 'pending' | 'accepted' | 'declined';
+
+export interface BuddyRequesterSummary {
+  id: string;
+  display_name?: string;
+  avatar_url?: string;
+}
 
 export interface BuddyRequest {
   id: string;
   requesterId: string;
   partnerId: string;
-  message?: string;
-  status: string;
+  message: string | null;
+  status: BuddyRequestStatus;
   createdAt: string;
+  updatedAt: string;
+  requester?: BuddyRequesterSummary;
+}
+
+interface BuddyRequestRow {
+  id: string;
+  requester_id: string;
+  partner_id: string;
+  message: string | null;
+  status: BuddyRequestStatus;
+  created_at: string;
+  updated_at: string;
+  requester?: BuddyRequesterSummary | BuddyRequesterSummary[] | null;
 }
 
 @Injectable()
 export class StudyBuddiesService {
-  private readonly logger = new Logger(StudyBuddiesService.name);
-  private requests: BuddyRequest[] = [];
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly usersService: UsersService,
+  ) {}
 
-  constructor(private readonly supabaseService: SupabaseService) {}
-
-  requestBuddy(dto: StudyBuddyRequestDto, requesterId: string) {
-    const request: BuddyRequest = {
-      id: Date.now().toString(),
-      requesterId,
-      partnerId: dto.partnerId,
-      message: dto.message,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
+  private toBuddyRequest(row: BuddyRequestRow): BuddyRequest {
+    const requester = Array.isArray(row.requester)
+      ? row.requester[0]
+      : (row.requester ?? undefined);
+    return {
+      id: row.id,
+      requesterId: row.requester_id,
+      partnerId: row.partner_id,
+      message: row.message,
+      status: row.status,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      requester,
     };
-    this.requests.push(request);
-    return request;
   }
 
   async requestBuddy(
@@ -170,38 +194,11 @@ export class StudyBuddiesService {
   }
 
   async followUser(userId: string, targetUserId: string): Promise<void> {
-    if (userId === targetUserId) {
-      throw new BadRequestException('Cannot follow yourself');
-    }
-    const supabase = this.supabaseService.getClient();
-    const { error } = await supabase
-      .from('follows')
-      .insert([
-        {
-          follower_id: userId,
-          following_id: targetUserId,
-        },
-      ])
-      .single();
-    if (error) {
-      if (error.code === '23505') {
-        // duplicate => already following, treat as success
-        return;
-      }
-      throw new InternalServerErrorException('Failed to follow user');
-    }
+    await this.usersService.followUser(userId, targetUserId);
   }
 
   async unfollowUser(userId: string, targetUserId: string): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-    const { error } = await supabase
-      .from('follows')
-      .delete()
-      .eq('follower_id', userId)
-      .eq('following_id', targetUserId);
-    if (error) {
-      throw new InternalServerErrorException('Failed to unfollow user');
-    }
+    await this.usersService.unfollowUser(userId, targetUserId);
   }
 
   getOrCreateChannel(userId: string, otherUserId: string): { channel: string } {

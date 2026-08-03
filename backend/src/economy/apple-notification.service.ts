@@ -405,7 +405,10 @@ export class AppleNotificationService {
 
     void supabase
       .from('subscriptions')
-      .update({ auto_renew: autoRenew, updated_at: new Date().toISOString() })
+      .update({
+        auto_renew: autoRenew,
+        updated_at: new Date().toISOString(),
+      })
       .eq('user_id', userId)
       .then(({ error }) => {
         if (error) {
@@ -521,7 +524,6 @@ export class AppleNotificationService {
       .update({
         is_vip: false,
         vip_tier: 'free',
-        updated_at: new Date().toISOString(),
       })
       .eq('id', userId)
       .then(({ error }) => {

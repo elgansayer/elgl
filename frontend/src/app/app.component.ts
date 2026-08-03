@@ -209,6 +209,43 @@ export class AppComponent implements OnInit {
     }
   }
 
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  private isValidPayload(data: unknown): data is {
+    type: string;
+    gift?: VirtualGift;
+    sender_name?: string;
+    callerId?: string;
+    callerName?: string;
+    callerAvatarUrl?: string;
+    roomName?: string;
+    isVideoCall?: boolean;
+  } {
+    if (!this.isRecord(data)) {
+      return false;
+    }
+    const type = data['type'];
+    if (typeof type === 'string') {
+      return true;
+    }
+    return false;
+  }
+
+  private isIncomingCallPayload(payload: unknown): payload is IncomingCallData {
+    if (!this.isRecord(payload)) {
+      return false;
+    }
+    return (
+      typeof payload['callerId'] === 'string' &&
+      typeof payload['callerName'] === 'string' &&
+      typeof payload['callerAvatarUrl'] === 'string' &&
+      typeof payload['roomName'] === 'string' &&
+      typeof payload['isVideoCall'] === 'boolean'
+    );
+  }
+
   onAcceptCall(_callData: IncomingCallData): void {
     this.incomingCallData.set(null);
     // TODO: Navigate to call room or start LiveKit session

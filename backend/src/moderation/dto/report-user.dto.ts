@@ -7,7 +7,7 @@ export class ReportUserDto {
 
   @IsString()
   @IsNotEmpty()
-  reason!: string;
+  reasonCategory!: string;
 
   @IsString()
   @IsOptional()

@@ -125,7 +125,9 @@ export class ChatController {
     @Body() dto: SuggestedRepliesRequestDto,
   ): Promise<{ suggestions: string[] } | null> {
     if (!user) return null;
-    return await this.chatService.getSuggestedReplies(user.id, dto);
+    return {
+      suggestions: await this.chatService.getSuggestedReplies(user.id, dto),
+    };
   }
 
   @Post('conversation-starters')

@@ -60,7 +60,7 @@ export class RecommendationsService {
           .limit(10);
 
         if (matches && matches.length > 0) {
-          const recommendedIds = matches.map((m) => m.id as string);
+          const recommendedIds = matches.map((m) => m.id);
 
           // Cache the top 10 recommendations in Redis for 24 hours
           await redis.set(
