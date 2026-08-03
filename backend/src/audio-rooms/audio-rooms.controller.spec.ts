@@ -79,7 +79,7 @@ describe('AudioRoomsController', () => {
       const room: any = { id: 'room-1', title: 'Test Room' };
       (audioRoomsService.createRoom as jest.Mock).mockResolvedValue(room);
 
-      const result = await controller.createRoom({ id: 'user-1' } as any, dto);
+      const result = await controller.createRoom({ id: 'user-1' }, dto);
       expect(audioRoomsService.createRoom).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual(room);
     });
@@ -99,10 +99,7 @@ describe('AudioRoomsController', () => {
         tokenResponse,
       );
 
-      const result = await controller.generateToken(
-        { id: 'user-1' } as any,
-        dto,
-      );
+      const result = await controller.generateToken({ id: 'user-1' }, dto);
       expect(audioRoomsService.generateToken).toHaveBeenCalledWith(
         'user-1',
         dto,
@@ -145,7 +142,7 @@ describe('AudioRoomsController', () => {
       const room: any = { id: 'room-1' };
       (audioRoomsService.raiseHand as jest.Mock).mockResolvedValue(room);
 
-      const result = await controller.raiseHand({ id: 'user-1' } as any, dto);
+      const result = await controller.raiseHand({ id: 'user-1' }, dto);
       expect(audioRoomsService.raiseHand).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual(room);
     });
@@ -163,10 +160,7 @@ describe('AudioRoomsController', () => {
       const room: any = { id: 'room-1' };
       (audioRoomsService.approveSpeaker as jest.Mock).mockResolvedValue(room);
 
-      const result = await controller.approveSpeaker(
-        { id: 'user-1' } as any,
-        dto,
-      );
+      const result = await controller.approveSpeaker({ id: 'user-1' }, dto);
       expect(audioRoomsService.approveSpeaker).toHaveBeenCalledWith(
         'user-1',
         dto,
@@ -187,10 +181,7 @@ describe('AudioRoomsController', () => {
       const room: any = { id: 'room-1' };
       (audioRoomsService.demoteSpeaker as jest.Mock).mockResolvedValue(room);
 
-      const result = await controller.demoteSpeaker(
-        { id: 'user-1' } as any,
-        dto,
-      );
+      const result = await controller.demoteSpeaker({ id: 'user-1' }, dto);
       expect(audioRoomsService.demoteSpeaker).toHaveBeenCalledWith(
         'user-1',
         dto,
@@ -211,10 +202,7 @@ describe('AudioRoomsController', () => {
       const room: any = { id: 'room-1', co_host_id: 'user-2' };
       (audioRoomsService.inviteCoHost as jest.Mock).mockResolvedValue(room);
 
-      const result = await controller.inviteCoHost(
-        { id: 'user-1' } as any,
-        dto,
-      );
+      const result = await controller.inviteCoHost({ id: 'user-1' }, dto);
       expect(audioRoomsService.inviteCoHost).toHaveBeenCalledWith(
         'user-1',
         dto,
@@ -235,10 +223,7 @@ describe('AudioRoomsController', () => {
       const room: any = { id: 'room-1', co_host_id: null };
       (audioRoomsService.removeCoHost as jest.Mock).mockResolvedValue(room);
 
-      const result = await controller.removeCoHost(
-        { id: 'user-1' } as any,
-        dto,
-      );
+      const result = await controller.removeCoHost({ id: 'user-1' }, dto);
       expect(audioRoomsService.removeCoHost).toHaveBeenCalledWith(
         'user-1',
         dto,
@@ -259,7 +244,7 @@ describe('AudioRoomsController', () => {
       const caption: any = { id: 'cap-1', text_content: 'Caption text' };
       (audioRoomsService.sendCaption as jest.Mock).mockResolvedValue(caption);
 
-      const result = await controller.sendCaption({ id: 'user-1' } as any, dto);
+      const result = await controller.sendCaption({ id: 'user-1' }, dto);
       expect(audioRoomsService.sendCaption).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual(caption);
     });
@@ -291,10 +276,7 @@ describe('AudioRoomsController', () => {
       ];
       (audioRoomsService.getCallLogs as jest.Mock).mockResolvedValue(logs);
 
-      const result = await controller.getCallLogs(
-        { id: 'user-1' } as any,
-        query,
-      );
+      const result = await controller.getCallLogs({ id: 'user-1' }, query);
       expect(audioRoomsService.getCallLogs).toHaveBeenCalledWith(
         'user-1',
         query,
@@ -315,7 +297,7 @@ describe('AudioRoomsController', () => {
       const room: any = { id: 'room-1', is_active: false };
       (audioRoomsService.archiveRoom as jest.Mock).mockResolvedValue(room);
 
-      const result = await controller.archiveRoom({ id: 'user-1' } as any, dto);
+      const result = await controller.archiveRoom({ id: 'user-1' }, dto);
       expect(audioRoomsService.archiveRoom).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual(room);
     });

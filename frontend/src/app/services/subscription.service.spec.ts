@@ -41,7 +41,8 @@ describe('SubscriptionService', () => {
     expect(req.request.method).toBe('GET');
     req.flush(response);
 
-    await expect(resultPromise).toBeResolvedTo(response);
+    const result = await resultPromise;
+    expect(result).toEqual(response);
   });
 
   it('should cancel the subscription', async () => {
@@ -52,7 +53,8 @@ describe('SubscriptionService', () => {
     expect(req.request.method).toBe('POST');
     req.flush(response);
 
-    await expect(resultPromise).resolves.toEqual(response);
+    const result = await resultPromise;
+    expect(result).toEqual(response);
   });
 
   it('should resume the subscription', async () => {
@@ -63,7 +65,8 @@ describe('SubscriptionService', () => {
     expect(req.request.method).toBe('POST');
     req.flush(response);
 
-    await expect(resultPromise).resolves.toEqual(response);
+    const result = await resultPromise;
+    expect(result).toEqual(response);
   });
 
   it('should fetch billing history invoices', async () => {
@@ -85,7 +88,8 @@ describe('SubscriptionService', () => {
     expect(req.request.method).toBe('GET');
     req.flush(response);
 
-    await expect(resultPromise).resolves.toEqual(response);
+    const result = await resultPromise;
+    expect(result).toEqual(response);
   });
 
   it('should create a billing portal session', async () => {
@@ -96,6 +100,7 @@ describe('SubscriptionService', () => {
     expect(req.request.method).toBe('POST');
     req.flush(response);
 
-    await expect(resultPromise).resolves.toEqual(response);
+    const result = await resultPromise;
+    expect(result).toEqual(response);
   });
 });

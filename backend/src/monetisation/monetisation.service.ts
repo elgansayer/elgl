@@ -108,7 +108,10 @@ export class MonetisationService {
     planId: string,
     interval: 'month' | 'year',
   ): string {
-    if (planId === 'consumer_50_ukp_63_usd') {
+    if (
+      planId === 'consumer_50_ukp_63_usd' ||
+      planId === 'consumer_6_ukp_8_usd'
+    ) {
       const priceId = this.configService.get<string>('STRIPE_YEARLY_PRICE_ID');
       if (!priceId) {
         throw new BadRequestException(
@@ -163,6 +166,7 @@ export class MonetisationService {
     const tierMap: Record<string, string> = {
       consumer_8_ukp_10_usd: 'consumer',
       consumer_50_ukp_63_usd: 'consumer',
+      consumer_6_ukp_8_usd: 'consumer',
       pro_12_ukp_15_usd: 'pro',
       developer_20_ukp_26_usd: 'developer',
     };
@@ -219,9 +223,16 @@ export class MonetisationService {
 
     this.logger.log(`Received verified Stripe Webhook event: ${event.type}`);
 
-    // Helper to determine tier based on interval metadata
-    const tierForInterval = (interval: string): string =>
-      interval === 'year' ? 'developer' : 'consumer';
+    // Helper to determine tier based on planId metadata (or fallback to interval)
+    const tierForPlan = (planId?: string, interval?: string): string => {
+      if (!planId) {
+        return interval === 'year' ? 'developer' : 'consumer';
+      }
+      if (planId.startsWith('consumer_')) return 'consumer';
+      if (planId.startsWith('pro_')) return 'pro';
+      if (planId.startsWith('developer_')) return 'developer';
+      return interval === 'year' ? 'developer' : 'consumer';
+    };
 
     if (
       event.type === 'checkout.session.completed' ||
@@ -235,7 +246,7 @@ export class MonetisationService {
       const metadata = obj.metadata;
       if (metadata?.userId) {
         const tier =
-          metadata.tier ?? tierForInterval(metadata.interval ?? 'month');
+          metadata.tier ?? tierForPlan(metadata.planId, metadata.interval);
         const isActive =
           !obj.status || obj.status === 'active' || obj.status === 'trialing';
         await this.updateVipStatusFromWebhook(
@@ -338,7 +349,7 @@ export class MonetisationService {
       total_api_calls_today: metric?.total_api_calls_today ?? 0,
       avg_latency_ms: metric?.avg_latency_ms ?? 0,
       pricing_info:
-        'Developer Tier: 20 UKP / $26 USD per month | Consumer VIP: 8 UKP / $10 USD per month',
+        'Developer Tier: 20 UKP / $26 USD per month | Consumer VIP: 8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent',
     };
   }
 

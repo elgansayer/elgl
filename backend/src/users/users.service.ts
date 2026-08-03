@@ -394,7 +394,7 @@ export class UsersService {
   ): Promise<UserProfile> {
     if (dto.target_languages && dto.target_languages.length > 1 && !isVip) {
       throw new BadRequestException(
-        'Free tier allows a maximum of 1 target language. Upgrade to VIP (8 UKP / $10 USD per month) to study up to 3 languages simultaneously.',
+        'Free tier allows a maximum of 1 target language. Upgrade to VIP (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent) to study up to 3 languages simultaneously.',
       );
     }
 
@@ -406,7 +406,7 @@ export class UsersService {
 
     if (dto.mock_location && !isVip) {
       throw new BadRequestException(
-        'Location spoofing requires a VIP subscription (8 UKP / $10 USD per month).',
+        'Location spoofing requires a VIP subscription (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent).',
       );
     }
 
@@ -981,7 +981,7 @@ export class UsersService {
   ): Promise<UserProfile> {
     if (settings.incognito_visits && !isVip) {
       throw new BadRequestException(
-        'Incognito profile visiting requires a VIP subscription (8 UKP / $10 USD per month).',
+        'Incognito profile visiting requires a VIP subscription (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent).',
       );
     }
 
@@ -1098,7 +1098,7 @@ export class UsersService {
         id: 'vip',
         name: 'VIP User',
         description:
-          'This user has a VIP subscription (8 UKP / $10 USD per month)',
+          'This user has a VIP subscription (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent)',
       });
     }
     if (profile.is_serious_learner) {

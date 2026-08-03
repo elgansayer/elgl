@@ -50,7 +50,7 @@ export class NlpService {
 
     if (currentCount >= 10) {
       throw new BadRequestException(
-        'Daily AI request limit (10 requests/day) reached on Free Tier. Upgrade to VIP (8 UKP / $10 USD per month) for unlimited AI translations, grammar checks, and pronunciation scoring!',
+        'Daily AI request limit (10 requests/day) reached on Free Tier. Upgrade to VIP (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent) for unlimited AI translations, grammar checks, and pronunciation scoring!',
       );
     }
 

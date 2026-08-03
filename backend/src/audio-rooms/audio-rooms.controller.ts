@@ -10,7 +10,6 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
@@ -46,6 +45,12 @@ import { CreatePrivatePartyDto } from './dto/create-private-party.dto';
 import { SendReactionDto } from './dto/send-reaction.dto';
 import { ReorderStageDto } from './dto/reorder-stage.dto';
 
+// Type representing the authenticated user fields used in the controller.
+interface AuthUser {
+  id: string;
+  email?: string;
+}
+
 @Controller('audio-rooms')
 @UseGuards(SupabaseAuthGuard)
 export class AudioRoomsController {
@@ -54,14 +59,16 @@ export class AudioRoomsController {
   @Post('create')
   @HttpCode(HttpStatus.CREATED)
   async createRoom(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: CreateAudioRoomDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
     return await this.audioRoomsService.createRoom(user.id, dto);
+  }
+
   @Post('archive-recording')
   async archiveRecording(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: ArchiveRoomDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -70,7 +77,7 @@ export class AudioRoomsController {
 
   @Post('token')
   async generateToken(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: AudioRoomTokenDto,
   ): Promise<RoomTokenResponse | null> {
     if (!user) return null;
@@ -102,7 +109,7 @@ export class AudioRoomsController {
 
   @Get('private')
   async getPrivateRooms(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
   ): Promise<AudioRoomRecord[]> {
     if (!user) return [];
     return this.audioRoomsService.getInvitedPrivateRooms(user.id);
@@ -110,7 +117,7 @@ export class AudioRoomsController {
 
   @Get('call-logs')
   async getCallLogs(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Query() query: GetCallLogsQueryDto,
   ): Promise<CallLogRecord[]> {
     if (!user) return [];
@@ -138,7 +145,7 @@ export class AudioRoomsController {
 
   @Post(':id/stage/reorder')
   async reorderSpeakers(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Param('id') roomId: string,
     @Body() dto: ReorderStageDto,
   ): Promise<AudioRoomRecord | null> {
@@ -152,7 +159,7 @@ export class AudioRoomsController {
 
   @Post(':id/stage/clear')
   async clearStage(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Param('id') roomId: string,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -161,7 +168,7 @@ export class AudioRoomsController {
 
   @Post('language-parties')
   async createLanguageParty(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: CreateLanguagePartyDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -170,7 +177,7 @@ export class AudioRoomsController {
 
   @Post('private')
   async createPrivateParty(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: CreatePrivatePartyDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -179,7 +186,7 @@ export class AudioRoomsController {
 
   @Post('raise-hand')
   async raiseHand(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: RaiseHandDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -188,7 +195,7 @@ export class AudioRoomsController {
 
   @Post('approve-speaker')
   async approveSpeaker(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: ApproveSpeakerDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -197,7 +204,7 @@ export class AudioRoomsController {
 
   @Post('mute-speaker')
   async muteSpeaker(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: DemoteSpeakerDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -206,7 +213,7 @@ export class AudioRoomsController {
 
   @Post('demote-speaker')
   async demoteSpeaker(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: DemoteSpeakerDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -215,7 +222,7 @@ export class AudioRoomsController {
 
   @Post('invite-co-host')
   async inviteCoHost(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: InviteCoHostDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -224,7 +231,7 @@ export class AudioRoomsController {
 
   @Post('remove-co-host')
   async removeCoHost(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: RemoveCoHostDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -233,7 +240,7 @@ export class AudioRoomsController {
 
   @Post('captions')
   async sendCaption(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: SendCaptionDto,
   ): Promise<CaptionRecord | null> {
     if (!user) return null;
@@ -247,7 +254,7 @@ export class AudioRoomsController {
 
   @Post('archive')
   async archiveRoom(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: ArchiveRoomDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
@@ -256,7 +263,7 @@ export class AudioRoomsController {
 
   @Post(':roomId/notes')
   async addNote(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Param('roomId') roomId: string,
     @Body() dto: CreateVoiceRoomNoteDto,
   ): Promise<VoiceRoomNote | null> {
@@ -271,7 +278,7 @@ export class AudioRoomsController {
 
   @Delete(':roomId/notes/:noteId')
   async deleteNote(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Param('roomId') _roomId: string,
     @Param('noteId') noteId: string,
   ): Promise<void> {
@@ -296,7 +303,7 @@ export class AudioRoomsController {
 
   @Post(':roomId/polls')
   async createPoll(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Param('roomId') roomId: string,
     @Body() dto: CreatePollDto,
   ): Promise<{ poll_id: string } | null> {
@@ -306,7 +313,7 @@ export class AudioRoomsController {
 
   @Post('polls/vote')
   async submitVote(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: SubmitVoteDto,
   ): Promise<void> {
     if (!user) return;
@@ -333,7 +340,7 @@ export class AudioRoomsController {
 
   @Post('soundboard/play')
   async playSound(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Body() dto: PlaySoundDto,
   ): Promise<{ success: boolean; soundUrl: string | null } | null> {
     if (!user) return null;
@@ -342,12 +349,11 @@ export class AudioRoomsController {
 
   @Post(':roomId/reactions')
   async sendReaction(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: AuthUser | null,
     @Param('roomId') roomId: string,
     @Body() dto: SendReactionDto,
   ): Promise<{ emojiId: string; animationUrl: string } | null> {
     if (!user) return null;
     return await this.audioRoomsService.sendReaction(user.id, roomId, dto);
-  }
   }
 }

@@ -21,17 +21,21 @@ export class SupabaseAuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing authorization header');
     }
 
-    const token = (authHeader as string).replace('Bearer ', '');
+    const token =
+      typeof authHeader === 'string' ? authHeader.replace('Bearer ', '') : '';
     try {
-      const {
-        data: { user },
-      } = await this.supabaseService.getClient().auth.getUser(token);
-
-      if (!user) {
+      const authResult = await this.supabaseService
+        .getClient()
+        .auth.getUser(token);
+      const authUser = authResult?.data?.user;
+      if (!authUser) {
         throw new UnauthorizedException('Invalid token');
       }
 
-      request.user = { id: user.id, email: user.email };
+      request.user = {
+        id: authUser.id,
+        email: authUser.email,
+      };
       return true;
     } catch {
       throw new UnauthorizedException('Invalid token');
