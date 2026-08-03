@@ -1,9 +1,9 @@
 import {
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
-  OnModuleInit,
 } from '@nestjs/common';
 import { SendReactionDto } from './dto/send-reaction.dto';
 import { ConfigService } from '@nestjs/config';
@@ -69,23 +69,22 @@ interface UserProfileRow {
 }
 
 @Injectable()
-export class AudioRoomsService implements OnModuleInit {
+export class AudioRoomsService {
   private readonly logger = new Logger(AudioRoomsService.name);
-  private roomServiceClient!: RoomServiceClient;
   private livekitUrl = '';
   private apiKey = '';
   private secretKey = '';
 
   constructor(
     private readonly configService: ConfigService,
+    @Inject('LIVEKIT_ROOM_SERVICE_CLIENT')
+    private readonly roomServiceClient: RoomServiceClient,
     private readonly supabaseService: SupabaseService,
     private readonly usersService: UsersService,
     private readonly centrifugoService: CentrifugoService,
     private readonly transcriptEgress: TranscriptEgressService,
     private readonly nlpService: NlpService,
-  ) {}
-
-  onModuleInit() {
+  ) {
     this.livekitUrl =
       this.configService.get<string>('LIVEKIT_URL') ||
       'https://mock.livekit.cloud';
@@ -93,19 +92,6 @@ export class AudioRoomsService implements OnModuleInit {
     this.secretKey =
       this.configService.get<string>('LIVEKIT_SECRET') ||
       'secretkey012345678901234567890123456789';
-
-    try {
-      this.roomServiceClient = new RoomServiceClient(
-        this.livekitUrl,
-        this.apiKey,
-        this.secretKey,
-      );
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      this.logger.warn(
-        `Could not init LiveKit RoomServiceClient (${msg}). Will fall back to local/mock.`,
-      );
-    }
   }
 
   async disableBiometricLock(

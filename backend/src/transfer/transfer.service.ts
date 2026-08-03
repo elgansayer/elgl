@@ -67,7 +67,7 @@ export class TransferService {
    */
   async swapTokenForSession(swapToken: string) {
     try {
-      const payload = jwt.verify(swapToken, this.secret);
+      const payload = await jwt.verify(swapToken, this.secret);
       if (typeof payload === 'string') {
         return null;
       }
