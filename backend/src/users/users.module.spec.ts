@@ -10,6 +10,7 @@ import { MediaModule } from '../media/media.module';
 import { XpModule } from '../xp/xp.module';
 import { TwoFactorModule } from '../two-factor/two-factor.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
+import { Test, TestingModule } from '@nestjs/testing';
 
 type ProviderToken = unknown;
 

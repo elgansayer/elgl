@@ -298,7 +298,7 @@ export class SupabaseService {
     const { data: users, error: usersError } = await this.supabase
       .from<'users'>('users')
       .select('*')
-      .in('id', viewerIds)
+      .in('id', viewerIds as string[])
       .returns<UserProfile[]>();
 
     if (usersError) {

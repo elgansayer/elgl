@@ -50,7 +50,7 @@ export class MediaService implements OnModuleInit {
         secretAccessKey,
       },
     });
-  }
+  } // Closing bracket for the class definition
 
   async generatePresignedUrl(
     userId: string,
@@ -310,4 +310,34 @@ export class MediaService implements OnModuleInit {
 
     return { avatarUrl };
   }
-}
+  async markMediaAsViewed(userId: string, mediaId: string): Promise<{ success: boolean }> {
+    const supabase = this.supabaseService.getClient();
+
+    // Check if the media exists and belongs to the user
+    const { data: media, error: fetchError } = await supabase
+      .from('media')
+      .select('id, view_once, viewed')
+      .eq('id', mediaId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !media) {
+      throw new BadRequestException('Media not found or access denied');
+    }
+
+    if (!media.view_once || media.viewed) {
+      throw new BadRequestException('Media is not view-once or already viewed');
+    }
+
+    // Mark the media as viewed
+    const { error: updateError } = await supabase
+      .from('media')
+      .update({ viewed: true })
+      .eq('id', mediaId);
+
+    if (updateError) {
+      throw new Error('Failed to mark media as viewed');
+    }
+
+    return { success: true };
+  }
