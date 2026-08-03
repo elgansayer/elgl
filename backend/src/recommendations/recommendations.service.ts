@@ -47,8 +47,11 @@ export class RecommendationsService {
           .select('id, is_serious_learner')
           .neq('id', user.id)
           .eq('privacy_hide_from_search', false)
-          .in('native_language', targetLanguages)
-          .contains('target_languages', [user.native_language])
+          .in('native_language', targetLanguages ?? [])
+          .contains(
+            'target_languages',
+            user.native_language ? [user.native_language] : [],
+          )
           .order('is_serious_learner', { ascending: false })
           .limit(10);
 
@@ -86,7 +89,7 @@ export class RecommendationsService {
       throw new Error(tagsError.message);
     }
 
-    const tags = (ownTags ?? []).map((r) => r.tag);
+    const tags = (ownTags ?? []).map((r) => r.tag as string);
     if (tags.length === 0) {
       return [];
     }

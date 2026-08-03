@@ -48,8 +48,18 @@ export class ChatService {
     private readonly xpService: XpService,
   ) {}
 
-  generateConnectionToken(userId: string): { token: string } {
-    return this.centrifugoService.generateConnectionToken(userId);
+  async generateCentrifugoToken(userId: string): Promise<string> {
+    const payload = {
+      sub: userId,
+      exp: Math.floor(Date.now() / 1000) + 3600, // Token expires in 1 hour
+    };
+
+    try {
+      const token = await this.centrifugoService.signJwt(payload);
+      return token;
+    } catch (error) {
+      throw new Error(`Failed to generate Centrifugo token: ${error.message}`);
+    }
   }
 
   private async generateCorrectionPayloadIfNeeded(

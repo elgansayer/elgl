@@ -58,7 +58,7 @@ export class SupabaseService {
   async getRecentlyJoinedNativeSpeakers(limit: number = 10): Promise<UserProfile[]> {
     const { data, error } = await this.supabase
       .from('users')
-      .select('*')
+      .select('*') as { data: UserProfile[] | null, error: any };
       .order('joined_at', { ascending: false })
       .limit(limit)
       .returns<UserProfile[]>();
@@ -107,7 +107,7 @@ export class SupabaseService {
   async getDailyStreak(userId: string): Promise<number> {
     const { data, error } = await this.supabase
       .from('user_streaks')
-      .select('streak_count')
+      .select('streak_count') as { data: { streak_count: number } | null, error: any };
       .eq('user_id', userId)
       .single<{ streak_count: number }>();
 

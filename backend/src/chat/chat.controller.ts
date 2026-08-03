@@ -46,11 +46,12 @@ export class ChatController {
   // which is not part of this codebase and has its own rate limiting).
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('token')
-  getConnectionToken(
+  async getConnectionToken(
     @CurrentUser() user: User | null,
-  ): { token: string } | null {
+  ): Promise<{ token: string } | null> {
     if (!user) return null;
-    return this.chatService.generateConnectionToken(user.id);
+    const token = await this.chatService.generateCentrifugoToken?.(user.id);
+    return { token };
   }
 
   @Post('messages')

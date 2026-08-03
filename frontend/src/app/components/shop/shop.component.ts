@@ -58,7 +58,6 @@ export class ShopComponent {
   message = signal<string>('');
 
   private catalogResource = resource<CatalogItem[], number>({
-    request: () => this.reload(),
     loader: async () => {
       const token = this.authService.getAccessToken();
       const response = await firstValueFrom(
