@@ -156,6 +156,35 @@ export class MonetisationService {
     return priceId;
   }
 
+  /**
+   * Verifies the Stripe webhook signature using the configured webhook secret.
+   * Returns a verified Stripe event object.
+   */
+  private verifyStripeSignature(
+    rawBody: Buffer,
+    signature: string,
+  ): Stripe.Event {
+    const webhookSecret = this.configService.get<string>(
+      'STRIPE_WEBHOOK_SECRET',
+    );
+    if (!webhookSecret) {
+      throw new Error('STRIPE_WEBHOOK_SECRET is not configured');
+    }
+
+    try {
+      return this.stripe.webhooks.constructEvent(
+        rawBody,
+        signature,
+        webhookSecret,
+      );
+    } catch (err: unknown) {
+      const error = err as Error;
+      const message = error.message || 'Unknown error';
+      this.logger.error(`Webhook signature verification failed: ${message}`);
+      throw new BadRequestException(`Webhook Error: ${message}`);
+    }
+  }
+
   async createCheckoutSession(
     userId: string,
     planId: string,
@@ -200,26 +229,7 @@ export class MonetisationService {
     rawBody: Buffer,
     signature: string,
   ): Promise<{ received: boolean; status: string }> {
-    const webhookSecret = this.configService.get<string>(
-      'STRIPE_WEBHOOK_SECRET',
-    );
-    if (!webhookSecret) {
-      throw new Error('STRIPE_WEBHOOK_SECRET is not configured');
-    }
-
-    let event: Stripe.Event;
-    try {
-      event = this.stripe.webhooks.constructEvent(
-        rawBody,
-        signature,
-        webhookSecret,
-      );
-    } catch (err: unknown) {
-      const error = err as Error;
-      const message = error.message || 'Unknown error';
-      this.logger.error(`Webhook signature verification failed: ${message}`);
-      throw new BadRequestException(`Webhook Error: ${message}`);
-    }
+    const event = this.verifyStripeSignature(rawBody, signature);
 
     this.logger.log(`Received verified Stripe Webhook event: ${event.type}`);
 

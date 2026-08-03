@@ -493,6 +493,10 @@ describe('HelloTalk API E2E Integration Suite', () => {
 
     it('/monetisation/analytics (GET) - should return developer analytics with dual currency pricing', () => {
       mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { study_streak_days: 10, correction_ratio: 0.9 },
+        error: null,
+      });
+      mockQueryBuilder.single.mockResolvedValueOnce({
         data: {
           id: 'e2e-user-1',
           is_vip: true,

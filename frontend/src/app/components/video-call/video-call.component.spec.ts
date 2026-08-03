@@ -108,7 +108,7 @@ describe('VideoCallComponent - screen sharing', () => {
       get: () => null,
     });
 
-    await expect(component.togglePip()).resolves.toBeUndefined();
+    await component.togglePip();
     expect(component.isInPip()).toBe(false);
   });
 
@@ -137,7 +137,7 @@ describe('VideoCallComponent - screen sharing', () => {
       new Error('Permission denied'),
     );
 
-    await expect(component.toggleScreenShare()).resolves.toBeUndefined();
+    await component.toggleScreenShare();
   });
 
   it('flags isScreenSharing when the local screen-share track publishes', () => {

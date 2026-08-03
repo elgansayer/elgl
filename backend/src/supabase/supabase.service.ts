@@ -853,6 +853,153 @@ export interface Database {
         }>;
         Relationships: [];
       };
+      apple_subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          original_transaction_id: string;
+          product_id: string;
+          transaction_id: string;
+          expires_date?: string | null;
+          purchase_date?: string | null;
+          status?: string | null;
+          created_at?: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          user_id: string;
+          original_transaction_id: string;
+          product_id: string;
+          transaction_id: string;
+          expires_date?: string | null;
+          purchase_date?: string | null;
+          status?: string | null;
+          created_at?: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          user_id?: string;
+          original_transaction_id?: string;
+          product_id?: string;
+          transaction_id?: string;
+          expires_date?: string | null;
+          purchase_date?: string | null;
+          status?: string | null;
+          created_at?: string;
+        }>;
+        Relationships: [];
+      };
+      google_play_purchases: {
+        Row: {
+          id: string;
+          user_id: string;
+          purchase_token: string;
+          subscription_id: string;
+          status?: string | null;
+          created_at?: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          user_id: string;
+          purchase_token: string;
+          subscription_id: string;
+          status?: string | null;
+          created_at?: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          user_id?: string;
+          purchase_token?: string;
+          subscription_id?: string;
+          status?: string | null;
+          created_at?: string;
+        }>;
+        Relationships: [];
+      };
+      curated_articles: {
+        Row: {
+          id: string;
+          title: string;
+          cefr_level?: string | null;
+          language?: string | null;
+          source_url?: string | null;
+          content_text?: string | null;
+          word_count?: number | null;
+          difficulty_rating?: number | null;
+          audio_url?: string | null;
+          image_url?: string | null;
+          tags?: string[] | null;
+          created_at?: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          title: string;
+          cefr_level?: string | null;
+          language?: string | null;
+          source_url?: string | null;
+          content_text?: string | null;
+          word_count?: number | null;
+          difficulty_rating?: number | null;
+          audio_url?: string | null;
+          image_url?: string | null;
+          tags?: string[] | null;
+          created_at?: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          title?: string;
+          cefr_level?: string | null;
+          language?: string | null;
+          source_url?: string | null;
+          content_text?: string | null;
+          word_count?: number | null;
+          difficulty_rating?: number | null;
+          audio_url?: string | null;
+          image_url?: string | null;
+          tags?: string[] | null;
+          created_at?: string;
+        }>;
+        Relationships: [];
+      };
+      curated_dialogues: {
+        Row: {
+          id: string;
+          title: string;
+          cefr_level?: string | null;
+          language?: string | null;
+          source_url?: string | null;
+          lines?: unknown[] | null;
+          audio_url?: string | null;
+          image_url?: string | null;
+          tags?: string[] | null;
+          created_at?: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          title: string;
+          cefr_level?: string | null;
+          language?: string | null;
+          source_url?: string | null;
+          lines?: unknown[] | null;
+          audio_url?: string | null;
+          image_url?: string | null;
+          tags?: string[] | null;
+          created_at?: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          title?: string;
+          cefr_level?: string | null;
+          language?: string | null;
+          source_url?: string | null;
+          lines?: unknown[] | null;
+          audio_url?: string | null;
+          image_url?: string | null;
+          tags?: string[] | null;
+          created_at?: string;
+        }>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
