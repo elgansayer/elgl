@@ -214,7 +214,7 @@ export class ChatService {
 
     const receiverId =
       roomMembers && roomMembers.length > 0
-        ? (roomMembers[0] as { user_id: string }).user_id
+        ? roomMembers[0].user_id
         : undefined;
 
     if (roomMembers && roomMembers.length > 0) {
@@ -970,7 +970,7 @@ export class ChatService {
       throw new Error('Original message not found');
     }
 
-    if ((originalMsg as any).message_type !== 'text') {
+    if (!isRecord(originalMsg) || originalMsg.message_type !== 'text') {
       throw new BadRequestException('Only text messages can be corrected');
     }
 
@@ -1010,7 +1010,7 @@ export class ChatService {
       throw new Error('Message not found');
     }
 
-    if (originalMsg.message_type !== 'text') {
+    if (!isRecord(originalMsg) || originalMsg.message_type !== 'text') {
       throw new BadRequestException('Only text messages can be fixed');
     }
 

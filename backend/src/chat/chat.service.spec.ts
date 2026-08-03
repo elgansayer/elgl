@@ -66,9 +66,7 @@ describe('ChatService', () => {
         {
           provide: CentrifugoService,
           useValue: {
-            generateConnectionToken: jest
-              .fn()
-              .mockReturnValue({ token: 'mock-token' }),
+            signJwt: jest.fn().mockResolvedValue('mock-token'),
             publish: jest.fn().mockResolvedValue(true),
           },
         },
@@ -130,13 +128,14 @@ describe('ChatService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('generateConnectionToken', () => {
-    it('should generate connection token via CentrifugoService', () => {
-      const result = await service.generateConnectionToken('user-1');
-      expect(centrifugoService.generateConnectionToken).toHaveBeenCalledWith(
-        'user-1',
-      );
-      expect(result).toEqual({ token: 'mock-token' });
+  describe('generateCentrifugoToken', () => {
+    it('should generate token via CentrifugoService', async () => {
+      const result = await service.generateCentrifugoToken('user-1');
+      expect(centrifugoService.signJwt).toHaveBeenCalledWith({
+        sub: 'user-1',
+        exp: expect.any(Number),
+      });
+      expect(result).toBe('mock-token');
     });
   });
 

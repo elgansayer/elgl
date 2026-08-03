@@ -32,7 +32,7 @@
       [currentCoverUrl]="profile()?.cover_photo_url || ''"
       (coverPhotoUploaded)="onCoverUploaded($event)"
     />
-    <section class="app-card app-padded">
+    <div class="app-card app-padded">
       <div
         class="flex flex-wrap items-center justify-between gap-4 border-b border-surface-100 pb-4"
       >
@@ -115,11 +115,11 @@
           @if (visitorsError()) {
             <div class="text-xs text-red-400">{{ visitorsError() }}</div>
           }
-          @if (!visitorsLoading() && !visitorsError() && visitors() && visitors().length > 0) {
+          @if (!visitorsLoading() && !visitorsError() && (visitors()?.length ?? 0) > 0) {
             <div class="flex flex-wrap gap-2">
               @for (visit of visitors(); track visit.id) {
                 <div class="flex items-center gap-2 rounded-full bg-surface-200 ps-2 pe-3 pt-1 pb-1 text-xs">
-                  @if (visit.visitor && visit.visitor.avatar_url && visit.visitor.id !== 'hidden-vip-only') {
+                  @if (visit.visitor?.avatar_url && visit.visitor?.id !== 'hidden-vip-only') {
                     <img
                       [src]="visit.visitor?.avatar_url"
                       alt="avatar"
@@ -266,7 +266,7 @@
         </div>
       }
 
-      @if (!isEditing() && profile()) {
+      @if (!isEditing() && profile() !== undefined) {
         <div class="mt-4">
           <app-achievements [userId]="profile()!.id" />
         </div>
@@ -723,12 +723,15 @@
           </div>
         </form>
       }
-    </section>
+    </div>
+  }
 
-@if (showConfetti()) {
-  <app-celebration-overlay
-    [milestone]="milestoneForConfetti()"
-    [visible]="showConfetti()"
-    (dismissed)="showConfetti.set(false)"
-  />
-}
+  @if (showConfetti()) {
+    <app-celebration-overlay
+      [milestone]="milestoneForConfetti()"
+      [visible]="showConfetti()"
+      (dismissed)="showConfetti.set(false)"
+    />
+  }
+
+</div>

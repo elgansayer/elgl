@@ -3,9 +3,9 @@
     <span
       class="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-1.5"
     >
-      <span>✏️ Language Correction Diff</span>
+      <span>✏️ {{ 'visual_diff.title' | t }}</span>
     </span>
-    <span class="text-[11px] font-medium text-text-secondary">Intl.Segmenter word engine</span>
+    <span class="text-[11px] font-medium text-text-secondary">{{ 'visual_diff.engine' | t }}</span>
   </div>
 
   <div class="text-sm md:text-base leading-relaxed break-words font-medium">
@@ -16,13 +16,13 @@
         }
         @if (seg.type === 'removed') {
           <span
-            class="line-through text-red-600 bg-red-500/20 px-1 py-0.5 rounded mx-0.5 select-none"
+            class="line-through text-red-600 bg-red-500/20 ps-1 pe-1 py-0.5 rounded ms-0.5 me-0.5 select-none"
             >{{ seg.text }}</span
           >
         }
         @if (seg.type === 'added') {
           <span
-            class="text-emerald-400 bg-emerald-500/20 font-bold px-1 py-0.5 rounded mx-0.5 shadow-sm"
+            class="text-emerald-400 bg-emerald-500/20 font-bold ps-1 pe-1 py-0.5 rounded ms-0.5 me-0.5 shadow-sm"
             >{{ seg.text }}</span
           >
         }
@@ -34,7 +34,7 @@
     <div
       class="mt-3 pt-3 border-t border-amber-500/30/60 text-xs text-text-secondary bg-surface-200/70 p-2.5 rounded-app"
     >
-      <span class="font-bold text-amber-400 block mb-0.5">💡 Tutor explanation:</span>
+      <span class="font-bold text-amber-400 block mb-0.5">💡 {{ 'visual_diff.explanation_label' | t }}:</span>
       {{ explanation() }}
     </div>
   }

@@ -2,9 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UserStatisticsQueryDto } from './dto/user-statistics-query.dto';
 
+type SupabaseClient = ReturnType<SupabaseService['getClient']>;
+
 @Injectable()
 export class UserStatisticsService {
-  private readonly supabase;
+  private readonly supabase: SupabaseClient;
 
   constructor(private readonly supabaseService: SupabaseService) {
     this.supabase = this.supabaseService.getClient();

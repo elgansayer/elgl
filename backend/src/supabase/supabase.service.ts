@@ -498,6 +498,125 @@ export interface Database {
         Update: Partial<ChatMessageRow>;
         Relationships: [];
       };
+      notification_preferences: {
+        Row: {
+          user_id: string;
+          new_message: { push: boolean; email: boolean; in_app: boolean };
+          call_invite: { push: boolean; email: boolean; in_app: boolean };
+          moment_like: { push: boolean; email: boolean; in_app: boolean };
+          moment_comment: { push: boolean; email: boolean; in_app: boolean };
+          correction: { push: boolean; email: boolean; in_app: boolean };
+          gift: { push: boolean; email: boolean; in_app: boolean };
+          profile_view: { push: boolean; email: boolean; in_app: boolean };
+          study_reminder: { push: boolean; email: boolean; in_app: boolean };
+          friend_request: { push: boolean; email: boolean; in_app: boolean };
+          audio_room_invite: { push: boolean; email: boolean; in_app: boolean };
+          new_follower: { push: boolean; email: boolean; in_app: boolean };
+          quiet_hours_start: string | null;
+          quiet_hours_end: string | null;
+          do_not_disturb: boolean;
+          custom_tone_url: string | null;
+          vibration_pattern: string | null;
+          updated_at: string;
+        };
+        Insert: Partial<{
+          user_id: string;
+          new_message?: { push: boolean; email: boolean; in_app: boolean };
+          call_invite?: { push: boolean; email: boolean; in_app: boolean };
+          moment_like?: { push: boolean; email: boolean; in_app: boolean };
+          moment_comment?: { push: boolean; email: boolean; in_app: boolean };
+          correction?: { push: boolean; email: boolean; in_app: boolean };
+          gift?: { push: boolean; email: boolean; in_app: boolean };
+          profile_view?: { push: boolean; email: boolean; in_app: boolean };
+          study_reminder?: { push: boolean; email: boolean; in_app: boolean };
+          friend_request?: { push: boolean; email: boolean; in_app: boolean };
+          audio_room_invite?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+          };
+          new_follower?: { push: boolean; email: boolean; in_app: boolean };
+          quiet_hours_start?: string | null;
+          quiet_hours_end?: string | null;
+          do_not_disturb?: boolean;
+          custom_tone_url?: string | null;
+          vibration_pattern?: string | null;
+          updated_at?: string;
+        }>;
+        Update: Partial<{
+          user_id?: string;
+          new_message?: { push: boolean; email: boolean; in_app: boolean };
+          call_invite?: { push: boolean; email: boolean; in_app: boolean };
+          moment_like?: { push: boolean; email: boolean; in_app: boolean };
+          moment_comment?: { push: boolean; email: boolean; in_app: boolean };
+          correction?: { push: boolean; email: boolean; in_app: boolean };
+          gift?: { push: boolean; email: boolean; in_app: boolean };
+          profile_view?: { push: boolean; email: boolean; in_app: boolean };
+          study_reminder?: { push: boolean; email: boolean; in_app: boolean };
+          friend_request?: { push: boolean; email: boolean; in_app: boolean };
+          audio_room_invite?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+          };
+          new_follower?: { push: boolean; email: boolean; in_app: boolean };
+          quiet_hours_start?: string | null;
+          quiet_hours_end?: string | null;
+          do_not_disturb?: boolean;
+          custom_tone_url?: string | null;
+          vibration_pattern?: string | null;
+          updated_at?: string;
+        }>;
+        Relationships: [];
+      };
+      chat_rooms: {
+        Row: {
+          id: string;
+          title: string | null;
+          is_online: boolean | null;
+          is_pinned: boolean | null;
+          is_locked?: boolean | null;
+          created_at?: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          title?: string | null;
+          is_online?: boolean | null;
+          is_pinned?: boolean | null;
+          is_locked?: boolean | null;
+          created_at?: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          title?: string | null;
+          is_online?: boolean | null;
+          is_pinned?: boolean | null;
+          is_locked?: boolean | null;
+          created_at?: string;
+        }>;
+        Relationships: [];
+      };
+      chat_room_members: {
+        Row: {
+          user_id: string;
+          room_id: string;
+          is_locked: boolean;
+          created_at?: string;
+        };
+        Insert: Partial<{
+          user_id: string;
+          room_id: string;
+          is_locked?: boolean;
+          created_at?: string;
+        }>;
+        Update: Partial<{
+          user_id?: string;
+          room_id?: string;
+          is_locked?: boolean;
+          created_at?: string;
+        }>;
+        Relationships: [];
+      };
       login_history: {
         Row: LoginHistoryRow;
         Insert: Partial<LoginHistoryRow>;
