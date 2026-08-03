@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -6,8 +6,9 @@ import { environment } from '../../environments/environment';
 export interface Milestone {
   id: string;
   title: string;
-  description?: string;
+  description?: string | null;
   completed: boolean;
+  completedAt?: string | null;
   createdAt?: string;
 }
 
@@ -20,32 +21,31 @@ export interface MilestoneProgress {
 @Injectable({ providedIn: 'root' })
 export class MilestoneService {
   private http = inject(HttpClient);
-  readonly milestones = signal<Milestone[]>([]);
-  readonly progress = signal<MilestoneProgress>({ total: 0, completed: 0, percentage: 0 });
+  private readonly apiUrl = `${environment.apiUrl}/milestones`;
 
-  async fetchMilestones() {
-    try {
-      const data = await firstValueFrom(
-        this.http.get<Milestone[]>(`${environment.apiUrl}/milestones`),
-      );
-      this.milestones.set(data ?? []);
-    } catch {
-      // fallback mock data
-      this.milestones.set([
-        { id: '1', title: 'Complete 10 flashcards', completed: false },
-        { id: '2', title: 'Have 5 voice conversations', completed: false },
-      ]);
-    }
+  getMilestones(): Promise<Milestone[]> {
+    return firstValueFrom(this.http.get<Milestone[]>(this.apiUrl));
   }
 
-  async getProgress() {
-    try {
-      const data = await firstValueFrom(
-        this.http.get<MilestoneProgress>(`${environment.apiUrl}/milestones/progress`),
-      );
-      if (data) this.progress.set(data);
-    } catch {
-      // ignore
-    }
+  getProgress(): Promise<MilestoneProgress> {
+    return firstValueFrom(
+      this.http.get<MilestoneProgress>(`${this.apiUrl}/progress`),
+    );
+  }
+
+  createMilestone(title: string, description?: string): Promise<Milestone> {
+    return firstValueFrom(
+      this.http.post<Milestone>(this.apiUrl, { title, description }),
+    );
+  }
+
+  markCompleted(id: string): Promise<Milestone> {
+    return firstValueFrom(
+      this.http.post<Milestone>(`${this.apiUrl}/${id}/complete`, {}),
+    );
+  }
+
+  deleteMilestone(id: string): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.apiUrl}/${id}`));
   }
 }

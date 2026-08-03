@@ -75,6 +75,10 @@ export class ProfileComponent implements OnInit {
   businessHours = '';
   websiteUrl = '';
   catalog: BusinessCatalogItem[] = [];
+  nationality = '';
+  region = '';
+  age: number | null = null;
+  gender = '';
 
   // Privacy fields
   incognitoVisits = signal<boolean>(false);
@@ -119,6 +123,10 @@ export class ProfileComponent implements OnInit {
         this.businessHours = data.business_hours || '';
         this.websiteUrl = data.website_url || '';
         this.catalog = data.catalog || [];
+        this.nationality = data.nationality || '';
+        this.region = data.region || '';
+        this.age = data.age || null;
+        this.gender = data.gender || '';
         this.checkMilestone();
       }
     } catch (e: unknown) {
@@ -166,6 +174,13 @@ export class ProfileComponent implements OnInit {
   async onVisibilityChange(value: string): Promise<void> {
     if (value === 'everyone' || value === 'vips_only' || value === 'hidden') {
       this.profileVisibility.set(value);
+    }
+  }
+
+  onIncognitoVisitsChange(event: Event): void {
+    const input = event.target;
+    if (input instanceof HTMLInputElement) {
+      this.incognitoVisits.set(input.checked);
     }
   }
 
@@ -234,7 +249,7 @@ export class ProfileComponent implements OnInit {
           privacy_profile_photo: this.privacyProfilePhoto,
           privacy_about_info: this.privacyAboutInfo,
           privacy_status: this.privacyStatus,
-          incognito_visits: this.incognitoVisits(),
+          incognito_visits: this.profile()?.is_vip ? this.incognitoVisits() : false,
         });
       } catch {
         // ignore privacy update errors
@@ -267,13 +282,13 @@ export class ProfileComponent implements OnInit {
   async blockProfile(): Promise<void> {
     const user = this.profile();
     if (!user) return;
-    const confirmed = confirm(this.i18n.translate('safety.confirmBlockBtn') || 'Are you sure you want to block this user?');
+    const confirmed = confirm(this.i18n.translate('safety.confirmBlockBtn'));
     if (!confirmed) return;
     try {
-      await this.userService.blockUser(user.id);
-      showToast(this.i18n.translate('profile.blockedSuccess') || 'User blocked', 'success', 4000);
+      await this.safetyService.blockUserAsync(user.id);
+      showToast(this.i18n.translate('profile.blockedSuccess'), 'success', 4000);
     } catch {
-      showToast(this.i18n.translate('profile.blockError') || 'Failed to block user', 'error', 4000);
+      showToast(this.i18n.translate('profile.blockError'), 'error', 4000);
     }
   }
 
@@ -281,23 +296,43 @@ export class ProfileComponent implements OnInit {
     const user = this.profile();
     if (!user) return;
     try {
-      await this.userService.unblockUser(user.id);
-      showToast(this.i18n.translate('profile.unblockUser') || 'Unblocked', 'success', 4000);
+      await this.safetyService.unblockUserAsync(user.id);
+      showToast(this.i18n.translate('profile.unblockUser'), 'success', 4000);
     } catch {
-      showToast(this.i18n.translate('profile.blockError') || 'Failed to unblock', 'error', 4000);
+      showToast(this.i18n.translate('profile.blockError'), 'error', 4000);
     }
   }
 
   async reportUser(): Promise<void> {
     const user = this.profile();
     if (!user) return;
-    const reason = prompt(this.i18n.translate('profile.reportReasonPrompt') || 'Enter a reason for reporting');
-    if (!reason) return;
     try {
-      await this.userService.reportUser(user.id, reason);
-      showToast(this.i18n.translate('profile.reportSuccess') || 'User reported', 'success', 4000);
+      const categories = await this.safetyService.getReportCategories();
+      if (!categories.length) {
+        this.errorMessage.set(this.i18n.translate('profile.reportError'));
+        return;
+      }
+      const options = categories.map((c, i) => `${i + 1}. ${c.label}`).join('\n');
+      const title = this.i18n.translate('profile.reportSelectReason');
+      const rawNumber = prompt(`${title}\n${options}`);
+      if (!rawNumber) return;
+      const idx = parseInt(rawNumber.trim(), 10) - 1;
+      if (isNaN(idx) || idx < 0 || idx >= categories.length) {
+        this.errorMessage.set(this.i18n.translate('profile.reportInvalidReason'));
+        return;
+      }
+      const category = categories[idx];
+      const descPrompt = this.i18n.translate('profile.reportDescriptionOptional');
+      const descriptionInput = prompt(descPrompt);
+      const description = descriptionInput ? descriptionInput.trim() : undefined;
+      await this.safetyService.reportUserAsync({
+        reported_id: user.id,
+        reason_category: category.value,
+        description,
+      });
+      showToast(this.i18n.translate('profile.reportSuccess'), 'success', 4000);
     } catch {
-      showToast(this.i18n.translate('profile.reportError') || 'Failed to report user', 'error', 4000);
+      showToast(this.i18n.translate('profile.reportError'), 'error', 4000);
     }
   }
 

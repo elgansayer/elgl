@@ -9,15 +9,27 @@
           class="flex items-center justify-between bg-surface rounded-lg p-3"
         >
           <div class="flex items-center gap-3">
-            <img
-              [src]="user.avatar_url || '/assets/default-avatar.png'"
-              [alt]="user.display_name"
-              class="w-10 h-10 rounded-full object-cover"
-            />
+            @if (user.avatar_url) {
+              <img
+                [src]="user.avatar_url"
+                [alt]="user.display_name ?? ''"
+                class="w-10 h-10 rounded-full object-cover"
+              />
+            } @else {
+              <div class="h-10 w-10 rounded-full bg-surface-2"></div>
+            }
             <div>
-              <p class="font-medium">{{ user.display_name }}</p>
+              <p class="font-medium">{{ user.display_name ?? '' }}</p>
               <p class="text-sm text-muted-foreground">
-                {{ user.native_language }} → {{ user.target_language }}
+                @if (user.native_language) {
+                  <span>{{ user.native_language }}</span>
+                }
+                @if (hasTargetLanguages(user)) {
+                  @if (user.native_language) {
+                    <span class="ms-1">→</span>
+                  }
+                  <span>{{ getTargetLanguagesText(user) }}</span>
+                }
               </p>
             </div>
           </div>

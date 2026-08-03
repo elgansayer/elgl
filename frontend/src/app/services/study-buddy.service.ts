@@ -9,24 +9,37 @@ export interface StudyBuddyMatch {
   avatar_url?: string;
 }
 
+export type BuddyRequestStatus = 'pending' | 'accepted' | 'declined';
+
+export interface BuddyRequester {
+  id: string;
+  display_name?: string;
+  avatar_url?: string;
+}
+
+export interface BuddyRequest {
+  id: string;
+  requesterId: string;
+  partnerId: string;
+  message?: string | null;
+  status: BuddyRequestStatus;
+  createdAt: string;
+  requester?: BuddyRequester;
+}
+
 @Injectable({ providedIn: 'root' })
 export class StudyBuddyService {
   private http = inject(HttpClient);
+  private readonly apiUrl = `${environment.apiUrl}/study-buddies`;
 
-  async requestBuddy(dto: { partnerId: string; message?: string }) {
-    try {
-      await firstValueFrom(
-        this.http.post(`${environment.apiUrl}/study-buddies/request`, dto),
-      );
-    } catch {
-      console.warn('Study buddy request failed (fallback)');
-    }
+  async requestBuddy(dto: { partnerId: string; message?: string }): Promise<void> {
+    await firstValueFrom(this.http.post(`${this.apiUrl}/request`, dto));
   }
 
   async getMatches(): Promise<StudyBuddyMatch[]> {
     try {
       const data = await firstValueFrom(
-        this.http.get<Record<string, unknown>[]>(`${environment.apiUrl}/study-buddies/matches`),
+        this.http.get<Record<string, unknown>[]>(`${this.apiUrl}/matches`),
       );
       if (!data) return [];
       const matches: StudyBuddyMatch[] = data
@@ -40,5 +53,17 @@ export class StudyBuddyService {
     } catch {
       return [];
     }
+  }
+
+  getIncomingRequests(): Promise<BuddyRequest[]> {
+    return firstValueFrom(this.http.get<BuddyRequest[]>(`${this.apiUrl}/requests`));
+  }
+
+  async acceptRequest(id: string): Promise<void> {
+    await firstValueFrom(this.http.post(`${this.apiUrl}/requests/${id}/accept`, {}));
+  }
+
+  async declineRequest(id: string): Promise<void> {
+    await firstValueFrom(this.http.post(`${this.apiUrl}/requests/${id}/decline`, {}));
   }
 }

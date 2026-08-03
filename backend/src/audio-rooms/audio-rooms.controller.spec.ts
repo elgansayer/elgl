@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AudioRoomsController } from './audio-rooms.controller';
 import { AudioRoomsService } from './audio-rooms.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { CallLogRecord } from './interfaces/call-log.interface';
 
 describe('AudioRoomsController', () => {
   let controller: AudioRoomsController;
@@ -25,6 +26,7 @@ describe('AudioRoomsController', () => {
             removeCoHost: jest.fn(),
             sendCaption: jest.fn(),
             archiveRoom: jest.fn(),
+            getCallLogs: jest.fn(),
           },
         },
       ],
@@ -240,6 +242,44 @@ describe('AudioRoomsController', () => {
       const result = await controller.sendCaption({ id: 'user-1' } as any, dto);
       expect(audioRoomsService.sendCaption).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual(caption);
+    });
+  });
+
+  describe('getCallLogs', () => {
+    it('should return an empty array if user is not provided', async () => {
+      const result = await controller.getCallLogs(null, {});
+      expect(result).toEqual([]);
+      expect(audioRoomsService.getCallLogs).not.toHaveBeenCalled();
+    });
+
+    it('should call service getCallLogs with the current user id and query', async () => {
+      const query: any = { callType: 'missed', limit: 20, offset: 0 };
+      const logs: CallLogRecord[] = [
+        {
+          id: 'log-1',
+          caller_id: 'user-2',
+          caller_name: 'Sam',
+          receiver_id: 'user-1',
+          receiver_name: 'Alex',
+          call_type: 'missed',
+          room_name: 'room-1',
+          started_at: '2026-08-01T10:00:00Z',
+          ended_at: null,
+          duration_seconds: null,
+          created_at: '2026-08-01T10:00:00Z',
+        },
+      ];
+      (audioRoomsService.getCallLogs as jest.Mock).mockResolvedValue(logs);
+
+      const result = await controller.getCallLogs(
+        { id: 'user-1' } as any,
+        query,
+      );
+      expect(audioRoomsService.getCallLogs).toHaveBeenCalledWith(
+        'user-1',
+        query,
+      );
+      expect(result).toEqual(logs);
     });
   });
 

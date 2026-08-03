@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { TwoFactorService } from '../two-factor/two-factor.service';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -63,13 +64,29 @@ export class AuthService {
     }
   }
 
-  async changePassword(userId: string, newPassword: string): Promise<void> {
+  async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    const { error } = await supabase.auth.admin.updateUserById(userId, {
-      password: newPassword,
+    const { data: userResult, error: userError } =
+      await supabase.auth.admin.getUserById(userId);
+    if (userError || !userResult?.user?.email) {
+      throw new BadRequestException('User not found');
+    }
+    const email = userResult.user.email;
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password: dto.currentPassword,
     });
-    if (error) {
-      throw new BadRequestException(error.message);
+    if (signInError) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+    const { error: updateError } = await supabase.auth.admin.updateUserById(
+      userId,
+      {
+        password: dto.newPassword,
+      },
+    );
+    if (updateError) {
+      throw new BadRequestException(updateError.message);
     }
   }
 
@@ -81,9 +98,15 @@ export class AuthService {
 
   async verifyTwoFactor(userId: string, token: string): Promise<boolean> {
     try {
-      return await this.twoFactorService.verifyToken(userId, token);
-    } catch {
-      return false;
+      const isValid = await this.twoFactorService.verifyToken(userId, token);
+      if (!isValid) {
+        throw new BadRequestException('Invalid 2FA token');
+      }
+      return true;
+    } catch (error) {
+      throw new BadRequestException(
+        error.message || 'Failed to verify 2FA token',
+      );
     }
   }
 

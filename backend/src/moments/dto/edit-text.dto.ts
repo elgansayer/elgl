@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsArray, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class EditTextDto {
   @IsString()
@@ -9,4 +9,13 @@ export class EditTextDto {
   @IsString()
   @MaxLength(1000)
   explanation?: string;
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  context?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  alternativeExpressions?: string[];
 }

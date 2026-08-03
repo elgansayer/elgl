@@ -88,4 +88,23 @@ describe('ThemeSelectorComponent', () => {
     // The second button (index 1) corresponds to "dark"
     expect(buttons[1].classList.contains('bg-blue-100')).toBe(true);
   });
+  it('should have accessible ARIA attributes for theme buttons', () => {
+    const buttons = fixture.nativeElement.querySelectorAll('button');
+    expect(buttons[0].getAttribute('aria-label')).toBe('theme.light');
+    expect(buttons[1].getAttribute('aria-label')).toBe('theme.dark');
+    expect(buttons[2].getAttribute('aria-label')).toBe('theme.system');
+  });
+
+  it('should apply RTL-safe classes for logical properties', () => {
+    const buttons = fixture.nativeElement.querySelectorAll('button');
+    expect(buttons[0].classList.contains('ps-4')).toBe(true);
+    expect(buttons[1].classList.contains('pe-4')).toBe(true);
+  });
+
+  it('should use the TranslatePipe for button labels', () => {
+    const buttons = fixture.nativeElement.querySelectorAll('button');
+    expect(buttons[0].textContent.trim()).toBe('theme.light');
+    expect(buttons[1].textContent.trim()).toBe('theme.dark');
+    expect(buttons[2].textContent.trim()).toBe('theme.system');
+  });
 });

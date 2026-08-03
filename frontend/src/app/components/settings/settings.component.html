@@ -1,6 +1,6 @@
 <div class="app-screen bg-surface-50">
   <header class="app-header">
-    <button (click)="goBack()" class="app-button-icon" aria-label="Go back">
+    <button (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
       <span class="text-xl">←</span>
     </button>
     <h1 class="app-header-title">{{ 'settings.title' | t }}</h1>
@@ -23,6 +23,23 @@
           {{ successMessage() }}
         </div>
       }
+
+      <section class="space-y-4">
+        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+          {{ 'settings.subscriptionSection' | t }}
+        </h2>
+        <div
+          class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm"
+        >
+          <button
+            (click)="goToMySubscription()"
+            class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
+          >
+            <span>{{ 'settings.mySubscription' | t }}</span>
+            <span class="text-text-secondary" aria-hidden="true">→</span>
+          </button>
+        </div>
+      </section>
 
       <section class="space-y-4">
         <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
@@ -111,6 +128,33 @@
             <input
               type="checkbox"
               [(ngModel)]="privacyHideLocation"
+              class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"
+            />
+          </label>
+
+          <div class="flex items-center justify-between p-4">
+            <span class="text-sm font-medium text-text-primary">{{
+              'settings.autoDownloadPreference' | t
+            }}</span>
+            <select
+              [ngModel]="autoDownloadPreference()"
+              (ngModelChange)="autoDownloadPreference.set($event)"
+              class="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="wifi">{{ 'settings.autoDownloadWifiOnly' | t }}</option>
+              <option value="cellular">{{ 'settings.autoDownloadCellular' | t }}</option>
+            </select>
+          </div>
+
+          <label
+            class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-200 transition-colors"
+          >
+            <span class="text-sm font-medium text-text-primary">{{
+              'settings.hideExactLocation' | t
+            }}</span>
+            <input
+              type="checkbox"
+              [(ngModel)]="privacyHideExactLocation"
               class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"
             />
           </label>
@@ -209,7 +253,8 @@
             }}</span>
             <input
               type="checkbox"
-              [(ngModel)]="chatEnterToSend"
+              [ngModel]="chatEnterToSend()"
+              (ngModelChange)="chatEnterToSend.set($event)"
               class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"
             />
           </label>
@@ -219,7 +264,8 @@
               'settings.textSize' | t
             }}</span>
             <select
-              [(ngModel)]="chatTextSize"
+              [ngModel]="chatTextSize()"
+              (ngModelChange)="chatTextSize.set($event)"
               class="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
             >
               <option value="small">{{ 'settings.textSizeSmall' | t }}</option>
@@ -286,31 +332,29 @@
         <div
           class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm"
         >
-          <label
-            class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-200 transition-colors"
+          <button
+            (click)="toggleSoundEffects()"
+            class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
           >
             <span class="text-sm font-medium text-text-primary">{{
               'settings.soundEffects' | t
             }}</span>
-            <input
-              type="checkbox"
-              [(ngModel)]="soundEffectsEnabled"
-              class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"
-            />
-          </label>
+            <span class="text-sm font-semibold text-primary">
+              {{ soundEffectsEnabled ? ('settings.on' | t) : ('settings.off' | t) }}
+            </span>
+          </button>
 
-          <label
-            class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-200 transition-colors"
+          <button
+            (click)="toggleVibration()"
+            class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
           >
             <span class="text-sm font-medium text-text-primary">{{
               'settings.vibration' | t
             }}</span>
-            <input
-              type="checkbox"
-              [(ngModel)]="vibrationEnabled"
-              class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"
-            />
-          </label>
+            <span class="text-sm font-semibold text-primary">
+              {{ vibrationEnabled ? ('settings.on' | t) : ('settings.off' | t) }}
+            </span>
+          </button>
         </div>
       </section>
 

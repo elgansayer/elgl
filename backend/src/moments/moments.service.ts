@@ -10,6 +10,7 @@ import { SafetyService } from '../safety/safety.service';
 import { XpService } from '../xp/xp.service';
 import { QuestsService } from '../quests/quests.service';
 import { CreateCommentDto, CreateMomentDto } from './dto/moment.dto';
+import { CreateLanguageQuestionDto } from './dto/create-language-question.dto';
 import { CreateStoryDto } from './dto/create-story.dto';
 import { EditTextDto } from './dto/edit-text.dto';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
@@ -34,11 +35,10 @@ interface MomentLikeRow {
   moment_id: string;
 }
 
-interface MomentLikeUser {
+export interface MomentLikeUser {
   id: string;
   display_name: string;
   avatar_url: string | null;
-  native_language?: string;
   native_languages?: string[];
   target_languages: string[];
 }
@@ -63,6 +63,39 @@ interface MomentCommentRow {
 
 @Injectable()
 export class MomentsService {
+  async getLifetimeCounts(_userId?: string): Promise<{
+    translations: number;
+    corrections: number;
+    moments: number;
+  }> {
+    void _userId;
+    const supabase = this.supabaseService.getClient();
+
+    const { data: momentsData, error: momentsError } = await supabase
+      .from('moments')
+      .select('id', { count: 'exact' });
+
+    const { data: correctionsData, error: correctionsError } = await supabase
+      .from('moment_comments')
+      .select('id', { count: 'exact' })
+      .not('correction_payload', 'is', null);
+
+    const { data: translationsData, error: translationsError } = await supabase
+      .from('translations')
+      .select('id', { count: 'exact' });
+
+    if (momentsError || correctionsError || translationsError) {
+      throw new Error(
+        `Failed to fetch counts: ${momentsError?.message ?? ''} ${correctionsError?.message ?? ''} ${translationsError?.message ?? ''}`,
+      );
+    }
+
+    return {
+      translations: translationsData?.length ?? 0,
+      corrections: correctionsData?.length ?? 0,
+      moments: momentsData?.length ?? 0,
+    };
+  }
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly usersService: UsersService,
@@ -177,7 +210,11 @@ export class MomentsService {
       );
     }
 
-    const moment = response.data;
+    const moment = response.data as MomentRecord & { post_type?: string };
+    moment.post_type = dto.post_type ?? 'moment';
+    moment.media_type = dto.media_type ?? 'none';
+    if (!moment.correct_answers_count) moment.correct_answers_count = 0;
+    if (!moment.total_answers_count) moment.total_answers_count = 0;
     // Award XP for creating a Moment
     void this.xpService.awardXpForActivity(userId, 'create_moment');
     // Award quest progress for posting a Moment
@@ -185,6 +222,55 @@ export class MomentsService {
     // Asynchronous fan-out via Redis timeline queue
     void this.timelineWorker.fanOutMoment(moment.id, userId);
 
+    const profile = await this.usersService.getProfile(userId);
+    moment.author = {
+      id: profile?.id ?? userId,
+      display_name: profile?.display_name ?? 'Serious Learner',
+      avatar_url: profile?.avatar_url ?? null,
+    };
+    moment.is_liked_by_me = false;
+    return moment;
+  }
+
+  async createLanguageQuestion(
+    userId: string,
+    dto: CreateLanguageQuestionDto,
+  ): Promise<MomentRecord> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = (await supabase
+      .from('moments')
+      .insert({
+        user_id: userId,
+        text_content: dto.text_content ?? null,
+        media_urls: [],
+        media_type: 'none',
+        target_language: dto.target_language,
+        post_type: 'language_question',
+        question_text: dto.question_text,
+        question_options: dto.question_options,
+        correct_answer: dto.correct_answer,
+      })
+      .select()
+      .single()) as unknown as {
+      data: MomentRecord | null;
+      error?: { message?: string } | null;
+    };
+
+    if (error || !data) {
+      throw new Error(
+        `Failed to create language question: ${error?.message ?? 'Unknown error'}`,
+      );
+    }
+    const moment = data as MomentRecord & { post_type?: string };
+    moment.post_type = 'language_question';
+    moment.media_type = 'none';
+    moment.is_pinned = false;
+    moment.likes_count = 0;
+    moment.comments_count = 0;
+    moment.correct_answers_count = 0;
+    moment.total_answers_count = 0;
+    void this.xpService.awardXpForActivity(userId, 'create_moment');
+    void this.questsService.incrementProgress(userId, 'post_moment', 1);
     const profile = await this.usersService.getProfile(userId);
     moment.author = {
       id: profile?.id ?? userId,
@@ -208,7 +294,8 @@ export class MomentsService {
 
     // 2) Get current user's native language for targeted visibility routing
     const profile = await this.usersService.getProfile(userId);
-    const userNativeLang = profile?.native_languages?.[0] ?? null;
+    const userNativeLang =
+      profile?.native_languages?.[0]?.toLowerCase() ?? null;
 
     let moments: MomentRecord[] = [];
 
@@ -260,11 +347,16 @@ export class MomentsService {
       if (data) moments = data;
     }
 
+    // Exclude post types that are not regular moments (questions/language questions)
+    moments = moments.filter((m) => !m.post_type || m.post_type === 'moment');
+
     // Apply targeted visibility for non-Classmates filters: only show moments
     // whose target_language matches the current user's native language.
     if (filter !== 'Classmates' && userNativeLang) {
       moments = moments.filter(
-        (m) => !m.target_language || m.target_language === userNativeLang,
+        (m) =>
+          !m.target_language ||
+          m.target_language.toLowerCase() === userNativeLang,
       );
     }
 
@@ -307,18 +399,17 @@ export class MomentsService {
 
       // Filter the generated mock data same as DB query
       if (filter === 'Classmates' && targetLang) {
-        return generated.filter((m) => m.target_language === targetLang);
-      }
-      // Targeted visibility for 'All' filter
-      if (filter === 'All' && userNativeLang) {
-        generated = generated.filter(
-          (m) => !m.target_language || m.target_language === userNativeLang,
+        return generated.filter(
+          (m) => m.target_language.toLowerCase() === targetLang.toLowerCase(),
         );
       }
-      // Targeted visibility for 'Following' filter
-      if (filter === 'Following' && userNativeLang) {
+      // Targeted visibility for non-Classmates filters: only show moments
+      // whose target_language matches the current user's native language.
+      if (filter !== 'Classmates' && userNativeLang) {
         generated = generated.filter(
-          (m) => !m.target_language || m.target_language === userNativeLang,
+          (m) =>
+            !m.target_language ||
+            m.target_language.toLowerCase() === userNativeLang,
         );
       }
       return generated.sort(
@@ -373,7 +464,7 @@ export class MomentsService {
     let query = supabase
       .from('moments')
       .select('*')
-      .eq('post_type', 'question')
+      .in('post_type', ['question', 'language_question'])
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -464,6 +555,76 @@ export class MomentsService {
     });
   }
 
+  async answerLanguageQuestion(
+    userId: string,
+    momentId: string,
+    answer: string,
+  ): Promise<{ correct: boolean; correctAnswer: string }> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: momentData, error: fetchError } = await supabase
+      .from('moments')
+      .select(
+        'user_id, post_type, correct_answer, question_options, question_text',
+      )
+      .eq('id', momentId)
+      .single();
+
+    if (fetchError || !momentData) {
+      throw new Error('Moment not found');
+    }
+
+    const moment = momentData as {
+      user_id: string;
+      post_type?: string;
+      correct_answer?: string;
+      question_options?: string[];
+      question_text?: string;
+    };
+
+    if (moment.post_type !== 'language_question') {
+      throw new BadRequestException('Only language questions can be answered.');
+    }
+
+    const correct = moment.correct_answer === answer;
+
+    try {
+      const { error: insertError } = await supabase
+        .from('moment_question_answers')
+        .insert({
+          moment_id: momentId,
+          user_id: userId,
+          answer,
+          is_correct: correct,
+        });
+      if (insertError) {
+        // ignore; table may not exist in some environments
+      }
+    } catch {
+      // ignore
+    }
+
+    const { data: rows, error: countError } = await supabase
+      .from('moment_question_answers')
+      .select('is_correct')
+      .eq('moment_id', momentId)
+      .returns<Array<{ is_correct: boolean }>>();
+
+    if (!countError && rows) {
+      const total = rows.length;
+      const correctCount = rows.filter((r) => r.is_correct).length;
+      await supabase
+        .from('moments')
+        .update({
+          correct_answers_count: correctCount,
+          total_answers_count: total,
+        })
+        .eq('id', momentId);
+    }
+
+    return { correct, correctAnswer: moment.correct_answer ?? '' };
+  }
+
   async likeMoment(
     userId: string,
     momentId: string,
@@ -544,6 +705,11 @@ export class MomentsService {
       ? await this.safetyService.getBlockedAndBlockerIds(currentUserId)
       : [];
 
+    type MomentLikeQueryResult = {
+      user_id: string;
+      created_at: string;
+      users: MomentLikeUser | null;
+    };
     const { data, error } = await supabase
       .from('moment_likes')
       .select(
@@ -554,19 +720,20 @@ export class MomentsService {
           id,
           display_name,
           avatar_url,
-          native_language,
+          native_languages,
           target_languages
         )
       `,
       )
       .eq('moment_id', momentId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .returns<MomentLikeQueryResult[]>();
 
     if (error) {
       throw new Error(`Failed to fetch likes: ${error.message}`);
     }
 
-    const rows = (data ?? []) as unknown as Array<{ users: MomentLikeUser }>;
+    const rows = data ?? [];
     const fullUsers = rows
       .map((row) => row.users)
       .filter((user): user is MomentLikeUser => Boolean(user));

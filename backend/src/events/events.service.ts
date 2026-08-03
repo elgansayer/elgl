@@ -11,6 +11,19 @@ import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventsQueryDto } from './dto/events-query.dto';
 
+export interface EventWithHost {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  date_time: string;
+  location: string | null;
+  language_pair: string | null;
+  max_participants: number | null;
+  host_id: string;
+  host?: { display_name: string | null; avatar_url: string | null };
+}
+
 @Injectable()
 export class EventsService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(EventsService.name);
@@ -71,7 +84,14 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
 
       if (!events || events.length === 0) return;
 
-      for (const event of events) {
+      const typedEvents: Array<{
+        id: string;
+        title: string;
+        host_id: string;
+        language_pair: string | null;
+      }> = events ?? [];
+
+      for (const event of typedEvents) {
         // Fetch attending users for this event
         const { data: rsvps, error: rsvpError } = await supabase
           .from('event_rsvps')
@@ -139,7 +159,10 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     // Record that we sent the reminder to avoid duplicates
     const { error: insertErr } = await supabase
       .from('event_reminders_sent')
-      .insert({ event_id: eventId, user_id: userId });
+      .insert<{ event_id: string; user_id: string }>({
+        event_id: eventId,
+        user_id: userId,
+      });
 
     if (insertErr) {
       this.logger.warn('Failed to record sent reminder', insertErr);
@@ -150,7 +173,16 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('events')
-      .insert({
+      .insert<{
+        title: string;
+        description: string | null;
+        category: string | null;
+        date_time: string;
+        location: string | null;
+        language_pair: string | null;
+        max_participants: number | null;
+        host_id: string;
+      }>({
         title: dto.title,
         description: dto.description ?? null,
         category: dto.category ?? null,
@@ -178,9 +210,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
 
     let q = supabase
       .from('events')
-      .select('*, host:host_id(display_name, avatar_url)')
-      .order('date_time', { ascending: true })
-      .range(offset, offset + limit - 1);
+      .select('*, host:host_id(display_name, avatar_url)');
 
     if (query.status === 'past') {
       q = q.lt('date_time', new Date().toISOString());
@@ -198,16 +228,23 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     if (query.from_date) {
       q = q.gte('date_time', query.from_date);
     }
+    if (query.proficiency) {
+      q = q.eq('proficiency', query.proficiency);
+    }
     if (query.to_date) {
       q = q.lte('date_time', query.to_date);
     }
+
+    q = q
+      .order('date_time', { ascending: true })
+      .range(offset, offset + limit - 1);
 
     const { data, error } = await q;
     if (error) {
       this.logger.error('Failed to list events', error);
       throw error;
     }
-    return (data ?? []).map((ev: any) => ({
+    return ((data ?? []) as EventWithHost[]).map((ev: EventWithHost) => ({
       ...ev,
       host_name: ev.host?.display_name ?? null,
       host_avatar_url: ev.host?.avatar_url ?? null,
@@ -217,7 +254,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
   async getUserEvents(
     userId: string,
     status?: 'upcoming' | 'past',
-  ): Promise<any[]> {
+  ): Promise<EventWithHost[]> {
     const supabase = this.supabaseService.getClient();
     const { data: rsvps, error: rsvpErr } = await supabase
       .from('event_rsvps')
@@ -229,7 +266,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     }
     if (!rsvps || rsvps.length === 0) return [];
 
-    const eventIds = rsvps.map((r: any) => r.event_id);
+    const eventIds = rsvps.map((r: { event_id: string }) => r.event_id);
     let q = supabase
       .from('events')
       .select('*, host:host_id(display_name, avatar_url)')
@@ -248,7 +285,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       this.logger.error('Failed to fetch user events', error);
       throw error;
     }
-    return (data ?? []).map((ev: any) => ({
+    return ((data ?? []) as EventWithHost[]).map((ev: EventWithHost) => ({
       ...ev,
       host_name: ev.host?.display_name ?? null,
       host_avatar_url: ev.host?.avatar_url ?? null,
@@ -285,10 +322,11 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       this.logger.warn('Failed to fetch interested count', iErr);
     }
 
+    const eventRow = data as unknown as EventWithHost;
     return {
-      ...data,
-      host_name: data.host?.display_name ?? null,
-      host_avatar_url: data.host?.avatar_url ?? null,
+      ...eventRow,
+      host_name: eventRow.host?.display_name ?? null,
+      host_avatar_url: eventRow.host?.avatar_url ?? null,
       attendees_count: attendingCount ?? 0,
       interested_count: interestedCount ?? 0,
     };
@@ -381,7 +419,15 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
 
       if (!events || events.length === 0) return;
 
-      for (const event of events) {
+      const typedEvents = (events ?? []) as unknown as Array<{
+        id: string;
+        title: string;
+        host_id: string;
+        language_pair: string;
+        category: string | null;
+      }>;
+
+      for (const event of typedEvents) {
         const roomName = `language_party-${event.id}`;
 
         // Check if a room already exists for this event
@@ -408,7 +454,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
             target_language:
               event.language_pair.split('-')[1] ?? event.language_pair,
             language_pair: event.language_pair,
-            topic_tag: event.category ?? null,
+            topic_tag: event.category ?? event.language_pair,
             is_video_stream: false,
           },
           roomName,

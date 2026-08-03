@@ -5,11 +5,13 @@ import {
   Body,
   Query,
   Param,
+  Req,
   UseGuards,
   HttpCode,
   HttpStatus,
+  NotFoundException,
 } from '@nestjs/common';
-import { ModerationService } from './moderation.service';
+import { ModerationItem, ModerationService } from './moderation.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ReportUserDto } from './dto/report-user.dto';
 import { ModerationActionDto } from './dto/moderation-action.dto';
@@ -23,14 +25,21 @@ export class ModerationController {
   async getItems(
     @Query('type') type: 'moment' | 'profile',
     @Query('status') status?: string,
-  ) {
-    return this.moderationService.getItems(type, status);
+  ): Promise<ModerationItem[]> {
+    const items = await this.moderationService.getItems(type, status);
+    if (!items.length) {
+      throw new NotFoundException('No moderation items found.');
+    }
+    return items;
   }
 
   @Post('report')
   @HttpCode(HttpStatus.CREATED)
-  async reportUser(@Body() dto: ReportUserDto) {
-    return this.moderationService.reportUser(dto);
+  async reportUser(
+    @Req() req: { user: { id: string } },
+    @Body() dto: ReportUserDto,
+  ) {
+    return this.moderationService.reportUser(req.user.id, dto);
   }
 
   @Post('approve')

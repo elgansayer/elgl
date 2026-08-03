@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -135,6 +136,10 @@ export class UpdateProfileDto {
   @ValidateNested()
   @Type(() => CoordinatesDto)
   mock_location?: CoordinatesDto;
+
+  @IsOptional()
+  @IsBoolean()
+  enable_location_spoofing?: boolean;
 
   @IsOptional()
   @IsBoolean()

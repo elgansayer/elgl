@@ -133,8 +133,8 @@
     @for (msg of filteredMessages(); track msg.id) {
       @if (msg.message_type === 'system' && msg.system_event) {
         <app-chat-system-bubble
-          [eventType]="msg.system_event.type"
-          [params]="msg.system_event"
+          [eventType]="msg.system_event?.type ?? ''"
+          [params]="msg.system_event ?? {}"
         ></app-chat-system-bubble>
       } @else {
         <app-long-press-context-menu
@@ -198,7 +198,7 @@
               }
               @if (msg.message_type === 'text' && msg.text_content) {
                 <app-tokenised-text
-                  [text]="msg.text_content"
+                  [text]="msg.text_content ?? ''"
                   (wordClicked)="onWordClicked($event)"
                 ></app-tokenised-text>
                 @if (transliterations()[msg.id]) {
@@ -209,27 +209,27 @@
               }
               @if (msg.message_type === 'correction' && msg.correction_payload) {
                 <app-visual-diff
-                  [original]="msg.correction_payload.original"
-                  [corrected]="msg.correction_payload.corrected"
-                  [explanation]="msg.correction_payload.explanation"
+                  [original]="msg.correction_payload?.original ?? ''"
+                  [corrected]="msg.correction_payload?.corrected ?? ''"
+                  [explanation]="msg.correction_payload?.explanation ?? ''"
                 ></app-visual-diff>
               }
               @if (msg.message_type === 'doodle' && msg.media_url) {
                 <img
-                  [src]="msg.media_url"
+                  [src]="msg.media_url ?? ''"
                   alt="doodle"
                   class="max-h-52 rounded-xl border border-surface-100"
                 />
               }
               @if (msg.message_type === 'sticker' && msg.media_url) {
                 <img
-                  [src]="msg.media_url"
+                  [src]="msg.media_url ?? ''"
                   alt="sticker"
                   class="max-h-32 w-auto object-contain drop-shadow-md"
                 />
               }
               @if (msg.message_type === 'voice' && msg.media_url) {
-                <audio [src]="msg.media_url" controls class="w-full min-w-52"></audio>
+                <audio [src]="msg.media_url ?? ''" controls class="w-full min-w-52"></audio>
               }
               <div class="mt-2 flex items-center gap-1">
                 @if (msg.message_type === 'text' && msg.text_content) {
@@ -244,6 +244,12 @@
                     class="rounded-lg bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-primary"
                   >
                     {{ 'chatRoom.transliterateBtn' | t }}
+                  </button>
+                  <button
+                    (click)="startCorrection(msg)"
+                    class="rounded-lg bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-primary"
+                  >
+                    {{ 'chatRoom.correctBtn' | t }}
                   </button>
                 }
                 <button

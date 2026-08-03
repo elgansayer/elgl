@@ -129,11 +129,11 @@ export class AiConversationComponent {
     this.inputText.set('');
     this.isLoading.set(true);
     try {
-      const { reply } = await this.aiService.sendMessage(
+      const response = await this.aiService.sendMessage(
         text,
         this.currentScenarioId,
       );
-      this.messages.update((msgs) => [...msgs, { from: 'ai', text: reply }]);
+      this.messages.update((msgs) => [...msgs, { from: 'ai', text: response.reply }]);
     } catch {
       this.messages.update((msgs) => [
         ...msgs,
