@@ -80,7 +80,7 @@ describe('UserService', () => {
       const req = httpMock.expectOne(`${baseUrl}/fcm/subscribe`);
       req.flush('error', { status: 500, statusText: 'Internal Server Error' });
 
-      await expect(resultPromise).rejects.toThrow('Failed to subscribe to topic');
+      await expect(resultPromise).toBeRejectedWith('Failed to subscribe to topic');
     });
   });
 

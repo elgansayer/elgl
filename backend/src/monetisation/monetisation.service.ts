@@ -225,16 +225,24 @@ export class MonetisationService {
 
     if (
       event.type === 'checkout.session.completed' ||
-      event.type === 'customer.subscription.created'
+      event.type === 'customer.subscription.created' ||
+      event.type === 'customer.subscription.updated'
     ) {
       const obj = event.data.object as {
         metadata?: Record<string, string>;
+        status?: string;
       };
       const metadata = obj.metadata;
       if (metadata?.userId) {
         const tier =
           metadata.tier ?? tierForInterval(metadata.interval ?? 'month');
-        await this.updateVipStatusFromWebhook(metadata.userId, true, tier);
+        const isActive =
+          !obj.status || obj.status === 'active' || obj.status === 'trialing';
+        await this.updateVipStatusFromWebhook(
+          metadata.userId,
+          isActive,
+          isActive ? tier : null,
+        );
       }
     } else if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object as {
@@ -250,14 +258,14 @@ export class MonetisationService {
   }
 
   async handleAppleWebhook(
-    payload: string,
+    payload: unknown,
   ): Promise<{ received: boolean; status: string }> {
     this.logger.log('Received Apple App Store Server Notification');
     return await this.appleNotificationService.handleNotification(payload);
   }
 
   async handleGoogleWebhook(
-    payload: Record<string, unknown>,
+    payload: unknown,
     authorizationHeader?: string,
   ): Promise<{ received: boolean; status: string }> {
     this.logger.log('Received Google Play Developer Notification');

@@ -62,7 +62,7 @@ export class AudioRoomsController {
   @Post('archive-recording')
   async archiveRecording(
     @CurrentUser() user: User | null,
-    @Body() dto: ArchiveRecordingDto,
+    @Body() dto: ArchiveRoomDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
     return await this.audioRoomsService.archiveRecording(user.id, dto);
@@ -348,5 +348,6 @@ export class AudioRoomsController {
   ): Promise<{ emojiId: string; animationUrl: string } | null> {
     if (!user) return null;
     return await this.audioRoomsService.sendReaction(user.id, roomId, dto);
+  }
   }
 }

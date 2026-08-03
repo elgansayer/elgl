@@ -41,7 +41,7 @@ describe('SubscriptionService', () => {
     expect(req.request.method).toBe('GET');
     req.flush(response);
 
-    await expect(resultPromise).resolves.toEqual(response);
+    await expect(resultPromise).toBeResolvedTo(response);
   });
 
   it('should cancel the subscription', async () => {

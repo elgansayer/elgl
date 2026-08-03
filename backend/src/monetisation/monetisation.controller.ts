@@ -51,14 +51,14 @@ export class MonetisationController {
 
   @Post('webhooks/apple')
   @HttpCode(200)
-  async handleAppleWebhook(@Body() payload: any) {
+  async handleAppleWebhook(@Body() payload: unknown) {
     return await this.monetisationService.handleAppleWebhook(payload);
   }
 
   @Post('webhooks/google')
   @HttpCode(200)
   async handleGoogleWebhook(
-    @Body() payload: any,
+    @Body() payload: unknown,
     @Headers('authorization') authorization?: string,
   ) {
     return await this.monetisationService.handleGoogleWebhook(

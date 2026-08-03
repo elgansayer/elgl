@@ -34,11 +34,18 @@ function buildSignedPayload(
 
 describe('AppleNotificationService', () => {
   let service: AppleNotificationService;
-  let mockSupabaseClient: any;
-  let mockQueryBuilder: any;
+  let mockSupabaseClient: { from: jest.Mock };
+  let mockQueryBuilder: { upsert: jest.Mock };
   let monetisationService: { updateVipStatusFromWebhook: jest.Mock };
 
-  const transactionInfo = {
+  const transactionInfo: {
+    originalTransactionId: string;
+    productId: string;
+    appAccountToken: string;
+    transactionId: string;
+    expiresDate: number;
+    purchaseDate: number;
+  } = {
     originalTransactionId: 'orig-txn-1',
     productId: 'com.hellotalk.consumer.monthly',
     appAccountToken: 'user-1',
