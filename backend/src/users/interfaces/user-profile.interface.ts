@@ -42,10 +42,10 @@ export interface UserProfile {
   location_privacy?: 'exact' | 'region';
   privacy_hide_online_status: boolean;
   privacy_hide_vip_status: boolean;
-  privacy_last_seen?: string;
-  privacy_profile_photo?: string;
-  privacy_about_info?: string;
-  privacy_status?: string;
+  privacy_last_seen?: 'everyone' | 'vips_only' | 'hidden';
+  privacy_profile_photo?: 'everyone' | 'vips_only' | 'hidden';
+  privacy_about_info?: 'everyone' | 'vips_only' | 'hidden';
+  privacy_status?: 'everyone' | 'vips_only' | 'hidden';
   incognito_visits?: boolean;
   do_not_disturb?: boolean;
   quiet_hours_start?: string;
