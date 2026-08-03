@@ -209,6 +209,10 @@ export class ProfileComponent implements OnInit {
     }
   }
 
+  onCustomAvatarFileSelected(event: Event): void {
+    this.onAvatarFileSelected(event);
+  }
+
   onAvatarClick(): void {
     const fileInputEl = this.fileInput();
     if (fileInputEl) {

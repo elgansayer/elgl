@@ -396,7 +396,7 @@ describe('HelloTalk API E2E Integration Suite', () => {
         .post('/audio-rooms/create')
         .send({
           title: 'Spanish Practice',
-          language: 'es',
+          language_pair: 'EN-ES',
         })
         .expect(201)
         .expect((res) => {

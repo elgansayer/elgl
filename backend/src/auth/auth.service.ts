@@ -118,4 +118,15 @@ export class AuthService {
       return false;
     }
   }
+
+  async checkTwoFactorStatus(userId: string): Promise<boolean> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('two_factor_enabled')
+      .eq('id', userId)
+      .single();
+    if (error || !data) return false;
+    return data.two_factor_enabled === true;
+  }
 }

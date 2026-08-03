@@ -81,7 +81,7 @@ export class AuthController {
     @Body('token') _token: string,
   ): Promise<{ success: boolean }> {
     const userId = this.getUserIdFromReq(req);
-    const success = await this.authService.disableTwoFactor(userId);
+    const success = await this.authService.disableTwoFactor(userId, _token);
     return { success };
   }
 
