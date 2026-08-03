@@ -50,7 +50,7 @@ export class MediaService implements OnModuleInit {
         secretAccessKey,
       },
     });
-  } // Closing bracket for the class definition
+  }
 
   async generatePresignedUrl(
     userId: string,
@@ -310,7 +310,10 @@ export class MediaService implements OnModuleInit {
 
     return { avatarUrl };
   }
-  async markMediaAsViewed(userId: string, mediaId: string): Promise<{ success: boolean }> {
+  async markMediaAsViewed(
+    userId: string,
+    mediaId: string,
+  ): Promise<{ success: boolean }> {
     const supabase = this.supabaseService.getClient();
 
     // Check if the media exists and belongs to the user
@@ -341,3 +344,4 @@ export class MediaService implements OnModuleInit {
 
     return { success: true };
   }
+}

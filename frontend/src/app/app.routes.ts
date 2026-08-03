@@ -7,6 +7,12 @@ import { StudyBuddyComponent } from './components/study-buddy/study-buddy.compon
 export const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
   {
+    path: 'lock',
+    loadComponent: () =>
+      import('./components/device-lock/device-lock.component').then((m) => m.DeviceLockComponent),
+    title: 'App Lock - HelloTalk',
+  },
+  {
     path: 'home',
     loadComponent: () =>
       import('./pages/home/home.component').then((m) => m.HomeComponent),

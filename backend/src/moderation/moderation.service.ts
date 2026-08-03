@@ -20,7 +20,7 @@ export interface ModerationItem {
 
 @Injectable()
 export class ModerationService {
-  private readonly supabase;
+  private readonly supabase: ReturnType<SupabaseService['getClient']>;
 
   constructor(private readonly supabaseService: SupabaseService) {
     this.supabase = this.supabaseService.getClient();

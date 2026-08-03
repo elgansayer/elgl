@@ -290,7 +290,9 @@ export class SupabaseService {
       return [];
     }
 
-    const viewerIds = (statusViews ?? []).map((row: { viewer_id: string }) => row.viewer_id);
+    const viewerIds: string[] = (statusViews ?? []).map(
+      (row: { viewer_id: string }) => row.viewer_id,
+    );
     if (viewerIds.length === 0) {
       return [];
     }
@@ -298,7 +300,7 @@ export class SupabaseService {
     const { data: users, error: usersError } = await this.supabase
       .from<'users'>('users')
       .select('*')
-      .in('id', viewerIds as string[])
+      .in('id', viewerIds)
       .returns<UserProfile[]>();
 
     if (usersError) {

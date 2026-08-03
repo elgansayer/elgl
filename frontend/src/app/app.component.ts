@@ -1,5 +1,5 @@
 import { Component, computed, inject, OnInit, signal, viewChild, afterNextRender, effect, DestroyRef } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { AuthService } from './services/auth.service';
 import { EconomyStore, VirtualGift } from './services/economy.store';
 import { CentrifugeService } from './services/centrifuge.service';
@@ -24,6 +24,7 @@ import { FontScaleSliderComponent } from './components/font-scale-slider/font-sc
 import { FontScaleService } from './services/font-scale.service';
 import { I18nService } from './services/i18n.service';
 import { AppLanguageSelectorComponent } from './components/app-language-selector/app-language-selector.component';
+import { AppLockService } from './services/app-lock.service';
 
 
 @Component({
@@ -44,7 +45,7 @@ import { AppLanguageSelectorComponent } from './components/app-language-selector
   ],
   templateUrl: './app.component.html',
   host: {
-    '[class.app-locked]': 'authService.appLocked()',
+    '[class.app-locked]': 'appLockService.appLocked()',
   },
   styleUrls: ['./app.component.scss'],
   animations: [routeAnimations],
@@ -67,6 +68,8 @@ export class AppComponent implements OnInit {
   readonly i18n = inject(I18nService);
   private document = inject(DOCUMENT);
   private destroyRef = inject(DestroyRef);
+  readonly appLockService = inject(AppLockService);
+  private readonly router = inject(Router);
   readonly totalUnread = computed(() => this.unreadCounter.totalUnread());
   readonly hasUnread = computed(() => this.totalUnread() > 0);
 
@@ -90,7 +93,7 @@ export class AppComponent implements OnInit {
   // Biometric lock state
   readonly biometricAvailable = signal<boolean>(false);
   readonly biometricBusy = signal<boolean>(false);
-  readonly biometricLockEnabled = computed(() => this.authService.biometricLockEnabled());
+  readonly biometricLockEnabled = computed(() => this.appLockService.biometricEnabled());
   readonly biometricControlsVisible = computed(
     () => this.authService.isAuthenticated() && this.biometricAvailable(),
   );
@@ -105,7 +108,7 @@ export class AppComponent implements OnInit {
   constructor() {
     afterNextRender(() => {
       this.reportModalService.registerModal(this.reportModal());
-      this.authService.isBiometricSupported().then((available) => {
+      this.appLockService.isBiometricSupported().then((available) => {
         this.biometricAvailable.set(available);
       });
     });
@@ -115,7 +118,7 @@ export class AppComponent implements OnInit {
       const doc = this.document;
       const handleVisibility = (): void => {
         if (doc.hidden && this.authService.isAuthenticated()) {
-          this.authService.lockApp();
+          this.appLockService.lockNow();
         }
       };
       doc.addEventListener('visibilitychange', handleVisibility);
@@ -127,6 +130,17 @@ export class AppComponent implements OnInit {
       const scale = this.fontScaleService.scaleFactor();
       if (this.document && this.document.documentElement) {
         this.document.documentElement.style.fontSize = `${(scale * 16).toFixed(2)}px`;
+      }
+    });
+
+    // Redirect to the lock screen when the app is locked
+    effect(() => {
+      const locked = this.appLockService.appLocked();
+      const currentUrl = this.router.url;
+      if (locked && !currentUrl.startsWith('/lock')) {
+        void this.router.navigate(['/lock']);
+      } else if (!locked && currentUrl.startsWith('/lock')) {
+        void this.router.navigate(['/home']);
       }
     });
   }
@@ -232,10 +246,10 @@ export class AppComponent implements OnInit {
     if (this.biometricBusy()) return;
     this.biometricBusy.set(true);
     try {
-      if (this.authService.biometricLockEnabled()) {
-        await this.authService.disableBiometricLock();
+      if (this.appLockService.biometricEnabled()) {
+        await this.appLockService.disableBiometricLock();
       } else {
-        await this.authService.enableBiometricLock();
+        await this.appLockService.enableBiometricLock();
       }
     } finally {
       this.biometricBusy.set(false);
