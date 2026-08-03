@@ -468,5 +468,8 @@
   "voip.dismiss": "رفض",
   "voip.incomingVoiceCall": "مكالمة صوتية واردة...",
   "voip.incomingVideoCall": "مكالمة فيديو واردة...",
-  "common.unknownCaller": "متصل غير معروف"
+  "common.unknownCaller": "متصل غير معروف",
+  "dailyLoginModal.title": "مكافأة يومية!",
+  "dailyLoginModal.body": "لقد حصلت على {coins} عملة لتسجيل دخولك اليوم.",
+  "dailyLoginModal.cta": "رائع!"
 }

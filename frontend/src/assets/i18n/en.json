@@ -559,5 +559,8 @@
   "forcedUpdateModal.message": "A new version of the app is available. Please update to continue.",
   "forcedUpdateModal.updateButton": "Update Now",
   "system.profileUpdated": "Profile updated",
-  "system.missedCall": "Missed call"
+  "system.missedCall": "Missed call",
+  "dailyLoginModal.title": "Daily Reward!",
+  "dailyLoginModal.body": "You received {coins} coins for logging in today.",
+  "dailyLoginModal.cta": "Awesome!"
 }

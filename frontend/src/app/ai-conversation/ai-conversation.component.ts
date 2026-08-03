@@ -5,6 +5,8 @@ import { from } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AiConversationService, Scenario } from '../services/ai-conversation.service';
 
+const EMPTY_SCENARIO_LIST: Scenario[] = [];
+
 interface ChatMessage {
   from: 'user' | 'ai';
   text: string;
@@ -104,7 +106,7 @@ export class AiConversationComponent {
 
   readonly scenarioList = toSignal(
     from(this.aiService.getScenarios()),
-    { initialValue: [] as Scenario[] },
+    { initialValue: EMPTY_SCENARIO_LIST },
   );
 
   readonly selectedScenario = signal<Scenario | null>(null);

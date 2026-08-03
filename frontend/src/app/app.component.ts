@@ -25,6 +25,13 @@ import { FontScaleService } from './services/font-scale.service';
 import { I18nService } from './services/i18n.service';
 import { AppLanguageSelectorComponent } from './components/app-language-selector/app-language-selector.component';
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null;
+}
+
+function isVirtualGift(v: unknown): v is VirtualGift {
+  return isRecord(v) && 'id' in v && 'name' in v && 'icon' in v;
+}
 
 @Component({
   selector: 'app-root',
@@ -154,24 +161,30 @@ export class AppComponent implements OnInit {
 
       await this.centrifugeService.connect();
       this.centrifugeService.subscribe(`user_${user.id}`, (data: unknown) => {
-        const payload = data as { type?: string; gift?: VirtualGift; sender_name?: string } | null;
-        if (payload && payload.type === 'virtual_gift' && payload.gift) {
+        if (!isRecord(data)) return;
+        const eventType = typeof data['type'] === 'string' ? data['type'] : null;
+
+        if (eventType === 'virtual_gift' && isVirtualGift(data['gift'])) {
           this.economyStore.triggerGiftAnimation({
-            gift: payload.gift,
-            sender_name: payload.sender_name || 'Language Partner',
+            gift: data['gift'],
+            sender_name: typeof data['sender_name'] === 'string' ? data['sender_name'] : 'Language Partner',
             receiver_name: 'You',
           });
         }
 
         // Handle incoming call events
-        if (payload && payload.type === 'incoming_call') {
-          const callPayload = payload as IncomingCallData & { type: string };
+        if (eventType === 'incoming_call') {
+          const callerId = typeof data['callerId'] === 'string' ? data['callerId'] : '';
+          const callerName = typeof data['callerName'] === 'string' ? data['callerName'] : '';
+          const callerAvatarUrl = typeof data['callerAvatarUrl'] === 'string' ? data['callerAvatarUrl'] : undefined;
+          const roomName = typeof data['roomName'] === 'string' ? data['roomName'] : '';
+          const isVideoCall = typeof data['isVideoCall'] === 'boolean' ? data['isVideoCall'] : false;
           this.incomingCallData.set({
-            callerId: callPayload.callerId,
-            callerName: callPayload.callerName,
-            callerAvatarUrl: callPayload.callerAvatarUrl,
-            roomName: callPayload.roomName,
-            isVideoCall: callPayload.isVideoCall,
+            callerId,
+            callerName,
+            callerAvatarUrl,
+            roomName,
+            isVideoCall,
           });
         }
       });
