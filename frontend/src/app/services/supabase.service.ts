@@ -61,7 +61,6 @@ export class SupabaseService {
       .select('*')
       .order('joined_at', { ascending: false })
       .limit(limit)
-      .returns<UserProfile[]>();
 
     if (error) {
       console.warn('Failed to fetch recently joined native speakers', error);
@@ -116,7 +115,6 @@ export class SupabaseService {
       .from('user_streaks')
       .select('streak_count')
       .eq('user_id', userId)
-      .returns<{ streak_count: number | null }>()
       .maybeSingle();
 
     if (error) {
@@ -150,7 +148,6 @@ export class SupabaseService {
       .from('users')
       .select('audio_intro_url')
       .eq('id', userId)
-      .returns<{ audio_intro_url: string | null }>()
       .maybeSingle();
 
     if (error) {
@@ -167,7 +164,6 @@ export class SupabaseService {
       .from('users')
       .select('is_vip, vip_tier, is_serious_learner')
       .eq('id', userId)
-      .returns<{ is_vip: boolean; vip_tier: string; is_serious_learner: boolean }>()
       .maybeSingle();
 
     if (error) {

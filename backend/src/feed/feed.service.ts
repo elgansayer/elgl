@@ -81,7 +81,7 @@ export class FeedService {
 
     let query = supabase
       .from('moments')
-      .select<MomentRow[]>(
+      .select(
         'id, author_id, content_text, media_urls, voice_note_url, detected_language, created_at',
       )
       .order('created_at', { ascending: false })
@@ -193,31 +193,29 @@ export class FeedService {
       }
 
       for (const author of authorRows ?? []) {
-        const typed = author;
-        authorMap.set(typed.id, {
-          id: typed.id,
-          display_name: typed.display_name,
-          avatar_url: typed.avatar_url ?? null,
-          native_languages: typed.native_languages ?? [],
-          target_languages: typed.target_languages ?? [],
+        authorMap.set(author.id, {
+          id: author.id,
+          display_name: author.display_name,
+          avatar_url: author.avatar_url ?? null,
+          native_languages: author.native_languages ?? [],
+          target_languages: author.target_languages ?? [],
         });
       }
     }
 
-    return momentRows.map((row) => {
-      const typed = row;
+    return momentRows.map((momentRow) => {
       return {
-        id: typed.id,
-        author_id: typed.author_id,
-        content_text: typed.content_text ?? null,
-        media_urls: typed.media_urls ?? [],
-        voice_note_url: typed.voice_note_url ?? null,
-        detected_language: typed.detected_language ?? null,
+        id: momentRow.id,
+        author_id: momentRow.author_id,
+        content_text: momentRow.content_text ?? null,
+        media_urls: momentRow.media_urls ?? [],
+        voice_note_url: momentRow.voice_note_url ?? null,
+        detected_language: momentRow.detected_language ?? null,
         is_pinned: false,
         likes_count: 0,
         comments_count: 0,
-        created_at: typed.created_at,
-        author: authorMap.get(typed.author_id) ?? null,
+        created_at: momentRow.created_at,
+        author: authorMap.get(momentRow.author_id) ?? null,
       };
     });
   }
