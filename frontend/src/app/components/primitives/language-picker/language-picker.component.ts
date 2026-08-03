@@ -1,4 +1,4 @@
-import { Component, input, output, signal, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, signal, computed } from '@angular/core';
 
 import { TranslatePipe } from '../../../services/translate.pipe';
 
@@ -243,6 +243,7 @@ export interface LanguageItem {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-language-picker',
   imports: [TranslatePipe],
   templateUrl: './language-picker.component.html',

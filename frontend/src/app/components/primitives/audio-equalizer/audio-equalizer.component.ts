@@ -1,6 +1,7 @@
-import { Component, input, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, computed } from '@angular/core';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-audio-equalizer',
   imports: [],
   template: `

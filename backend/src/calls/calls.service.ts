@@ -282,10 +282,11 @@ export class CallsService {
     isVideo: boolean = true,
   ) {
     const roomName = `call_${uuidv4()}`;
-    const apiKey =
-      this.configService.get<string>('LIVEKIT_API_KEY') || 'devkey';
-    const apiSecret =
-      this.configService.get<string>('LIVEKIT_SECRET') || 'secret';
+    const apiKey = this.configService.get<string>('LIVEKIT_API_KEY');
+    const apiSecret = this.configService.get<string>('LIVEKIT_SECRET');
+    if (!apiKey || !apiSecret) {
+      throw new Error('LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured');
+    }
 
     // Create the room for the 1:1 call
     const roomService = new RoomServiceClient(
@@ -419,10 +420,11 @@ export class CallsService {
     }
 
     const roomName = `group_${uuidv4()}`;
-    const apiKey =
-      this.configService.get<string>('LIVEKIT_API_KEY') || 'devkey';
-    const apiSecret =
-      this.configService.get<string>('LIVEKIT_SECRET') || 'secret';
+    const apiKey = this.configService.get<string>('LIVEKIT_API_KEY');
+    const apiSecret = this.configService.get<string>('LIVEKIT_SECRET');
+    if (!apiKey || !apiSecret) {
+      throw new Error('LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured');
+    }
 
     // Create the room with a maximum participant limit
     const roomService = new RoomServiceClient(

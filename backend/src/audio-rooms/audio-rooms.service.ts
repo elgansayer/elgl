@@ -121,10 +121,15 @@ export class AudioRoomsService implements OnModuleInit {
     this.livekitUrl =
       this.configService.get<string>('LIVEKIT_URL') ||
       'https://mock.livekit.cloud';
-    this.apiKey = this.configService.get<string>('LIVEKIT_API_KEY') || 'devkey';
-    this.secretKey =
-      this.configService.get<string>('LIVEKIT_SECRET') ||
-      'secretkey012345678901234567890123456789';
+
+    const apiKey = this.configService.get<string>('LIVEKIT_API_KEY');
+    const secretKey = this.configService.get<string>('LIVEKIT_SECRET');
+    if (!apiKey || !secretKey) {
+      throw new Error('LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured');
+    }
+
+    this.apiKey = apiKey;
+    this.secretKey = secretKey;
   }
 
   async archiveRecording(
