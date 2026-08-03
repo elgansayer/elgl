@@ -27,5 +27,8 @@
   "forcedUpdateModal.message": "新しいバージョンが利用可能です。続行するにはアップデートしてください。",
   "forcedUpdateModal.updateButton": "今すぐアップデート",
   "system.profileUpdated": "プロフィールが更新されました",
-  "system.missedCall": "不在着信"
+  "system.missedCall": "不在着信",
+  "dailyLoginModal.title": "デイリー報酬！",
+  "dailyLoginModal.body": "本日ログインして {coins} コインを獲得しました。",
+  "dailyLoginModal.cta": "ありがとう！"
 }
