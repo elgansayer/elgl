@@ -59,7 +59,7 @@ export class SupabaseService {
     const { data, error } = await this.supabase
       .from('users')
       .select('*') as { data: UserProfile[] | null, error: any };
-      .order('joined_at', { ascending: false })
+      .order('joined_at', { ascending: false });
       .limit(limit)
       .returns<UserProfile[]>();
 
@@ -90,13 +90,13 @@ export class SupabaseService {
   }
 
   async getLinkedAccounts(): Promise<{ email: boolean; google: boolean; apple: boolean }> {
-    const { data, error } = await this.supabase.auth.getUser();
+    const { data, error } = await this.supabase.auth.getUser() as { data: { user: { identities: Array<{ provider: string }> } } | null, error: any };
 
     if (error || !data) {
       throw new Error('Failed to fetch linked accounts');
     }
 
-    const identities: Array<{ provider: string }> = data?.user?.identities ?? [];
+    const identities: Array<{ provider: string }> = data?.user.identities ?? [];
     return {
       email: identities.some((id) => id.provider === 'email'),
       google: identities.some((id) => id.provider === 'google'),
@@ -107,7 +107,7 @@ export class SupabaseService {
   async getDailyStreak(userId: string): Promise<number> {
     const { data, error } = await this.supabase
       .from('user_streaks')
-      .select('streak_count') as { data: { streak_count: number } | null, error: any };
+      .select('streak_count')
       .eq('user_id', userId)
       .single<{ streak_count: number }>();
 
@@ -281,9 +281,8 @@ export class SupabaseService {
   async getStatusViewers(statusId: string): Promise<UserProfile[]> {
     const { data: statusViews, error: statusError } = await this.supabase
       .from('status_views')
-      .select('viewer_id')
-      .eq('status_id', statusId)
-      .returns<{ viewer_id: string }[]>();
+      .select<{ viewer_id: string }>('viewer_id')
+      .eq('status_id', statusId);
 
     if (statusError) {
       console.warn('Failed to fetch status viewers', statusError);
@@ -301,9 +300,9 @@ export class SupabaseService {
     for (const id of viewerIds) {
       const { data: user, error: userError } = await this.supabase
         .from('users')
-        .select('*')
+        .select<UserProfile>('*')
         .eq('id', id)
-        .single<UserProfile>();
+        .single();
       if (userError) {
         console.warn('Failed to fetch viewer profile', userError);
         continue;

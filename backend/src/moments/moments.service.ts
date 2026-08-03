@@ -250,6 +250,95 @@ export class MomentsService {
     return moment;
   }
 
+  async getFeed(
+    userId: string,
+    filter: 'All' | 'Classmates' | 'Following',
+    targetLang?: string,
+  ): Promise<MomentRecord[]> {
+    const supabase = this.supabaseService.getClient();
+    const redis = this.supabaseService.getRedisClient();
+
+    // 1) Get blocked+blocker user IDs (bidirectional)
+    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
+
+    // 2) Get current user's native language for targeted visibility routing
+    const profile = await this.usersService.getProfile(userId);
+    const userNativeLang =
+      profile?.native_languages?.[0]?.toLowerCase() ?? null;
+
+    let moments: MomentRecord[] = [];
+
+    if (filter === 'Following') {
+      const queueKey = `timeline_queue:${userId}`;
+      const momentIds = await redis.lrange(queueKey, 0, 49);
+      if (momentIds.length > 0) {
+        const { data } = await supabase
+          .from('moments')
+          .select('*')
+          .in('id', momentIds)
+          .order('created_at', { ascending: false });
+        if (data) moments = data;
+      } else {
+        // Fallback: get followed users from DB
+        const { data: follows } = await supabase
+          .from('user_follows')
+          .select('following_id')
+          .eq('follower_id', userId);
+        const followRows = (follows ?? []) as UserFollowRow[];
+        const ids = followRows.map((f) => f.following_id);
+        ids.push(userId);
+        const { data } = await supabase
+          .from('moments')
+          .select('*')
+          .in('user_id', ids)
+          .order('created_at', { ascending: false })
+          .limit(50);
+        if (data) moments = data;
+      }
+    } else if (filter === 'Classmates') {
+      const lang = targetLang || 'en';
+      const { data } = await supabase
+        .from('moments')
+        .select('*')
+        .eq('target_language', lang)
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (data) moments = data;
+    } else {
+      // All
+      const { data } = await supabase
+        .from('moments')
+        .select('*')
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (data) moments = data;
+    }
+
+    // Exclude ephemeral stories (they should only be visible via the stories endpoint)
+    moments = moments.filter((m) => !m.is_ephemeral);
+    // Exclude post types that are not regular moments (questions/language questions)
+    moments = moments.filter((m) => !m.post_type || m.post_type === 'moment');
+
+    // Apply targeted visibility for non-Classmates filters: only show moments
+    // whose target_language matches the current user's native language.
+    if (filter !== 'Classmates' && userNativeLang) {
+      moments = moments.filter(
+        (m) =>
+          !m.target_language ||
+          m.target_language.toLowerCase() === userNativeLang,
+      );
+    }
+
+    // Filter out blocked users
+    if (blockedIds.length > 0) {
+      moments = moments.filter((m) => !blockedIds.includes(m.user_id));
+    }
+
+    return moments;
+  }
+
   async createLanguageQuestion(
     userId: string,
     dto: CreateLanguageQuestionDto,
