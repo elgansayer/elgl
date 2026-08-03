@@ -1,0 +1,167 @@
+---
+priority: High Impact
+---
+# i18n Fix for `pages` Module
+
+## Description
+This task covers resolving missing translation keys (High Impact) and externalizing hardcoded text (Medium Impact) for the `pages` module to guarantee a 100% translatable UI.
+
+### Missing Keys (Raw keys leaking to user)
+- **frontend/src/app/pages/block-management/block-management.component.html**
+  - `blockManagement.title`
+  - `blockManagement.noBlockedUsers`
+  - `blockManagement.unblock`
+- **frontend/src/app/pages/call-logs/call-logs.component.ts**
+  - `call_logs.title`
+  - `call_logs.all`
+  - `call_logs.incoming`
+  - `call_logs.outgoing`
+  - `call_logs.missed`
+  - `call_logs.empty`
+- **frontend/src/app/pages/chat/chat-page.component.ts**
+  - `chat.rooms`
+  - `aiPartner.start`
+  - `aiPartner.title`
+  - `aiPartner.exit`
+  - `aiPartner.typing`
+  - `aiPartner.inputPlaceholder`
+  - `aiPartner.send`
+  - `chat.exportHistory`
+  - `chat.statusReply`
+  - `chat.replyToStatus`
+  - `chat.emptyState`
+  - `aiPartner.greeting`
+- **frontend/src/app/pages/chat-settings/chat-settings.component.html**
+  - `chat_settings.title`
+  - `chat_settings.auto_translate`
+  - `chat_settings.read_receipts`
+  - `chat_settings.enter_to_send`
+- **frontend/src/app/pages/data-storage/data-storage.component.html**
+  - `dataStorage.title`
+  - `dataStorage.clearCache`
+  - `dataStorage.cellularAutoDownload`
+- **frontend/src/app/pages/help-about/help-about.component.ts**
+  - `helpAbout.title`
+  - `helpAbout.appVersion`
+  - `helpAbout.buildNumber`
+  - `helpAbout.openSourceLicences`
+- **frontend/src/app/pages/help-centre/help-centre.component.ts**
+  - `common.error_occurred`
+- **frontend/src/app/pages/home/home.component.ts**
+  - `home.title`
+- **frontend/src/app/pages/join-group/join-group.component.html**
+  - `join.groupTitle`
+  - `join.joining`
+  - `join.joinButton`
+  - `join.error`
+  - `join.loading`
+  - `join.invalidLink`
+  - `join.backToGroups`
+- **frontend/src/app/pages/language-settings/language-settings.component.ts**
+  - `languageSettings.title`
+  - `languageSettings.description`
+  - `languageSettings.selectLabel`
+  - `languageSettings.currentLang`
+- **frontend/src/app/pages/lessons/lessons.component.ts**
+  - `lessons.title`
+  - `lessons.words`
+  - `lessons.completed`
+  - `lessons.none`
+- **frontend/src/app/pages/my-subscription/my-subscription.component.ts**
+  - `subscription.title`
+  - `subscription.loadError`
+  - `subscription.status`
+  - `subscription.active`
+  - `subscription.inactive`
+  - `subscription.plan`
+  - `subscription.free`
+  - `subscription.email`
+  - `subscription.availablePlans`
+  - `subscription.perYear`
+  - `subscription.perMonth`
+  - `subscription.processing`
+  - `subscription.cancelling`
+  - `subscription.cancelButton`
+- **frontend/src/app/pages/settings/linked-accounts/linked-accounts.component.ts**
+  - `settings.linkedAccounts.title`
+  - `settings.linkedAccounts.active`
+  - `settings.linkedAccounts.inactive`
+  - `settings.linkedAccounts.unlink`
+  - `settings.linkedAccounts.none`
+  - `settings.linkedAccounts.linkGoogle`
+  - `settings.linkedAccounts.linkApple`
+  - `settings.linkedAccounts.linkEmail`
+- **frontend/src/app/pages/support-centre/support-centre.component.ts**
+  - `support.title`
+  - `support.subtitle`
+  - `support.allCategories`
+  - `common.loadError`
+  - `support.noResults`
+- **frontend/src/app/pages/vip/vip.component.html**
+  - `vip.heroTitle`
+  - `vip.heroSubtitle`
+  - `vip.seePlans`
+  - `vip.startFree`
+  - `vip.premiumPlans`
+  - `vip.premiumSubtitle`
+  - `vip.mostPopular`
+  - `vip.billedMonthly`
+  - `vip.compareAllFeatures`
+  - `vip.featureTableHeader`
+  - `vip.freePlan`
+  - `vip.consumerPlan`
+  - `vip.developerPlan`
+  - `vip.included`
+  - `vip.notIncluded`
+  - `vip.faqTitle`
+  - `vip.ctaTitle`
+  - `vip.ctaSubtitle`
+  - `vip.viewPlans`
+  - `vip.continueFree`
+- **frontend/src/app/pages/vip-subscription/vip-subscription.component.html**
+  - `vip.heroTitle`
+  - `vip.heroSubtitle`
+  - `vip.seePlans`
+  - `vip.startFree`
+  - `vip.tryAgain`
+  - `vip.freeUpgrade`
+  - `vip.getStartedFree`
+  - `vip.premiumPlans`
+  - `vip.premiumSubtitle`
+  - `vip.mostPopular`
+  - `vip.billedMonthly`
+  - `vip.keyBenefits`
+  - `vip.allFeatures`
+  - `vip.subscribeNow`
+  - `vip.choosePlan`
+  - `vip.compareAllFeatures`
+  - `vip.featureTableHeader`
+  - `vip.faqTitle`
+  - `vip.faqSwitchQ`
+  - `vip.faqSwitchA`
+  - `vip.faqTrialQ`
+  - `vip.faqTrialA`
+  - `vip.faqPaymentQ`
+  - `vip.faqPaymentA`
+  - `vip.faqCancelQ`
+  - `vip.faqCancelA`
+  - `vip.ctaTitle`
+  - `vip.ctaSubtitle`
+  - `vip.viewPlans`
+  - `vip.continueFree`
+- **frontend/src/app/pages/vip-subscription/vip-subscription.component.ts**
+  - `vip.failedLoad`
+  - `vip.freePrice`
+
+### Hardcoded Text (Needs to be translated)
+- **frontend/src/app/pages/help-centre/help-centre.component.html**
+  - "Help Centre"
+  - "No articles found."
+- **frontend/src/app/pages/vip-subscription/vip-subscription.component.html**
+  - "Popular"
+
+## Technical Implementation
+1. Add missing keys and externalize hardcoded text into `frontend/src/assets/i18n/en.json` following a logical standard (e.g. `pages.propertyName`).
+2. Replace hardcoded text in HTML templates with `{{ 'key' | t }}` or `[attr.aria-label]="'key' | t"`.
+3. Use translation interpolation for dynamic values.
+4. Verify that no raw keys or hardcoded text are visible in the `pages` components.
