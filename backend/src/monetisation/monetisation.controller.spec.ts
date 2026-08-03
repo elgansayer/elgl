@@ -4,6 +4,7 @@ import { MonetisationController } from './monetisation.controller';
 import { MonetisationService } from './monetisation.service';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { VipGuard } from './guards/vip.guard';
 import { BadRequestException } from '@nestjs/common';
 
 describe('MonetisationController', () => {
@@ -42,6 +43,8 @@ describe('MonetisationController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .overrideGuard(VipGuard)
       .useValue({ canActivate: jest.fn().mockReturnValue(true) })
       .compile();
 

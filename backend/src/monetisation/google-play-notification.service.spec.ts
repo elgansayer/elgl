@@ -66,6 +66,7 @@ describe('GooglePlayNotificationService', () => {
   let mockQueryBuilder: any;
   let monetisationService: { updateVipStatusFromWebhook: jest.Mock };
   let httpService: { get: jest.Mock };
+  let subscriptionPlansService: { getTierByProductId: jest.Mock };
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -81,6 +82,9 @@ describe('GooglePlayNotificationService', () => {
       updateVipStatusFromWebhook: jest.fn().mockResolvedValue(undefined),
     };
     httpService = { get: jest.fn() };
+    subscriptionPlansService = {
+      getTierByProductId: jest.fn((productId: string) => productId),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -111,11 +115,7 @@ describe('GooglePlayNotificationService', () => {
         { provide: MonetisationService, useValue: monetisationService },
         {
           provide: SubscriptionPlansService,
-          useValue: {
-            getTierByProductId: jest
-              .fn()
-              .mockReturnValue('consumer_8_ukp_10_usd'),
-          },
+          useValue: subscriptionPlansService,
         },
       ],
     }).compile();
@@ -286,6 +286,10 @@ describe('GooglePlayNotificationService', () => {
             useValue: {
               getClient: jest.fn().mockReturnValue(mockSupabaseClient),
             },
+          },
+          {
+            provide: SubscriptionPlansService,
+            useValue: subscriptionPlansService,
           },
           { provide: MonetisationService, useValue: monetisationService },
         ],

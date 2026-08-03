@@ -63,40 +63,10 @@ export class MonetisationService {
   }
 
   /**
-   * PRIVATE: VIP status must only be changed via verified payment webhooks.
-   * This method is called exclusively from webhook handlers.
+   * VIP status must only be changed via verified payment webhooks.
+   * This method is called exclusively from webhook handlers (Stripe, Apple, Google Play).
    */
-  private async updateVipStatus(
-    userId: string,
-    isVip: boolean,
-    vipTier: string | null,
-  ): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-    const { error } = await supabase
-      .from('users')
-      .update({
-        is_vip: isVip,
-        vip_tier: vipTier,
-      })
-      .eq('id', userId);
-
-    if (error) {
-      this.logger.error(
-        `Failed to update VIP status for user ${userId}: ${error.message}`,
-      );
-      throw new Error('Failed to update VIP status');
-    }
-
-    this.logger.log(
-      `VIP status updated for user ${userId}: isVip=${isVip}, tier=${vipTier}`,
-    );
-  }
-
-  /**
-   * PRIVATE: VIP status must only be changed via verified payment webhooks.
-   * This method is called exclusively from webhook handlers.
-   */
-  private async updateVipStatus(
+  async updateVipStatusFromWebhook(
     userId: string,
     isVip: boolean,
     vipTier: string | null,

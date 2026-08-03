@@ -15,6 +15,8 @@ export class PurchaseCoinsDto {
   @IsString()
   @IsIn(['ios', 'android', 'web'])
   platform?: 'ios' | 'android' | 'web';
+}
+
 export class VerifiedPurchaseDto {
   @IsString()
   @IsNotEmpty()
