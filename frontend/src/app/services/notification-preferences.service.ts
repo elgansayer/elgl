@@ -70,15 +70,20 @@ export class NotificationPreferencesService {
     );
   }
 
-  getCustomizationPreferences(): Promise<{
+  async getCustomizationPreferences(): Promise<{
     customToneUrl?: string;
     vibrationPattern?: number[];
   }> {
-    return firstValueFrom(
+    const raw = await firstValueFrom(
       this.http.get<{ custom_tone_url?: string; vibration_pattern?: number[] }>(
         `${environment.apiUrl}/users/me/notification-preferences`,
       ),
     );
+    const result: { customToneUrl?: string; vibrationPattern?: number[] } = {
+      customToneUrl: raw.custom_tone_url,
+      vibrationPattern: raw.vibration_pattern,
+    };
+    return result;
   }
 
   resetToDefaults(): Promise<NotificationPreferences> {

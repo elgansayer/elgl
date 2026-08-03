@@ -17,6 +17,8 @@ import { ChatSettingsController } from './chat-settings.controller';
 import { ChatSettingsService } from './chat-settings.service';
 import { ChatBackupController } from './chat-backup.controller';
 import { ChatBackupService } from './chat-backup.service';
+import { QuickRepliesController } from './quick-replies/quick-replies.controller';
+import { QuickRepliesService } from './quick-replies/quick-replies.service';
 
 @Module({
   imports: [
@@ -26,7 +28,12 @@ import { ChatBackupService } from './chat-backup.service';
     XpModule,
     LlmProxyModule,
   ],
-  controllers: [ChatController, ChatSettingsController, ChatBackupController],
+  controllers: [
+    ChatController,
+    ChatSettingsController,
+    ChatBackupController,
+    QuickRepliesController,
+  ],
   providers: [
     CentrifugoService,
     TranslationService,
@@ -38,6 +45,7 @@ import { ChatBackupService } from './chat-backup.service';
     SystemMessageService,
     ChatSettingsService,
     ChatBackupService,
+    QuickRepliesService,
   ],
   exports: [
     CentrifugoService,

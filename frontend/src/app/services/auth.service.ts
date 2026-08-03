@@ -362,7 +362,7 @@ export class AuthService {
     const res = await lastValueFrom(
       this.http.post<{ success: boolean }>(
         `${this.apiUrl}/auth/two-factor/disable`,
-        { token },
+        {},
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -477,7 +477,7 @@ export class AuthService {
     return await lastValueFrom(
       this.http.post<{ swapToken: string }>(
         `${this.apiUrl}/auth/transfer/consume`,
-        { token },
+        { token: token },
       ),
     );
   }
@@ -522,7 +522,7 @@ export class AuthService {
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
     await lastValueFrom(
-      this.http.post(`${this.apiUrl}/auth/reset-password`, { token, newPassword }),
+      this.http.post(`${this.apiUrl}/auth/reset-password`, { token: token, newPassword: newPassword }),
     );
   }
 
