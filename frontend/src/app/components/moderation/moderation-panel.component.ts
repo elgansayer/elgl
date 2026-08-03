@@ -10,7 +10,6 @@ import {
 
 @Component({
   selector: 'app-moderation-panel',
-  standalone: true,
   imports: [CommonModule, TranslatePipe],
   templateUrl: './moderation-panel.html',
 })

@@ -5,7 +5,6 @@ import { UserService } from '../../services/user.service';
 
 @Component({
   selector: 'app-audio-intro-recorder',
-  standalone: true,
   imports: [CommonModule, TranslatePipe],
   templateUrl: './audio-intro-recorder.component.html',
   styleUrls: ['./audio-intro-recorder.component.scss'],

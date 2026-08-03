@@ -9,7 +9,6 @@ import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-forgot-password',
-  standalone: true,
   imports: [ReactiveFormsModule, TranslatePipe],
   template: `
     <div class="min-h-screen flex items-center justify-center bg-surface p-4">

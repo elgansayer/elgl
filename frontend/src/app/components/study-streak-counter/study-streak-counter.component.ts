@@ -4,7 +4,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { UserService } from '../../services/user.service';
 
 @Component({
-  standalone: true,
   selector: 'app-study-streak-counter',
   template: `
     @if (streakValue() !== undefined) {

@@ -14,7 +14,6 @@ interface ChatMessage {
 
 @Component({
   selector: 'app-ai-conversation',
-  standalone: true,
   imports: [CommonModule, FormsModule],
   host: {
     class: 'flex flex-col h-full bg-[#121212] text-white',

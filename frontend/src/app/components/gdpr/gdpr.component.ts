@@ -7,7 +7,6 @@ import { I18nService } from '../../services/i18n.service';
 
 @Component({
   selector: 'app-gdpr',
-  standalone: true,
   imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <div class="max-w-lg mx-auto p-6 space-y-6">

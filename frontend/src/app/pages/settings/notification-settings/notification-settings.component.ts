@@ -3,7 +3,6 @@ import { TranslatePipe } from '../../../services/translate.pipe';
 import { NotificationPreferencesService } from '../../../services/notification-preferences.service';
 
 @Component({
-  standalone: true,
   selector: 'app-notification-settings',
   templateUrl: './notification-settings.component.html',
   imports: [TranslatePipe],

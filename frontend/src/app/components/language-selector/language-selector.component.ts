@@ -12,7 +12,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-language-selector',
-  standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
     <div

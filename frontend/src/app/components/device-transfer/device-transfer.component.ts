@@ -6,7 +6,6 @@ import { SupabaseService } from '../../services/supabase.service';
 
 @Component({
   selector: 'app-device-transfer',
-  standalone: true,
   template: `
     <div class="flex flex-col items-center justify-center min-h-screen p-8 bg-surface text-on-surface">
       <h1 class="text-2xl font-bold mb-4">Device Transfer</h1>

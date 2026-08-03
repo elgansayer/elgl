@@ -12,7 +12,6 @@ import { CoverPhotoService } from '../../services/cover-photo.service';
 
 @Component({
   selector: 'app-profile-cover-photo',
-  standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
     <div class="relative w-full rounded-xl overflow-hidden bg-surface">

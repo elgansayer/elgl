@@ -11,7 +11,6 @@ import {
 
 @Component({
   selector: 'app-notification-preferences',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="surface p-4 rounded-lg max-w-2xl mx-auto">

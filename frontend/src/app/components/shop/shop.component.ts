@@ -17,7 +17,6 @@ interface CatalogItem {
 
 @Component({
   selector: 'app-shop',
-  standalone: true,
   imports: [TranslatePipe, RouterLink],
   template: `
     <div class="p-4">

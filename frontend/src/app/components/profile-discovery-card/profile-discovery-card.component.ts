@@ -3,7 +3,6 @@ import { UserProfile } from '../../services/user.service';
 
 @Component({
   selector: 'app-profile-discovery-card',
-  standalone: true,
   template: `
     <div class="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 p-4 transition hover:border-blue-500/50">
       <div class="flex items-center gap-3">

@@ -6,7 +6,6 @@ import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-resource-library',
-  standalone: true,
   imports: [CommonModule, TranslatePipe, FormsModule],
   template: `
     <div class="p-4">

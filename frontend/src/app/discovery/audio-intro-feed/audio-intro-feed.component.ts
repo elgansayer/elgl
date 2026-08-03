@@ -7,7 +7,6 @@ import { resource } from '@angular/core';
 
 @Component({
   selector: 'app-audio-intro-feed',
-  standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
     @if (users.isLoading()) {

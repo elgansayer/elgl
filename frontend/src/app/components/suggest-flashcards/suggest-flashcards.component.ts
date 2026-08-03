@@ -10,7 +10,6 @@ import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-suggest-flashcards',
-  standalone: true,
   imports: [FormsModule, TranslatePipe],
   template: `
     <div class="p-4 bg-surface rounded-xl">

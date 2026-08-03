@@ -3,7 +3,6 @@ import { FlashcardService } from './flashcard.service';
 
 @Directive({
   selector: '[appFlashcardContextMenu]',
-  standalone: true,
   host: {
     '(contextmenu)': 'onContextMenu($event)',
     '(touchstart)': 'onTouchStart($event)',

@@ -7,7 +7,6 @@ import { TranslatePipe } from '../../../services/translate.pipe';
 
 @Component({
   selector: 'app-linked-accounts',
-  standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
     <h2>{{ 'settings.linkedAccounts.title' | t }}</h2>

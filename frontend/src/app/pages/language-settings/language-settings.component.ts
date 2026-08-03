@@ -4,7 +4,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-language-settings',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="max-w-md mx-auto p-4">

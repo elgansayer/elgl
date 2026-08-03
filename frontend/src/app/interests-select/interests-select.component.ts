@@ -10,7 +10,6 @@ export interface InterestVocabulary {
 }
 
 @Component({
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="flex flex-wrap gap-2">

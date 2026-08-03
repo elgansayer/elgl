@@ -7,7 +7,6 @@ import {
 
 @Component({
   selector: 'app-block-management',
-  standalone: true,
   imports: [TranslatePipe],
   templateUrl: './block-management.component.html',
   styles: [],

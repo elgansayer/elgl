@@ -3,7 +3,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-help-about',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="max-w-2xl mx-auto p-4 text-center">

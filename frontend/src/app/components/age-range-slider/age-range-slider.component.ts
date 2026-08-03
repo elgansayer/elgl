@@ -10,7 +10,6 @@ export interface AgeRange {
 
 @Component({
   selector: 'app-age-range-slider',
-  standalone: true,
   imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <div class="flex flex-col">

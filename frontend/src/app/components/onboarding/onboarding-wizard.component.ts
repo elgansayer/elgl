@@ -7,7 +7,6 @@ import { I18nService } from '../../services/i18n.service';
 
 @Component({
   selector: 'app-onboarding-wizard',
-  standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
     <div class="onboarding-wizard surface text-on-surface ps-4 pe-4 pt-6 pb-6">

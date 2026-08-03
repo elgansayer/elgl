@@ -9,7 +9,6 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
 
 @Component({
   selector: 'app-chat-settings',
-  standalone: true,
   imports: [CommonModule, TranslatePipe],
   templateUrl: './chat-settings.component.html',
 })

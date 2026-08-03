@@ -6,7 +6,6 @@ import { AppCardComponent } from '../primitives/card/card.component';
 
 @Component({
   selector: 'app-appearance-settings',
-  standalone: true,
   imports: [TranslatePipe, AppCardComponent],
   template: `
     <app-card variant="default" padding="lg">

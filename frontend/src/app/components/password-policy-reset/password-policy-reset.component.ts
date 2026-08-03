@@ -3,7 +3,6 @@ import { I18nService } from '../../services/i18n.service';
 
 @Component({
   selector: 'app-password-policy-reset',
-  standalone: true,
   template: `
     <div class="password-reset-container">
       <h2 class="title">{{ i18n.translate('password.resetTitle') }}</h2>

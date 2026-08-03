@@ -16,7 +16,6 @@ interface VoiceRoomNote {
 
 @Component({
   selector: 'app-voiceroom-notes',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="p-4 bg-surface rounded-lg">

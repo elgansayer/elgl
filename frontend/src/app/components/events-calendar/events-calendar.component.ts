@@ -3,7 +3,6 @@ import { firstValueFrom } from 'rxjs';
 import { EventsService, Event } from '../../services/events.service';
 
 @Component({
-  standalone: true,
   template: `
     <div class="min-h-screen bg-[#121212] text-white p-4">
       <div class="max-w-2xl mx-auto">

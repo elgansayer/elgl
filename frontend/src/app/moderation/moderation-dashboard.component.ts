@@ -6,7 +6,6 @@ import { ModerationItem, ModerationService } from './moderation.service';
 
 @Component({
   selector: 'app-moderation-dashboard',
-  standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
     <div class="ps-4 pe-4 pt-4 pb-4">
