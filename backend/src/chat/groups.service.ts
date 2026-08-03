@@ -11,6 +11,15 @@ import { SystemMessageService } from './services/system-message.service';
 import { ChatRoomRecord } from './interfaces/chat-message.interface';
 import { randomBytes } from 'crypto';
 
+export interface GroupMember {
+  user_id: string;
+  user: {
+    id: string;
+    display_name: string;
+    avatar_url: string | null;
+  } | null;
+}
+
 @Injectable()
 export class GroupsService {
   constructor(
@@ -136,7 +145,7 @@ export class GroupsService {
     await this.systemMessageService.publishToRoom(roomId, 'memberRemoved', {});
   }
 
-  async getGroupMembers(roomId: string): Promise<any[]> {
+  async getGroupMembers(roomId: string): Promise<GroupMember[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('chat_room_members')
@@ -307,6 +316,14 @@ export class GroupsService {
     await this.systemMessageService.publishToRoom(roomId, 'announcement', {
       message,
     });
+  }
+
+  async sendAnnouncement(
+    userId: string,
+    roomId: string,
+    message: string,
+  ): Promise<void> {
+    await this.broadcastMessage(userId, roomId, message);
   }
 
   async getAnnouncements(

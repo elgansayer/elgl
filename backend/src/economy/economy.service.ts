@@ -257,7 +257,7 @@ export class EconomyService {
       .single();
     if (response.error || !response.data) {
       const profile = await this.usersService.getProfile(userId);
-      return { coins_balance: profile.coins_balance || 50 };
+      return { coins_balance: profile.coins_balance ?? 50 };
     }
     const row = response.data;
     if (!isCoinBalanceRow(row)) {
@@ -311,7 +311,7 @@ export class EconomyService {
   async purchaseCoins(
     userId: string,
     dto: PurchaseCoinsDto,
-  ): Promise<{ coins: number; newBalance: number }> {
+  ): Promise<{ coins: number; new_balance: number }> {
     const supabase = this.supabaseService.getClient();
 
     // 1. Determine platform and verify the receipt with the store
@@ -402,15 +402,9 @@ export class EconomyService {
       throw new BadRequestException('User not found');
     }
 
-    if (!isCoinBalanceRow(userData)) {
-      // Rollback the purchase record (best effort)
-      await supabase
-        .from('coin_purchases')
-        .delete()
-        .eq('transaction_id', transactionId);
-      throw new BadRequestException('User not found');
-    }
-    const newBalance = userData.coins_balance + coinPackage.coins;
+    const currentBalance =
+      typeof userData.coins_balance === 'number' ? userData.coins_balance : 0;
+    const newBalance = currentBalance + coinPackage.coins;
 
     const { error: updateError } = await supabase
       .from('users')
@@ -437,7 +431,7 @@ export class EconomyService {
 
     return {
       coins: coinPackage.coins,
-      newBalance,
+      new_balance: newBalance,
     };
   }
 

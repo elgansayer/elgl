@@ -13,7 +13,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { AddMemberDto } from './dto/add-member.dto';
-import { GroupsService } from './groups.service';
+import { GroupsService, GroupMember } from './groups.service';
 import { ChatRoomRecord } from './interfaces/chat-message.interface';
 
 @UseGuards(SupabaseAuthGuard)
@@ -71,7 +71,7 @@ export class GroupsController {
   async getGroupMembers(
     @CurrentUser() user: User | null,
     @Param('roomId') roomId: string,
-  ): Promise<any[]> {
+  ): Promise<GroupMember[]> {
     if (!user) return [];
     return await this.groupsService.getGroupMembers(roomId);
   }
@@ -111,7 +111,7 @@ export class GroupsController {
     @Body() body: { message: string },
   ): Promise<{ success: boolean } | null> {
     if (!user) return null;
-    await this.groupsService.sendAnnouncement(user.id, roomId, body.message);
+    await this.groupsService.broadcastMessage(user.id, roomId, body.message);
     return { success: true };
   }
 

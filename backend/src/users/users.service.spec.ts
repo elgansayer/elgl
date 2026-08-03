@@ -567,7 +567,7 @@ describe('UsersService', () => {
   describe('getBadges', () => {
     it('should include VIP badge when profile is VIP', async () => {
       mockQueryBuilder.single.mockResolvedValue({
-        data: null,
+        data: { id: 'user-1', is_vip: true },
         error: null,
       });
       const badges = await service.getBadges('user-1');

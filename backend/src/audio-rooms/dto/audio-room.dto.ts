@@ -31,6 +31,8 @@ export class CreateAudioRoomDto {
   @IsOptional()
   @IsString()
   level?: string;
+}
+
 export class ArchiveRecordingDto {
   @IsString()
   @IsNotEmpty()
