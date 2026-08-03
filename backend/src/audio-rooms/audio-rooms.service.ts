@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -66,6 +67,19 @@ interface UserProfileRow {
   id: string;
   display_name?: string;
   avatar_url?: string | null;
+}
+
+export interface SoundboardSound {
+  id: string;
+  name: string;
+  url: string;
+  icon: string;
+}
+
+interface ExclusiveEmoji {
+  emojiId: string;
+  name: string;
+  animationUrl: string;
 }
 
 @Injectable()
@@ -162,6 +176,11 @@ export class AudioRoomsService {
     roomNameOverride?: string,
   ): Promise<AudioRoomRecord> {
     const supabase = this.supabaseService.getClient();
+    if (!dto.title?.trim() || !dto.language_pair?.trim()) {
+      throw new BadRequestException(
+        'Title and language pair are required to create an audio room.',
+      );
+    }
     const cleanTitle = dto.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
@@ -241,6 +260,11 @@ export class AudioRoomsService {
     roomNameOverride?: string,
   ): Promise<AudioRoomRecord> {
     const supabase = this.supabaseService.getClient();
+    if (!dto.title?.trim() || !dto.language_pair?.trim()) {
+      throw new BadRequestException(
+        'Title and language pair are required to create a language party.',
+      );
+    }
     const cleanTitle = dto.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
@@ -266,7 +290,7 @@ export class AudioRoomsService {
     const languagePair = String(dto.language_pair);
     const targetLanguage = languagePair.split('-')[1] ?? languagePair;
 
-    const insertPayload: any = {
+    const insertPayload = {
       room_name: roomName,
       title: dto.title,
       party_type: 'language_party',
@@ -373,8 +397,8 @@ export class AudioRoomsService {
     const room = response.data as AudioRoomRow;
     // Private room access check
     if (
-      (room as any).is_private &&
-      !(room as any).invited_user_ids?.includes(userId) &&
+      room.is_private &&
+      !room.invited_user_ids?.includes(userId) &&
       room.host_id !== userId
     ) {
       throw new ForbiddenException(
@@ -1222,7 +1246,7 @@ export class AudioRoomsService {
     return data ?? [];
   }
 
-  private readonly soundboardSounds = [
+  private readonly soundboardSounds: SoundboardSound[] = [
     {
       id: 'applause',
       name: 'Applause',
@@ -1255,11 +1279,7 @@ export class AudioRoomsService {
     },
   ];
 
-  private readonly exclusiveEmojiList: {
-    emojiId: string;
-    name: string;
-    animationUrl: string;
-  }[] = [
+  private readonly exclusiveEmojiList: ExclusiveEmoji[] = [
     {
       emojiId: 'star',
       name: '🌟 Star',
@@ -1282,15 +1302,11 @@ export class AudioRoomsService {
     },
   ];
 
-  getExclusiveEmojis(): {
-    emojiId: string;
-    name: string;
-    animationUrl: string;
-  }[] {
+  getExclusiveEmojis(): ExclusiveEmoji[] {
     return this.exclusiveEmojiList;
   }
 
-  getSoundboardSounds(): { sounds: any[] } {
+  getSoundboardSounds(): { sounds: SoundboardSound[] } {
     return { sounds: this.soundboardSounds };
   }
 

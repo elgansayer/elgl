@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import { Global, Injectable, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -212,6 +210,14 @@ type LoginHistoryRow = {
   created_at: string;
 };
 
+type ChatMessageRow = {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  created_at: string;
+};
+
 type BlockRow = {
   id: string;
   blocker_id: string;
@@ -227,14 +233,6 @@ type ReportRow = {
   description?: string | null;
   context_url?: string | null;
   created_at?: string;
-};
-
-type ChatMessageRow = {
-  id: string;
-  sender_id: string;
-  receiver_id: string;
-  content: string;
-  created_at: string;
 };
 
 export interface Database {
@@ -696,12 +694,7 @@ export interface Database {
         Relationships: [];
       };
       blocks: {
-        Row: {
-          id: string;
-          blocker_id: string;
-          blocked_id: string;
-          created_at?: string;
-        };
+        Row: BlockRow;
         Insert: {
           blocker_id: string;
           blocked_id: string;
@@ -717,15 +710,7 @@ export interface Database {
         Relationships: [];
       };
       reports: {
-        Row: {
-          id: string;
-          reporter_id: string;
-          reported_user_id: string;
-          reason_category: string;
-          description?: string | null;
-          context_url?: string | null;
-          created_at?: string;
-        };
+        Row: ReportRow;
         Insert: {
           reporter_id: string;
           reported_user_id: string;

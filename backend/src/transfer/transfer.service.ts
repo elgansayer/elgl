@@ -67,7 +67,7 @@ export class TransferService {
    */
   async swapTokenForSession(swapToken: string) {
     try {
-      const payload = await jwt.verify(swapToken, this.secret);
+      const payload = jwt.verify(swapToken, this.secret);
       if (typeof payload === 'string') {
         return null;
       }
@@ -78,6 +78,7 @@ export class TransferService {
       }
       // In this MVP we return dummy tokens; the real implementation would
       // exchange the token for a Supabase session via the admin API.
+      await Promise.resolve();
       return {
         access_token: `dummy-access-${sub}`,
         refresh_token: `dummy-refresh-${sub}`,

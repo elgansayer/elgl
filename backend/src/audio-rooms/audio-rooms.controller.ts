@@ -13,7 +13,7 @@ import {
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { AudioRoomsService } from './audio-rooms.service';
+import { AudioRoomsService, SoundboardSound } from './audio-rooms.service';
 import { CreatePollDto } from './dto/create-poll.dto';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
 import { PlaySoundDto } from './dto/play-sound.dto';
@@ -47,6 +47,7 @@ export class AudioRoomsController {
   constructor(private readonly audioRoomsService: AudioRoomsService) {}
 
   @Post('create')
+  @HttpCode(HttpStatus.CREATED)
   async createRoom(
     @CurrentUser() user: User | null,
     @Body() dto: CreateAudioRoomDto,
@@ -272,7 +273,7 @@ export class AudioRoomsController {
   }
 
   @Get('soundboard/list')
-  listSoundboardSounds(): { sounds: any[] } {
+  listSoundboardSounds(): { sounds: SoundboardSound[] } {
     return this.audioRoomsService.getSoundboardSounds();
   }
 
