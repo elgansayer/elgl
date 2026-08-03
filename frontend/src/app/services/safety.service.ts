@@ -308,9 +308,10 @@ export class SafetyService {
 
   async getBlockedAndBlockerIds(userId: string): Promise<string[]> {
     try {
-      return await firstValueFrom(
+      const ids: string[] = await firstValueFrom(
         this.http.get<string[]>(`${this.apiUrl}/safety/blocked-and-blocker-ids/${userId}`),
       );
+      return ids;
     } catch (e) {
       console.error('Failed to get blocked and blocker IDs:', e);
       return [];

@@ -51,7 +51,7 @@ export class ChatViewComponent implements OnInit {
   messages: ChatMessage[] = [];
   newMessageText = '';
 
-  private blockedUserIds = signal<Set<string>>(new Set());
+  private blockedUserIds = signal<Set<string>>(new Set<string>());
 
   readonly effectiveUserId = computed(
     () => this.currentUserId() ?? this.authService.currentUser()?.id,

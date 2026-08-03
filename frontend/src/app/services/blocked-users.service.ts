@@ -35,7 +35,7 @@ export class BlockedUsersService {
   /** Fetches the full list of blocked user details from the backend and updates the signal. */
   async loadBlockedUsers(): Promise<void> {
     try {
-      const users = await firstValueFrom(
+      const users: BlockedUserResponse[] = await firstValueFrom(
         this.http.get<BlockedUserResponse[]>(`${this.apiUrl}/blocks`, {
           headers: this.getHeaders(),
         })

@@ -350,7 +350,12 @@ export class UsersController {
     if (!user) throw new UnauthorizedException();
     if (!dto.reported_id || !dto.reason_category)
       throw new BadRequestException();
-    return this.usersService.reportUser(user.id, dto);
+    return this.usersService.reportUser(user.id, {
+      reported_id: String(dto.reported_id),
+      reason_category: String(dto.reason_category),
+      description: dto.description ? String(dto.description) : undefined,
+      context_url: dto.context_url ? String(dto.context_url) : undefined,
+    });
   }
 
   @Get('me/privacy-settings')

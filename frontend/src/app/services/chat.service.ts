@@ -141,7 +141,7 @@ export class ChatService {
 
   // Blocked user list is loaded on demand, never in the constructor,
   // to avoid premature HTTP calls that break test environments.
-  private readonly blockedUsers = signal<Set<string>>(new Set());
+  private readonly blockedUsers = signal<Set<string>>(new Set<string>());
 
   constructor() {
     if (typeof window !== 'undefined') {

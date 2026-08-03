@@ -131,10 +131,10 @@ export class ChatRoomComponent implements OnDestroy {
   correctedText = '';
   explanationText = '';
 
-  private subscription: unknown = null;
+  private subscription: { unsubscribe: () => void } | null = null;
 
   private isChatEventPayload(
-    value: unknown,
+    value: Record<string, unknown>,
   ): value is { message?: ChatMessage; typing?: boolean } {
     return (
       !!value &&
