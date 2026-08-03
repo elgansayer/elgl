@@ -1,7 +1,10 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, signal, computed, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { RouterLink } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
+import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 interface CatalogItem {
@@ -15,11 +18,15 @@ interface CatalogItem {
 @Component({
   selector: 'app-shop',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, RouterLink],
   template: `
     <div class="p-4">
       <h1 class="text-xl font-bold mb-4">{{ 'shop.title' | t }}</h1>
       <p class="mb-6 text-sm opacity-70">{{ 'shop.subtitle' | t }}</p>
+      <a routerLink="/cart" class="mb-6 block text-sm font-medium text-indigo-400 underline">{{ 'cart.title' | t }}</a>
+      @if (message()) {
+        <p class="mb-4 text-sm text-indigo-300">{{ message() }}</p>
+      }
       <div class="grid grid-cols-2 gap-4">
         @for (item of items(); track item.id) {
           <div class="rounded-xl bg-surface p-3 shadow">
@@ -40,28 +47,43 @@ interface CatalogItem {
     </div>
   `,
 })
-export class ShopComponent implements OnInit {
+export class ShopComponent {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
-  items = signal<CatalogItem[]>([]);
+  private i18n = inject(I18nService);
 
-  ngOnInit() {
-    const token = this.authService.getAccessToken();
-    this.http.get<CatalogItem[]>(`${environment.apiUrl}/shopping/catalog`, {
-      headers: { Authorization: `Bearer ${token ?? ''}` },
-    }).subscribe({
-      next: (data) => this.items.set(data),
-      error: () => this.items.set([]),
-    });
-  }
+  private reload = signal(0);
+  message = signal<string>('');
+
+  private catalogResource = resource<CatalogItem[], number>({
+    request: () => this.reload(),
+    loader: async ({ request }) => {
+      const token = this.authService.getAccessToken();
+      return await firstValueFrom(
+        this.http.get<CatalogItem[]>(
+          `${environment.apiUrl}/shopping/catalog`,
+          { headers: { Authorization: `Bearer ${token ?? ''}` } },
+        ),
+      );
+    },
+  });
+
+  items = computed(() => this.catalogResource.value() ?? []);
 
   async addToCart(itemId: string) {
     const token = this.authService.getAccessToken();
-    this.http.post(`${environment.apiUrl}/cart/add`, { itemId }, {
-      headers: { Authorization: `Bearer ${token ?? ''}` },
-    }).subscribe({
-      next: () => alert('Added to cart!'),
-      error: () => alert('Failed to add.'),
-    });
+    try {
+      await firstValueFrom(
+        this.http.post(
+          `${environment.apiUrl}/shopping/cart`,
+          { itemId },
+          { headers: { Authorization: `Bearer ${token ?? ''}` } },
+        ),
+      );
+      this.message.set(this.i18n.translate('cart.addSuccess'));
+      this.reload.update((v) => v + 1);
+    } catch {
+      this.message.set(this.i18n.translate('cart.addError'));
+    }
   }
 }
