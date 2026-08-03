@@ -48,6 +48,10 @@ export class CreateMomentDto {
   @IsOptional()
   @IsString()
   voice_note_url?: string;
+
+  @IsOptional()
+  @IsEnum(['vip', 'non-vip'])
+  user_type?: 'vip' | 'non-vip'; // Enforce AI usage limits for non-VIP users
   @IsOptional()
   @IsArray()
   @IsString({ each: true })

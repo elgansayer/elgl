@@ -84,6 +84,10 @@ export interface UserProfile {
   away_message?: string;
   followers_count?: number;
   following_count?: number;
+  ai_usage_count?: number; // Tracks AI usage for non-VIP users
+  max_target_languages?: number; // Maximum target languages for non-VIP users
+  location_spoofing_enabled?: boolean; // Indicates if location spoofing is enabled
+  incognito_profile_views?: boolean; // Indicates if incognito profile views are enabled
   custom_avatar_url?: string; // Custom profile picture URL
   about_status?: string; // Custom About status
   notification_preferences?: NotificationPreferences;

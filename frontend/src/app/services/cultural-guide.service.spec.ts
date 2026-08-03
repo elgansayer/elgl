@@ -26,7 +26,8 @@ describe('CulturalGuideService', () => {
     expect(req.request.method).toBe('GET');
     req.flush({ language: 'fr', guide: 'Bonjour is the customary greeting.' });
 
-    await expect(guidePromise).resolves.toBe('Bonjour is the customary greeting.');
+    const guide = await guidePromise;
+    expect(guide).toBe('Bonjour is the customary greeting.');
   });
 
   it('should resolve to null when no guide exists for the language', async () => {
@@ -35,7 +36,7 @@ describe('CulturalGuideService', () => {
     const req = httpMock.expectOne('http://localhost:3000/api/cultural-guides/xx');
     req.flush('Not Found', { status: 404, statusText: 'Not Found' });
 
-    await expect(guidePromise).resolves.toBeNull();
+    expect(await guidePromise).toBeNull();
   });
 
   it('should resolve to null on a network error', async () => {
@@ -44,6 +45,6 @@ describe('CulturalGuideService', () => {
     const req = httpMock.expectOne('http://localhost:3000/api/cultural-guides/fr');
     req.error(new ProgressEvent('Network error'));
 
-    await expect(guidePromise).resolves.toBeNull();
+    expect(await guidePromise).toBeNull();
   });
 });

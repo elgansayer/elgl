@@ -1,4 +1,4 @@
-import { Global, Injectable, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import Redis from 'ioredis';
@@ -742,7 +742,6 @@ export interface Database {
   };
 }
 
-@Global()
 @Injectable()
 export class SupabaseService implements OnModuleDestroy {
   private readonly client: SupabaseClient<Database>;
@@ -860,5 +859,22 @@ export class SupabaseService implements OnModuleDestroy {
       return 0;
     }
     return Number(data.xp_total ?? 0);
+  }
+
+  async isVipUser(userId: string): Promise<boolean> {
+    const supabase = this.getClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('is_vip')
+      .eq('id', userId)
+      .single();
+    if (error || !data) {
+      console.error(
+        `Failed to fetch VIP status for user ${userId}:`,
+        error?.message,
+      );
+      return false;
+    }
+    return data.is_vip ?? false;
   }
 }

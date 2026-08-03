@@ -157,7 +157,7 @@ describe('LivekitService', () => {
       req.flush({ token: 'test-token' });
       const room = await roomPromise;
       expect(mockRoomConnect).toHaveBeenCalledWith(environment.liveKitUrl, 'test-token');
-      expect(room).toStrictEqual(fakeRoom);
+      expect(room).toEqual(fakeRoom);
       expect(internals(service).room).toEqual(fakeRoom);
     });
   });

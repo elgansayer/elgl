@@ -26,6 +26,10 @@ export class CreateStoryDto {
   target_language?: string;
 
   @IsOptional()
+  @IsEnum(['vip', 'non-vip'])
+  user_type?: 'vip' | 'non-vip'; // Enforce target language limits for non-VIP users
+
+  @IsOptional()
   @IsNumber()
   expireInHours?: number; // defaults to 24 in service
 
