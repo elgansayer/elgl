@@ -35,7 +35,9 @@ interface CatalogItem {
             </div>
             <h2 class="font-semibold">{{ item.name }}</h2>
             <p class="text-xs opacity-60">{{ item.description }}</p>
-            <p class="mt-1 font-semibold text-indigo-400">{{ item.price }} {{ 'common.coins' | t }}</p>
+            <p class="mt-1 font-semibold text-indigo-400">
+              {{ item.price }} {{ 'common.coins' | t: { currency: 'coins' } }}
+            </p>
             <button
               class="mt-2 w-full rounded-full bg-indigo-600 py-1 text-sm font-medium hover:bg-indigo-500"
               (click)="addToCart(item.id)">
@@ -57,14 +59,24 @@ export class ShopComponent {
 
   private catalogResource = resource<CatalogItem[], number>({
     request: () => this.reload(),
-    loader: async ({ request }) => {
+    loader: async () => {
       const token = this.authService.getAccessToken();
-      return await firstValueFrom(
+      const response = await firstValueFrom(
         this.http.get<CatalogItem[]>(
           `${environment.apiUrl}/shopping/catalog`,
           { headers: { Authorization: `Bearer ${token ?? ''}` } },
         ),
       );
+      if (!Array.isArray(response)) {
+        throw new Error('Invalid catalog response');
+      }
+      return response.map((item) => ({
+        id: String(item.id),
+        name: String(item.name),
+        description: String(item.description),
+        price: Number(item.price),
+        imageUrl: item.imageUrl ? String(item.imageUrl) : undefined,
+      }));
     },
   });
 
@@ -73,17 +85,20 @@ export class ShopComponent {
   async addToCart(itemId: string) {
     const token = this.authService.getAccessToken();
     try {
-      await firstValueFrom(
-        this.http.post(
+      const response = await firstValueFrom(
+        this.http.post<{ success: boolean }>(
           `${environment.apiUrl}/shopping/cart`,
           { itemId },
           { headers: { Authorization: `Bearer ${token ?? ''}` } },
         ),
       );
+      if (!response.success) {
+        throw new Error('Failed to add item to cart');
+      }
       this.message.set(this.i18n.translate('cart.addSuccess'));
       this.reload.update((v) => v + 1);
     } catch {
-      this.message.set(this.i18n.translate('cart.addError'));
+      this.message.set(this.i18n.translate('cart.addError', { itemId }));
     }
   }
 }
