@@ -225,6 +225,11 @@ export class ProfileComponent implements OnInit {
         this.selectedAvatarFile = null;
       }
 
+      // Update About status
+      if (this.statusText) {
+        await this.userService.updateAboutStatus(this.statusText);
+      }
+
       const updated = await this.userService.updateMyProfile({
         display_name: this.displayName,
         native_languages: this.nativeLanguages,

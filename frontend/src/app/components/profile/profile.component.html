@@ -115,11 +115,11 @@
           @if (visitorsError()) {
             <div class="text-xs text-red-400">{{ visitorsError() }}</div>
           }
-          @if (!visitorsLoading() && !visitorsError() && visitors()?.length > 0) {
+          @if (!visitorsLoading() && !visitorsError() && visitors() && visitors()!.length > 0) {
             <div class="flex flex-wrap gap-2">
               @for (visit of visitors(); track visit.id) {
                 <div class="flex items-center gap-2 rounded-full bg-surface-200 ps-2 pe-3 pt-1 pb-1 text-xs">
-                  @if (visit.visitor && visit.visitor.avatar_url && visit.visitor.id !== 'hidden-vip-only') {
+                  @if (visit.visitor && visit.visitor?.avatar_url && visit.visitor?.id !== 'hidden-vip-only') {
                     <img
                       [src]="visit.visitor?.avatar_url"
                       alt="avatar"
@@ -266,7 +266,7 @@
         </div>
       }
 
-      @if (!isEditing() && profile()) {
+      @if (!isEditing() && profile() != null) {
         <div class="mt-4">
           <app-achievements [userId]="profile()!.id" />
         </div>
@@ -444,6 +444,29 @@
           </div>
 
           <div class="mt-4">
+            <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{
+              'profile.customAvatarLabel' | t
+            }}</label>
+            <input
+              type="file"
+              accept="image/*"
+              (change)="onCustomAvatarFileSelected($event)"
+              class="app-input"
+            />
+          </div>
+
+          <div class="mt-4">
+            <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{
+              'profile.aboutStatusLabel' | t
+            }}</label>
+            <textarea
+              [(ngModel)]="statusText"
+              name="aboutStatus"
+              rows="3"
+              [placeholder]="'profile.aboutStatusPlaceholder' | t"
+              class="app-textarea"
+            ></textarea>
+          </div>
             <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{
               'profile.proficiencyLabel' | t
             }}</label>
@@ -704,7 +727,7 @@
   }
 </div>
 
-@if (showConfetti()) {
+@if (showConfetti() != null && showConfetti()) {
   <app-celebration-overlay
     [milestone]="milestoneForConfetti()"
     [visible]="showConfetti()"

@@ -234,6 +234,27 @@ export class UserService {
     );
   }
 
+  async updateCustomAvatar(file: File): Promise<string> {
+    const { uploadUrl, mediaUrl } = await this.getPresignedAvatarUrl(file.name, file.type);
+
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type },
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error('Failed to upload custom avatar');
+    }
+
+    await this.updateMyProfile({ custom_avatar_url: mediaUrl });
+    return mediaUrl;
+  }
+
+  async updateAboutStatus(aboutStatus: string): Promise<UserProfile> {
+    return this.updateMyProfile({ about_status: aboutStatus });
+  }
+
   async updateMyProfile(
     update: Partial<UserProfile> & {
       location?: { latitude: number; longitude: number };

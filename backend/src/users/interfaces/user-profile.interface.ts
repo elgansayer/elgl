@@ -84,6 +84,8 @@ export interface UserProfile {
   away_message?: string;
   followers_count?: number;
   following_count?: number;
+  custom_avatar_url?: string; // Custom profile picture URL
+  about_status?: string; // Custom About status
 }
 
 export interface BusinessCatalogItem {
