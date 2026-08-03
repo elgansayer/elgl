@@ -67,7 +67,7 @@ export class CartComponent {
   private reload = signal(0);
   message = signal<string>('');
 
-  private cartResource = resource({
+  private cartResource = resource<CartItem[], { version: number; token: string | null }>({
     request: () => ({
       version: this.reload(),
       token: this.authService.getAccessToken(),
@@ -82,10 +82,10 @@ export class CartComponent {
     },
   });
 
-  items = computed(() => this.cartResource.value() ?? []);
+  items = computed<CartItem[]>(() => this.cartResource.value() ?? []);
 
   totalCoins = computed(() =>
-    this.items().reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
+    this.items().reduce((sum: number, item: CartItem) => sum + item.unitPrice * item.quantity, 0),
   );
 
   async removeItem(itemId: string): Promise<void> {

@@ -238,7 +238,7 @@
                 }
                 @if (moment.media_type === 'audio') {
                   <div class="bg-surface-300 rounded-full py-1 px-3 inline-block">
-                    <audio [src]="moment.media_urls[0]" controls class="h-8 w-[200px]"></audio>
+                    <audio [src]="moment.media_urls?.[0] ?? ''" controls class="h-8 w-[200px]"></audio>
                   </div>
                 }
               </div>

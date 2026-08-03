@@ -305,6 +305,13 @@ export class I18nService {
 
     // Audio Room Component
     'audioRoom.liveSfuBadge': '🔴 Live SFU room',
+    'audioRoom.title': 'Live room',
+    'audioRoom.host': 'Host',
+    'audioRoom.speakers': 'Speakers',
+    'audioRoom.listeners': 'Listeners',
+    'audioRoom.live': 'Live',
+    'audioRoom.leave': 'Leave',
+    'audioRoom.speaking': 'Speaking',
     'audioRoom.hostLabel': 'Host',
     'audioRoom.hostFallback': 'Room Host',
     'audioRoom.listenersCount': '{{count}} listening',

@@ -60,7 +60,7 @@ export const routes: Routes = [
   {
     path: 'audio-rooms',
     loadComponent: () =>
-      import('./components/audio-room/audio-room.component').then((m) => m.AudioRoomComponent),
+      import('./audio-rooms/audio-room.component').then((m) => m.AudioRoomComponent),
   },
   {
     path: 'chat',

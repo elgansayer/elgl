@@ -80,7 +80,7 @@ export class FeedService {
       await this.safetyService.getBlockedAndBlockerIds(currentUserId);
 
     let query = supabase
-      .from<MomentRow>('moments')
+      .from('moments')
       .select(
         'id, author_id, content_text, media_urls, voice_note_url, detected_language, created_at',
       )
@@ -106,7 +106,9 @@ export class FeedService {
         return [];
       }
 
-      const followedIds = (followingRows ?? []).map((row) => row.following_id);
+      const followedIds = (followingRows ?? [])
+        .map((row) => row.following_id)
+        .filter((id): id is string => !!id);
 
       if (followedIds.length === 0) {
         return [];
@@ -160,7 +162,9 @@ export class FeedService {
         return [];
       }
 
-      const matchedIds = (matchedAuthors ?? []).map((row) => row.id);
+      const matchedIds = (matchedAuthors ?? [])
+        .map((row) => row.id)
+        .filter((id): id is string => !!id);
       if (matchedIds.length === 0) {
         return [];
       }
@@ -175,13 +179,15 @@ export class FeedService {
       return [];
     }
 
-    const authorIds = Array.from(new Set(momentRows.map((m) => m.author_id)));
+    const authorIds = Array.from(
+      new Set(momentRows.map((m) => m.author_id)),
+    ).filter((id): id is string => !!id);
 
     const authorMap = new Map<string, Moment['author']>();
 
     if (authorIds.length > 0) {
       const { data: authorRows, error: authorError } = await supabase
-        .from<AuthorRow>('users')
+        .from('users')
         .select(
           'id, display_name, avatar_url, native_languages, target_languages',
         )
@@ -232,7 +238,7 @@ export class FeedService {
 
     const { data: momentRow, error: momentError } = await supabase
       .from('moments')
-      .select<MomentRow>(
+      .select(
         'id, author_id, content_text, media_urls, voice_note_url, detected_language, created_at',
       )
       .eq('id', momentId)
@@ -250,7 +256,7 @@ export class FeedService {
 
     const { data: authorRow, error: authorError } = await supabase
       .from('users')
-      .select<AuthorRow>(
+      .select(
         'id, display_name, avatar_url, native_languages, target_languages',
       )
       .eq('id', typed.author_id)
@@ -303,7 +309,7 @@ export class FeedService {
         voice_note_url: content.voice_note_url || null,
         detected_language: content.detected_language || null,
       })
-      .select<MomentRow>(
+      .select(
         'id, author_id, content_text, media_urls, voice_note_url, detected_language, created_at',
       )
       .single();
@@ -316,7 +322,7 @@ export class FeedService {
 
     const { data: authorRow, error: authorError } = await supabase
       .from('users')
-      .select<AuthorRow>(
+      .select(
         'id, display_name, avatar_url, native_languages, target_languages',
       )
       .eq('id', typed.author_id)
@@ -355,7 +361,7 @@ export class FeedService {
     // Verify ownership
     const momentResponse = await supabase
       .from('moments')
-      .select<{ author_id: string }>('author_id')
+      .select('author_id')
       .eq('id', momentId)
       .single();
 
