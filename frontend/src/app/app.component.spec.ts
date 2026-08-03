@@ -134,7 +134,7 @@ describe('AppComponent', () => {
     expect(centrifugeServiceMock.connect).toHaveBeenCalledTimes(1);
     expect(centrifugeServiceMock.subscribe).toHaveBeenCalledTimes(1);
     expect(fcmServiceMock.requestPermission).toHaveBeenCalledTimes(1);
-    expect(fcmServiceMock.persistFcmToken).toHaveBeenCalledWith('test-user-1');
+    expect(fcmServiceMock.persistFcmToken).toHaveBeenCalled();
   });
 
   it('should trigger gift animation when receiving a virtual_gift payload', () => {

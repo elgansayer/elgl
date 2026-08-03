@@ -14,8 +14,8 @@ export class CorrectorScoreService {
     const { error } = await supabase
       .from('corrector_ratings')
       .upsert(
-        { rater_id: raterId, rated_user_id: ratedUserId, score } as const,
-        { onConflict: 'rater_id,rated_user_id' },
+        { rater_id: raterId, rated_user_id: ratedUserId, score },
+        { onConflict: ['rater_id', 'rated_user_id'] },
       );
     if (error) throw error;
   }

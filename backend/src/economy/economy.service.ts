@@ -858,7 +858,9 @@ export class EconomyService {
     const { coins_balance: senderBalance } = await this.getBalance(senderId);
     if (senderBalance < (gift as VirtualGiftRow).cost_coins) {
       throw new BadRequestException(
-        `Insufficient coin balance (${senderBalance} available, ${gift.cost_coins} required). Purchase coins to support your language partners and room hosts!`,
+        `Insufficient coin balance (${senderBalance} available, ${
+          (gift as VirtualGiftRow).cost_coins
+        } required). Purchase coins to support your language partners and room hosts!`,
       );
     }
 

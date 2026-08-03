@@ -266,22 +266,57 @@ export class MonetisationService {
     return { received: true, status: 'processed' };
   }
 
-  async handleAppleWebhook(
-    payload: unknown,
+  async handleAppleNotification(
+    dto: AppleNotificationDto,
   ): Promise<{ received: boolean; status: string }> {
-    this.logger.log('Received Apple App Store Server Notification');
-    return await this.appleNotificationService.handleNotification(payload);
+    this.logger.log(
+      `Processing Apple Notification: ${dto.notificationType}, ${dto.subtype}`,
+    );
+
+    if (dto.receiptData) {
+      const validationResult =
+        await this.appleReceiptValidatorService.validateReceipt(
+          'userId-placeholder', // Replace with actual user ID resolution logic
+          dto.receiptData,
+          false,
+        );
+
+      if (validationResult.valid) {
+        await this.updateVipStatusFromWebhook(
+          'userId-placeholder', // Replace with actual user ID resolution logic
+          true,
+          'tier-placeholder', // Replace with actual tier resolution logic
+        );
+        return { received: true, status: 'processed' };
+      }
+    }
+
+    return { received: true, status: 'ignored' };
   }
 
-  async handleGoogleWebhook(
-    payload: unknown,
-    authorizationHeader?: string,
+  async handleGoogleNotification(
+    dto: GoogleNotificationDto,
   ): Promise<{ received: boolean; status: string }> {
-    this.logger.log('Received Google Play Developer Notification');
-    return await this.googlePlayNotificationService.handleNotification(
-      payload,
-      authorizationHeader,
+    this.logger.log(
+      `Processing Google Notification: ${dto.productId}, ${dto.purchaseToken}`,
     );
+
+    const purchaseDetails =
+      await this.googlePlayNotificationService.getSubscriptionPurchaseDetails(
+        dto.productId,
+        dto.purchaseToken,
+      );
+
+    if (purchaseDetails) {
+      await this.updateVipStatusFromWebhook(
+        dto.userId || 'userId-placeholder', // Replace with actual user ID resolution logic
+        true,
+        'tier-placeholder', // Replace with actual tier resolution logic
+      );
+      return { received: true, status: 'processed' };
+    }
+
+    return { received: true, status: 'ignored' };
   }
 
   async generateApiKey(

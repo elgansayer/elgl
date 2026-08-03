@@ -53,20 +53,14 @@ export class MonetisationController {
 
   @Post('webhooks/apple')
   @HttpCode(200)
-  async handleAppleWebhook(@Body() payload: unknown) {
-    return await this.monetisationService.handleAppleWebhook(payload);
+  async handleAppleWebhook(@Body() dto: AppleNotificationDto) {
+    return await this.monetisationService.handleAppleNotification(dto);
   }
 
   @Post('webhooks/google')
   @HttpCode(200)
-  async handleGoogleWebhook(
-    @Body() payload: unknown,
-    @Headers('authorization') authorization?: string,
-  ) {
-    return await this.monetisationService.handleGoogleWebhook(
-      payload,
-      authorization,
-    );
+  async handleGoogleWebhook(@Body() dto: GoogleNotificationDto) {
+    return await this.monetisationService.handleGoogleNotification(dto);
   }
 
   @Post('generate-api-key')
