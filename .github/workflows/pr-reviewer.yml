@@ -37,7 +37,7 @@ jobs:
             2. Run the local tests and linters to verify the code is correct.
             3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
             4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
-            5. Once the code is perfect and all tests pass locally, you have the final authority to merge it. Use the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it.
+            5. CRITICAL INSTRUCTION: Once the code is perfect and all tests pass locally, you MUST execute the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it. DO NOT just say it looks good, YOU MUST ACTUALLY RUN THE COMMAND!
 
       - name: Tier 2 - OpenHands (Gemini 3.6 Flash Fallback)
         id: secondary
@@ -58,7 +58,7 @@ jobs:
             2. Run the local tests and linters to verify the code is correct.
             3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
             4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
-            5. Once the code is perfect and all tests pass locally, you have the final authority to merge it. Use the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it.
+            5. CRITICAL INSTRUCTION: Once the code is perfect and all tests pass locally, you MUST execute the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it. DO NOT just say it looks good, YOU MUST ACTUALLY RUN THE COMMAND!
           cli_args: "--max-iterations 30"
 
       - name: Tier 3 - OpenHands (DeepSeek Coder Fallback)
@@ -79,5 +79,5 @@ jobs:
             2. Run the local tests and linters to verify the code is correct.
             3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
             4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
-            5. Once the code is perfect and all tests pass locally, you have the final authority to merge it. Use the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it.
+            5. CRITICAL INSTRUCTION: Once the code is perfect and all tests pass locally, you MUST execute the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it. DO NOT just say it looks good, YOU MUST ACTUALLY RUN THE COMMAND!
           cli_args: "--max-iterations 50"
