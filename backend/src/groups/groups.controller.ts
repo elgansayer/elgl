@@ -20,6 +20,7 @@ import { RemoveMemberDto } from './dto/remove-member.dto';
 import { UpdateGroupSettingsDto } from './dto/update-group-settings.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { SendAnnouncementDto } from './dto/send-announcement.dto';
+import { RenameGroupDto } from './dto/rename-group.dto';
 
 @Controller('groups')
 export class GroupsController {
@@ -27,8 +28,8 @@ export class GroupsController {
 
   @Post()
   @UseGuards(SupabaseAuthGuard)
-  async create(@Body() dto: CreateGroupDto, @Req() req: any) {
-    const ownerId = req.user.id;
+  async create(@Body() dto: CreateGroupDto, @CurrentUser() user: User) {
+    const ownerId = user.id;
     return this.groupsService.createGroup(
       ownerId,
       dto.name,
@@ -40,18 +41,20 @@ export class GroupsController {
 
   @Get()
   @UseGuards(SupabaseAuthGuard)
-  async getGroups(@Req() req: any, @Query('interestId') interestId?: string) {
+  async getGroups(
+    @CurrentUser() user: User,
+    @Query('interestId') interestId?: string,
+  ) {
     if (interestId) {
       return this.groupsService.getGroupsByInterest(interestId);
     }
-    return this.groupsService.getDiscoverableGroups(req.user.id);
+    return this.groupsService.getDiscoverableGroups(user.id);
   }
 
   @Get('discoverable')
   @UseGuards(SupabaseAuthGuard)
-  async getDiscoverableGroups(@Req() req: any) {
-    const userId = req.user.id;
-    return this.groupsService.getDiscoverableGroups(userId);
+  async getDiscoverableGroups(@CurrentUser() user: User) {
+    return this.groupsService.getDiscoverableGroups(user.id);
   }
 
   @Get(':groupId/members')
@@ -90,13 +93,13 @@ export class GroupsController {
   async addMember(
     @Param('groupId') groupId: string,
     @Body() dto: AddMemberDto,
-    @Req() req: any,
+    @CurrentUser() user: User,
   ) {
-    const requesterId = req.user.id;
+    const requesterId = user.id;
     const isAdmin = await this.groupsService.isAdmin(requesterId, groupId);
     if (!isAdmin)
       throw new UnauthorizedException('Only the group admin can add members');
-    return this.groupsService.addMember(groupId, dto.memberId);
+    return this.groupsService.addMember(groupId, dto.memberId, requesterId);
   }
 
   @Post(':groupId/remove-member')
@@ -104,15 +107,15 @@ export class GroupsController {
   async removeMember(
     @Param('groupId') groupId: string,
     @Body() dto: RemoveMemberDto,
-    @Req() req: any,
+    @CurrentUser() user: User,
   ) {
-    const requesterId = req.user.id;
+    const requesterId = user.id;
     const isAdmin = await this.groupsService.isAdmin(requesterId, groupId);
     if (!isAdmin)
       throw new UnauthorizedException(
         'Only the group admin can remove members',
       );
-    return this.groupsService.removeMember(groupId, dto.memberId);
+    return this.groupsService.removeMember(groupId, dto.memberId, requesterId);
   }
 
   @Post(':groupId/settings')
@@ -120,9 +123,9 @@ export class GroupsController {
   async updateSettings(
     @Param('groupId') groupId: string,
     @Body() dto: UpdateGroupSettingsDto,
-    @Req() req: any,
+    @CurrentUser() user: User,
   ) {
-    const requesterId = req.user.id;
+    const requesterId = user.id;
     const isAdmin = await this.groupsService.isAdmin(requesterId, groupId);
     if (!isAdmin)
       throw new UnauthorizedException(
@@ -136,9 +139,9 @@ export class GroupsController {
   async restrictSendMessages(
     @Param('groupId') groupId: string,
     @Body() dto: { canSendMessages: boolean },
-    @Req() req: any,
+    @CurrentUser() user: User,
   ) {
-    const requesterId = req.user.id;
+    const requesterId = user.id;
     const isAdmin = await this.groupsService.isAdmin(requesterId, groupId);
     if (!isAdmin)
       throw new UnauthorizedException(
@@ -154,9 +157,9 @@ export class GroupsController {
   async restrictEditInfo(
     @Param('groupId') groupId: string,
     @Body() dto: { canEditInfo: boolean },
-    @Req() req: any,
+    @CurrentUser() user: User,
   ) {
-    const requesterId = req.user.id;
+    const requesterId = user.id;
     const isAdmin = await this.groupsService.isAdmin(requesterId, groupId);
     if (!isAdmin)
       throw new UnauthorizedException(
@@ -167,14 +170,30 @@ export class GroupsController {
     });
   }
 
+  @Post(':groupId/rename')
+  @UseGuards(SupabaseAuthGuard)
+  async renameGroup(
+    @Param('groupId') groupId: string,
+    @Body() dto: RenameGroupDto,
+    @CurrentUser() user: User,
+  ) {
+    const requesterId = user.id;
+    const isAdmin = await this.groupsService.isAdmin(requesterId, groupId);
+    if (!isAdmin)
+      throw new UnauthorizedException(
+        'Only the group admin can rename the group',
+      );
+    return this.groupsService.renameGroup(groupId, dto.newName, requesterId);
+  }
+
   @Post(':groupId/announcement')
   @UseGuards(SupabaseAuthGuard)
   async sendAnnouncement(
     @Param('groupId') groupId: string,
     @Body() dto: SendAnnouncementDto,
-    @Req() req: any,
+    @CurrentUser() user: User,
   ): Promise<{ success: boolean }> {
-    const requesterId = req.user.id;
+    const requesterId = user.id;
     const isAdmin = await this.groupsService.isAdmin(requesterId, groupId);
     if (!isAdmin)
       throw new UnauthorizedException(
@@ -189,8 +208,11 @@ export class GroupsController {
 
   @Post(':groupId/join')
   @UseGuards(SupabaseAuthGuard)
-  async joinGroup(@Param('groupId') groupId: string, @Req() req: any) {
-    const userId = req.user.id;
+  async joinGroup(
+    @Param('groupId') groupId: string,
+    @CurrentUser() user: User,
+  ) {
+    const userId = user.id;
     return this.groupsService.joinGroup(groupId, userId);
   }
 
@@ -206,9 +228,9 @@ export class GroupsController {
   async deleteGroupResource(
     @Param('groupId') groupId: string,
     @Param('resourceId') resourceId: string,
-    @Req() req: any,
+    @CurrentUser() user: User,
   ): Promise<void> {
-    const requesterId = req.user.id;
+    const requesterId = user.id;
     return this.groupsService.deleteGroupResource(
       groupId,
       resourceId,
