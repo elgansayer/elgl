@@ -106,8 +106,8 @@ export class SafetyService {
   }
 
   /** Apply mute‑word filter to an array of moments. */
-  filterMomentsByMutedWords(moments: MomentFeedItem[]): MomentFeedItem[] {
-    if (!moments || moments.length === 0) return moments;
+  filterMomentsByMutedWords(moments: MomentFeedItem[] | null | undefined): MomentFeedItem[] {
+    if (!moments || moments.length === 0) return [];
     const muted = this._mutedWords();
     if (muted.length === 0) return moments;
     return moments.filter(moment => {

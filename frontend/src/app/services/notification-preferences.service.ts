@@ -96,7 +96,7 @@ export class NotificationPreferencesService {
     enabled: boolean,
     currentPrefs: NotificationPreferences,
   ): Promise<NotificationPreferences> {
-    const update: Record<string, unknown> = {
+    const update: Partial<NotificationPreferences> = {
       [category]: {
         ...currentPrefs[category],
         [channel]: enabled,
@@ -110,9 +110,9 @@ export class NotificationPreferencesService {
     start?: string,
     end?: string,
   ): Promise<NotificationPreferences> {
-    const update: Record<string, unknown> = { do_not_disturb: enabled };
-    if (start !== undefined) update['quiet_hours_start'] = start;
-    if (end !== undefined) update['quiet_hours_end'] = end;
+    const update: Partial<NotificationPreferences> = { do_not_disturb: enabled };
+    if (start !== undefined) update.quiet_hours_start = start;
+    if (end !== undefined) update.quiet_hours_end = end;
     return this.updatePreferences(update);
   }
 }
