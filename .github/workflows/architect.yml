@@ -8,25 +8,24 @@ on:
 jobs:
   architect_planning:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Run OpenHands Architect (Claude 5 Sonnet)
+      - name: Run Claude Code Architect (Primary - Claude Pro Subscription)
         id: primary
         continue-on-error: true
-        uses: All-Hands-AI/OpenHands@main
+        uses: anthropics/claude-code-base-action@beta
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-          LITELLM_GATEWAY_URL: ${{ secrets.LITELLM_GATEWAY_URL }}
-          LITELLM_API_KEY: ${{ secrets.LITELLM_API_KEY }}
         with:
-          github_token: ${{ secrets.PAT_TOKEN }}
-          llm_api_url: ${{ secrets.LITELLM_GATEWAY_URL }}
-          llm_api_key: ${{ secrets.LITELLM_API_KEY }}
-          model: "litellm_proxy/claude-5-sonnet"
-          max_iterations: 50
-          task: >
+          anthropic_api_key: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+          prompt: >
             You are the Lead AI Architect for this project.
             Your job is to evaluate the current state of the app against its goals.
             

@@ -1,4 +1,4 @@
-name: OpenHands Auto-Resolver
+name: AI Auto-Resolver
 
 on:
   issue_comment:
@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  openhands-agent:
+  ai-agent:
     if: >
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/openhands-fix')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '/openhands-fix')) ||
@@ -23,20 +23,18 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
+      id-token: write
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Run OpenHands Agent (Claude 5 Sonnet)
+      - name: Run Claude Code (Primary - Claude Pro Subscription)
         id: primary
         continue-on-error: true
-        uses: OpenHands/extensions/plugins/github-action@main
+        uses: anthropics/claude-code-action@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          llm_api_url: ${{ secrets.LITELLM_GATEWAY_URL }}
-          llm_api_key: ${{ secrets.LITELLM_API_KEY }}
-          model: "litellm_proxy/claude-5-sonnet"
-          max_iterations: 30
+          anthropic_api_key: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+          trigger_phrase: "/openhands-fix"
 
       - name: Run OpenHands Agent (DeepSeek Fallback)
         if: steps.primary.outcome == 'failure'

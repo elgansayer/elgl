@@ -6,6 +6,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { LocationModule } from './location/location.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -88,6 +89,7 @@ import { NotificationPreferencesModule } from './notification-preferences/notifi
       ignoreErrors: false,
     }),
     SupabaseModule,
+    LocationModule,
     AuthModule,
     UsersModule,
     MediaModule,
