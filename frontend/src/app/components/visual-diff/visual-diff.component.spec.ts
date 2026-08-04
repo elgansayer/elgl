@@ -30,23 +30,23 @@ describe('VisualDiffComponent', () => {
 
     const segments = component.segments();
     expect(segments.length).toBeGreaterThan(0);
-    expect(segments.every((segment) => segment.type === 'unchanged')).toBeTrue();
+    expect(segments.every((segment) => segment.type === 'unchanged')).toBe(true);
   });
 
   it('should mark added tokens when corrected text expands original', () => {
     setInputs('Hello', 'Hello World');
 
     const segments = component.segments();
-    expect(segments.some((segment) => segment.type === 'added')).toBeTrue();
-    expect(segments.some((segment) => segment.type === 'removed')).toBeFalse();
+    expect(segments.some((segment) => segment.type === 'added')).toBe(true);
+    expect(segments.some((segment) => segment.type === 'removed')).toBe(false);
   });
 
   it('should mark removed tokens when original text contains extra content', () => {
     setInputs('Hello World', 'Hello');
 
     const segments = component.segments();
-    expect(segments.some((segment) => segment.type === 'removed')).toBeTrue();
-    expect(segments.some((segment) => segment.type === 'added')).toBeFalse();
+    expect(segments.some((segment) => segment.type === 'removed')).toBe(true);
+    expect(segments.some((segment) => segment.type === 'added')).toBe(false);
   });
 
   it('should treat case differences as unchanged', () => {
@@ -62,8 +62,8 @@ describe('VisualDiffComponent', () => {
     setInputs('Hello!', 'Hello?');
 
     const segments = component.segments();
-    expect(segments.some((segment) => segment.type === 'removed')).toBeTrue();
-    expect(segments.some((segment) => segment.type === 'added')).toBeTrue();
+    expect(segments.some((segment) => segment.type === 'removed')).toBe(true);
+    expect(segments.some((segment) => segment.type === 'added')).toBe(true);
   });
 
   it('should produce monotonic indexes', () => {
@@ -84,7 +84,7 @@ describe('VisualDiffComponent', () => {
 
     const segments = component.segments();
     expect(segments.length).toBeGreaterThan(0);
-    expect(segments.every((segment) => segment.type === 'unchanged')).toBeTrue();
+    expect(segments.every((segment) => segment.type === 'unchanged')).toBe(true);
   });
 
   it('should render added spans in the DOM', () => {

@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -11,11 +12,7 @@ import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { MomentsFeedComponent } from './moments-feed.component';
 import type { MomentRecord, MomentComment } from '../../services/moments.store';
-import { showToast } from '../../services/toast.service';
-
-jest.mock('../../services/toast.service', () => ({
-  showToast: jest.fn(),
-}));
+import * as toastService from '../../services/toast.service';
 
 describe('MomentsFeedComponent', () => {
   let fixture: ComponentFixture<MomentsFeedComponent>;
@@ -52,13 +49,13 @@ describe('MomentsFeedComponent', () => {
     isLoading = signal<boolean>(false);
     activeFilter = signal<string>('All');
 
-    loadFeed = jest.fn().mockImplementation(async (filter: string) => {
+    loadFeed = vi.fn().mockImplementation(async (filter: string) => {
       this.activeFilter.set(filter);
       this.feed.set(filter === 'All' ? [...testMoments] : []);
     });
 
-    createMoment = jest.fn().mockResolvedValue(undefined);
-    loadComments = jest.fn().mockImplementation(async (momentId: string) => {
+    createMoment = vi.fn().mockResolvedValue(undefined);
+    loadComments = vi.fn().mockImplementation(async (momentId: string) => {
       const current = this.feed();
       const updated = current.map((m) =>
         m.id === momentId
@@ -77,17 +74,22 @@ describe('MomentsFeedComponent', () => {
       );
       this.feed.set(updated);
     });
-    addComment = jest.fn().mockResolvedValue(undefined);
-    togglePin = jest.fn();
-    toggleLike = jest.fn();
+    addComment = vi.fn().mockResolvedValue(undefined);
+    togglePin = vi.fn();
+    toggleLike = vi.fn();
   }
 
   class MockVocabStore {
-    translateWordOrSentence = jest.fn().mockResolvedValue({
+    translateWordOrSentence = vi.fn().mockResolvedValue({
       translated_text: 'Hola',
     });
-    saveWord = jest.fn().mockResolvedValue({ id: 'w1' });
-    updateSrsLevel = jest.fn().mockResolvedValue(undefined);
+    saveWord = vi.fn().mockResolvedValue({ id: 'w1' });
+    updateSrsLevel = vi.fn().mockResolvedValue(undefined);
+    getWordStatus = vi.fn().mockReturnValue({
+      level: 0,
+      colorClass: '',
+      colourClass: '',
+    });
   }
 
   beforeEach(async () => {
@@ -102,7 +104,7 @@ describe('MomentsFeedComponent', () => {
     } as unknown as AuthService;
 
     mockUserService = {
-      getMyProfile: jest.fn().mockResolvedValue({ target_languages: ['en'] } as never),
+      getMyProfile: vi.fn().mockResolvedValue({ target_languages: ['en'] } as never),
     } as unknown as UserService;
 
     mockI18nService = {
@@ -144,9 +146,14 @@ describe('MomentsFeedComponent', () => {
   });
 
   it('calls loadFeed when a filter is selected', async () => {
-    (mockMomentsStore.loadFeed as jest.Mock).mockClear();
+    vi.mocked(mockMomentsStore.loadFeed).mockClear();
     await component.setFilter('Following');
     expect(mockMomentsStore.loadFeed).toHaveBeenCalledWith('Following');
+  });
+
+  it('renders a text-to-speech control for moments with text content', () => {
+    const ttsButton = fixture.nativeElement.querySelector('app-text-to-speech button');
+    expect(ttsButton).toBeTruthy();
   });
 
   it('adds a temporary image URL', () => {
@@ -157,13 +164,14 @@ describe('MomentsFeedComponent', () => {
   });
 
   it('shows a toast when more than 9 images are added', () => {
+    const toastCountBefore = toastService.toastsSignal().length;
     for (let i = 0; i < 9; i += 1) {
       component.tempImageUrlInput = `https://example.com/${i}.jpg`;
       component.addTempImageUrl();
     }
     component.tempImageUrlInput = 'https://example.com/ten.jpg';
     component.addTempImageUrl();
-    expect(showToast).toHaveBeenCalled();
+    expect(toastService.toastsSignal().length).toBeGreaterThan(toastCountBefore);
   });
 
   it('submits a new moment via createMoment', async () => {

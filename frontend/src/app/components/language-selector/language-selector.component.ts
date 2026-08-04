@@ -6,7 +6,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-language-selector',
   imports: [TranslatePipe],
   templateUrl: './language-selector.component.html',
-  styleUrls: ['./language-selector.component.scss'],
 })
 export class LanguageSelectorComponent {
   private readonly i18n = inject(I18nService);

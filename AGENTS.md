@@ -111,12 +111,12 @@ Limited exceptions for `ngOnInit`/`ngOnDestroy`: ONLY allowed when integrating w
 
 - Must pass all AXE checks and follow WCAG AA minimums (focus management, colour contrast, ARIA attributes).
 
-## 6. Strict UI Clone Delivery Protocol (Mandatory)
+## 6. UI Evolution & Design System Protocol
 
-- **Absolute Screenshot Adherence:** You MUST visually match the original HelloTalk screenshots located in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`. Never invent your own UI layouts or use generic web dashboard styles. The clone must be a pixel-perfect, mobile-first design featuring strict dark mode (`#121212` backgrounds), vibrant neon accents, horizontal scrollable pills, and dense flag indicators. Do not consider a UI component "done" if it looks like standard Bootstrap or Tailwind web forms.
+- **Design System Adherence:** We are moving beyond strict screenshot parity. You must maintain the core design system established in the app: a mobile-first design featuring strict dark mode (`#121212` backgrounds), vibrant neon accents, horizontal scrollable pills, and dense flag indicators. Do not use generic web dashboard styles or standard Bootstrap/Tailwind web forms. You have the freedom to design net-new UI layouts that fit this aesthetic.
 - **Responsive Device Support:** We are mobile design first, but the application must fully support tablet and desktop screens. You must provide a unique, rich experience for each device or screen size rather than simply stretching the mobile layout (e.g., utilizing sidebars, multi-pane layouts, or grid adaptations for larger screens).
 - **Zero hard-coded strings:** Never write raw hard-coded text inside templates (`*.html`) or component code (`*.ts`). Always pipe UI text through `TranslatePipe` (`| t` / `| t: params`) using keys from `I18nService`.
-- **Clone-first scope:** For frontend tasks, ship parity with original HelloTalk behaviour before introducing net-new UI ideas. Improvements are allowed only after parity is reached.
+- **Feature-first scope:** Focus on delivering high-quality user experiences for both parity features and net-new ideas, ensuring they visually fit the established design language.
 - **Template control flow only:** Never use `*ngIf`, `*ngFor`, `*ngSwitch`, `*ngSwitchCase`, or `*ngSwitchDefault`. Use `@if`, `@for`, and `@switch` exclusively.
 - **No `ngClass` or `ngStyle`:** Use native `[class]`, `[class.foo]`, and `[style.prop]` bindings only.
 - **Stable tracking:** Every `@for` must track a stable identity key (for example `track item.id`) unless no stable key exists.
@@ -187,7 +187,7 @@ Domain-specific, on-demand workflows for recurring engineering tasks on this cod
 
 ## 10. Strict Execution & Quality Rules (Added 2026-07-23)
 
-- **Strict Visual Cloning:** You must strictly follow the original screenshots for all UI development. Do not build standard web forms; instead, build custom Angular primitives (e.g., scrollable pills, gradient buttons, flag fluency indicators) to exactly replicate the mobile app experience.
+- **Design Language Consistency:** You must strictly follow the established aesthetic for all UI development. Do not build standard web forms; instead, continue building custom Angular primitives (e.g., scrollable pills, gradient buttons, flag fluency indicators) that match the mobile-first experience.
 - **No Dead Buttons:** The application must have absolutely zero buttons that do nothing. Every single `<button>`, `<a>`, or clickable element must either have a functional `(click)` handler, a valid `[routerLink]`, or trigger a "Not Implemented" toast notification if the feature is pending.
 - **Test Coverage Mandate:** A test must be added for every single feature developed. This includes unit tests for both Angular frontend components/services (`*.spec.ts`) and NestJS backend controllers/services.
 - **Fake Data First:** Fake/mock seed data must be added to the backend for every feature as it is developed. The frontend should never render empty states indefinitely during development; it must always populate with realistic placeholder data served from the backend or database seeds to properly validate the UI.

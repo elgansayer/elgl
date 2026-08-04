@@ -31,7 +31,7 @@
     <app-scrollable-pills
       [pills]="filterPills()"
       [selected]="momentsStore.activeFilter()"
-      (select)="setFilter($event)"
+      (pillPicked)="setFilter($event)"
     >
     </app-scrollable-pills>
   </header>
@@ -272,6 +272,10 @@
                 }}</span>
               </button>
               @if (moment.text_content) {
+                <app-text-to-speech
+                  [text]="moment.text_content"
+                  [language]="moment.target_language || 'en-GB'"
+                ></app-text-to-speech>
                 <button
                   (click)="openGhostCorrection(moment)"
                   class="flex items-center gap-1.5 text-amber-400 hover:opacity-80 font-bold transition-opacity"

@@ -44,14 +44,14 @@ describe('LanguageSelectorComponent', () => {
   });
 
   it('should toggle open state', () => {
-    expect(component.isOpen()).toBeFalse();
+    expect(component.isOpen()).toBe(false);
     component.toggle();
-    expect(component.isOpen()).toBeTrue();
+    expect(component.isOpen()).toBe(true);
   });
 
   it('should call setLanguage when selecting a language', () => {
     component.selectLanguage('es');
     expect(i18nServiceMock.setLanguage).toHaveBeenCalledWith('es');
-    expect(component.isOpen()).toBeFalse();
+    expect(component.isOpen()).toBe(false);
   });
 });

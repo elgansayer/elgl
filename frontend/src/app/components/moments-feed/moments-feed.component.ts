@@ -15,6 +15,7 @@ import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.component';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { CorrectionModalComponent } from '../correction-modal/correction-modal.component';
+import { TextToSpeechComponent } from '../text-to-speech/text-to-speech.component';
 import {
   LanguagePickerComponent,
   getLanguageFlag,
@@ -34,6 +35,7 @@ import {
     ScrollablePillsComponent,
     CorrectionModalComponent,
     LanguagePickerComponent,
+    TextToSpeechComponent,
   ],
   templateUrl: './moments-feed.component.html',
   styleUrls: ['./moments-feed.component.scss'],

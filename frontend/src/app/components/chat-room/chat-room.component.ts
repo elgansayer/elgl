@@ -18,6 +18,7 @@ import { LongPressContextMenuComponent } from '../long-press-context-menu/long-p
 import { StickerPickerComponent } from '../sticker-picker/sticker-picker.component';
 import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
 import { SafetyService } from '../../services/safety.service';
+import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.component';
 
@@ -49,6 +50,7 @@ export class ChatRoomComponent implements OnDestroy {
   readonly vocabStore = inject(VocabularyStore);
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
+  private readonly tts = inject(TextToSpeechService);
 
   id = input.required<string>();
 
@@ -481,14 +483,7 @@ export class ChatRoomComponent implements OnDestroy {
 
   speakMessage(msg: ChatMessage): void {
     if (!msg.text_content?.trim()) return;
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      showToast(this.i18n.translate('tts.unsupported'));
-      return;
-    }
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(msg.text_content);
-    utterance.rate = 0.9;
-    window.speechSynthesis.speak(utterance);
+    this.tts.speak(msg.id, msg.text_content);
   }
 
   async toggleTranslation(msg: ChatMessage): Promise<void> {

@@ -89,7 +89,6 @@ describe('TokenisedTextComponent', () => {
 
   it('should throw an error when Intl.Segmenter is unavailable', () => {
     const originalSegmenter = Intl.Segmenter;
-    // @ts-expect-error deliberately disable Intl.Segmenter for this test
     (Intl as any).Segmenter = undefined;
 
     try {
