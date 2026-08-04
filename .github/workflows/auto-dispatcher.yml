@@ -33,7 +33,7 @@ jobs:
           fi
           
           gh label create "swarm-active" --color "0E8A16" --force || true
-          ISSUE_NUM=$(gh issue list --state open --search "-label:swarm-active" --limit 1 --sort created --direction asc --json number -q '.[0].number')
+          ISSUE_NUM=$(gh issue list --state open --search "-label:swarm-active sort:created-asc" --limit 1 --json number -q '.[0].number')
           
           if [ -z "$ISSUE_NUM" ] || [ "$ISSUE_NUM" == "null" ]; then
             echo "Queue is empty!"
