@@ -1176,6 +1176,16 @@ export class I18nService {
     'moderation.noFlags': 'No dating behaviour detected',
     'moderation.behaviourWarning': 'High risk of dating behaviour',
     'moderation.learningOnly': 'This user must be evaluated for learning-only compliance',
+    'moderation.profiles': 'Profile reports',
+    'moderation.moments': 'Moment reports',
+    'moderation.all': 'All',
+    'moderation.pending': 'Pending',
+    'moderation.approved': 'Approved',
+    'moderation.rejected': 'Rejected',
+    'moderation.noItems': 'No reports to review',
+    'moderation.user': 'Reported user',
+    'moderation.content': 'Moment content',
+    'moderation.description': 'Description',
 
     // Password Policy & Reset
     'password.resetTitle': 'Reset Password',

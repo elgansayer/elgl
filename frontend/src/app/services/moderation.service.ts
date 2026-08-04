@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface ModerationItem {
@@ -11,13 +11,17 @@ export interface ModerationItem {
   reason: string;
   reporter: {
     id: string;
-    name: string;
+    name?: string;
+    display_name?: string;
   };
   reported_user?: {
     id: string;
-    name: string;
+    name?: string;
+    display_name?: string;
   };
   moment_content?: string;
+  reportedMomentId?: string | null;
+  momentAuthorName?: string;
 }
 
 export interface UserAnalysisResult {
@@ -47,7 +51,9 @@ export class ModerationService {
     return this.http.get<ModerationItem[]>(`${this.baseUrl}/items`, {
       headers: this.getHeaders(),
       params,
-    });
+    }).pipe(
+      map(items => items.map(item => ({ ...item, type }))),
+    );
   }
 
   approveItem(itemId: string, type: string): Observable<unknown> {
@@ -70,8 +76,8 @@ export class ModerationService {
     );
   }
 
-  reportUser(reportedUserId: string, reason: string, description?: string): Observable<unknown> {
-    const body: Record<string, string> = { reportedUserId, reason };
+  reportUser(reportedUserId: string, reasonCategory: string, description?: string): Observable<unknown> {
+    const body: Record<string, string> = { reportedUserId, reasonCategory };
     if (description) {
       body['description'] = description;
     }
