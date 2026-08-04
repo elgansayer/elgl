@@ -14,6 +14,7 @@ describe('SettingsComponent', () => {
     i18nServiceMock = {
       currentLang: signal('en-GB'),
       translate: vi.fn((key: string) => key),
+      setLanguage: vi.fn(),
     };
     routerMock = {
       navigate: vi.fn(),
@@ -45,5 +46,10 @@ describe('SettingsComponent', () => {
   it('should navigate to the My Subscription page', () => {
     component.goToMySubscription();
     expect(routerMock.navigate).toHaveBeenCalledWith(['/my-subscription']);
+  });
+
+  it('should change the UI language', () => {
+    component.changeUiLanguage('es');
+    expect(i18nServiceMock.setLanguage).toHaveBeenCalledWith('es');
   });
 });

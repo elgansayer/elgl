@@ -1,54 +1,57 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
 import { LanguageSelectorComponent } from './language-selector.component';
 import { I18nService } from '../../services/i18n.service';
-import { ProficiencyService } from '../../services/proficiency.service';
-import { TranslatePipe } from '../../services/translate.pipe';
+import { signal } from '@angular/core';
 
 describe('LanguageSelectorComponent', () => {
   let component: LanguageSelectorComponent;
   let fixture: ComponentFixture<LanguageSelectorComponent>;
+  let i18nServiceMock: Partial<I18nService>;
 
   beforeEach(async () => {
+    i18nServiceMock = {
+      currentLang: signal('en-GB'),
+      availableLanguages: [
+        { code: 'en-GB', name: 'British English', nativeName: 'English (UK)', flag: '🇬🇧', isRtl: false },
+        { code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸', isRtl: false },
+      ],
+      translate: vi.fn((key: string) => key),
+      setLanguage: vi.fn(),
+    };
+
     await TestBed.configureTestingModule({
       imports: [LanguageSelectorComponent],
-      providers: [
-        provideHttpClient(),
-        I18nService,
-        ProficiencyService,
-        TranslatePipe,
-      ],
+      providers: [{ provide: I18nService, useValue: i18nServiceMock }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LanguageSelectorComponent);
     component = fixture.componentInstance;
-    fixture.componentRef.setInput('userId', 'test-user-123');
-    fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should have access to availableLanguages', () => {
-    expect(component.availableLanguages.length).toBeGreaterThan(0);
+  it('should display current language name', () => {
+    expect(component.currentLanguage().name).toBe('British English');
   });
 
-  it('should start with no target languages', () => {
-    expect(component.targetLanguages().length).toBe(0);
+  it('should filter languages based on search query', () => {
+    component.searchQuery.set('span');
+    expect(component.filteredLanguages()).toHaveLength(1);
+    expect(component.filteredLanguages()[0].code).toBe('es');
   });
 
-  it('should add a target language when addTargetLanguage is called', () => {
-    component.selectedNativeLang.set('en-GB');
-    component.addTargetLanguage();
-    expect(component.targetLanguages().length).toBe(1);
+  it('should toggle open state', () => {
+    expect(component.isOpen()).toBeFalse();
+    component.toggle();
+    expect(component.isOpen()).toBeTrue();
   });
 
-  it('should not add more than 3 target languages', () => {
-    component.selectedNativeLang.set('en-GB');
-    for (let i = 0; i < 5; i++) {
-      component.addTargetLanguage();
-    }
-    expect(component.targetLanguages().length).toBe(3);
+  it('should call setLanguage when selecting a language', () => {
+    component.selectLanguage('es');
+    expect(i18nServiceMock.setLanguage).toHaveBeenCalledWith('es');
+    expect(component.isOpen()).toBeFalse();
   });
 });

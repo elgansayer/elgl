@@ -1204,6 +1204,8 @@ export class I18nService {
     'languageSettings.selectLabel': 'Select interface language',
     'languageSettings.applyBtn': 'Apply',
     'languageSettings.currentLang': 'Current: {{name}}',
+    'settings.changeLanguage': 'Change language',
+    'common.selected': 'Selected',
 
     // Help & About
     'helpAbout.title': 'Help & About',
@@ -1247,6 +1249,9 @@ export class I18nService {
     'settings.on': 'On',
     'settings.off': 'Off',
     'settings.fontScale': 'Text size',
+    'settings.languageSection': 'Language',
+    'settings.languageSelectLabel': 'Interface language',
+    'settings.languageChangeDescription': 'Choose the language used throughout HelloTalk. This will update the UI text immediately.',
     // Pill colour CSS class tokens (kept i18n so themes can override without recompiling templates)
     'pill.colour_primary': 'bg-indigo-500 text-white hover:bg-indigo-600',
     'pill.colour_success': 'bg-emerald-500 text-white hover:bg-emerald-600',
