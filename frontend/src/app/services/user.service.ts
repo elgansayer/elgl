@@ -529,6 +529,13 @@ export class UserService {
     );
   }
 
+  async getAvailableInterests(): Promise<string[]> {
+    return firstValueFrom(
+      this.http.get<string[]>(`${this.baseUrl}/interests`, { headers: this.getHeaders() })
+        .pipe(catchError(() => of([]))),
+    );
+  }
+
   async queryUsersByLanguagePairs(languagePairs: { native: string; target: string }[]): Promise<UserProfile[]> {
     return firstValueFrom(
       this.http
