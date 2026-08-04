@@ -529,6 +529,7 @@ export class I18nService {
     'vocabulary.chipGrammar': '✏️ Grammar AI',
     'vocabulary.chipPronunciation': '🎙️ Pronunciation AI',
     'vocabulary.noDue': 'No review cards are due right now.',
+    'vocabulary.restart': 'Restart review',
     'vocabulary.cardCounter': 'Card {{current}} of {{total}}',
     'vocabulary.levelBadge': 'Level {{level}}/4',
     'vocabulary.tapToFlip': 'Tap to flip',
@@ -548,6 +549,9 @@ export class I18nService {
     'vocabulary.originalLabel': 'Original: ',
     'vocabulary.correctedLabel': 'Corrected: ',
     'vocabulary.pronunciationScore': 'Pronunciation score: {{score}} / 100',
+    'vocabulary.defaultPracticeText': 'Today I practice expressing my thoughts clearly.',
+    'vocabulary.grammarErrorAlert': 'Failed to check grammar. Please try again later.',
+    'vocabulary.pronunciationErrorAlert': 'Failed to score pronunciation. Please try again later.',
     'profile.playAudioIntro': 'Play Introduction',
 
     // User Detail Component
