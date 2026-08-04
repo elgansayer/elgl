@@ -45,4 +45,57 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
-          gh issue comment ${{ env.ISSUE_NUM }} --body "/openhands-fix" --repo ${{ github.repository }}
+          gh issue comment ${{ env.ISSUE_NUM }} --body "/openhands-fix" --repo ${{ github.repository }}          
+          # Move issue to In Progress on the Project Board dynamically
+          OWNER="${{ github.repository_owner }}"
+          NAME="${{ github.event.repository.name }}"
+          
+          # We need to wait a second for GitHub to register the comment before hitting the API heavily, though not strictly required
+          sleep 1
+          
+          ITEM_JSON=$(gh api graphql -F issueNum=${{ env.ISSUE_NUM }} -F owner="$OWNER" -F name="$NAME" -f query='
+            query($owner: String!, $name: String!, $issueNum: Int!) {
+              repository(owner: $owner, name: $name) {
+                issue(number: $issueNum) {
+                  projectItems(first: 1) {
+                    nodes {
+                      id
+                      project {
+                        id
+                      }
+                    }
+                  }
+                }
+              }
+            }' --jq '.data.repository.issue.projectItems.nodes[0]' || echo "")
+          
+          ITEM_ID=$(echo "$ITEM_JSON" | jq -r '.id // empty' 2>/dev/null || echo "")
+          PROJECT_ID=$(echo "$ITEM_JSON" | jq -r '.project.id // empty' 2>/dev/null || echo "")
+          
+          if [ -n "$ITEM_ID" ] && [ -n "$PROJECT_ID" ] && [ "$ITEM_ID" != "null" ]; then
+            FIELD_JSON=$(gh api graphql -F projectId=$PROJECT_ID -f query='
+              query($projectId: ID!) {
+                node(id: $projectId) {
+                  ... on ProjectV2 {
+                    field(name: "Status") {
+                      ... on ProjectV2SingleSelectField {
+                        id
+                        options {
+                          id
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+              }' --jq '.data.node.field' || echo "")
+            
+            FIELD_ID=$(echo "$FIELD_JSON" | jq -r '.id // empty' 2>/dev/null || echo "")
+            OPTION_ID=$(echo "$FIELD_JSON" | jq -r '.options[]? | select(.name | ascii_downcase == "in progress") | .id // empty' 2>/dev/null || echo "")
+            
+            if [ -n "$FIELD_ID" ] && [ -n "$OPTION_ID" ] && [ "$FIELD_ID" != "null" ]; then
+              echo "Moving Issue #${{ env.ISSUE_NUM }} to In Progress in Project"
+              gh project item-edit --id $ITEM_ID --field-id $FIELD_ID --project-id $PROJECT_ID --single-select-option-id $OPTION_ID || true
+            fi
+          fi
+
