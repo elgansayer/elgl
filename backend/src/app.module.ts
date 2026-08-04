@@ -62,6 +62,7 @@ import { ResourceLibraryModule } from './resource-library/resource-library.modul
 import { WordOfTheDayModule } from './word-of-the-day/word-of-the-day.module';
 import { SpamDetectionModule } from './spam-detection/spam-detection.module';
 import { UserStatisticsModule } from './user-statistics/user-statistics.module';
+import { LanguageIslandsModule } from './language-islands/language-islands.module';
 import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
 
 @Module({
@@ -144,6 +145,7 @@ import { NotificationPreferencesModule } from './notification-preferences/notifi
     WordOfTheDayModule,
     SpamDetectionModule,
     UserStatisticsModule,
+    LanguageIslandsModule,
   ],
   controllers: [AppController],
   providers: [

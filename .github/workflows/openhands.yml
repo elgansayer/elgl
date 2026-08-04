@@ -28,7 +28,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
 
-      - name: Run Claude Code (Primary - Claude Pro Subscription)
+      - name: Tier 1 - Claude Code (Claude Pro)
         id: primary
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
@@ -36,7 +36,8 @@ jobs:
           anthropic_api_key: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
           trigger_phrase: "/openhands-fix"
 
-      - name: Run OpenHands Agent (DeepSeek Fallback)
+      - name: Tier 2 - OpenHands (DeepSeek Coder Fallback)
+        id: secondary
         if: steps.primary.outcome == 'failure'
         uses: OpenHands/extensions/plugins/github-action@main
         with:

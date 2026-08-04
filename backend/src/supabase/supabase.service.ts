@@ -1579,6 +1579,78 @@ export interface Database {
         }>;
         Relationships: [];
       };
+      language_islands: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          language_pair: string;
+          host_id: string;
+          max_members: number | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          name: string;
+          description?: string | null;
+          language_pair: string;
+          host_id: string;
+          max_members?: number | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          name?: string;
+          description?: string | null;
+          language_pair?: string;
+          host_id?: string;
+          max_members?: number | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        }>;
+        Relationships: [];
+      };
+      language_island_members: {
+        Row: {
+          island_id: string;
+          user_id: string;
+          role: 'host' | 'member';
+          joined_at: string;
+        };
+        Insert: Partial<{
+          island_id: string;
+          user_id: string;
+          role: 'host' | 'member';
+          joined_at?: string;
+        }>;
+        Update: Partial<{
+          island_id?: string;
+          user_id?: string;
+          role?: 'host' | 'member';
+          joined_at?: string;
+        }>;
+        Relationships: [
+          {
+            foreignKeyName: 'language_island_members_island_id_fkey';
+            columns: ['island_id'];
+            isOneToOne: false;
+            referencedRelation: 'language_islands';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'language_island_members_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: {

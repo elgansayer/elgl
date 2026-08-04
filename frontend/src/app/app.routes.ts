@@ -496,6 +496,12 @@ export const routes: Routes = [
     title: 'App Version - HelloTalk',
   },
   {
+    path: 'language-islands',
+    loadComponent: () =>
+      import('./pages/language-islands/language-islands.component').then((m) => m.LanguageIslandsComponent),
+    title: 'Language Islands - HelloTalk',
+  },
+  {
     path: 'language-parties',
     loadComponent: () =>
       import('./components/language-parties/language-parties.component').then((m) => m.LanguagePartiesComponent),

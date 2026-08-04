@@ -1,0 +1,42 @@
+Fix failing tests introduced by: Add The concept of `language islands'.
+
+Errors:
+==== frontend lint FAILED (exit 1) ====
+STDOUT:
+
+> frontend@0.0.0 lint
+> eslint "src/**/*.ts" --fix && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical
+
+
+/home/dev/hellotalk/frontend/src/app/chat/context-menu/chat-context-menu.component.ts
+  67:43  error  Input bindings should not be aliased (https://angular.dev/guide/components/inputs#choosing-input-names)  @angular-eslint/no-input-rename
+  18:7   error  click must be accompanied by either keyup, keydown or keypress event for accessibility                   @angular-eslint/template/click-events-have-key-events
+  23:9   error  click must be accompanied by either keyup, keydown or keypress event for accessibility                   @angular-eslint/template/click-events-have-key-events
+  23:9   error  Elements with interaction handlers must be focusable                                                     @angular-eslint/template/interactive-supports-focus
+
+/home/dev/hellotalk/frontend/src/app/components/vocabulary-dashboard/vocabulary-dashboard.component.ts
+  34:13  error  Elements with interaction handlers must be focusable  @angular-eslint/template/interactive-supports-focus
+
+/home/dev/hellotalk/frontend/src/app/pages/admin/admin-users.component.ts
+   7:3   error    'LoginHistoryEntry' is defined but never used                                                                                                                                   @typescript-eslint/no-unused-vars
+  62:26  warning  Type assertions (as) are banned in production code. Use type narrowing, type guards, or schema validation (Zod) instead. Migrate existing casts before upgrading this to error  no-restricted-syntax
+
+✖ 7 problems (6 errors, 1 warning)
+
+
+STDERR:
+
+
+==== backend lint FAILED (exit 1) ====
+STDOUT:
+any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+  31:11  warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  31:33  warning  Unsafe member access .user on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  31:59  warning  Unsafe member access .user on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  32:40  warning  Unsafe argument of type `any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+  37:11  warning  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  37:33  warning  Unsafe member access .user on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  37:59  warning  Unsafe member access .user on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  38:38  warning  Unsafe argument of type `any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+
+/home/dev/hellotalk/backend/src/study-buddies/study-buddies.service.t
