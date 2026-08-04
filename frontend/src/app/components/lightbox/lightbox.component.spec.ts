@@ -121,4 +121,71 @@ describe('LightboxComponent', () => {
     expect(propagated).toBeTrue();
     expect(component.currentIndex()).toBe(1);
   });
+
+  it('should stop propagation on prev arrow click', () => {
+    setup(['a', 'b'], 0);
+
+    let propagated = false;
+    const event = new Event('click', { bubbles: true });
+    const originalStop = event.stopPropagation.bind(event);
+    event.stopPropagation = () => {
+      propagated = true;
+      originalStop();
+    };
+
+    component.prev(event);
+    expect(propagated).toBeTrue();
+    expect(component.currentIndex()).toBe(0);
+  });
+
+  it('should emit closed when close() is called', () => {
+    setup(['a']);
+    let closed = false;
+    component.closed.subscribe(() => (closed = true));
+    component.close();
+    expect(closed).toBeTrue();
+  });
+
+  it('should ignore non-navigation keys on keydown', () => {
+    setup(['a', 'b'], 0);
+
+    let closed = false;
+    component.closed.subscribe(() => (closed = true));
+
+    component.handleKeyDown(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+    expect(component.currentIndex()).toBe(0);
+    expect(closed).toBeFalse();
+
+    component.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+
+    expect(component.currentIndex()).toBe(0);
+    expect(closed).toBeFalse();
+  });
+
+  it('should not change index on short horizontal swipe', () => {
+    setup(['a', 'b', 'c'], 0);
+
+    component.onTouchStart({
+      changedTouches: [{ screenX: 200 }],
+    } as unknown as TouchEvent);
+    component.onTouchEnd({
+      changedTouches: [{ screenX: 196 }],
+    } as unknown as TouchEvent);
+
+    expect(component.currentIndex()).toBe(0);
+  });
+
+  it('should ignore vertical swipe', () => {
+    setup(['a', 'b', 'c'], 0);
+
+    component.onTouchStart({
+      changedTouches: [{ screenX: 100, screenY: 100 }],
+    } as unknown as TouchEvent);
+    component.onTouchEnd({
+      changedTouches: [{ screenX: 100, screenY: 300 }],
+    } as unknown as TouchEvent);
+
+    expect(component.currentIndex()).toBe(0);
+  });
 });

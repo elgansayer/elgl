@@ -62,7 +62,7 @@ CFG = {
     'repo_name':      os.environ.get('SWARM_REPO_NAME', 'hellotalk'),
     'gh_sync_cycles': int(os.environ.get('SWARM_GH_SYNC_CYCLES', 20)),
     'review_cycles':  int(os.environ.get('SWARM_REVIEW_CYCLES', 5)),
-    'models':         ['deepseek'],
+    'models':         ['claude', 'antigravity', 'copilot', 'deepseek'],
     'audit_cooldown_cycles': int(os.environ.get('SWARM_AUDIT_COOLDOWN_CYCLES', 10)),
     'fix_max_rounds': int(os.environ.get('SWARM_FIX_MAX_ROUNDS', 5)),
     'stuck_alert_s':  int(os.environ.get('SWARM_STUCK_ALERT_SECONDS', 900)),
@@ -183,6 +183,9 @@ def validate_environment() -> dict:
 
     model_checks = {
         'deepseek':    ('aider', 'DEEPSEEK_API_KEY'),
+        'copilot':     ('aider', 'OPENAI_API_KEY'),
+        'antigravity': ('agy', 'GEMINI_API_KEY'),
+        'claude':      ('claude', None),
     }
 
     for model, (binary, key_var) in model_checks.items():
