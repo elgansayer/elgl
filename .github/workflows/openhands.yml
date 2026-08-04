@@ -44,7 +44,7 @@ jobs:
         if: steps.primary.outcome == 'failure'
         uses: xinbenlv/openhands-action@main
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.PAT_TOKEN }}
           llm_model: "deepseek/deepseek-coder"
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
           prompt: "Please review the issue or PR and solve the requested changes."
