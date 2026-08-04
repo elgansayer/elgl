@@ -38,7 +38,7 @@ jobs:
             
             IMPORTANT: Do not write code for these issues! Just plan, update the documentation, and create the tickets. Other agents will pick up the tickets and do the coding.
 
-      - name: Run OpenHands Architect (GPT-4o Fallback)
+      - name: Run OpenHands Architect (DeepSeek Fallback)
         if: steps.primary.outcome == 'failure'
         uses: All-Hands-AI/OpenHands@main
         env:
@@ -49,7 +49,7 @@ jobs:
           github_token: ${{ secrets.PAT_TOKEN }}
           llm_api_url: ${{ secrets.LITELLM_GATEWAY_URL }}
           llm_api_key: ${{ secrets.LITELLM_API_KEY }}
-          model: "litellm_proxy/gpt-4o"
+          model: "litellm_proxy/deepseek-coder"
           max_iterations: 50
           task: >
             You are the Lead AI Architect for this project.
