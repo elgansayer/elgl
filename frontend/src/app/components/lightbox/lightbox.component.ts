@@ -16,6 +16,7 @@ import { CommonModule } from '@angular/common';
       <!-- Close Button -->
       <button
         (click)="closed.emit()"
+        aria-label="Close"
         class="absolute top-4 end-4 z-[110] p-2 text-white/70 hover:text-white bg-black/50 rounded-full transition-colors"
       >
         <svg
@@ -50,6 +51,7 @@ import { CommonModule } from '@angular/common';
       @if (images().length > 1) {
         <button
           (click)="prev($event)"
+          aria-label="Previous image"
           [class.invisible]="currentIndex() === 0"
           class="absolute start-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white bg-black/50 rounded-full hidden md:block transition-colors z-[110]"
         >
@@ -67,6 +69,7 @@ import { CommonModule } from '@angular/common';
 
         <button
           (click)="next($event)"
+          aria-label="Next image"
           [class.invisible]="currentIndex() === images().length - 1"
           class="absolute end-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white bg-black/50 rounded-full hidden md:block transition-colors z-[110]"
         >
