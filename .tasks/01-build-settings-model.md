@@ -1,96 +1,122 @@
 Priority: High Impact
 
-Description:
-Define a comprehensive, scalable settings system and user profile configuration area. This data model will serve as the foundation for the settings interface, encompassing account security, profile discovery, social privacy, app preferences, and notifications.
+Description: Define the comprehensive Data Model and TypeScript interface for the Settings state, handling complex nested configuration options across Account, Profile, Social, Application Preferences, and Notifications.
 
-Technical Implementation:
-Create a robust TypeScript interface (`settings.interface.ts`) to strictly type the settings state. The structure must be nested and granular.
+Technical Implementation: Create a robust `user-settings.model.ts` containing the `UserSettings` interface and its nested sub-interfaces. This will provide type safety and enforce the data structure for state management.
 
 ```typescript
+// user-settings.model.ts
+
 export interface UserSettings {
-  account: {
-    email: string;
-    isEmailVerified: boolean;
-    twoFactorEnabled: boolean;
-    hardwareKeyEnabled: boolean;
-    activeSessions: Array<{
-      id: string;
-      device: string;
-      location: string;
-      lastActive: string;
-      current: boolean;
-    }>;
+  account: AccountSettings;
+  profile: ProfileSettings;
+  social: SocialPrivacySettings;
+  appPreferences: AppPreferences;
+  notifications: NotificationSettings;
+}
+
+export interface AccountSettings {
+  email: string;
+  isEmailVerified: boolean;
+  twoFactorAuthentication: {
+    enabled: boolean;
+    method: 'authenticator_app' | 'sms' | null;
+    hardwareKeys: HardwareKey[];
   };
-  profile: {
-    bio: string;
-    nativeLanguage: string;
-    targetLanguages: Array<{
-      language: string;
-      proficiencyLevel: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2' | 'Native';
-      customGoals?: string;
-    }>;
-    discovery: {
-      isVisible: boolean;
-      ageFilter: { min: number; max: number };
-      distanceRadiusKm: number;
-      matchingPreferences: 'language_exchange' | 'friendship' | 'all';
-    };
-    displayOptions: {
-      showKana: boolean; // Specific for Japanese learners
-      showJLPT: boolean; // Specific for Japanese learners
-    };
+  activeSessions: Session[];
+}
+
+export interface HardwareKey {
+  id: string;
+  name: string;
+  addedAt: Date;
+}
+
+export interface Session {
+  id: string;
+  device: string;
+  location: string;
+  lastActive: Date;
+}
+
+export interface ProfileSettings {
+  bio: string;
+  nativeLanguage: string;
+  targetLanguages: TargetLanguage[];
+  discovery: DiscoverySettings;
+}
+
+export interface TargetLanguage {
+  language: string;
+  level: string; // e.g., 'JLPT N1', 'Beginner'
+  showKana: boolean;
+}
+
+export interface DiscoverySettings {
+  isVisibleInDiscovery: boolean;
+  ageRange: { min: number; max: number };
+  distanceRadiusKm: number;
+  matchingPreferences: 'native_speakers' | 'learners' | 'both';
+}
+
+export interface SocialPrivacySettings {
+  profileVisibility: 'everyone' | 'friends' | 'server_members' | 'nobody';
+  status: {
+    presence: 'online' | 'idle' | 'dnd' | 'invisible';
+    customEmoji: string | null;
+    customText: string | null;
   };
-  socialPrivacy: {
-    profileVisibility: 'public' | 'friends' | 'server_members' | 'private';
-    presence: {
-      status: 'online' | 'idle' | 'dnd' | 'offline';
-      customStatus: {
-        text?: string;
-        emoji?: string;
-        expiresAt?: string;
-      };
-    };
-    messaging: {
-      readReceipts: boolean;
-      allowDMsFrom: 'everyone' | 'friends' | 'server_members';
-      explicitImageFiltering: 'strict' | 'blur' | 'off';
-    };
-    friendRequests: 'everyone' | 'friends_of_friends' | 'server_members' | 'nobody';
+  readReceipts: boolean;
+  directMessages: {
+    allowFromServerMembers: boolean;
+    explicitImageFilters: 'blur' | 'block' | 'off';
   };
-  appPreferences: {
-    accessibility: {
-      textToSpeechEnabled: boolean;
-      screenReaderOptimized: boolean;
-      reduceMotion: boolean;
-    };
-    appearance: {
-      theme: 'light' | 'dark' | 'system';
-      compactMode: boolean;
-      messageDisplay: 'cozy' | 'compact';
-    };
-    media: {
-      inlineImageDisplay: boolean;
-      linkPreviews: boolean;
-      autoPlayGifs: boolean;
-    };
+  friendRequests: {
+    allowFromEveryone: boolean;
+    allowFromFriendsOfFriends: boolean;
+    allowFromServerMembers: boolean;
   };
-  notifications: {
-    communication: {
-      directMessages: { push: boolean; email: boolean };
-      mentions: { push: boolean; email: boolean };
-    };
-    social: {
-      friendRequests: { push: boolean; email: boolean };
-      newFollowers: { push: boolean; email: boolean };
-    };
-    recommendations: {
-      studyBuddies: { push: boolean; email: boolean };
-      events: { push: boolean; email: boolean };
-    };
-    updates: {
-      appUpdates: { push: boolean; email: boolean };
-      marketing: { push: boolean; email: boolean };
-    };
+}
+
+export interface AppPreferences {
+  accessibility: {
+    textToSpeech: boolean;
+    screenReaderOptimized: boolean;
+    reduceMotion: boolean;
+  };
+  appearance: {
+    theme: 'light' | 'dark' | 'system';
+    compactMode: boolean;
+    messageDisplay: 'cozy' | 'compact';
+  };
+  media: {
+    inlineImageDisplay: boolean;
+    linkPreviews: boolean;
+    autoPlayGifs: boolean;
+  };
+}
+
+export interface NotificationSettings {
+  push: NotificationChannels;
+  email: NotificationChannels;
+}
+
+export interface NotificationChannels {
+  communication: {
+    directMessages: boolean;
+    mentions: boolean;
+  };
+  social: {
+    friendRequests: boolean;
+    serverInvites: boolean;
+  };
+  recommendations: {
+    newMatches: boolean;
+    languageTips: boolean;
+  };
+  updates: {
+    productAnnouncements: boolean;
+    securityAlerts: boolean;
   };
 }
 ```
