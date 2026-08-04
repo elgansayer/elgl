@@ -57,7 +57,7 @@
         ></textarea>
       </div>
 
-      @if ((newMediaUrls() ?? []).length > 0) {
+      @if (newMediaUrls().length > 0) {
         <div class="mt-3 ms-13 flex flex-wrap gap-2">
           @for (url of newMediaUrls(); track url; let i = $index) {
             <div class="relative">
@@ -141,14 +141,14 @@
       <div class="p-8 text-center font-bold text-text-secondary">{{ 'moments.loading' | t }}</div>
     }
 
-    @if (!momentsStore.isLoading() && (momentsStore.feed() ?? []).length === 0) {
+    @if (!momentsStore.isLoading() && momentsStore.feed().length === 0) {
       <div class="p-8 text-center">
         <p class="font-bold text-text-primary text-lg">{{ 'moments.empty' | t }}</p>
       </div>
     }
 
     <!-- Moments Feed List -->
-    @for (moment of momentsStore.feed(); track moment.id) {
+    @for (moment of momentsStore.feed().slice(0, visibleCount()); track moment.id) {
       <article
         class="p-4 bg-surface-500 hover:bg-surface-400/50 transition-colors"
         [class.bg-surface-400]="moment.is_pinned"

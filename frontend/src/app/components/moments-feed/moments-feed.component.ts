@@ -1,5 +1,5 @@
 import { showToast } from '../../services/toast.service';
-import { Component, inject, signal, computed, resource, effect } from '@angular/core';
+import { Component, DestroyRef, inject, signal, computed, resource, effect, afterNextRender } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -47,6 +47,17 @@ export class MomentsFeedComponent {
   readonly authService = inject(AuthService);
   private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
+
+  private readonly destroyRef = inject(DestroyRef);
+  readonly pageSize = 15;
+  readonly visibleCount = signal(15);
+
+  constructor() {
+    afterNextRender(() => {
+      window.addEventListener('scroll', this.handleWindowScroll);
+      this.destroyRef.onDestroy(() => window.removeEventListener('scroll', this.handleWindowScroll));
+    });
+  }
 
   readonly isCreating = signal<boolean>(false);
   readonly showVoiceRecorder = signal<boolean>(false);
@@ -124,6 +135,7 @@ export class MomentsFeedComponent {
   }
 
   async setFilter(filter: string): Promise<void> {
+    this.visibleCount.set(this.pageSize);
     if (filter === 'All' || filter === 'Classmates' || filter === 'Following') {
       await this.momentsStore.loadFeed(filter);
     } else {
@@ -393,4 +405,16 @@ export class MomentsFeedComponent {
   closeLikedBy(): void {
     this.activeLikedByMomentId.set(null);
   }
+
+  private handleWindowScroll = (): void => {
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const docHeight = document.documentElement.scrollHeight;
+    const winHeight = window.innerHeight;
+    if (docHeight - scrollTop - winHeight < 200) {
+      const total = this.momentsStore.feed().length;
+      if (this.visibleCount() < total) {
+        this.visibleCount.update(c => c + this.pageSize);
+      }
+    }
+  };
 }
