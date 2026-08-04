@@ -621,4 +621,29 @@ export class ChatService {
     );
     return response.wallpaperUrl;
   }
+
+  async deleteMessage(
+    messageId: string,
+    scope: 'self' | 'everyone' = 'self',
+  ): Promise<void> {
+    await firstValueFrom(
+      this.http.delete(`${this.baseUrl}/messages/${messageId}`, {
+        headers: this.getHeaders(),
+        body: { scope },
+      }),
+    );
+  }
+
+  async forwardMessage(
+    messageId: string,
+    roomIds: string[],
+  ): Promise<void> {
+    await firstValueFrom(
+      this.http.post(
+        `${this.baseUrl}/messages/${messageId}/forward`,
+        { room_ids: roomIds },
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
 }
