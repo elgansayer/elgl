@@ -62,7 +62,7 @@ CFG = {
     'repo_name':      os.environ.get('SWARM_REPO_NAME', 'hellotalk'),
     'gh_sync_cycles': int(os.environ.get('SWARM_GH_SYNC_CYCLES', 20)),
     'review_cycles':  int(os.environ.get('SWARM_REVIEW_CYCLES', 5)),
-    'models':         ['claude', 'antigravity', 'copilot', 'deepseek'],
+    'models':         ['litellm', 'copilot', 'deepseek'],
     'audit_cooldown_cycles': int(os.environ.get('SWARM_AUDIT_COOLDOWN_CYCLES', 10)),
     'fix_max_rounds': int(os.environ.get('SWARM_FIX_MAX_ROUNDS', 5)),
     'stuck_alert_s':  int(os.environ.get('SWARM_STUCK_ALERT_SECONDS', 900)),
@@ -186,6 +186,7 @@ def validate_environment() -> dict:
         'copilot':     ('aider', 'OPENAI_API_KEY'),
         'antigravity': ('agy', 'GEMINI_API_KEY'),
         'claude':      ('claude', None),
+        'litellm':     ('aider', None),
     }
 
     for model, (binary, key_var) in model_checks.items():
@@ -1200,6 +1201,106 @@ def run_deepseek(task: str) -> dict:
     return {'ok': False, 'model': 'deepseek', 'changes': 0,
             'output': 'Max rounds reached', 'exit_code': -1, 'killed': False, 'reason': 'max_rounds'}
 
+def run_litellm(task: str) -> dict:
+    """Aider via LiteLLM proxy. One-shot code-editing."""
+    aider = _binary('aider')
+    if not aider:
+        return {'ok': False, 'files_changed': 0, 'output': 'Aider not found',
+                'exit_code': -1, 'model': 'litellm'}
+
+    litellm_base = os.environ.get('LITELLM_API_BASE', 'http://localhost:4000')
+    api_key = os.environ.get('LITELLM_API_KEY', 'dummy-key')
+
+    log(f"Running Aider/LiteLLM ({litellm_base})...")
+    stub_dir = _prepare_aider_stub()
+    stub_path = f"{stub_dir}:{os.environ.get('PATH', '')}"
+
+    before = set(_git_porcelain())
+
+    env = os.environ.copy()
+    env['PATH'] = stub_path
+    env['PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD'] = '1'
+    env['PLAYWRIGHT_SKIP_BROWSER_GC'] = '1'
+    if 'LITELLM_API_BASE' not in os.environ:
+        env['LITELLM_API_BASE'] = litellm_base
+    if 'LITELLM_API_KEY' not in os.environ:
+        env['LITELLM_API_KEY'] = api_key
+
+    # By default, use openrouter/auto or a specific model if configured
+    model_name = os.environ.get('LITELLM_MODEL', 'openai/gpt-4o')
+
+    cmd = [aider, '--model', model_name,
+           '--openai-api-base', litellm_base,
+           '--openai-api-key', api_key,
+           '--read', 'AGENTS.md',
+           '--message', task,
+           '--no-auto-commits', '--yes', '--no-suggest-shell-commands']
+
+    proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, bufsize=1, start_new_session=True, env=env
+    )
+    global _child_procs
+    _child_procs.append(proc)
+
+    output_chunks = []
+    output_lock = threading.Lock()
+    last_output_ts = time.time()
+    last_change_ts = time.time()
+    current_porcelain = before.copy()
+    killed = False
+    kill_reason = ''
+
+    def reader():
+        nonlocal last_output_ts
+        try:
+            for line in proc.stdout:
+                with output_lock:
+                    output_chunks.append(line)
+                last_output_ts = time.time()
+        except Exception:
+            pass
+
+    rt = threading.Thread(target=reader, daemon=True)
+    rt.start()
+
+    try:
+        while proc.poll() is None:
+            time.sleep(5)
+            now = set(_git_porcelain())
+            if now != current_porcelain:
+                last_change_ts = time.time()
+                current_porcelain = now
+
+            inactivity = time.time() - max(last_output_ts, last_change_ts)
+            if inactivity >= CFG['stuck_timeout']:
+                log(f"LiteLLM STUCK: {inactivity:.0f}s inactivity. Killing.")
+                killed = True
+                kill_reason = 'stuck'
+                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+                time.sleep(2)
+                try: os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                except Exception: pass
+                break
+    except KeyboardInterrupt:
+        killed = True
+        kill_reason = 'keyboard_interrupt'
+        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+
+    rt.join(timeout=2)
+    output = ''.join(output_chunks)
+    changes = _git_real_changes(before, set(_git_porcelain()))
+    
+    if changes > 0:
+        log(f"LiteLLM: produced {changes} file changes")
+        if killed:
+            log(f"LiteLLM was killed ({kill_reason}) but produced file changes. Accepting partial work.")
+        return {'ok': True, 'model': 'litellm', 'changes': changes,
+                'output': output, 'exit_code': proc.returncode, 'killed': killed, 'reason': ''}
+    else:
+        return {'ok': False, 'model': 'litellm', 'changes': 0,
+                'output': output, 'exit_code': proc.returncode, 'killed': killed, 'reason': kill_reason if killed else 'no_changes'}
+
 # ── Fallback chain: try models in rotating order ─────────────────────
 
 MODEL_RUNNERS = {
@@ -1207,6 +1308,7 @@ MODEL_RUNNERS = {
     'antigravity':  run_antigravity,
     'copilot':      run_copilot,
     'deepseek':     run_deepseek,
+    'litellm':      run_litellm,
 }
 
 def run_task_with_fallback(task: str, attempt: int = 0, cycle: int = 0) -> dict:
