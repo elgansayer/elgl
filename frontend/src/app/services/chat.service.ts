@@ -55,6 +55,12 @@ export interface ChatMessage {
   is_view_once?: boolean;
   /** Timestamp when the view‑once media was first accessed (null = not yet opened) */
   viewed_at?: string | null;
+
+  /** User IDs for whom the message has been soft‑deleted (self‑delete only) */
+  deleted_for_user_ids?: string[];
+
+  /** True when the message has been soft‑deleted for all users */
+  is_deleted?: boolean;
 }
 
 export interface FavouriteRecord {
@@ -632,6 +638,13 @@ export class ChatService {
         body: { scope },
       }),
     );
+  }
+
+  /**
+   * Deletes a message for everyone (only allowed for the sender or a room admin).
+   */
+  async deleteMessageForEveryone(messageId: string): Promise<void> {
+    await this.deleteMessage(messageId, 'everyone');
   }
 
   async forwardMessage(

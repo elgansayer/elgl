@@ -22,6 +22,8 @@
     "test:backend": "cd backend && npm run test",
     "verify": "npm run check:constitution && npm run build && cd backend && npm run verify",
     "verify:node": "node --version && npm --version && echo '✅ Node.js and npm verified'",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "prepare": "if [ -d .git ]; then npx husky || true; fi"
   },
   "dependencies": {
@@ -29,6 +31,13 @@
     "@ngx-translate/http-loader": "^8.0.0"
   },
   "devDependencies": {
-    "husky": "^9.1.7"
+    "husky": "^9.1.7",
+    "prettier": "^3.3.3",
+    "lint-staged": "^15.2.10"
+  },
+  "lint-staged": {
+    "*.{js,ts,html,css,scss,json,md,mdx,yaml,yml}": [
+      "prettier --write"
+    ]
   }
 }

@@ -475,6 +475,12 @@
   "voip.incomingVoiceCall": "مكالمة صوتية واردة...",
   "voip.incomingVideoCall": "مكالمة فيديو واردة...",
   "common.unknownCaller": "متصل غير معروف",
+  "system.profileUpdated": "تم تحديث الملف الشخصي",
+  "system.missedCall": "مكالمة فائتة",
+  "system.groupRenamed": "تمت إعادة تسمية المجموعة إلى {{name}}",
+  "system.memberAdded": "تمت إضافة {{count}} عضو (أعضاء)",
+  "system.memberRemoved": "تمت إزالة عضو",
+  "system.announcement": "📢 {{message}}",
   "dailyLoginModal.title": "مكافأة يومية!",
   "dailyLoginModal.body": "لقد حصلت على {coins} عملة لتسجيل دخولك اليوم.",
   "dailyLoginModal.cta": "رائع!"

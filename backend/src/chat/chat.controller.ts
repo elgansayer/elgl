@@ -20,6 +20,7 @@ import { AiGenerateReplyDto, SendMessageDto } from './dto/send-message.dto';
 import { LlmProxyDto } from './dto/llm-proxy.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { AddLabelDto, RemoveLabelDto } from './dto/label.dto';
+import { DeleteMessageDto } from './dto/delete-message.dto';
 import { FixMessageDto } from './dto/fix-message.dto';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
 import { ShareContactDto } from './dto/share-contact.dto';
@@ -240,6 +241,17 @@ export class ChatController {
   ): Promise<{ success: boolean } | null> {
     if (!user) return null;
     await this.chatService.viewMessageMedia(user.id, messageId);
+    return { success: true };
+  }
+
+  @Delete('messages/:messageId')
+  async deleteMessage(
+    @CurrentUser() user: User | null,
+    @Param('messageId') messageId: string,
+    @Body() dto: DeleteMessageDto,
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.chatService.deleteMessage(user.id, messageId, dto.scope);
     return { success: true };
   }
 
