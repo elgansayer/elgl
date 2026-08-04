@@ -48,8 +48,8 @@ jobs:
           github_token: ${{ secrets.PAT_TOKEN }}
           llm_model: "gemini/gemini-3.6-flash"
           llm_api_key: ${{ secrets.GEMINI_API_KEY }}
-          openhands_image: "docker.openhands.dev/openhands/openhands:1.8"
-          runtime_image: "docker.openhands.dev/openhands/runtime:1.8-nikolaik"
+          openhands_image: "ghcr.io/openhands/openhands:0.32"
+          runtime_image: "ghcr.io/openhands/runtime:0.32-nikolaik"
           prompt: >
             You are the AI PR Reviewer and Fixer. 
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
@@ -69,8 +69,8 @@ jobs:
           github_token: ${{ secrets.PAT_TOKEN }}
           llm_model: "deepseek/deepseek-coder"
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
-          openhands_image: "docker.openhands.dev/openhands/openhands:1.8"
-          runtime_image: "docker.openhands.dev/openhands/runtime:1.8-nikolaik"
+          openhands_image: "ghcr.io/openhands/openhands:0.32"
+          runtime_image: "ghcr.io/openhands/runtime:0.32-nikolaik"
           prompt: >
             You are the AI PR Reviewer and Fixer. 
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.

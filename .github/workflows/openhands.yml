@@ -49,5 +49,5 @@ jobs:
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
           prompt: "Please review the issue or PR and solve the requested changes."
           cli_args: "--max-iterations 30"
-          openhands_image: "docker.openhands.dev/openhands/openhands:1.8"
-          runtime_image: "docker.openhands.dev/openhands/runtime:1.8-nikolaik"
+          openhands_image: "ghcr.io/openhands/openhands:0.32"
+          runtime_image: "ghcr.io/openhands/runtime:0.32-nikolaik"
