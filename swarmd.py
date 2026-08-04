@@ -231,13 +231,77 @@ def validate_environment() -> dict:
 for d in ['pending', 'active', 'stuck', 'completed']:
     (TASKS_DIR / d).mkdir(parents=True, exist_ok=True)
 
+_completed_cache = {'mtime': None, 'contents': set()}
+
+def _completed_task_contents() -> set[str]:
+    """
+    Exact task-text contents currently in .tasks/completed/, cached and
+    refreshed only when that directory's mtime changes (i.e. once per
+    completion), so repeated task_next() calls stay cheap.
+    """
+    d = TASKS_DIR / 'completed'
+    try:
+        mtime = d.stat().st_mtime
+    except FileNotFoundError:
+        return set()
+    if _completed_cache['mtime'] != mtime:
+        contents = set()
+        for f in d.glob('*.task'):
+            try:
+                contents.add(f.read_text().strip())
+            except Exception:
+                pass
+        _completed_cache['mtime'] = mtime
+        _completed_cache['contents'] = contents
+    return _completed_cache['contents']
+
 def task_next() -> tuple[str | None, Path | None]:
+    """
+    Return the next task to run. Any task file (in active/ or pending/)
+    whose full text exactly matches one already in completed/ is a stale
+    duplicate left over from a queue merge or a re-import: instead of
+    re-running finished work forever, archive it on sight and keep looking.
+    """
+    completed = _completed_task_contents()
     for state in ['active', 'pending']:
-        tasks = sorted((TASKS_DIR / state).glob('*.task'))
-        if tasks:
-            f = tasks[0]
-            return f.read_text().strip().split('\n')[0], f
+        for f in sorted((TASKS_DIR / state).glob('*.task')):
+            try:
+                content = f.read_text().strip()
+            except Exception:
+                continue
+            if content in completed:
+                log(f"Skipping already-completed duplicate task, archiving: {f.name}")
+                task_move(f, 'completed')
+                continue
+            return content.split('\n')[0], f
     return None, None
+
+def dedupe_task_queue() -> int:
+    """
+    Self-healing sweep: drop pending/active/stuck task files that exactly
+    duplicate another task in the same state, or that duplicate work
+    already recorded in completed/. Run at startup and periodically, since
+    merges/imports can reintroduce duplicates outside of task_add()'s
+    insert-time check.
+    """
+    completed = _completed_task_contents()
+    removed = 0
+    for state in ['pending', 'active', 'stuck']:
+        seen = set()
+        for f in sorted((TASKS_DIR / state).glob('*.task')):
+            try:
+                content = f.read_text().strip()
+            except Exception:
+                continue
+            if content in completed or content in seen:
+                try:
+                    f.unlink()
+                    removed += 1
+                except Exception:
+                    pass
+                continue
+            seen.add(content)
+    return removed
 
 def task_move(f: Path, to_state: str) -> Path:
     dest = TASKS_DIR / to_state / f.name
@@ -476,8 +540,9 @@ def sync_github_issues() -> tuple[int, int]:
     repo  = CFG.get('repo_name', 'hellotalk')
 
     # Build maps of existing tasks in all subdirs
-    existing = {}     # title → (subdir, Path)
-    issue_map = {}    # issue_number → (subdir, Path)
+    existing = {}      # title → (subdir, Path)  (first file seen per title)
+    issue_map = {}     # issue_number → (subdir, Path)
+    title_nums = {}     # title → [(issue_number, subdir), ...]  (every file, for dup detection)
     for subdir in ['pending', 'active', 'stuck', 'completed']:
         d = TASKS_DIR / subdir
         if d.exists():
@@ -488,8 +553,13 @@ def sync_github_issues() -> tuple[int, int]:
                     num = _issue_number_from_file(f)
                     if num:
                         issue_map.setdefault(num, (subdir, f))
+                        title_nums.setdefault(title, []).append((num, subdir))
                 except Exception:
                     pass
+
+    def _has_other_completed_sibling(title: str, num: int) -> bool:
+        """True if another issue number with the exact same task title is already completed."""
+        return any(n != num and sd == 'completed' for n, sd in title_nums.get(title, []))
 
     imported = 0
     closed_synced = 0
@@ -521,18 +591,45 @@ def sync_github_issues() -> tuple[int, int]:
                     log(f"Sync: closed GitHub issue #{num} → moved task to completed")
                 continue
 
-            # Case 2: Issue reopened on GitHub but our task is in completed → move back to pending
+            # Case 2: Issue reopened on GitHub but our task is in completed → move back to pending.
+            # Exception: if a *different* issue number with the identical task
+            # title is already completed, this isn't genuinely reopened work,
+            # it's a stale duplicate GitHub issue (e.g. two issues filed for
+            # the same task). Close it instead of resurrecting finished work
+            # into the queue forever.
             if state == 'open' and num in issue_map:
                 subdir, f = issue_map[num]
                 if subdir == 'completed':
-                    task_move(f, 'pending')
-                    imported += 1
-                    log(f"Sync: reopened GitHub issue #{num} → moved task to pending")
+                    if _has_other_completed_sibling(title, num):
+                        if _gh_api('PATCH', f'/repos/{owner}/{repo}/issues/{num}',
+                                   {'state': 'closed'}):
+                            closed_synced += 1
+                            log(f"Sync: issue #{num} duplicates already-completed work "
+                                f"under another issue number - closed instead of reopening")
+                    else:
+                        task_move(f, 'pending')
+                        imported += 1
+                        log(f"Sync: reopened GitHub issue #{num} → moved task to pending")
                 continue
 
             # Case 3: Open issue not yet in .tasks/ → import (fuzzy-dedup: skip
             # near-duplicates like "Add a moment system" vs "Build moments
             # feature" too, not just exact title matches).
+            if title in existing and issue_map.get(num) is None:
+                # Exact title match to a task we already have under a
+                # different issue number. If that work is done, this is a
+                # stale duplicate issue on GitHub's side - close it so it
+                # stops resurfacing on every sync instead of just skipping
+                # it locally forever.
+                dup_subdir, _ = existing[title]
+                if dup_subdir == 'completed':
+                    if _gh_api('PATCH', f'/repos/{owner}/{repo}/issues/{num}',
+                               {'state': 'closed'}):
+                        closed_synced += 1
+                        log(f"Sync: issue #{num} is an exact duplicate of already-completed "
+                            f"work - closed: {title[:80]}")
+                    continue
+
             is_near_dup = title not in existing and any(
                 difflib.SequenceMatcher(None, title.lower(), t.lower()).ratio() >= 0.72
                 for t in existing
@@ -1301,6 +1398,10 @@ def _cleanup():
 
 signal.signal(signal.SIGTERM, _on_signal)
 signal.signal(signal.SIGINT, _on_signal)
+if hasattr(signal, 'SIGHUP'):
+    # Ignore SIGHUP so a dropped SSH/terminal session can never kill the
+    # daemon if it's ever launched outside of systemd/nohup/tmux.
+    signal.signal(signal.SIGHUP, signal.SIG_IGN)
 atexit.register(_cleanup)
 
 def supervisor():
@@ -1346,6 +1447,15 @@ def supervisor():
         'last_error': '', 'last_commit': '',
         'uptime_seconds': 0,
     })
+
+    # Startup dedupe: drop any stale/duplicate task files (e.g. reintroduced
+    # by a git merge of .tasks/pending) before we start dispatching.
+    try:
+        removed = dedupe_task_queue()
+        if removed:
+            log(f"Startup dedupe: removed {removed} duplicate/already-completed task files")
+    except Exception as e:
+        log(f"Startup dedupe error: {e}")
 
     # Initial GitHub sync on startup
     try:
@@ -1399,6 +1509,12 @@ def supervisor():
                     log(f"GitHub sync: +{imported} imported, {closed_synced} closed")
             except Exception as e:
                 log(f"GitHub sync error: {e}")
+            try:
+                removed = dedupe_task_queue()
+                if removed:
+                    log(f"Periodic dedupe: removed {removed} duplicate/already-completed task files")
+            except Exception as e:
+                log(f"Periodic dedupe error: {e}")
             last_gh_sync = time.time()
 
         task, taskfile = task_next()
@@ -1495,16 +1611,7 @@ def supervisor():
             # --relaxed-tests explicitly opts out of this gate.
             passed, test_errors = run_tests()
             if not passed:
-                log(f"Tests have failures after {model_used}. Attempting AI fix...")
-                fix_ok = run_test_fix(test_errors, cycle_count)
-                if fix_ok:
-                    passed, test_errors = run_tests()
-                    if passed:
-                        log("Tests pass after AI fix.")
-                    else:
-                        log("Tests still failing after AI fix.")
-                else:
-                    log("AI test fix failed.")
+                log(f"Tests have failures after {model_used}. Skipping inline AI fix pass to prevent hangs.")
 
             if not passed and not RELAXED_TESTS:
                 log("Verification still failing and RELAXED_TESTS is off: "
