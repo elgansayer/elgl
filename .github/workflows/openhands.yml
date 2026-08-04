@@ -7,6 +7,8 @@ on:
     types: [opened, synchronize, reopened]
   pull_request_review_comment:
     types: [created]
+  issues:
+    types: [opened]
 
 concurrency:
   group: openhands-swarm
@@ -17,7 +19,8 @@ jobs:
     if: >
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/openhands-fix')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '/openhands-fix')) ||
-      (github.event_name == 'pull_request')
+      (github.event_name == 'pull_request') ||
+      (github.event_name == 'issues')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -28,42 +31,28 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
 
-      - name: Tier 1 - OpenHands (Claude Pro)
+      - name: Tier 1 - OpenHands (Gemini 3.6 Flash)
         id: primary
         continue-on-error: true
         uses: xinbenlv/openhands-action@main
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: 'anthropic/claude-3-5-sonnet-20241022'
-          llm_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          prompt: 'Please review the issue or PR and solve the requested changes.'
-          cli_args: '--max-iterations 30'
-          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
-          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
+          llm_model: "gemini/gemini-3.6-flash"
+          llm_api_key: ${{ secrets.GEMINI_API_KEY }}
+          prompt: "Please review the issue or PR and solve the requested changes."
+          cli_args: "--max-iterations 30"
+          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
+          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
 
-      - name: Tier 2 - OpenHands (Gemini 3.6 Flash Fallback)
+      - name: Tier 2 - OpenHands (DeepSeek Coder Fallback)
         id: secondary
         if: steps.primary.outcome == 'failure'
-        continue-on-error: true
         uses: xinbenlv/openhands-action@main
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: 'gemini/gemini-3.6-flash'
-          llm_api_key: ${{ secrets.GEMINI_API_KEY }}
-          prompt: 'Please review the issue or PR and solve the requested changes.'
-          cli_args: '--max-iterations 30'
-          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
-          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
-
-      - name: Tier 3 - OpenHands (DeepSeek Coder Fallback)
-        id: tertiary
-        if: steps.secondary.outcome == 'failure'
-        uses: xinbenlv/openhands-action@main
-        with:
-          github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: 'deepseek/deepseek-coder'
+          llm_model: "deepseek/deepseek-coder"
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
-          prompt: 'Please review the issue or PR and solve the requested changes.'
-          cli_args: '--max-iterations 30'
-          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
-          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
+          prompt: "Please review the issue or PR and solve the requested changes."
+          cli_args: "--max-iterations 30"
+          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
+          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
