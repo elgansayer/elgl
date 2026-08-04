@@ -907,6 +907,10 @@ export class I18nService {
     // Context Menu
     'context_menu.reply': 'Reply',
     'context_menu.copy': 'Copy',
+    'context_menu.translate': 'Translate',
+    'context_menu.transliterate': 'Transliterate',
+    'context_menu.speak': 'Speak',
+    'context_menu.correct': 'Correct',
     'context_menu.favourite': 'Favourite',
     'context_menu.report': 'Report',
     'context_menu.block': 'Block',

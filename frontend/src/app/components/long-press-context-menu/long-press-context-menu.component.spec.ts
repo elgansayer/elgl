@@ -80,6 +80,67 @@ describe('LongPressContextMenuComponent', () => {
     expect(component.menuVisible()).toBe(false);
   });
 
+  it('should emit translate and close the menu when doTranslate is called', () => {
+    vi.spyOn(component.translate, 'emit');
+    component.menuVisible.set(true);
+
+    component.doTranslate();
+
+    expect(component.translate.emit).toHaveBeenCalledWith({
+      messageId: 'test-message-id',
+      content: 'Hello world',
+    });
+    expect(component.menuVisible()).toBe(false);
+  });
+
+  it('should emit transliterate and close the menu when doTransliterate is called', () => {
+    vi.spyOn(component.transliterate, 'emit');
+    component.menuVisible.set(true);
+
+    component.doTransliterate();
+
+    expect(component.transliterate.emit).toHaveBeenCalledWith({
+      messageId: 'test-message-id',
+      content: 'Hello world',
+    });
+    expect(component.menuVisible()).toBe(false);
+  });
+
+  it('should emit speak and close the menu when doSpeak is called', () => {
+    vi.spyOn(component.speak, 'emit');
+    component.menuVisible.set(true);
+
+    component.doSpeak();
+
+    expect(component.speak.emit).toHaveBeenCalledWith({
+      messageId: 'test-message-id',
+      content: 'Hello world',
+    });
+    expect(component.menuVisible()).toBe(false);
+  });
+
+  it('should emit correct and close the menu when doCorrect is called', () => {
+    vi.spyOn(component.correct, 'emit');
+    component.menuVisible.set(true);
+
+    component.doCorrect();
+
+    expect(component.correct.emit).toHaveBeenCalledWith({
+      messageId: 'test-message-id',
+      content: 'Hello world',
+    });
+    expect(component.menuVisible()).toBe(false);
+  });
+
+  it('should not render translate, transliterate, speak, or correct actions for non-text messages', () => {
+    fixture.componentRef.setInput('messageType', 'voice');
+    component.menuVisible.set(true);
+    fixture.detectChanges();
+
+    const buttons = fixture.debugElement.queryAll(By.css('button'));
+    expect(buttons.length).toBe(6);
+  });
+
   it('should emit block toggled to true when the sender is not yet blocked', () => {
     vi.spyOn(component.block, 'emit');
     component.menuVisible.set(true);
@@ -137,6 +198,6 @@ describe('LongPressContextMenuComponent', () => {
     fixture.detectChanges();
 
     const buttons = fixture.debugElement.queryAll(By.css('button'));
-    expect(buttons.length).toBe(6);
+    expect(buttons.length).toBe(10);
   });
 });

@@ -467,18 +467,28 @@ export class ChatRoomComponent implements OnDestroy {
 
   async transliterateMessage(msg: ChatMessage): Promise<void> {
     if (!msg.text_content) return;
+    try {
+      const result = await this.vocabStore.translateWordOrSentence(msg.text_content, 'en');
+      this.transliterations.update((prev) => ({
+        ...prev,
+        [msg.id]: result.transliteration || result.translated_text,
+      }));
+    } catch (e) {
+      console.error('Failed to transliterate message:', e);
+      showToast(this.i18n.translate('moments.transError') || 'Transliteration failed');
+    }
+  }
 
-    // In a full implementation, this would call the NLP service.
-    // For the UI implementation, we provide a mock transliteration.
-    const mockTransliteration = msg.text_content
-      .split(' ')
-      .map((word) => word.toLowerCase() + '-romaji')
-      .join(' ');
-
-    this.transliterations.update((prev) => ({
-      ...prev,
-      [msg.id]: mockTransliteration,
-    }));
+  speakMessage(msg: ChatMessage): void {
+    if (!msg.text_content?.trim()) return;
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      showToast(this.i18n.translate('tts.unsupported'));
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(msg.text_content);
+    utterance.rate = 0.9;
+    window.speechSynthesis.speak(utterance);
   }
 
   async toggleTranslation(msg: ChatMessage): Promise<void> {

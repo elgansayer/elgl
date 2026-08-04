@@ -45,6 +45,36 @@ import {Component, input, output, signal} from '@angular/core';import { Translat
             {{ 'context_menu.copy' | t }}
           </button>
 
+          @if (messageType() === 'text') {
+            <button
+              class="w-full text-start text-white font-medium py-2 px-3 rounded-lg hover:bg-white/10"
+              (click)="doTranslate()"
+            >
+              {{ 'context_menu.translate' | t }}
+            </button>
+
+            <button
+              class="w-full text-start text-white font-medium py-2 px-3 rounded-lg hover:bg-white/10"
+              (click)="doTransliterate()"
+            >
+              {{ 'context_menu.transliterate' | t }}
+            </button>
+
+            <button
+              class="w-full text-start text-white font-medium py-2 px-3 rounded-lg hover:bg-white/10"
+              (click)="doSpeak()"
+            >
+              {{ 'context_menu.speak' | t }}
+            </button>
+
+            <button
+              class="w-full text-start text-white font-medium py-2 px-3 rounded-lg hover:bg-white/10"
+              (click)="doCorrect()"
+            >
+              {{ 'context_menu.correct' | t }}
+            </button>
+          }
+
           <button
             class="w-full text-start text-white font-medium py-2 px-3 rounded-lg hover:bg-white/10"
             (click)="doFavourite()"
@@ -101,6 +131,10 @@ export class LongPressContextMenuComponent {
   }>();
   readonly report = output<{ messageId: string; senderId: string }>();
   readonly block = output<{ senderId: string; blocked: boolean }>();
+  readonly translate = output<{ messageId: string; content: string }>();
+  readonly transliterate = output<{ messageId: string; content: string }>();
+  readonly speak = output<{ messageId: string; content: string }>();
+  readonly correct = output<{ messageId: string; content: string }>();
 
   menuVisible = signal(false);
 
@@ -172,6 +206,26 @@ export class LongPressContextMenuComponent {
 
   doReport() {
     this.report.emit({ messageId: this.messageId(), senderId: this.senderId() });
+    this.closeMenu();
+  }
+
+  doTranslate() {
+    this.translate.emit({ messageId: this.messageId(), content: this.messageContent() });
+    this.closeMenu();
+  }
+
+  doTransliterate() {
+    this.transliterate.emit({ messageId: this.messageId(), content: this.messageContent() });
+    this.closeMenu();
+  }
+
+  doSpeak() {
+    this.speak.emit({ messageId: this.messageId(), content: this.messageContent() });
+    this.closeMenu();
+  }
+
+  doCorrect() {
+    this.correct.emit({ messageId: this.messageId(), content: this.messageContent() });
     this.closeMenu();
   }
 

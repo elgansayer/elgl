@@ -147,6 +147,10 @@
           (reply)="startReply(msg.id)"
           (favourite)="bookmark(msg)"
           (block)="onBlockToggle($event)"
+          (translate)="toggleTranslation(msg)"
+          (transliterate)="transliterateMessage(msg)"
+          (speak)="speakMessage(msg)"
+          (correct)="startCorrection(msg)"
         >
           <div
             [id]="'msg-' + msg.id"
@@ -206,6 +210,11 @@
                     {{ transliterations()[msg.id] }}
                   </p>
                 }
+                @if (showTranslation()[msg.id] && translations()[msg.id]) {
+                  <p class="mt-1 text-[10px] text-primary italic">
+                    {{ translations()[msg.id] }}
+                  </p>
+                }
               }
               @if (msg.message_type === 'correction' && msg.correction_payload) {
                 <app-visual-diff
@@ -238,18 +247,6 @@
                     class="rounded-lg bg-amber-500/90 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-white"
                   >
                     {{ 'chatRoom.saveBtn' | t }}
-                  </button>
-                  <button
-                    (click)="transliterateMessage(msg)"
-                    class="rounded-lg bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-primary"
-                  >
-                    {{ 'chatRoom.transliterateBtn' | t }}
-                  </button>
-                  <button
-                    (click)="startCorrection(msg)"
-                    class="rounded-lg bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-primary"
-                  >
-                    {{ 'chatRoom.correctBtn' | t }}
                   </button>
                 }
                 <button
