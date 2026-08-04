@@ -35,7 +35,6 @@
     "express": "^5.2.1",
     "firebase": "^11.3.2",
     "livekit-client": "^2.21.0",
-    "@livekit/components-angular": "latest",
     "@ngx-translate/core": "^16.0.0",
     "@ngx-translate/http-loader": "^16.0.0",
     "ng2-charts": "^5.0.4",
