@@ -3,6 +3,7 @@ import { Component, effect, inject, resource, signal } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
 import { StudyStreakWidgetComponent } from '../../components/study-streak-widget/study-streak-widget.component';
 import { WordOfTheDayComponent } from '../../components/word-of-the-day/word-of-the-day.component';
+import { DailyLearningTipComponent } from '../../components/daily-learning-tip/daily-learning-tip.component';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { UserService } from '../../services/user.service';
 import { StreakMilestoneService } from '../../services/streak-milestone.service';
@@ -13,6 +14,7 @@ import { StreakCelebrationOverlayComponent } from '../../components/streak-celeb
   imports: [
     StudyStreakWidgetComponent,
     WordOfTheDayComponent,
+    DailyLearningTipComponent,
     TranslatePipe,
     StreakCelebrationOverlayComponent,
   ],
@@ -30,6 +32,7 @@ import { StreakCelebrationOverlayComponent } from '../../components/streak-celeb
       <main class="py-4 ps-4 pe-4 space-y-4">
         <app-study-streak-widget></app-study-streak-widget>
         <app-word-of-the-day></app-word-of-the-day>
+        <app-daily-learning-tip></app-daily-learning-tip>
       </main>
 
       <app-streak-celebration-overlay></app-streak-celebration-overlay>

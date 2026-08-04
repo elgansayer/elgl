@@ -39,10 +39,11 @@ jobs:
       - name: Tier 2 - OpenHands (DeepSeek Coder Fallback)
         id: secondary
         if: steps.primary.outcome == 'failure'
-        uses: OpenHands/extensions/plugins/github-action@main
+        uses: xinbenlv/openhands-action@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          llm_api_url: ${{ secrets.LITELLM_GATEWAY_URL }}
+          llm_model: "litellm_proxy/deepseek-coder"
           llm_api_key: ${{ secrets.LITELLM_API_KEY }}
-          model: "litellm_proxy/deepseek-coder"
-          max_iterations: 30
+          prompt: "Please review the issue or PR and solve the requested changes."
+          additional_env: '{"LLM_BASE_URL": "${{ secrets.LITELLM_GATEWAY_URL }}"}'
+          cli_args: "--max-iterations 30"

@@ -41,15 +41,12 @@ jobs:
         id: secondary
         if: steps.primary.outcome == 'failure'
         continue-on-error: true
-        uses: All-Hands-AI/OpenHands@main
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        uses: xinbenlv/openhands-action@main
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
+          llm_model: "gemini/gemini-3.6-flash"
           llm_api_key: ${{ secrets.GEMINI_API_KEY }}
-          model: "gemini/gemini-3.6-flash"
-          max_iterations: 30
-          task: >
+          prompt: >
             You are the Lead AI Architect for this project.
             Your job is to evaluate the current state of the app against its goals.
             
@@ -60,20 +57,18 @@ jobs:
             5. Use the `gh issue create --title "..." --body "..."` command to create new actionable GitHub Issues for the missing features or bugs you found.
             
             IMPORTANT: Do not write code for these issues! Just plan, update the documentation, and create the tickets. Other agents will pick up the tickets and do the coding.
+          cli_args: "--max-iterations 30"
 
       - name: Tier 3 - OpenHands (DeepSeek Coder Fallback)
         id: tertiary
         if: steps.secondary.outcome == 'failure'
-        uses: All-Hands-AI/OpenHands@main
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        uses: xinbenlv/openhands-action@main
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_api_url: ${{ secrets.LITELLM_GATEWAY_URL }}
+          llm_model: "litellm_proxy/deepseek-coder"
           llm_api_key: ${{ secrets.LITELLM_API_KEY }}
-          model: "litellm_proxy/deepseek-coder"
-          max_iterations: 50
-          task: >
+          additional_env: '{"LLM_BASE_URL": "${{ secrets.LITELLM_GATEWAY_URL }}"}'
+          prompt: >
             You are the Lead AI Architect for this project.
             Your job is to evaluate the current state of the app against its goals.
             
@@ -84,3 +79,4 @@ jobs:
             5. Use the `gh issue create --title "..." --body "..."` command to create new actionable GitHub Issues for the missing features or bugs you found.
             
             IMPORTANT: Do not write code for these issues! Just plan, update the documentation, and create the tickets. Other agents will pick up the tickets and do the coding.
+          cli_args: "--max-iterations 50"

@@ -1,15 +1,25 @@
-import { Controller, Get, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  UseGuards,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { User } from '@supabase/supabase-js';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { DailyTipService } from './daily-tip.service';
 
 @Controller('daily-tip')
+@UseGuards(SupabaseAuthGuard)
 export class DailyTipController {
   constructor(private readonly dailyTipService: DailyTipService) {}
 
-  @UseGuards(SupabaseAuthGuard)
   @Get()
-  async getTodayTip(@Request() req): Promise<{ tip: string }> {
-    const tip = await this.dailyTipService.getTodayTipForUser(req.user.id);
+  async getTodayTip(
+    @CurrentUser() user: User | null,
+  ): Promise<{ tip: string }> {
+    if (!user) throw new UnauthorizedException();
+    const tip = await this.dailyTipService.getTodayTipForUser(user.id);
     return { tip };
   }
 }

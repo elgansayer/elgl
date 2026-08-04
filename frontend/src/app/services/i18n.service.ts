@@ -1318,6 +1318,11 @@ export class I18nService {
     'chat_backup.importing': 'Importing...',
     'chat_backup.export_error': 'Failed to export chat history.',
     'chat_backup.import_error': 'Failed to import chat history.',
+
+    // Daily Learning Tip
+    'home.dailyTip.title': 'Daily learning tip',
+    'home.dailyTip.loading': 'Fetching your tip...',
+    'home.dailyTip.fallback': 'Keep practising every day!',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });

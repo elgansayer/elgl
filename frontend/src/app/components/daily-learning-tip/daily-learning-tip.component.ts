@@ -1,0 +1,48 @@
+import { Component, computed, inject, resource } from '@angular/core';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
+import { AuthService } from '../../services/auth.service';
+import { AppCardComponent } from '../primitives/card/card.component';
+import { environment } from '../../../environments/environment';
+
+interface DailyTipResponse {
+  tip: string;
+}
+
+@Component({
+  selector: 'app-daily-learning-tip',
+  imports: [TranslatePipe, AppCardComponent],
+  template: `
+    <app-card variant="default" padding="md" customClass="space-y-2">
+      <h2 class="text-sm uppercase tracking-wider text-gray-400 font-medium">
+        {{ 'home.dailyTip.title' | t }}
+      </h2>
+      @if (tipResource.isLoading()) {
+        <p class="text-sm text-gray-400">{{ 'home.dailyTip.loading' | t }}</p>
+      } @else {
+        <p class="text-base text-white">{{ tip() }}</p>
+      }
+    </app-card>
+  `,
+  styles: [':host { display: block; }'],
+})
+export class DailyLearningTipComponent {
+  private readonly authService = inject(AuthService);
+  private readonly i18nService = inject(I18nService);
+
+  protected readonly tipResource = resource<DailyTipResponse, unknown>({
+    loader: () => {
+      const token = this.authService.getAccessToken();
+      return fetch(`${environment.apiUrl}/daily-tip`, {
+        headers: { Authorization: `Bearer ${token ?? ''}` },
+      }).then((r) => {
+        if (!r.ok) throw new Error('Failed to fetch daily tip');
+        return r.json();
+      });
+    },
+  });
+
+  protected readonly tip = computed(
+    () => this.tipResource.value()?.tip ?? this.i18nService.translate('home.dailyTip.fallback'),
+  );
+}

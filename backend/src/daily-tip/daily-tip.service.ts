@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PostgrestError } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
 import { ChatMessageEvent } from '../notifications/events/notification.events';
@@ -48,7 +49,7 @@ export class DailyTipService {
       data:
         | { id: string; target_languages: string[]; native_language: string }[]
         | null;
-      error: any;
+      error: PostgrestError | null;
     } = await supabase
       .from('users')
       .select('id, target_languages, native_language');
@@ -77,8 +78,9 @@ export class DailyTipService {
         this.eventEmitter.emit('chat.message', event);
         this.logger.log(`Daily tip sent to user ${user.id}`);
       } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
         this.logger.error(
-          `Failed to generate tip for user ${user.id}: ${(err as Error).message}`,
+          `Failed to generate tip for user ${user.id}: ${message}`,
         );
       }
     }
