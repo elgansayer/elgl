@@ -815,6 +815,13 @@ export class I18nService {
     'voiceRecorder.sendBtn': '📤 Send voice note',
     'voiceRecorder.uploadingBtn': '⏳ Uploading to Cloudflare R2...',
 
+    // Audio Player
+    'audioPlayer.groupLabel': 'Audio player',
+    'audioPlayer.play': 'Play',
+    'audioPlayer.pause': 'Pause',
+    'audioPlayer.seekLabel': 'Seek audio position',
+    'audioPlayer.error': 'Unable to play this audio',
+
     // Trust Safety Modal
     'safety.title': '🛡️ Trust and safety moderation',
     'safety.subtitle': 'Report or block {{name}} to keep our community safe',

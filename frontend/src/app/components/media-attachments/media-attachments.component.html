@@ -4,10 +4,7 @@
 
 @if (voiceNote(); as voice) {
   <div class="mt-2 mb-2">
-    <audio controls [src]="voice.url" class="w-full"></audio>
-    <span class="text-sm">
-      {{ 'media.voice_note' | t }} ({{ voice.durationSec }} {{ 'media.seconds' | t }})
-    </span>
+    <app-audio-player [src]="voice.url" [durationSec]="voice.durationSec" />
   </div>
 }
 @if (showImages()) {

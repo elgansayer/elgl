@@ -77,18 +77,19 @@ describe('MediaAttachmentsComponent', () => {
     expect(img.alt).toBe('media.image');
   });
 
-  it('should render a voice note with its duration', () => {
+  it('should render a voice note with an audio player showing its duration', async () => {
     fixture.componentRef.setInput('message', {
       voiceNote: { url: 'voice.mp3', durationSec: 42 },
     } satisfies MultiMediaMessage);
     fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
     const audio = fixture.nativeElement.querySelector('audio') as HTMLAudioElement;
     expect(audio).toBeTruthy();
     expect(audio.src).toContain('voice.mp3');
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('media.voice_note');
-    expect(compiled.textContent).toContain('42');
-    expect(compiled.textContent).toContain('media.seconds');
+    expect(compiled.textContent).toContain('0:42');
   });
 
   it('should not render the images grid when a voice note is present', () => {
