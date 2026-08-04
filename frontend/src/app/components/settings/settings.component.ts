@@ -40,7 +40,7 @@ export class SettingsComponent implements OnInit {
   readonly isVip = signal(false);
   readonly primaryAccentColor = signal<string | null>(null);
   readonly interests = signal<string[]>([]);
-  newInterest = '';
+  readonly availableInterests = signal<string[]>([]);
 
   readonly availableColors = [
     '#4f46e5', // Indigo (default)
@@ -99,6 +99,9 @@ export class SettingsComponent implements OnInit {
       // Load linked accounts
       const accounts: LinkedAccount[] | null = await this.userService.getLinkedAccounts();
       this.linkedAccounts.set(accounts ?? []);
+
+      const available = await this.userService.getAvailableInterests();
+      this.availableInterests.set(available);
     } catch {
       this.autoDownloadPreference.set('wifi'); // Default to Wi-Fi only
       this.errorMessage.set('Failed to load profile or linked accounts');
@@ -192,12 +195,12 @@ export class SettingsComponent implements OnInit {
     }
   }
 
-  addInterest(): void {
-    const tag = this.newInterest.trim().toLowerCase().replace(/\s+/g, '_');
-    if (tag && !this.interests().includes(tag)) {
-      this.interests.update(arr => [...arr, tag]);
-    }
-    this.newInterest = '';
+  toggleInterest(interest: string): void {
+    this.interests.update(arr =>
+      arr.includes(interest)
+        ? arr.filter((x) => x !== interest)
+        : [...arr, interest],
+    );
   }
 
   removeInterest(index: number): void {

@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
@@ -112,7 +114,20 @@ export class GroupsService {
     return data.owner_id === userId;
   }
 
-  async addMember(groupId: string, memberId: string): Promise<void> {
+  private async ensureAdmin(userId: string, groupId: string): Promise<void> {
+    const isAdmin = await this.isAdmin(userId, groupId);
+    if (!isAdmin) {
+      throw new ForbiddenException('Only group admin can perform this action');
+    }
+  }
+
+  async addMember(
+    groupId: string,
+    memberId: string,
+    requesterId: string,
+  ): Promise<void> {
+    await this.ensureAdmin(requesterId, groupId);
+
     const supabase = this.supabaseService.getClient();
 
     // fetch group to get max_members
@@ -123,6 +138,27 @@ export class GroupsService {
       .single();
     if (groupError || !group) {
       throw new NotFoundException('Group not found');
+    }
+
+    // verify target user exists
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', memberId)
+      .maybeSingle();
+    if (!existingUser) {
+      throw new NotFoundException('User not found');
+    }
+
+    // prevent duplicate membership
+    const { data: existingMembership } = await supabase
+      .from('group_members')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('user_id', memberId)
+      .maybeSingle();
+    if (existingMembership) {
+      throw new ConflictException('User is already a member of this group');
     }
 
     // count current members
@@ -146,14 +182,72 @@ export class GroupsService {
     }
   }
 
-  async removeMember(groupId: string, memberId: string): Promise<void> {
+  async removeMember(
+    groupId: string,
+    memberId: string,
+    requesterId: string,
+  ): Promise<void> {
+    await this.ensureAdmin(requesterId, groupId);
+
     const supabase = this.supabaseService.getClient();
+
+    // fetch group to check ownership
+    const { data: group, error: groupError } = await supabase
+      .from('groups')
+      .select('owner_id')
+      .eq('id', groupId)
+      .single();
+    if (groupError || !group) {
+      throw new NotFoundException('Group not found');
+    }
+
+    // prevent removing the owner from the group
+    if (memberId === group.owner_id) {
+      throw new ForbiddenException('Cannot remove the group owner');
+    }
+
+    // ensure member actually exists
+    const { data: membership } = await supabase
+      .from('group_members')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('user_id', memberId)
+      .maybeSingle();
+    if (!membership) {
+      throw new NotFoundException('Member not found in group');
+    }
+
     const { error } = await supabase
       .from('group_members')
       .delete()
       .match({ group_id: groupId, user_id: memberId });
     if (error) {
       throw new NotFoundException('Failed to remove member');
+    }
+  }
+
+  async renameGroup(
+    groupId: string,
+    newName: string,
+    requesterId: string,
+  ): Promise<void> {
+    await this.ensureAdmin(requesterId, groupId);
+
+    // enforce basic name validation as a safety net
+    const trimmedName = newName.trim();
+    if (trimmedName.length === 0 || trimmedName.length > 200) {
+      throw new BadRequestException(
+        'Group name must be between 1 and 200 characters',
+      );
+    }
+
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('groups')
+      .update({ name: trimmedName })
+      .eq('id', groupId);
+    if (error) {
+      throw new NotFoundException('Failed to rename group');
     }
   }
 

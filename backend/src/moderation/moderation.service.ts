@@ -16,6 +16,9 @@ export interface ModerationItem {
   description?: string;
   reporter: Reporter | null;
   reported_user: Reporter | null;
+  reportedMomentId?: string | null;
+  moment_content?: string;
+  momentAuthorName?: string;
 }
 
 @Injectable()
@@ -40,6 +43,7 @@ export class ModerationService {
         created_at,
         reporter_id,
         reported_user_id,
+        reported_moment_id,
         description,
         reporter:reporter_id ( id, display_name ),
         reported_user:reported_user_id ( id, display_name )
@@ -69,6 +73,7 @@ export class ModerationService {
         description: obj.description as string | undefined,
         reporter: obj.reporter as Reporter | null,
         reported_user: obj.reported_user as Reporter | null,
+        reportedMomentId: (obj.reported_moment_id as string | null) ?? null,
       };
     });
 
@@ -76,8 +81,48 @@ export class ModerationService {
       return items.filter((item) => item.reported_user != null);
     }
 
-    // For moment reports we currently only support profiles, so return empty.
-    return [];
+    // For moment reports, fetch the attached moment content
+    const momentItems = items.filter((item) => item.reportedMomentId != null);
+
+    const hydrated: ModerationItem[] = [];
+    for (const item of momentItems) {
+      const moment = await this.getMomentContent(
+        item.reportedMomentId as string,
+      );
+      if (moment) {
+        hydrated.push({
+          ...item,
+          moment_content: moment.content_text,
+          momentAuthorName: moment.authorName,
+        });
+      }
+    }
+
+    return hydrated;
+  }
+
+  private async getMomentContent(
+    momentId: string,
+  ): Promise<{ content_text: string; authorName: string | null } | null> {
+    const { data, error } = await this.supabase
+      .from('moments')
+      .select('content_text, author_id, author:author_id ( display_name )')
+      .eq('id', momentId)
+      .maybeSingle();
+
+    if (error || !data) {
+      return null;
+    }
+
+    const row = data as {
+      content_text: string;
+      author: { display_name?: string } | null;
+    };
+
+    return {
+      content_text: row.content_text ?? '',
+      authorName: row.author?.display_name ?? null,
+    };
   }
 
   async reportUser(reporterId: string, dto: ReportUserDto) {

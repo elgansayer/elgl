@@ -92,6 +92,15 @@ export class EventsService {
     return this.http.post<Event>(`${environment.apiUrl}/events`, dto);
   }
 
+  shareContact(
+    targetUserId: string,
+  ): Observable<{ phone_number?: string; email?: string }> {
+    return this.http.post<{ phone_number?: string; email?: string }>(
+      `${environment.apiUrl}/users/me/contact-sharing`,
+      { target_user_id: targetUserId },
+    );
+  }
+
   getCategories(): Observable<string[]> {
     const categories = ['Audio Rooms', 'Learning Seminars', 'In-person Meetups', 'Cultural Exchanges'];
     return new Observable((observer) => {

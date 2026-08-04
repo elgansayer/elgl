@@ -432,8 +432,8 @@ export const routes: Routes = [
   {
     path: 'admin/moderation',
     loadComponent: () =>
-      import('./components/moderation/moderation-panel.component').then(
-        (m) => m.ModerationPanelComponent,
+      import('./moderation/moderation-queue.component').then(
+        (m) => m.ModerationQueueComponent,
       ),
     canActivate: [adminGuard],
     title: 'Moderation - HelloTalk',
