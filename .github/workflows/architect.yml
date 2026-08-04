@@ -17,8 +17,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Tier 1 - Gemini Flash Architect (Routine Planning)
+      - name: Tier 1 - Claude Code (Claude Pro)
         id: primary
+        continue-on-error: true
+        uses: anthropics/claude-code-base-action@beta
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        with:
+          anthropic_api_key: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+          prompt: >
+            You are the Lead AI Architect for this project.
+            Your job is to evaluate the current state of the app against its goals.
+            
+            1. Read AGENTS.md, SPEC.md (if available), and the README.md to understand the project goals.
+            2. Explore the codebase to assess the current implementation status.
+            3. Identify gaps between the planned features and the current state.
+            4. Self-modify any architecture or planning .md files (like SPEC.md or a new ROADMAP.md) to reflect the current state and next steps.
+            5. Use the `gh issue create --title "..." --body "..."` command to create new actionable GitHub Issues for the missing features or bugs you found.
+            
+            IMPORTANT: Do not write code for these issues! Just plan, update the documentation, and create the tickets. Other agents will pick up the tickets and do the coding.
+
+      - name: Tier 2 - OpenHands (Gemini 3.6 Flash Fallback)
+        id: secondary
+        if: steps.primary.outcome == 'failure'
         continue-on-error: true
         uses: All-Hands-AI/OpenHands@main
         env:
@@ -27,7 +48,7 @@ jobs:
           github_token: ${{ secrets.PAT_TOKEN }}
           llm_api_key: ${{ secrets.GEMINI_API_KEY }}
           model: "gemini/gemini-3.6-flash"
-          max_iterations: 15
+          max_iterations: 30
           task: >
             You are the Lead AI Architect for this project.
             Your job is to evaluate the current state of the app against its goals.
@@ -40,15 +61,19 @@ jobs:
             
             IMPORTANT: Do not write code for these issues! Just plan, update the documentation, and create the tickets. Other agents will pick up the tickets and do the coding.
 
-      - name: Tier 2 - Claude Sonnet Escalation (Complex Architecture)
-        id: escalation
-        if: steps.primary.outcome == 'failure'
-        uses: anthropics/claude-code-base-action@beta
+      - name: Tier 3 - OpenHands (DeepSeek Coder Fallback)
+        id: tertiary
+        if: steps.secondary.outcome == 'failure'
+        uses: All-Hands-AI/OpenHands@main
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         with:
-          anthropic_api_key: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
-          prompt: >
+          github_token: ${{ secrets.PAT_TOKEN }}
+          llm_api_url: ${{ secrets.LITELLM_GATEWAY_URL }}
+          llm_api_key: ${{ secrets.LITELLM_API_KEY }}
+          model: "litellm_proxy/deepseek-coder"
+          max_iterations: 50
+          task: >
             You are the Lead AI Architect for this project.
             Your job is to evaluate the current state of the app against its goals.
             
