@@ -1132,7 +1132,7 @@ export class UsersService {
     return badges;
   }
 
-  async shareContact(
+  shareContact(
     requesterId: string,
     targetUserId: string,
   ): Promise<{ phone_number?: string; email?: string }> {
@@ -1141,10 +1141,10 @@ export class UsersService {
     }
     // Placeholder implementation to support contact sharing.
     // Future iterations will retrieve details from the user's profile.
-    return {
+    return Promise.resolve({
       phone_number: '+447700900123',
       email: 'partner@example.com',
-    };
+    });
   }
 
   async permanentDeleteAccount(userId: string): Promise<void> {
