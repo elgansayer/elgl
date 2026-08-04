@@ -48,8 +48,8 @@ jobs:
           github_token: ${{ secrets.PAT_TOKEN }}
           llm_model: "gemini/gemini-3.6-flash"
           llm_api_key: ${{ secrets.GEMINI_API_KEY }}
-          openhands_image: "ghcr.io/openhands/openhands:0.32"
-          runtime_image: "ghcr.io/openhands/runtime:0.32-nikolaik"
+          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
+          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
           prompt: >
             You are the Lead AI Architect for this project.
             Your job is to evaluate the current state of the app against its goals.
@@ -71,8 +71,8 @@ jobs:
           github_token: ${{ secrets.PAT_TOKEN }}
           llm_model: "deepseek/deepseek-coder"
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
-          openhands_image: "ghcr.io/openhands/openhands:0.32"
-          runtime_image: "ghcr.io/openhands/runtime:0.32-nikolaik"
+          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
+          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
           prompt: >
             You are the Lead AI Architect for this project.
             Your job is to evaluate the current state of the app against its goals.
