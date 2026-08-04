@@ -31,7 +31,7 @@
     <app-scrollable-pills
       [pills]="filterPills()"
       [selected]="momentsStore.activeFilter()"
-      (select)="setFilter($any($event))"
+      (select)="setFilter($event)"
     >
     </app-scrollable-pills>
   </header>
@@ -57,7 +57,7 @@
         ></textarea>
       </div>
 
-      @if (newMediaUrls().length > 0) {
+      @if ((newMediaUrls() ?? []).length > 0) {
         <div class="mt-3 ms-13 flex flex-wrap gap-2">
           @for (url of newMediaUrls(); track url; let i = $index) {
             <div class="relative">
@@ -141,7 +141,7 @@
       <div class="p-8 text-center font-bold text-text-secondary">{{ 'moments.loading' | t }}</div>
     }
 
-    @if (!momentsStore.isLoading() && momentsStore.feed().length === 0) {
+    @if (!momentsStore.isLoading() && (momentsStore.feed() ?? []).length === 0) {
       <div class="p-8 text-center">
         <p class="font-bold text-text-primary text-lg">{{ 'moments.empty' | t }}</p>
       </div>
@@ -223,7 +223,7 @@
             }
 
             <!-- Media -->
-            @if ((moment.media_urls || []).length > 0) {
+            @if ((moment.media_urls?.length ?? 0) > 0) {
               <div class="mt-3">
                 @if (moment.media_type === 'images') {
                   <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">

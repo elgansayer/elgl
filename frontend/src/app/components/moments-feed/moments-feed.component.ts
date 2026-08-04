@@ -1,5 +1,5 @@
 import { showToast } from '../../services/toast.service';
-import { Component, inject, signal, OnInit, computed } from '@angular/core';
+import { Component, inject, signal, computed, resource, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -38,7 +38,7 @@ import {
   templateUrl: './moments-feed.component.html',
   styleUrls: ['./moments-feed.component.scss'],
 })
-export class MomentsFeedComponent implements OnInit {
+export class MomentsFeedComponent {
   private readonly MAX_IMAGES = 9;
   private readonly MAX_VOICE_SECONDS = 60;
 
@@ -83,14 +83,23 @@ export class MomentsFeedComponent implements OnInit {
   correctionCorrectedMap: Record<string, string> = {};
   correctionExplanationMap: Record<string, string> = {};
 
-  async ngOnInit(): Promise<void> {
-    await this.momentsStore.loadFeed('All');
-    const profile = await this.userService.getMyProfile();
-    const preferredTarget = profile?.target_languages?.[0];
-    if (preferredTarget) {
-      this.newTargetLanguage.set(preferredTarget);
+  readonly feedResource = resource({
+    loader: () => this.momentsStore.loadFeed('All'),
+  });
+
+  readonly profileResource = resource({
+    loader: () => this.userService.getMyProfile(),
+  });
+
+  readonly initEffect = effect(() => {
+    const profile = this.profileResource.value();
+    if (profile) {
+      const preferredTarget = profile.target_languages?.[0];
+      if (preferredTarget) {
+        this.newTargetLanguage.set(preferredTarget);
+      }
     }
-  }
+  });
 
   onTargetLanguageSelected(code: string): void {
     this.newTargetLanguage.set(code);
@@ -114,8 +123,12 @@ export class MomentsFeedComponent implements OnInit {
     });
   }
 
-  async setFilter(filter: 'All' | 'Classmates' | 'Following'): Promise<void> {
-    await this.momentsStore.loadFeed(filter);
+  async setFilter(filter: string): Promise<void> {
+    if (filter === 'All' || filter === 'Classmates' || filter === 'Following') {
+      await this.momentsStore.loadFeed(filter);
+    } else {
+      await this.momentsStore.loadFeed('All');
+    }
   }
 
   addTempImageUrl(): void {
