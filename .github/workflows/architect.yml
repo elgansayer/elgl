@@ -5,40 +5,34 @@ on:
     - cron: '0 0 * * 1'
   workflow_dispatch:
 
+concurrency:
+  group: architect-planner
+  cancel-in-progress: false
+
 jobs:
-  architect_planning:
+  plan:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
       issues: write
       id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Tier 1 - OpenHands (Gemini 3.6 Flash)
+      - name: Tier 1 - Claude Code (Claude Pro via OAuth)
         id: primary
         continue-on-error: true
-        uses: xinbenlv/openhands-action@main
+        uses: anthropics/claude-code-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         with:
-          github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "gemini/gemini-3.6-flash"
-          llm_api_key: ${{ secrets.GEMINI_API_KEY }}
-          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
-          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
           prompt: >
-            You are the Lead AI Architect for this project.
-            Your job is to evaluate the current state of the app against its goals.
-            
-            1. Read AGENTS.md, SPEC.md (if available), and the README.md to understand the project goals.
-            2. Explore the codebase to assess the current implementation status.
-            3. Identify gaps between the planned features and the current state.
-            4. Self-modify any architecture or planning .md files (like SPEC.md or a new ROADMAP.md) to reflect the current state and next steps.
-            5. Use the `gh issue create --title "..." --body "..."` command to create new actionable GitHub Issues for the missing features or bugs you found.
-            
-            IMPORTANT: Do not write code for these issues! Just plan, update the documentation, and create the tickets. Other agents will pick up the tickets and do the coding.
-            CRITICAL INSTRUCTION: If GitHub rejects the merge because checks are still running, you MUST write a bash script to poll 'gh pr checks <number> --watch' or sleep and retry until it succeeds. DO NOT FINISH until it is successfully merged.
+            You are the Lead AI Architect.
+            1. Read SPEC.md and ROADMAP.md.
+            2. Survey the codebase to see what is missing.
+            3. Use `gh issue create` to create actionable, atomic GitHub issues for missing features.
+            4. Do NOT write any project code. Your only job is planning and issue creation.
 
       - name: Tier 2 - OpenHands (Gemini 3.6 Flash Fallback)
         id: secondary
@@ -52,20 +46,14 @@ jobs:
           openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
           runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
           prompt: >
-            You are the Lead AI Architect for this project.
-            Your job is to evaluate the current state of the app against its goals.
-            
-            1. Read AGENTS.md, SPEC.md (if available), and the README.md to understand the project goals.
-            2. Explore the codebase to assess the current implementation status.
-            3. Identify gaps between the planned features and the current state.
-            4. Self-modify any architecture or planning .md files (like SPEC.md or a new ROADMAP.md) to reflect the current state and next steps.
-            5. Use the `gh issue create --title "..." --body "..."` command to create new actionable GitHub Issues for the missing features or bugs you found.
-            
-            IMPORTANT: Do not write code for these issues! Just plan, update the documentation, and create the tickets. Other agents will pick up the tickets and do the coding.
-            CRITICAL INSTRUCTION: If GitHub rejects the merge because checks are still running, you MUST write a bash script to poll 'gh pr checks <number> --watch' or sleep and retry until it succeeds. DO NOT FINISH until it is successfully merged.
+            You are the Lead AI Architect.
+            1. Read SPEC.md and ROADMAP.md.
+            2. Survey the codebase to see what is missing.
+            3. Use `gh issue create` to create actionable, atomic GitHub issues for missing features.
+            4. Do NOT write any project code. Your only job is planning and issue creation.
           cli_args: "--max-iterations 30"
 
-      - name: Tier 3 - OpenHands (DeepSeek Coder Fallback)
+      - name: Tier 3 - OpenHands (DeepSeek Coder Final Fallback)
         id: tertiary
         if: steps.secondary.outcome == 'failure'
         uses: xinbenlv/openhands-action@main
@@ -76,15 +64,9 @@ jobs:
           openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
           runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
           prompt: >
-            You are the Lead AI Architect for this project.
-            Your job is to evaluate the current state of the app against its goals.
-            
-            1. Read AGENTS.md, SPEC.md (if available), and the README.md to understand the project goals.
-            2. Explore the codebase to assess the current implementation status.
-            3. Identify gaps between the planned features and the current state.
-            4. Self-modify any architecture or planning .md files (like SPEC.md or a new ROADMAP.md) to reflect the current state and next steps.
-            5. Use the `gh issue create --title "..." --body "..."` command to create new actionable GitHub Issues for the missing features or bugs you found.
-            
-            IMPORTANT: Do not write code for these issues! Just plan, update the documentation, and create the tickets. Other agents will pick up the tickets and do the coding.
-            CRITICAL INSTRUCTION: If GitHub rejects the merge because checks are still running, you MUST write a bash script to poll 'gh pr checks <number> --watch' or sleep and retry until it succeeds. DO NOT FINISH until it is successfully merged.
-          cli_args: "--max-iterations 50"
+            You are the Lead AI Architect.
+            1. Read SPEC.md and ROADMAP.md.
+            2. Survey the codebase to see what is missing.
+            3. Use `gh issue create` to create actionable, atomic GitHub issues for missing features.
+            4. Do NOT write any project code. Your only job is planning and issue creation.
+          cli_args: "--max-iterations 30"

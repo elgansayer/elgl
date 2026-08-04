@@ -1,11 +1,20 @@
-name: AI PR Reviewer & Fixer
+name: AI PR Reviewer
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize]
+  pull_request_review_comment:
+    types: [created]
+
+concurrency:
+  group: pr-reviewer-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
 
 jobs:
   review_and_fix:
+    if: >
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '/openhands-fix')) ||
+      (github.event_name == 'pull_request')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -16,19 +25,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
-      - name: Tier 1 - OpenHands (Gemini 3.6 Flash)
+      - name: Tier 1 - Claude Code (Claude Pro via OAuth)
         id: primary
         continue-on-error: true
-        uses: xinbenlv/openhands-action@main
+        uses: anthropics/claude-code-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         with:
-          github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "gemini/gemini-3.6-flash"
-          llm_api_key: ${{ secrets.GEMINI_API_KEY }}
-          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
-          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
           prompt: >
             You are the AI PR Reviewer and Fixer. 
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
@@ -61,7 +66,7 @@ jobs:
             5. CRITICAL INSTRUCTION: Once the code is perfect and all tests pass locally, you MUST execute the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it. DO NOT just say it looks good, YOU MUST ACTUALLY RUN THE COMMAND! If GitHub rejects the merge because checks are still running, you MUST write a bash script to poll 'gh pr checks ${{ github.event.pull_request.number }} --watch' or sleep and retry until it succeeds. DO NOT FINISH until it is successfully merged.
           cli_args: "--max-iterations 30"
 
-      - name: Tier 3 - OpenHands (DeepSeek Coder Fallback)
+      - name: Tier 3 - OpenHands (DeepSeek Coder Final Fallback)
         id: tertiary
         if: steps.secondary.outcome == 'failure'
         uses: xinbenlv/openhands-action@main
@@ -80,4 +85,4 @@ jobs:
             3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
             4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
             5. CRITICAL INSTRUCTION: Once the code is perfect and all tests pass locally, you MUST execute the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it. DO NOT just say it looks good, YOU MUST ACTUALLY RUN THE COMMAND! If GitHub rejects the merge because checks are still running, you MUST write a bash script to poll 'gh pr checks ${{ github.event.pull_request.number }} --watch' or sleep and retry until it succeeds. DO NOT FINISH until it is successfully merged.
-          cli_args: "--max-iterations 50"
+          cli_args: "--max-iterations 30"

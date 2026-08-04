@@ -31,8 +31,23 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
 
-      - name: Tier 1 - OpenHands (Gemini 3.6 Flash)
+      - name: Tier 1 - Claude Code (Claude Pro via OAuth)
         id: primary
+        continue-on-error: true
+        uses: anthropics/claude-code-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        with:
+          prompt: >
+            Please resolve issue #${{ github.event.issue.number }}: "${{ github.event.issue.title }}".
+            Issue body: "${{ github.event.issue.body }}".
+            1. Write the code to fix the issue.
+            2. Run tests to verify.
+            3. Commit your changes and use `gh pr create --title "Fixes #${{ github.event.issue.number }}" --body "Fixes #${{ github.event.issue.number }}"` to open a PR.
+
+      - name: Tier 2 - OpenHands (Gemini 3.6 Flash Fallback)
+        id: secondary
+        if: steps.primary.outcome == 'failure'
         continue-on-error: true
         uses: xinbenlv/openhands-action@main
         with:
@@ -44,9 +59,9 @@ jobs:
           openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
           runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
 
-      - name: Tier 2 - OpenHands (DeepSeek Coder Fallback)
-        id: secondary
-        if: steps.primary.outcome == 'failure'
+      - name: Tier 3 - OpenHands (DeepSeek Coder Final Fallback)
+        id: tertiary
+        if: steps.secondary.outcome == 'failure'
         uses: xinbenlv/openhands-action@main
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
