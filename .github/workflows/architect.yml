@@ -30,14 +30,15 @@ jobs:
           prompt: >
             You are the Lead AI Architect for this project.
             Your job is to evaluate the current state of the app against its goals.
-            
+
             1. Read AGENTS.md, SPEC.md (if available), and the README.md to understand the project goals.
             2. Explore the codebase to assess the current implementation status.
             3. Identify gaps between the planned features and the current state.
             4. Self-modify any architecture or planning .md files (like SPEC.md or a new ROADMAP.md) to reflect the current state and next steps.
             5. Use the `gh issue create --title "..." --body "..."` command to create new actionable GitHub Issues for the missing features or bugs you found.
-            
+
             IMPORTANT: Do not write code for these issues! Just plan, update the documentation, and create the tickets. Other agents will pick up the tickets and do the coding.
+            CRITICAL INSTRUCTION: If GitHub rejects the merge because checks are still running, you MUST write a bash script to poll 'gh pr checks <number> --watch' or sleep and retry until it succeeds. DO NOT FINISH until it is successfully merged.
 
       - name: Tier 2 - OpenHands (Gemini 3.6 Flash Fallback)
         id: secondary
@@ -46,22 +47,23 @@ jobs:
         uses: xinbenlv/openhands-action@main
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "gemini/gemini-3.6-flash"
+          llm_model: 'gemini/gemini-3.6-flash'
           llm_api_key: ${{ secrets.GEMINI_API_KEY }}
-          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
-          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
+          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
+          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
             You are the Lead AI Architect for this project.
             Your job is to evaluate the current state of the app against its goals.
-            
+
             1. Read AGENTS.md, SPEC.md (if available), and the README.md to understand the project goals.
             2. Explore the codebase to assess the current implementation status.
             3. Identify gaps between the planned features and the current state.
             4. Self-modify any architecture or planning .md files (like SPEC.md or a new ROADMAP.md) to reflect the current state and next steps.
             5. Use the `gh issue create --title "..." --body "..."` command to create new actionable GitHub Issues for the missing features or bugs you found.
-            
+
             IMPORTANT: Do not write code for these issues! Just plan, update the documentation, and create the tickets. Other agents will pick up the tickets and do the coding.
-          cli_args: "--max-iterations 30"
+            CRITICAL INSTRUCTION: If GitHub rejects the merge because checks are still running, you MUST write a bash script to poll 'gh pr checks <number> --watch' or sleep and retry until it succeeds. DO NOT FINISH until it is successfully merged.
+          cli_args: '--max-iterations 30'
 
       - name: Tier 3 - OpenHands (DeepSeek Coder Fallback)
         id: tertiary
@@ -69,19 +71,20 @@ jobs:
         uses: xinbenlv/openhands-action@main
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "deepseek/deepseek-coder"
+          llm_model: 'deepseek/deepseek-coder'
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
-          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
-          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
+          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
+          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
             You are the Lead AI Architect for this project.
             Your job is to evaluate the current state of the app against its goals.
-            
+
             1. Read AGENTS.md, SPEC.md (if available), and the README.md to understand the project goals.
             2. Explore the codebase to assess the current implementation status.
             3. Identify gaps between the planned features and the current state.
             4. Self-modify any architecture or planning .md files (like SPEC.md or a new ROADMAP.md) to reflect the current state and next steps.
             5. Use the `gh issue create --title "..." --body "..."` command to create new actionable GitHub Issues for the missing features or bugs you found.
-            
+
             IMPORTANT: Do not write code for these issues! Just plan, update the documentation, and create the tickets. Other agents will pick up the tickets and do the coding.
-          cli_args: "--max-iterations 50"
+            CRITICAL INSTRUCTION: If GitHub rejects the merge because checks are still running, you MUST write a bash script to poll 'gh pr checks <number> --watch' or sleep and retry until it succeeds. DO NOT FINISH until it is successfully merged.
+          cli_args: '--max-iterations 50'

@@ -32,12 +32,12 @@ jobs:
           prompt: >
             You are the AI PR Reviewer and Fixer. 
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
-            
+
             1. Review the code changes in this branch.
             2. Run the local tests and linters to verify the code is correct.
             3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
             4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
-            5. CRITICAL INSTRUCTION: Once the code is perfect and all tests pass locally, you MUST execute the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it. DO NOT just say it looks good, YOU MUST ACTUALLY RUN THE COMMAND!
+            5. CRITICAL INSTRUCTION: Once the code is perfect and all tests pass locally, you MUST execute the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it. DO NOT just say it looks good, YOU MUST ACTUALLY RUN THE COMMAND! If GitHub rejects the merge because checks are still running, you MUST write a bash script to poll 'gh pr checks ${{ github.event.pull_request.number }} --watch' or sleep and retry until it succeeds. DO NOT FINISH until it is successfully merged.
 
       - name: Tier 2 - OpenHands (Gemini 3.6 Flash Fallback)
         id: secondary
@@ -46,20 +46,20 @@ jobs:
         uses: xinbenlv/openhands-action@main
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "gemini/gemini-3.6-flash"
+          llm_model: 'gemini/gemini-3.6-flash'
           llm_api_key: ${{ secrets.GEMINI_API_KEY }}
-          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
-          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
+          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
+          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
             You are the AI PR Reviewer and Fixer. 
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
-            
+
             1. Review the code changes in this branch.
             2. Run the local tests and linters to verify the code is correct.
             3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
             4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
-            5. CRITICAL INSTRUCTION: Once the code is perfect and all tests pass locally, you MUST execute the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it. DO NOT just say it looks good, YOU MUST ACTUALLY RUN THE COMMAND!
-          cli_args: "--max-iterations 30"
+            5. CRITICAL INSTRUCTION: Once the code is perfect and all tests pass locally, you MUST execute the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it. DO NOT just say it looks good, YOU MUST ACTUALLY RUN THE COMMAND! If GitHub rejects the merge because checks are still running, you MUST write a bash script to poll 'gh pr checks ${{ github.event.pull_request.number }} --watch' or sleep and retry until it succeeds. DO NOT FINISH until it is successfully merged.
+          cli_args: '--max-iterations 30'
 
       - name: Tier 3 - OpenHands (DeepSeek Coder Fallback)
         id: tertiary
@@ -67,17 +67,17 @@ jobs:
         uses: xinbenlv/openhands-action@main
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "deepseek/deepseek-coder"
+          llm_model: 'deepseek/deepseek-coder'
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
-          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
-          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
+          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
+          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
             You are the AI PR Reviewer and Fixer. 
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
-            
+
             1. Review the code changes in this branch.
             2. Run the local tests and linters to verify the code is correct.
             3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
             4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
-            5. CRITICAL INSTRUCTION: Once the code is perfect and all tests pass locally, you MUST execute the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it. DO NOT just say it looks good, YOU MUST ACTUALLY RUN THE COMMAND!
-          cli_args: "--max-iterations 50"
+            5. CRITICAL INSTRUCTION: Once the code is perfect and all tests pass locally, you MUST execute the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it. DO NOT just say it looks good, YOU MUST ACTUALLY RUN THE COMMAND! If GitHub rejects the merge because checks are still running, you MUST write a bash script to poll 'gh pr checks ${{ github.event.pull_request.number }} --watch' or sleep and retry until it succeeds. DO NOT FINISH until it is successfully merged.
+          cli_args: '--max-iterations 50'
