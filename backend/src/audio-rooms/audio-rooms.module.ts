@@ -7,6 +7,7 @@ import { NlpModule } from '../nlp/nlp.module';
 import { AudioRoomsController } from './audio-rooms.controller';
 import { AudioRoomsService } from './audio-rooms.service';
 import { TranscriptEgressService } from './transcript-egress.service';
+import { R2Service } from '../cloudflare-r2/r2.service';
 
 @Module({
   imports: [UsersModule, ChatModule, NlpModule],
@@ -14,6 +15,7 @@ import { TranscriptEgressService } from './transcript-egress.service';
   providers: [
     AudioRoomsService,
     TranscriptEgressService,
+    R2Service,
     // LiveKit RoomServiceClient is configured to manage audio room lifecycle.
     {
       provide: 'LIVEKIT_ROOM_SERVICE_CLIENT',

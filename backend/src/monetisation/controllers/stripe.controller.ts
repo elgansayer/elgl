@@ -4,13 +4,10 @@ import {
   Body,
   Headers,
   Req,
-  UseGuards,
   BadRequestException,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { StripeService } from '../services/stripe.service';
-import { SupabaseAuthGuard } from '../../auth/guards/supabase-auth.guard';
-import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { IsString, IsIn, IsNotEmpty } from 'class-validator';
 
 export class CreateCheckoutSessionDto {

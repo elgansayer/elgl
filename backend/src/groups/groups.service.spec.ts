@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
 import { GroupsService } from './groups.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from '../chat/centrifugo.service';

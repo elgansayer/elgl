@@ -12,6 +12,40 @@ export class ResourceLibraryService {
     return this.supabaseService.getClient();
   }
 
+  private toResource(data: unknown): Resource {
+    if (typeof data !== 'object' || data === null) {
+      throw new Error('Invalid resource data');
+    }
+    const row = data as {
+      id: string;
+      title: string;
+      description: string | null;
+      url: string;
+      category: string | null;
+      content: string | null;
+      topic: string | null;
+      difficulty: string | null;
+      type?: string | null;
+      created_by: string;
+      created_at: string;
+      updated_at: string;
+    };
+    return {
+      id: row.id,
+      title: row.title,
+      description: row.description ?? undefined,
+      url: row.url,
+      category: row.category ?? undefined,
+      content: row.content ?? undefined,
+      topic: row.topic ?? undefined,
+      difficulty: row.difficulty ?? undefined,
+      type: row.type ?? undefined,
+      createdBy: row.created_by,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
   async create(userId: string, dto: CreateResourceDto): Promise<Resource> {
     const { data, error } = await this.client
       .from('resource_library')
@@ -30,7 +64,8 @@ export class ResourceLibraryService {
       .single();
 
     if (error) throw error;
-    return data;
+    if (!data) throw new NotFoundException('Resource not found');
+    return this.toResource(data);
   }
 
   async findAll(
@@ -52,7 +87,7 @@ export class ResourceLibraryService {
     const { data, error } = await query;
 
     if (error) throw error;
-    return data ?? [];
+    return (data ?? []).map((row) => this.toResource(row));
   }
 
   async findOne(id: string): Promise<Resource> {
@@ -64,7 +99,7 @@ export class ResourceLibraryService {
 
     if (error) throw error;
     if (!data) throw new NotFoundException('Resource not found');
-    return data;
+    return this.toResource(data);
   }
 
   async update(id: string, dto: UpdateResourceDto): Promise<Resource> {
@@ -86,7 +121,7 @@ export class ResourceLibraryService {
 
     if (error) throw error;
     if (!data) throw new NotFoundException('Resource not found');
-    return data;
+    return this.toResource(data);
   }
 
   async remove(id: string): Promise<void> {

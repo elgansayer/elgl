@@ -134,7 +134,7 @@ export class ChatRoomComponent implements OnDestroy {
   private subscription: { unsubscribe: () => void } | null = null;
 
   private isChatEventPayload(
-    value: Record<string, unknown>,
+    value: unknown,
   ): value is { message?: ChatMessage; typing?: boolean } {
     return (
       !!value &&

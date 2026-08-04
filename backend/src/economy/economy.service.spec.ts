@@ -7,6 +7,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { of } from 'rxjs';
+import type Stripe from 'stripe';
 
 describe('EconomyService', () => {
   let service: EconomyService;
@@ -97,8 +98,20 @@ describe('EconomyService', () => {
   describe('getCatalog', () => {
     it('should return catalog of virtual gifts ordered by cost', async () => {
       const gifts = [
-        { id: 'gift-1', name: 'Rose', cost_coins: 10 },
-        { id: 'gift-2', name: 'Crown', cost_coins: 100 },
+        {
+          id: 'gift-1',
+          name: 'Rose',
+          icon: 'rose.png',
+          cost_coins: 10,
+          animation_type: 'float',
+        },
+        {
+          id: 'gift-2',
+          name: 'Crown',
+          icon: 'crown.png',
+          cost_coins: 100,
+          animation_type: 'pop',
+        },
       ];
       mockQueryBuilder.order.mockResolvedValue({
         data: gifts,
@@ -114,14 +127,31 @@ describe('EconomyService', () => {
       expect(result).toEqual(gifts);
     });
 
-    it('should return empty array when virtual gifts response data is null', async () => {
+    it('should return the default gift catalog when virtual gifts response data is null', async () => {
       mockQueryBuilder.order.mockResolvedValue({
         data: null,
         error: { message: 'Table error' },
       });
 
       const result = await service.getCatalog();
-      expect(result).toEqual([]);
+      expect(result).toEqual([
+        {
+          id: 'gift_rose',
+          name: 'Rose',
+          icon: '🌹',
+          cost_coins: 10,
+          animation_type: 'float',
+          animation_url: 'https://r2.example.com/rose.json',
+        },
+        {
+          id: 'gift_heart',
+          name: 'Heart',
+          icon: '❤️',
+          cost_coins: 20,
+          animation_type: 'float',
+          animation_url: 'https://r2.example.com/heart.json',
+        },
+      ]);
     });
   });
 
@@ -190,7 +220,7 @@ describe('EconomyService', () => {
         coins_balance: 600,
       });
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'user-1');
-      expect(result).toEqual({ coins: 500, newBalance: 600 });
+      expect(result).toEqual({ coins: 500, new_balance: 600 });
     });
 
     it('should reject a replayed transaction atomically without crediting coins twice', async () => {
@@ -241,45 +271,72 @@ describe('EconomyService', () => {
         error: null,
       });
 
-      jest.spyOn(service['httpService'], 'get').mockReturnValue(
-        of({
-          data: {
-            payment_status: 'paid',
-            payment_intent: 'pi_123',
-            metadata: {
-              userId: 'user-1',
-              product_id: 'coins_medium_web',
-            },
-          },
-        }),
-      );
-
+      const pendingRecord = {
+        id: 'purchase-1',
+        user_id: 'user-1',
+        package_id: 'coins_medium',
+        coins_added: 500,
+        amount_paid: 1999,
+        currency: 'usd',
+        receipt_token: 'sess_123',
+        platform: 'web',
+        transaction_id: 'sess_123',
+        status: 'pending',
+      };
       mockQueryBuilder.maybeSingle.mockResolvedValue({
-        data: null,
+        data: pendingRecord,
         error: null,
       });
+
+      jest
+        .spyOn(service['stripe'].checkout.sessions, 'retrieve')
+        .mockResolvedValue({
+          id: 'sess_123',
+          payment_status: 'paid',
+          amount_total: 1999,
+          metadata: {
+            userId: 'user-1',
+            product_id: 'coins_medium_web',
+          },
+        } as unknown as Stripe.Checkout.Session);
 
       const result = await service.purchaseCoins('user-1', {
         receipt_token: 'stripe_sess_123',
         platform: 'web',
       });
 
-      expect(result).toEqual({ coins: 500, newBalance: 600 });
+      expect(result).toEqual({ coins: 500, new_balance: 600 });
     });
 
     it('should reject a Stripe session belonging to a different user', async () => {
-      jest.spyOn(service['httpService'], 'get').mockReturnValue(
-        of({
-          data: {
-            payment_status: 'paid',
-            payment_intent: 'pi_123',
-            metadata: {
-              userId: 'other-user',
-              product_id: 'coins_medium_web',
-            },
+      const pendingRecord = {
+        id: 'purchase-1',
+        user_id: 'user-1',
+        package_id: 'coins_medium',
+        coins_added: 500,
+        amount_paid: 1999,
+        currency: 'usd',
+        receipt_token: 'sess_123',
+        platform: 'web',
+        transaction_id: 'sess_123',
+        status: 'pending',
+      };
+      mockQueryBuilder.maybeSingle.mockResolvedValue({
+        data: pendingRecord,
+        error: null,
+      });
+
+      jest
+        .spyOn(service['stripe'].checkout.sessions, 'retrieve')
+        .mockResolvedValue({
+          id: 'sess_123',
+          payment_status: 'paid',
+          amount_total: 1999,
+          metadata: {
+            userId: 'other-user',
+            product_id: 'coins_medium_web',
           },
-        }),
-      );
+        } as unknown as Stripe.Checkout.Session);
 
       await expect(
         service.purchaseCoins('user-1', {
@@ -297,7 +354,7 @@ describe('EconomyService', () => {
 
   describe('sendGift', () => {
     it('should throw NotFoundException when gift ID not found in catalog', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
+      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
         data: null,
         error: null,
       });
@@ -320,8 +377,8 @@ describe('EconomyService', () => {
         icon: 'rocket.png',
         animation_type: 'launch',
       };
-      // 1st single() call: get gift
-      mockQueryBuilder.single.mockResolvedValueOnce({
+      // 1st call: get gift (maybeSingle)
+      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
         data: giftRow,
         error: null,
       });
@@ -351,14 +408,19 @@ describe('EconomyService', () => {
         icon: 'heart.png',
         animation_type: 'pop',
       };
-      // 1st single() call: get gift
-      mockQueryBuilder.single.mockResolvedValueOnce({
+      // 1st call: get gift (maybeSingle)
+      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
         data: giftRow,
         error: null,
       });
       // 2nd single() call: getBalance(senderId)
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: { id: 'sender-1', coins_balance: 200 },
+        error: null,
+      });
+      // 2nd maybeSingle() call: receiver existence check
+      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
+        data: { id: 'receiver-1' },
         error: null,
       });
       // 3rd single() call: getBalance(receiverId)
@@ -387,13 +449,26 @@ describe('EconomyService', () => {
         room_id: 'room-101',
         coins_spent: 50,
       });
-      expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-101', {
+      const expectedGiftEvent = {
         type: 'virtual_gift',
-        gift: giftRow,
+        gift_id: 'gift-1',
+        gift_name: 'Heart',
+        icon: 'heart.png',
+        animation_url: '',
+        animation_type: 'pop',
+        coin_value: 50,
         sender_name: 'Sender User',
         receiver_name: 'Receiver User',
         room_id: 'room-101',
-      });
+      };
+      expect(centrifugoService.publish).toHaveBeenCalledWith(
+        'user_receiver-1',
+        expectedGiftEvent,
+      );
+      expect(centrifugoService.publish).toHaveBeenCalledWith(
+        'room_room-101',
+        expectedGiftEvent,
+      );
       expect(result).toEqual({
         success: true,
         coins_remaining: 150,
@@ -409,14 +484,19 @@ describe('EconomyService', () => {
         icon: 'tea.png',
         animation_type: 'steam',
       };
-      // 1st single() call: get gift
-      mockQueryBuilder.single.mockResolvedValueOnce({
+      // 1st call: get gift (maybeSingle)
+      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
         data: giftRow,
         error: null,
       });
       // 2nd single() call: getBalance(senderId)
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: { id: 'sender-1', coins_balance: 100 },
+        error: null,
+      });
+      // 2nd maybeSingle() call: receiver existence check
+      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
+        data: { id: 'receiver-1' },
         error: null,
       });
       // 3rd single() call: getBalance(receiverId)

@@ -9,7 +9,7 @@
 
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 export SWARM_ROOT="$(dirname "$SCRIPT_DIR")"
-source "$SWARM_ROOT/scripts/swarm-env.sh"
+source "$SWARM_ROOT/scripts/swarm-env.sh" 2>/dev/null || true
 
 # --- Config ------------------------------------------------------------
 STALL_MINUTES="${WATCHDOG_STALL_MINUTES:-15}"
@@ -115,15 +115,8 @@ recover_hung_pane() {
 
 recover_full_restart() {
     can_recover || return 1
-    send_telegram "🔧 <b>Auto-Recovery: Full swarm restart</b>\nRunning <code>swarmd.py</code>."
-    tmux kill-session -t ai_swarm 2>/dev/null || true
-    sleep 3
-    pkill -9 -f "swarmd.py" 2>/dev/null || true
-    pkill -9 -f "loop.sh" 2>/dev/null || true
-    pkill -9 -f "aider" 2>/dev/null || true
-    pkill -9 -f "claude" 2>/dev/null || true
-    sleep 2
-    cd "$REPO_DIR" && tmux new-session -d -s ai_swarm "python3 $REPO_DIR/swarmd.py"
+    send_telegram "🔧 <b>Auto-Recovery: Full swarm restart</b>\nRestarting swarmd.service."
+    systemctl --user restart swarmd.service
     sleep 5
     return 0
 }
@@ -146,16 +139,16 @@ get_swarm_summary() {
     echo "stage=$stage task='$task' tool=$tool attempt=$attempt completed=$completed stuck=$stuck"
 }
 
-# Check if tmux session is alive.
+# Check if the swarmd.service user unit is active.
 SESSION_DEAD=false
-tmux has-session -t ai_swarm 2>/dev/null || SESSION_DEAD=true
+systemctl --user is-active --quiet swarmd.service 2>/dev/null || SESSION_DEAD=true
 
-# --- CHECK 1: tmux session alive? -------------------------------------
+# --- CHECK 1: swarmd.service alive? -------------------------------------
 if $SESSION_DEAD; then
-    local_log "tmux session ai_swarm is dead"
+    local_log "swarmd.service is not active"
     alert "session_dead" \
-        "SWARM DOWN - tmux session dead" \
-        "The <code>ai_swarm</code> tmux session is not running.\n\nAttempting automatic restart via <code>swarmd.py</code>..."
+        "SWARM DOWN - swarmd.service inactive" \
+        "The <code>swarmd.service</code> user unit is not running.\n\nAttempting automatic restart..."
     recover_full_restart
     exit 0
 fi

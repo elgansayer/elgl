@@ -1,5 +1,6 @@
 import { showToast } from '../../services/toast.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
 import { Component, effect, inject, input, output, signal, OnDestroy } from '@angular/core';
 
 import { VocabularyStore } from '../../services/vocabulary.store';
@@ -21,11 +22,12 @@ export interface TokenSegmentSpan {
 })
 export class AudioSyncReaderComponent implements OnDestroy {
   readonly vocabStore = inject(VocabularyStore);
+  private readonly i18n = inject(I18nService);
 
   readonly text = input.required<string>();
   readonly language = input<string>('en-GB');
   readonly audioUrl = input<string | undefined>();
-  readonly title = input<string>('Audio-Synchronised LingQ Immersion Lesson');
+  readonly title = input<string>('audioSync.immersionLessonTitle');
   readonly isVip = input<boolean>(false);
 
   readonly wordClicked = output<{ token: string; context: string }>();
@@ -142,7 +144,7 @@ export class AudioSyncReaderComponent implements OnDestroy {
 
   private playSpeechSynthesis(): void {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      showToast('Speech synthesis is not available in this browser environment.');
+      showToast(this.i18n.translate('audioSync.speechSynthesisUnavailable'));
       return;
     }
 

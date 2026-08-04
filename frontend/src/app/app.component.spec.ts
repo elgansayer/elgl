@@ -5,6 +5,7 @@ import { DOCUMENT } from '@angular/common';
 import { vi } from 'vitest';
 import { AppComponent } from './app.component';
 import { AuthService } from './services/auth.service';
+import { AppLockService } from './services/app-lock.service';
 import { EconomyStore } from './services/economy.store';
 import { CentrifugeService } from './services/centrifuge.service';
 import { FcmService } from './services/fcm.service';
@@ -22,13 +23,16 @@ describe('AppComponent', () => {
 
   const authServiceMock = {
     isAuthenticated: vi.fn(() => true),
-    isBiometricSupported: vi.fn(() => Promise.resolve(true)),
-    biometricLockEnabled: vi.fn(() => false),
-    appLocked: vi.fn(() => false),
-    lockApp: vi.fn(),
-    enableBiometricLock: vi.fn(() => Promise.resolve()),
-    disableBiometricLock: vi.fn(() => Promise.resolve()),
     currentUser: vi.fn(() => ({ id: 'test-user-1' })),
+  };
+
+  const appLockServiceMock = {
+    isBiometricSupported: vi.fn(() => Promise.resolve(true)),
+    biometricEnabled: vi.fn(() => false),
+    appLocked: vi.fn(() => false),
+    lockNow: vi.fn(),
+    enableBiometricLock: vi.fn(() => Promise.resolve(true)),
+    disableBiometricLock: vi.fn(() => Promise.resolve(true)),
   };
 
   const economyStoreMock = {
@@ -81,8 +85,8 @@ describe('AppComponent', () => {
 
     // Default resetts that keep the component in a known state
     authServiceMock.isAuthenticated.mockReturnValue(true);
-    authServiceMock.biometricLockEnabled.mockReturnValue(false);
     authServiceMock.currentUser.mockReturnValue({ id: 'test-user-1' });
+    appLockServiceMock.biometricEnabled.mockReturnValue(false);
 
     await TestBed.configureTestingModule({
       imports: [AppComponent],
@@ -90,6 +94,7 @@ describe('AppComponent', () => {
         provideRouter([]),
         provideLocationMocks(),
         { provide: AuthService, useValue: authServiceMock },
+        { provide: AppLockService, useValue: appLockServiceMock },
         { provide: EconomyStore, useValue: economyStoreMock },
         { provide: CentrifugeService, useValue: centrifugeServiceMock },
         { provide: FcmService, useValue: fcmServiceMock },
@@ -146,7 +151,13 @@ describe('AppComponent', () => {
 
     const payload = {
       type: 'virtual_gift',
-      gift: { id: 'gift-1' },
+      gift: {
+        id: 'gift-1',
+        name: 'Rose',
+        icon: '🌹',
+        cost_coins: 10,
+        animation_type: 'confetti',
+      },
       sender_name: 'Alice',
     };
     subscribeCallback?.(payload);
@@ -187,21 +198,21 @@ describe('AppComponent', () => {
   });
 
   it('should toggle biometric lock on when currently disabled', async () => {
-    authServiceMock.biometricLockEnabled.mockReturnValue(false);
+    appLockServiceMock.biometricEnabled.mockReturnValue(false);
     await component.toggleBiometricLock();
-    expect(authServiceMock.enableBiometricLock).toHaveBeenCalledTimes(1);
-    expect(authServiceMock.disableBiometricLock).not.toHaveBeenCalled();
+    expect(appLockServiceMock.enableBiometricLock).toHaveBeenCalledTimes(1);
+    expect(appLockServiceMock.disableBiometricLock).not.toHaveBeenCalled();
   });
 
   it('should toggle biometric lock off when currently enabled', async () => {
-    authServiceMock.biometricLockEnabled.mockReturnValue(true);
+    appLockServiceMock.biometricEnabled.mockReturnValue(true);
     await component.toggleBiometricLock();
-    expect(authServiceMock.disableBiometricLock).toHaveBeenCalledTimes(1);
-    expect(authServiceMock.enableBiometricLock).not.toHaveBeenCalled();
+    expect(appLockServiceMock.disableBiometricLock).toHaveBeenCalledTimes(1);
+    expect(appLockServiceMock.enableBiometricLock).not.toHaveBeenCalled();
   });
 
   it('should set biometricBusy during toggle', async () => {
-    authServiceMock.biometricLockEnabled.mockReturnValue(false);
+    appLockServiceMock.biometricEnabled.mockReturnValue(false);
     expect(component.biometricBusy()).toBe(false);
     const promise = component.toggleBiometricLock();
     expect(component.biometricBusy()).toBe(true);

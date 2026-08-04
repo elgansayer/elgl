@@ -25,6 +25,13 @@ export class CentrifugoService implements OnModuleInit {
     return { token };
   }
 
+  /**
+   * Signs an arbitrary JWT payload using the Centrifugo token secret.
+   */
+  signJwt(payload: Record<string, unknown>): Promise<string> {
+    return Promise.resolve(jwt.sign(payload, this.tokenSecret));
+  }
+
   async publish(
     channel: string,
     data: Record<string, unknown>,

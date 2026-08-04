@@ -5,7 +5,6 @@ import {
   IsString,
   ArrayMinSize,
   ArrayMaxSize,
-  IsArray,
 } from 'class-validator';
 
 export class CreateLanguageQuestionDto {

@@ -1,6 +1,7 @@
 import { Component, inject, signal, effect, OnDestroy, output } from '@angular/core';
 
 import { I18nService } from '../../services/i18n.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { CentrifugoService } from '../../services/centrifugo.service';
@@ -46,7 +47,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
 
 @Component({
   selector: 'app-incoming-call',
-  imports: [AppButtonPrimaryComponent, AppButtonSecondaryComponent],
+  imports: [AppButtonPrimaryComponent, AppButtonSecondaryComponent, TranslatePipe],
   template: `
     @if (showCallModal()) {
       <div
@@ -63,27 +64,27 @@ function getAudioContextClass(): typeof AudioContext | undefined {
               @if (callInfo()?.callerAvatar) {
                 <img
                   [src]="callInfo()?.callerAvatar"
-                  alt="Caller avatar"
+                  [alt]="'voip.callerAvatar' | t"
                   class="w-full h-full object-cover"
                   loading="lazy"
                 />
               } @else {
-                <span class="text-4xl">👤</span>
+                <span class="text-4xl">{{ 'voip.avatarPlaceholder' | t }}</span>
               }
             </div>
             <h2 class="text-xl font-bold text-text-primary mb-1">
-              {{ callInfo()?.callerName || i18n.translate('common.unknownCaller') }}
+              {{ callInfo()?.callerName || ('common.unknownCaller' | t) }}
             </h2>
             <p class="text-sm text-text-secondary">
               {{
                 callInfo()?.isVideo
-                  ? i18n.translate('voip.incomingVideoCall')
-                  : i18n.translate('voip.incomingVoiceCall')
+                  ? ('voip.incomingVideoCall' | t)
+                  : ('voip.incomingVoiceCall' | t)
               }}
             </p>
             @if (callInfo()?.e2eeKey) {
               <p class="text-xs text-green-500 mt-2 flex items-center gap-1">
-                <span>🔒</span> {{ i18n.translate('voip.endToEndEncrypted') }}
+                <span>{{ 'voip.endToEndEncryptedIcon' | t }}</span> {{ 'voip.endToEndEncrypted' | t }}
               </p>
             }
           </div>
@@ -95,7 +96,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
               customClass="!rounded-full !w-16 !h-16 !p-0 !bg-red-500 !border-red-500 hover:!bg-red-600"
               (clicked)="rejectCall()"
             >
-              <span class="text-2xl">📞</span>
+              <span class="text-2xl">{{ 'voip.rejectIcon' | t }}</span>
             </app-button-secondary>
 
             <app-button-primary
@@ -103,14 +104,14 @@ function getAudioContextClass(): typeof AudioContext | undefined {
               customClass="!rounded-full !w-16 !h-16 !p-0 !bg-green-500 hover:!bg-green-600"
               (clicked)="acceptCall()"
             >
-              <span class="text-2xl">🎥</span>
+              <span class="text-2xl">{{ 'voip.acceptIcon' | t }}</span>
             </app-button-primary>
           </div>
 
           <!-- Ringing indicator -->
           <div class="text-center pb-6">
             <span class="text-xs text-text-muted animate-pulse">
-              {{ i18n.translate('voip.ringing') }}
+              {{ 'voip.ringing' | t }}
             </span>
           </div>
         </div>

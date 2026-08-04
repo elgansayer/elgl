@@ -18,6 +18,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { TranscriptEgressService } from './transcript-egress.service';
 import { NlpService } from '../nlp/nlp.service';
+import { R2Service } from '../cloudflare-r2/r2.service';
 import { CreatePollDto } from './dto/create-poll.dto';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
 import { PlaySoundDto } from './dto/play-sound.dto';
@@ -117,6 +118,7 @@ export class AudioRoomsService implements OnModuleInit {
     private readonly centrifugoService: CentrifugoService,
     private readonly transcriptEgress: TranscriptEgressService,
     private readonly nlpService: NlpService,
+    private readonly r2Service: R2Service,
   ) {
     this.livekitUrl =
       this.configService.get<string>('LIVEKIT_URL') ||
@@ -158,7 +160,7 @@ export class AudioRoomsService implements OnModuleInit {
     const r2Key = `audio-rooms/${room.room_name}/recording.webm`;
 
     try {
-      await this.supabaseService.uploadToR2(r2Key, recordingUrl);
+      await this.r2Service.uploadFromUrl(r2Key, recordingUrl);
     } catch (error) {
       this.logger.error('Failed to upload recording to R2', error);
       throw new Error('Failed to upload recording to R2');

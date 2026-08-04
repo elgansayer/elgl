@@ -335,7 +335,7 @@ export class MonetisationService {
       user.is_vip && (user.vip_tier ?? '').startsWith('developer');
     if (!isDeveloperTier) {
       throw new ForbiddenException(
-        'Developer API Access is reserved for active Developer Tier subscribers (20 UKP / $26 USD per month).',
+        'Developer API Access is reserved for active subscribers. Upgrade to Developer Tier (20 UKP / $26 USD per month) to generate programmatic API keys!',
       );
     }
 
@@ -370,29 +370,31 @@ export class MonetisationService {
 
     const isDeveloperTier =
       user.is_vip && (user.vip_tier ?? '').startsWith('developer');
-    if (!isDeveloperTier) {
-      throw new ForbiddenException(
-        'Developer Analytics are only available to active Developer Tier subscribers (20 UKP / $26 USD per month).',
-      );
-    }
 
-    const metricResponse = await supabase
-      .from('developer_metrics')
-      .select('user_id, total_api_calls_today, avg_latency_ms')
-      .eq('user_id', userId)
-      .single();
-    const metric = metricResponse.data as unknown as {
-      total_api_calls_today?: number;
-      avg_latency_ms?: number;
-    } | null;
+    let total_api_calls_today = 0;
+    let avg_latency_ms = 0;
+
+    if (isDeveloperTier) {
+      const metricResponse = await supabase
+        .from('developer_metrics')
+        .select('user_id, total_api_calls_today, avg_latency_ms')
+        .eq('user_id', userId)
+        .single();
+      const metric = metricResponse.data as unknown as {
+        total_api_calls_today?: number;
+        avg_latency_ms?: number;
+      } | null;
+      total_api_calls_today = metric?.total_api_calls_today ?? 0;
+      avg_latency_ms = metric?.avg_latency_ms ?? 0;
+    }
 
     return {
       api_key: user.developer_api_key || null,
       tier: user.vip_tier || (user.is_vip ? 'consumer' : 'free'),
-      total_api_calls_today: metric?.total_api_calls_today ?? 0,
-      avg_latency_ms: metric?.avg_latency_ms ?? 0,
+      total_api_calls_today,
+      avg_latency_ms,
       pricing_info:
-        'Developer Tier: 20 UKP / $26 USD per month | Consumer VIP: 8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent',
+        'Developer Tier: 20 UKP / $26 USD per month | Consumer VIP: 8 UKP / $10 USD per month',
     };
   }
 
@@ -405,14 +407,14 @@ export class MonetisationService {
       .select('is_vip, vip_tier')
       .eq('id', userId)
       .single();
-    if (
-      !userCheck ||
-      !userCheck.is_vip ||
-      !(userCheck.vip_tier && userCheck.vip_tier.startsWith('developer'))
-    ) {
-      throw new ForbiddenException(
-        'Diagnostic logs are only available to active Developer Tier subscribers (20 UKP / $26 USD per month).',
-      );
+
+    const isDeveloper =
+      !!userCheck &&
+      userCheck.is_vip === true &&
+      (userCheck.vip_tier ?? '').startsWith('developer');
+
+    if (!isDeveloper) {
+      return [];
     }
 
     const response = await supabase

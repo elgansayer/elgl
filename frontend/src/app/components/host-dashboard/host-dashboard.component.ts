@@ -28,7 +28,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
       <div class="flex flex-col items-start border-s border-slate-700 ps-4">
         <span class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">{{ 'host_dashboard.coins_earned' | t }}</span>
         <div class="flex items-center gap-2">
-          <span class="text-yellow-400 text-xl">🪙</span>
+          <span class="text-yellow-400 text-xl">{{ 'host_dashboard.coinIcon' | t }}</span>
           <span class="text-xl font-bold text-yellow-400">{{ earnedCoins() }}</span>
         </div>
       </div>

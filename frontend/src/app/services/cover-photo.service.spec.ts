@@ -35,7 +35,7 @@ describe('CoverPhotoService', () => {
 
     req.flush({ url: expectedUrl });
 
-    await expectAsync(uploadPromise).toBeResolvedTo(expectedUrl);
+    await expect(uploadPromise).resolves.toBe(expectedUrl);
   });
 
   it('should reject on network error', async () => {

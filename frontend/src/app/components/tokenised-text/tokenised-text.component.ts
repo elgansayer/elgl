@@ -1,6 +1,8 @@
 import { Component, input, output, inject, signal, effect } from '@angular/core';
 
 import { VocabularyStore } from '../../services/vocabulary.store';
+import { I18nService } from '../../services/i18n.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 export interface TokenSegment {
   segment: string;
@@ -10,12 +12,13 @@ export interface TokenSegment {
 
 @Component({
   selector: 'app-tokenised-text',
-  imports: [],
+  imports: [TranslatePipe],
   templateUrl: './tokenised-text.component.html',
   styleUrls: ['./tokenised-text.component.scss'],
 })
 export class TokenisedTextComponent {
   readonly vocabStore = inject(VocabularyStore);
+  readonly i18n = inject(I18nService);
 
   text = input.required<string>();
   language = input('en');
@@ -33,7 +36,7 @@ export class TokenisedTextComponent {
 
   private parseText(): void {
     if (typeof Intl === 'undefined' || !Intl.Segmenter) {
-      throw new Error('Intl.Segmenter is not available in this environment.');
+      throw new Error(this.i18n.translate('errors.intlSegmenterUnavailable'));
     }
 
     const segments: TokenSegment[] = [];

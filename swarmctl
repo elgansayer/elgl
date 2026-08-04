@@ -20,7 +20,7 @@
 export PATH="$HOME/.local/bin:$PATH"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 export SWARM_ROOT="$SCRIPT_DIR"
-source "$SWARM_ROOT/scripts/swarm-env.sh"
+source "$SWARM_ROOT/scripts/swarm-env.sh" 2>/dev/null || true
 source "$SWARM_ROOT/scripts/swarm-state.sh" 2>/dev/null || true
 source "$SWARM_ROOT/scripts/swarm-tasks.sh" 2>/dev/null || true
 
@@ -41,9 +41,9 @@ case "$cmd" in
         pkill -9 -f "pm-loop.sh" 2>/dev/null || true
         pkill -9 -f "aider" 2>/dev/null || true
         pkill -9 -f "claude" 2>/dev/null || true
-        # Stop python daemon (swarmd.py)
-        pkill -TERM -f "swarmd.py" 2>/dev/null || true
-        sleep 1
+        # Stop python daemon (swarmd.service). Must go through systemctl,
+        # since Restart=always means a raw pkill just gets respawned in 5s.
+        systemctl --user stop swarmd.service 2>/dev/null || true
         pkill -9 -f "swarmd.py" 2>/dev/null || true
         # Clean up coordination lock
         rm -f /tmp/ai_swarm_coordination.lock
@@ -94,6 +94,7 @@ case "$cmd" in
 
         # Swarmd.py daemon
         echo ""
+        echo "Swarmd unit:   $(systemctl --user is-active swarmd.service 2>/dev/null || echo 'unknown') ($(systemctl --user is-enabled swarmd.service 2>/dev/null || echo 'not installed'))"
         if pgrep -f "swarmd\.py" >/dev/null 2>&1; then
             echo "Swarmd daemon:  RUNNING (PID: $(pgrep -f 'swarmd\.py' | head -1))"
             if [ -f "$SWARM_ROOT/logs/swarmd.log" ]; then
@@ -102,6 +103,8 @@ case "$cmd" in
         else
             echo "Swarmd daemon:  STOPPED"
         fi
+        echo ""
+        echo "Watchdog timer: $(systemctl --user is-active swarmd-watchdog.timer 2>/dev/null || echo 'unknown') ($(systemctl --user is-enabled swarmd-watchdog.timer 2>/dev/null || echo 'not installed'))"
         echo ""
 
         # Disk
@@ -129,40 +132,26 @@ case "$cmd" in
         echo "TODO.md is preserved as a human-readable reference."
         ;;
     daemon-start)
-        echo "Starting swarmd.py daemon..."
-        if pgrep -f "swarmd\.py" >/dev/null 2>&1; then
-            echo "swarmd.py is already running (PID: $(pgrep -f 'swarmd\.py' | head -1))"
-            exit 1
-        fi
-        mkdir -p "$SWARM_ROOT/logs"
-        nohup python3 "$SWARM_ROOT/swarmd.py" >> "$SWARM_ROOT/logs/swarmd.log" 2>&1 &
-        echo "swarmd.py started (PID: $!)"
+        echo "Starting swarmd.service (systemd --user, Restart=always)..."
+        systemctl --user daemon-reload
+        systemctl --user enable --now swarmd.service
+        systemctl --user status --no-pager swarmd.service
         ;;
     daemon-stop)
-        echo "Stopping swarmd.py daemon..."
-        pkill -TERM -f "swarmd\.py" 2>/dev/null || true
-        sleep 2
-        pkill -9 -f "swarmd\.py" 2>/dev/null || true
+        echo "Stopping swarmd.service..."
+        systemctl --user stop swarmd.service
         rm -f /tmp/ai_swarm_coordination.lock
         echo "swarmd.py stopped."
         ;;
     daemon-status)
-        if pgrep -f "swarmd\.py" >/dev/null 2>&1; then
-            echo "swarmd.py is RUNNING (PID: $(pgrep -f 'swarmd\.py' | head -1))"
-            if [ -f "$SWARM_ROOT/logs/swarmd.log" ]; then
-                echo "--- last 20 log lines ---"
-                tail -20 "$SWARM_ROOT/logs/swarmd.log"
-            fi
-        else
-            echo "swarmd.py is STOPPED"
+        systemctl --user status --no-pager swarmd.service 2>&1 || true
+        if [ -f "$SWARM_ROOT/logs/swarmd.log" ]; then
+            echo "--- last 20 log lines ---"
+            tail -20 "$SWARM_ROOT/logs/swarmd.log"
         fi
         ;;
     daemon-logs)
-        if [ -f "$SWARM_ROOT/logs/swarmd.log" ]; then
-            tail -f "$SWARM_ROOT/logs/swarmd.log"
-        else
-            echo "No swarmd.py logs found."
-        fi
+        journalctl --user -u swarmd.service -f
         ;;
     health)
         echo "============================================"

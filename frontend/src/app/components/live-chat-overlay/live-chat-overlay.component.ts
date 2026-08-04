@@ -10,6 +10,8 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CentrifugoService } from '../../services/centrifugo.service';
+import { I18nService } from '../../services/i18n.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 interface LiveMessage {
   id: string;
@@ -27,7 +29,7 @@ interface CentrifugoMessageData {
 
 @Component({
   selector: 'app-live-chat-overlay',
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   template: `
     <!-- Overlay container positioned at the bottom of the video stream -->
     <div
@@ -87,6 +89,7 @@ export class LiveChatOverlayComponent implements OnInit, OnDestroy {
   roomId = input.required<string>();
 
   private centrifugo = inject(CentrifugoService);
+  private i18n = inject(I18nService);
   private scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
 
   messages = signal<LiveMessage[]>([]);
@@ -116,7 +119,7 @@ export class LiveChatOverlayComponent implements OnInit, OnDestroy {
       if (event.type === 'text') {
         this.addMessage({
           id: event.id || Math.random().toString(36).substring(2),
-          senderName: event.senderName || 'User',
+          senderName: event.senderName || this.i18n.translate('common.user'),
           text: event.content,
           timestamp: Date.now(),
         });

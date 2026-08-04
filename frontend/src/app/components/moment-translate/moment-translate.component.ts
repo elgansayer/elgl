@@ -1,5 +1,6 @@
-import { Component, computed, input, resource, signal } from '@angular/core';
+import { Component, computed, inject, input, resource, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
 import { environment } from '../../../environments/environment';
 
 
@@ -33,6 +34,7 @@ export class MomentTranslateComponent {
   readonly targetLanguage = input<string>('en-GB');
 
   readonly showTranslation = signal(false);
+  private readonly i18n = inject(I18nService);
 
   private readonly translateRequest = computed<{ text: string; target: string } | null>(() => {
     if (!this.showTranslation()) {
@@ -62,7 +64,7 @@ export class MomentTranslateComponent {
       })
         .then((response) => {
           if (!response.ok) {
-            throw new Error('Translation failed');
+            throw new Error(this.i18n.translate('errors.translation.failed'));
           }
           return response.json();
         })

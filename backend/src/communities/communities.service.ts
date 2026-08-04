@@ -82,10 +82,13 @@ export class CommunitiesService {
     if (fetchError || !community) {
       throw new NotFoundException('Community not found');
     }
-    if ((community as CommunityRecord).owner_id !== requesterId) {
+    if (community.owner_id !== requesterId) {
       throw new ForbiddenException('Only the owner can update this community');
     }
-    const updates: Partial<Pick<CommunityRecord, 'name' | 'description'>> = {};
+    const updates: Partial<Pick<CommunityRecord, 'name' | 'description'>> = {
+      name: dto.name,
+      description: dto.description,
+    };
     if (dto.name !== undefined) {
       updates.name = dto.name;
     }

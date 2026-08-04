@@ -415,14 +415,14 @@ export class EconomyService {
     return { claimed: true, coins_rewarded: reward, new_balance: newBalance };
   }
 
-  async verifyPurchaseReceipt(dto: {
+  verifyPurchaseReceipt(_dto: {
     receipt_token: string;
     platform: string;
   }): Promise<boolean> {
     // Implement server-side receipt verification logic here
     // This is a placeholder implementation
     const isValid = true; // Replace with actual verification logic
-    return isValid;
+    return Promise.resolve(isValid);
   }
 
   async purchaseCoins(
@@ -886,7 +886,7 @@ export class EconomyService {
       .select('*')
       .eq('id', dto.gift_id)
       .maybeSingle();
-    if (giftResponse.error || !giftResponse.data) {
+    if (!giftResponse || giftResponse.error || !giftResponse.data) {
       throw new NotFoundException(
         `Gift '${dto.gift_id}' not found in catalog.`,
       );
