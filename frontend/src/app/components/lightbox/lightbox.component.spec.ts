@@ -71,7 +71,7 @@ describe('LightboxComponent', () => {
     component.closed.subscribe(() => (closed = true));
 
     component.handleKeyDown(new KeyboardEvent('keydown', { key: 'Escape' }));
-    expect(closed).toBeTrue();
+    expect(closed).toBe(true);
   });
 
   it('should increase currentIndex on ArrowRight', () => {
@@ -118,7 +118,7 @@ describe('LightboxComponent', () => {
     };
 
     component.next(event);
-    expect(propagated).toBeTrue();
+    expect(propagated).toBe(true);
     expect(component.currentIndex()).toBe(1);
   });
 
@@ -134,7 +134,7 @@ describe('LightboxComponent', () => {
     };
 
     component.prev(event);
-    expect(propagated).toBeTrue();
+    expect(propagated).toBe(true);
     expect(component.currentIndex()).toBe(0);
   });
 
@@ -142,8 +142,8 @@ describe('LightboxComponent', () => {
     setup(['a']);
     let closed = false;
     component.closed.subscribe(() => (closed = true));
-    component.close();
-    expect(closed).toBeTrue();
+    component.closed.emit();
+    expect(closed).toBe(true);
   });
 
   it('should ignore non-navigation keys on keydown', () => {
@@ -155,12 +155,12 @@ describe('LightboxComponent', () => {
     component.handleKeyDown(new KeyboardEvent('keydown', { key: 'Enter' }));
 
     expect(component.currentIndex()).toBe(0);
-    expect(closed).toBeFalse();
+    expect(closed).toBe(false);
 
     component.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
 
     expect(component.currentIndex()).toBe(0);
-    expect(closed).toBeFalse();
+    expect(closed).toBe(false);
   });
 
   it('should not change index on short horizontal swipe', () => {
@@ -184,6 +184,35 @@ describe('LightboxComponent', () => {
     } as unknown as TouchEvent);
     component.onTouchEnd({
       changedTouches: [{ screenX: 100, screenY: 300 }],
+    } as unknown as TouchEvent);
+
+    expect(component.currentIndex()).toBe(0);
+  });
+
+  it('should stop propagation on goTo click', () => {
+    setup(['a', 'b'], 0);
+
+    let propagated = false;
+    const event = new Event('click', { bubbles: true });
+    const originalStop = event.stopPropagation.bind(event);
+    event.stopPropagation = () => {
+      propagated = true;
+      originalStop();
+    };
+
+    component.goTo(1, event);
+    expect(propagated).toBe(true);
+    expect(component.currentIndex()).toBe(1);
+  });
+
+  it('should not change index when swipe threshold is exactly 50', () => {
+    setup(['a', 'b', 'c'], 0);
+
+    component.onTouchStart({
+      changedTouches: [{ screenX: 150 }],
+    } as unknown as TouchEvent);
+    component.onTouchEnd({
+      changedTouches: [{ screenX: 100 }],
     } as unknown as TouchEvent);
 
     expect(component.currentIndex()).toBe(0);

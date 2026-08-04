@@ -12,7 +12,7 @@ export interface TokenSegment {
 
 @Component({
   selector: 'app-tokenised-text',
-  imports: [TranslatePipe],
+  imports: [],
   templateUrl: './tokenised-text.component.html',
   styleUrls: ['./tokenised-text.component.scss'],
 })

@@ -26050,3 +26050,887 @@ Errors:
 [2026-08-04T12:59:48Z] Pass 2 round 1: produced 1 file changes (or completed audit)
 [2026-08-04T12:59:48Z] SUCCESS: deepseek produced 1 file changes
 [2026-08-04T12:59:48Z]   OK    swarmd syntax
+[2026-08-04T13:00:07Z] Signal 15 received. Shutting down gracefully...
+[2026-08-04T13:00:07Z]   FAIL  frontend lint
+[2026-08-04T13:00:38Z] ==================================================
+[2026-08-04T13:00:38Z] swarmd v2.1 starting
+[2026-08-04T13:00:38Z] Models: claude, antigravity, copilot, deepseek  Retries: 1  Cooldown: 15s  Stuck timeout: 600s  Rate cooldown: 15s  Relaxed tests: True
+[2026-08-04T13:00:38Z] Coordination lock acquired.
+[2026-08-04T13:00:38Z] Model availability: 4/4 providers ready (deepseek, copilot, antigravity, claude)
+[2026-08-04T13:00:40Z] Sync: issue #1012 is an exact duplicate of already-completed work - closed: Refactor all Angular components to replace raw strings with `{{ KEY | translate 
+[2026-08-04T13:00:40Z] Sync: issue #1376 is an exact duplicate of already-completed work - closed: Refactor all Angular components to replace raw strings with `{{ KEY | translate 
+[2026-08-04T13:00:41Z] Sync: issue #172 is an exact duplicate of already-completed work - closed: Create `en.json` and `ja.json` translation files in `assets/i18n/`.
+[2026-08-04T13:00:42Z] Sync: issue #265 is an exact duplicate of already-completed work - closed: Implement active VoIP Call UI (Mute, Speakerphone, End Call).
+[2026-08-04T13:00:43Z] Sync: issue #264 is an exact duplicate of already-completed work - closed: Implement active VoIP Call UI (Mute, Speakerphone, End Call).
+[2026-08-04T13:00:44Z] Sync: issue #267 is an exact duplicate of already-completed work - closed: Build 1-on-1 Video Call interface with local preview overlay.
+[2026-08-04T13:00:44Z] Sync: issue #268 is an exact duplicate of already-completed work - closed: Build 1-on-1 Video Call interface with local preview overlay.
+[2026-08-04T13:00:45Z] Sync: issue #271 is an exact duplicate of already-completed work - closed: Build VIP Subscription showcase page detailing all premium benefits.
+[2026-08-04T13:00:45Z] Sync: issue #270 is an exact duplicate of already-completed work - closed: Build VIP Subscription showcase page detailing all premium benefits.
+[2026-08-04T13:00:46Z] Sync: issue #277 is an exact duplicate of already-completed work - closed: Build Daily Study Streak counter widget on home screen.
+[2026-08-04T13:00:46Z] Sync: issue #278 is an exact duplicate of already-completed work - closed: Build Daily Study Streak counter widget on home screen.
+[2026-08-04T13:00:47Z] Sync: issue #280 is an exact duplicate of already-completed work - closed: Implement NestJS CRON job to reset streaks if inactive for 24 hours.
+[2026-08-04T13:00:48Z] Sync: issue #295 is an exact duplicate of already-completed work - closed: Integrate Firebase Cloud Messaging (FCM) in Angular.
+[2026-08-04T13:00:48Z] Sync: issue #283 is an exact duplicate of already-completed work - closed: Implement NestJS CRON job to reset streaks if inactive for 24 hours.
+[2026-08-04T13:00:49Z] Sync: issue #298 is an exact duplicate of already-completed work - closed: Build NestJS event listeners to dispatch push alerts for chats, comments, and pr
+[2026-08-04T13:00:50Z] Sync: issue #300 is an exact duplicate of already-completed work - closed: Build Notification Preferences UI with granular category toggles.
+[2026-08-04T13:00:50Z] Sync: issue #301 is an exact duplicate of already-completed work - closed: Build Notification Preferences UI with granular category toggles.
+[2026-08-04T13:00:51Z] Sync: issue #304 is an exact duplicate of already-completed work - closed: Implement Blocklist system hiding blocked accounts across chat, feed, and search
+[2026-08-04T13:00:51Z] Sync: issue #306 is an exact duplicate of already-completed work - closed: Build automated NLP spam detector in NestJS to flag duplicate copy-paste message
+[2026-08-04T13:00:52Z] Sync: issue #309 is an exact duplicate of already-completed work - closed: Build multi-step Angular onboarding wizard.
+[2026-08-04T13:00:53Z] Sync: issue #307 is an exact duplicate of already-completed work - closed: Build automated NLP spam detector in NestJS to flag duplicate copy-paste message
+[2026-08-04T13:00:53Z] Sync: issue #310 is an exact duplicate of already-completed work - closed: Build multi-step Angular onboarding wizard.
+[2026-08-04T13:00:54Z] Sync: issue #312 is an exact duplicate of already-completed work - closed: Step 1: Native Language and Target Language selection.
+[2026-08-04T13:00:55Z] Sync: issue #315 is an exact duplicate of already-completed work - closed: Step 2: Proficiency Level assessment.
+[2026-08-04T13:00:55Z] Sync: issue #316 is an exact duplicate of already-completed work - closed: Step 2: Proficiency Level assessment.
+[2026-08-04T13:00:56Z] Sync: issue #318 is an exact duplicate of already-completed work - closed: Step 3: Avatar upload and permissions prompt (Microphone, Camera).
+[2026-08-04T13:00:56Z] Sync: issue #321 is an exact duplicate of already-completed work - closed: Implement Gender filter in discovery (VIP tier).
+[2026-08-04T13:00:57Z] Sync: issue #319 is an exact duplicate of already-completed work - closed: Step 3: Avatar upload and permissions prompt (Microphone, Camera).
+[2026-08-04T13:00:58Z] Sync: issue #322 is an exact duplicate of already-completed work - closed: Implement Gender filter in discovery (VIP tier).
+[2026-08-04T13:00:58Z] Sync: issue #324 is an exact duplicate of already-completed work - closed: Implement Age Range dual-thumb slider controls.
+[2026-08-04T13:00:59Z] Sync: issue #325 is an exact duplicate of already-completed work - closed: Implement Age Range dual-thumb slider controls.
+[2026-08-04T13:00:59Z] Sync: issue #392 is an exact duplicate of already-completed work - closed: Build custom sticker picker drawer inside chat window.
+[2026-08-04T13:01:00Z] Sync: issue #391 is an exact duplicate of already-completed work - closed: Build custom sticker picker drawer inside chat window.
+[2026-08-04T13:01:01Z] Sync: issue #399 is an exact duplicate of already-completed work - closed: Build Theme Selector (Dark, Light, System Default).
+[2026-08-04T13:01:01Z] Sync: issue #403 is an exact duplicate of already-completed work - closed: Build Theme Selector (Dark, Light, System Default).
+[2026-08-04T13:01:02Z] Sync: issue #427 is an exact duplicate of already-completed work - closed: Build Host Dashboard showing live viewer count, earned coins, and stream uptime.
+[2026-08-04T13:01:03Z] Sync: issue #483 is an exact duplicate of already-completed work - closed: Build in-app Help Centre fetching dynamic FAQ articles from backend.
+[2026-08-04T13:01:03Z] Sync: issue #523 is an exact duplicate of already-completed work - closed: Build Social Login UI components (Google, Facebook, Apple OAuth buttons).
+[2026-08-04T13:01:04Z] Sync: issue #484 is an exact duplicate of already-completed work - closed: Build in-app Help Centre fetching dynamic FAQ articles from backend.
+[2026-08-04T13:01:05Z] Sync: issue #529 is an exact duplicate of already-completed work - closed: Build Password Policy & Reset UI with real-time regex validation (min 8 chars, n
+[2026-08-04T13:01:05Z] Sync: issue #528 is an exact duplicate of already-completed work - closed: Build Password Policy & Reset UI with real-time regex validation (min 8 chars, n
+[2026-08-04T13:01:06Z] Sync: issue #534 is an exact duplicate of already-completed work - closed: Implement System-wide Dark Mode, Light Mode, and System Default toggle.
+[2026-08-04T13:01:07Z] Sync: issue #536 is an exact duplicate of already-completed work - closed: Implement UI & Font Scaling slider adjusting base `rem` units across Angular.
+[2026-08-04T13:01:07Z] Sync: issue #537 is an exact duplicate of already-completed work - closed: Implement UI & Font Scaling slider adjusting base `rem` units across Angular.
+[2026-08-04T13:01:08Z] Sync: issue #590 is an exact duplicate of already-completed work - closed: Design and build AI Conversation Partner chat interface.
+[2026-08-04T13:01:09Z] Sync: issue #577 is an exact duplicate of already-completed work - closed: Implement proficiency level filter in Discovery search.
+[2026-08-04T13:01:09Z] Sync: issue #592 is an exact duplicate of already-completed work - closed: Implement NestJS service to proxy chat messages to a Large Language Model (e.g.,
+[2026-08-04T13:01:10Z] Sync: issue #593 is an exact duplicate of already-completed work - closed: Implement NestJS service to proxy chat messages to a Large Language Model (e.g.,
+[2026-08-04T13:01:11Z] Sync: issue #603 is an exact duplicate of already-completed work - closed: Design database schema for user achievements (`achievements` table, `user_achiev
+[2026-08-04T13:01:11Z] Sync: issue #604 is an exact duplicate of already-completed work - closed: Design database schema for user achievements (`achievements` table, `user_achiev
+[2026-08-04T13:01:12Z] Sync: issue #610 is an exact duplicate of already-completed work - closed: Build Achievements showcase page on user profiles.
+[2026-08-04T13:01:13Z] Sync: issue #613 is an exact duplicate of already-completed work - closed: Implement a point-based XP system, granting XP for learning activities.
+[2026-08-04T13:01:13Z] Sync: issue #612 is an exact duplicate of already-completed work - closed: Implement a point-based XP system, granting XP for learning activities.
+[2026-08-04T13:01:14Z] Sync: issue #621 is an exact duplicate of already-completed work - closed: Create database schema for curated learning content (articles, dialogues by CEFR
+[2026-08-04T13:01:14Z] Sync: issue #625 is an exact duplicate of already-completed work - closed: Build CMS or admin interface to upload and manage lesson content.
+[2026-08-04T13:01:15Z] Sync: issue #630 is an exact duplicate of already-completed work - closed: Integrate short cultural etiquette guides for different languages within the app
+[2026-08-04T13:01:15Z] Sync: issue #632 is an exact duplicate of already-completed work - closed: Integrate short cultural etiquette guides for different languages within the app
+[2026-08-04T13:01:16Z] Sync: issue #635 is an exact duplicate of already-completed work - closed: Add subtle micro-animations (`framer-motion` or CSS) to button clicks and hover 
+[2026-08-04T13:01:17Z] Sync: issue #634 is an exact duplicate of already-completed work - closed: Add subtle micro-animations (`framer-motion` or CSS) to button clicks and hover 
+[2026-08-04T13:01:17Z] Sync: issue #637 is an exact duplicate of already-completed work - closed: Animate Angular route transitions for a smoother navigation feel.
+[2026-08-04T13:01:18Z] Sync: issue #640 is an exact duplicate of already-completed work - closed: Build an interactive, multi-step product tour for new users using a library like
+[2026-08-04T13:01:18Z] Sync: issue #641 is an exact duplicate of already-completed work - closed: Build an interactive, multi-step product tour for new users using a library like
+[2026-08-04T13:01:19Z] Sync: issue #644 is an exact duplicate of already-completed work - closed: Refine chat bubble appearance with distinct sent/received styles and message-tai
+[2026-08-04T13:01:20Z] Sync: issue #646 is an exact duplicate of already-completed work - closed: Add haptic feedback on mobile for key actions (e.g., sending message, liking a p
+[2026-08-04T13:01:20Z] Sync: issue #666 is an exact duplicate of already-completed work - closed: Build celebratory full-screen animation/confetti for completing study streaks (e
+[2026-08-04T13:01:21Z] Sync: issue #658 is an exact duplicate of already-completed work - closed: Integrate AI to auto-generate `explanation` field for `correction` payloads in c
+[2026-08-04T13:01:21Z] Sync: issue #667 is an exact duplicate of already-completed work - closed: Build celebratory full-screen animation/confetti for completing study streaks (e
+[2026-08-04T13:01:22Z] Sync: issue #676 is an exact duplicate of already-completed work - closed: Implement LiveKit EgressClient to generate and save a full transcript of complet
+[2026-08-04T13:01:23Z] Sync: issue #677 is an exact duplicate of already-completed work - closed: Implement LiveKit EgressClient to generate and save a full transcript of complet
+[2026-08-04T13:01:23Z] Sync: issue #682 is an exact duplicate of already-completed work - closed: Implement real-time translation for the text chat overlay inside Voicerooms.
+[2026-08-04T13:01:24Z] Sync: issue #683 is an exact duplicate of already-completed work - closed: Implement real-time translation for the text chat overlay inside Voicerooms.
+[2026-08-04T13:01:25Z] Sync: issue #696 is an exact duplicate of already-completed work - closed: Build UI for threaded replies in chat to preserve conversation context.
+[2026-08-04T13:01:25Z] Sync: issue #715 is an exact duplicate of already-completed work - closed: Implement Multimedia Posts (text, photos, and voice notes).
+[2026-08-04T13:01:26Z] Sync: issue #717 is an exact duplicate of already-completed work - closed: Build Targeted Visibility routing (posts display to native speakers of target la
+[2026-08-04T13:01:26Z] Sync: issue #718 is an exact duplicate of already-completed work - closed: Implement Instant Grammar Fixes (direct text editing by native speakers).
+[2026-08-04T13:01:27Z] Sync: issue #719 is an exact duplicate of already-completed work - closed: Build Voice Feedback functionality for pronunciation corrections.
+[2026-08-04T13:01:28Z] Sync: issue #721 is an exact duplicate of already-completed work - closed: Add Detailed Explanations UI for context and alternative expressions.
+[2026-08-04T13:01:28Z] Sync: issue #724 is an exact duplicate of already-completed work - closed: Build Language Questions post type.
+[2026-08-04T13:01:29Z] Sync: issue #726 is an exact duplicate of already-completed work - closed: Implement Cultural Insights tagging and filtering.
+[2026-08-04T13:01:30Z] Sync: issue #725 is an exact duplicate of already-completed work - closed: Implement Cultural Insights tagging and filtering.
+[2026-08-04T13:01:30Z] Sync: issue #728 is an exact duplicate of already-completed work - closed: Build Milestone Tracking for progress and study buddy matching.
+[2026-08-04T13:01:31Z] Sync: issue #729 is an exact duplicate of already-completed work - closed: Build Resource Library for saving helpful posts and tips.
+[2026-08-04T13:01:31Z] Sync: issue #730 is an exact duplicate of already-completed work - closed: Build Resource Library for saving helpful posts and tips.
+[2026-08-04T13:01:32Z] Sync: issue #731 is an exact duplicate of already-completed work - closed: Implement Organised Collections (sort by topic/difficulty).
+[2026-08-04T13:01:33Z] Sync: issue #733 is an exact duplicate of already-completed work - closed: Build Offline Access functionality for saved content.
+[2026-08-04T13:01:33Z] Sync: issue #732 is an exact duplicate of already-completed work - closed: Implement Organised Collections (sort by topic/difficulty).
+[2026-08-04T13:01:34Z] Sync: issue #734 is an exact duplicate of already-completed work - closed: Build Offline Access functionality for saved content.
+[2026-08-04T13:01:35Z] Sync: issue #736 is an exact duplicate of already-completed work - closed: Build Avatar upload and client-side cropping tool.
+[2026-08-04T13:01:35Z] Sync: issue #737 is an exact duplicate of already-completed work - closed: Implement Native Language and Target Language selection with proficiency levels.
+[2026-08-04T13:01:36Z] Sync: issue #740 is an exact duplicate of already-completed work - closed: Display Nationality, Region, Age, and Gender fields.
+[2026-08-04T13:01:37Z] Sync: issue #738 is an exact duplicate of already-completed work - closed: Implement Native Language and Target Language selection with proficiency levels.
+[2026-08-04T13:01:37Z] Sync: issue #743 is an exact duplicate of already-completed work - closed: Implement Text Bio section with inline translation support.
+[2026-08-04T13:01:38Z] Sync: issue #744 is an exact duplicate of already-completed work - closed: Implement Text Bio section with inline translation support.
+[2026-08-04T13:01:38Z] Sync: issue #745 is an exact duplicate of already-completed work - closed: Build 30-second Audio Introduction recording and playback widget.
+[2026-08-04T13:01:39Z] Sync: issue #747 is an exact duplicate of already-completed work - closed: Add selectable Hobbies and Interests tags.
+[2026-08-04T13:01:40Z] Sync: issue #746 is an exact duplicate of already-completed work - closed: Build 30-second Audio Introduction recording and playback widget.
+[2026-08-04T13:01:40Z] Sync: issue #749 is an exact duplicate of already-completed work - closed: Display Daily Study Streak counter.
+[2026-08-04T13:01:41Z] Sync: issue #752 is an exact duplicate of already-completed work - closed: Show total lifetime counts for Translations, Corrections, and Moments.
+[2026-08-04T13:01:41Z] Sync: issue #754 is an exact duplicate of already-completed work - closed: Display earned user badges (VIP status, Serious Learner).
+[2026-08-04T13:01:43Z] Sync: issue #761 is an exact duplicate of already-completed work - closed: Build toggles to hide or show exact location and online status.
+[2026-08-04T13:01:44Z] Sync: issue #764 is an exact duplicate of already-completed work - closed: Add incognito mode for profile visiting (VIP feature).
+[2026-08-04T13:01:44Z] Sync: issue #763 is an exact duplicate of already-completed work - closed: Implement Block User and Report User workflows directly from the profile.
+[2026-08-04T13:01:45Z] Sync: issue #766 is an exact duplicate of already-completed work - closed: Build Linked Accounts management (Email, Google, Apple).
+[2026-08-04T13:01:45Z] Sync: issue #767 is an exact duplicate of already-completed work - closed: Build Linked Accounts management (Email, Google, Apple).
+[2026-08-04T13:01:46Z] Sync: issue #768 is an exact duplicate of already-completed work - closed: Implement Password reset and change workflows.
+[2026-08-04T13:01:47Z] Sync: issue #770 is an exact duplicate of already-completed work - closed: Build Account Deletion and data export requests.
+[2026-08-04T13:01:47Z] Sync: issue #769 is an exact duplicate of already-completed work - closed: Implement Password reset and change workflows.
+[2026-08-04T13:01:48Z] Sync: issue #771 is an exact duplicate of already-completed work - closed: Build Account Deletion and data export requests.
+[2026-08-04T13:01:48Z] Sync: issue #774 is an exact duplicate of already-completed work - closed: Build Location Privacy toggles (Exact location vs. Region only).
+[2026-08-04T13:01:49Z] Sync: issue #780 is an exact duplicate of already-completed work - closed: Build granular Push Notification toggles (Messages, Comments, Likes, Followers).
+[2026-08-04T13:01:50Z] Sync: issue #779 is an exact duplicate of already-completed work - closed: Build Blocked Users management list.
+[2026-08-04T13:01:50Z] Sync: issue #781 is an exact duplicate of already-completed work - closed: Build granular Push Notification toggles (Messages, Comments, Likes, Followers).
+[2026-08-04T13:01:51Z] Sync: issue #782 is an exact duplicate of already-completed work - closed: Implement In-App Sound and Vibration settings.
+[2026-08-04T13:01:52Z] Sync: issue #783 is an exact duplicate of already-completed work - closed: Implement In-App Sound and Vibration settings.
+[2026-08-04T13:01:52Z] Sync: issue #786 is an exact duplicate of already-completed work - closed: Build App UI Language selector.
+[2026-08-04T13:01:53Z] Sync: issue #788 is an exact duplicate of already-completed work - closed: Set Default Translation Language.
+[2026-08-04T13:01:54Z] Sync: issue #787 is an exact duplicate of already-completed work - closed: Build App UI Language selector.
+[2026-08-04T13:01:54Z] Sync: issue #789 is an exact duplicate of already-completed work - closed: Set Default Translation Language.
+[2026-08-04T13:01:55Z] Sync: issue #790 is an exact duplicate of already-completed work - closed: Implement Chat specific settings (Enter to send, Text size customisation).
+[2026-08-04T13:01:55Z] Sync: issue #792 is an exact duplicate of already-completed work - closed: Build Local Storage management (Clear cache, Delete old media).
+[2026-08-04T13:01:56Z] Sync: issue #794 is an exact duplicate of already-completed work - closed: Implement Auto-Download preferences (Wi-Fi only vs. Cellular).
+[2026-08-04T13:01:57Z] Sync: issue #793 is an exact duplicate of already-completed work - closed: Build Local Storage management (Clear cache, Delete old media).
+[2026-08-04T13:01:57Z] Sync: issue #795 is an exact duplicate of already-completed work - closed: Implement Auto-Download preferences (Wi-Fi only vs. Cellular).
+[2026-08-04T13:01:58Z] Sync: issue #796 is an exact duplicate of already-completed work - closed: Build Chat Backup and Restore functionality.
+[2026-08-04T13:01:58Z] Sync: issue #799 is an exact duplicate of already-completed work - closed: Build Subscription Management portal.
+[2026-08-04T13:01:59Z] Sync: issue #803 is an exact duplicate of already-completed work - closed: Add Support Centre and FAQ viewer.
+[2026-08-04T13:02:00Z] Sync: issue #802 is an exact duplicate of already-completed work - closed: Add Support Centre and FAQ viewer.
+[2026-08-04T13:02:00Z] Sync: issue #804 is an exact duplicate of already-completed work - closed: Implement App Version display and update checker.
+[2026-08-04T13:02:01Z] Sync: issue #808 is an exact duplicate of already-completed work - closed: Implement sorting algorithms (Best Match, Online Now, Nearest, Newest).
+[2026-08-04T13:02:01Z] Sync: issue #809 is an exact duplicate of already-completed work - closed: Implement sorting algorithms (Best Match, Online Now, Nearest, Newest).
+[2026-08-04T13:02:02Z] Sync: issue #811 is an exact duplicate of already-completed work - closed: Build global user query engine based on Native and Target language pairs.
+[2026-08-04T13:02:03Z] Sync: issue #810 is an exact duplicate of already-completed work - closed: Build global user query engine based on Native and Target language pairs.
+[2026-08-04T13:02:03Z] Sync: issue #814 is an exact duplicate of already-completed work - closed: Build Age Range dual-thumb slider.
+[2026-08-04T13:02:04Z] Sync: issue #815 is an exact duplicate of already-completed work - closed: Build Age Range dual-thumb slider.
+[2026-08-04T13:02:05Z] Sync: issue #817 is an exact duplicate of already-completed work - closed: Add Language Proficiency filter (Beginner, Intermediate, Advanced).
+[2026-08-04T13:02:05Z] Sync: issue #823 is an exact duplicate of already-completed work - closed: Implement specific Country and City manual search.
+[2026-08-04T13:02:06Z] Sync: issue #818 is an exact duplicate of already-completed work - closed: Add Language Proficiency filter (Beginner, Intermediate, Advanced).
+[2026-08-04T13:02:07Z] Sync: issue #824 is an exact duplicate of already-completed work - closed: Implement specific Country and City manual search.
+[2026-08-04T13:02:07Z] Sync: issue #826 is an exact duplicate of already-completed work - closed: Build Location Spoofing functionality for VIP users to search as if in another c
+[2026-08-04T13:02:08Z] Sync: issue #827 is an exact duplicate of already-completed work - closed: Build Profile Discovery Cards displaying avatar, name, languages, and short bio.
+[2026-08-04T13:02:08Z] Sync: issue #828 is an exact duplicate of already-completed work - closed: Build Profile Discovery Cards displaying avatar, name, languages, and short bio.
+[2026-08-04T13:02:09Z] Sync: issue #829 is an exact duplicate of already-completed work - closed: Implement inline Audio Intro play button directly on the search card.
+[2026-08-04T13:02:10Z] Sync: issue #834 is an exact duplicate of already-completed work - closed: Display online status indicators (green dot) and last active timestamps.
+[2026-08-04T13:02:10Z] Sync: issue #833 is an exact duplicate of already-completed work - closed: Display online status indicators (green dot) and last active timestamps.
+[2026-08-04T13:02:11Z] Sync: issue #837 is an exact duplicate of already-completed work - closed: Implement new user spotlight to highlight recently joined native speakers.
+[2026-08-04T13:02:11Z] Sync: issue #839 is an exact duplicate of already-completed work - closed: Implement advanced, detailed search filters matching Tandem (e.g., search by exa
+[2026-08-04T13:02:12Z] Sync: issue #843 is an exact duplicate of already-completed work - closed: Build a robust community moderation tool to strictly enforce learning-only behav
+[2026-08-04T13:02:13Z] Sync: issue #847 is an exact duplicate of already-completed work - closed: Implement Group Admin controls to manage membership and moderate shared resource
+[2026-08-04T13:02:14Z] Sync: issue #849 is an exact duplicate of already-completed work - closed: Implement audio room categorization by topic and target language level.
+[2026-08-04T13:02:14Z] Sync: issue #940 is an exact duplicate of already-completed work - closed: Build Report User modal with dynamic category selection (BLOCKED: missing design
+[2026-08-04T13:02:15Z] Sync: issue #851 is an exact duplicate of already-completed work - closed: Implement exclusive animated emojis and reactions during live audio sessions for
+[2026-08-04T13:02:16Z] Sync: issue #983 is an exact duplicate of already-completed work - closed: Build NestJS `MomentsController` (`POST /moments` for creation, `GET /moments/fe
+[2026-08-04T13:02:16Z] Sync: issue #985 is an exact duplicate of already-completed work - closed: Build Angular Social Feed UI (`MomentsFeedComponent`) with multi-modal rendering
+[2026-08-04T13:02:17Z] Sync: issue #986 is an exact duplicate of already-completed work - closed: Integrate `VisualDiffComponent` into moment comments section, allowing community
+[2026-08-04T13:02:17Z] Sync: issue #988 is an exact duplicate of already-completed work - closed: Build Moment pinning functionality for VIP users (`PATCH /moments/:id/pin`).
+[2026-08-04T13:02:18Z] Sync: issue #987 is an exact duplicate of already-completed work - closed: Build one-tap Moment audio reading (`TextToSpeechComponent`) and inline Moment t
+[2026-08-04T13:02:19Z] Sync: issue #989 is an exact duplicate of already-completed work - closed: Install `livekit-server-sdk` in NestJS `AudioRoomsModule` and configure `RoomSer
+[2026-08-04T13:02:19Z] Sync: issue #990 is an exact duplicate of already-completed work - closed: Build NestJS endpoint (`POST /audio-rooms/create`) to initialize LiveKit room an
+[2026-08-04T13:02:20Z] Sync: issue #991 is an exact duplicate of already-completed work - closed: Build NestJS access token generation endpoint (`POST /audio-rooms/token`) granti
+[2026-08-04T13:02:20Z] Sync: issue #992 is an exact duplicate of already-completed work - closed: Install `@livekit/components-angular` or native `livekit-client` in Angular fron
+[2026-08-04T13:02:21Z] Sync: issue #995 is an exact duplicate of already-completed work - closed: Build synchronised text chat overlay (`RoomChatComponent`) inside live rooms pow
+[2026-08-04T13:02:22Z] Sync: issue #994 is an exact duplicate of already-completed work - closed: Implement Stage Management API & UI:
+[2026-08-04T13:02:22Z] Sync: issue #996 is an exact duplicate of already-completed work - closed: Implement real-time AI speech-to-text subtitles broadcasting closed captions int
+[2026-08-04T13:02:23Z] Sync: issue #997 is an exact duplicate of already-completed work - closed: Build stream recording & replay archive storage (`POST /audio-rooms/archive`) sa
+[2026-08-04T13:02:23Z] Sync: issue #998 is an exact duplicate of already-completed work - closed: Build NestJS `MonetisationController` handling Stripe & App Store webhooks (`POS
+[2026-08-04T13:02:24Z] Sync: issue #1000 is an exact duplicate of already-completed work - closed: Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`)
+[2026-08-04T13:02:25Z] Sync: issue #1002 is an exact duplicate of already-completed work - closed: Build Audio Room tipping mechanism allowing listeners to gift coins directly to 
+[2026-08-04T13:02:25Z] Sync: issue #1001 is an exact duplicate of already-completed work - closed: Build Virtual Gift catalog & sending endpoint (`POST /economy/send-gift`), deduc
+[2026-08-04T13:02:26Z] Sync: issue #1004 is an exact duplicate of already-completed work - closed: Build Trust & Safety reporting system (`POST /safety/report`, `POST /safety/bloc
+[2026-08-04T13:02:27Z] Sync: issue #1005 is an exact duplicate of already-completed work - closed: Verify Stripe webhook signatures (`stripe.webhooks.constructEvent` with `STRIPE_
+[2026-08-04T13:02:27Z] Sync: issue #1006 is an exact duplicate of already-completed work - closed: Lock down `POST /monetisation/upgrade` so VIP status can only change via verifie
+[2026-08-04T13:02:28Z] Sync: issue #1008 is an exact duplicate of already-completed work - closed: Implement Apple App Store Server Notifications and Google Play Billing webhook h
+[2026-08-04T13:02:29Z] Sync: issue #1007 is an exact duplicate of already-completed work - closed: Rework `POST /economy/purchase-coins` to verify purchase receipt records server-
+[2026-08-04T13:02:29Z] Sync: issue #1009 is an exact duplicate of already-completed work - closed: Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azu
+[2026-08-04T13:02:30Z] Sync: issue #1010 is an exact duplicate of already-completed work - closed: Install `@ngx-translate/core` and `@ngx-translate/http-loader` in Angular.
+[2026-08-04T13:02:30Z] Sync: issue #1011 is an exact duplicate of already-completed work - closed: Create `en.json` and `ja.json` translation files in `assets/i18n/`.
+[2026-08-04T13:02:31Z] Sync: issue #1090 is an exact duplicate of already-completed work - closed: AUTONOMOUS DIRECTIVE: Execute complete codebase audit. Verify zero hardcoded str
+[2026-08-04T13:02:32Z] Sync: issue #1023 is an exact duplicate of already-completed work - closed: Build Host Dashboard showing live viewer count, earned coins, and stream uptime.
+[2026-08-04T13:02:32Z] Sync: issue #1091 is an exact duplicate of already-completed work - closed: Build Social Login UI components (Google, Facebook, Apple OAuth buttons).
+[2026-08-04T13:02:33Z] Sync: issue #1093 is an exact duplicate of already-completed work - closed: Build Password Policy & Reset UI with real-time regex validation (min 8 chars, n
+[2026-08-04T13:02:33Z] Sync: issue #1095 is an exact duplicate of already-completed work - closed: Implement System-wide Dark Mode, Light Mode, and System Default toggle.
+[2026-08-04T13:02:34Z] Sync: issue #1096 is an exact duplicate of already-completed work - closed: Implement UI & Font Scaling slider adjusting base `rem` units across Angular.
+[2026-08-04T13:02:35Z] Sync: issue #1113 is an exact duplicate of already-completed work - closed: Design and build AI Conversation Partner chat interface.
+[2026-08-04T13:02:35Z] Sync: issue #1109 is an exact duplicate of already-completed work - closed: Implement proficiency level filter in Discovery search.
+[2026-08-04T13:02:36Z] Sync: issue #1116 is an exact duplicate of already-completed work - closed: Implement AI-generated suggested replies in chat based on conversation context.
+[2026-08-04T13:02:36Z] Sync: issue #1120 is an exact duplicate of already-completed work - closed: Build Achievements showcase page on user profiles.
+[2026-08-04T13:02:37Z] Sync: issue #1121 is an exact duplicate of already-completed work - closed: Implement a point-based XP system, granting XP for learning activities.
+[2026-08-04T13:02:38Z] Sync: issue #1124 is an exact duplicate of already-completed work - closed: Create database schema for curated learning content (articles, dialogues by CEFR
+[2026-08-04T13:02:38Z] Sync: issue #1128 is an exact duplicate of already-completed work - closed: Implement skeleton loaders (`ngx-skeleton-loader`) for all data-heavy components
+[2026-08-04T13:02:39Z] Sync: issue #1125 is an exact duplicate of already-completed work - closed: Build CMS or admin interface to upload and manage lesson content.
+[2026-08-04T13:02:39Z] Sync: issue #1129 is an exact duplicate of already-completed work - closed: Add subtle micro-animations (`framer-motion` or CSS) to button clicks and hover 
+[2026-08-04T13:02:40Z] Sync: issue #1130 is an exact duplicate of already-completed work - closed: Animate Angular route transitions for a smoother navigation feel.
+[2026-08-04T13:02:41Z] Sync: issue #1132 is an exact duplicate of already-completed work - closed: Refine chat bubble appearance with distinct sent/received styles and message-tai
+[2026-08-04T13:02:41Z] Sync: issue #1133 is an exact duplicate of already-completed work - closed: Add haptic feedback on mobile for key actions (e.g., sending message, liking a p
+[2026-08-04T13:02:42Z] Sync: issue #1140 is an exact duplicate of already-completed work - closed: Build celebratory full-screen animation/confetti for completing study streaks (e
+[2026-08-04T13:02:43Z] Sync: issue #1137 is an exact duplicate of already-completed work - closed: Integrate AI to auto-generate `explanation` field for `correction` payloads in c
+[2026-08-04T13:02:43Z] Sync: issue #1144 is an exact duplicate of already-completed work - closed: Implement LiveKit EgressClient to generate and save a full transcript of complet
+[2026-08-04T13:02:44Z] Sync: issue #1151 is an exact duplicate of already-completed work - closed: Build UI for threaded replies in chat to preserve conversation context.
+[2026-08-04T13:02:45Z] Sync: issue #1178 is an exact duplicate of already-completed work - closed: End-to-end encrypted video calls.
+[2026-08-04T13:02:46Z] Sync: issue #1179 is an exact duplicate of already-completed work - closed: Group calls with a specific participant limit.
+[2026-08-04T13:02:47Z] Sync: issue #1181 is an exact duplicate of already-completed work - closed: Picture-in-picture mode for video calls.
+[2026-08-04T13:02:48Z] Sync: issue #1180 is an exact duplicate of already-completed work - closed: Call waiting and switching between calls.
+[2026-08-04T13:02:48Z] Sync: issue #1184 is an exact duplicate of already-completed work - closed: Create and manage group chats.
+[2026-08-04T13:02:49Z] Sync: issue #1185 is an exact duplicate of already-completed work - closed: Admin controls (add/remove members, restrict who can send messages or edit group
+[2026-08-04T13:02:49Z] Sync: issue #1186 is an exact duplicate of already-completed work - closed: Mentioning participants (@mentions).
+[2026-08-04T13:02:50Z] Sync: issue #1188 is an exact duplicate of already-completed work - closed: Join groups via invite links or QR codes.
+[2026-08-04T13:02:51Z] Sync: issue #1187 is an exact duplicate of already-completed work - closed: Group descriptions and rules.
+[2026-08-04T13:02:51Z] Sync: issue #1191 is an exact duplicate of already-completed work - closed: Share text, photo, video, and voice updates that disappear after 24 hours.
+[2026-08-04T13:02:52Z] Sync: issue #1192 is an exact duplicate of already-completed work - closed: Privacy controls for who can view status updates.
+[2026-08-04T13:02:53Z] Sync: issue #1194 is an exact duplicate of already-completed work - closed: View list of users who have seen the status.
+[2026-08-04T13:02:53Z] Sync: issue #1197 is an exact duplicate of already-completed work - closed: View once media (photos/videos that disappear after being opened).
+[2026-08-04T13:02:54Z] Sync: issue #1202 is an exact duplicate of already-completed work - closed: Silence unknown callers.
+[2026-08-04T13:02:54Z] Sync: issue #1201 is an exact duplicate of already-completed work - closed: Control over who can see Last Seen, profile photo, about info, and status.
+[2026-08-04T13:02:55Z] Sync: issue #1203 is an exact duplicate of already-completed work - closed: Chat Lock (hide specific chats in a locked folder).
+[2026-08-04T13:02:55Z] Sync: issue #1204 is an exact duplicate of already-completed work - closed: Customizable profile picture and About status.
+[2026-08-04T13:02:56Z] Sync: issue #1206 is an exact duplicate of already-completed work - closed: Notification customization (custom tones, vibration patterns).
+[2026-08-04T13:02:57Z] Sync: issue #1205 is an exact duplicate of already-completed work - closed: Custom chat wallpapers.
+[2026-08-04T13:02:57Z] Sync: issue #1207 is an exact duplicate of already-completed work - closed: Data and storage usage controls (auto-download settings).
+[2026-08-04T13:02:58Z] Sync: issue #1209 is an exact duplicate of already-completed work - closed: Multi-device support (use the app on linked devices without keeping the phone on
+[2026-08-04T13:02:58Z] Sync: issue #1210 is an exact duplicate of already-completed work - closed: Account transfer between devices.
+[2026-08-04T13:02:59Z] Sync: issue #1212 is an exact duplicate of already-completed work - closed: Quick replies for frequently asked questions.
+[2026-08-04T13:03:00Z] Sync: issue #1214 is an exact duplicate of already-completed work - closed: Labels to organize chats and customers.
+[2026-08-04T13:03:01Z] Sync: issue #1213 is an exact duplicate of already-completed work - closed: Automated greeting and away messages.
+[2026-08-04T13:03:01Z] Sync: issue #1215 is an exact duplicate of already-completed work - closed: Cart and catalog integration for shopping.
+[2026-08-04T13:03:02Z] Sync: issue #1216 is an exact duplicate of already-completed work - closed: Implement Multimedia Posts (text, photos, and voice notes).
+[2026-08-04T13:03:03Z] Sync: issue #1217 is an exact duplicate of already-completed work - closed: Build Targeted Visibility routing (posts display to native speakers of target la
+[2026-08-04T13:03:03Z] Sync: issue #1218 is an exact duplicate of already-completed work - closed: Implement Instant Grammar Fixes (direct text editing by native speakers).
+[2026-08-04T13:03:04Z] Sync: issue #1220 is an exact duplicate of already-completed work - closed: Add Detailed Explanations UI for context and alternative expressions.
+[2026-08-04T13:03:04Z] Sync: issue #1219 is an exact duplicate of already-completed work - closed: Build Voice Feedback functionality for pronunciation corrections.
+[2026-08-04T13:03:05Z] Sync: issue #1221 is an exact duplicate of already-completed work - closed: Build Language Questions post type.
+[2026-08-04T13:03:06Z] Sync: issue #1222 is an exact duplicate of already-completed work - closed: Implement Cultural Insights tagging and filtering.
+[2026-08-04T13:03:06Z] Sync: issue #1223 is an exact duplicate of already-completed work - closed: Build Milestone Tracking for progress and study buddy matching.
+[2026-08-04T13:03:07Z] Sync: issue #1225 is an exact duplicate of already-completed work - closed: Implement Organised Collections (sort by topic/difficulty).
+[2026-08-04T13:03:07Z] Sync: issue #1224 is an exact duplicate of already-completed work - closed: Build Resource Library for saving helpful posts and tips.
+[2026-08-04T13:03:08Z] Sync: issue #1227 is an exact duplicate of already-completed work - closed: Build Avatar upload and client-side cropping tool.
+[2026-08-04T13:03:09Z] Sync: issue #1228 is an exact duplicate of already-completed work - closed: Implement Native Language and Target Language selection with proficiency levels.
+[2026-08-04T13:03:09Z] Sync: issue #1229 is an exact duplicate of already-completed work - closed: Display Nationality, Region, Age, and Gender fields.
+[2026-08-04T13:03:10Z] Sync: issue #1233 is an exact duplicate of already-completed work - closed: Add selectable Hobbies and Interests tags.
+[2026-08-04T13:03:10Z] Sync: issue #1231 is an exact duplicate of already-completed work - closed: Implement Text Bio section with inline translation support.
+[2026-08-04T13:03:11Z] Sync: issue #1234 is an exact duplicate of already-completed work - closed: Display Daily Study Streak counter.
+[2026-08-04T13:03:12Z] Sync: issue #1235 is an exact duplicate of already-completed work - closed: Show total lifetime counts for Translations, Corrections, and Moments.
+[2026-08-04T13:03:12Z] Sync: issue #1236 is an exact duplicate of already-completed work - closed: Display earned user badges (VIP status, Serious Learner).
+[2026-08-04T13:03:13Z] Sync: issue #1240 is an exact duplicate of already-completed work - closed: Build toggles to hide or show exact location and online status.
+[2026-08-04T13:03:14Z] Sync: issue #1237 is an exact duplicate of already-completed work - closed: Implement Followers and Following lists with numeric counters.
+[2026-08-04T13:03:14Z] Sync: issue #1241 is an exact duplicate of already-completed work - closed: Implement Block User and Report User workflows directly from the profile.
+[2026-08-04T13:03:15Z] Sync: issue #1242 is an exact duplicate of already-completed work - closed: Add incognito mode for profile visiting (VIP feature).
+[2026-08-04T13:03:15Z] Sync: issue #1247 is an exact duplicate of already-completed work - closed: Build Location Privacy toggles (Exact location vs. Region only).
+[2026-08-04T13:03:16Z] Sync: issue #1249 is an exact duplicate of already-completed work - closed: Build Blocked Users management list.
+[2026-08-04T13:03:17Z] Sync: issue #1250 is an exact duplicate of already-completed work - closed: Build granular Push Notification toggles (Messages, Comments, Likes, Followers).
+[2026-08-04T13:03:17Z] Sync: issue #1254 is an exact duplicate of already-completed work - closed: Set Default Translation Language.
+[2026-08-04T13:03:18Z] Sync: issue #1253 is an exact duplicate of already-completed work - closed: Build App UI Language selector.
+[2026-08-04T13:03:18Z] Sync: issue #1255 is an exact duplicate of already-completed work - closed: Implement Chat specific settings (Enter to send, Text size customisation).
+[2026-08-04T13:03:19Z] Sync: issue #1256 is an exact duplicate of already-completed work - closed: Build Local Storage management (Clear cache, Delete old media).
+[2026-08-04T13:03:20Z] Sync: issue #1258 is an exact duplicate of already-completed work - closed: Build Chat Backup and Restore functionality.
+[2026-08-04T13:03:20Z] Sync: issue #1262 is an exact duplicate of already-completed work - closed: Implement App Version display and update checker.
+[2026-08-04T13:03:21Z] Sync: issue #1259 is an exact duplicate of already-completed work - closed: Build Subscription Management portal.
+[2026-08-04T13:03:21Z] Sync: issue #1267 is an exact duplicate of already-completed work - closed: Build Age Range dual-thumb slider.
+[2026-08-04T13:03:22Z] Sync: issue #1268 is an exact duplicate of already-completed work - closed: Implement Gender filter dropdown (often restricted to VIP).
+[2026-08-04T13:03:23Z] Sync: issue #1276 is an exact duplicate of already-completed work - closed: Build Location Spoofing functionality for VIP users to search as if in another c
+[2026-08-04T13:03:23Z] Sync: issue #1277 is an exact duplicate of already-completed work - closed: Build Report User modal with dynamic category selection (BLOCKED: missing design
+[2026-08-04T13:03:24Z] Sync: issue #1278 is an exact duplicate of already-completed work - closed: Build Profile Discovery Cards displaying avatar, name, languages, and short bio.
+[2026-08-04T13:03:24Z] Sync: issue #1280 is an exact duplicate of already-completed work - closed: Implement inline Audio Intro play button directly on the search card.
+[2026-08-04T13:03:25Z] Sync: issue #1293 is an exact duplicate of already-completed work - closed: Implement advanced, detailed search filters matching Tandem (e.g., search by exa
+[2026-08-04T13:03:26Z] Sync: issue #1284 is an exact duplicate of already-completed work - closed: Display online status indicators (green dot) and last active timestamps.
+[2026-08-04T13:03:26Z] Sync: issue #1295 is an exact duplicate of already-completed work - closed: Build a dedicated web application (Tandem Web parity) allowing users to chat and
+[2026-08-04T13:03:27Z] Sync: issue #1309 is an exact duplicate of already-completed work - closed: Implement Group Admin controls to manage membership and moderate shared resource
+[2026-08-04T13:03:27Z] Sync: issue #1313 is an exact duplicate of already-completed work - closed: Implement audio room categorization by topic and target language level.
+[2026-08-04T13:03:28Z] Sync: issue #1318 is an exact duplicate of already-completed work - closed: Implement exclusive animated emojis and reactions during live audio sessions for
+[2026-08-04T13:03:29Z] Sync: issue #1324 is an exact duplicate of already-completed work - closed: Build Event categories (e.g., Audio Rooms, Learning Seminars, In-person Meetups,
+[2026-08-04T13:03:29Z] Sync: issue #1347 is an exact duplicate of already-completed work - closed: Build NestJS `MomentsController` (`POST /moments` for creation, `GET /moments/fe
+[2026-08-04T13:03:30Z] Sync: issue #1350 is an exact duplicate of already-completed work - closed: Integrate `VisualDiffComponent` into moment comments section, allowing community
+[2026-08-04T13:03:31Z] Sync: issue #1349 is an exact duplicate of already-completed work - closed: Build Angular Social Feed UI (`MomentsFeedComponent`) with multi-modal rendering
+[2026-08-04T13:03:31Z] Sync: issue #1351 is an exact duplicate of already-completed work - closed: Build one-tap Moment audio reading (`TextToSpeechComponent`) and inline Moment t
+[2026-08-04T13:03:32Z] Sync: issue #1352 is an exact duplicate of already-completed work - closed: Build Moment pinning functionality for VIP users (`PATCH /moments/:id/pin`).
+[2026-08-04T13:03:32Z] Sync: issue #1353 is an exact duplicate of already-completed work - closed: Install `livekit-server-sdk` in NestJS `AudioRoomsModule` and configure `RoomSer
+[2026-08-04T13:03:33Z] Sync: issue #1354 is an exact duplicate of already-completed work - closed: Build NestJS endpoint (`POST /audio-rooms/create`) to initialize LiveKit room an
+[2026-08-04T13:03:34Z] Sync: issue #1356 is an exact duplicate of already-completed work - closed: Install `@livekit/components-angular` or native `livekit-client` in Angular fron
+[2026-08-04T13:03:34Z] Sync: issue #1355 is an exact duplicate of already-completed work - closed: Build NestJS access token generation endpoint (`POST /audio-rooms/token`) granti
+[2026-08-04T13:03:35Z] Sync: issue #1358 is an exact duplicate of already-completed work - closed: Implement Stage Management API & UI:
+[2026-08-04T13:03:36Z] Sync: issue #1359 is an exact duplicate of already-completed work - closed: Build synchronised text chat overlay (`RoomChatComponent`) inside live rooms pow
+[2026-08-04T13:03:36Z] Sync: issue #1360 is an exact duplicate of already-completed work - closed: Implement real-time AI speech-to-text subtitles broadcasting closed captions int
+[2026-08-04T13:03:37Z] Sync: issue #1361 is an exact duplicate of already-completed work - closed: Build stream recording & replay archive storage (`POST /audio-rooms/archive`) sa
+[2026-08-04T13:03:37Z] Sync: issue #1362 is an exact duplicate of already-completed work - closed: Build NestJS `MonetisationController` handling Stripe & App Store webhooks (`POS
+[2026-08-04T13:03:38Z] Sync: issue #1364 is an exact duplicate of already-completed work - closed: Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`)
+[2026-08-04T13:03:39Z] Sync: issue #1365 is an exact duplicate of already-completed work - closed: Build Virtual Gift catalog & sending endpoint (`POST /economy/send-gift`), deduc
+[2026-08-04T13:03:39Z] Sync: issue #1366 is an exact duplicate of already-completed work - closed: Build Audio Room tipping mechanism allowing listeners to gift coins directly to 
+[2026-08-04T13:03:40Z] Sync: issue #1369 is an exact duplicate of already-completed work - closed: Verify Stripe webhook signatures (`stripe.webhooks.constructEvent` with `STRIPE_
+[2026-08-04T13:03:41Z] Sync: issue #1368 is an exact duplicate of already-completed work - closed: Build Trust & Safety reporting system (`POST /safety/report`, `POST /safety/bloc
+[2026-08-04T13:03:41Z] Sync: issue #1370 is an exact duplicate of already-completed work - closed: Lock down `POST /monetisation/upgrade` so VIP status can only change via verifie
+[2026-08-04T13:03:42Z] Sync: issue #1371 is an exact duplicate of already-completed work - closed: Rework `POST /economy/purchase-coins` to verify purchase receipt records server-
+[2026-08-04T13:03:42Z] Sync: issue #1373 is an exact duplicate of already-completed work - closed: Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azu
+[2026-08-04T13:03:43Z] Sync: issue #1372 is an exact duplicate of already-completed work - closed: Implement Apple App Store Server Notifications and Google Play Billing webhook h
+[2026-08-04T13:03:44Z] Sync: issue #1374 is an exact duplicate of already-completed work - closed: Install `@ngx-translate/core` and `@ngx-translate/http-loader` in Angular.
+[2026-08-04T13:03:44Z] Sync: issue #1375 is an exact duplicate of already-completed work - closed: Create `en.json` and `ja.json` translation files in `assets/i18n/`.
+[2026-08-04T13:03:45Z] Sync: issue #1414 is an exact duplicate of already-completed work - closed: Build in-app Help Centre fetching dynamic FAQ articles from backend.
+[2026-08-04T13:03:45Z] Sync: issue #1441 is an exact duplicate of already-completed work - closed: Build Social Login UI components (Google, Facebook, Apple OAuth buttons).
+[2026-08-04T13:03:46Z] Sync: issue #1443 is an exact duplicate of already-completed work - closed: Build Password Policy & Reset UI with real-time regex validation (min 8 chars, n
+[2026-08-04T13:03:47Z] Sync: issue #1446 is an exact duplicate of already-completed work - closed: Implement UI & Font Scaling slider adjusting base `rem` units across Angular.
+[2026-08-04T13:03:47Z] Sync: issue #1445 is an exact duplicate of already-completed work - closed: Implement System-wide Dark Mode, Light Mode, and System Default toggle.
+[2026-08-04T13:03:49Z] Sync: issue #1459 is an exact duplicate of already-completed work - closed: Implement proficiency level filter in Discovery search.
+[2026-08-04T13:03:50Z] Sync: issue #1460 is an exact duplicate of already-completed work - closed: Build Account Deletion and data export requests.
+[2026-08-04T13:03:50Z] Sync: issue #1462 is an exact duplicate of already-completed work - closed: Build Location Privacy toggles (Exact location vs. Region only).
+[2026-08-04T13:03:51Z] Sync: issue #1465 is an exact duplicate of already-completed work - closed: Build granular Push Notification toggles (Messages, Comments, Likes, Followers).
+[2026-08-04T13:03:52Z] Sync: issue #1464 is an exact duplicate of already-completed work - closed: Build Blocked Users management list.
+[2026-08-04T13:03:52Z] Sync: issue #1466 is an exact duplicate of already-completed work - closed: Implement In-App Sound and Vibration settings.
+[2026-08-04T13:03:53Z] Sync: issue #1469 is an exact duplicate of already-completed work - closed: Set Default Translation Language.
+[2026-08-04T13:03:54Z] Sync: issue #1470 is an exact duplicate of already-completed work - closed: Implement Chat specific settings (Enter to send, Text size customisation).
+[2026-08-04T13:03:54Z] Sync: issue #1473 is an exact duplicate of already-completed work - closed: Build Chat Backup and Restore functionality.
+[2026-08-04T13:03:55Z] Sync: issue #1472 is an exact duplicate of already-completed work - closed: Implement Auto-Download preferences (Wi-Fi only vs. Cellular).
+[2026-08-04T13:03:56Z] Sync: issue #1474 is an exact duplicate of already-completed work - closed: Build Subscription Management portal.
+[2026-08-04T13:03:56Z] Sync: issue #1476 is an exact duplicate of already-completed work - closed: Add Support Centre and FAQ viewer.
+[2026-08-04T13:03:57Z] Sync: issue #1479 is an exact duplicate of already-completed work - closed: Implement sorting algorithms (Best Match, Online Now, Nearest, Newest).
+[2026-08-04T13:03:57Z] Sync: issue #1477 is an exact duplicate of already-completed work - closed: Implement App Version display and update checker.
+[2026-08-04T13:03:58Z] Sync: issue #1480 is an exact duplicate of already-completed work - closed: Build global user query engine based on Native and Target language pairs.
+[2026-08-04T13:03:59Z] Sync: issue #1483 is an exact duplicate of already-completed work - closed: Implement Gender filter dropdown (often restricted to VIP).
+[2026-08-04T13:03:59Z] Sync: issue #1484 is an exact duplicate of already-completed work - closed: Add Language Proficiency filter (Beginner, Intermediate, Advanced).
+[2026-08-04T13:04:00Z] Sync: issue #1487 is an exact duplicate of already-completed work - closed: Implement specific Country and City manual search.
+[2026-08-04T13:04:00Z] Sync: issue #1489 is an exact duplicate of already-completed work - closed: Build Profile Discovery Cards displaying avatar, name, languages, and short bio.
+[2026-08-04T13:04:01Z] Sync: issue #1488 is an exact duplicate of already-completed work - closed: Build Location Spoofing functionality for VIP users to search as if in another c
+[2026-08-04T13:04:02Z] Sync: issue #1490 is an exact duplicate of already-completed work - closed: Implement inline Audio Intro play button directly on the search card.
+[2026-08-04T13:04:02Z] Sync: issue #1492 is an exact duplicate of already-completed work - closed: Display online status indicators (green dot) and last active timestamps.
+[2026-08-04T13:04:03Z] Sync: issue #1496 is an exact duplicate of already-completed work - closed: Implement advanced, detailed search filters matching Tandem (e.g., search by exa
+[2026-08-04T13:04:04Z] Sync: issue #1494 is an exact duplicate of already-completed work - closed: Implement new user spotlight to highlight recently joined native speakers.
+[2026-08-04T13:04:04Z] Sync: issue #1497 is an exact duplicate of already-completed work - closed: Build a dedicated web application (Tandem Web parity) allowing users to chat and
+[2026-08-04T13:04:05Z] Sync: issue #1500 is an exact duplicate of already-completed work - closed: Build a robust community moderation tool to strictly enforce learning-only behav
+[2026-08-04T13:04:05Z] Sync: issue #1504 is an exact duplicate of already-completed work - closed: Implement Group Admin controls to manage membership and moderate shared resource
+[2026-08-04T13:04:06Z] Sync: issue #1508 is an exact duplicate of already-completed work - closed: Implement exclusive animated emojis and reactions during live audio sessions for
+[2026-08-04T13:04:07Z] Sync: issue #1506 is an exact duplicate of already-completed work - closed: Implement audio room categorization by topic and target language level.
+[2026-08-04T13:04:07Z] Sync: issue #1511 is an exact duplicate of already-completed work - closed: Build Event categories (e.g., Audio Rooms, Learning Seminars, In-person Meetups,
+[2026-08-04T13:04:08Z] Sync: issue #266 is an exact duplicate of already-completed work - closed: Build 1-on-1 Video Call interface with local preview overlay.
+[2026-08-04T13:04:09Z] Sync: issue #263 is an exact duplicate of already-completed work - closed: Implement active VoIP Call UI (Mute, Speakerphone, End Call).
+[2026-08-04T13:04:09Z] Sync: issue #272 is an exact duplicate of already-completed work - closed: Integrate Stripe Checkout for Monthly (8 UKP / $10 USD) and Yearly (50 UKP / $63
+[2026-08-04T13:04:10Z] Sync: issue #276 is an exact duplicate of already-completed work - closed: Build Daily Study Streak counter widget on home screen.
+[2026-08-04T13:04:11Z] Sync: issue #279 is an exact duplicate of already-completed work - closed: Implement NestJS CRON job to reset streaks if inactive for 24 hours.
+[2026-08-04T13:04:11Z] Sync: issue #293 is an exact duplicate of already-completed work - closed: Integrate Firebase Cloud Messaging (FCM) in Angular.
+[2026-08-04T13:04:12Z] Sync: issue #302 is an exact duplicate of already-completed work - closed: Implement Blocklist system hiding blocked accounts across chat, feed, and search
+[2026-08-04T13:04:12Z] Sync: issue #296 is an exact duplicate of already-completed work - closed: Build NestJS event listeners to dispatch push alerts for chats, comments, and pr
+[2026-08-04T13:04:13Z] Sync: issue #311 is an exact duplicate of already-completed work - closed: Step 1: Native Language and Target Language selection.
+[2026-08-04T13:04:14Z] Sync: issue #317 is an exact duplicate of already-completed work - closed: Step 3: Avatar upload and permissions prompt (Microphone, Camera).
+[2026-08-04T13:04:14Z] Sync: issue #320 is an exact duplicate of already-completed work - closed: Implement Gender filter in discovery (VIP tier).
+[2026-08-04T13:04:15Z] Sync: issue #390 is an exact duplicate of already-completed work - closed: Build custom sticker picker drawer inside chat window.
+[2026-08-04T13:04:16Z] Sync: issue #323 is an exact duplicate of already-completed work - closed: Implement Age Range dual-thumb slider controls.
+[2026-08-04T13:04:16Z] Sync: issue #425 is an exact duplicate of already-completed work - closed: Build Host Dashboard showing live viewer count, earned coins, and stream uptime.
+[2026-08-04T13:04:17Z] Sync: issue #482 is an exact duplicate of already-completed work - closed: Build in-app Help Centre fetching dynamic FAQ articles from backend.
+[2026-08-04T13:04:17Z] Sync: issue #867 is an exact duplicate of already-completed work - closed: AUTONOMOUS DIRECTIVE: Execute complete codebase audit. Verify zero hardcoded str
+[2026-08-04T13:04:18Z] Sync: issue #527 is an exact duplicate of already-completed work - closed: Build Password Policy & Reset UI with real-time regex validation (min 8 chars, n
+[2026-08-04T13:04:19Z] Sync: issue #522 is an exact duplicate of already-completed work - closed: Build Social Login UI components (Google, Facebook, Apple OAuth buttons).
+[2026-08-04T13:04:19Z] Sync: issue #532 is an exact duplicate of already-completed work - closed: Implement System-wide Dark Mode, Light Mode, and System Default toggle.
+[2026-08-04T13:04:20Z] Sync: issue #576 is an exact duplicate of already-completed work - closed: Implement proficiency level filter in Discovery search.
+[2026-08-04T13:04:20Z] Sync: issue #588 is an exact duplicate of already-completed work - closed: Design and build AI Conversation Partner chat interface.
+[2026-08-04T13:04:21Z] Sync: issue #597 is an exact duplicate of already-completed work - closed: Implement AI-generated suggested replies in chat based on conversation context.
+[2026-08-04T13:04:22Z] Sync: issue #591 is an exact duplicate of already-completed work - closed: Implement NestJS service to proxy chat messages to a Large Language Model (e.g.,
+[2026-08-04T13:04:22Z] Sync: issue #602 is an exact duplicate of already-completed work - closed: Design database schema for user achievements (`achievements` table, `user_achiev
+[2026-08-04T13:04:23Z] Sync: issue #608 is an exact duplicate of already-completed work - closed: Build Achievements showcase page on user profiles.
+[2026-08-04T13:04:23Z] Sync: issue #620 is an exact duplicate of already-completed work - closed: Create database schema for curated learning content (articles, dialogues by CEFR
+[2026-08-04T13:04:24Z] Sync: issue #623 is an exact duplicate of already-completed work - closed: Build CMS or admin interface to upload and manage lesson content.
+[2026-08-04T13:04:25Z] Sync: issue #629 is an exact duplicate of already-completed work - closed: Integrate short cultural etiquette guides for different languages within the app
+[2026-08-04T13:04:25Z] Sync: issue #631 is an exact duplicate of already-completed work - closed: Implement skeleton loaders (`ngx-skeleton-loader`) for all data-heavy components
+[2026-08-04T13:04:26Z] Sync: issue #633 is an exact duplicate of already-completed work - closed: Add subtle micro-animations (`framer-motion` or CSS) to button clicks and hover 
+[2026-08-04T13:04:27Z] Sync: issue #636 is an exact duplicate of already-completed work - closed: Animate Angular route transitions for a smoother navigation feel.
+[2026-08-04T13:04:27Z] Sync: issue #639 is an exact duplicate of already-completed work - closed: Build an interactive, multi-step product tour for new users using a library like
+[2026-08-04T13:04:28Z] Sync: issue #642 is an exact duplicate of already-completed work - closed: Refine chat bubble appearance with distinct sent/received styles and message-tai
+[2026-08-04T13:04:28Z] Sync: issue #656 is an exact duplicate of already-completed work - closed: Integrate AI to auto-generate `explanation` field for `correction` payloads in c
+[2026-08-04T13:04:29Z] Sync: issue #645 is an exact duplicate of already-completed work - closed: Add haptic feedback on mobile for key actions (e.g., sending message, liking a p
+[2026-08-04T13:04:30Z] Sync: issue #675 is an exact duplicate of already-completed work - closed: Implement LiveKit EgressClient to generate and save a full transcript of complet
+[2026-08-04T13:04:30Z] Sync: issue #681 is an exact duplicate of already-completed work - closed: Implement real-time translation for the text chat overlay inside Voicerooms.
+[2026-08-04T13:04:31Z] Sync: issue #695 is an exact duplicate of already-completed work - closed: Build UI for threaded replies in chat to preserve conversation context.
+[2026-08-04T13:04:34Z] Sync: issue #164 is an exact duplicate of already-completed work - closed: Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azu
+[2026-08-04T13:04:50Z] Sync: issue #155 is an exact duplicate of already-completed work - closed: Verify Stripe webhook signatures (`stripe.webhooks.constructEvent` with `STRIPE_
+[2026-08-04T13:04:51Z] Sync: issue #146 is an exact duplicate of already-completed work - closed: Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`)
+[2026-08-04T13:04:53Z] Sync: skipping near-duplicate issue #1173: Document and file sharing (pdfs, spreadsheets, etc.).
+[2026-08-04T13:04:54Z] Sync: skipping near-duplicate issue #891: Build UI for VIP users to select custom primary accent colours in settings.
+[2026-08-04T13:04:57Z] Sync: skipping near-duplicate issue #898: Implement Dynamic Font Size slider adjusting base `rem` CSS rules. (Added `FontS
+[2026-08-04T13:05:00Z] Sync: skipping near-duplicate issue #866: Analyse chat UI screenshots in `original-hello-talk-screenshots/`.
+[2026-08-04T13:05:00Z] Sync: skipping near-duplicate issue #865: Analyse search screenshots in `original-hello-talk-screenshots/`.
+[2026-08-04T13:05:00Z] Sync: skipping near-duplicate issue #864: Analyse chat context menu screenshots in `original-hello-talk-screenshots/`.
+[2026-08-04T13:05:01Z] Sync: issue #173 is an exact duplicate of already-completed work - closed: Refactor all Angular components to replace raw strings with `{{ KEY | translate 
+[2026-08-04T13:05:01Z] Sync: issue #170 is an exact duplicate of already-completed work - closed: Create `en.json` and `ja.json` translation files in `assets/i18n/`.
+[2026-08-04T13:05:02Z] Sync: issue #167 is an exact duplicate of already-completed work - closed: Install `@ngx-translate/core` and `@ngx-translate/http-loader` in Angular.
+[2026-08-04T13:05:03Z] Sync: issue #153 is an exact duplicate of already-completed work - closed: Build Trust & Safety reporting system (`POST /safety/report`, `POST /safety/bloc
+[2026-08-04T13:05:03Z] Sync: issue #150 is an exact duplicate of already-completed work - closed: Build Audio Room tipping mechanism allowing listeners to gift coins directly to 
+[2026-08-04T13:05:04Z] Sync: issue #148 is an exact duplicate of already-completed work - closed: Build Virtual Gift catalog & sending endpoint (`POST /economy/send-gift`), deduc
+[2026-08-04T13:05:05Z] Sync: issue #142 is an exact duplicate of already-completed work - closed: Build NestJS `MonetisationController` handling Stripe & App Store webhooks (`POS
+[2026-08-04T13:05:05Z] Sync: issue #140 is an exact duplicate of already-completed work - closed: Build stream recording & replay archive storage (`POST /audio-rooms/archive`) sa
+[2026-08-04T13:05:06Z] Sync: issue #138 is an exact duplicate of already-completed work - closed: Implement real-time AI speech-to-text subtitles broadcasting closed captions int
+[2026-08-04T13:05:07Z] Sync: issue #136 is an exact duplicate of already-completed work - closed: Build synchronised text chat overlay (`RoomChatComponent`) inside live rooms pow
+[2026-08-04T13:05:07Z] Sync: issue #134 is an exact duplicate of already-completed work - closed: Implement Stage Management API & UI:
+[2026-08-04T13:05:08Z] Sync: issue #130 is an exact duplicate of already-completed work - closed: Install `@livekit/components-angular` or native `livekit-client` in Angular fron
+[2026-08-04T13:05:09Z] Sync: issue #128 is an exact duplicate of already-completed work - closed: Build NestJS access token generation endpoint (`POST /audio-rooms/token`) granti
+[2026-08-04T13:05:09Z] Sync: issue #126 is an exact duplicate of already-completed work - closed: Build NestJS endpoint (`POST /audio-rooms/create`) to initialize LiveKit room an
+[2026-08-04T13:05:10Z] Sync: issue #124 is an exact duplicate of already-completed work - closed: Install `livekit-server-sdk` in NestJS `AudioRoomsModule` and configure `RoomSer
+[2026-08-04T13:05:11Z] Sync: issue #122 is an exact duplicate of already-completed work - closed: Build Moment pinning functionality for VIP users (`PATCH /moments/:id/pin`).
+[2026-08-04T13:05:11Z] Sync: issue #120 is an exact duplicate of already-completed work - closed: Build one-tap Moment audio reading (`TextToSpeechComponent`) and inline Moment t
+[2026-08-04T13:05:12Z] Sync: issue #118 is an exact duplicate of already-completed work - closed: Integrate `VisualDiffComponent` into moment comments section, allowing community
+[2026-08-04T13:05:12Z] Sync: issue #116 is an exact duplicate of already-completed work - closed: Build Angular Social Feed UI (`MomentsFeedComponent`) with multi-modal rendering
+[2026-08-04T13:05:14Z] Sync: issue #113 is an exact duplicate of already-completed work - closed: Build NestJS `MomentsController` (`POST /moments` for creation, `GET /moments/fe
+[2026-08-04T13:05:19Z] Sync: skipping near-duplicate issue #935: Fix QA test failure: `Error: Timed out waiting 300000ms from config.webServer.` 
+[2026-08-04T13:05:25Z] Startup GitHub sync: +0 imported, 390 closed
+[2026-08-04T13:05:27Z] Sync: issue #1012 is an exact duplicate of already-completed work - closed: Refactor all Angular components to replace raw strings with `{{ KEY | translate 
+[2026-08-04T13:05:27Z] Sync: issue #1376 is an exact duplicate of already-completed work - closed: Refactor all Angular components to replace raw strings with `{{ KEY | translate 
+[2026-08-04T13:05:28Z] Sync: issue #172 is an exact duplicate of already-completed work - closed: Create `en.json` and `ja.json` translation files in `assets/i18n/`.
+[2026-08-04T13:05:29Z] Sync: issue #265 is an exact duplicate of already-completed work - closed: Implement active VoIP Call UI (Mute, Speakerphone, End Call).
+[2026-08-04T13:05:30Z] Sync: issue #264 is an exact duplicate of already-completed work - closed: Implement active VoIP Call UI (Mute, Speakerphone, End Call).
+[2026-08-04T13:05:30Z] Sync: issue #267 is an exact duplicate of already-completed work - closed: Build 1-on-1 Video Call interface with local preview overlay.
+[2026-08-04T13:05:31Z] Sync: issue #268 is an exact duplicate of already-completed work - closed: Build 1-on-1 Video Call interface with local preview overlay.
+[2026-08-04T13:05:31Z] Sync: issue #271 is an exact duplicate of already-completed work - closed: Build VIP Subscription showcase page detailing all premium benefits.
+[2026-08-04T13:05:32Z] Sync: issue #270 is an exact duplicate of already-completed work - closed: Build VIP Subscription showcase page detailing all premium benefits.
+[2026-08-04T13:05:33Z] Sync: issue #277 is an exact duplicate of already-completed work - closed: Build Daily Study Streak counter widget on home screen.
+[2026-08-04T13:05:33Z] Sync: issue #278 is an exact duplicate of already-completed work - closed: Build Daily Study Streak counter widget on home screen.
+[2026-08-04T13:05:34Z] Sync: issue #280 is an exact duplicate of already-completed work - closed: Implement NestJS CRON job to reset streaks if inactive for 24 hours.
+[2026-08-04T13:05:34Z] Sync: issue #295 is an exact duplicate of already-completed work - closed: Integrate Firebase Cloud Messaging (FCM) in Angular.
+[2026-08-04T13:05:35Z] Sync: issue #283 is an exact duplicate of already-completed work - closed: Implement NestJS CRON job to reset streaks if inactive for 24 hours.
+[2026-08-04T13:05:36Z] Sync: issue #298 is an exact duplicate of already-completed work - closed: Build NestJS event listeners to dispatch push alerts for chats, comments, and pr
+[2026-08-04T13:05:37Z] Sync: issue #300 is an exact duplicate of already-completed work - closed: Build Notification Preferences UI with granular category toggles.
+[2026-08-04T13:05:37Z] Sync: issue #301 is an exact duplicate of already-completed work - closed: Build Notification Preferences UI with granular category toggles.
+[2026-08-04T13:05:38Z] Sync: issue #304 is an exact duplicate of already-completed work - closed: Implement Blocklist system hiding blocked accounts across chat, feed, and search
+[2026-08-04T13:05:39Z] Sync: issue #306 is an exact duplicate of already-completed work - closed: Build automated NLP spam detector in NestJS to flag duplicate copy-paste message
+[2026-08-04T13:05:39Z] Sync: issue #309 is an exact duplicate of already-completed work - closed: Build multi-step Angular onboarding wizard.
+[2026-08-04T13:05:40Z] Sync: issue #307 is an exact duplicate of already-completed work - closed: Build automated NLP spam detector in NestJS to flag duplicate copy-paste message
+[2026-08-04T13:05:40Z] Sync: issue #310 is an exact duplicate of already-completed work - closed: Build multi-step Angular onboarding wizard.
+[2026-08-04T13:05:41Z] Sync: issue #312 is an exact duplicate of already-completed work - closed: Step 1: Native Language and Target Language selection.
+[2026-08-04T13:05:42Z] Sync: issue #315 is an exact duplicate of already-completed work - closed: Step 2: Proficiency Level assessment.
+[2026-08-04T13:05:42Z] Sync: issue #316 is an exact duplicate of already-completed work - closed: Step 2: Proficiency Level assessment.
+[2026-08-04T13:05:43Z] Sync: issue #318 is an exact duplicate of already-completed work - closed: Step 3: Avatar upload and permissions prompt (Microphone, Camera).
+[2026-08-04T13:05:44Z] Sync: issue #321 is an exact duplicate of already-completed work - closed: Implement Gender filter in discovery (VIP tier).
+[2026-08-04T13:05:44Z] Sync: issue #319 is an exact duplicate of already-completed work - closed: Step 3: Avatar upload and permissions prompt (Microphone, Camera).
+[2026-08-04T13:05:45Z] Sync: issue #322 is an exact duplicate of already-completed work - closed: Implement Gender filter in discovery (VIP tier).
+[2026-08-04T13:05:46Z] Sync: issue #324 is an exact duplicate of already-completed work - closed: Implement Age Range dual-thumb slider controls.
+[2026-08-04T13:05:46Z] Sync: issue #325 is an exact duplicate of already-completed work - closed: Implement Age Range dual-thumb slider controls.
+[2026-08-04T13:05:47Z] Sync: issue #392 is an exact duplicate of already-completed work - closed: Build custom sticker picker drawer inside chat window.
+[2026-08-04T13:05:47Z] Sync: issue #391 is an exact duplicate of already-completed work - closed: Build custom sticker picker drawer inside chat window.
+[2026-08-04T13:05:48Z] Sync: issue #399 is an exact duplicate of already-completed work - closed: Build Theme Selector (Dark, Light, System Default).
+[2026-08-04T13:05:49Z] Sync: issue #403 is an exact duplicate of already-completed work - closed: Build Theme Selector (Dark, Light, System Default).
+[2026-08-04T13:05:49Z] Sync: issue #427 is an exact duplicate of already-completed work - closed: Build Host Dashboard showing live viewer count, earned coins, and stream uptime.
+[2026-08-04T13:05:50Z] Sync: issue #483 is an exact duplicate of already-completed work - closed: Build in-app Help Centre fetching dynamic FAQ articles from backend.
+[2026-08-04T13:05:50Z] Sync: issue #523 is an exact duplicate of already-completed work - closed: Build Social Login UI components (Google, Facebook, Apple OAuth buttons).
+[2026-08-04T13:05:51Z] Sync: issue #484 is an exact duplicate of already-completed work - closed: Build in-app Help Centre fetching dynamic FAQ articles from backend.
+[2026-08-04T13:05:52Z] Sync: issue #529 is an exact duplicate of already-completed work - closed: Build Password Policy & Reset UI with real-time regex validation (min 8 chars, n
+[2026-08-04T13:05:52Z] Sync: issue #528 is an exact duplicate of already-completed work - closed: Build Password Policy & Reset UI with real-time regex validation (min 8 chars, n
+[2026-08-04T13:05:53Z] Sync: issue #534 is an exact duplicate of already-completed work - closed: Implement System-wide Dark Mode, Light Mode, and System Default toggle.
+[2026-08-04T13:05:54Z] Sync: issue #536 is an exact duplicate of already-completed work - closed: Implement UI & Font Scaling slider adjusting base `rem` units across Angular.
+[2026-08-04T13:05:54Z] Sync: issue #537 is an exact duplicate of already-completed work - closed: Implement UI & Font Scaling slider adjusting base `rem` units across Angular.
+[2026-08-04T13:05:55Z] Sync: issue #590 is an exact duplicate of already-completed work - closed: Design and build AI Conversation Partner chat interface.
+[2026-08-04T13:05:55Z] Sync: issue #577 is an exact duplicate of already-completed work - closed: Implement proficiency level filter in Discovery search.
+[2026-08-04T13:05:56Z] Sync: issue #592 is an exact duplicate of already-completed work - closed: Implement NestJS service to proxy chat messages to a Large Language Model (e.g.,
+[2026-08-04T13:05:57Z] Sync: issue #593 is an exact duplicate of already-completed work - closed: Implement NestJS service to proxy chat messages to a Large Language Model (e.g.,
+[2026-08-04T13:05:57Z] Sync: issue #603 is an exact duplicate of already-completed work - closed: Design database schema for user achievements (`achievements` table, `user_achiev
+[2026-08-04T13:06:09Z] Sync: issue #610 is an exact duplicate of already-completed work - closed: Build Achievements showcase page on user profiles.
+[2026-08-04T13:06:10Z] Sync: issue #613 is an exact duplicate of already-completed work - closed: Implement a point-based XP system, granting XP for learning activities.
+[2026-08-04T13:06:11Z] Sync: issue #612 is an exact duplicate of already-completed work - closed: Implement a point-based XP system, granting XP for learning activities.
+[2026-08-04T13:06:11Z] Sync: issue #621 is an exact duplicate of already-completed work - closed: Create database schema for curated learning content (articles, dialogues by CEFR
+[2026-08-04T13:06:12Z] Sync: issue #625 is an exact duplicate of already-completed work - closed: Build CMS or admin interface to upload and manage lesson content.
+[2026-08-04T13:06:13Z] Sync: issue #630 is an exact duplicate of already-completed work - closed: Integrate short cultural etiquette guides for different languages within the app
+[2026-08-04T13:06:13Z] Sync: issue #632 is an exact duplicate of already-completed work - closed: Integrate short cultural etiquette guides for different languages within the app
+[2026-08-04T13:06:14Z] Sync: issue #635 is an exact duplicate of already-completed work - closed: Add subtle micro-animations (`framer-motion` or CSS) to button clicks and hover 
+[2026-08-04T13:06:14Z] Sync: issue #634 is an exact duplicate of already-completed work - closed: Add subtle micro-animations (`framer-motion` or CSS) to button clicks and hover 
+[2026-08-04T13:06:15Z] Sync: issue #637 is an exact duplicate of already-completed work - closed: Animate Angular route transitions for a smoother navigation feel.
+[2026-08-04T13:06:16Z] Sync: issue #640 is an exact duplicate of already-completed work - closed: Build an interactive, multi-step product tour for new users using a library like
+[2026-08-04T13:06:16Z] Sync: issue #641 is an exact duplicate of already-completed work - closed: Build an interactive, multi-step product tour for new users using a library like
+[2026-08-04T13:06:17Z] Sync: issue #644 is an exact duplicate of already-completed work - closed: Refine chat bubble appearance with distinct sent/received styles and message-tai
+[2026-08-04T13:06:18Z] Sync: issue #646 is an exact duplicate of already-completed work - closed: Add haptic feedback on mobile for key actions (e.g., sending message, liking a p
+[2026-08-04T13:06:18Z] Sync: issue #666 is an exact duplicate of already-completed work - closed: Build celebratory full-screen animation/confetti for completing study streaks (e
+[2026-08-04T13:06:19Z] Sync: issue #658 is an exact duplicate of already-completed work - closed: Integrate AI to auto-generate `explanation` field for `correction` payloads in c
+[2026-08-04T13:06:19Z] Sync: issue #667 is an exact duplicate of already-completed work - closed: Build celebratory full-screen animation/confetti for completing study streaks (e
+[2026-08-04T13:06:20Z] Sync: issue #676 is an exact duplicate of already-completed work - closed: Implement LiveKit EgressClient to generate and save a full transcript of complet
+[2026-08-04T13:06:21Z] Sync: issue #677 is an exact duplicate of already-completed work - closed: Implement LiveKit EgressClient to generate and save a full transcript of complet
+[2026-08-04T13:06:21Z] Sync: issue #682 is an exact duplicate of already-completed work - closed: Implement real-time translation for the text chat overlay inside Voicerooms.
+[2026-08-04T13:06:22Z] Sync: issue #683 is an exact duplicate of already-completed work - closed: Implement real-time translation for the text chat overlay inside Voicerooms.
+[2026-08-04T13:06:23Z] Sync: issue #696 is an exact duplicate of already-completed work - closed: Build UI for threaded replies in chat to preserve conversation context.
+[2026-08-04T13:06:23Z] Sync: issue #715 is an exact duplicate of already-completed work - closed: Implement Multimedia Posts (text, photos, and voice notes).
+[2026-08-04T13:06:24Z] Sync: issue #717 is an exact duplicate of already-completed work - closed: Build Targeted Visibility routing (posts display to native speakers of target la
+[2026-08-04T13:06:24Z] Sync: issue #718 is an exact duplicate of already-completed work - closed: Implement Instant Grammar Fixes (direct text editing by native speakers).
+[2026-08-04T13:06:25Z] Sync: issue #719 is an exact duplicate of already-completed work - closed: Build Voice Feedback functionality for pronunciation corrections.
+[2026-08-04T13:06:26Z] Sync: issue #721 is an exact duplicate of already-completed work - closed: Add Detailed Explanations UI for context and alternative expressions.
+[2026-08-04T13:06:26Z] Sync: issue #724 is an exact duplicate of already-completed work - closed: Build Language Questions post type.
+[2026-08-04T13:06:27Z] Sync: issue #726 is an exact duplicate of already-completed work - closed: Implement Cultural Insights tagging and filtering.
+[2026-08-04T13:06:27Z] Sync: issue #725 is an exact duplicate of already-completed work - closed: Implement Cultural Insights tagging and filtering.
+[2026-08-04T13:06:28Z] Sync: issue #728 is an exact duplicate of already-completed work - closed: Build Milestone Tracking for progress and study buddy matching.
+[2026-08-04T13:06:29Z] Sync: issue #729 is an exact duplicate of already-completed work - closed: Build Resource Library for saving helpful posts and tips.
+[2026-08-04T13:06:29Z] Sync: issue #730 is an exact duplicate of already-completed work - closed: Build Resource Library for saving helpful posts and tips.
+[2026-08-04T13:06:30Z] Sync: issue #731 is an exact duplicate of already-completed work - closed: Implement Organised Collections (sort by topic/difficulty).
+[2026-08-04T13:06:31Z] Sync: issue #733 is an exact duplicate of already-completed work - closed: Build Offline Access functionality for saved content.
+[2026-08-04T13:06:31Z] Sync: issue #732 is an exact duplicate of already-completed work - closed: Implement Organised Collections (sort by topic/difficulty).
+[2026-08-04T13:06:32Z] Sync: issue #734 is an exact duplicate of already-completed work - closed: Build Offline Access functionality for saved content.
+[2026-08-04T13:06:33Z] Sync: issue #736 is an exact duplicate of already-completed work - closed: Build Avatar upload and client-side cropping tool.
+[2026-08-04T13:06:33Z] Sync: issue #737 is an exact duplicate of already-completed work - closed: Implement Native Language and Target Language selection with proficiency levels.
+[2026-08-04T13:06:34Z] Sync: issue #740 is an exact duplicate of already-completed work - closed: Display Nationality, Region, Age, and Gender fields.
+[2026-08-04T13:06:36Z] Sync: issue #738 is an exact duplicate of already-completed work - closed: Implement Native Language and Target Language selection with proficiency levels.
+[2026-08-04T13:06:37Z] Sync: issue #743 is an exact duplicate of already-completed work - closed: Implement Text Bio section with inline translation support.
+[2026-08-04T13:06:38Z] Sync: issue #744 is an exact duplicate of already-completed work - closed: Implement Text Bio section with inline translation support.
+[2026-08-04T13:06:38Z] Sync: issue #745 is an exact duplicate of already-completed work - closed: Build 30-second Audio Introduction recording and playback widget.
+[2026-08-04T13:06:39Z] Sync: issue #747 is an exact duplicate of already-completed work - closed: Add selectable Hobbies and Interests tags.
+[2026-08-04T13:06:40Z] Sync: issue #746 is an exact duplicate of already-completed work - closed: Build 30-second Audio Introduction recording and playback widget.
+[2026-08-04T13:06:40Z] Sync: issue #749 is an exact duplicate of already-completed work - closed: Display Daily Study Streak counter.
+[2026-08-04T13:06:41Z] Sync: issue #752 is an exact duplicate of already-completed work - closed: Show total lifetime counts for Translations, Corrections, and Moments.
+[2026-08-04T13:06:42Z] Sync: issue #754 is an exact duplicate of already-completed work - closed: Display earned user badges (VIP status, Serious Learner).
+[2026-08-04T13:06:44Z] Sync: issue #761 is an exact duplicate of already-completed work - closed: Build toggles to hide or show exact location and online status.
+[2026-08-04T13:06:44Z] Sync: issue #764 is an exact duplicate of already-completed work - closed: Add incognito mode for profile visiting (VIP feature).
+[2026-08-04T13:06:45Z] Sync: issue #763 is an exact duplicate of already-completed work - closed: Implement Block User and Report User workflows directly from the profile.
+[2026-08-04T13:06:46Z] Sync: issue #766 is an exact duplicate of already-completed work - closed: Build Linked Accounts management (Email, Google, Apple).
+[2026-08-04T13:06:46Z] Sync: issue #767 is an exact duplicate of already-completed work - closed: Build Linked Accounts management (Email, Google, Apple).
+[2026-08-04T13:06:47Z] Sync: issue #768 is an exact duplicate of already-completed work - closed: Implement Password reset and change workflows.
+[2026-08-04T13:06:48Z] Sync: issue #770 is an exact duplicate of already-completed work - closed: Build Account Deletion and data export requests.
+[2026-08-04T13:06:48Z] Sync: issue #769 is an exact duplicate of already-completed work - closed: Implement Password reset and change workflows.
+[2026-08-04T13:06:49Z] Sync: issue #771 is an exact duplicate of already-completed work - closed: Build Account Deletion and data export requests.
+[2026-08-04T13:06:49Z] Sync: issue #774 is an exact duplicate of already-completed work - closed: Build Location Privacy toggles (Exact location vs. Region only).
+[2026-08-04T13:06:50Z] Sync: issue #780 is an exact duplicate of already-completed work - closed: Build granular Push Notification toggles (Messages, Comments, Likes, Followers).
+[2026-08-04T13:06:51Z] Sync: issue #779 is an exact duplicate of already-completed work - closed: Build Blocked Users management list.
+[2026-08-04T13:06:51Z] Sync: issue #781 is an exact duplicate of already-completed work - closed: Build granular Push Notification toggles (Messages, Comments, Likes, Followers).
+[2026-08-04T13:06:52Z] Sync: issue #782 is an exact duplicate of already-completed work - closed: Implement In-App Sound and Vibration settings.
+[2026-08-04T13:06:53Z] Sync: issue #783 is an exact duplicate of already-completed work - closed: Implement In-App Sound and Vibration settings.
+[2026-08-04T13:06:53Z] Sync: issue #786 is an exact duplicate of already-completed work - closed: Build App UI Language selector.
+[2026-08-04T13:06:54Z] Sync: issue #788 is an exact duplicate of already-completed work - closed: Set Default Translation Language.
+[2026-08-04T13:06:55Z] Sync: issue #787 is an exact duplicate of already-completed work - closed: Build App UI Language selector.
+[2026-08-04T13:06:55Z] Sync: issue #789 is an exact duplicate of already-completed work - closed: Set Default Translation Language.
+[2026-08-04T13:06:56Z] Sync: issue #790 is an exact duplicate of already-completed work - closed: Implement Chat specific settings (Enter to send, Text size customisation).
+[2026-08-04T13:06:56Z] Sync: issue #792 is an exact duplicate of already-completed work - closed: Build Local Storage management (Clear cache, Delete old media).
+[2026-08-04T13:06:57Z] Sync: issue #794 is an exact duplicate of already-completed work - closed: Implement Auto-Download preferences (Wi-Fi only vs. Cellular).
+[2026-08-04T13:06:58Z] Sync: issue #793 is an exact duplicate of already-completed work - closed: Build Local Storage management (Clear cache, Delete old media).
+[2026-08-04T13:06:58Z] Sync: issue #795 is an exact duplicate of already-completed work - closed: Implement Auto-Download preferences (Wi-Fi only vs. Cellular).
+[2026-08-04T13:06:59Z] Sync: issue #796 is an exact duplicate of already-completed work - closed: Build Chat Backup and Restore functionality.
+[2026-08-04T13:07:00Z] Sync: issue #799 is an exact duplicate of already-completed work - closed: Build Subscription Management portal.
+[2026-08-04T13:07:00Z] Sync: issue #803 is an exact duplicate of already-completed work - closed: Add Support Centre and FAQ viewer.
+[2026-08-04T13:07:01Z] Sync: issue #802 is an exact duplicate of already-completed work - closed: Add Support Centre and FAQ viewer.
+[2026-08-04T13:07:02Z] Sync: issue #804 is an exact duplicate of already-completed work - closed: Implement App Version display and update checker.
+[2026-08-04T13:07:02Z] Sync: issue #808 is an exact duplicate of already-completed work - closed: Implement sorting algorithms (Best Match, Online Now, Nearest, Newest).
+[2026-08-04T13:07:03Z] Sync: issue #809 is an exact duplicate of already-completed work - closed: Implement sorting algorithms (Best Match, Online Now, Nearest, Newest).
+[2026-08-04T13:07:04Z] Sync: issue #811 is an exact duplicate of already-completed work - closed: Build global user query engine based on Native and Target language pairs.
+[2026-08-04T13:07:04Z] Sync: issue #810 is an exact duplicate of already-completed work - closed: Build global user query engine based on Native and Target language pairs.
+[2026-08-04T13:07:05Z] Sync: issue #814 is an exact duplicate of already-completed work - closed: Build Age Range dual-thumb slider.
+[2026-08-04T13:07:06Z] Sync: issue #815 is an exact duplicate of already-completed work - closed: Build Age Range dual-thumb slider.
+[2026-08-04T13:07:06Z] Sync: issue #817 is an exact duplicate of already-completed work - closed: Add Language Proficiency filter (Beginner, Intermediate, Advanced).
+[2026-08-04T13:07:07Z] Sync: issue #823 is an exact duplicate of already-completed work - closed: Implement specific Country and City manual search.
+[2026-08-04T13:07:07Z] Sync: issue #818 is an exact duplicate of already-completed work - closed: Add Language Proficiency filter (Beginner, Intermediate, Advanced).
+[2026-08-04T13:07:08Z] Sync: issue #824 is an exact duplicate of already-completed work - closed: Implement specific Country and City manual search.
+[2026-08-04T13:07:09Z] Sync: issue #826 is an exact duplicate of already-completed work - closed: Build Location Spoofing functionality for VIP users to search as if in another c
+[2026-08-04T13:07:09Z] Sync: issue #827 is an exact duplicate of already-completed work - closed: Build Profile Discovery Cards displaying avatar, name, languages, and short bio.
+[2026-08-04T13:07:10Z] Sync: issue #828 is an exact duplicate of already-completed work - closed: Build Profile Discovery Cards displaying avatar, name, languages, and short bio.
+[2026-08-04T13:07:11Z] Sync: issue #829 is an exact duplicate of already-completed work - closed: Implement inline Audio Intro play button directly on the search card.
+[2026-08-04T13:07:11Z] Sync: issue #834 is an exact duplicate of already-completed work - closed: Display online status indicators (green dot) and last active timestamps.
+[2026-08-04T13:07:12Z] Sync: issue #833 is an exact duplicate of already-completed work - closed: Display online status indicators (green dot) and last active timestamps.
+[2026-08-04T13:07:12Z] Sync: issue #837 is an exact duplicate of already-completed work - closed: Implement new user spotlight to highlight recently joined native speakers.
+[2026-08-04T13:07:13Z] Sync: issue #839 is an exact duplicate of already-completed work - closed: Implement advanced, detailed search filters matching Tandem (e.g., search by exa
+[2026-08-04T13:07:14Z] Sync: issue #843 is an exact duplicate of already-completed work - closed: Build a robust community moderation tool to strictly enforce learning-only behav
+[2026-08-04T13:07:14Z] Sync: issue #847 is an exact duplicate of already-completed work - closed: Implement Group Admin controls to manage membership and moderate shared resource
+[2026-08-04T13:07:15Z] Sync: issue #849 is an exact duplicate of already-completed work - closed: Implement audio room categorization by topic and target language level.
+[2026-08-04T13:07:16Z] Sync: issue #940 is an exact duplicate of already-completed work - closed: Build Report User modal with dynamic category selection (BLOCKED: missing design
+[2026-08-04T13:07:16Z] Sync: issue #851 is an exact duplicate of already-completed work - closed: Implement exclusive animated emojis and reactions during live audio sessions for
+[2026-08-04T13:07:17Z] Sync: issue #983 is an exact duplicate of already-completed work - closed: Build NestJS `MomentsController` (`POST /moments` for creation, `GET /moments/fe
+[2026-08-04T13:07:18Z] Sync: issue #985 is an exact duplicate of already-completed work - closed: Build Angular Social Feed UI (`MomentsFeedComponent`) with multi-modal rendering
+[2026-08-04T13:07:18Z] Sync: issue #986 is an exact duplicate of already-completed work - closed: Integrate `VisualDiffComponent` into moment comments section, allowing community
+[2026-08-04T13:07:19Z] Sync: issue #988 is an exact duplicate of already-completed work - closed: Build Moment pinning functionality for VIP users (`PATCH /moments/:id/pin`).
+[2026-08-04T13:07:20Z] Sync: issue #987 is an exact duplicate of already-completed work - closed: Build one-tap Moment audio reading (`TextToSpeechComponent`) and inline Moment t
+[2026-08-04T13:07:20Z] Sync: issue #989 is an exact duplicate of already-completed work - closed: Install `livekit-server-sdk` in NestJS `AudioRoomsModule` and configure `RoomSer
+[2026-08-04T13:07:21Z] Sync: issue #990 is an exact duplicate of already-completed work - closed: Build NestJS endpoint (`POST /audio-rooms/create`) to initialize LiveKit room an
+[2026-08-04T13:07:21Z] Sync: issue #991 is an exact duplicate of already-completed work - closed: Build NestJS access token generation endpoint (`POST /audio-rooms/token`) granti
+[2026-08-04T13:07:22Z] Sync: issue #992 is an exact duplicate of already-completed work - closed: Install `@livekit/components-angular` or native `livekit-client` in Angular fron
+[2026-08-04T13:07:23Z] Sync: issue #995 is an exact duplicate of already-completed work - closed: Build synchronised text chat overlay (`RoomChatComponent`) inside live rooms pow
+[2026-08-04T13:07:23Z] Sync: issue #994 is an exact duplicate of already-completed work - closed: Implement Stage Management API & UI:
+[2026-08-04T13:07:24Z] Sync: issue #996 is an exact duplicate of already-completed work - closed: Implement real-time AI speech-to-text subtitles broadcasting closed captions int
+[2026-08-04T13:07:25Z] Sync: issue #997 is an exact duplicate of already-completed work - closed: Build stream recording & replay archive storage (`POST /audio-rooms/archive`) sa
+[2026-08-04T13:07:25Z] Sync: issue #998 is an exact duplicate of already-completed work - closed: Build NestJS `MonetisationController` handling Stripe & App Store webhooks (`POS
+[2026-08-04T13:07:26Z] Sync: issue #1000 is an exact duplicate of already-completed work - closed: Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`)
+[2026-08-04T13:07:27Z] Sync: issue #1002 is an exact duplicate of already-completed work - closed: Build Audio Room tipping mechanism allowing listeners to gift coins directly to 
+[2026-08-04T13:07:27Z] Sync: issue #1001 is an exact duplicate of already-completed work - closed: Build Virtual Gift catalog & sending endpoint (`POST /economy/send-gift`), deduc
+[2026-08-04T13:07:28Z] Sync: issue #1004 is an exact duplicate of already-completed work - closed: Build Trust & Safety reporting system (`POST /safety/report`, `POST /safety/bloc
+[2026-08-04T13:07:28Z] Sync: issue #1005 is an exact duplicate of already-completed work - closed: Verify Stripe webhook signatures (`stripe.webhooks.constructEvent` with `STRIPE_
+[2026-08-04T13:07:29Z] Sync: issue #1006 is an exact duplicate of already-completed work - closed: Lock down `POST /monetisation/upgrade` so VIP status can only change via verifie
+[2026-08-04T13:07:30Z] Sync: issue #1008 is an exact duplicate of already-completed work - closed: Implement Apple App Store Server Notifications and Google Play Billing webhook h
+[2026-08-04T13:07:30Z] Sync: issue #1007 is an exact duplicate of already-completed work - closed: Rework `POST /economy/purchase-coins` to verify purchase receipt records server-
+[2026-08-04T13:07:31Z] Sync: issue #1009 is an exact duplicate of already-completed work - closed: Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azu
+[2026-08-04T13:07:32Z] Sync: issue #1010 is an exact duplicate of already-completed work - closed: Install `@ngx-translate/core` and `@ngx-translate/http-loader` in Angular.
+[2026-08-04T13:07:32Z] Sync: issue #1011 is an exact duplicate of already-completed work - closed: Create `en.json` and `ja.json` translation files in `assets/i18n/`.
+[2026-08-04T13:07:33Z] Sync: issue #1090 is an exact duplicate of already-completed work - closed: AUTONOMOUS DIRECTIVE: Execute complete codebase audit. Verify zero hardcoded str
+[2026-08-04T13:07:34Z] Sync: issue #1023 is an exact duplicate of already-completed work - closed: Build Host Dashboard showing live viewer count, earned coins, and stream uptime.
+[2026-08-04T13:07:34Z] Sync: issue #1091 is an exact duplicate of already-completed work - closed: Build Social Login UI components (Google, Facebook, Apple OAuth buttons).
+[2026-08-04T13:07:35Z] Sync: issue #1093 is an exact duplicate of already-completed work - closed: Build Password Policy & Reset UI with real-time regex validation (min 8 chars, n
+[2026-08-04T13:07:36Z] Sync: issue #1095 is an exact duplicate of already-completed work - closed: Implement System-wide Dark Mode, Light Mode, and System Default toggle.
+[2026-08-04T13:07:36Z] Sync: issue #1096 is an exact duplicate of already-completed work - closed: Implement UI & Font Scaling slider adjusting base `rem` units across Angular.
+[2026-08-04T13:07:37Z] Sync: issue #1113 is an exact duplicate of already-completed work - closed: Design and build AI Conversation Partner chat interface.
+[2026-08-04T13:07:38Z] Sync: issue #1109 is an exact duplicate of already-completed work - closed: Implement proficiency level filter in Discovery search.
+[2026-08-04T13:07:38Z] Sync: issue #1116 is an exact duplicate of already-completed work - closed: Implement AI-generated suggested replies in chat based on conversation context.
+[2026-08-04T13:07:39Z] Sync: issue #1120 is an exact duplicate of already-completed work - closed: Build Achievements showcase page on user profiles.
+[2026-08-04T13:07:39Z] Sync: issue #1121 is an exact duplicate of already-completed work - closed: Implement a point-based XP system, granting XP for learning activities.
+[2026-08-04T13:07:40Z] Sync: issue #1124 is an exact duplicate of already-completed work - closed: Create database schema for curated learning content (articles, dialogues by CEFR
+[2026-08-04T13:07:41Z] Sync: issue #1128 is an exact duplicate of already-completed work - closed: Implement skeleton loaders (`ngx-skeleton-loader`) for all data-heavy components
+[2026-08-04T13:07:41Z] Sync: issue #1125 is an exact duplicate of already-completed work - closed: Build CMS or admin interface to upload and manage lesson content.
+[2026-08-04T13:07:42Z] Sync: issue #1129 is an exact duplicate of already-completed work - closed: Add subtle micro-animations (`framer-motion` or CSS) to button clicks and hover 
+[2026-08-04T13:07:43Z] Sync: issue #1130 is an exact duplicate of already-completed work - closed: Animate Angular route transitions for a smoother navigation feel.
+[2026-08-04T13:07:43Z] Sync: issue #1132 is an exact duplicate of already-completed work - closed: Refine chat bubble appearance with distinct sent/received styles and message-tai
+[2026-08-04T13:07:44Z] Sync: issue #1133 is an exact duplicate of already-completed work - closed: Add haptic feedback on mobile for key actions (e.g., sending message, liking a p
+[2026-08-04T13:07:44Z] Sync: issue #1140 is an exact duplicate of already-completed work - closed: Build celebratory full-screen animation/confetti for completing study streaks (e
+[2026-08-04T13:07:45Z] Sync: issue #1137 is an exact duplicate of already-completed work - closed: Integrate AI to auto-generate `explanation` field for `correction` payloads in c
+[2026-08-04T13:07:46Z] Sync: issue #1144 is an exact duplicate of already-completed work - closed: Implement LiveKit EgressClient to generate and save a full transcript of complet
+[2026-08-04T13:07:46Z] Sync: issue #1151 is an exact duplicate of already-completed work - closed: Build UI for threaded replies in chat to preserve conversation context.
+[2026-08-04T13:07:47Z] Sync: issue #1178 is an exact duplicate of already-completed work - closed: End-to-end encrypted video calls.
+[2026-08-04T13:07:49Z] Sync: issue #1179 is an exact duplicate of already-completed work - closed: Group calls with a specific participant limit.
+[2026-08-04T13:07:49Z] Sync: issue #1181 is an exact duplicate of already-completed work - closed: Picture-in-picture mode for video calls.
+[2026-08-04T13:07:50Z] Sync: issue #1180 is an exact duplicate of already-completed work - closed: Call waiting and switching between calls.
+[2026-08-04T13:07:51Z] Sync: issue #1184 is an exact duplicate of already-completed work - closed: Create and manage group chats.
+[2026-08-04T13:07:51Z] Sync: issue #1185 is an exact duplicate of already-completed work - closed: Admin controls (add/remove members, restrict who can send messages or edit group
+[2026-08-04T13:07:52Z] Sync: issue #1186 is an exact duplicate of already-completed work - closed: Mentioning participants (@mentions).
+[2026-08-04T13:07:53Z] Sync: issue #1188 is an exact duplicate of already-completed work - closed: Join groups via invite links or QR codes.
+[2026-08-04T13:07:53Z] Sync: issue #1187 is an exact duplicate of already-completed work - closed: Group descriptions and rules.
+[2026-08-04T13:07:54Z] Sync: issue #1191 is an exact duplicate of already-completed work - closed: Share text, photo, video, and voice updates that disappear after 24 hours.
+[2026-08-04T13:07:55Z] Sync: issue #1192 is an exact duplicate of already-completed work - closed: Privacy controls for who can view status updates.
+[2026-08-04T13:07:55Z] Sync: issue #1194 is an exact duplicate of already-completed work - closed: View list of users who have seen the status.
+[2026-08-04T13:07:56Z] Sync: issue #1197 is an exact duplicate of already-completed work - closed: View once media (photos/videos that disappear after being opened).
+[2026-08-04T13:07:57Z] Sync: issue #1202 is an exact duplicate of already-completed work - closed: Silence unknown callers.
+[2026-08-04T13:07:57Z] Sync: issue #1201 is an exact duplicate of already-completed work - closed: Control over who can see Last Seen, profile photo, about info, and status.
+[2026-08-04T13:07:58Z] Sync: issue #1203 is an exact duplicate of already-completed work - closed: Chat Lock (hide specific chats in a locked folder).
+[2026-08-04T13:07:58Z] Sync: issue #1204 is an exact duplicate of already-completed work - closed: Customizable profile picture and About status.
+[2026-08-04T13:07:59Z] Sync: issue #1206 is an exact duplicate of already-completed work - closed: Notification customization (custom tones, vibration patterns).
+[2026-08-04T13:08:00Z] Sync: issue #1205 is an exact duplicate of already-completed work - closed: Custom chat wallpapers.
+[2026-08-04T13:08:00Z] Sync: issue #1207 is an exact duplicate of already-completed work - closed: Data and storage usage controls (auto-download settings).
+[2026-08-04T13:08:01Z] Sync: issue #1209 is an exact duplicate of already-completed work - closed: Multi-device support (use the app on linked devices without keeping the phone on
+[2026-08-04T13:08:01Z] Sync: issue #1210 is an exact duplicate of already-completed work - closed: Account transfer between devices.
+[2026-08-04T13:08:02Z] Sync: issue #1212 is an exact duplicate of already-completed work - closed: Quick replies for frequently asked questions.
+[2026-08-04T13:08:03Z] Sync: issue #1214 is an exact duplicate of already-completed work - closed: Labels to organize chats and customers.
+[2026-08-04T13:08:03Z] Sync: issue #1213 is an exact duplicate of already-completed work - closed: Automated greeting and away messages.
+[2026-08-04T13:08:04Z] Sync: issue #1215 is an exact duplicate of already-completed work - closed: Cart and catalog integration for shopping.
+[2026-08-04T13:08:05Z] Sync: issue #1216 is an exact duplicate of already-completed work - closed: Implement Multimedia Posts (text, photos, and voice notes).
+[2026-08-04T13:08:05Z] Sync: issue #1217 is an exact duplicate of already-completed work - closed: Build Targeted Visibility routing (posts display to native speakers of target la
+[2026-08-04T13:08:06Z] Sync: issue #1218 is an exact duplicate of already-completed work - closed: Implement Instant Grammar Fixes (direct text editing by native speakers).
+[2026-08-04T13:08:07Z] Sync: issue #1220 is an exact duplicate of already-completed work - closed: Add Detailed Explanations UI for context and alternative expressions.
+[2026-08-04T13:08:07Z] Sync: issue #1219 is an exact duplicate of already-completed work - closed: Build Voice Feedback functionality for pronunciation corrections.
+[2026-08-04T13:08:08Z] Sync: issue #1221 is an exact duplicate of already-completed work - closed: Build Language Questions post type.
+[2026-08-04T13:08:09Z] Sync: issue #1222 is an exact duplicate of already-completed work - closed: Implement Cultural Insights tagging and filtering.
+[2026-08-04T13:08:09Z] Sync: issue #1223 is an exact duplicate of already-completed work - closed: Build Milestone Tracking for progress and study buddy matching.
+[2026-08-04T13:08:10Z] Sync: issue #1225 is an exact duplicate of already-completed work - closed: Implement Organised Collections (sort by topic/difficulty).
+[2026-08-04T13:08:11Z] Sync: issue #1224 is an exact duplicate of already-completed work - closed: Build Resource Library for saving helpful posts and tips.
+[2026-08-04T13:08:11Z] Sync: issue #1227 is an exact duplicate of already-completed work - closed: Build Avatar upload and client-side cropping tool.
+[2026-08-04T13:08:12Z] Sync: issue #1228 is an exact duplicate of already-completed work - closed: Implement Native Language and Target Language selection with proficiency levels.
+[2026-08-04T13:08:13Z] Sync: issue #1229 is an exact duplicate of already-completed work - closed: Display Nationality, Region, Age, and Gender fields.
+[2026-08-04T13:08:13Z] Sync: issue #1233 is an exact duplicate of already-completed work - closed: Add selectable Hobbies and Interests tags.
+[2026-08-04T13:08:14Z] Sync: issue #1231 is an exact duplicate of already-completed work - closed: Implement Text Bio section with inline translation support.
+[2026-08-04T13:08:14Z] Sync: issue #1234 is an exact duplicate of already-completed work - closed: Display Daily Study Streak counter.
+[2026-08-04T13:08:15Z] Sync: issue #1235 is an exact duplicate of already-completed work - closed: Show total lifetime counts for Translations, Corrections, and Moments.
+[2026-08-04T13:08:16Z] Sync: issue #1236 is an exact duplicate of already-completed work - closed: Display earned user badges (VIP status, Serious Learner).
+[2026-08-04T13:08:16Z] Sync: issue #1240 is an exact duplicate of already-completed work - closed: Build toggles to hide or show exact location and online status.
+[2026-08-04T13:08:17Z] Sync: issue #1237 is an exact duplicate of already-completed work - closed: Implement Followers and Following lists with numeric counters.
+[2026-08-04T13:08:18Z] Sync: issue #1241 is an exact duplicate of already-completed work - closed: Implement Block User and Report User workflows directly from the profile.
+[2026-08-04T13:08:18Z] Sync: issue #1242 is an exact duplicate of already-completed work - closed: Add incognito mode for profile visiting (VIP feature).
+[2026-08-04T13:08:19Z] Sync: issue #1247 is an exact duplicate of already-completed work - closed: Build Location Privacy toggles (Exact location vs. Region only).
+[2026-08-04T13:08:20Z] Sync: issue #1249 is an exact duplicate of already-completed work - closed: Build Blocked Users management list.
+[2026-08-04T13:08:20Z] Sync: issue #1250 is an exact duplicate of already-completed work - closed: Build granular Push Notification toggles (Messages, Comments, Likes, Followers).
+[2026-08-04T13:08:21Z] Sync: issue #1254 is an exact duplicate of already-completed work - closed: Set Default Translation Language.
+[2026-08-04T13:08:21Z] Sync: issue #1253 is an exact duplicate of already-completed work - closed: Build App UI Language selector.
+[2026-08-04T13:08:22Z] Sync: issue #1255 is an exact duplicate of already-completed work - closed: Implement Chat specific settings (Enter to send, Text size customisation).
+[2026-08-04T13:08:23Z] Sync: issue #1256 is an exact duplicate of already-completed work - closed: Build Local Storage management (Clear cache, Delete old media).
+[2026-08-04T13:08:23Z] Sync: issue #1258 is an exact duplicate of already-completed work - closed: Build Chat Backup and Restore functionality.
+[2026-08-04T13:08:24Z] Sync: issue #1262 is an exact duplicate of already-completed work - closed: Implement App Version display and update checker.
+[2026-08-04T13:08:25Z] Sync: issue #1259 is an exact duplicate of already-completed work - closed: Build Subscription Management portal.
+[2026-08-04T13:08:25Z] Sync: issue #1267 is an exact duplicate of already-completed work - closed: Build Age Range dual-thumb slider.
+[2026-08-04T13:08:26Z] Sync: issue #1268 is an exact duplicate of already-completed work - closed: Implement Gender filter dropdown (often restricted to VIP).
+[2026-08-04T13:08:26Z] Sync: issue #1276 is an exact duplicate of already-completed work - closed: Build Location Spoofing functionality for VIP users to search as if in another c
+[2026-08-04T13:08:27Z] Sync: issue #1277 is an exact duplicate of already-completed work - closed: Build Report User modal with dynamic category selection (BLOCKED: missing design
+[2026-08-04T13:08:28Z] Sync: issue #1278 is an exact duplicate of already-completed work - closed: Build Profile Discovery Cards displaying avatar, name, languages, and short bio.
+[2026-08-04T13:08:28Z] Sync: issue #1280 is an exact duplicate of already-completed work - closed: Implement inline Audio Intro play button directly on the search card.
+[2026-08-04T13:08:29Z] Sync: issue #1293 is an exact duplicate of already-completed work - closed: Implement advanced, detailed search filters matching Tandem (e.g., search by exa
+[2026-08-04T13:08:29Z] Sync: issue #1284 is an exact duplicate of already-completed work - closed: Display online status indicators (green dot) and last active timestamps.
+[2026-08-04T13:08:30Z] Sync: issue #1295 is an exact duplicate of already-completed work - closed: Build a dedicated web application (Tandem Web parity) allowing users to chat and
+[2026-08-04T13:08:31Z] Sync: issue #1309 is an exact duplicate of already-completed work - closed: Implement Group Admin controls to manage membership and moderate shared resource
+[2026-08-04T13:08:31Z] Sync: issue #1313 is an exact duplicate of already-completed work - closed: Implement audio room categorization by topic and target language level.
+[2026-08-04T13:08:32Z] Sync: issue #1318 is an exact duplicate of already-completed work - closed: Implement exclusive animated emojis and reactions during live audio sessions for
+[2026-08-04T13:08:33Z] Sync: issue #1324 is an exact duplicate of already-completed work - closed: Build Event categories (e.g., Audio Rooms, Learning Seminars, In-person Meetups,
+[2026-08-04T13:08:33Z] Sync: issue #1347 is an exact duplicate of already-completed work - closed: Build NestJS `MomentsController` (`POST /moments` for creation, `GET /moments/fe
+[2026-08-04T13:08:34Z] Sync: issue #1350 is an exact duplicate of already-completed work - closed: Integrate `VisualDiffComponent` into moment comments section, allowing community
+[2026-08-04T13:08:35Z] Sync: issue #1349 is an exact duplicate of already-completed work - closed: Build Angular Social Feed UI (`MomentsFeedComponent`) with multi-modal rendering
+[2026-08-04T13:08:35Z] Sync: issue #1351 is an exact duplicate of already-completed work - closed: Build one-tap Moment audio reading (`TextToSpeechComponent`) and inline Moment t
+[2026-08-04T13:08:36Z] Sync: issue #1352 is an exact duplicate of already-completed work - closed: Build Moment pinning functionality for VIP users (`PATCH /moments/:id/pin`).
+[2026-08-04T13:08:36Z] Sync: issue #1353 is an exact duplicate of already-completed work - closed: Install `livekit-server-sdk` in NestJS `AudioRoomsModule` and configure `RoomSer
+[2026-08-04T13:08:37Z] Sync: issue #1354 is an exact duplicate of already-completed work - closed: Build NestJS endpoint (`POST /audio-rooms/create`) to initialize LiveKit room an
+[2026-08-04T13:08:38Z] Sync: issue #1356 is an exact duplicate of already-completed work - closed: Install `@livekit/components-angular` or native `livekit-client` in Angular fron
+[2026-08-04T13:08:38Z] Sync: issue #1355 is an exact duplicate of already-completed work - closed: Build NestJS access token generation endpoint (`POST /audio-rooms/token`) granti
+[2026-08-04T13:08:39Z] Sync: issue #1358 is an exact duplicate of already-completed work - closed: Implement Stage Management API & UI:
+[2026-08-04T13:08:40Z] Sync: issue #1359 is an exact duplicate of already-completed work - closed: Build synchronised text chat overlay (`RoomChatComponent`) inside live rooms pow
+[2026-08-04T13:08:40Z] Sync: issue #1360 is an exact duplicate of already-completed work - closed: Implement real-time AI speech-to-text subtitles broadcasting closed captions int
+[2026-08-04T13:08:41Z] Sync: issue #1361 is an exact duplicate of already-completed work - closed: Build stream recording & replay archive storage (`POST /audio-rooms/archive`) sa
+[2026-08-04T13:08:42Z] Sync: issue #1362 is an exact duplicate of already-completed work - closed: Build NestJS `MonetisationController` handling Stripe & App Store webhooks (`POS
+[2026-08-04T13:08:42Z] Sync: issue #1364 is an exact duplicate of already-completed work - closed: Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`)
+[2026-08-04T13:08:43Z] Sync: issue #1365 is an exact duplicate of already-completed work - closed: Build Virtual Gift catalog & sending endpoint (`POST /economy/send-gift`), deduc
+[2026-08-04T13:08:43Z] Sync: issue #1366 is an exact duplicate of already-completed work - closed: Build Audio Room tipping mechanism allowing listeners to gift coins directly to 
+[2026-08-04T13:08:44Z] Sync: issue #1369 is an exact duplicate of already-completed work - closed: Verify Stripe webhook signatures (`stripe.webhooks.constructEvent` with `STRIPE_
+[2026-08-04T13:08:45Z] Sync: issue #1368 is an exact duplicate of already-completed work - closed: Build Trust & Safety reporting system (`POST /safety/report`, `POST /safety/bloc
+[2026-08-04T13:08:45Z] Sync: issue #1370 is an exact duplicate of already-completed work - closed: Lock down `POST /monetisation/upgrade` so VIP status can only change via verifie
+[2026-08-04T13:08:46Z] Sync: issue #1371 is an exact duplicate of already-completed work - closed: Rework `POST /economy/purchase-coins` to verify purchase receipt records server-
+[2026-08-04T13:08:47Z] Sync: issue #1373 is an exact duplicate of already-completed work - closed: Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azu
+[2026-08-04T13:08:47Z] Sync: issue #1372 is an exact duplicate of already-completed work - closed: Implement Apple App Store Server Notifications and Google Play Billing webhook h
+[2026-08-04T13:08:48Z] Sync: issue #1374 is an exact duplicate of already-completed work - closed: Install `@ngx-translate/core` and `@ngx-translate/http-loader` in Angular.
+[2026-08-04T13:08:49Z] Sync: issue #1375 is an exact duplicate of already-completed work - closed: Create `en.json` and `ja.json` translation files in `assets/i18n/`.
+[2026-08-04T13:08:49Z] Sync: issue #1414 is an exact duplicate of already-completed work - closed: Build in-app Help Centre fetching dynamic FAQ articles from backend.
+[2026-08-04T13:08:50Z] Sync: issue #1441 is an exact duplicate of already-completed work - closed: Build Social Login UI components (Google, Facebook, Apple OAuth buttons).
+[2026-08-04T13:08:50Z] Sync: issue #1443 is an exact duplicate of already-completed work - closed: Build Password Policy & Reset UI with real-time regex validation (min 8 chars, n
+[2026-08-04T13:08:51Z] Sync: issue #1446 is an exact duplicate of already-completed work - closed: Implement UI & Font Scaling slider adjusting base `rem` units across Angular.
+[2026-08-04T13:08:52Z] Sync: issue #1445 is an exact duplicate of already-completed work - closed: Implement System-wide Dark Mode, Light Mode, and System Default toggle.
+[2026-08-04T13:08:53Z] Sync: issue #1459 is an exact duplicate of already-completed work - closed: Implement proficiency level filter in Discovery search.
+[2026-08-04T13:08:54Z] Sync: issue #1460 is an exact duplicate of already-completed work - closed: Build Account Deletion and data export requests.
+[2026-08-04T13:08:55Z] Sync: issue #1462 is an exact duplicate of already-completed work - closed: Build Location Privacy toggles (Exact location vs. Region only).
+[2026-08-04T13:08:55Z] Sync: issue #1465 is an exact duplicate of already-completed work - closed: Build granular Push Notification toggles (Messages, Comments, Likes, Followers).
+[2026-08-04T13:08:56Z] Sync: issue #1464 is an exact duplicate of already-completed work - closed: Build Blocked Users management list.
+[2026-08-04T13:08:57Z] Sync: issue #1466 is an exact duplicate of already-completed work - closed: Implement In-App Sound and Vibration settings.
+[2026-08-04T13:08:57Z] Sync: issue #1469 is an exact duplicate of already-completed work - closed: Set Default Translation Language.
+[2026-08-04T13:08:58Z] Sync: issue #1470 is an exact duplicate of already-completed work - closed: Implement Chat specific settings (Enter to send, Text size customisation).
+[2026-08-04T13:08:58Z] Sync: issue #1473 is an exact duplicate of already-completed work - closed: Build Chat Backup and Restore functionality.
+[2026-08-04T13:08:59Z] Sync: issue #1472 is an exact duplicate of already-completed work - closed: Implement Auto-Download preferences (Wi-Fi only vs. Cellular).
+[2026-08-04T13:09:00Z] Sync: issue #1474 is an exact duplicate of already-completed work - closed: Build Subscription Management portal.
+[2026-08-04T13:09:00Z] Sync: issue #1476 is an exact duplicate of already-completed work - closed: Add Support Centre and FAQ viewer.
+[2026-08-04T13:09:01Z] Sync: issue #1479 is an exact duplicate of already-completed work - closed: Implement sorting algorithms (Best Match, Online Now, Nearest, Newest).
+[2026-08-04T13:09:01Z] Sync: issue #1477 is an exact duplicate of already-completed work - closed: Implement App Version display and update checker.
+[2026-08-04T13:09:02Z] Sync: issue #1480 is an exact duplicate of already-completed work - closed: Build global user query engine based on Native and Target language pairs.
+[2026-08-04T13:09:02Z] Sync: issue #1483 is an exact duplicate of already-completed work - closed: Implement Gender filter dropdown (often restricted to VIP).
+[2026-08-04T13:09:03Z] Sync: issue #1484 is an exact duplicate of already-completed work - closed: Add Language Proficiency filter (Beginner, Intermediate, Advanced).
+[2026-08-04T13:09:04Z] Sync: issue #1487 is an exact duplicate of already-completed work - closed: Implement specific Country and City manual search.
+[2026-08-04T13:09:04Z] Sync: issue #1489 is an exact duplicate of already-completed work - closed: Build Profile Discovery Cards displaying avatar, name, languages, and short bio.
+[2026-08-04T13:09:05Z] Sync: issue #1488 is an exact duplicate of already-completed work - closed: Build Location Spoofing functionality for VIP users to search as if in another c
+[2026-08-04T13:09:06Z] Sync: issue #1490 is an exact duplicate of already-completed work - closed: Implement inline Audio Intro play button directly on the search card.
+[2026-08-04T13:09:06Z] Sync: issue #1492 is an exact duplicate of already-completed work - closed: Display online status indicators (green dot) and last active timestamps.
+[2026-08-04T13:09:07Z] Sync: issue #1496 is an exact duplicate of already-completed work - closed: Implement advanced, detailed search filters matching Tandem (e.g., search by exa
+[2026-08-04T13:09:07Z] Sync: issue #1494 is an exact duplicate of already-completed work - closed: Implement new user spotlight to highlight recently joined native speakers.
+[2026-08-04T13:09:08Z] Sync: issue #1497 is an exact duplicate of already-completed work - closed: Build a dedicated web application (Tandem Web parity) allowing users to chat and
+[2026-08-04T13:09:09Z] Sync: issue #1500 is an exact duplicate of already-completed work - closed: Build a robust community moderation tool to strictly enforce learning-only behav
+[2026-08-04T13:09:10Z] Sync: issue #1504 is an exact duplicate of already-completed work - closed: Implement Group Admin controls to manage membership and moderate shared resource
+[2026-08-04T13:09:10Z] Sync: issue #1508 is an exact duplicate of already-completed work - closed: Implement exclusive animated emojis and reactions during live audio sessions for
+[2026-08-04T13:09:11Z] Sync: issue #1506 is an exact duplicate of already-completed work - closed: Implement audio room categorization by topic and target language level.
+[2026-08-04T13:09:11Z] Sync: issue #1511 is an exact duplicate of already-completed work - closed: Build Event categories (e.g., Audio Rooms, Learning Seminars, In-person Meetups,
+[2026-08-04T13:09:12Z] Sync: issue #266 is an exact duplicate of already-completed work - closed: Build 1-on-1 Video Call interface with local preview overlay.
+[2026-08-04T13:09:12Z] Sync: issue #263 is an exact duplicate of already-completed work - closed: Implement active VoIP Call UI (Mute, Speakerphone, End Call).
+[2026-08-04T13:09:13Z] Sync: issue #272 is an exact duplicate of already-completed work - closed: Integrate Stripe Checkout for Monthly (8 UKP / $10 USD) and Yearly (50 UKP / $63
+[2026-08-04T13:09:14Z] Sync: issue #276 is an exact duplicate of already-completed work - closed: Build Daily Study Streak counter widget on home screen.
+[2026-08-04T13:09:15Z] Sync: issue #279 is an exact duplicate of already-completed work - closed: Implement NestJS CRON job to reset streaks if inactive for 24 hours.
+[2026-08-04T13:09:15Z] Sync: issue #293 is an exact duplicate of already-completed work - closed: Integrate Firebase Cloud Messaging (FCM) in Angular.
+[2026-08-04T13:09:16Z] Sync: issue #302 is an exact duplicate of already-completed work - closed: Implement Blocklist system hiding blocked accounts across chat, feed, and search
+[2026-08-04T13:09:17Z] Sync: issue #296 is an exact duplicate of already-completed work - closed: Build NestJS event listeners to dispatch push alerts for chats, comments, and pr
+[2026-08-04T13:09:17Z] Sync: issue #311 is an exact duplicate of already-completed work - closed: Step 1: Native Language and Target Language selection.
+[2026-08-04T13:09:18Z] Sync: issue #317 is an exact duplicate of already-completed work - closed: Step 3: Avatar upload and permissions prompt (Microphone, Camera).
+[2026-08-04T13:09:18Z] Sync: issue #320 is an exact duplicate of already-completed work - closed: Implement Gender filter in discovery (VIP tier).
+[2026-08-04T13:09:19Z] Sync: issue #390 is an exact duplicate of already-completed work - closed: Build custom sticker picker drawer inside chat window.
+[2026-08-04T13:09:20Z] Sync: issue #323 is an exact duplicate of already-completed work - closed: Implement Age Range dual-thumb slider controls.
+[2026-08-04T13:09:20Z] Sync: issue #425 is an exact duplicate of already-completed work - closed: Build Host Dashboard showing live viewer count, earned coins, and stream uptime.
+[2026-08-04T13:09:21Z] Sync: issue #482 is an exact duplicate of already-completed work - closed: Build in-app Help Centre fetching dynamic FAQ articles from backend.
+[2026-08-04T13:09:22Z] Sync: issue #867 is an exact duplicate of already-completed work - closed: AUTONOMOUS DIRECTIVE: Execute complete codebase audit. Verify zero hardcoded str
+[2026-08-04T13:09:22Z] Sync: issue #527 is an exact duplicate of already-completed work - closed: Build Password Policy & Reset UI with real-time regex validation (min 8 chars, n
+[2026-08-04T13:09:23Z] Sync: issue #522 is an exact duplicate of already-completed work - closed: Build Social Login UI components (Google, Facebook, Apple OAuth buttons).
+[2026-08-04T13:09:24Z] Sync: issue #532 is an exact duplicate of already-completed work - closed: Implement System-wide Dark Mode, Light Mode, and System Default toggle.
+[2026-08-04T13:09:24Z] Sync: issue #576 is an exact duplicate of already-completed work - closed: Implement proficiency level filter in Discovery search.
+[2026-08-04T13:09:25Z] Sync: issue #588 is an exact duplicate of already-completed work - closed: Design and build AI Conversation Partner chat interface.
+[2026-08-04T13:09:26Z] Sync: issue #597 is an exact duplicate of already-completed work - closed: Implement AI-generated suggested replies in chat based on conversation context.
+[2026-08-04T13:09:26Z] Sync: issue #591 is an exact duplicate of already-completed work - closed: Implement NestJS service to proxy chat messages to a Large Language Model (e.g.,
+[2026-08-04T13:09:27Z] Sync: issue #602 is an exact duplicate of already-completed work - closed: Design database schema for user achievements (`achievements` table, `user_achiev
+[2026-08-04T13:09:27Z] Sync: issue #608 is an exact duplicate of already-completed work - closed: Build Achievements showcase page on user profiles.
+[2026-08-04T13:09:28Z] Sync: issue #620 is an exact duplicate of already-completed work - closed: Create database schema for curated learning content (articles, dialogues by CEFR
+[2026-08-04T13:09:29Z] Sync: issue #623 is an exact duplicate of already-completed work - closed: Build CMS or admin interface to upload and manage lesson content.
+[2026-08-04T13:09:29Z] Sync: issue #629 is an exact duplicate of already-completed work - closed: Integrate short cultural etiquette guides for different languages within the app
+[2026-08-04T13:09:30Z] Sync: issue #631 is an exact duplicate of already-completed work - closed: Implement skeleton loaders (`ngx-skeleton-loader`) for all data-heavy components
+[2026-08-04T13:09:30Z] Sync: issue #633 is an exact duplicate of already-completed work - closed: Add subtle micro-animations (`framer-motion` or CSS) to button clicks and hover 
+[2026-08-04T13:09:31Z] Sync: issue #636 is an exact duplicate of already-completed work - closed: Animate Angular route transitions for a smoother navigation feel.
+[2026-08-04T13:09:32Z] Sync: issue #639 is an exact duplicate of already-completed work - closed: Build an interactive, multi-step product tour for new users using a library like
+[2026-08-04T13:09:32Z] Sync: issue #642 is an exact duplicate of already-completed work - closed: Refine chat bubble appearance with distinct sent/received styles and message-tai
+[2026-08-04T13:09:33Z] Sync: issue #656 is an exact duplicate of already-completed work - closed: Integrate AI to auto-generate `explanation` field for `correction` payloads in c
+[2026-08-04T13:09:33Z] Sync: issue #645 is an exact duplicate of already-completed work - closed: Add haptic feedback on mobile for key actions (e.g., sending message, liking a p
+[2026-08-04T13:09:34Z] Sync: issue #675 is an exact duplicate of already-completed work - closed: Implement LiveKit EgressClient to generate and save a full transcript of complet
+[2026-08-04T13:09:35Z] Sync: issue #681 is an exact duplicate of already-completed work - closed: Implement real-time translation for the text chat overlay inside Voicerooms.
+[2026-08-04T13:09:36Z] Sync: issue #695 is an exact duplicate of already-completed work - closed: Build UI for threaded replies in chat to preserve conversation context.
+[2026-08-04T13:09:39Z] Sync: issue #164 is an exact duplicate of already-completed work - closed: Replace mock returns in `backend/src/nlp/nlp.service.ts` with real DeepL and Azu
+[2026-08-04T13:09:55Z] Sync: issue #155 is an exact duplicate of already-completed work - closed: Verify Stripe webhook signatures (`stripe.webhooks.constructEvent` with `STRIPE_
+[2026-08-04T13:09:55Z] Sync: issue #146 is an exact duplicate of already-completed work - closed: Build virtual coin store & purchasing endpoints (`POST /economy/purchase-coins`)
+[2026-08-04T13:09:57Z] Sync: skipping near-duplicate issue #1173: Document and file sharing (pdfs, spreadsheets, etc.).
+[2026-08-04T13:09:58Z] Sync: skipping near-duplicate issue #891: Build UI for VIP users to select custom primary accent colours in settings.
+[2026-08-04T13:10:02Z] Sync: skipping near-duplicate issue #898: Implement Dynamic Font Size slider adjusting base `rem` CSS rules. (Added `FontS
+[2026-08-04T13:10:04Z] Sync: skipping near-duplicate issue #866: Analyse chat UI screenshots in `original-hello-talk-screenshots/`.
+[2026-08-04T13:10:04Z] Sync: skipping near-duplicate issue #865: Analyse search screenshots in `original-hello-talk-screenshots/`.
+[2026-08-04T13:10:04Z] Sync: skipping near-duplicate issue #864: Analyse chat context menu screenshots in `original-hello-talk-screenshots/`.
+[2026-08-04T13:10:05Z] Sync: issue #173 is an exact duplicate of already-completed work - closed: Refactor all Angular components to replace raw strings with `{{ KEY | translate 
+[2026-08-04T13:10:06Z] Sync: issue #170 is an exact duplicate of already-completed work - closed: Create `en.json` and `ja.json` translation files in `assets/i18n/`.
+[2026-08-04T13:10:06Z] Sync: issue #167 is an exact duplicate of already-completed work - closed: Install `@ngx-translate/core` and `@ngx-translate/http-loader` in Angular.
+[2026-08-04T13:10:07Z] Sync: issue #153 is an exact duplicate of already-completed work - closed: Build Trust & Safety reporting system (`POST /safety/report`, `POST /safety/bloc
+[2026-08-04T13:10:07Z] Sync: issue #150 is an exact duplicate of already-completed work - closed: Build Audio Room tipping mechanism allowing listeners to gift coins directly to 
+[2026-08-04T13:10:08Z] Sync: issue #148 is an exact duplicate of already-completed work - closed: Build Virtual Gift catalog & sending endpoint (`POST /economy/send-gift`), deduc
+[2026-08-04T13:10:09Z] Sync: issue #142 is an exact duplicate of already-completed work - closed: Build NestJS `MonetisationController` handling Stripe & App Store webhooks (`POS
+[2026-08-04T13:10:09Z] Sync: issue #140 is an exact duplicate of already-completed work - closed: Build stream recording & replay archive storage (`POST /audio-rooms/archive`) sa
+[2026-08-04T13:10:10Z] Sync: issue #138 is an exact duplicate of already-completed work - closed: Implement real-time AI speech-to-text subtitles broadcasting closed captions int
+[2026-08-04T13:10:11Z] Sync: issue #136 is an exact duplicate of already-completed work - closed: Build synchronised text chat overlay (`RoomChatComponent`) inside live rooms pow
+[2026-08-04T13:10:11Z] Sync: issue #134 is an exact duplicate of already-completed work - closed: Implement Stage Management API & UI:
+[2026-08-04T13:10:12Z] Sync: issue #130 is an exact duplicate of already-completed work - closed: Install `@livekit/components-angular` or native `livekit-client` in Angular fron
+[2026-08-04T13:10:13Z] Sync: issue #128 is an exact duplicate of already-completed work - closed: Build NestJS access token generation endpoint (`POST /audio-rooms/token`) granti
+[2026-08-04T13:10:13Z] Sync: issue #126 is an exact duplicate of already-completed work - closed: Build NestJS endpoint (`POST /audio-rooms/create`) to initialize LiveKit room an
+[2026-08-04T13:10:14Z] Sync: issue #124 is an exact duplicate of already-completed work - closed: Install `livekit-server-sdk` in NestJS `AudioRoomsModule` and configure `RoomSer
+[2026-08-04T13:10:15Z] Sync: issue #122 is an exact duplicate of already-completed work - closed: Build Moment pinning functionality for VIP users (`PATCH /moments/:id/pin`).
+[2026-08-04T13:10:15Z] Sync: issue #120 is an exact duplicate of already-completed work - closed: Build one-tap Moment audio reading (`TextToSpeechComponent`) and inline Moment t
+[2026-08-04T13:10:16Z] Sync: issue #118 is an exact duplicate of already-completed work - closed: Integrate `VisualDiffComponent` into moment comments section, allowing community
+[2026-08-04T13:10:17Z] Sync: issue #116 is an exact duplicate of already-completed work - closed: Build Angular Social Feed UI (`MomentsFeedComponent`) with multi-modal rendering
+[2026-08-04T13:10:18Z] Sync: issue #113 is an exact duplicate of already-completed work - closed: Build NestJS `MomentsController` (`POST /moments` for creation, `GET /moments/fe
+[2026-08-04T13:10:22Z] Sync: skipping near-duplicate issue #935: Fix QA test failure: `Error: Timed out waiting 300000ms from config.webServer.` 
+[2026-08-04T13:10:29Z] GitHub sync: +0 imported, 389 closed
+[2026-08-04T13:10:29Z] Task: Code review finding: Add unit tests for frontend/src/app/components/lightbox/lig
+[2026-08-04T13:10:29Z] Queue: 299 pending, 519 done, 1 stuck
+[2026-08-04T13:10:29Z] Attempt 1/1
+[2026-08-04T13:10:29Z] Trying claude...
+[2026-08-04T13:10:29Z] Running Claude Code...
+[2026-08-04T13:10:39Z] Claude: no file changes (exit=1, killed=False)
+[2026-08-04T13:10:39Z]   claude failed:  (exit=1)
+[2026-08-04T13:10:42Z] Trying antigravity...
+[2026-08-04T13:10:42Z] Running Antigravity (agy)...
+[2026-08-04T13:10:53Z] Antigravity: no file changes (exit=0, killed=False)
+[2026-08-04T13:10:53Z]   antigravity failed:  (exit=0)
+[2026-08-04T13:10:56Z] Trying copilot...
+[2026-08-04T13:10:56Z] Running Aider/Copilot (https://api.githubcopilot.com)...
+[2026-08-04T13:12:42Z] Copilot: no file changes (exit=0, killed=False)
+[2026-08-04T13:12:42Z]   copilot failed: no_changes (exit=0)
+[2026-08-04T13:12:45Z] Trying deepseek...
+[2026-08-04T13:12:45Z] Running Aider/DeepSeek (deepseek/deepseek-reasoner)...
+[2026-08-04T13:12:45Z] Aider pass 1 (discover)...
+[2026-08-04T13:13:20Z] Pass 1: discovered 2 files
+[2026-08-04T13:13:20Z] Pass 2 round 1: 2 files in context
+[2026-08-04T13:14:10Z] Round 1: no changes, no further files discovered.
+[2026-08-04T13:14:10Z]   deepseek failed: no_changes (exit=0)
+[2026-08-04T13:14:13Z] All models exhausted in fallback chain.
+[2026-08-04T13:14:13Z] No changes after 1 attempts. Marking complete.
+[2026-08-04T13:14:13Z] Cooldown 15s...
+[2026-08-04T13:14:29Z] Task: Code review finding: Replace 3 hardcoded UI string(s) with TranslatePipe in rece
+[2026-08-04T13:14:29Z] Queue: 298 pending, 520 done, 1 stuck
+[2026-08-04T13:14:29Z] Attempt 1/1
+[2026-08-04T13:14:29Z] Trying claude...
+[2026-08-04T13:14:29Z] Running Claude Code...
+[2026-08-04T13:14:34Z] Claude: no file changes (exit=1, killed=False)
+[2026-08-04T13:14:34Z]   claude failed:  (exit=1)
+[2026-08-04T13:14:37Z] Trying antigravity...
+[2026-08-04T13:14:37Z] Running Antigravity (agy)...
+[2026-08-04T13:14:57Z] Antigravity: no file changes (exit=0, killed=False)
+[2026-08-04T13:14:57Z]   antigravity failed:  (exit=0)
+[2026-08-04T13:15:00Z] Trying copilot...
+[2026-08-04T13:15:00Z] Running Aider/Copilot (https://api.githubcopilot.com)...
+[2026-08-04T13:16:46Z] Copilot: no file changes (exit=0, killed=False)
+[2026-08-04T13:16:46Z]   copilot failed: no_changes (exit=0)
+[2026-08-04T13:16:49Z] Trying deepseek...
+[2026-08-04T13:16:49Z] Running Aider/DeepSeek (deepseek/deepseek-reasoner)...
+[2026-08-04T13:16:49Z] Aider pass 1 (discover)...
+[2026-08-04T13:19:15Z] Pass 1: discovered 4 files
+[2026-08-04T13:19:15Z] Pass 2 round 1: 4 files in context
+[2026-08-04T13:20:56Z] Round 1: no changes, no further files discovered.
+[2026-08-04T13:20:56Z]   deepseek failed: no_changes (exit=0)
+[2026-08-04T13:20:59Z] All models exhausted in fallback chain.
+[2026-08-04T13:20:59Z] No changes after 1 attempts. Marking complete.
+[2026-08-04T13:20:59Z] Cooldown 15s...
+[2026-08-04T13:21:14Z] Task: Fix all TypeScript errors in frontend and backend from the i18n refactor. Specif
+[2026-08-04T13:21:14Z] Queue: 297 pending, 521 done, 1 stuck
+[2026-08-04T13:21:14Z] Attempt 1/1
+[2026-08-04T13:21:14Z] Trying claude...
+[2026-08-04T13:21:14Z] Running Claude Code...
+[2026-08-04T13:21:19Z] Claude: no file changes (exit=1, killed=False)
+[2026-08-04T13:21:19Z]   claude failed:  (exit=1)
+[2026-08-04T13:21:22Z] Trying antigravity...
+[2026-08-04T13:21:22Z] Running Antigravity (agy)...
+[2026-08-04T13:21:37Z] Antigravity: no file changes (exit=0, killed=False)
+[2026-08-04T13:21:37Z]   antigravity failed:  (exit=0)
+[2026-08-04T13:21:40Z] Trying copilot...
+[2026-08-04T13:21:40Z] Running Aider/Copilot (https://api.githubcopilot.com)...
+[2026-08-04T13:23:21Z] Copilot: no file changes (exit=0, killed=False)
+[2026-08-04T13:23:21Z]   copilot failed: no_changes (exit=0)
+[2026-08-04T13:23:24Z] Trying deepseek...
+[2026-08-04T13:23:24Z] Running Aider/DeepSeek (deepseek/deepseek-reasoner)...
+[2026-08-04T13:23:24Z] Aider pass 1 (discover)...
+[2026-08-04T13:28:06Z] Pass 1: discovered 11 files
+[2026-08-04T13:28:06Z] Pass 2 round 1: 11 files in context
+[2026-08-04T13:30:48Z] Pass 2 round 1: produced 4 file changes (or completed audit)
+[2026-08-04T13:30:48Z] SUCCESS: deepseek produced 4 file changes
+[2026-08-04T13:30:48Z]   OK    swarmd syntax
+[2026-08-04T13:31:05Z]   FAIL  frontend lint
+[2026-08-04T13:32:29Z]   OK    backend lint
+[2026-08-04T13:33:55Z]   OK    frontend test
+[2026-08-04T13:35:55Z]   TIMEOUT backend test
+[2026-08-04T13:36:07Z]   OK    backend e2e
+[2026-08-04T13:36:55Z]   OK    frontend build
+[2026-08-04T13:37:25Z]   FAIL  backend build
+[2026-08-04T13:37:25Z] Tests have failures after deepseek. Skipping inline AI fix pass to prevent hangs.
+[2026-08-04T13:37:26Z] RELAXED_TESTS is on: committing despite failures. Created follow-up test-fix task.

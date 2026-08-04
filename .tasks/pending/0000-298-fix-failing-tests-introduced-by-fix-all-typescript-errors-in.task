@@ -1,0 +1,51 @@
+Fix failing tests introduced by: Fix all TypeScript errors in frontend and backend from the i18n refactor. Specifically fix missing T.
+
+Errors:
+==== frontend lint FAILED (exit 1) ====
+STDOUT:
+
+> frontend@0.0.0 lint
+> eslint "src/**/*.ts" --fix && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical
+
+
+/home/dev/hellotalk/frontend/src/app/components/tokenised-text/tokenised-text.component.ts
+  5:10  error  'TranslatePipe' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 1 problem (1 error, 0 warnings)
+
+
+STDERR:
+
+
+==== backend test TIMEOUT ====
+
+==== backend build FAILED (exit 1) ====
+STDOUT:
+
+> backend@0.0.1 build
+> nest build
+
+Found 110 error(s).
+
+
+STDERR:
+~~[0m
+[96msrc/resource-library/resource-library.service.ts[0m:[93m44[0m:[93m7[0m - [91merror[0m[90m TS2322: [0mType 'string' is not assignable to type 'Date'.
+
+[7m44[0m       createdAt: row.created_at,
+[7m  [0m [91m      ~~~~~~~~~[0m
+
+  [96msrc/resource-library/interfaces/resource.interface.ts[0m:[93m8[0m:[93m3[0m
+    [7m8[0m   createdAt: Date;
+    [7m [0m [96m  ~~~~~~~~~[0m
+    The expected type comes from property 'createdAt' which is declared here on type 'Resource'
+[96msrc/resource-library/resource-library.service.ts[0m:[93m45[0m:[93m7[0m - [91merror[0m[90m TS2322: [0mType 'string' is not assignable to type 'Date'.
+
+[7m45[0m       updatedAt: row.updated_at,
+[7m  [0m [91m      ~~~~~~~~~[0m
+
+  [96msrc/resource-library/interfaces/resource.interface.ts[0m:[93m9[0m:[93m3[0m
+    [7m9[0m   updatedAt: Date;
+    [7m [0m [96m  ~~~~~~~~~[0m
+    The expected type comes from property 'updatedAt' which is declared here on type 'Resource'
+

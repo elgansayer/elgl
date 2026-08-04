@@ -20,8 +20,8 @@ describe('MonetisationController', () => {
           provide: MonetisationService,
           useValue: {
             handleStripeWebhook: jest.fn(),
-            handleAppleWebhook: jest.fn(),
-            handleGoogleWebhook: jest.fn(),
+            handleAppleNotification: jest.fn(),
+            handleGoogleNotification: jest.fn(),
             generateApiKey: jest.fn(),
             getDeveloperAnalytics: jest.fn(),
             getDiagnosticLogs: jest.fn(),
@@ -92,12 +92,12 @@ describe('MonetisationController', () => {
     it('should pass webhook payload to service', async () => {
       const payload = { notificationType: 'test' };
       const response = { received: true, status: 'processed' };
-      (monetisationService.handleAppleWebhook as jest.Mock).mockResolvedValue(
-        response,
-      );
+      (
+        monetisationService.handleAppleNotification as jest.Mock
+      ).mockResolvedValue(response);
 
       const result = await controller.handleAppleWebhook(payload);
-      expect(monetisationService.handleAppleWebhook).toHaveBeenCalledWith(
+      expect(monetisationService.handleAppleNotification).toHaveBeenCalledWith(
         payload,
       );
       expect(result).toEqual(response);
@@ -108,15 +108,15 @@ describe('MonetisationController', () => {
     it('should pass webhook payload and authorization header to service', async () => {
       const payload = { version: '1.0' };
       const response = { received: true, status: 'processed' };
-      (monetisationService.handleGoogleWebhook as jest.Mock).mockResolvedValue(
-        response,
-      );
+      (
+        monetisationService.handleGoogleNotification as jest.Mock
+      ).mockResolvedValue(response);
 
       const result = await controller.handleGoogleWebhook(
         payload,
         'Bearer google-oidc-token',
       );
-      expect(monetisationService.handleGoogleWebhook).toHaveBeenCalledWith(
+      expect(monetisationService.handleGoogleNotification).toHaveBeenCalledWith(
         payload,
         'Bearer google-oidc-token',
       );
@@ -175,14 +175,24 @@ describe('MonetisationController', () => {
   });
 
   describe('getDiagnosticLogs', () => {
-    it('should return logs from service', async () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.getDiagnosticLogs(null);
+      expect(result).toBeNull();
+      expect(monetisationService.getDiagnosticLogs).not.toHaveBeenCalled();
+    });
+
+    it('should return logs from service when user is provided', async () => {
       const logs = [{ id: 'log-1', category: 'POSTGIS' }];
       (monetisationService.getDiagnosticLogs as jest.Mock).mockResolvedValue(
         logs,
       );
 
-      const result = await controller.getDiagnosticLogs();
-      expect(monetisationService.getDiagnosticLogs).toHaveBeenCalled();
+      const result = await controller.getDiagnosticLogs({
+        id: 'user-1',
+      } as any);
+      expect(monetisationService.getDiagnosticLogs).toHaveBeenCalledWith(
+        'user-1',
+      );
       expect(result).toEqual(logs);
     });
   });

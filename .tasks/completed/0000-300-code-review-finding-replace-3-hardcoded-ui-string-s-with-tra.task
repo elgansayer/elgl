@@ -1,0 +1,1 @@
+Code review finding: Replace 3 hardcoded UI string(s) with TranslatePipe in recent commit (from commit da85acaa: Refactor all Angular components to replace raw str)

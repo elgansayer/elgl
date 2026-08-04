@@ -306,19 +306,17 @@ describe('MonetisationService', () => {
       });
     });
 
-    it('should generate API key and return consumer rate limits for non-developer tier VIP user', async () => {
+    it('should throw ForbiddenException for non-developer tier VIP user', async () => {
       mockQueryBuilder.single.mockResolvedValue({
         data: { id: 'user-vip', is_vip: true, vip_tier: 'consumer' },
         error: null,
       });
 
-      const result = await service.generateApiKey('user-vip');
-
-      expect(result).toEqual({
-        api_key: expect.stringMatching(/^ht_dev_[a-f0-9]{32}$/),
-        tier: 'consumer',
-        rate_limit_rpm: 60,
-      });
+      await expect(service.generateApiKey('user-vip')).rejects.toThrow(
+        new ForbiddenException(
+          'Developer API Access is reserved for active subscribers. Upgrade to Developer Tier (20 UKP / $26 USD per month) to generate programmatic API keys!',
+        ),
+      );
     });
   });
 

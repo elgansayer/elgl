@@ -93,19 +93,19 @@ describe('ChatController', () => {
   });
 
   describe('getConnectionToken', () => {
-    it('should return null if user is not provided', () => {
-      const result = controller.getConnectionToken(null);
+    it('should return null if user is not provided', async () => {
+      const result = await controller.getConnectionToken(null);
       expect(result).toBeNull();
       expect(chatService.generateConnectionToken).not.toHaveBeenCalled();
     });
 
-    it('should return connection token when user is provided', () => {
+    it('should return connection token when user is provided', async () => {
       const mockToken = { token: 'ws-token' };
-      (chatService.generateConnectionToken as jest.Mock).mockReturnValue(
+      (chatService.generateConnectionToken as jest.Mock).mockResolvedValue(
         mockToken,
       );
 
-      const result = controller.getConnectionToken(mockUser());
+      const result = await controller.getConnectionToken(mockUser());
       expect(chatService.generateConnectionToken).toHaveBeenCalledWith(
         mockUser().id,
       );

@@ -1724,7 +1724,6 @@ export class SupabaseService implements OnModuleDestroy {
       );
       return false;
     }
-    const row = data as { is_vip: boolean | null };
-    return row.is_vip ?? false;
+    return data.is_vip ?? false;
   }
 }

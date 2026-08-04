@@ -12,6 +12,7 @@ import { CentrifugoService } from '../chat/centrifugo.service';
 import { TranscriptEgressService } from './transcript-egress.service';
 import { NlpService } from '../nlp/nlp.service';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
+import { R2Service } from '../cloudflare-r2/r2.service';
 
 const mockCreateRoom = jest.fn().mockResolvedValue({});
 const mockAddGrant = jest.fn();
@@ -107,6 +108,12 @@ describe('AudioRoomsService', () => {
           provide: NlpService,
           useValue: {
             generateSessionSummary: jest.fn(),
+          },
+        },
+        {
+          provide: R2Service,
+          useValue: {
+            generateUploadUrl: jest.fn(),
           },
         },
       ],

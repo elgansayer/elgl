@@ -316,7 +316,7 @@ describe('MomentsService', () => {
         });
 
       const result = await service.getFeed('user-1', 'Following');
-      expect(result.filter((m) => m.id === 'm-ja')).toHaveLength(1);
+      expect(result.filter((m) => m.id === 'm-3')).toHaveLength(1);
     });
 
     it('should return classmates feed filtered by target language', async () => {
@@ -405,10 +405,10 @@ describe('MomentsService', () => {
         id: 'user-1',
         display_name: 'Serious Learner',
         avatar_url: 'avatar.png',
-        native_languages: ['JA'],
+        native_languages: ['ja'],
       } as any);
 
-      const moments = [{ id: 'm-ja', user_id: 'u-1', target_language: 'ja' }];
+      const moments = [{ id: 'm-ja', user_id: 'u-1', target_language: 'JA' }];
 
       mockSupabaseClient.from = jest
         .fn()
