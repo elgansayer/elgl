@@ -1,0 +1,80 @@
+name: Swarm Auto-Dispatcher
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_run:
+    workflows: ["OpenHands Auto-Resolver"]
+    types:
+      - completed
+
+concurrency:
+  group: swarm-dispatcher
+  cancel-in-progress: false
+
+jobs:
+  dispatch_and_plan:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Find Next Task
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUNNING=$(gh run list --workflow openhands.yml --status in_progress --json databaseId -q 'length')
+          if [ "$RUNNING" -gt 0 ]; then
+            echo "OpenHands is currently running. Waiting."
+            exit 0
+          fi
+          
+          gh label create "swarm-active" --color "0E8A16" --force || true
+          ISSUE_NUM=$(gh issue list --state open --search "-label:swarm-active" --limit 1 --sort created --direction asc --json number -q '.[0].number')
+          
+          if [ -z "$ISSUE_NUM" ] || [ "$ISSUE_NUM" == "null" ]; then
+            echo "Queue is empty!"
+            exit 0
+          fi
+          
+          echo "ISSUE_NUM=$ISSUE_NUM" >> $GITHUB_ENV
+          gh issue edit $ISSUE_NUM --add-label "swarm-active"
+
+      - name: Phase 1 - Architect Planning (Gemini)
+        if: env.ISSUE_NUM != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          pip install -q google-generativeai
+          
+          python3 -c "
+          import os, google.generativeai as genai, subprocess
+          genai.configure(api_key=os.environ['GEMINI_API_KEY'])
+          
+          # Fetch issue details
+          issue_num = os.environ['ISSUE_NUM']
+          title = subprocess.run(['gh', 'issue', 'view', issue_num, '--json', 'title', '-q', '.title'], capture_output=True, text=True).stdout.strip()
+          
+          prompt = f'''You are an expert Software Architect. 
+          Write a strict, step-by-step Technical Implementation Plan for this frontend/backend feature: {title}.
+          Do not write code, just the architecture, file paths, and logical steps. Make sure to abide by Angular Signals and strict UI aesthetic rules.'''
+          
+          # Using the absolute best, most recent Gemini free-tier model for massive context planning
+          model = genai.GenerativeModel('gemini-3.0-flash') 
+          plan = model.generate_content(prompt).text
+          
+          with open('plan.txt', 'w') as f: 
+              f.write('### 🧠 Gemini Architectural Plan\n\n' + plan)
+          "
+          gh issue comment $ISSUE_NUM --body-file plan.txt
+
+      - name: Phase 2 - Hand off to Builder (OpenHands)
+        if: env.ISSUE_NUM != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment ${{ env.ISSUE_NUM }} --body "/openhands-fix"

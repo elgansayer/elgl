@@ -1,0 +1,37 @@
+name: OpenHands Auto-Resolver
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_review_comment:
+    types: [created]
+
+concurrency:
+  group: openhands-swarm
+  cancel-in-progress: false
+
+jobs:
+  openhands-agent:
+    if: >
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/openhands-fix')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '/openhands-fix')) ||
+      (github.event_name == 'pull_request')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run OpenHands Agent
+        uses: OpenHands/extensions/plugins/github-action@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          llm_api_url: ${{ secrets.LITELLM_GATEWAY_URL }}
+          llm_api_key: ${{ secrets.LITELLM_API_KEY }}
+          model: "litellm_proxy/coder-pro"
+          max_iterations: 30
