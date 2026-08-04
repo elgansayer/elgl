@@ -24,7 +24,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         with:
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: >
             You are the Lead AI Architect for this project.
             Your job is to evaluate the current state of the app against its goals.
@@ -46,6 +48,8 @@ jobs:
           github_token: ${{ secrets.PAT_TOKEN }}
           llm_model: "gemini/gemini-3.6-flash"
           llm_api_key: ${{ secrets.GEMINI_API_KEY }}
+          openhands_image: "docker.openhands.dev/openhands/openhands:1.8"
+          runtime_image: "docker.openhands.dev/openhands/runtime:1.8-nikolaik"
           prompt: >
             You are the Lead AI Architect for this project.
             Your job is to evaluate the current state of the app against its goals.
@@ -67,6 +71,8 @@ jobs:
           github_token: ${{ secrets.PAT_TOKEN }}
           llm_model: "deepseek/deepseek-coder"
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
+          openhands_image: "docker.openhands.dev/openhands/openhands:1.8"
+          runtime_image: "docker.openhands.dev/openhands/runtime:1.8-nikolaik"
           prompt: >
             You are the Lead AI Architect for this project.
             Your job is to evaluate the current state of the app against its goals.

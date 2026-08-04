@@ -34,7 +34,9 @@ jobs:
         uses: anthropics/claude-code-action@v1
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         with:
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           trigger_phrase: "/openhands-fix"
 
       - name: Tier 2 - OpenHands (DeepSeek Coder Fallback)
@@ -47,3 +49,5 @@ jobs:
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
           prompt: "Please review the issue or PR and solve the requested changes."
           cli_args: "--max-iterations 30"
+          openhands_image: "docker.openhands.dev/openhands/openhands:1.8"
+          runtime_image: "docker.openhands.dev/openhands/runtime:1.8-nikolaik"
