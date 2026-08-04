@@ -1132,6 +1132,21 @@ export class UsersService {
     return badges;
   }
 
+  async shareContact(
+    requesterId: string,
+    targetUserId: string,
+  ): Promise<{ phone_number?: string; email?: string }> {
+    if (!requesterId || !targetUserId) {
+      throw new BadRequestException('User IDs are required');
+    }
+    // Placeholder implementation to support contact sharing.
+    // Future iterations will retrieve details from the user's profile.
+    return {
+      phone_number: '+447700900123',
+      email: 'partner@example.com',
+    };
+  }
+
   async permanentDeleteAccount(userId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
 

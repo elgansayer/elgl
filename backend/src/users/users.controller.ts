@@ -460,6 +460,17 @@ export class UsersController {
     );
   }
 
+  @Post('me/contact-sharing')
+  async shareContact(
+    @CurrentUser() user: User | null,
+    @Body('target_user_id') targetUserId: string,
+  ): Promise<{ phone_number?: string; email?: string }> {
+    if (!user) throw new UnauthorizedException();
+    if (!targetUserId)
+      throw new BadRequestException('Target user ID is required');
+    return this.usersService.shareContact(user.id, targetUserId);
+  }
+
   @Patch('me/notification-preferences')
   async updateNotificationPreferences(
     @CurrentUser() user: User | null,

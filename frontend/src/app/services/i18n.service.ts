@@ -783,6 +783,16 @@ export class I18nService {
     'visitors.vipOnly': 'VIP only',
     'visitors.visibleStatus': 'Visible',
 
+    // Contact sharing
+    'contact.share.title': 'Share contact',
+    'contact.share.subtitle': 'Share your phone number or email with this partner',
+    'contact.share.button': 'Share contact',
+    'contact.share.success': 'Contact shared with {{name}}',
+    'contact.share.error': 'Could not share contact right now',
+    'contact.share.alreadyShared': 'Contact already shared',
+    'contact.share.receivedTitle': 'Contact shared with you',
+    'contact.share.receivedBody': '{{name}} shared their contact details.',
+
     // Doodle Pad
     'doodle.title': '🎨 Interactive Doodle Pad',
     'doodle.colorLabel': 'Colour',
