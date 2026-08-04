@@ -1,0 +1,10 @@
+# OpenHands Instructions for HelloTalk
+
+Welcome to the HelloTalk project! When you start a task, you **MUST** read and adhere to `AGENTS.md` or `SPEC.md` if available.
+
+## Key Directives:
+1. **GitHub Projects & Issues**: When you start a task, use the `gh issue view <issue_number>` command to understand the full context and requirements. If the issue is part of a GitHub Project, use `gh project item-edit` to update its status.
+2. **Verification Gate**: Before you consider a task complete, you must run local tests (e.g. `npm run test` or `jest` in the backend, `ng test` in frontend) to ensure you did not break existing functionality. Code must pass linting and tests before you push.
+3. **Clean Commits**: Ensure your commits are descriptive.
+
+Read `AGENTS.md` thoroughly before starting.
