@@ -23,8 +23,8 @@ jobs:
         uses: anthropics/claude-code-base-action@beta
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         with:
-          anthropic_api_key: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
           prompt: >
             You are the Lead AI Architect for this project.
             Your job is to evaluate the current state of the app against its goals.
@@ -65,9 +65,8 @@ jobs:
         uses: xinbenlv/openhands-action@main
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "litellm_proxy/deepseek-coder"
-          llm_api_key: ${{ secrets.LITELLM_API_KEY }}
-          additional_env: '{"LLM_BASE_URL": "${{ secrets.LITELLM_GATEWAY_URL }}"}'
+          llm_model: "deepseek/deepseek-coder"
+          llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
           prompt: >
             You are the Lead AI Architect for this project.
             Your job is to evaluate the current state of the app against its goals.
