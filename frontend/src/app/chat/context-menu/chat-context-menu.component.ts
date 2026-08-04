@@ -14,15 +14,20 @@ export interface ChatContextMenuAction {
   standalone: true,
   imports: [TranslatePipe],
   template: `
-    @if (isOpen()) {
+    @if (open()) {
       <div
         class="fixed inset-0 z-50 bg-black/50 overflow-y-auto"
         tabindex="0"
         (click)="close()"
+        (keyup.enter)="close()"
+        (keyup.space)="close()"
       >
         <div
           class="fixed bottom-0 start-0 end-0 bg-neutral-900 rounded-t-2xl p-4 shadow-2xl"
+          tabindex="0"
           (click)="$event.stopPropagation()"
+          (keyup.enter)="$event.stopPropagation()"
+          (keyup.space)="$event.stopPropagation()"
         >
           <div class="flex items-center justify-between mb-2 ps-1 pe-1">
             <span class="text-lg font-semibold text-neutral-100">{{ 'chat.contextMenu.title' | t }}</span>
@@ -64,7 +69,7 @@ export interface ChatContextMenuAction {
 export class ChatContextMenuComponent {
   readonly message = input.required<ChatMessage>();
   readonly targetLanguage = input<string>('en');
-  readonly isOpen = input(false, { alias: 'open' });
+  readonly open = input(false);
 
   readonly closed = output<void>();
   readonly replyRequested = output<ChatMessage>();

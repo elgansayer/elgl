@@ -35,7 +35,10 @@ type ReviewGrade = 'again' | 'good' | 'known';
               class="flashcard"
               [class.is-flipped]="isFlipped()"
               (click)="flipCard()"
+              (keyup.enter)="flipCard()"
+              (keyup.space)="flipCard()"
               role="button"
+              tabindex="0"
               [attr.aria-pressed]="isFlipped()"
             >
               <div class="flashcard-inner">

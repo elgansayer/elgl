@@ -4,7 +4,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import {
   AdminService,
   AdminUserSummary,
-  LoginHistoryEntry,
 } from '../../services/admin.service';
 
 @Component({
