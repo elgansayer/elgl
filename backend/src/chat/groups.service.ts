@@ -318,14 +318,6 @@ export class GroupsService {
     });
   }
 
-  async sendAnnouncement(
-    userId: string,
-    roomId: string,
-    message: string,
-  ): Promise<void> {
-    await this.broadcastMessage(userId, roomId, message);
-  }
-
   async getAnnouncements(
     roomId: string,
   ): Promise<

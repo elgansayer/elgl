@@ -43,6 +43,6 @@ jobs:
       - name: Hand off to Builder (OpenHands)
         if: env.ISSUE_NUM != ''
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           gh issue comment ${{ env.ISSUE_NUM }} --body "/openhands-fix" --repo ${{ github.repository }}

@@ -156,8 +156,11 @@ export class MomentsController {
   }
 
   @Get(':id/likes')
-  async getMomentLikes(@Param('id') id: string): Promise<MomentLikeUser[]> {
-    return await this.momentsService.getMomentLikes(id);
+  async getMomentLikes(
+    @CurrentUser() user: User | null,
+    @Param('id') id: string,
+  ): Promise<MomentLikeUser[]> {
+    return await this.momentsService.getMomentLikes(id, user?.id);
   }
 
   @Post(':id/comments')

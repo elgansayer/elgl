@@ -973,6 +973,7 @@ export class I18nService {
     'system.groupRenamed': 'Group renamed to "{{name}}".',
     'system.memberAdded': '{{count}} member(s) joined the group.',
     'system.memberRemoved': 'A member left the group.',
+    'system.announcement': '📢 {{message}}',
 
     // VoIP Call UI
     'voip.mute': 'Mute',

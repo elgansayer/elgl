@@ -2,6 +2,7 @@ import {
   Injectable,
   ForbiddenException,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -33,6 +34,15 @@ import { randomUUID } from 'crypto';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+interface DeletedAwareMessage extends ChatMessage {
+  is_deleted?: boolean;
+  deleted_for_user_ids?: string[];
 }
 
 interface GroupMember {
@@ -483,13 +493,24 @@ export class ChatService {
       }
       return mockMessages;
     }
-    const messages: ChatMessage[] = response.data;
+    const messages: DeletedAwareMessage[] = response.data;
 
     // Exclude media_url for view-once media that has already been viewed
     for (const msg of messages) {
       if (msg.is_view_once && msg.viewed_at) {
         msg.media_url = undefined;
       }
+    }
+
+    if (currentUserId) {
+      const visibleMessages = messages.filter((msg) => {
+        if (msg.is_deleted) return false;
+        if (msg.deleted_for_user_ids?.includes(currentUserId)) {
+          return false;
+        }
+        return true;
+      });
+      return visibleMessages;
     }
 
     return messages;
@@ -1101,13 +1122,20 @@ export class ChatService {
       throw new BadRequestException('Only text messages can be corrected');
     }
 
+    const roomId = asString(originalMsg.room_id);
+    const originalText = asString(originalMsg.text_content) ?? '';
+
+    if (!roomId) {
+      throw new BadRequestException('Message is missing room identifier');
+    }
+
     const sendDto: SendMessageDto = {
-      room_id: (originalMsg as any).room_id,
+      room_id: roomId,
       message_type: 'correction',
       text_content: undefined,
       media_url: undefined,
       correction_payload: {
-        original: (originalMsg as any).text_content ?? '',
+        original: originalText,
         corrected: correctedText,
         explanation: explanation ?? undefined,
       },
@@ -1141,10 +1169,14 @@ export class ChatService {
       throw new BadRequestException('Only text messages can be fixed');
     }
 
+    const roomId = asString(originalMsg.room_id);
+    const senderId = asString(originalMsg.sender_id);
+    const textContent = asString(originalMsg.text_content);
+
     const { data: membership } = await supabase
       .from('chat_room_members')
       .select('user_id')
-      .eq('room_id', originalMsg.room_id)
+      .eq('room_id', roomId)
       .eq('user_id', userId)
       .maybeSingle();
 
@@ -1152,7 +1184,7 @@ export class ChatService {
       throw new ForbiddenException('You are not a member of this room');
     }
 
-    if (originalMsg.sender_id === userId) {
+    if (senderId === userId) {
       throw new ForbiddenException('You cannot fix your own message');
     }
 
@@ -1164,7 +1196,7 @@ export class ChatService {
     const originalText =
       currentPayload && typeof currentPayload.original === 'string'
         ? currentPayload.original
-        : (originalMsg.text_content ?? '');
+        : (textContent ?? '');
 
     let resolvedExplanation = explanation;
 
@@ -1216,11 +1248,104 @@ export class ChatService {
       );
     }
 
-    await this.centrifugoService.publish(`chat:${originalMsg.room_id}`, {
+    await this.centrifugoService.publish(`chat:${roomId}`, {
       message: updatedMsg,
     });
 
     return updatedMsg;
+  }
+
+  async deleteMessage(
+    userId: string,
+    messageId: string,
+    scope: 'self' | 'everyone',
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: msg, error: msgError } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('id', messageId)
+      .single();
+
+    if (msgError || !msg) {
+      throw new NotFoundException('Message not found');
+    }
+
+    // Verify the user is a member of the room that the message belongs to
+    const { data: membership } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', msg.room_id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this room');
+    }
+
+    if (scope === 'self') {
+      // Delete the message only for the current user (soft delete)
+      let deletedFor: string[] = [];
+      if (isRecord(msg) && Array.isArray(msg.deleted_for_user_ids)) {
+        deletedFor = msg.deleted_for_user_ids.filter(
+          (x): x is string => typeof x === 'string',
+        );
+      }
+
+      if (!deletedFor.includes(userId)) {
+        deletedFor.push(userId);
+      }
+
+      const { error: updateError } = await supabase
+        .from('chat_messages')
+        .update({ deleted_for_user_ids: deletedFor })
+        .eq('id', messageId);
+
+      if (updateError) {
+        throw new Error(
+          `Failed to delete message for self: ${updateError.message}`,
+        );
+      }
+      return;
+    }
+
+    // scope === 'everyone'
+    // Only the message sender or a group admin can delete for everyone
+    const { data: room } = await supabase
+      .from('chat_rooms')
+      .select('admin_id')
+      .eq('id', msg.room_id)
+      .single();
+
+    if (
+      room &&
+      room.admin_id &&
+      room.admin_id !== userId &&
+      msg.sender_id !== userId
+    ) {
+      throw new ForbiddenException(
+        'You do not have permission to delete this message for everyone',
+      );
+    }
+
+    const { error: deleteError } = await supabase
+      .from('chat_messages')
+      .delete()
+      .eq('id', messageId);
+
+    if (deleteError) {
+      throw new Error(
+        `Failed to delete message for everyone: ${deleteError.message}`,
+      );
+    }
+
+    // Notify all clients in the room that the message was removed
+    await this.centrifugoService.publish(`chat:${msg.room_id}`, {
+      type: 'message_deleted',
+      message_id: messageId,
+      deleted_for: 'everyone',
+    });
   }
 
   async viewMessageMedia(userId: string, messageId: string): Promise<void> {
