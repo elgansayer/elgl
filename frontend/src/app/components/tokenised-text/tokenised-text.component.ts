@@ -1,13 +1,18 @@
-import { Component, input, output, inject, signal, effect } from '@angular/core';
+import { Component, input, output, inject, computed } from '@angular/core';
 
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
-import { TranslatePipe } from '../../services/translate.pipe';
+import { TransliterationService } from '../../services/transliteration.service';
 
 export interface TokenSegment {
   segment: string;
   isWordLike: boolean;
   index: number;
+}
+
+interface ParsedTokens {
+  tokens: TokenSegment[];
+  transliteration: string;
 }
 
 @Component({
@@ -19,22 +24,13 @@ export interface TokenSegment {
 export class TokenisedTextComponent {
   readonly vocabStore = inject(VocabularyStore);
   readonly i18n = inject(I18nService);
+  readonly transliterationService = inject(TransliterationService);
 
   text = input.required<string>();
   language = input('en');
   wordClicked = output<{ token: string; context: string }>();
 
-  readonly tokens = signal<TokenSegment[]>([]);
-
-  constructor() {
-    effect(() => {
-      this.text();
-      this.language();
-      this.parseText();
-    });
-  }
-
-  private parseText(): void {
+  private readonly parsed = computed<ParsedTokens>(() => {
     if (typeof Intl === 'undefined' || !Intl.Segmenter) {
       throw new Error(this.i18n.translate('errors.intlSegmenterUnavailable'));
     }
@@ -51,8 +47,14 @@ export class TokenisedTextComponent {
       });
     }
 
-    this.tokens.set(segments);
-  }
+    return {
+      tokens: segments,
+      transliteration: this.transliterationService.transliterate(this.text(), this.language()),
+    };
+  });
+
+  readonly tokens = computed(() => this.parsed().tokens);
+  readonly transliteration = computed(() => this.parsed().transliteration);
 
   onTokenClick(token: TokenSegment): void {
     if (!token.isWordLike) return;

@@ -14,4 +14,9 @@
       {{ token.segment }}
     </span>
   }
+  @if (transliteration()) {
+    <div class="transliteration mt-1 text-xs leading-snug text-slate-500" dir="ltr">
+      {{ transliteration() }}
+    </div>
+  }
 </div>
