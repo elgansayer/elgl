@@ -28,6 +28,7 @@ import {
 import { SystemMessageService } from './services/system-message.service';
 import { XpService } from '../xp/xp.service';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
+import { ShareContactDto } from './dto/share-contact.dto';
 import { randomUUID } from 'crypto';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -794,6 +795,125 @@ export class ChatService {
     }
 
     return (data ?? []).map((row: { room_id: string }) => row.room_id);
+  }
+
+  async shareContact(
+    senderId: string,
+    dto: ShareContactDto,
+  ): Promise<ChatMessage> {
+    const supabase = this.supabaseService.getClient();
+
+    // Verify sender is a member of this room
+    const { data: membership } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', dto.roomId)
+      .eq('user_id', senderId)
+      .maybeSingle();
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this room');
+    }
+
+    // Fetch contact user profile
+    const { data: contact, error: contactError } = await supabase
+      .from('users')
+      .select('id, display_name, avatar_url')
+      .eq('id', dto.contactUserId)
+      .maybeSingle();
+    if (contactError || !contact) {
+      throw new BadRequestException('Contact user not found');
+    }
+
+    // Find receiver for push notification and block checks
+    const { data: roomMembers, error: roomMembersError } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', dto.roomId)
+      .neq('user_id', senderId);
+    if (roomMembersError) {
+      throw new Error(
+        `Failed to load room members: ${roomMembersError.message}`,
+      );
+    }
+    const receiverId =
+      roomMembers && roomMembers.length > 0
+        ? roomMembers[0].user_id
+        : undefined;
+
+    if (receiverId) {
+      const receiverBlockedIds =
+        await this.safetyService.getBlockedAndBlockerIds(receiverId);
+      if (receiverBlockedIds.includes(senderId)) {
+        throw new Error('You cannot send contact to this user.');
+      }
+      const senderBlockedIds =
+        await this.safetyService.getBlockedAndBlockerIds(senderId);
+      if (senderBlockedIds.includes(receiverId)) {
+        throw new Error('You cannot send contact to this user.');
+      }
+    }
+
+    const previewText =
+      dto.greetingText?.trim() || `Check out ${contact.display_name}'s profile`;
+
+    const { data: savedMessage, error: insertError } = await supabase
+      .from('chat_messages')
+      .insert({
+        room_id: dto.roomId,
+        sender_id: senderId,
+        message_type: 'contact',
+        text_content: previewText,
+        media_url: null,
+        correction_payload: null,
+        reply_to_id: null,
+        correction_request_payload: null,
+        status_reply_payload: {
+          contact_user_id: contact.id,
+          display_name: contact.display_name,
+          avatar_url: contact.avatar_url,
+        },
+        is_view_once: false,
+      })
+      .select(
+        `
+        *,
+        sender:users!chat_messages_sender_id_fkey (
+          id,
+          display_name,
+          avatar_url
+        )
+      `,
+      )
+      .single();
+
+    if (insertError || !savedMessage) {
+      const msg = insertError?.message ?? 'Unknown error';
+      throw new Error(`Failed to save contact message: ${msg}`);
+    }
+
+    // Publish to Centrifugo so receivers get the new message immediately
+    await this.centrifugoService.publish(`chat:${dto.roomId}`, {
+      message: savedMessage,
+    });
+
+    // Award XP for contributing a message
+    void this.xpService.awardXpForActivity(senderId, 'send_message');
+
+    // Notify receiver via push notification
+    if (receiverId) {
+      this.eventEmitter.emit(
+        'chat.message',
+        new ChatMessageEvent(
+          senderId,
+          receiverId,
+          dto.roomId,
+          'contact',
+          previewText,
+        ),
+      );
+    }
+
+    return savedMessage;
   }
 
   async setWallpaper(

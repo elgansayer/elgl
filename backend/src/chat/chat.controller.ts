@@ -22,6 +22,7 @@ import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto'
 import { AddLabelDto, RemoveLabelDto } from './dto/label.dto';
 import { FixMessageDto } from './dto/fix-message.dto';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
+import { ShareContactDto } from './dto/share-contact.dto';
 import {
   ChatMessage,
   ChatRoomRecord,
@@ -61,6 +62,16 @@ export class ChatController {
   ): Promise<ChatMessage | null> {
     if (!user) return null;
     return await this.chatService.sendMessage(user.id, dto);
+  }
+
+  @Post('contacts/share')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  async shareContact(
+    @CurrentUser() user: User | null,
+    @Body() dto: ShareContactDto,
+  ): Promise<ChatMessage | null> {
+    if (!user) return null;
+    return await this.chatService.shareContact(user.id, dto);
   }
 
   @Get('rooms')
