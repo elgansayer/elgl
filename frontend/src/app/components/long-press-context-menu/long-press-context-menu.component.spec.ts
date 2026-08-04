@@ -28,6 +28,10 @@ describe('LongPressContextMenuComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should have menu hidden initially', () => {
+    expect(component.menuVisible()).toBe(false);
+  });
+
   it('should emit reply and close the menu when doReply is called', () => {
     vi.spyOn(component.reply, 'emit');
     component.menuVisible.set(true);
@@ -199,5 +203,86 @@ describe('LongPressContextMenuComponent', () => {
 
     const buttons = fixture.debugElement.queryAll(By.css('button'));
     expect(buttons.length).toBe(10);
+  });
+
+  it('should emit block toggled to false when the sender is already blocked', () => {
+    vi.spyOn(component.block, 'emit');
+    fixture.componentRef.setInput('isBlocked', true);
+    component.menuVisible.set(true);
+
+    component.doBlockToggle();
+
+    expect(component.block.emit).toHaveBeenCalledWith({
+      senderId: 'user-123',
+      blocked: false,
+    });
+    expect(component.menuVisible()).toBe(false);
+  });
+
+  it('should open the menu after a long touch press', () => {
+    vi.useFakeTimers();
+
+    const touchStartEvent = {
+      touches: [{ identifier: 0 }],
+    } as unknown as TouchEvent;
+    component.onTouchStart(touchStartEvent);
+    expect(component.menuVisible()).toBe(false);
+
+    vi.advanceTimersByTime(600);
+    expect(component.menuVisible()).toBe(true);
+
+    vi.useRealTimers();
+  });
+
+  it('should not open the menu on multiple-touch start', () => {
+    vi.useFakeTimers();
+
+    const multiTouchEvent = {
+      touches: [{ identifier: 0 }, { identifier: 1 }],
+    } as unknown as TouchEvent;
+    component.onTouchStart(multiTouchEvent);
+    vi.advanceTimersByTime(600);
+
+    expect(component.menuVisible()).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it('should not open the menu if touch is released before the long press threshold', () => {
+    vi.useFakeTimers();
+
+    const touchStartEvent = {
+      touches: [{ identifier: 0 }],
+    } as unknown as TouchEvent;
+    component.onTouchStart(touchStartEvent);
+    component.onTouchEnd();
+    vi.advanceTimersByTime(600);
+
+    expect(component.menuVisible()).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it('should not open the menu if touch is cancelled before the long press threshold', () => {
+    vi.useFakeTimers();
+
+    const touchStartEvent = {
+      touches: [{ identifier: 0 }],
+    } as unknown as TouchEvent;
+    component.onTouchStart(touchStartEvent);
+    component.onTouchCancel();
+    vi.advanceTimersByTime(600);
+
+    expect(component.menuVisible()).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it('should cancel the menu timer when the mouse leaves before the long press threshold', () => {
+    vi.useFakeTimers();
+
+    component.onMouseDown(new MouseEvent('mousedown', { button: 0 }));
+    component.onMouseCancel();
+    vi.advanceTimersByTime(600);
+
+    expect(component.menuVisible()).toBe(false);
+    vi.useRealTimers();
   });
 });
