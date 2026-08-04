@@ -1,1 +1,0 @@
-Code review finding: Replace 95 usage(s) of 'any' type with proper types in recent commit (from commit 826d9c26: Install `@ngx-translate/core` and `@ngx-translate/)

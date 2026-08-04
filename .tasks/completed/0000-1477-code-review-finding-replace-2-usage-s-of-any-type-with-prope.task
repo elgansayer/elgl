@@ -1,1 +1,0 @@
-Code review finding: Replace 2 usage(s) of 'any' type with proper types in recent commit (from commit a2758181: Fix failing tests introduced by: Labels to organiz)

@@ -1,1 +1,0 @@
-Code review finding: Replace 5 'as' type assertion(s) with proper type narrowing in recent commit (from commit ff945029: Implement active VoIP Call UI (Mute, Speakerphone,)

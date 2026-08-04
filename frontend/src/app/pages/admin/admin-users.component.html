@@ -1,0 +1,179 @@
+<div class="p-4">
+  <h2 class="text-2xl font-bold mb-4">{{ 'admin.users.title' | t }}</h2>
+
+  <div class="flex items-center mb-4 gap-2">
+    <input
+      type="search"
+      [value]="searchTerm()"
+      (input)="onSearchInput($event)"
+      placeholder="{{ 'admin.users.searchPlaceholder' | t }}"
+      class="border border-slate-300 rounded px-3 py-2 ms-2"
+    />
+    <button
+      type="button"
+      (click)="changePage(-1)"
+      [disabled]="page() <= 1"
+      class="btn btn-sm rounded border border-slate-300 px-3 py-1 disabled:opacity-50"
+    >
+      {{ 'admin.users.previous' | t }}
+    </button>
+    <span class="text-sm">
+      {{ 'admin.users.page' | t: { current: page(), total: pageTotal() } }}
+    </span>
+    <button
+      type="button"
+      (click)="changePage(1)"
+      [disabled]="page() >= pageTotal()"
+      class="btn btn-sm rounded border border-slate-300 px-3 py-1 disabled:opacity-50"
+    >
+      {{ 'admin.users.next' | t }}
+    </button>
+  </div>
+
+  @if (isLoading()) {
+    <p class="text-slate-500">{{ 'admin.users.loading' | t }}</p>
+  } @else {
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200">
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+              {{ 'admin.users.avatar' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+              {{ 'admin.users.name' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+              {{ 'admin.users.nativeLanguages' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+              {{ 'admin.users.targetLanguages' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+              {{ 'admin.users.vip' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+              {{ 'admin.users.coins' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+              {{ 'admin.users.streak' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+              {{ 'admin.users.lastActive' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+              {{ 'admin.users.actions' | t }}
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-slate-100">
+          @for (user of users(); track user.id) {
+            <tr class="hover:bg-slate-50">
+              <td class="px-3 py-2">
+                @if (user.avatar_url) {
+                  <img
+                    [src]="user.avatar_url"
+                    alt=""
+                    class="h-8 w-8 rounded-full object-cover"
+                  />
+                } @else {
+                  <span class="text-slate-400">{{ 'admin.users.noAvatar' | t }}</span>
+                }
+              </td>
+              <td class="px-3 py-2">{{ user.display_name ?? '-' }}</td>
+              <td class="px-3 py-2">{{ user.native_languages.join(', ') }}</td>
+              <td class="px-3 py-2">{{ user.target_languages.join(', ') }}</td>
+              <td class="px-3 py-2">
+                <span
+                  [class.text-green-600]="user.is_vip"
+                  [class.text-slate-400]="!user.is_vip"
+                >
+                  {{ user.is_vip ? ('admin.users.yes' | t) : ('admin.users.no' | t) }}
+                </span>
+              </td>
+              <td class="px-3 py-2">{{ user.coins_balance }}</td>
+              <td class="px-3 py-2">{{ user.study_streak_days }}</td>
+              <td class="px-3 py-2">
+                {{ user.last_active_at ? (user.last_active_at | date: 'medium') : '-' }}
+              </td>
+              <td class="px-3 py-2 whitespace-nowrap">
+                <button
+                  type="button"
+                  (click)="openHistory(user)"
+                  class="btn btn-sm rounded border border-slate-300 px-3 py-1 me-2 hover:bg-slate-100"
+                >
+                  {{ 'admin.users.loginHistory' | t }}
+                </button>
+                <button
+                  type="button"
+                  (click)="toggleVip(user)"
+                  [disabled]="isVipUpdating() === user.id"
+                  class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100 disabled:opacity-50"
+                >
+                  {{ user.is_vip ? ('admin.users.disableVip' | t) : ('admin.users.enableVip' | t) }}
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="9" class="px-3 py-4 text-center text-slate-400">
+                {{ 'admin.users.empty' | t }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if (showHistory()) {
+    <div
+      class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+      (click)="closeHistory()"
+    >
+      <div
+        class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
+        (click)="$event.stopPropagation()"
+      >
+        <h3 class="text-lg font-semibold mb-4">{{ 'admin.users.loginHistoryTitle' | t }}</h3>
+        @if (loginHistory().length === 0) {
+          <p class="text-slate-500">{{ 'admin.users.noHistory' | t }}</p>
+        } @else {
+          <table class="min-w-full divide-y divide-slate-200">
+            <thead class="bg-slate-50">
+              <tr>
+                <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+                  {{ 'admin.users.historyTime' | t }}
+                </th>
+                <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+                  {{ 'admin.users.ip' | t }}
+                </th>
+                <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+                  {{ 'admin.users.userAgent' | t }}
+                </th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-slate-100">
+              @for (entry of loginHistory(); track entry.id) {
+                <tr>
+                  <td class="px-3 py-2">{{ entry.created_at | date: 'medium' }}</td>
+                  <td class="px-3 py-2">{{ entry.ip_address ?? '-' }}</td>
+                  <td class="px-3 py-2">{{ entry.user_agent ?? '-' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+        <div class="mt-4 text-end">
+          <button
+            type="button"
+            (click)="closeHistory()"
+            class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100"
+          >
+            {{ 'admin.users.close' | t }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,109 @@
+import { Component, computed, inject, resource, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TranslatePipe } from '../../services/translate.pipe';
+import {
+  AdminService,
+  AdminUserSummary,
+  LoginHistoryEntry,
+} from '../../services/admin.service';
+
+@Component({
+  selector: 'app-admin-users',
+  standalone: true,
+  imports: [CommonModule, TranslatePipe],
+  templateUrl: './admin-users.component.html',
+})
+export class AdminUsersComponent {
+  private adminService = inject(AdminService);
+
+  readonly searchTerm = signal('');
+  readonly page = signal(1);
+  readonly pageSize = signal(10);
+  private readonly refreshToken = signal(0);
+
+  private readonly request = computed(() => ({
+    search: this.searchTerm(),
+    page: this.page(),
+    pageSize: this.pageSize(),
+    refresh: this.refreshToken(),
+  }));
+
+  private readonly usersResource = resource({
+    request: this.request,
+    loader: ({ request }) =>
+      this.adminService.listUsers(request.search, request.page, request.pageSize),
+  });
+
+  readonly users = computed(() => this.usersResource.value()?.users ?? []);
+  readonly total = computed(() => this.usersResource.value()?.total ?? 0);
+  readonly isLoading = computed(() => this.usersResource.isLoading());
+
+  readonly pageTotal = computed(() =>
+    Math.max(1, Math.ceil(this.total() / this.pageSize())),
+  );
+
+  readonly selectedUserId = signal<string | null>(null);
+  readonly showHistory = signal(false);
+  readonly isVipUpdating = signal<string | null>(null);
+
+  private readonly historyResource = resource({
+    request: this.selectedUserId,
+    loader: ({ request }) => {
+      if (!request) {
+        return Promise.resolve([]);
+      }
+      return this.adminService.getLoginHistory(request);
+    },
+  });
+
+  readonly loginHistory = computed(() => this.historyResource.value() ?? []);
+
+  onSearchInput(event: Event): void {
+    this.searchTerm.set((event.target as HTMLInputElement).value);
+    this.page.set(1);
+    this.refreshToken.update((v) => v + 1);
+  }
+
+  changePage(delta: number): void {
+    const next = this.page() + delta;
+    if (next < 1 || next > this.pageTotal()) {
+      return;
+    }
+    this.page.set(next);
+    this.refreshToken.update((v) => v + 1);
+  }
+
+  async toggleVip(user: AdminUserSummary): Promise<void> {
+    if (this.isVipUpdating()) {
+      return;
+    }
+    this.isVipUpdating.set(user.id);
+    try {
+      const updated = await this.adminService.setVipStatus(
+        user.id,
+        !user.is_vip,
+        !user.is_vip ? 'consumer_8_ukp_10_usd' : 'free',
+      );
+      this.usersResource.update((prev) => {
+        if (!prev) {
+          return prev;
+        }
+        const list = prev.users.map((u) => (u.id === updated.id ? updated : u));
+        return { ...prev, users: list };
+      });
+    } finally {
+      this.isVipUpdating.set(null);
+      this.refreshToken.update((v) => v + 1);
+    }
+  }
+
+  openHistory(user: AdminUserSummary): void {
+    this.selectedUserId.set(user.id);
+    this.showHistory.set(true);
+  }
+
+  closeHistory(): void {
+    this.showHistory.set(false);
+    this.selectedUserId.set(null);
+  }
+}

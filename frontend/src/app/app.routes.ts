@@ -439,6 +439,13 @@ export const routes: Routes = [
     title: 'Moderation - HelloTalk',
   },
   {
+    path: 'admin/users',
+    loadComponent: () =>
+      import('./pages/admin/admin-users.component').then((m) => m.AdminUsersComponent),
+    canActivate: [adminGuard],
+    title: 'Admin Users - HelloTalk',
+  },
+  {
     path: 'milestones',
     component: MilestoneComponent,
     title: 'Milestones - HelloTalk',

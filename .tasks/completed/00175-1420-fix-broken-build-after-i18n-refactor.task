@@ -1,1 +1,0 @@
-Fix all TypeScript errors in frontend and backend from the i18n refactor. Specifically fix missing TranslatePipe imports and Supabase Row type mismatches.
