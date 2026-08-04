@@ -1,0 +1,47 @@
+name: Telegram Notifier
+on:
+  pull_request:
+    types: [opened, closed, reopened]
+  issues:
+    types: [opened, closed]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Telegram Notification
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -z "$BOT_TOKEN" ] || [ -z "$CHAT_ID" ]; then
+            echo "Telegram secrets not set. Skipping."
+            exit 0
+          fi
+          
+          # Determine the event type and context
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            ACTION="${{ github.event.action }}"
+            URL="${{ github.event.pull_request.html_url }}"
+            TITLE="${{ github.event.pull_request.title }}"
+            USER="${{ github.event.pull_request.user.login }}"
+            TYPE="Pull Request"
+          else
+            ACTION="${{ github.event.action }}"
+            URL="${{ github.event.issue.html_url }}"
+            TITLE="${{ github.event.issue.title }}"
+            USER="${{ github.event.issue.user.login }}"
+            TYPE="Issue"
+          fi
+          
+          MESSAGE="🤖 *Update from OpenHands Swarm*
+          *$TYPE $ACTION*
+          Repo: ${{ github.repository }}
+          Title: $TITLE
+          By: $USER
+          Link: $URL"
+          
+          curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
+            -d "chat_id=$CHAT_ID" \
+            -d "parse_mode=Markdown" \
+            -d "text=$MESSAGE"
