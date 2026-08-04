@@ -28,21 +28,21 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
 
-      - name: Tier 1 - Claude Code (Claude Pro)
+      - name: Tier 1 - DeepSeek Worker (Routine Fixes)
         id: primary
         continue-on-error: true
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
-          trigger_phrase: "/openhands-fix"
-
-      - name: Tier 2 - OpenHands (DeepSeek Coder Fallback)
-        id: secondary
-        if: steps.primary.outcome == 'failure'
         uses: OpenHands/extensions/plugins/github-action@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           llm_api_url: ${{ secrets.LITELLM_GATEWAY_URL }}
           llm_api_key: ${{ secrets.LITELLM_API_KEY }}
           model: "litellm_proxy/deepseek-coder"
-          max_iterations: 30
+          max_iterations: 15
+
+      - name: Tier 2 - Claude Sonnet Escalation (Complex/Test Failures)
+        id: escalation
+        if: steps.primary.outcome == 'failure'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+          trigger_phrase: "/openhands-fix"

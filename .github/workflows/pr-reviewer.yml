@@ -19,27 +19,8 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
-      - name: Tier 1 - Claude Code (Claude Pro)
+      - name: Tier 1 - Gemini Flash Reviewer (Routine Review)
         id: primary
-        continue-on-error: true
-        uses: anthropics/claude-code-base-action@beta
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-        with:
-          anthropic_api_key: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
-          prompt: >
-            You are the AI PR Reviewer and Fixer. 
-            Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
-            
-            1. Review the code changes in this branch.
-            2. Run the local tests and linters to verify the code is correct.
-            3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
-            4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
-            5. Once the code is perfect and all tests pass locally, you have the final authority to merge it. Use the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it.
-
-      - name: Tier 2 - OpenHands (Gemini 3.6 Flash Fallback)
-        id: secondary
-        if: steps.primary.outcome == 'failure'
         continue-on-error: true
         uses: All-Hands-AI/OpenHands@main
         env:
@@ -48,7 +29,7 @@ jobs:
           github_token: ${{ secrets.PAT_TOKEN }}
           llm_api_key: ${{ secrets.GEMINI_API_KEY }}
           model: "gemini/gemini-3.6-flash"
-          max_iterations: 30
+          max_iterations: 15
           task: >
             You are the AI PR Reviewer and Fixer. 
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
@@ -59,19 +40,15 @@ jobs:
             4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
             5. Once the code is perfect and all tests pass locally, you have the final authority to merge it. Use the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it.
 
-      - name: Tier 3 - OpenHands (DeepSeek Coder Fallback)
-        id: tertiary
-        if: steps.secondary.outcome == 'failure'
-        uses: All-Hands-AI/OpenHands@main
+      - name: Tier 2 - Claude Sonnet Escalation (Complex Fixes)
+        id: escalation
+        if: steps.primary.outcome == 'failure'
+        uses: anthropics/claude-code-base-action@beta
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         with:
-          github_token: ${{ secrets.PAT_TOKEN }}
-          llm_api_url: ${{ secrets.LITELLM_GATEWAY_URL }}
-          llm_api_key: ${{ secrets.LITELLM_API_KEY }}
-          model: "litellm_proxy/deepseek-coder"
-          max_iterations: 50
-          task: >
+          anthropic_api_key: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+          prompt: >
             You are the AI PR Reviewer and Fixer. 
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
             
