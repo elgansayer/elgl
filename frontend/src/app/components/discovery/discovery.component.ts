@@ -71,6 +71,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       { id: 'all', label: this.i18n.translate('discovery.filterAll') },
       { id: 'serious', label: this.i18n.translate('discovery.filterSerious') },
       { id: 'nearby', label: this.i18n.translate('discovery.filterNearMe') },
+      { id: 'city', label: this.i18n.translate('discovery.filterCity') },
+      { id: 'paid', label: this.i18n.translate('discovery.filterPaidPractice') },
     ];
   });
   readonly selectedFilter = signal<string>('all');
@@ -103,7 +105,13 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   onFilterSelect(id: string) {
     this.selectedFilter.set(id);
     this.seriousLearnerOnly.set(id === 'serious');
-    this.selectedDistanceKm.set(id === 'nearby' ? 10 : 50); // 10km for nearby, 50km default
+    if (id === 'nearby') {
+      this.selectedDistanceKm.set(10); // 10km for nearby
+    } else if (id === 'city') {
+      this.selectedDistanceKm.set(25); // 25km for city-level
+    } else {
+      this.selectedDistanceKm.set(50);
+    }
     void this.searchPartners();
   }
 
@@ -247,6 +255,25 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       this.currentAudio = null;
     }
     this.playingPartnerId.set(null);
+  }
+
+  getActiveStatus(lastActiveAt: string): string {
+    if (!lastActiveAt) return '';
+    const last = new Date(lastActiveAt).getTime();
+    const now = Date.now();
+    const diffSec = Math.floor((now - last) / 1000);
+    if (diffSec < 60) return this.i18n.translate('discovery.activeNow');
+    if (diffSec < 3600) {
+      const mins = Math.floor(diffSec / 60);
+      return this.i18n.translate('discovery.activeMinutesAgo', { minutes: mins });
+    }
+    if (diffSec < 86400) {
+      const hours = Math.floor(diffSec / 3600);
+      return this.i18n.translate('discovery.activeHoursAgo', { hours });
+    }
+    const days = Math.floor(diffSec / 86400);
+    if (days === 1) return this.i18n.translate('discovery.activeYesterday');
+    return this.i18n.translate('discovery.activeDaysAgo', { days });
   }
 
   ngOnDestroy(): void {

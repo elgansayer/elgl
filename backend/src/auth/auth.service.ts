@@ -10,65 +10,6 @@ export class AuthService {
     private readonly twoFactorService: TwoFactorService,
   ) {}
 
-  async requestPasswordReset(email: string): Promise<string> {
-    const supabase = this.supabaseService.getClient();
-
-    const linkResult = await supabase.auth.admin.generateLink({
-      type: 'recovery',
-      email,
-      options: { redirectTo: '' },
-    });
-
-    if (linkResult.error || !linkResult.data) {
-      throw new BadRequestException(
-        linkResult.error?.message ?? 'Unable to generate reset link',
-      );
-    }
-
-    const data = linkResult.data as {
-      properties?: { action_link?: string };
-    } | null;
-
-    const actionLink = data?.properties?.action_link;
-    if (!actionLink) {
-      throw new BadRequestException('Unable to generate reset link');
-    }
-
-    const url = new URL(actionLink);
-    const hash = url.hash.slice(1);
-    const params = new URLSearchParams(hash);
-    const accessToken = params.get('access_token');
-    if (!accessToken) {
-      throw new BadRequestException('Unable to extract reset token');
-    }
-    return accessToken;
-  }
-
-  async resetPassword(token: string, newPassword: string): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-    try {
-      const userResult = await supabase.auth.getUser(token);
-
-      if (userResult.error || !userResult.data?.user?.id) {
-        throw new BadRequestException('Invalid or expired reset token');
-      }
-
-      const userId = userResult.data.user.id;
-
-      const updateResult = await supabase.auth.admin.updateUserById(userId, {
-        password: newPassword,
-      });
-      if (updateResult.error) {
-        throw new BadRequestException(updateResult.error.message);
-      }
-    } catch (err: unknown) {
-      if (err instanceof BadRequestException) {
-        throw err;
-      }
-      throw new BadRequestException('Invalid or expired reset token');
-    }
-  }
-
   async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
     const supabase = this.supabaseService.getClient();
     const userResult = await supabase.auth.admin.getUserById(userId);

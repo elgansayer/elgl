@@ -192,6 +192,18 @@
                       >{{ 'discovery.vipBadge' | t }}</span
                     >
                   }
+                  @if (partner.is_partner_of_week) {
+                    <span
+                      class="rounded bg-purple-500 px-1.5 py-0.5 text-[9px] font-black uppercase text-white"
+                      >{{ 'discovery.partnerOfWeek' | t }}</span
+                    >
+                  }
+                  @if (partner.mbti_personality_type) {
+                    <span
+                      class="rounded bg-surface-200 px-1.5 py-0.5 text-[9px] font-bold text-text-secondary"
+                      >{{ partner.mbti_personality_type }}</span
+                    >
+                  }
                   @if (partner.audio_intro_url) {
                     <button
                       type="button"
@@ -219,12 +231,43 @@
                   </app-fluency-indicator>
                 </div>
 
-                <p class="text-xs text-text-secondary mt-0.5 truncate max-w-[200px]">
-                  {{ partner.bio_text || ('discovery.partnerBioFallback' | t) }}
-                </p>
-                <p class="text-xs text-text-secondary mt-0.5">
-                  {{ partner.formattedDistance }}
-                </p>
+                <!-- Active status and distance -->
+                <div class="flex items-center gap-2 mb-1">
+                  <p class="text-xs text-text-secondary mt-0.5 truncate max-w-[200px]">
+                    {{ partner.bio_text || ('discovery.partnerBioFallback' | t) }}
+                  </p>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  @if (partner.last_active_at) {
+                    <span class="text-[10px] text-green-500 font-semibold">{{ getActiveStatus(partner.last_active_at) }}</span>
+                  }
+                  @if (partner.formattedDistance) {
+                    <span class="text-[10px] text-text-muted">{{ partner.formattedDistance }}</span>
+                  }
+                </div>
+
+                <!-- Interest/hobby tags -->
+                @if (partner.interests && partner.interests.length > 0) {
+                  <div class="flex flex-wrap gap-1 mt-1.5">
+                    @for (interest of partner.interests.slice(0, 5); track interest) {
+                      <span class="px-1.5 py-0.5 rounded-full bg-surface-200 text-[10px] text-text-secondary font-medium">
+                        {{ interest }}
+                      </span>
+                    }
+                    @if (partner.interests.length > 5) {
+                      <span class="text-[10px] text-text-muted self-center">+{{ partner.interests.length - 5 }}</span>
+                    }
+                  </div>
+                }
+
+                <!-- Shared interests highlight -->
+                @if (partner.shared_interests && partner.shared_interests.length > 0) {
+                  <div class="mt-1">
+                    <span class="text-[10px] text-accent-500 font-semibold">
+                      {{ 'discovery.sharedInterests' | t: { interests: partner.shared_interests.slice(0, 2).join(', ') } }}
+                    </span>
+                  </div>
+                }
               </div>
             </div>
 
