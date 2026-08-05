@@ -17,6 +17,7 @@ import {
 } from '../primitives/language-picker/language-picker.component';
 import { RouterLink } from '@angular/router';
 import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range-slider.component';
+import { DistanceSliderComponent } from '../distance-slider/distance-slider.component';
 
 @Component({
   selector: 'app-discovery',
@@ -29,6 +30,7 @@ import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range
     LanguagePickerComponent,
     RouterLink,
     AgeRangeSliderComponent,
+    DistanceSliderComponent,
   ],
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
@@ -99,6 +101,11 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   onAgeRangeChanged(range: AgeRange): void {
     this.ageRangeMin.set(range.min);
     this.ageRangeMax.set(range.max);
+    void this.searchPartners();
+  }
+
+  onDistanceChanged(km: number): void {
+    this.selectedDistanceKm.set(km);
     void this.searchPartners();
   }
 

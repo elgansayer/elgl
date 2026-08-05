@@ -205,6 +205,9 @@ export class I18nService {
     'discovery.sortNearest': 'Nearest',
     'discovery.sortNewest': 'Newest',
     'discovery.radiusLabel': 'Maximum Distance: {{radius}} km',
+    'discovery.distanceSliderLabel': 'Search radius',
+    'discovery.distanceSliderAria': 'Distance search radius in kilometres',
+    'discovery.distanceVipRequired': 'VIP (8 UKP / $10 USD) unlocks fine-tuned distance control.',
     'discovery.vipRadiusNote':
       'VIP users (8 UKP / $10 USD) get global discovery and location spoofing.',
     'discovery.searchPlaceholder': 'Search by name, language, or bio...',
