@@ -1,11 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { map, lastValueFrom } from 'rxjs';
+import { map } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { environment } from '../../../environments/environment';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-forgot-password',
@@ -86,7 +85,7 @@ import { environment } from '../../../environments/environment';
 })
 export class ForgotPasswordComponent {
   private fb = inject(FormBuilder);
-  private http = inject(HttpClient);
+  private authService = inject(AuthService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
 
@@ -116,12 +115,8 @@ export class ForgotPasswordComponent {
     this.sendError.set(null);
     this.sendSuccess.set(false);
 
-    const email = this.emailForm.controls.email.value;
-
     try {
-      await lastValueFrom(
-        this.http.post<{ message: string }>(`${environment.apiUrl}/auth/request-password-reset`, { email }),
-      );
+      await this.authService.requestPasswordReset(this.emailForm.controls.email.value);
       this.isSending.set(false);
       this.sendSuccess.set(true);
     } catch {
@@ -140,12 +135,8 @@ export class ForgotPasswordComponent {
     this.resetError.set(null);
     this.resetSuccess.set(false);
 
-    const newPassword = this.resetForm.controls.newPassword.value;
-
     try {
-      await lastValueFrom(
-        this.http.post<{ message: string }>(`${environment.apiUrl}/auth/reset-password`, { token, newPassword }),
-      );
+      await this.authService.resetPassword(token, this.resetForm.controls.newPassword.value);
       this.isResetting.set(false);
       this.resetSuccess.set(true);
       this.router.navigate(['/home']);
