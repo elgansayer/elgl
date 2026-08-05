@@ -355,6 +355,8 @@ export class I18nService {
     'audioRoom.coHostBadge': 'Co-Host',
     'audioRoom.listening': 'Listening',
     'audioRoom.memberPrefix': '🎧 Member #{{num}}',
+    'audioRoom.listenerPrefix': 'Listener #{{num}}',
+    'audioRoom.listenerAudienceDesc': '{{count}} listeners in the audience listening to the stage.',
     'audioRoom.roomsTitle': '🎙️ Live audio and video rooms',
     'audioRoom.roomsSubtitle':
       'Join language rooms, raise your hand to speak, or launch your own room.',
