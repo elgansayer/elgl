@@ -27,6 +27,24 @@ module.exports = {
           dark: '#0891B2',
           light: '#22D3EE',
         },
+        accent: {
+          50: '#FDF2F8',
+          100: '#FCE7F3',
+          200: '#FBCFE8',
+          300: '#F9A8D4',
+          400: '#F472B6',
+          500: '#EC4899', // HelloTalk pink accent
+          DEFAULT: '#EC4899',
+          600: '#DB2777',
+          700: '#BE185D',
+        },
+        neon: {
+          purple: '#B357EA',
+          pink: '#F53561',
+          cyan: '#00D387',
+          blue: '#3793FF',
+          orange: '#FFA102',
+        },
         vip: {
           DEFAULT: '#F59E0B', // Gold/Amber
           light: '#FBBF24',
