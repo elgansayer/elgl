@@ -15,6 +15,7 @@ import {
   LanguagePickerComponent,
   getLanguageFlag,
 } from '../primitives/language-picker/language-picker.component';
+import { GlobalSearchComponent } from './global-search/global-search.component';
 import { RouterLink } from '@angular/router';
 import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range-slider.component';
 
@@ -27,6 +28,7 @@ import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range
     FluencyIndicatorComponent,
     AppGradientButtonComponent,
     LanguagePickerComponent,
+    GlobalSearchComponent,
     RouterLink,
     AgeRangeSliderComponent,
   ],
@@ -57,6 +59,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly selectedDistanceKm = signal<number>(50);
   readonly selectedNativeLanguage = signal<string>('');
   readonly selectedTargetLanguage = signal<string>('');
+  readonly selectedProficiencyLevel = signal<string>('');
   readonly selectedGender = signal<string>('');
   readonly seriousLearnerOnly = signal<boolean>(false);
   readonly seriousLearnerMode = signal<boolean>(false);
@@ -174,6 +177,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
         age_min: this.ageRangeMin(),
         age_max: this.ageRangeMax(),
         serious_learner_mode: this.seriousLearnerMode(),
+        proficiency_level: this.selectedProficiencyLevel() || undefined,
         available_time_start:
           this.availableTimeStart() || undefined,
         available_time_end:
@@ -280,10 +284,28 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.stopAudioIntro();
   }
 
+  onGlobalSearch(filters: {
+    native_languages?: string;
+    target_language?: string;
+    proficiency_level?: string;
+  }): void {
+    if (filters.native_languages !== undefined) {
+      this.selectedNativeLanguage.set(filters.native_languages);
+    }
+    if (filters.target_language !== undefined) {
+      this.selectedTargetLanguage.set(filters.target_language);
+    }
+    if (filters.proficiency_level !== undefined) {
+      this.selectedProficiencyLevel.set(filters.proficiency_level);
+    }
+    void this.searchPartners();
+  }
+
   resetFilters(): void {
     this.selectedDistanceKm.set(50);
     this.selectedNativeLanguage.set('');
     this.selectedTargetLanguage.set('');
+    this.selectedProficiencyLevel.set('');
     this.selectedGender.set('');
     this.seriousLearnerOnly.set(false);
     this.seriousLearnerMode.set(false);
