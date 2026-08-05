@@ -10,7 +10,7 @@ on:
 
 concurrency:
   # Per-issue concurrency: different issues run in parallel, same issue is serialised
-  group: openhands-issue-${{ github.event.issue.number || github.run_id }}
+  group: openhands-issue-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
     if: >
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/openhands-fix')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '/openhands-fix')) ||
-
+      (github.event_name == 'pull_request') ||
       (github.event_name == 'issues')
     runs-on: ubuntu-latest
     permissions:

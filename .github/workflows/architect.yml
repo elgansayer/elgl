@@ -14,20 +14,6 @@ jobs:
       issues: write
       id-token: write
     steps:
-      - name: Check issue queue depth
-        env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
-        run: |
-          OPEN=$(gh issue list --repo ${{ github.repository }} \
-            --state open --label "ai-agent-task" \
-            --search "-label:swarm-active" \
-            --json number -q 'length' 2>/dev/null || echo "0")
-          echo "Open unprocessed ai-agent-task issues: $OPEN"
-          if [ "$OPEN" -gt 10 ]; then
-            echo "Queue depth $OPEN > 10 — skipping architect run to avoid flooding."
-            exit 0
-          fi
-
       - name: Checkout repository
         uses: actions/checkout@v4
 

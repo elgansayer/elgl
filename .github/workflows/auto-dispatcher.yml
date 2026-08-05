@@ -67,22 +67,6 @@ jobs:
             exit 0
           fi
 
-          # ── PR DEDUPLICATION ────────────────────────────────────────────────
-          # If an open PR already exists for this issue, nudge the reviewer
-          # to merge it rather than creating a brand-new competing PR.
-          EXISTING_PR=$(gh pr list --repo ${{ github.repository }} \
-            --search "Fixes #${ISSUE_NUM} in:body" \
-            --state open --json number -q '.[0].number' 2>/dev/null || echo "")
-
-          if [ -n "$EXISTING_PR" ] && [ "$EXISTING_PR" != "null" ]; then
-            echo "PR #$EXISTING_PR already open for issue #$ISSUE_NUM — nudging reviewer."
-            gh pr comment "$EXISTING_PR" \
-              --body "/openhands-fix Please review and merge this PR." \
-              --repo ${{ github.repository }} || true
-            exit 0
-          fi
-          # ────────────────────────────────────────────────────────────────────
-
           echo "ISSUE_NUM=$ISSUE_NUM" >> $GITHUB_ENV
           gh issue edit $ISSUE_NUM --add-label "swarm-active" --repo ${{ github.repository }}
           echo "Dispatching issue #$ISSUE_NUM"
