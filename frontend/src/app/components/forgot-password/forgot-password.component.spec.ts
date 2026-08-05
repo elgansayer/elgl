@@ -1,15 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ForgotPasswordComponent } from './forgot-password.component';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { I18nService } from '../../services/i18n.service';
+import { AuthService } from '../../services/auth.service';
 import { signal } from '@angular/core';
 
 describe('ForgotPasswordComponent', () => {
   let component: ForgotPasswordComponent;
   let fixture: ComponentFixture<ForgotPasswordComponent>;
-  let httpMock: HttpTestingController;
-  let router: Router;
 
   const mockI18n = {
     translate: (key: string) => key,
@@ -18,33 +16,44 @@ describe('ForgotPasswordComponent', () => {
     translations: signal({}),
   };
 
-  const mockRouter = { navigate: jasmine.createSpy('navigate') };
-  const mockQueryParams = signal(new Map());
+  const mockRouter = { navigate: jasmine.createSpy('navigate').and.returnValue(Promise.resolve(true)) };
+
+  function buildMockAuthService() {
+    return {
+      requestPasswordReset: jasmine.createSpy('requestPasswordReset').and.returnValue(Promise.resolve()),
+      resetPassword: jasmine.createSpy('resetPassword').and.returnValue(Promise.resolve()),
+    };
+  }
+
+  function buildActivatedRoute(tokenValue: string | null) {
+    const paramMap = new Map<string, string>();
+    if (tokenValue) paramMap.set('token', tokenValue);
+    return {
+      provide: ActivatedRoute,
+      useValue: {
+        queryParamMap: signal(paramMap),
+      },
+    };
+  }
+
+  let mockAuthService: ReturnType<typeof buildMockAuthService>;
 
   beforeEach(async () => {
+    mockAuthService = buildMockAuthService();
+
     await TestBed.configureTestingModule({
-      imports: [ForgotPasswordComponent, HttpClientTestingModule],
+      imports: [ForgotPasswordComponent],
       providers: [
         { provide: I18nService, useValue: mockI18n },
         { provide: Router, useValue: mockRouter },
-        {
-          provide: ActivatedRoute,
-          useValue: {
-            queryParamMap: mockQueryParams,
-          },
-        },
+        { provide: AuthService, useValue: mockAuthService },
+        buildActivatedRoute(null),
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ForgotPasswordComponent);
     component = fixture.componentInstance;
-    httpMock = TestBed.inject(HttpTestingController);
-    router = TestBed.inject(Router);
     fixture.detectChanges();
-  });
-
-  afterEach(() => {
-    httpMock.verify();
   });
 
   it('should create the component', () => {
@@ -54,37 +63,100 @@ describe('ForgotPasswordComponent', () => {
   it('should show email form when no token query param', () => {
     const emailInput = fixture.nativeElement.querySelector('#email');
     expect(emailInput).toBeTruthy();
+    const newPasswordInput = fixture.nativeElement.querySelector('#newPassword');
+    expect(newPasswordInput).toBeNull();
   });
 
-  it('should show reset form when token query param is present', () => {
-    // Mock the token query signal
-    const params = new URLSearchParams({ token: 'test-token' });
-    const paramMap = new Map([['token', 'test-token']]);
-    // We can't easily mock the toSignal, but the component works correctly
+  it('should show reset form when token query param is present', async () => {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [ForgotPasswordComponent],
+      providers: [
+        { provide: I18nService, useValue: mockI18n },
+        { provide: Router, useValue: mockRouter },
+        { provide: AuthService, useValue: mockAuthService },
+        buildActivatedRoute('test-token'),
+      ],
+    }).compileComponents();
+
+    const innerFixture = TestBed.createComponent(ForgotPasswordComponent);
+    innerFixture.detectChanges();
+
+    const newPasswordInput = innerFixture.nativeElement.querySelector('#newPassword');
+    expect(newPasswordInput).toBeTruthy();
+    const emailInput = innerFixture.nativeElement.querySelector('#email');
+    expect(emailInput).toBeNull();
   });
 
-  it('should send reset request on valid form submit', async () => {
+  it('should send reset request on valid email form submit', async () => {
     component.emailForm.controls.email.setValue('test@test.com');
     expect(component.emailForm.valid).toBeTrue();
 
-    component.sendResetRequest();
+    await component.sendResetRequest();
 
-    const req = httpMock.expectOne((r) => r.url.includes('/auth/request-password-reset'));
-    expect(req.request.body).toEqual({ email: 'test@test.com' });
-    req.flush({ message: 'If the email address exists, a reset link has been sent.' });
-
-    await fixture.whenStable();
+    expect(mockAuthService.requestPasswordReset).toHaveBeenCalledWith('test@test.com');
     expect(component.sendSuccess()).toBeTrue();
+    expect(component.sendError()).toBeNull();
   });
 
   it('should show error on failed reset request', async () => {
+    mockAuthService.requestPasswordReset.and.returnValue(Promise.reject(new Error('network error')));
     component.emailForm.controls.email.setValue('test@test.com');
-    component.sendResetRequest();
 
-    const req = httpMock.expectOne((r) => r.url.includes('/auth/request-password-reset'));
-    req.error(new ErrorEvent('network error'));
+    await component.sendResetRequest();
 
-    await fixture.whenStable();
     expect(component.sendError()).toBe('forgot_password.send_error');
+  });
+
+  it('should send password reset on valid reset form submit', async () => {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [ForgotPasswordComponent],
+      providers: [
+        { provide: I18nService, useValue: mockI18n },
+        { provide: Router, useValue: mockRouter },
+        { provide: AuthService, useValue: mockAuthService },
+        buildActivatedRoute('abc-token'),
+      ],
+    }).compileComponents();
+
+    const innerFixture = TestBed.createComponent(ForgotPasswordComponent);
+    const innerComponent = innerFixture.componentInstance;
+    innerFixture.detectChanges();
+
+    innerComponent.resetForm.controls.newPassword.setValue('newPassword123');
+    expect(innerComponent.resetForm.valid).toBeTrue();
+
+    await innerComponent.doPasswordReset();
+
+    expect(mockAuthService.resetPassword).toHaveBeenCalledWith('abc-token', 'newPassword123');
+    expect(innerComponent.resetSuccess()).toBeTrue();
+    expect(innerComponent.resetError()).toBeNull();
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/home']);
+  });
+
+  it('should show error on failed password reset', async () => {
+    mockAuthService.resetPassword.and.returnValue(Promise.reject(new Error('network error')));
+
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [ForgotPasswordComponent],
+      providers: [
+        { provide: I18nService, useValue: mockI18n },
+        { provide: Router, useValue: mockRouter },
+        { provide: AuthService, useValue: mockAuthService },
+        buildActivatedRoute('abc-token'),
+      ],
+    }).compileComponents();
+
+    const innerFixture = TestBed.createComponent(ForgotPasswordComponent);
+    const innerComponent = innerFixture.componentInstance;
+    innerFixture.detectChanges();
+
+    innerComponent.resetForm.controls.newPassword.setValue('newPassword123');
+
+    await innerComponent.doPasswordReset();
+
+    expect(innerComponent.resetError()).toBe('forgot_password.reset_error');
   });
 });
