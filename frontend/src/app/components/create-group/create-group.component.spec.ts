@@ -174,7 +174,7 @@ describe('CreateGroupComponent', () => {
   });
 
   it('should canAddMore return correct value', () => {
-    expect(component.canAddMore).toBe(true);
+    expect(component.canAddMore()).toBe(true);
 
     for (let i = 0; i < 49; i++) {
       component.addMember({
@@ -184,7 +184,7 @@ describe('CreateGroupComponent', () => {
       });
     }
 
-    expect(component.canAddMore).toBe(false);
+    expect(component.canAddMore()).toBe(false);
   });
 
   it('should render the create button disabled when form is invalid', () => {
