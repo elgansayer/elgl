@@ -1,19 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PasswordPolicyResetComponent } from './password-policy-reset.component';
-import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
-import { signal } from '@angular/core';
 
 describe('PasswordPolicyResetComponent', () => {
   let component: PasswordPolicyResetComponent;
   let fixture: ComponentFixture<PasswordPolicyResetComponent>;
-  let i18nServiceMock: { translate: ReturnType<typeof vi.fn> };
   let authServiceMock: { changePassword: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
-    i18nServiceMock = {
-      translate: vi.fn((key: string) => key),
-    };
     authServiceMock = {
       changePassword: vi.fn(),
     };
@@ -21,7 +15,6 @@ describe('PasswordPolicyResetComponent', () => {
     await TestBed.configureTestingModule({
       imports: [PasswordPolicyResetComponent],
       providers: [
-        { provide: I18nService, useValue: i18nServiceMock },
         { provide: AuthService, useValue: authServiceMock },
       ],
     }).compileComponents();
