@@ -1,0 +1,3 @@
+* Priority: Medium Impact
+* Description: Implement the Notifications settings panel.
+* Technical Implementation: Create `NotificationSettingsComponent`. Group toggles logically (Push vs Email, then by category: Communication, Social, etc.). Implement a master toggle for categories if applicable. Use `FormArray` or nested `FormGroup` structures to cleanly map the `NotificationSettings` interface and handle bulk updates efficiently.

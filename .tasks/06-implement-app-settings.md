@@ -1,0 +1,3 @@
+* Priority: Medium Impact
+* Description: Implement the App Settings and Preferences panel.
+* Technical Implementation: Create `AppSettingsComponent`. Bind toggles for Appearance (Theme, Compact Mode) and Media (Inline Images). When the theme or compact mode changes, the `SettingsService` should not only update the backend but also trigger a global class change on the `document.body` or root Angular element (e.g., using `Renderer2` or a host binding on the main layout) to apply CSS variable changes instantly.

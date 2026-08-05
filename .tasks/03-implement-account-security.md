@@ -1,0 +1,3 @@
+* Priority: High Impact
+* Description: Implement the Account and Security settings panel.
+* Technical Implementation: Create `AccountSettingsComponent`. Implement a Reactive Form handling email changes, password updates, and 2FA toggles. Connect these to backend endpoints via `SettingsService`. For session management, display a list of active sessions (mapped from `AccountSettings.sessions`) with an option to revoke them individually, requiring a confirmation dialog component.

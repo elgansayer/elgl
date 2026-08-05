@@ -1,0 +1,3 @@
+* Priority: High Impact
+* Description: Implement the Profile and Discovery settings panel (HelloTalk/Bumble style).
+* Technical Implementation: Create `ProfileSettingsComponent`. Use complex form controls (e.g., dual-slider for age filters, custom select components for languages and JLPT levels). Ensure changes to discovery preferences (like `distanceRadius`) use debounce operators before calling the `SettingsService` optimistic update method to avoid spamming the backend during slider interactions.
