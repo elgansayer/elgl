@@ -5,15 +5,12 @@ on:
     - cron: '0 0 * * 1'
   workflow_dispatch:
 
-concurrency:
-  group: architect-planner
-  cancel-in-progress: false
-
 jobs:
-  plan:
+  architect_planning:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
       issues: write
       id-token: write
     steps:
@@ -29,45 +26,71 @@ jobs:
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
           prompt: >
-            You are the Lead AI Architect.
-            1. Read SPEC.md and ROADMAP.md.
-            2. Survey the codebase to see what is missing.
-            3. Use `gh issue create` to create actionable, atomic GitHub issues for missing features.
-            4. Do NOT write any project code. Your only job is planning and issue creation.
+            You are the Lead AI Architect for this project.
+            Your job is to evaluate the current state of the app against its goals.
 
-      - name: Tier 2 - OpenHands (Gemini 3.6 Flash Fallback)
+            1. Read AGENTS.md, SPEC.md (if available), and the README.md to understand the project goals.
+            2. Explore the codebase to assess the current implementation status.
+            3. Identify gaps between the planned features and the current state.
+            4. Self-modify any architecture or planning .md files (like SPEC.md or a new ROADMAP.md) to reflect the current state and next steps.
+            5. Use the `gh issue create --title "..." --body "..."` command to create new actionable GitHub Issues for the missing features or bugs you found.
+
+            IMPORTANT: Do not write code for these issues! Just plan, update the documentation, and create the tickets. Other agents will pick up the tickets and do the coding.
+
+      - name: Check if Claude created issues
+        id: check_claude
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          COUNT=$(gh issue list --repo ${{ github.repository }} --state open --limit 1 --json number -q 'length' 2>/dev/null || echo "0")
+          if [ "$COUNT" -gt 0 ]; then
+            echo "issues_exist=true" >> $GITHUB_OUTPUT
+          else
+            echo "issues_exist=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Tier 2 - OpenHands (DeepSeek Coder — paid fallback)
         id: secondary
-        if: steps.primary.outcome == 'failure'
+        if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.issues_exist == 'false'
         continue-on-error: true
         uses: xinbenlv/openhands-action@main
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "gemini/gemini-3.6-flash"
-          llm_api_key: ${{ secrets.GEMINI_API_KEY }}
-          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
-          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
+          llm_model: 'deepseek/deepseek-coder'
+          llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
+          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
+          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
-            You are the Lead AI Architect.
-            1. Read SPEC.md and ROADMAP.md.
-            2. Survey the codebase to see what is missing.
-            3. Use `gh issue create` to create actionable, atomic GitHub issues for missing features.
-            4. Do NOT write any project code. Your only job is planning and issue creation.
-          cli_args: "--max-iterations 30"
+            You are the Lead AI Architect for this project.
+            Your job is to evaluate the current state of the app against its goals.
 
-      - name: Tier 3 - OpenHands (DeepSeek Coder Final Fallback)
+            1. Read AGENTS.md, SPEC.md (if available), and the README.md to understand the project goals.
+            2. Explore the codebase to assess the current implementation status.
+            3. Identify gaps between the planned features and the current state.
+            4. Self-modify any architecture or planning .md files (like SPEC.md or a new ROADMAP.md) to reflect the current state and next steps.
+            5. Use the `gh issue create --title "..." --body "..."` command to create new actionable GitHub Issues for the missing features or bugs you found.
+
+            IMPORTANT: Do not write code for these issues! Just plan, update the documentation, and create the tickets.
+          cli_args: '--max-iterations 50'
+
+      - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
         id: tertiary
         if: steps.secondary.outcome == 'failure'
         uses: xinbenlv/openhands-action@main
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "deepseek/deepseek-coder"
-          llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
-          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
-          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
+          llm_model: 'gemini/gemini-3.6-flash'
+          llm_api_key: ${{ secrets.GEMINI_API_KEY }}
+          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
+          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
-            You are the Lead AI Architect.
-            1. Read SPEC.md and ROADMAP.md.
-            2. Survey the codebase to see what is missing.
-            3. Use `gh issue create` to create actionable, atomic GitHub issues for missing features.
-            4. Do NOT write any project code. Your only job is planning and issue creation.
-          cli_args: "--max-iterations 30"
+            You are the Lead AI Architect for this project.
+            Your job is to evaluate the current state of the app against its goals.
+
+            1. Read AGENTS.md, SPEC.md (if available), and the README.md to understand the project goals.
+            2. Explore the codebase to assess the current implementation status.
+            3. Identify gaps between the planned features and the current state.
+            4. Use the `gh issue create --title "..." --body "..."` command to create new actionable GitHub Issues for the missing features or bugs you found.
+
+            IMPORTANT: Do not write code for these issues! Just plan and create tickets.
+          cli_args: '--max-iterations 30'

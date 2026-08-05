@@ -1,20 +1,11 @@
-name: AI PR Reviewer
+name: AI PR Reviewer & Fixer
 
 on:
   pull_request:
-    types: [opened, synchronize]
-  pull_request_review_comment:
-    types: [created]
-
-concurrency:
-  group: pr-reviewer-${{ github.event.pull_request.number }}
-  cancel-in-progress: false
+    types: [opened, synchronize, reopened]
 
 jobs:
   review_and_fix:
-    if: >
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '/openhands-fix')) ||
-      (github.event_name == 'pull_request')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -25,8 +16,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
+      # ── TIER 1: Claude Code ────────────────────────────────────────────────
       - name: Tier 1 - Claude Code (Claude Pro via OAuth)
         id: primary
         continue-on-error: true
@@ -36,54 +29,81 @@ jobs:
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
           prompt: >
-            You are the AI PR Reviewer and Fixer. 
+            You are the AI PR Reviewer and Fixer.
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
-            
+
             1. Review the code changes in this branch.
             2. Run the local tests and linters to verify the code is correct.
             3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
             4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
-            5. CRITICAL INSTRUCTION: Once the code is perfect and all tests pass locally, you MUST execute the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it. DO NOT just say it looks good, YOU MUST ACTUALLY RUN THE COMMAND! If GitHub rejects the merge because checks are still running, you MUST write a bash script to poll 'gh pr checks ${{ github.event.pull_request.number }} --watch' or sleep and retry until it succeeds. DO NOT FINISH until it is successfully merged.
+            5. CRITICAL INSTRUCTION: Once the code is perfect and all tests pass locally, you MUST execute
+               `gh pr merge ${{ github.event.pull_request.number }} --admin --squash`
+               If GitHub rejects the merge because checks are still running, poll
+               'gh pr checks ${{ github.event.pull_request.number }} --watch' and retry.
+               DO NOT FINISH until the PR is successfully merged.
 
-      - name: Tier 2 - OpenHands (Gemini 3.6 Flash Fallback)
+      # Auto-skip: check if PR was merged by Claude
+      - name: Check if Claude merged the PR
+        id: check_claude
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          STATE=$(gh pr view ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} --json state -q '.state' 2>/dev/null || echo "OPEN")
+          echo "pr_state=$STATE" >> $GITHUB_OUTPUT
+          if [ "$STATE" = "MERGED" ]; then
+            echo "merged=true" >> $GITHUB_OUTPUT
+            echo "✅ PR already merged by Claude."
+          else
+            echo "merged=false" >> $GITHUB_OUTPUT
+            echo "⚠️  PR not merged — falling through to Tier 2."
+          fi
+
+      # ── TIER 2: DeepSeek Coder (paid, heavy lifting) ──────────────────────
+      - name: Tier 2 - OpenHands (DeepSeek Coder — paid heavy fallback)
         id: secondary
-        if: steps.primary.outcome == 'failure'
+        if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.merged == 'false'
         continue-on-error: true
         uses: xinbenlv/openhands-action@main
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "gemini/gemini-3.6-flash"
-          llm_api_key: ${{ secrets.GEMINI_API_KEY }}
-          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
-          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
+          llm_model: 'deepseek/deepseek-coder'
+          llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
+          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
+          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
-            You are the AI PR Reviewer and Fixer. 
+            You are the AI PR Reviewer and Fixer.
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
-            
+
             1. Review the code changes in this branch.
             2. Run the local tests and linters to verify the code is correct.
             3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
             4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
-            5. CRITICAL INSTRUCTION: Once the code is perfect and all tests pass locally, you MUST execute the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it. DO NOT just say it looks good, YOU MUST ACTUALLY RUN THE COMMAND! If GitHub rejects the merge because checks are still running, you MUST write a bash script to poll 'gh pr checks ${{ github.event.pull_request.number }} --watch' or sleep and retry until it succeeds. DO NOT FINISH until it is successfully merged.
-          cli_args: "--max-iterations 30"
+            5. CRITICAL INSTRUCTION: Once the code is perfect and all tests pass locally, you MUST execute
+               `gh pr merge ${{ github.event.pull_request.number }} --admin --squash`
+               If GitHub rejects the merge because checks are still running, poll
+               'gh pr checks ${{ github.event.pull_request.number }} --watch' and retry.
+               DO NOT FINISH until the PR is successfully merged.
+          cli_args: '--max-iterations 50'
 
-      - name: Tier 3 - OpenHands (DeepSeek Coder Final Fallback)
+      # ── TIER 3: Gemini Flash (lightweight last resort) ────────────────────
+      - name: Tier 3 - OpenHands (Gemini 3.6 Flash — lightweight last resort)
         id: tertiary
         if: steps.secondary.outcome == 'failure'
         uses: xinbenlv/openhands-action@main
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "deepseek/deepseek-coder"
-          llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
-          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
-          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
+          llm_model: 'gemini/gemini-3.6-flash'
+          llm_api_key: ${{ secrets.GEMINI_API_KEY }}
+          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
+          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
-            You are the AI PR Reviewer and Fixer. 
+            You are the AI PR Reviewer and Fixer.
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
-            
+
             1. Review the code changes in this branch.
             2. Run the local tests and linters to verify the code is correct.
-            3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
-            4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
-            5. CRITICAL INSTRUCTION: Once the code is perfect and all tests pass locally, you MUST execute the command `gh pr merge ${{ github.event.pull_request.number }} --admin --squash` to merge it. DO NOT just say it looks good, YOU MUST ACTUALLY RUN THE COMMAND! If GitHub rejects the merge because checks are still running, you MUST write a bash script to poll 'gh pr checks ${{ github.event.pull_request.number }} --watch' or sleep and retry until it succeeds. DO NOT FINISH until it is successfully merged.
-          cli_args: "--max-iterations 30"
+            3. If tests fail, write fixes, commit, and push to this branch.
+            4. CRITICAL: Execute `gh pr merge ${{ github.event.pull_request.number }} --admin --squash`
+               Poll checks if needed. DO NOT FINISH until the PR is successfully merged.
+          cli_args: '--max-iterations 30'
