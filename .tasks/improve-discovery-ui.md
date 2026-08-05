@@ -1,0 +1,3 @@
+* Priority: High Impact
+* Description: Transition from the current list-based discovery view to a card-based swiping layout similar to Bumble and Hinge. This increases engagement, simplifies decision-making, and uses intuitive gestures for matching or skipping users. Include a clear visual hierarchy for profile pictures, language fluencies, and shared interests.
+* Technical Implementation: Refactor `discovery.component.html` and `.scss`. Implement the Angular CDK `DragDropModule` to enable card dragging (swiping left/right). Use CSS Grid for the card layout structure and `@angular/animations` for smooth entry/exit and swipe transitions. Ensure large touch targets for mobile. Add skeleton loaders for initial data fetching instead of plain text loading states.
