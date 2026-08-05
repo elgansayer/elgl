@@ -1,3 +1,5 @@
+
+
 import {
   Controller,
   Get,
@@ -10,8 +12,6 @@ import {
 import { AuthService } from './auth.service';
 import { TransferService } from '../transfer/transfer.service';
 import { SupabaseAuthGuard } from './supabase-auth.guard';
-import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 
 interface RequestWithUser {
@@ -24,18 +24,6 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly transferService: TransferService,
   ) {}
-
-  @Post('request-password-reset')
-  async requestPasswordReset(@Body() dto: ForgotPasswordDto) {
-    const token = await this.authService.requestPasswordReset(dto.email);
-    return { token };
-  }
-
-  @Post('reset-password')
-  async resetPassword(@Body() dto: ResetPasswordDto) {
-    await this.authService.resetPassword(dto.token, dto.newPassword);
-    return { message: 'Password successfully reset' };
-  }
 
   @UseGuards(SupabaseAuthGuard)
   @Post('change-password')
