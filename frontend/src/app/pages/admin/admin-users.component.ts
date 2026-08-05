@@ -29,9 +29,9 @@ export class AdminUsersComponent {
   }));
 
   private readonly usersResource = resource({
-    request: this.request,
-    loader: ({ request }) =>
-      this.adminService.listUsers(request.search, request.page, request.pageSize),
+    params: () => this.request(),
+    loader: ({ params }) =>
+      this.adminService.listUsers(params.search, params.page, params.pageSize),
   });
 
   readonly users = computed(() => this.usersResource.value()?.users ?? []);
@@ -47,12 +47,12 @@ export class AdminUsersComponent {
   readonly isVipUpdating = signal<string | null>(null);
 
   private readonly historyResource = resource({
-    request: this.selectedUserId,
-    loader: ({ request }) => {
-      if (!request) {
+    params: () => this.selectedUserId(),
+    loader: ({ params }) => {
+      if (!params) {
         return Promise.resolve([]);
       }
-      return this.adminService.getLoginHistory(request);
+      return this.adminService.getLoginHistory(params);
     },
   });
 
