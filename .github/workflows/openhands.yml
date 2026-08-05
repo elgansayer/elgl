@@ -84,7 +84,7 @@ jobs:
         uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: 'deepseek/deepseek-chat'
+          llm_model: 'deepseek/deepseek-v4-flash'
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
           prompt: >
             Please resolve issue #${{ github.event.issue.number }}: "${{ github.event.issue.title }}".
@@ -105,7 +105,7 @@ jobs:
         uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: 'gemini/gemini-3.6-flash'
+          llm_model: 'gemini/gemini-3.5-flash'
           llm_api_key: ${{ secrets.GEMINI_API_KEY }}
           prompt: >
             Please resolve issue #${{ github.event.issue.number }}: "${{ github.event.issue.title }}".
