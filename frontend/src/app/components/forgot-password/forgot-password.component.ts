@@ -1,11 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { map, lastValueFrom } from 'rxjs';
+import { map } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { environment } from '../../../environments/environment';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-forgot-password',
@@ -17,7 +16,7 @@ import { environment } from '../../../environments/environment';
         <h1 class="text-3xl font-bold text-center text-text-primary">{{ 'forgot_password.title' | t }}</h1>
 
         @if (!tokenQuery()) {
-          <!-- Email form -->
+          <!-- Email form: step 1 - request reset link -->
           <form [formGroup]="emailForm" (ngSubmit)="sendResetRequest()" class="space-y-4">
             <div>
               <label for="email" class="block text-sm font-medium text-text-secondary">{{
@@ -42,13 +41,13 @@ import { environment } from '../../../environments/environment';
             <button
               type="submit"
               [disabled]="emailForm.invalid || isSending()"
-              class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-accent hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
+              class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-accent hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50"
             >
               {{ (isSending() ? 'forgot_password.sending' : 'forgot_password.send_button') | t }}
             </button>
           </form>
         } @else {
-          <!-- Password reset form -->
+          <!-- Reset form: step 2 - set new password using token from email link -->
           <form [formGroup]="resetForm" (ngSubmit)="doPasswordReset()" class="space-y-4">
             <div>
               <label for="newPassword" class="block text-sm font-medium text-text-secondary">{{
@@ -74,7 +73,7 @@ import { environment } from '../../../environments/environment';
             <button
               type="submit"
               [disabled]="resetForm.invalid || isResetting()"
-              class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-accent hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
+              class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-accent hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50"
             >
               {{ (isResetting() ? 'forgot_password.resetting' : 'forgot_password.reset_button') | t }}
             </button>
@@ -86,7 +85,7 @@ import { environment } from '../../../environments/environment';
 })
 export class ForgotPasswordComponent {
   private fb = inject(FormBuilder);
-  private http = inject(HttpClient);
+  private authService = inject(AuthService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
 
@@ -119,18 +118,12 @@ export class ForgotPasswordComponent {
     const email = this.emailForm.controls.email.value;
 
     try {
-      const res = await lastValueFrom(
-        this.http.post<{ token: string }>(`${environment.apiUrl}/auth/request-password-reset`, { email }),
-      );
-      this.isSending.set(false);
+      await this.authService.requestPasswordReset(email);
       this.sendSuccess.set(true);
-      this.router.navigate([], {
-        queryParams: { token: res.token },
-        queryParamsHandling: 'merge',
-      });
     } catch {
-      this.isSending.set(false);
       this.sendError.set('Failed to send reset request');
+    } finally {
+      this.isSending.set(false);
     }
   }
 
@@ -147,15 +140,13 @@ export class ForgotPasswordComponent {
     const newPassword = this.resetForm.controls.newPassword.value;
 
     try {
-      await lastValueFrom(
-        this.http.post<{ message: string }>(`${environment.apiUrl}/auth/reset-password`, { token, newPassword }),
-      );
-      this.isResetting.set(false);
+      await this.authService.resetPassword(token, newPassword);
       this.resetSuccess.set(true);
-      this.router.navigate(['/home']);
+      setTimeout(() => this.router.navigate(['/home']), 1500);
     } catch {
-      this.isResetting.set(false);
       this.resetError.set('Failed to reset password');
+    } finally {
+      this.isResetting.set(false);
     }
   }
 }

@@ -109,6 +109,9 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "transformIgnorePatterns": [
+      "node_modules/(?!(uuid|jwks-rsa|livekit-server-sdk|jose|@supabase)/)"
+    ]
   }
 }
