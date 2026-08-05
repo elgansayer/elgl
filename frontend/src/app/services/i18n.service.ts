@@ -1208,6 +1208,7 @@ export class I18nService {
 
     // Password Policy & Reset
     'password.resetTitle': 'Reset Password',
+    'password.currentPassword': 'Current Password',
     'password.newPassword': 'New Password',
     'password.confirmPassword': 'Confirm Password',
     'password.minLength': 'At least 8 characters',
