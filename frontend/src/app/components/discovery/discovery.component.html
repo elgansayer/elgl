@@ -149,6 +149,11 @@
     </div>
   }
 
+  <!-- Global Search Component -->
+  <div class="px-4 mt-4 mb-2">
+    <app-global-search (searchFilters)="onGlobalSearch($event)"></app-global-search>
+  </div>
+
   <!-- Content States -->
   <main class="p-0">
     @if (isLoading()) {
