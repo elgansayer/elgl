@@ -21,25 +21,26 @@ export class PasswordResetService {
   async requestPasswordReset(dto: RequestPasswordResetDto): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
-    // Look up user by email (stored in auth.users, but we can find via users table linked)
-    const { data: users, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', dto.email);
+    // Look up user by email via Supabase Auth admin API
+    const { data: authUsers, error: userError } = await supabase.auth.admin.listUsers({
+      page: 1,
+      perPage: 1,
+      filter: `email eq "${dto.email}"`,
+    });
 
-    if (userError || !users || users.length === 0) {
+    if (userError || !authUsers || authUsers.users.length === 0) {
       // Do not reveal whether the email exists
       return;
     }
 
-    const user = users[0];
+    const authUser = authUsers.users[0];
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
 
     const { error: insertError } = await supabase
       .from('password_reset_tokens')
       .insert({
-        user_id: user.id,
+        user_id: authUser.id,
         token,
         expires_at: expiresAt.toISOString(),
         used: false,

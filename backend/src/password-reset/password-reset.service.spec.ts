@@ -8,7 +8,7 @@ describe('PasswordResetService (unit)', () => {
   let emailService: { sendPasswordResetEmail: jest.Mock };
   let supabaseClient: {
     from: jest.Mock;
-    auth: { admin: { updateUserById: jest.Mock } };
+    auth: { admin: { updateUserById: jest.Mock; listUsers: jest.Mock } };
   };
 
   beforeEach(() => {
@@ -17,6 +17,7 @@ describe('PasswordResetService (unit)', () => {
       auth: {
         admin: {
           updateUserById: jest.fn(),
+          listUsers: jest.fn(),
         },
       },
     };
@@ -34,21 +35,21 @@ describe('PasswordResetService (unit)', () => {
 
   describe('requestPasswordReset', () => {
     it('should silently return when no user found with the given email', async () => {
-      const chain = createChain();
-      supabaseClient.from = jest.fn().mockReturnValue(chain);
-      chain.select = jest.fn().mockReturnValue(chain);
-      chain.eq = jest.fn().mockResolvedValue({ data: [], error: null });
+      supabaseClient.auth.admin.listUsers = jest.fn().mockResolvedValue({
+        data: { users: [] },
+        error: null,
+      });
 
       await service.requestPasswordReset({ email: 'nobody@example.com' });
 
       expect(emailService.sendPasswordResetEmail).not.toHaveBeenCalled();
     });
 
-    it('should silently return on database error', async () => {
-      const chain = createChain();
-      supabaseClient.from = jest.fn().mockReturnValue(chain);
-      chain.select = jest.fn().mockReturnValue(chain);
-      chain.eq = jest.fn().mockResolvedValue({ data: null, error: new Error('db error') });
+    it('should silently return on listUsers error', async () => {
+      supabaseClient.auth.admin.listUsers = jest.fn().mockResolvedValue({
+        data: null,
+        error: new Error('auth error'),
+      });
 
       await service.requestPasswordReset({ email: 'user@example.com' });
 
@@ -56,20 +57,13 @@ describe('PasswordResetService (unit)', () => {
     });
 
     it('should create a reset token and send email for a valid user', async () => {
-      const findChain = createChain();
-      supabaseClient.from = jest.fn().mockReturnValue(findChain);
-      findChain.select = jest.fn().mockReturnValue(findChain);
-      findChain.eq = jest.fn().mockResolvedValue({ data: [{ id: 'user-abc' }], error: null });
+      supabaseClient.auth.admin.listUsers = jest.fn().mockResolvedValue({
+        data: { users: [{ id: 'user-abc' }] },
+        error: null,
+      });
 
       const insertChain = createChain();
-      // Override from for the insert call
-      supabaseClient.from = jest.fn()
-        .mockReturnValueOnce(findChain) // select
-        .mockReturnValueOnce(insertChain); // insert
-
-      findChain.select = jest.fn().mockReturnValue(findChain);
-      findChain.eq = jest.fn().mockResolvedValue({ data: [{ id: 'user-abc' }], error: null });
-
+      supabaseClient.from = jest.fn().mockReturnValue(insertChain);
       insertChain.insert = jest.fn().mockResolvedValue({ error: null });
 
       await service.requestPasswordReset({ email: 'user@example.com' });
@@ -89,19 +83,13 @@ describe('PasswordResetService (unit)', () => {
     });
 
     it('should throw BadRequestException when token insert fails', async () => {
-      const findChain = createChain();
-      supabaseClient.from = jest.fn().mockReturnValue(findChain);
-      findChain.select = jest.fn().mockReturnValue(findChain);
-      findChain.eq = jest.fn().mockResolvedValue({ data: [{ id: 'user-abc' }], error: null });
+      supabaseClient.auth.admin.listUsers = jest.fn().mockResolvedValue({
+        data: { users: [{ id: 'user-abc' }] },
+        error: null,
+      });
 
       const insertChain = createChain();
-      supabaseClient.from = jest.fn()
-        .mockReturnValueOnce(findChain)
-        .mockReturnValueOnce(insertChain);
-
-      findChain.select = jest.fn().mockReturnValue(findChain);
-      findChain.eq = jest.fn().mockResolvedValue({ data: [{ id: 'user-abc' }], error: null });
-
+      supabaseClient.from = jest.fn().mockReturnValue(insertChain);
       insertChain.insert = jest.fn().mockResolvedValue({ error: new Error('insert failed') });
 
       await expect(
