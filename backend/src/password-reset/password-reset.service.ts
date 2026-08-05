@@ -21,7 +21,7 @@ export class PasswordResetService {
   async requestPasswordReset(dto: RequestPasswordResetDto): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
-    // Look up user by email (stored in auth.users, but we can find via users table linked)
+    // Look up user by email in the public users table
     const { data: users, error: userError } = await supabase
       .from('users')
       .select('id')
