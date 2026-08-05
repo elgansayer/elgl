@@ -71,8 +71,8 @@ jobs:
         uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: 'deepseek/deepseek-v4-flash'
-          llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
+          llm_model: 'openrouter/deepseek/deepseek-v4-pro'
+          llm_api_key: ${{ secrets.OPENROUTER_API_KEY }}
           openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
           runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
