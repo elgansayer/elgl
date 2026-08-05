@@ -75,23 +75,17 @@ describe('GroupsService', () => {
     const adminBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      single: jest
-        .fn()
-        .mockResolvedValue({ data: { owner_id: 'admin-1' }, error: null }),
+      single: jest.fn().mockResolvedValue({ data: { owner_id: 'admin-1' }, error: null }),
     };
     const groupMaxBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      single: jest
-        .fn()
-        .mockResolvedValue({ data: { max_members: 10 }, error: null }),
+      single: jest.fn().mockResolvedValue({ data: { max_members: 10 }, error: null }),
     };
     const userExistsBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      maybeSingle: jest
-        .fn()
-        .mockResolvedValue({ data: { id: 'member-9' }, error: null }),
+      maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'member-9' }, error: null }),
     };
     const noMembershipBuilder = {
       select: jest.fn().mockReturnThis(),
@@ -134,23 +128,17 @@ describe('GroupsService', () => {
     const adminBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      single: jest
-        .fn()
-        .mockResolvedValue({ data: { owner_id: 'admin-1' }, error: null }),
+      single: jest.fn().mockResolvedValue({ data: { owner_id: 'admin-1' }, error: null }),
     };
     const groupMaxBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      single: jest
-        .fn()
-        .mockResolvedValue({ data: { max_members: 2 }, error: null }),
+      single: jest.fn().mockResolvedValue({ data: { max_members: 2 }, error: null }),
     };
     const userExistsBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      maybeSingle: jest
-        .fn()
-        .mockResolvedValue({ data: { id: 'member-9' }, error: null }),
+      maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'member-9' }, error: null }),
     };
     const noMembershipBuilder = {
       select: jest.fn().mockReturnThis(),
@@ -180,32 +168,26 @@ describe('GroupsService', () => {
       from: mockFrom,
     });
 
-    await expect(
-      service.addMember('group-1', 'member-9', 'admin-1'),
-    ).rejects.toThrow(ForbiddenException);
+    await expect(service.addMember('group-1', 'member-9', 'admin-1')).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 
   it('removeMember deletes the member row', async () => {
     const adminBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      single: jest
-        .fn()
-        .mockResolvedValue({ data: { owner_id: 'admin-1' }, error: null }),
+      single: jest.fn().mockResolvedValue({ data: { owner_id: 'admin-1' }, error: null }),
     };
     const groupOwnerBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      single: jest
-        .fn()
-        .mockResolvedValue({ data: { owner_id: 'other-owner' }, error: null }),
+      single: jest.fn().mockResolvedValue({ data: { owner_id: 'other-owner' }, error: null }),
     };
     const membershipBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      maybeSingle: jest
-        .fn()
-        .mockResolvedValue({ data: { id: 'mem-1' }, error: null }),
+      maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'mem-1' }, error: null }),
     };
     const deleteBuilder = {
       delete: jest.fn().mockReturnThis(),
@@ -232,6 +214,7 @@ describe('GroupsService', () => {
       service.removeMember('group-1', 'member-9', 'admin-1'),
     ).resolves.not.toThrow();
   });
+
 
   it('createGroup enforces size limits and adds the owner as a member', async () => {
     const interestRow = { id: 'inter-1', name: 'Football' };
