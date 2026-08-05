@@ -206,7 +206,7 @@ export class I18nService {
     'discovery.sortNewest': 'Newest',
     'discovery.radiusLabel': 'Maximum Distance: {{radius}} km',
     'discovery.vipRadiusNote':
-      'VIP users (8 UKP / $10 USD) get global discovery and location spoofing.',
+      'VIP (8 UKP / $10 USD) unlocks the distance slider and global discovery.',
     'discovery.searchPlaceholder': 'Search by name, language, or bio...',
     'discovery.emptyState': 'No language partners matched your current filter criteria.',
     'discovery.streakDays': '🔥 {{days}}d Streak',
