@@ -32,9 +32,9 @@ jobs:
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         with:
+          github_token: ${{ secrets.PAT_TOKEN }}
           prompt: >
             You are the AI PR Reviewer and Fixer. 
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.

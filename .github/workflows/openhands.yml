@@ -36,9 +36,9 @@ jobs:
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         with:
+          github_token: ${{ secrets.PAT_TOKEN }}
           prompt: >
             Please resolve issue #${{ github.event.issue.number }}: "${{ github.event.issue.title }}".
             Issue body: "${{ github.event.issue.body }}".
