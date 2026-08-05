@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of } from 'rxjs';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ForgotPasswordComponent } from './forgot-password.component';
 import { AuthService } from '../../services/auth.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -8,8 +9,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
 describe('ForgotPasswordComponent', () => {
   let component: ForgotPasswordComponent;
   let fixture: ComponentFixture<ForgotPasswordComponent>;
-  let authService: jasmine.SpyObj<AuthService>;
-  let router: jasmine.SpyObj<Router>;
+  let authService: { requestPasswordReset: ReturnType<typeof vi.fn>; resetPassword: ReturnType<typeof vi.fn> };
+  let router: { navigate: ReturnType<typeof vi.fn> };
 
   const createActivatedRoute = (token: string | null) => ({
     queryParamMap: of({
@@ -21,8 +22,13 @@ describe('ForgotPasswordComponent', () => {
   });
 
   beforeEach(async () => {
-    authService = jasmine.createSpyObj('AuthService', ['requestPasswordReset', 'resetPassword']);
-    router = jasmine.createSpyObj('Router', ['navigate']);
+    authService = {
+      requestPasswordReset: vi.fn(),
+      resetPassword: vi.fn(),
+    };
+    router = {
+      navigate: vi.fn(),
+    };
 
     await TestBed.configureTestingModule({
       imports: [ForgotPasswordComponent],
@@ -47,24 +53,24 @@ describe('ForgotPasswordComponent', () => {
     });
 
     it('should call authService.requestPasswordReset on valid submit', async () => {
-      authService.requestPasswordReset.and.returnValue(Promise.resolve());
+      authService.requestPasswordReset.mockResolvedValue(undefined);
 
       component.emailForm.setValue({ email: 'test@example.com' });
       await component.sendResetRequest();
 
       expect(authService.requestPasswordReset).toHaveBeenCalledWith('test@example.com');
-      expect(component.sendSuccess()).toBeTrue();
-      expect(component.isSending()).toBeFalse();
+      expect(component.sendSuccess()).toBe(true);
+      expect(component.isSending()).toBe(false);
     });
 
     it('should set sendError on request failure', async () => {
-      authService.requestPasswordReset.and.returnValue(Promise.reject(new Error('Network error')));
+      authService.requestPasswordReset.mockRejectedValue(new Error('Network error'));
 
       component.emailForm.setValue({ email: 'test@example.com' });
       await component.sendResetRequest();
 
       expect(component.sendError()).toBe('forgot_password.send_error');
-      expect(component.isSending()).toBeFalse();
+      expect(component.isSending()).toBe(false);
     });
 
     it('should not submit if emailForm is invalid', async () => {
@@ -100,25 +106,25 @@ describe('ForgotPasswordComponent', () => {
     });
 
     it('should call authService.resetPassword and navigate on valid submit', async () => {
-      authService.resetPassword.and.returnValue(Promise.resolve());
+      authService.resetPassword.mockResolvedValue(undefined);
 
       component.resetForm.setValue({ newPassword: 'newPass123!' });
       await component.doPasswordReset();
 
       expect(authService.resetPassword).toHaveBeenCalledWith('reset-token-abc', 'newPass123!');
-      expect(component.resetSuccess()).toBeTrue();
-      expect(component.isResetting()).toBeFalse();
+      expect(component.resetSuccess()).toBe(true);
+      expect(component.isResetting()).toBe(false);
       expect(router.navigate).toHaveBeenCalledWith(['/home']);
     });
 
     it('should set resetError on reset failure', async () => {
-      authService.resetPassword.and.returnValue(Promise.reject(new Error('Invalid token')));
+      authService.resetPassword.mockRejectedValue(new Error('Invalid token'));
 
       component.resetForm.setValue({ newPassword: 'newPass123!' });
       await component.doPasswordReset();
 
       expect(component.resetError()).toBe('forgot_password.reset_error');
-      expect(component.isResetting()).toBeFalse();
+      expect(component.isResetting()).toBe(false);
     });
 
     it('should not submit if resetForm is invalid', async () => {

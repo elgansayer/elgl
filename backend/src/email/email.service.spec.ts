@@ -43,8 +43,12 @@ describe('EmailService (unit)', () => {
       expect(mailArgs.to).toBe('user@example.com');
       expect(mailArgs.subject).toBe('Reset your HelloTalk password');
       expect(mailArgs.from).toBe('"HelloTalk" <noreply@hellotalk.com>');
-      expect(mailArgs.text).toContain('https://hellotalk.com/forgot-password?token=abc123token');
-      expect(mailArgs.html).toContain('https://hellotalk.com/forgot-password?token=abc123token');
+      expect(mailArgs.text).toContain(
+        'https://hellotalk.com/forgot-password?token=abc123token',
+      );
+      expect(mailArgs.html).toContain(
+        'https://hellotalk.com/forgot-password?token=abc123token',
+      );
     });
 
     it('should use FRONTEND_URL env var for the reset link', async () => {
@@ -64,7 +68,9 @@ describe('EmailService (unit)', () => {
       await customService.sendPasswordResetEmail('x@y.com', 'mytoken');
 
       expect(fn).toHaveBeenCalledTimes(1);
-      expect(fn.mock.calls[0][0].text).toContain('https://custom.app/forgot-password?token=mytoken');
+      expect(fn.mock.calls[0][0].text).toContain(
+        'https://custom.app/forgot-password?token=mytoken',
+      );
     });
 
     it('should default to localhost:4200 when FRONTEND_URL is not set', async () => {
@@ -76,7 +82,9 @@ describe('EmailService (unit)', () => {
       await defaultService.sendPasswordResetEmail('x@y.com', 'localtoken');
 
       expect(fn).toHaveBeenCalledTimes(1);
-      expect(fn.mock.calls[0][0].text).toContain('http://localhost:4200/forgot-password?token=localtoken');
+      expect(fn.mock.calls[0][0].text).toContain(
+        'http://localhost:4200/forgot-password?token=localtoken',
+      );
     });
   });
 });

@@ -30,7 +30,9 @@ describe('PasswordResetService (unit)', () => {
   beforeEach(() => {
     supabaseAdmin = {
       getUserByEmail: jest.fn().mockRejectedValue(new Error('Not available')),
-      listUsers: jest.fn().mockResolvedValue({ data: { users: [] }, error: null }),
+      listUsers: jest
+        .fn()
+        .mockResolvedValue({ data: { users: [] }, error: null }),
       updateUserById: jest.fn(),
     };
 
@@ -54,8 +56,13 @@ describe('PasswordResetService (unit)', () => {
 
   describe('requestPasswordReset', () => {
     it('should silently return when no user is found', async () => {
-      supabaseAdmin.getUserByEmail.mockRejectedValue(new Error('Not available'));
-      supabaseAdmin.listUsers.mockResolvedValue({ data: { users: [] }, error: null });
+      supabaseAdmin.getUserByEmail.mockRejectedValue(
+        new Error('Not available'),
+      );
+      supabaseAdmin.listUsers.mockResolvedValue({
+        data: { users: [] },
+        error: null,
+      });
 
       await service.requestPasswordReset({ email: 'nobody@example.com' });
 
@@ -89,7 +96,9 @@ describe('PasswordResetService (unit)', () => {
     });
 
     it('should fall back to listUsers and send reset email', async () => {
-      supabaseAdmin.getUserByEmail.mockRejectedValue(new Error('Not available'));
+      supabaseAdmin.getUserByEmail.mockRejectedValue(
+        new Error('Not available'),
+      );
       supabaseAdmin.listUsers.mockResolvedValue({
         data: {
           users: [
@@ -146,7 +155,10 @@ describe('PasswordResetService (unit)', () => {
       });
 
       await expect(
-        service.resetPassword({ token: 'bad-token', newPassword: 'newPass123!' }),
+        service.resetPassword({
+          token: 'bad-token',
+          newPassword: 'newPass123!',
+        }),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -180,7 +192,9 @@ describe('PasswordResetService (unit)', () => {
         error: null,
       });
 
-      supabaseAdmin.updateUserById = jest.fn().mockResolvedValue({ error: null });
+      supabaseAdmin.updateUserById = jest
+        .fn()
+        .mockResolvedValue({ error: null });
 
       const updateChain = createChain();
       // First call returns findChain, second returns updateChain

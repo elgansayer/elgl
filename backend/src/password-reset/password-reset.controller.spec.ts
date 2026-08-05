@@ -1,9 +1,11 @@
 import { PasswordResetController } from './password-reset.controller';
-import { PasswordResetService } from './password-reset.service';
 
 describe('PasswordResetController (unit)', () => {
   let controller: PasswordResetController;
-  let resetService: { requestPasswordReset: jest.Mock; resetPassword: jest.Mock };
+  let resetService: {
+    requestPasswordReset: jest.Mock;
+    resetPassword: jest.Mock;
+  };
 
   beforeEach(() => {
     resetService = {
@@ -11,14 +13,18 @@ describe('PasswordResetController (unit)', () => {
       resetPassword: jest.fn(),
     };
 
-    controller = new (PasswordResetController as any)(resetService) as PasswordResetController;
+    controller = new (PasswordResetController as any)(
+      resetService,
+    ) as PasswordResetController;
   });
 
   describe('requestPasswordReset', () => {
     it('should call the reset service and return a generic message', async () => {
       resetService.requestPasswordReset.mockResolvedValue(undefined);
 
-      const result = await controller.requestPasswordReset({ email: 'user@example.com' });
+      const result = await controller.requestPasswordReset({
+        email: 'user@example.com',
+      });
 
       expect(resetService.requestPasswordReset).toHaveBeenCalledWith({
         email: 'user@example.com',
@@ -29,7 +35,9 @@ describe('PasswordResetController (unit)', () => {
     });
 
     it('should still return the generic message even if the service throws', async () => {
-      resetService.requestPasswordReset.mockRejectedValue(new Error('DB error'));
+      resetService.requestPasswordReset.mockRejectedValue(
+        new Error('DB error'),
+      );
 
       await expect(
         controller.requestPasswordReset({ email: 'bad@example.com' }),
@@ -59,7 +67,10 @@ describe('PasswordResetController (unit)', () => {
       resetService.resetPassword.mockRejectedValue(new Error('Invalid token'));
 
       await expect(
-        controller.resetPassword({ token: 'bad', newPassword: 'justalongpassword' }),
+        controller.resetPassword({
+          token: 'bad',
+          newPassword: 'justalongpassword',
+        }),
       ).rejects.toThrow('Invalid token');
     });
   });
