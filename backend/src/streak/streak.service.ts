@@ -66,10 +66,9 @@ export class StreakService {
   }
 
   /**
-   * Scheduled job that runs every hour to reset streaks for inactive users.
+   * Scheduled job that runs daily at midnight to reset streaks for inactive users.
    */
-
-  @Cron('0 * * * *')
+  @Cron('0 0 * * *')
   async handleStreakResetCron(): Promise<void> {
     this.logger.log('Running scheduled streak reset job');
     try {
