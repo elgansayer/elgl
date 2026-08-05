@@ -6,10 +6,11 @@ on:
 
 jobs:
   review_and_fix:
-    # Guard: only skip if the PR reviewer itself pushed the commit (true self-review loop).
-    # AI-created PRs (openhands-agent, jules, etc.) MUST be reviewed and merged.
-    # The old guard blocked ALL bots which meant every AI-created PR was skipped!
-    if: github.actor != 'claude-code[bot]'
+    # Guard: don't re-review PRs pushed by bots (prevents self-review loops)
+    if: |
+      github.actor != 'github-actions[bot]' &&
+      github.actor != 'app/github-actions' &&
+      !contains(github.actor, '[bot]')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -18,7 +19,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
@@ -62,8 +63,8 @@ jobs:
             echo "PR not merged — falling through to Tier 2."
           fi
 
-      # ── TIER 2: DeepSeek V4 Pro (paid, heavy lifting) ────────────────────
-      - name: Tier 2 - OpenHands (DeepSeek V4 Pro — paid heavy fallback)
+      # ── TIER 2: DeepSeek V3 Chat (paid, heavy lifting) ────────────────────
+      - name: Tier 2 - OpenHands (DeepSeek V3 — paid heavy fallback)
         id: secondary
         if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.merged == 'false'
         continue-on-error: true
