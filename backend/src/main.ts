@@ -3,9 +3,11 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { json, urlencoded, Request, Response } from 'express';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
+  app.use(helmet());
   app.setGlobalPrefix('api');
 
   // Ensure raw body is preserved for Stripe webhook
@@ -34,7 +36,7 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: '*',
+    origin: process.env.FRONTEND_URL || '*',
     credentials: true,
   });
   app.useGlobalPipes(
