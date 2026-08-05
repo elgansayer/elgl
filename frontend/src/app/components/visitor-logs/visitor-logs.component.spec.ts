@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
 import { VisitorLogsComponent } from './visitor-logs.component';
 import { UserService, VisitorLog, UserProfile } from '../../services/user.service';
 import { I18nService } from '../../services/i18n.service';
@@ -10,8 +9,8 @@ import { provideRouter } from '@angular/router';
 describe('VisitorLogsComponent', () => {
   let component: VisitorLogsComponent;
   let fixture: ComponentFixture<VisitorLogsComponent>;
-  let userService: jasmine.SpyObj<UserService>;
-  let i18nService: jasmine.SpyObj<I18nService>;
+  let userService: { getMyProfile: ReturnType<typeof vi.fn>; getMyVisitors: ReturnType<typeof vi.fn> };
+  let i18nService: { translate: ReturnType<typeof vi.fn> };
 
   const mockProfile: UserProfile = {
     id: 'user-1',
@@ -59,18 +58,18 @@ describe('VisitorLogsComponent', () => {
   ];
 
   beforeEach(async () => {
-    userService = jasmine.createSpyObj<UserService>('UserService', [
-      'getMyProfile',
-      'getMyVisitors',
-    ]);
-    i18nService = jasmine.createSpyObj<I18nService>('I18nService', ['translate']);
-
-    i18nService.translate.and.callFake((key: string, params?: Record<string, unknown>) => {
-      if (params && 'count' in params) {
-        return `${key}:${params['count']}`;
-      }
-      return key;
-    });
+    userService = {
+      getMyProfile: vi.fn(),
+      getMyVisitors: vi.fn(),
+    };
+    i18nService = {
+      translate: vi.fn((key: string, params?: Record<string, unknown>) => {
+        if (params && 'count' in params) {
+          return `${key}:${params['count']}`;
+        }
+        return key;
+      }),
+    };
 
     await TestBed.configureTestingModule({
       imports: [VisitorLogsComponent],
@@ -92,20 +91,20 @@ describe('VisitorLogsComponent', () => {
   });
 
   it('should load visitors and profile on init', async () => {
-    userService.getMyProfile.and.resolveTo(mockProfile);
-    userService.getMyVisitors.and.resolveTo(mockVisitors);
+    userService.getMyProfile.mockResolvedValue(mockProfile);
+    userService.getMyVisitors.mockResolvedValue(mockVisitors);
 
     fixture.detectChanges();
     await fixture.whenStable();
 
     expect(component.profile()).toEqual(mockProfile);
     expect(component.visitors()).toEqual(mockVisitors);
-    expect(component.isLoading()).toBeFalse();
+    expect(component.isLoading()).toBeFalsy();
   });
 
   it('should compute visible and blurred counts', async () => {
-    userService.getMyProfile.and.resolveTo(mockProfile);
-    userService.getMyVisitors.and.resolveTo(mockVisitors);
+    userService.getMyProfile.mockResolvedValue(mockProfile);
+    userService.getMyVisitors.mockResolvedValue(mockVisitors);
 
     fixture.detectChanges();
     await fixture.whenStable();
@@ -115,8 +114,8 @@ describe('VisitorLogsComponent', () => {
   });
 
   it('should toggle hideBlurred', async () => {
-    userService.getMyProfile.and.resolveTo(mockProfile);
-    userService.getMyVisitors.and.resolveTo(mockVisitors);
+    userService.getMyProfile.mockResolvedValue(mockProfile);
+    userService.getMyVisitors.mockResolvedValue(mockVisitors);
 
     fixture.detectChanges();
     await fixture.whenStable();
@@ -127,8 +126,8 @@ describe('VisitorLogsComponent', () => {
   });
 
   it('should show vip banner when profile is not vip', async () => {
-    userService.getMyProfile.and.resolveTo(mockProfile);
-    userService.getMyVisitors.and.resolveTo([]);
+    userService.getMyProfile.mockResolvedValue(mockProfile);
+    userService.getMyVisitors.mockResolvedValue([]);
 
     fixture.detectChanges();
     await fixture.whenStable();
@@ -139,8 +138,8 @@ describe('VisitorLogsComponent', () => {
 
   it('should not show vip banner when profile is vip', async () => {
     const vipProfile = { ...mockProfile, is_vip: true };
-    userService.getMyProfile.and.resolveTo(vipProfile);
-    userService.getMyVisitors.and.resolveTo([]);
+    userService.getMyProfile.mockResolvedValue(vipProfile);
+    userService.getMyVisitors.mockResolvedValue([]);
 
     fixture.detectChanges();
     await fixture.whenStable();
@@ -150,8 +149,8 @@ describe('VisitorLogsComponent', () => {
   });
 
   it('should show loading state', () => {
-    userService.getMyProfile.and.returnValue(new Promise(() => {}));
-    userService.getMyVisitors.and.returnValue(new Promise(() => {}));
+    userService.getMyProfile.mockReturnValue(new Promise(() => {}));
+    userService.getMyVisitors.mockReturnValue(new Promise(() => {}));
 
     component.isLoading.set(true);
     fixture.detectChanges();
@@ -161,8 +160,8 @@ describe('VisitorLogsComponent', () => {
   });
 
   it('should show empty state when no visitors', async () => {
-    userService.getMyProfile.and.resolveTo(mockProfile);
-    userService.getMyVisitors.and.resolveTo([]);
+    userService.getMyProfile.mockResolvedValue(mockProfile);
+    userService.getMyVisitors.mockResolvedValue([]);
 
     fixture.detectChanges();
     await fixture.whenStable();
@@ -172,8 +171,8 @@ describe('VisitorLogsComponent', () => {
   });
 
   it('should render visitor cards', async () => {
-    userService.getMyProfile.and.resolveTo(mockProfile);
-    userService.getMyVisitors.and.resolveTo(mockVisitors);
+    userService.getMyProfile.mockResolvedValue(mockProfile);
+    userService.getMyVisitors.mockResolvedValue(mockVisitors);
 
     fixture.detectChanges();
     await fixture.whenStable();
@@ -183,8 +182,8 @@ describe('VisitorLogsComponent', () => {
   });
 
   it('should apply blurred class to blurred cards', async () => {
-    userService.getMyProfile.and.resolveTo(mockProfile);
-    userService.getMyVisitors.and.resolveTo(mockVisitors);
+    userService.getMyProfile.mockResolvedValue(mockProfile);
+    userService.getMyVisitors.mockResolvedValue(mockVisitors);
 
     fixture.detectChanges();
     await fixture.whenStable();
@@ -194,13 +193,13 @@ describe('VisitorLogsComponent', () => {
   });
 
   it('should handle load errors gracefully', async () => {
-    userService.getMyProfile.and.rejectWith(new Error('Network error'));
-    userService.getMyVisitors.and.rejectWith(new Error('Network error'));
+    userService.getMyProfile.mockRejectedValue(new Error('Network error'));
+    userService.getMyVisitors.mockRejectedValue(new Error('Network error'));
 
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(component.isLoading()).toBeFalse();
+    expect(component.isLoading()).toBeFalsy();
     expect(component.visitors()).toEqual([]);
   });
 });
