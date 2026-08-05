@@ -95,6 +95,11 @@ export class ChatRoomComponent implements OnDestroy {
   // Toggle state: message id -> boolean
   readonly showTranslation = signal<Record<string, boolean>>({});
 
+  // Voice transcription state: message id -> transcribed text
+  readonly transcriptions = signal<Record<string, string>>({});
+  // Set of message ids currently being transcribed
+  readonly transcribingIds = signal<Set<string>>(new Set());
+
   // Selected word token for LingQ definition modal
   readonly activeWordToken = signal<string | null>(null);
   readonly activeWordContext = signal<string>('');
@@ -511,6 +516,34 @@ export class ChatRoomComponent implements OnDestroy {
     } catch (e) {
       console.error('Failed to translate message:', e);
       showToast(this.i18n.translate('moments.transError') || 'Translation failed');
+    }
+  }
+
+  async onTranscribeVoice(msg: ChatMessage): Promise<void> {
+    if (!msg.media_url) return;
+    if (this.transcriptions()[msg.id]) return; // Already transcribed
+
+    this.transcribingIds.update((s) => {
+      const next = new Set(s);
+      next.add(msg.id);
+      return next;
+    });
+
+    try {
+      const result = await this.chatService.transcribeVoice(msg.media_url);
+      this.transcriptions.update((prev) => ({
+        ...prev,
+        [msg.id]: result.original_text || this.i18n.translate('chatRoom.transcriptEmpty'),
+      }));
+    } catch (e) {
+      console.error('Failed to transcribe voice message:', e);
+      showToast(this.i18n.translate('chatRoom.transcribeError'));
+    } finally {
+      this.transcribingIds.update((s) => {
+        const next = new Set(s);
+        next.delete(msg.id);
+        return next;
+      });
     }
   }
 
