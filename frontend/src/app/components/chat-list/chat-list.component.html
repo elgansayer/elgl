@@ -1,6 +1,6 @@
-<div class="app-screen space-y-0">
+<div class="app-screen space-y-0 bg-surface-500 min-h-screen">
   <!-- Top App Bar -->
-  <header class="bg-surface-300 pt-12 pb-3 ps-4 pe-4 border-b border-surface-200">
+  <header class="bg-gradient-to-b from-surface-400 to-surface-500 pt-12 pb-3 ps-4 pe-4">
     <div class="flex items-center justify-between mb-4">
       <button aria-label="Open menu" (click)="notImplemented()" class="text-text-primary">
         <span class="text-xl">≡</span>
@@ -23,7 +23,7 @@
       </a>
       <a [routerLink]="['/moments']" class="flex flex-col items-center gap-1">
         <div
-          class="w-12 h-12 rounded-[1rem] bg-green-500 flex items-center justify-center text-white text-xl shadow-lg"
+          class="w-12 h-12 rounded-2xl bg-gradient-to-br from-neon-cyan to-emerald-400 flex items-center justify-center text-white text-xl shadow-lg shadow-green-500/20"
         >
           🎮
         </div>
@@ -33,7 +33,7 @@
       </a>
       <button (click)="notImplemented()" class="flex flex-col items-center gap-1">
         <div
-          class="w-12 h-12 rounded-[1rem] bg-cyan-500 flex items-center justify-center text-white text-xl shadow-lg"
+          class="w-12 h-12 rounded-2xl bg-gradient-to-br from-neon-purple to-accent-500 flex items-center justify-center text-white text-xl shadow-lg shadow-purple-500/20"
         >
           🌐
         </div>
@@ -146,7 +146,7 @@
             </p>
             @if (preview.unreadCount > 0) {
               <span
-                class="bg-purple-600 text-white text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0"
+                class="bg-gradient-to-br from-primary to-accent-500 text-white text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0 shadow-md shadow-purple-500/30"
               >
                 {{ preview.unreadCount }}
               </span>
@@ -215,7 +215,7 @@
                 </p>
                 @if (preview.unreadCount > 0) {
                   <span
-                    class="bg-purple-600 text-white text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0"
+                class="bg-gradient-to-br from-primary to-accent-500 text-white text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0 shadow-md shadow-purple-500/30"
                   >
                     {{ preview.unreadCount }}
                   </span>

@@ -80,6 +80,8 @@ export interface ChatRoom {
   is_online: boolean;
   is_pinned: boolean;
   is_locked?: boolean;
+  is_vip?: boolean;
+  native_languages?: string[];
   created_at: string;
   admin_id?: string;
   wallpaper_url?: string | null;
