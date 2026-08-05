@@ -7,12 +7,11 @@ import {
   Body,
   Query,
   UseGuards,
-  Req,
   UnauthorizedException,
   HttpCode,
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { User } from '@supabase/supabase-js';
+import type { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { GroupsService } from './groups.service';
 import { AddMemberDto } from './dto/add-member.dto';
