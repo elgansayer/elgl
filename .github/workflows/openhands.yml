@@ -22,7 +22,7 @@ jobs:
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '/openhands-fix')) ||
       (github.event_name == 'pull_request') ||
       (github.event_name == 'issues')
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: write
       pull-requests: write

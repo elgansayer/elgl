@@ -5,7 +5,7 @@ on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_run:
-    workflows: ["AI Auto-Resolver"]
+    workflows: ['AI Auto-Resolver']
     types:
       - completed
 
@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   dispatch_and_plan:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       issues: write
       actions: read
