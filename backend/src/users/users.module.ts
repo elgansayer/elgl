@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
-import { ScheduleModule } from '@nestjs/schedule';
 import { UsersController } from './users.controller';
 import { DeviceLinkController } from './device-link.controller';
 import { UsersService } from './users.service';
@@ -15,7 +14,6 @@ import { TwoFactorModule } from '../two-factor/two-factor.module';
 
 @Module({
   imports: [
-    ScheduleModule.forRoot(),
     SupabaseModule,
     NotificationsModule,
     MediaModule,
