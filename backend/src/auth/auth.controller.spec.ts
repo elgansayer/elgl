@@ -1,21 +1,24 @@
 import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { TransferService } from '../transfer/transfer.service';
 
 describe('AuthController (unit)', () => {
   let controller: AuthController;
   let authService: {
-    requestPasswordReset: jest.Mock;
-    resetPassword: jest.Mock;
     changePassword: jest.Mock;
     enableTwoFactor: jest.Mock;
     verifyTwoFactor: jest.Mock;
     disableTwoFactor: jest.Mock;
     checkTwoFactorStatus: jest.Mock;
   };
+  let transferService: {
+    generateTransferToken: jest.Mock;
+    consumeTransferToken: jest.Mock;
+    swapTokenForSession: jest.Mock;
+  };
 
   beforeEach(() => {
     authService = {
-      requestPasswordReset: jest.fn(),
-      resetPassword: jest.fn(),
       changePassword: jest.fn(),
       enableTwoFactor: jest.fn(),
       verifyTwoFactor: jest.fn(),
@@ -23,35 +26,16 @@ describe('AuthController (unit)', () => {
       checkTwoFactorStatus: jest.fn(),
     };
 
-    controller = new (AuthController as any)(authService) as AuthController;
-  });
+    transferService = {
+      generateTransferToken: jest.fn(),
+      consumeTransferToken: jest.fn(),
+      swapTokenForSession: jest.fn(),
+    };
 
-  describe('requestPasswordReset', () => {
-    it('should call the auth service and return a reset token', async () => {
-      const token = 'reset-token-123';
-      authService.requestPasswordReset.mockResolvedValue(token);
-
-      const result = await controller.requestPasswordReset({
-        email: 'user@example.com',
-      });
-
-      expect(authService.requestPasswordReset).toHaveBeenCalledWith(
-        'user@example.com',
-      );
-      expect(result).toEqual({ token });
-    });
-  });
-
-  describe('resetPassword', () => {
-    it('should reset password and return success message', async () => {
-      authService.resetPassword.mockResolvedValue(undefined);
-
-      const body = { token: 'abc', newPassword: 'newpass' };
-      const result = await controller.resetPassword(body);
-
-      expect(authService.resetPassword).toHaveBeenCalledWith('abc', 'newpass');
-      expect(result).toEqual({ message: 'Password successfully reset' });
-    });
+    controller = new AuthController(
+      authService as unknown as AuthService,
+      transferService as unknown as TransferService,
+    );
   });
 
   describe('changePassword', () => {
@@ -59,20 +43,26 @@ describe('AuthController (unit)', () => {
       authService.changePassword.mockResolvedValue(undefined);
 
       const req = { user: { id: 'user-123' } };
-      const result = await controller.changePassword(req, 'newPass123');
+      const result = await controller.changePassword(req, {
+        currentPassword: 'old',
+        newPassword: 'new',
+      });
 
-      expect(authService.changePassword).toHaveBeenCalledWith(
-        'user-123',
-        'newPass123',
-      );
+      expect(authService.changePassword).toHaveBeenCalledWith('user-123', {
+        currentPassword: 'old',
+        newPassword: 'new',
+      });
       expect(result).toEqual({ message: 'Password changed successfully' });
     });
 
     it('should throw an Unauthorized error when no user is present', async () => {
       const req = {};
-      await expect(controller.changePassword(req, 'somePass')).rejects.toThrow(
-        'Unauthorized',
-      );
+      await expect(
+        controller.changePassword(req, {
+          currentPassword: 'old',
+          newPassword: 'new',
+        }),
+      ).rejects.toThrow('Unauthorized');
     });
   });
 
@@ -160,6 +150,70 @@ describe('AuthController (unit)', () => {
 
       expect(authService.checkTwoFactorStatus).toHaveBeenCalledWith('user-123');
       expect(result).toEqual({ enabled: true });
+    });
+  });
+
+  describe('generateTransferLink', () => {
+    it('should generate a transfer link', async () => {
+      transferService.generateTransferToken.mockResolvedValue('xfer-token');
+      process.env.APP_URL = 'http://localhost:4200';
+
+      const req = { user: { id: 'user-123' } };
+      const result = await controller.generateTransferLink(req);
+
+      expect(transferService.generateTransferToken).toHaveBeenCalledWith(
+        'user-123',
+      );
+      expect(result).toEqual({
+        url: 'http://localhost:4200/device-transfer?token=xfer-token',
+      });
+    });
+  });
+
+  describe('consumeTransferLink', () => {
+    it('should consume a transfer token', async () => {
+      transferService.consumeTransferToken.mockResolvedValue('swap-token');
+
+      const result = await controller.consumeTransferLink('xfer-token');
+
+      expect(transferService.consumeTransferToken).toHaveBeenCalledWith(
+        'xfer-token',
+      );
+      expect(result).toEqual({ swapToken: 'swap-token' });
+    });
+
+    it('should throw on invalid token', async () => {
+      transferService.consumeTransferToken.mockResolvedValue(null);
+
+      await expect(
+        controller.consumeTransferLink('bad-token'),
+      ).rejects.toThrow('Invalid or expired transfer token');
+    });
+  });
+
+  describe('swapTransferLink', () => {
+    it('should swap a transfer link for a session', async () => {
+      transferService.swapTokenForSession.mockResolvedValue({
+        access_token: 'at',
+        refresh_token: 'rt',
+        user_id: 'uid',
+      });
+
+      const result = await controller.swapTransferLink('swap-token');
+
+      expect(result).toEqual({
+        access_token: 'at',
+        refresh_token: 'rt',
+        user_id: 'uid',
+      });
+    });
+
+    it('should throw on invalid swap token', async () => {
+      transferService.swapTokenForSession.mockResolvedValue(null);
+
+      await expect(
+        controller.swapTransferLink('bad-swap'),
+      ).rejects.toThrow('Invalid or expired swap token');
     });
   });
 });
