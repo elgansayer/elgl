@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { User } from '../users/interfaces/user-profile.interface';
+import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { LanguageIslandsService } from './language-islands.service';
 import { CreateLanguageIslandDto } from './dto/create-language-island.dto';
 import { UpdateLanguageIslandDto } from './dto/update-language-island.dto';
@@ -26,14 +26,14 @@ export class LanguageIslandsController {
 
   @Get()
   async list(
-    @CurrentUser() user: User | null,
+    @CurrentUser() user: UserProfile | null,
     @Query() query: QueryLanguageIslandsDto,
   ) {
     return this.languageIslandsService.list(query, user?.id);
   }
 
   @Get('my')
-  async getMyIslands(@CurrentUser() user: User | null) {
+  async getMyIslands(@CurrentUser() user: UserProfile | null) {
     if (!user) {
       return [];
     }
@@ -47,7 +47,7 @@ export class LanguageIslandsController {
 
   @Post()
   async create(
-    @CurrentUser() user: User,
+    @CurrentUser() user: UserProfile,
     @Body() dto: CreateLanguageIslandDto,
   ) {
     return this.languageIslandsService.create(dto, user.id);
@@ -55,7 +55,7 @@ export class LanguageIslandsController {
 
   @Patch(':id')
   async update(
-    @CurrentUser() user: User,
+    @CurrentUser() user: UserProfile,
     @Param('id') id: string,
     @Body() dto: UpdateLanguageIslandDto,
   ) {
@@ -63,17 +63,17 @@ export class LanguageIslandsController {
   }
 
   @Delete(':id')
-  async remove(@CurrentUser() user: User, @Param('id') id: string) {
+  async remove(@CurrentUser() user: UserProfile, @Param('id') id: string) {
     return this.languageIslandsService.remove(id, user.id);
   }
 
   @Post(':id/join')
-  async join(@CurrentUser() user: User, @Param('id') id: string) {
+  async join(@CurrentUser() user: UserProfile, @Param('id') id: string) {
     return this.languageIslandsService.join(id, user.id);
   }
 
   @Post(':id/leave')
-  async leave(@CurrentUser() user: User, @Param('id') id: string) {
+  async leave(@CurrentUser() user: UserProfile, @Param('id') id: string) {
     return this.languageIslandsService.leave(id, user.id);
   }
 }
