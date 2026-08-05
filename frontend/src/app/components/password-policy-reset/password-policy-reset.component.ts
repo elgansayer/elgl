@@ -164,16 +164,14 @@ export class PasswordPolicyResetComponent {
   readonly allValid = computed(() => this.hasMinLength() && this.hasNumber() && this.hasSymbol() && this.passwordsMatch());
 
   onNewPasswordInput(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    if (target) {
-      this.newPassword.set(target.value);
+    if (event.target instanceof HTMLInputElement) {
+      this.newPassword.set(event.target.value);
     }
   }
 
   onConfirmPasswordInput(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    if (target) {
-      this.confirmPassword.set(target.value);
+    if (event.target instanceof HTMLInputElement) {
+      this.confirmPassword.set(event.target.value);
     }
   }
 
