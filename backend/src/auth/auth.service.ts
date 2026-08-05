@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { TwoFactorService } from '../two-factor/two-factor.service';
+import { EmailService } from '../email/email.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
@@ -8,9 +9,10 @@ export class AuthService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly twoFactorService: TwoFactorService,
+    private readonly emailService: EmailService,
   ) {}
 
-  async requestPasswordReset(email: string): Promise<string> {
+  async requestPasswordReset(email: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
     const linkResult = await supabase.auth.admin.generateLink({
@@ -20,9 +22,8 @@ export class AuthService {
     });
 
     if (linkResult.error || !linkResult.data) {
-      throw new BadRequestException(
-        linkResult.error?.message ?? 'Unable to generate reset link',
-      );
+      // Do not reveal whether the email exists
+      return;
     }
 
     const data = linkResult.data as {
@@ -31,7 +32,7 @@ export class AuthService {
 
     const actionLink = data?.properties?.action_link;
     if (!actionLink) {
-      throw new BadRequestException('Unable to generate reset link');
+      return;
     }
 
     const url = new URL(actionLink);
@@ -39,9 +40,12 @@ export class AuthService {
     const params = new URLSearchParams(hash);
     const accessToken = params.get('access_token');
     if (!accessToken) {
-      throw new BadRequestException('Unable to extract reset token');
+      return;
     }
-    return accessToken;
+
+    // Send password reset email via EmailService instead of relying on
+    // Supabase's default email template, so we can use our custom design
+    await this.emailService.sendPasswordResetEmail(email, accessToken);
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {

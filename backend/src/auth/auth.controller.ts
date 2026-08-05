@@ -27,8 +27,10 @@ export class AuthController {
 
   @Post('request-password-reset')
   async requestPasswordReset(@Body() dto: ForgotPasswordDto) {
-    const token = await this.authService.requestPasswordReset(dto.email);
-    return { token };
+    await this.authService.requestPasswordReset(dto.email);
+    return {
+      message: 'If the email address exists, a reset link has been sent.',
+    };
   }
 
   @Post('reset-password')

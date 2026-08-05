@@ -27,9 +27,8 @@ describe('AuthController (unit)', () => {
   });
 
   describe('requestPasswordReset', () => {
-    it('should call the auth service and return a reset token', async () => {
-      const token = 'reset-token-123';
-      authService.requestPasswordReset.mockResolvedValue(token);
+    it('should call the auth service and return a success message', async () => {
+      authService.requestPasswordReset.mockResolvedValue(undefined);
 
       const result = await controller.requestPasswordReset({
         email: 'user@example.com',
@@ -38,7 +37,9 @@ describe('AuthController (unit)', () => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith(
         'user@example.com',
       );
-      expect(result).toEqual({ token });
+      expect(result).toEqual({
+        message: 'If the email address exists, a reset link has been sent.',
+      });
     });
   });
 
