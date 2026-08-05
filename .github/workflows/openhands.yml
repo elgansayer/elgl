@@ -30,7 +30,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       # ── TIER 1: Claude Code ────────────────────────────────────────────────
       - name: Tier 1 - Claude Code (Claude Pro via OAuth)
