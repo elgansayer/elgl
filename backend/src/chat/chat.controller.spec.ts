@@ -228,7 +228,10 @@ describe('ChatController', () => {
       (chatService.deleteFavourite as jest.Mock).mockResolvedValue(undefined);
 
       const result = await controller.deleteFavourite(mockUser(), 'fav-1');
-      expect(chatService.deleteFavourite).toHaveBeenCalledWith('user-1', 'fav-1');
+      expect(chatService.deleteFavourite).toHaveBeenCalledWith(
+        'user-1',
+        'fav-1',
+      );
       expect(result).toEqual({ success: true });
     });
   });
