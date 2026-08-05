@@ -48,7 +48,9 @@ describe('PasswordResetService (unit)', () => {
       const chain = createChain();
       supabaseClient.from = jest.fn().mockReturnValue(chain);
       chain.select = jest.fn().mockReturnValue(chain);
-      chain.eq = jest.fn().mockResolvedValue({ data: null, error: new Error('db error') });
+      chain.eq = jest
+        .fn()
+        .mockResolvedValue({ data: null, error: new Error('db error') });
 
       await service.requestPasswordReset({ email: 'user@example.com' });
 
@@ -59,16 +61,21 @@ describe('PasswordResetService (unit)', () => {
       const findChain = createChain();
       supabaseClient.from = jest.fn().mockReturnValue(findChain);
       findChain.select = jest.fn().mockReturnValue(findChain);
-      findChain.eq = jest.fn().mockResolvedValue({ data: [{ id: 'user-abc' }], error: null });
+      findChain.eq = jest
+        .fn()
+        .mockResolvedValue({ data: [{ id: 'user-abc' }], error: null });
 
       const insertChain = createChain();
       // Override from for the insert call
-      supabaseClient.from = jest.fn()
+      supabaseClient.from = jest
+        .fn()
         .mockReturnValueOnce(findChain) // select
         .mockReturnValueOnce(insertChain); // insert
 
       findChain.select = jest.fn().mockReturnValue(findChain);
-      findChain.eq = jest.fn().mockResolvedValue({ data: [{ id: 'user-abc' }], error: null });
+      findChain.eq = jest
+        .fn()
+        .mockResolvedValue({ data: [{ id: 'user-abc' }], error: null });
 
       insertChain.insert = jest.fn().mockResolvedValue({ error: null });
 
@@ -92,17 +99,24 @@ describe('PasswordResetService (unit)', () => {
       const findChain = createChain();
       supabaseClient.from = jest.fn().mockReturnValue(findChain);
       findChain.select = jest.fn().mockReturnValue(findChain);
-      findChain.eq = jest.fn().mockResolvedValue({ data: [{ id: 'user-abc' }], error: null });
+      findChain.eq = jest
+        .fn()
+        .mockResolvedValue({ data: [{ id: 'user-abc' }], error: null });
 
       const insertChain = createChain();
-      supabaseClient.from = jest.fn()
+      supabaseClient.from = jest
+        .fn()
         .mockReturnValueOnce(findChain)
         .mockReturnValueOnce(insertChain);
 
       findChain.select = jest.fn().mockReturnValue(findChain);
-      findChain.eq = jest.fn().mockResolvedValue({ data: [{ id: 'user-abc' }], error: null });
+      findChain.eq = jest
+        .fn()
+        .mockResolvedValue({ data: [{ id: 'user-abc' }], error: null });
 
-      insertChain.insert = jest.fn().mockResolvedValue({ error: new Error('insert failed') });
+      insertChain.insert = jest
+        .fn()
+        .mockResolvedValue({ error: new Error('insert failed') });
 
       await expect(
         service.requestPasswordReset({ email: 'user@example.com' }),
@@ -116,10 +130,15 @@ describe('PasswordResetService (unit)', () => {
       supabaseClient.from = jest.fn().mockReturnValue(chain);
       chain.select = jest.fn().mockReturnValue(chain);
       chain.eq = jest.fn().mockReturnValue(chain);
-      chain.single = jest.fn().mockResolvedValue({ data: null, error: new Error('not found') });
+      chain.single = jest
+        .fn()
+        .mockResolvedValue({ data: null, error: new Error('not found') });
 
       await expect(
-        service.resetPassword({ token: 'bad-token', newPassword: 'newPass123!' }),
+        service.resetPassword({
+          token: 'bad-token',
+          newPassword: 'newPass123!',
+        }),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -135,7 +154,10 @@ describe('PasswordResetService (unit)', () => {
       });
 
       await expect(
-        service.resetPassword({ token: 'expired-token', newPassword: 'newPass123!' }),
+        service.resetPassword({
+          token: 'expired-token',
+          newPassword: 'newPass123!',
+        }),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -150,10 +172,13 @@ describe('PasswordResetService (unit)', () => {
         error: null,
       });
 
-      supabaseClient.auth.admin.updateUserById = jest.fn().mockResolvedValue({ error: null });
+      supabaseClient.auth.admin.updateUserById = jest
+        .fn()
+        .mockResolvedValue({ error: null });
 
       const updateChain = createChain();
-      supabaseClient.from = jest.fn()
+      supabaseClient.from = jest
+        .fn()
         .mockReturnValueOnce(findChain) // select
         .mockReturnValueOnce(updateChain); // update
 
@@ -167,7 +192,10 @@ describe('PasswordResetService (unit)', () => {
       updateChain.update = jest.fn().mockReturnValue(updateChain);
       updateChain.eq = jest.fn().mockResolvedValue({ error: null });
 
-      await service.resetPassword({ token: 'valid-token', newPassword: 'newPass123!' });
+      await service.resetPassword({
+        token: 'valid-token',
+        newPassword: 'newPass123!',
+      });
 
       expect(supabaseClient.auth.admin.updateUserById).toHaveBeenCalledWith(
         'user-abc',
@@ -192,7 +220,10 @@ describe('PasswordResetService (unit)', () => {
       });
 
       await expect(
-        service.resetPassword({ token: 'valid-token', newPassword: 'newPass123!' }),
+        service.resetPassword({
+          token: 'valid-token',
+          newPassword: 'newPass123!',
+        }),
       ).rejects.toThrow(BadRequestException);
     });
   });

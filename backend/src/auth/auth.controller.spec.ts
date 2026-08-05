@@ -10,7 +10,11 @@ describe('AuthController (unit)', () => {
     checkTwoFactorStatus: jest.Mock;
   };
 
-  let transferService: { generateTransferToken: jest.Mock; consumeTransferToken: jest.Mock; swapTokenForSession: jest.Mock };
+  let transferService: {
+    generateTransferToken: jest.Mock;
+    consumeTransferToken: jest.Mock;
+    swapTokenForSession: jest.Mock;
+  };
 
   beforeEach(() => {
     authService = {
@@ -26,7 +30,10 @@ describe('AuthController (unit)', () => {
       swapTokenForSession: jest.fn(),
     };
 
-    controller = new (AuthController as any)(authService, transferService) as AuthController;
+    controller = new (AuthController as any)(
+      authService,
+      transferService,
+    ) as AuthController;
   });
 
   describe('changePassword', () => {
@@ -34,20 +41,26 @@ describe('AuthController (unit)', () => {
       authService.changePassword.mockResolvedValue(undefined);
 
       const req = { user: { id: 'user-123' } };
-      const result = await controller.changePassword(req, { currentPassword: 'old', newPassword: 'newPass123' });
+      const result = await controller.changePassword(req, {
+        currentPassword: 'old',
+        newPassword: 'newPass123',
+      });
 
-      expect(authService.changePassword).toHaveBeenCalledWith(
-        'user-123',
-        { currentPassword: 'old', newPassword: 'newPass123' },
-      );
+      expect(authService.changePassword).toHaveBeenCalledWith('user-123', {
+        currentPassword: 'old',
+        newPassword: 'newPass123',
+      });
       expect(result).toEqual({ message: 'Password changed successfully' });
     });
 
     it('should throw an Unauthorized error when no user is present', async () => {
       const req = {};
-      await expect(controller.changePassword(req, { currentPassword: 'old', newPassword: 'somePass' })).rejects.toThrow(
-        'Unauthorized',
-      );
+      await expect(
+        controller.changePassword(req, {
+          currentPassword: 'old',
+          newPassword: 'somePass',
+        }),
+      ).rejects.toThrow('Unauthorized');
     });
   });
 
