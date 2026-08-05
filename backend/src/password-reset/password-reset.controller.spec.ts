@@ -13,16 +13,22 @@ describe('PasswordResetController (unit)', () => {
       resetPassword: jest.fn(),
     };
 
-    controller = new (PasswordResetController as any)(resetService) as PasswordResetController;
+    controller = new (PasswordResetController as any)(
+      resetService,
+    ) as PasswordResetController;
   });
 
   describe('requestPasswordReset', () => {
     it('should call service and return a generic success message', async () => {
       resetService.requestPasswordReset.mockResolvedValue(undefined);
 
-      const result = await controller.requestPasswordReset({ email: 'user@example.com' });
+      const result = await controller.requestPasswordReset({
+        email: 'user@example.com',
+      });
 
-      expect(resetService.requestPasswordReset).toHaveBeenCalledWith({ email: 'user@example.com' });
+      expect(resetService.requestPasswordReset).toHaveBeenCalledWith({
+        email: 'user@example.com',
+      });
       expect(result).toEqual({
         message: 'If the email address exists, a reset link has been sent.',
       });
@@ -51,7 +57,9 @@ describe('PasswordResetController (unit)', () => {
         token: 'valid-token',
         newPassword: 'newPass123!',
       });
-      expect(result).toEqual({ message: 'Password has been successfully reset.' });
+      expect(result).toEqual({
+        message: 'Password has been successfully reset.',
+      });
     });
   });
 });

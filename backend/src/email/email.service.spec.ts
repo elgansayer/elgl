@@ -6,17 +6,21 @@ describe('EmailService (unit)', () => {
   let transporter: { sendMail: jest.Mock };
 
   beforeEach(() => {
-    transporter = { sendMail: jest.fn().mockResolvedValue({ messageId: 'abc-123' }) };
+    transporter = {
+      sendMail: jest.fn().mockResolvedValue({ messageId: 'abc-123' }),
+    };
 
-    configService = { get: jest.fn((key: string, fallback: string) => fallback) };
+    configService = {
+      get: jest.fn((key: string, fallback: string) => fallback),
+    };
 
     jest.doMock('nodemailer', () => ({
       createTransport: jest.fn().mockReturnValue(transporter),
     }));
 
-    const nodemailer = require('nodemailer');
-
-    service = new (EmailService as any)(configService) as EmailService;
+    service = new (EmailService as Record<string, never>)(
+      configService,
+    ) as EmailService;
     // Override the transporter with our mock
     (service as any).transporter = transporter;
   });
@@ -50,8 +54,12 @@ describe('EmailService (unit)', () => {
       await svc.sendPasswordResetEmail('user@example.com', 'my-token');
 
       const mailOptions = transporter.sendMail.mock.calls[0][0];
-      expect(mailOptions.text).toContain('https://app.example.com/forgot-password?token=my-token');
-      expect(mailOptions.html).toContain('https://app.example.com/forgot-password?token=my-token');
+      expect(mailOptions.text).toContain(
+        'https://app.example.com/forgot-password?token=my-token',
+      );
+      expect(mailOptions.html).toContain(
+        'https://app.example.com/forgot-password?token=my-token',
+      );
     });
 
     it('should use custom MAIL_FROM_NAME and MAIL_FROM_ADDRESS when configured', async () => {
@@ -68,7 +76,9 @@ describe('EmailService (unit)', () => {
       await svc.sendPasswordResetEmail('user@example.com', 'tok');
 
       const mailOptions = transporter.sendMail.mock.calls[0][0];
-      expect(mailOptions.from).toBe('"HelloTalk Support" <support@hellotalk.app>');
+      expect(mailOptions.from).toBe(
+        '"HelloTalk Support" <support@hellotalk.app>',
+      );
     });
   });
 });
