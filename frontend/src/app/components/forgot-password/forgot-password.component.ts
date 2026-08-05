@@ -32,8 +32,8 @@ import { environment } from '../../../environments/environment';
               />
             </div>
 
-            @if (sendError(); as error) {
-              <p class="text-error text-sm">{{ error }}</p>
+            @if (sendError()) {
+              <p class="text-error text-sm">{{ (sendError() ?? '') | t }}</p>
             }
             @if (sendSuccess()) {
               <p class="text-success text-sm">{{ 'forgot_password.sent_message' | t }}</p>
@@ -64,8 +64,8 @@ import { environment } from '../../../environments/environment';
               />
             </div>
 
-            @if (resetError(); as error) {
-              <p class="text-error text-sm">{{ error }}</p>
+            @if (resetError()) {
+              <p class="text-error text-sm">{{ (resetError() ?? '') | t }}</p>
             }
             @if (resetSuccess()) {
               <p class="text-success text-sm">{{ 'forgot_password.reset_success' | t }}</p>
@@ -126,7 +126,7 @@ export class ForgotPasswordComponent {
       this.sendSuccess.set(true);
     } catch {
       this.isSending.set(false);
-      this.sendError.set('Failed to send reset request');
+      this.sendError.set('forgot_password.error_send');
     }
   }
 
@@ -151,7 +151,7 @@ export class ForgotPasswordComponent {
       this.router.navigate(['/home']);
     } catch {
       this.isResetting.set(false);
-      this.resetError.set('Failed to reset password');
+      this.resetError.set('forgot_password.error_reset');
     }
   }
 }
