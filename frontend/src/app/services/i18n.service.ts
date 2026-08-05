@@ -1216,6 +1216,8 @@ export class I18nService {
     'forgot_password.reset_button': 'Reset Password',
     'forgot_password.resetting': 'Resetting...',
     'forgot_password.reset_success': 'Password reset successfully.',
+    'forgot_password.send_error': 'Failed to send reset request. Please try again.',
+    'forgot_password.reset_error': 'Failed to reset password. The link may have expired.',
 
     'auth.resetPassword.title': 'Reset Password',
     'auth.resetPassword.token': 'Token from your email',
