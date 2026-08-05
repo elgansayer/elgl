@@ -71,7 +71,7 @@ describe('ForgotPasswordComponent', () => {
 
     const req = httpMock.expectOne((r) => r.url.includes('/auth/request-password-reset'));
     expect(req.request.body).toEqual({ email: 'test@test.com' });
-    req.flush({ token: 'some-token' });
+    req.flush({ message: 'If the email address exists, a reset link has been sent.' });
 
     await fixture.whenStable();
     expect(component.sendSuccess()).toBeTrue();
