@@ -579,6 +579,17 @@ describe('ChatService', () => {
     });
   });
 
+  describe('deleteFavourite', () => {
+    it('should delete a favourite by id and user', async () => {
+      await service.deleteFavourite('user-1', 'fav-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('favourites');
+      expect(mockQueryBuilder.delete).toHaveBeenCalled();
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'fav-1');
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
+    });
+  });
+
   describe('lockChat', () => {
     it('should mark the room as locked for the given user', async () => {
       mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>

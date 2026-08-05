@@ -110,6 +110,16 @@ export class ChatController {
     return await this.chatService.getFavourites(user.id);
   }
 
+  @Delete('favourites/:id')
+  async deleteFavourite(
+    @CurrentUser() user: User | null,
+    @Param('id') id: string,
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.chatService.deleteFavourite(user.id, id);
+    return { success: true };
+  }
+
   @Post('llm-proxy')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async chatLlmProxy(

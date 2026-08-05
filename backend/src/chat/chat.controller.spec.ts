@@ -33,6 +33,7 @@ describe('ChatController', () => {
             getMessages: jest.fn(),
             addFavourite: jest.fn(),
             getFavourites: jest.fn(),
+            deleteFavourite: jest.fn(),
             llmProxy: jest.fn(),
             generateAiReply: jest.fn(),
             getSuggestedReplies: jest.fn(),
@@ -213,6 +214,22 @@ describe('ChatController', () => {
       const result = await controller.getFavourites(mockUser());
       expect(chatService.getFavourites).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(favourites);
+    });
+  });
+
+  describe('deleteFavourite', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.deleteFavourite(null, 'fav-1');
+      expect(result).toBeNull();
+      expect(chatService.deleteFavourite).not.toHaveBeenCalled();
+    });
+
+    it('should call chatService.deleteFavourite when user is provided', async () => {
+      (chatService.deleteFavourite as jest.Mock).mockResolvedValue(undefined);
+
+      const result = await controller.deleteFavourite(mockUser(), 'fav-1');
+      expect(chatService.deleteFavourite).toHaveBeenCalledWith('user-1', 'fav-1');
+      expect(result).toEqual({ success: true });
     });
   });
 
