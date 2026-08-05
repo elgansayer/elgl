@@ -33,7 +33,7 @@ import { environment } from '../../../environments/environment';
             </div>
 
             @if (sendError(); as error) {
-              <p class="text-error text-sm">{{ error }}</p>
+              <p class="text-error text-sm">{{ error | t }}</p>
             }
             @if (sendSuccess()) {
               <p class="text-success text-sm">{{ 'forgot_password.sent_message' | t }}</p>
@@ -65,7 +65,7 @@ import { environment } from '../../../environments/environment';
             </div>
 
             @if (resetError(); as error) {
-              <p class="text-error text-sm">{{ error }}</p>
+              <p class="text-error text-sm">{{ error | t }}</p>
             }
             @if (resetSuccess()) {
               <p class="text-success text-sm">{{ 'forgot_password.reset_success' | t }}</p>
@@ -119,18 +119,14 @@ export class ForgotPasswordComponent {
     const email = this.emailForm.controls.email.value;
 
     try {
-      const res = await lastValueFrom(
-        this.http.post<{ token: string }>(`${environment.apiUrl}/auth/request-password-reset`, { email }),
+      await lastValueFrom(
+        this.http.post<{ message: string }>(`${environment.apiUrl}/auth/request-password-reset`, { email }),
       );
       this.isSending.set(false);
       this.sendSuccess.set(true);
-      this.router.navigate([], {
-        queryParams: { token: res.token },
-        queryParamsHandling: 'merge',
-      });
     } catch {
       this.isSending.set(false);
-      this.sendError.set('Failed to send reset request');
+      this.sendError.set('forgot_password.send_error');
     }
   }
 
@@ -155,7 +151,7 @@ export class ForgotPasswordComponent {
       this.router.navigate(['/home']);
     } catch {
       this.isResetting.set(false);
-      this.resetError.set('Failed to reset password');
+      this.resetError.set('forgot_password.reset_error');
     }
   }
 }
