@@ -4,6 +4,10 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+concurrency:
+  group: pr-reviewer-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   review_and_fix:
     # Guard: only skip if the PR reviewer itself pushed the commit (true self-review loop).
