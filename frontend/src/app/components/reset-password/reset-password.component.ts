@@ -64,10 +64,12 @@ export class ResetPasswordComponent {
   readonly messageKey = signal<string>('');
   readonly isError = signal(false);
 
+  // Read token from query params on init
+  private readonly routeToken = this.route.snapshot.queryParamMap.get('token');
+
   constructor() {
-    const tokenParam = this.route.snapshot.queryParamMap.get('token');
-    if (tokenParam) {
-      this.token.set(tokenParam);
+    if (this.routeToken) {
+      this.token.set(this.routeToken);
     }
   }
 

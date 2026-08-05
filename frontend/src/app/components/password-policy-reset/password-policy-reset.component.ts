@@ -1,5 +1,6 @@
 import { Component, signal, computed, inject } from '@angular/core';
 import { I18nService } from '../../services/i18n.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-password-policy-reset',
@@ -7,6 +8,16 @@ import { I18nService } from '../../services/i18n.service';
   template: `
     <div class="password-reset-container">
       <h2 class="title">{{ i18n.translate('password.resetTitle') }}</h2>
+
+      <div class="field">
+        <label for="current-password">{{ i18n.translate('password.currentPassword') }}</label>
+        <input
+          id="current-password"
+          type="password"
+          [value]="currentPassword()"
+          (input)="currentPassword.set($any($event.target).value)"
+        />
+      </div>
 
       <div class="field">
         <label for="new-password">{{ i18n.translate('password.newPassword') }}</label>
@@ -151,11 +162,14 @@ import { I18nService } from '../../services/i18n.service';
 })
 export class PasswordPolicyResetComponent {
   protected readonly i18n = inject(I18nService);
+  private readonly authService = inject(AuthService);
 
   readonly newPassword = signal('');
   readonly confirmPassword = signal('');
+  readonly currentPassword = signal('');
   readonly successMessage = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
+  readonly isSubmitting = signal(false);
 
   readonly hasMinLength = computed(() => this.newPassword().length >= 8);
   readonly hasNumber = computed(() => /\d/.test(this.newPassword()));
@@ -163,9 +177,19 @@ export class PasswordPolicyResetComponent {
   readonly passwordsMatch = computed(() => this.newPassword() === this.confirmPassword());
   readonly allValid = computed(() => this.hasMinLength() && this.hasNumber() && this.hasSymbol() && this.passwordsMatch());
 
-  resetPassword(): void {
-    // TODO: implement actual password update via Supabase or backend.
-    this.successMessage.set(this.i18n.translate('password.resetSuccess'));
+  async resetPassword(): Promise<void> {
+    if (!this.allValid() || this.isSubmitting()) return;
+    this.isSubmitting.set(true);
     this.errorMessage.set(null);
+    this.successMessage.set(null);
+
+    try {
+      await this.authService.changePassword(this.currentPassword(), this.newPassword());
+      this.successMessage.set(this.i18n.translate('password.resetSuccess'));
+    } catch {
+      this.errorMessage.set(this.i18n.translate('password.resetError'));
+    } finally {
+      this.isSubmitting.set(false);
+    }
   }
 }
