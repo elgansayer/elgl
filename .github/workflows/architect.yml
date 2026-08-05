@@ -17,6 +17,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      # ── TIER 1: Claude Code ────────────────────────────────────────────────
       - name: Tier 1 - Claude Code (Claude Pro via OAuth)
         id: primary
         continue-on-error: true
@@ -32,31 +33,37 @@ jobs:
             1. Read AGENTS.md, SPEC.md (if available), and the README.md to understand the project goals.
             2. Explore the codebase to assess the current implementation status.
             3. Identify gaps between the planned features and the current state.
-            4. Self-modify any architecture or planning .md files (like SPEC.md or a new ROADMAP.md) to reflect the current state and next steps.
-            5. Use the `gh issue create --title "..." --body "..."` command to create new actionable GitHub Issues for the missing features or bugs you found.
+            4. Self-modify ROADMAP.md or SPEC.md to reflect next steps.
+            5. For each gap, create a GitHub issue using this exact command format:
+               gh issue create --title "..." --body "..." --label "ai-agent-task,priority:high"
+               Use priority:high for core features/bugs, priority:medium for enhancements, priority:low for nice-to-haves.
 
-            IMPORTANT: Do not write code for these issues! Just plan, update the documentation, and create the tickets. Other agents will pick up the tickets and do the coding.
+            IMPORTANT: Do NOT write code. Only plan and create tickets. Other agents handle coding.
 
       - name: Check if Claude created issues
         id: check_claude
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
-          COUNT=$(gh issue list --repo ${{ github.repository }} --state open --limit 1 --json number -q 'length' 2>/dev/null || echo "0")
+          COUNT=$(gh issue list --repo ${{ github.repository }} --label "ai-agent-task" \
+            --state open --limit 1 --json number -q 'length' 2>/dev/null || echo "0")
           if [ "$COUNT" -gt 0 ]; then
-            echo "issues_exist=true" >> $GITHUB_OUTPUT
+            echo "has_issues=true" >> $GITHUB_OUTPUT
+            echo "Claude created issues successfully."
           else
-            echo "issues_exist=false" >> $GITHUB_OUTPUT
+            echo "has_issues=false" >> $GITHUB_OUTPUT
+            echo "Claude did not create issues — falling through to Tier 2."
           fi
 
-      - name: Tier 2 - OpenHands (DeepSeek Coder — paid fallback)
+      # ── TIER 2: DeepSeek V3 Chat (paid fallback) ──────────────────────────
+      - name: Tier 2 - OpenHands (DeepSeek V3 — paid fallback)
         id: secondary
-        if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.issues_exist == 'false'
+        if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.has_issues == 'false'
         continue-on-error: true
-        uses: xinbenlv/openhands-action@main
+        uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: 'deepseek/deepseek-coder'
+          llm_model: 'deepseek/deepseek-chat'
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
           openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
           runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
@@ -67,16 +74,19 @@ jobs:
             1. Read AGENTS.md, SPEC.md (if available), and the README.md to understand the project goals.
             2. Explore the codebase to assess the current implementation status.
             3. Identify gaps between the planned features and the current state.
-            4. Self-modify any architecture or planning .md files (like SPEC.md or a new ROADMAP.md) to reflect the current state and next steps.
-            5. Use the `gh issue create --title "..." --body "..."` command to create new actionable GitHub Issues for the missing features or bugs you found.
+            4. Self-modify ROADMAP.md or SPEC.md to reflect next steps.
+            5. For each gap, create a GitHub issue using this exact command format:
+               gh issue create --title "..." --body "..." --label "ai-agent-task,priority:high"
+               Use priority:high for core features/bugs, priority:medium for enhancements, priority:low for nice-to-haves.
 
-            IMPORTANT: Do not write code for these issues! Just plan, update the documentation, and create the tickets.
+            IMPORTANT: Do NOT write code. Only plan and create tickets.
           cli_args: '--max-iterations 50'
 
+      # ── TIER 3: Gemini 3.6 Flash (last resort) ────────────────────────────
       - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
         id: tertiary
         if: steps.secondary.outcome == 'failure'
-        uses: xinbenlv/openhands-action@main
+        uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
           llm_model: 'gemini/gemini-3.6-flash'
@@ -85,12 +95,10 @@ jobs:
           runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
             You are the Lead AI Architect for this project.
-            Your job is to evaluate the current state of the app against its goals.
 
-            1. Read AGENTS.md, SPEC.md (if available), and the README.md to understand the project goals.
-            2. Explore the codebase to assess the current implementation status.
-            3. Identify gaps between the planned features and the current state.
-            4. Use the `gh issue create --title "..." --body "..."` command to create new actionable GitHub Issues for the missing features or bugs you found.
+            1. Read README.md to understand the project goals.
+            2. Identify the most important missing features or bugs.
+            3. Create GitHub issues: gh issue create --title "..." --body "..." --label "ai-agent-task,priority:high"
 
-            IMPORTANT: Do not write code for these issues! Just plan and create tickets.
+            IMPORTANT: Do NOT write code. Only create tickets.
           cli_args: '--max-iterations 30'

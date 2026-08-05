@@ -6,6 +6,11 @@ on:
 
 jobs:
   review_and_fix:
+    # Guard: don't re-review PRs pushed by bots (prevents self-review loops)
+    if: |
+      github.actor != 'github-actions[bot]' &&
+      github.actor != 'app/github-actions' &&
+      !contains(github.actor, '[bot]')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -36,13 +41,12 @@ jobs:
             2. Run the local tests and linters to verify the code is correct.
             3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
             4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
-            5. CRITICAL INSTRUCTION: Once the code is perfect and all tests pass locally, you MUST execute
-               `gh pr merge ${{ github.event.pull_request.number }} --admin --squash`
-               If GitHub rejects the merge because checks are still running, poll
-               'gh pr checks ${{ github.event.pull_request.number }} --watch' and retry.
-               DO NOT FINISH until the PR is successfully merged.
+            5. CRITICAL: Once all tests pass, execute:
+               gh pr merge ${{ github.event.pull_request.number }} --admin --squash
+               If checks are still running, poll 'gh pr checks ${{ github.event.pull_request.number }} --watch'
+               and retry. DO NOT FINISH until the PR is successfully merged.
 
-      # Auto-skip: check if PR was merged by Claude
+      # Auto-skip: check if Claude actually merged the PR
       - name: Check if Claude merged the PR
         id: check_claude
         env:
@@ -50,24 +54,24 @@ jobs:
         run: |
           STATE=$(gh pr view ${{ github.event.pull_request.number }} \
             --repo ${{ github.repository }} --json state -q '.state' 2>/dev/null || echo "OPEN")
-          echo "pr_state=$STATE" >> $GITHUB_OUTPUT
+          echo "pr_state=$STATE"
           if [ "$STATE" = "MERGED" ]; then
             echo "merged=true" >> $GITHUB_OUTPUT
-            echo "✅ PR already merged by Claude."
+            echo "PR already merged by Claude."
           else
             echo "merged=false" >> $GITHUB_OUTPUT
-            echo "⚠️  PR not merged — falling through to Tier 2."
+            echo "PR not merged — falling through to Tier 2."
           fi
 
-      # ── TIER 2: DeepSeek Coder (paid, heavy lifting) ──────────────────────
-      - name: Tier 2 - OpenHands (DeepSeek Coder — paid heavy fallback)
+      # ── TIER 2: DeepSeek V3 Chat (paid, heavy lifting) ────────────────────
+      - name: Tier 2 - OpenHands (DeepSeek V3 — paid heavy fallback)
         id: secondary
         if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.merged == 'false'
         continue-on-error: true
-        uses: xinbenlv/openhands-action@main
+        uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: 'deepseek/deepseek-coder'
+          llm_model: 'deepseek/deepseek-chat'
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
           openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
           runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
@@ -79,18 +83,17 @@ jobs:
             2. Run the local tests and linters to verify the code is correct.
             3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
             4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
-            5. CRITICAL INSTRUCTION: Once the code is perfect and all tests pass locally, you MUST execute
-               `gh pr merge ${{ github.event.pull_request.number }} --admin --squash`
-               If GitHub rejects the merge because checks are still running, poll
-               'gh pr checks ${{ github.event.pull_request.number }} --watch' and retry.
-               DO NOT FINISH until the PR is successfully merged.
+            5. CRITICAL: Once all tests pass, execute:
+               gh pr merge ${{ github.event.pull_request.number }} --admin --squash
+               If checks are still running, poll 'gh pr checks ${{ github.event.pull_request.number }} --watch'
+               and retry. DO NOT FINISH until the PR is successfully merged.
           cli_args: '--max-iterations 50'
 
-      # ── TIER 3: Gemini Flash (lightweight last resort) ────────────────────
-      - name: Tier 3 - OpenHands (Gemini 3.6 Flash — lightweight last resort)
+      # ── TIER 3: Gemini 3.6 Flash (lightweight last resort) ────────────────
+      - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
         id: tertiary
         if: steps.secondary.outcome == 'failure'
-        uses: xinbenlv/openhands-action@main
+        uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
           llm_model: 'gemini/gemini-3.6-flash'
@@ -102,8 +105,7 @@ jobs:
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
 
             1. Review the code changes in this branch.
-            2. Run the local tests and linters to verify the code is correct.
-            3. If tests fail, write fixes, commit, and push to this branch.
-            4. CRITICAL: Execute `gh pr merge ${{ github.event.pull_request.number }} --admin --squash`
-               Poll checks if needed. DO NOT FINISH until the PR is successfully merged.
+            2. Run local tests. Fix any failures, commit, and push.
+            3. CRITICAL: Execute gh pr merge ${{ github.event.pull_request.number }} --admin --squash
+               Poll checks if needed. DO NOT FINISH until the PR is merged.
           cli_args: '--max-iterations 30'
