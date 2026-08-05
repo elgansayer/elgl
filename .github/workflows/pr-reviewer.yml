@@ -6,11 +6,10 @@ on:
 
 jobs:
   review_and_fix:
-    # Guard: don't re-review PRs pushed by bots (prevents self-review loops)
-    if: |
-      github.actor != 'github-actions[bot]' &&
-      github.actor != 'app/github-actions' &&
-      !contains(github.actor, '[bot]')
+    # Guard: only skip if the PR reviewer itself pushed the commit (true self-review loop).
+    # AI-created PRs (openhands-agent, jules, etc.) MUST be reviewed and merged.
+    # The old guard blocked ALL bots which meant every AI-created PR was skipped!
+    if: github.actor != 'claude-code[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -19,7 +18,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
@@ -63,18 +62,18 @@ jobs:
             echo "PR not merged — falling through to Tier 2."
           fi
 
-      # ── TIER 2: DeepSeek V3 Chat (paid, heavy lifting) ────────────────────
-      - name: Tier 2 - OpenHands (DeepSeek V3 — paid heavy fallback)
+      # ── TIER 2: DeepSeek V4 Pro (paid, heavy lifting) ────────────────────
+      - name: Tier 2 - OpenHands (DeepSeek V4 Pro — paid heavy fallback)
         id: secondary
         if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.merged == 'false'
         continue-on-error: true
         uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "deepseek/deepseek-v4-pro"
+          llm_model: 'deepseek/deepseek-v4-pro'
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
-          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
-          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
+          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
+          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
             You are the AI PR Reviewer and Fixer.
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
@@ -87,7 +86,7 @@ jobs:
                gh pr merge ${{ github.event.pull_request.number }} --admin --squash
                If checks are still running, poll 'gh pr checks ${{ github.event.pull_request.number }} --watch'
                and retry. DO NOT FINISH until the PR is successfully merged.
-          cli_args: "--max-iterations 50"
+          cli_args: '--max-iterations 50'
 
       # ── TIER 3: Gemini 3.6 Flash (lightweight last resort) ────────────────
       - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
@@ -96,10 +95,10 @@ jobs:
         uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "gemini/gemini-3.5-flash"
+          llm_model: 'gemini/gemini-3.5-flash'
           llm_api_key: ${{ secrets.GEMINI_API_KEY }}
-          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
-          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
+          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
+          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
             You are the AI PR Reviewer and Fixer.
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
@@ -108,4 +107,4 @@ jobs:
             2. Run local tests. Fix any failures, commit, and push.
             3. CRITICAL: Execute gh pr merge ${{ github.event.pull_request.number }} --admin --squash
                Poll checks if needed. DO NOT FINISH until the PR is merged.
-          cli_args: "--max-iterations 30"
+          cli_args: '--max-iterations 30'
