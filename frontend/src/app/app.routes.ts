@@ -81,6 +81,14 @@ export const routes: Routes = [
     title: 'Groups Discovery - HelloTalk',
   },
   {
+    path: 'groups/create',
+    loadComponent: () =>
+      import('./components/create-group/create-group.component').then(
+        (m) => m.CreateGroupComponent,
+      ),
+    title: 'Create Group - HelloTalk',
+  },
+  {
     path: 'communities',
     loadComponent: () =>
       import('./components/communities/communities.component').then(

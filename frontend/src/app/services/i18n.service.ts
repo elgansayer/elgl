@@ -507,6 +507,24 @@ export class I18nService {
     'groupChat.deleteSuccess': 'Group chat deleted successfully.',
     'groupChat.error': 'An error occurred while managing the group chat.',
 
+    // Group Creation
+    'group.createTitle': 'Create Group',
+    'group.createSubtitle': 'Start a group chat with up to 50 members including yourself.',
+    'group.nameLabel': 'Group Name',
+    'group.namePlaceholder': 'Enter a name for your group',
+    'group.addMembers': 'Add Members',
+    'group.searchPlaceholder': 'Search by name, language, or user ID...',
+    'group.maxMembersReached': 'Maximum of {{max}} members reached.',
+    'group.selectedMembers': 'Selected Members',
+    'group.noMembersSelected': 'No members selected yet. Search above to add members.',
+    'group.removeMemberAria': 'Remove {{name}} from group',
+    'group.removeBtn': 'Remove',
+    'group.addBtn': 'Add',
+    'group.creatingBtn': 'Creating',
+    'group.createBtn': 'Create Group',
+    'group.successMsg': 'Group created successfully! Navigating home...',
+    'group.errorCreate': 'Failed to create group. Please try again.',
+
     // Chat List Component
     'chatList.title': 'Chats',
     'chatList.subtitle': 'Messages, corrections, and instant language exchange.',
