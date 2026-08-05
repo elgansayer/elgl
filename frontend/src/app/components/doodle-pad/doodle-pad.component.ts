@@ -27,7 +27,7 @@ export class DoodlePadComponent {
       canvas.height = 400;
       this.ctx = canvas.getContext('2d');
       if (this.ctx) {
-        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fillStyle = '#1e1e1e';
         this.ctx.fillRect(0, 0, canvas.width, canvas.height);
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
@@ -65,7 +65,7 @@ export class DoodlePadComponent {
   clearCanvas(): void {
     if (!this.ctx || !this.canvasRef()) return;
     const canvas = this.canvasRef().nativeElement;
-    this.ctx.fillStyle = '#ffffff';
+    this.ctx.fillStyle = '#1e1e1e';
     this.ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
