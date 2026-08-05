@@ -71,10 +71,10 @@ jobs:
         uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: 'deepseek/deepseek-v4-pro'
+          llm_model: "deepseek/deepseek-v4-pro"
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
-          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
-          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
+          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
+          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
           prompt: >
             You are the AI PR Reviewer and Fixer.
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
@@ -87,7 +87,7 @@ jobs:
                gh pr merge ${{ github.event.pull_request.number }} --admin --squash
                If checks are still running, poll 'gh pr checks ${{ github.event.pull_request.number }} --watch'
                and retry. DO NOT FINISH until the PR is successfully merged.
-          cli_args: '--max-iterations 50'
+          cli_args: "--max-iterations 50"
 
       # ── TIER 3: Gemini 3.6 Flash (lightweight last resort) ────────────────
       - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
@@ -96,10 +96,10 @@ jobs:
         uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: 'gemini/gemini-3.5-flash'
+          llm_model: "gemini/gemini-3.5-flash"
           llm_api_key: ${{ secrets.GEMINI_API_KEY }}
-          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
-          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
+          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
+          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
           prompt: >
             You are the AI PR Reviewer and Fixer.
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
@@ -108,4 +108,4 @@ jobs:
             2. Run local tests. Fix any failures, commit, and push.
             3. CRITICAL: Execute gh pr merge ${{ github.event.pull_request.number }} --admin --squash
                Poll checks if needed. DO NOT FINISH until the PR is merged.
-          cli_args: '--max-iterations 30'
+          cli_args: "--max-iterations 30"
