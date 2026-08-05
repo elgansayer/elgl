@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map, lastValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -89,6 +90,7 @@ export class ForgotPasswordComponent {
   private http = inject(HttpClient);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private i18n = inject(I18nService);
 
   readonly tokenQuery = toSignal(
     this.route.queryParamMap.pipe(map((params) => params.get('token'))),
@@ -119,18 +121,16 @@ export class ForgotPasswordComponent {
     const email = this.emailForm.controls.email.value;
 
     try {
-      const res = await lastValueFrom(
-        this.http.post<{ token: string }>(`${environment.apiUrl}/auth/request-password-reset`, { email }),
+      await lastValueFrom(
+        this.http.post<{ message: string }>(`${environment.apiUrl}/auth/request-password-reset`, { email }),
       );
       this.isSending.set(false);
       this.sendSuccess.set(true);
-      this.router.navigate([], {
-        queryParams: { token: res.token },
-        queryParamsHandling: 'merge',
-      });
     } catch {
       this.isSending.set(false);
-      this.sendError.set('Failed to send reset request');
+      this.sendError.set(
+        this.i18n.translate('forgot_password.send_error'),
+      );
     }
   }
 
@@ -155,7 +155,9 @@ export class ForgotPasswordComponent {
       this.router.navigate(['/home']);
     } catch {
       this.isResetting.set(false);
-      this.resetError.set('Failed to reset password');
+      this.resetError.set(
+        this.i18n.translate('forgot_password.reset_error'),
+      );
     }
   }
 }
