@@ -6,7 +6,7 @@ on:
 
 jobs:
   report-failure:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     # Exclude: self, AI Auto-Resolver, AI PR Reviewer (they fail during tier transitions
     # and would create infinite loops of failure issues).
     # Only report genuine CI/CD pipeline failures.

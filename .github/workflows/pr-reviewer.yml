@@ -10,7 +10,7 @@ jobs:
     # AI-created PRs (openhands-agent, jules, etc.) MUST be reviewed and merged.
     # WARNING: Do NOT block all [bot] actors — that prevents all AI PRs from being reviewed!
     if: github.actor != 'claude-code[bot]'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
