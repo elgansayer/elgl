@@ -305,6 +305,14 @@ export class SettingsComponent implements OnInit {
     }
   }
 
+  goToChangePassword(): void {
+    this.router.navigate(['/change-password']);
+  }
+
+  goToForgotPassword(): void {
+    this.router.navigate(['/forgot-password']);
+  }
+
   openVersionCheck(): void {
     this.router.navigate(['/version']);
   }

@@ -40,6 +40,29 @@
           </button>
         </div>
       </section>
+      <section class="space-y-4">
+        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+          {{ 'settings.accountSection' | t }}
+        </h2>
+        <div
+          class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm"
+        >
+          <button
+            (click)="goToChangePassword()"
+            class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
+          >
+            <span>{{ 'settings.changePassword' | t }}</span>
+            <span class="text-text-secondary" aria-hidden="true">→</span>
+          </button>
+          <button
+            (click)="goToForgotPassword()"
+            class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
+          >
+            <span>{{ 'settings.forgotPassword' | t }}</span>
+            <span class="text-text-secondary" aria-hidden="true">→</span>
+          </button>
+        </div>
+      </section>
 
       <section class="space-y-4">
         <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
