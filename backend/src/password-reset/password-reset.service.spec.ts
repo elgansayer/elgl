@@ -7,7 +7,10 @@ import { UnauthorizedException } from '@nestjs/common';
 
 describe('PasswordResetService', () => {
   let service: PasswordResetService;
-  let mockSupabase: { from: jest.Mock; auth: { admin: { updateUserById: jest.Mock } } };
+  let mockSupabase: {
+    from: jest.Mock;
+    auth: { admin: { updateUserById: jest.Mock } };
+  };
   let mockEmailService: { sendPasswordResetEmail: jest.Mock };
 
   function createMockQB() {
@@ -29,13 +32,18 @@ describe('PasswordResetService', () => {
       auth: { admin: { updateUserById: jest.fn() } },
     };
 
-    mockEmailService = { sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined) };
+    mockEmailService = {
+      sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PasswordResetService,
         { provide: ConfigService, useValue: { get: jest.fn() } },
-        { provide: SupabaseService, useValue: { getClient: () => mockSupabase } },
+        {
+          provide: SupabaseService,
+          useValue: { getClient: () => mockSupabase },
+        },
         { provide: EmailService, useValue: mockEmailService },
       ],
     }).compile();
@@ -46,7 +54,9 @@ describe('PasswordResetService', () => {
   describe('requestPasswordReset', () => {
     it('should not reveal whether the email exists when no user found', async () => {
       mockQB.eq.mockReturnValueOnce({ data: [], error: null });
-      await expect(service.requestPasswordReset({ email: 'no@user.com' })).resolves.toBeUndefined();
+      await expect(
+        service.requestPasswordReset({ email: 'no@user.com' }),
+      ).resolves.toBeUndefined();
       expect(mockEmailService.sendPasswordResetEmail).not.toHaveBeenCalled();
     });
 
@@ -56,16 +66,25 @@ describe('PasswordResetService', () => {
         .mockReturnValueOnce({ error: null });
 
       await service.requestPasswordReset({ email: 'user@test.com' });
-      expect(mockEmailService.sendPasswordResetEmail).toHaveBeenCalledWith('user@test.com', expect.any(String));
+      expect(mockEmailService.sendPasswordResetEmail).toHaveBeenCalledWith(
+        'user@test.com',
+        expect.any(String),
+      );
     });
   });
 
   describe('resetPassword', () => {
     it('should throw for invalid token', async () => {
-      mockQB.single.mockReturnValueOnce({ data: null, error: { message: 'not found' } });
+      mockQB.single.mockReturnValueOnce({
+        data: null,
+        error: { message: 'not found' },
+      });
 
       await expect(
-        service.resetPassword({ token: 'bad-token', newPassword: 'newpass123' }),
+        service.resetPassword({
+          token: 'bad-token',
+          newPassword: 'newpass123',
+        }),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -77,7 +96,10 @@ describe('PasswordResetService', () => {
       });
 
       await expect(
-        service.resetPassword({ token: 'expired-token', newPassword: 'newpass123' }),
+        service.resetPassword({
+          token: 'expired-token',
+          newPassword: 'newpass123',
+        }),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -89,15 +111,23 @@ describe('PasswordResetService', () => {
         error: null,
       });
 
-      mockSupabase.auth.admin.updateUserById.mockResolvedValueOnce({ error: null });
+      mockSupabase.auth.admin.updateUserById.mockResolvedValueOnce({
+        error: null,
+      });
 
       await expect(
-        service.resetPassword({ token: 'valid-token', newPassword: 'newpass123' }),
+        service.resetPassword({
+          token: 'valid-token',
+          newPassword: 'newpass123',
+        }),
       ).resolves.toBeUndefined();
 
-      expect(mockSupabase.auth.admin.updateUserById).toHaveBeenCalledWith('user-1', {
-        password: 'newpass123',
-      });
+      expect(mockSupabase.auth.admin.updateUserById).toHaveBeenCalledWith(
+        'user-1',
+        {
+          password: 'newpass123',
+        },
+      );
     });
   });
 });

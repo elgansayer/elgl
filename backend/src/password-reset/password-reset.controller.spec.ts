@@ -4,7 +4,10 @@ import { PasswordResetService } from './password-reset.service';
 
 describe('PasswordResetController', () => {
   let controller: PasswordResetController;
-  let mockService: { requestPasswordReset: jest.Mock; resetPassword: jest.Mock };
+  let mockService: {
+    requestPasswordReset: jest.Mock;
+    resetPassword: jest.Mock;
+  };
 
   beforeEach(async () => {
     mockService = {
@@ -22,11 +25,15 @@ describe('PasswordResetController', () => {
 
   describe('requestPasswordReset', () => {
     it('should return a generic message regardless of email validity', async () => {
-      const result = await controller.requestPasswordReset({ email: 'test@test.com' });
+      const result = await controller.requestPasswordReset({
+        email: 'test@test.com',
+      });
       expect(result).toEqual({
         message: 'If the email address exists, a reset link has been sent.',
       });
-      expect(mockService.requestPasswordReset).toHaveBeenCalledWith({ email: 'test@test.com' });
+      expect(mockService.requestPasswordReset).toHaveBeenCalledWith({
+        email: 'test@test.com',
+      });
     });
   });
 
