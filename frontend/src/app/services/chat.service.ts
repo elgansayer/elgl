@@ -528,6 +528,16 @@ export class ChatService {
     );
   }
 
+  async transcribeVoice(audioUrl: string): Promise<{ original_text: string; detected_language: string; confidence: number }> {
+    return firstValueFrom(
+      this.http.post<{ original_text: string; detected_language: string; confidence: number }>(
+        `${environment.apiUrl}/nlp/transcribe-voice`,
+        { audio_url: audioUrl },
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
   async getSuggestedReplies(roomId: string, recentMessages?: ChatMessage[]): Promise<string[]> {
     const body = {
       room_id: roomId,

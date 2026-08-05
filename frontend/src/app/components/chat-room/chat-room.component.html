@@ -239,6 +239,21 @@
               }
               @if (msg.message_type === 'voice' && msg.media_url) {
                 <audio [src]="msg.media_url ?? ''" controls class="w-full min-w-52"></audio>
+                <div class="mt-2 flex items-center gap-2">
+                  <button
+                    (click)="onTranscribeVoice(msg)"
+                    [disabled]="transcribingIds().has(msg.id)"
+                    class="rounded-lg bg-surface-200 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-secondary"
+                  >
+                    {{ (transcribingIds().has(msg.id) ? 'chatRoom.transcribingBtn' : 'chatRoom.transcribeBtn') | t }}
+                  </button>
+                </div>
+                @if (transcriptions()[msg.id]; as transcript) {
+                  <div class="mt-2 rounded-lg bg-blue-500/10 border-s-2 border-blue-500 ps-2 pe-2 pt-2 pb-2">
+                    <p class="text-xs text-text-primary font-medium">{{ 'chatRoom.transcriptLabel' | t }}</p>
+                    <p class="text-sm text-text-primary mt-0.5">{{ transcript }}</p>
+                  </div>
+                }
               }
               <div class="mt-2 flex items-center gap-1">
                 @if (msg.message_type === 'text' && msg.text_content) {
