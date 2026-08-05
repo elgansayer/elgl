@@ -1,0 +1,3 @@
+* Priority: High Impact
+* Description: Implement the Social and Privacy settings panel (Discord style).
+* Technical Implementation: Create `PrivacySettingsComponent` (following the architecture example). Implement UI for custom statuses (emoji picker + text input) and read receipt toggles. Use Angular Signals to ensure that changes here instantly reflect across the app UI (e.g., hiding online status immediately upon toggle, while saving in the background).
