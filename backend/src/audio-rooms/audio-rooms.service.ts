@@ -1189,6 +1189,42 @@ export class AudioRoomsService implements OnModuleInit {
     return [...new Set(rows.map((r) => r.host_id))];
   }
 
+  /**
+   * Returns active rooms grouped by target language pair.
+   * Each group includes the language pair, room count, and the list of rooms.
+   */
+  async listActiveRoomsByLanguage(): Promise<
+    Array<{
+      language_pair: string;
+      count: number;
+      rooms: AudioRoomRecord[];
+    }>
+  > {
+    const rooms = await this.listActiveRooms();
+    const groups = new Map<
+      string,
+      { language_pair: string; count: number; rooms: AudioRoomRecord[] }
+    >();
+
+    for (const room of rooms) {
+      const pair = room.language_pair || room.target_language || 'unknown';
+      if (!groups.has(pair)) {
+        groups.set(pair, {
+          language_pair: pair,
+          count: 0,
+          rooms: [],
+        });
+      }
+      const entry = groups.get(pair)!;
+      entry.rooms.push(room);
+      entry.count = entry.rooms.length;
+    }
+
+    return Array.from(groups.values()).sort(
+      (a, b) => b.count - a.count,
+    );
+  }
+
   async createPoll(
     hostId: string,
     roomId: string,

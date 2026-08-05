@@ -1,5 +1,5 @@
 import { showToast } from '../../services/toast.service';
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
@@ -57,8 +57,26 @@ export class AudioRoomComponent implements OnInit {
   readonly exclusiveEmojis = signal<{emojiId:string;name:string;animationUrl:string}[]>([]);
   readonly showExclusivePicker = signal<boolean>(false);
 
+  /** Toggle between flat list view and language-grouped view */
+  readonly viewMode = signal<'flat' | 'grouped'>('grouped');
+
+  /** Rooms currently displayed (either all, or filtered by selected language group) */
+  readonly displayedRooms = computed(() => {
+    const selected = this.store.selectedLanguageGroup();
+    if (selected) {
+      const group = this.store
+        .roomsByLanguage()
+        .find((g) => g.language_pair === selected);
+      return group?.rooms ?? [];
+    }
+    return this.store.activeRooms();
+  });
+
   async ngOnInit(): Promise<void> {
-    await this.store.loadActiveRooms();
+    await Promise.all([
+      this.store.loadActiveRooms(),
+      this.store.loadRoomsByLanguage(),
+    ]);
     try {
       const result = await firstValueFrom(
         this.httpClient.get<{emojiId:string;name:string;animationUrl:string}[]>('/audio-rooms/exclusive-emojis')
@@ -67,6 +85,19 @@ export class AudioRoomComponent implements OnInit {
     } catch {
       // non-critical, picker will be empty
     }
+  }
+
+  selectLanguageGroup(pair: string): void {
+    if (this.store.selectedLanguageGroup() === pair) {
+      this.store.selectedLanguageGroup.set(null);
+    } else {
+      this.store.selectedLanguageGroup.set(pair);
+    }
+  }
+
+  toggleViewMode(): void {
+    this.viewMode.update((m) => (m === 'flat' ? 'grouped' : 'flat'));
+    this.store.selectedLanguageGroup.set(null);
   }
 
   selectExclusiveEmoji(emojiId: string): void {

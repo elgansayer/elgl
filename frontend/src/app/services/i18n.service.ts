@@ -400,6 +400,12 @@ export class I18nService {
       'This audio/video room has ended and been archived to Cloudflare R2.',
     'audioRoom.raiseHandToast':
       '✋ Hand raised! The host has been notified of your request to speak on stage.',
+    'audioRoom.exclusiveEmojiBtn': '✨ Exclusive',
+    'audioRoom.reactionSent': 'Reaction sent!',
+    'audioRoom.viewFlatList': '📋 Flat list',
+    'audioRoom.viewByLanguage': '🌐 Group by language',
+    'audioRoom.showingRoomsFor': 'Showing rooms for {{pair}}',
+    'audioRoom.noRoomsInGroup': 'No active rooms in this language group.',
     'quickPoll.title': 'Quick Poll',
     'quickPoll.createBtn': 'Create Poll',
     'quickPoll.questionPlaceholder': 'Enter your question...',

@@ -69,6 +69,13 @@ export class AudioRoomsStore {
   private baseUrl = `${environment.apiUrl}/audio-rooms`;
 
   readonly activeRooms = signal<AudioRoomRecord[]>([]);
+  readonly roomsByLanguage = signal<
+    Array<{
+      language_pair: string;
+      count: number;
+      rooms: AudioRoomRecord[];
+    }>
+  >([]);
   readonly currentRoom = signal<AudioRoomRecord | null>(null);
   readonly isSpeaker = signal<boolean>(false);
   readonly isConnectedToLiveKit = signal<boolean>(false);
@@ -76,6 +83,7 @@ export class AudioRoomsStore {
   readonly captions = signal<CaptionRecord[]>([]);
   readonly roomMessages = signal<RoomChatMessage[]>([]);
   readonly isLoading = signal<boolean>(false);
+  readonly selectedLanguageGroup = signal<string | null>(null);
 
   // Split-screen co-host video state
   private readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
@@ -143,6 +151,23 @@ private findRemoteVideoTrack(userId: string): RemoteVideoTrack | null {
       this.activeRooms.set(list);
     } catch (e) {
       console.error('Failed to load active audio rooms:', e);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  async loadRoomsByLanguage(): Promise<void> {
+    this.isLoading.set(true);
+    try {
+      const groups = await firstValueFrom(
+        this.http.get<Array<{ language_pair: string; count: number; rooms: AudioRoomRecord[] }>>(
+          `${this.baseUrl}/by-language`,
+          { headers: this.getHeaders() },
+        ),
+      );
+      this.roomsByLanguage.set(groups);
+    } catch (e) {
+      console.error('Failed to load rooms by language:', e);
     } finally {
       this.isLoading.set(false);
     }
