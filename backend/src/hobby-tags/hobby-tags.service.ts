@@ -192,7 +192,7 @@ export class HobbyTagsService {
       if (!hobbyTag) continue;
 
       const targetVocab: TargetVocabularyItem[] = Array.isArray(hobbyTag.target_vocabulary)
-        ? hobbyTag.target_vocabulary
+        ? (hobbyTag.target_vocabulary as TargetVocabularyItem[])
         : [];
 
       const filteredVocab = targetVocab.filter(
