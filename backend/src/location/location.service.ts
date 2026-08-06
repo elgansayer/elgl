@@ -110,7 +110,7 @@ export class LocationService {
         `Failed to start live location: ${error?.message ?? 'No data'}`,
       );
     }
-    return { id: (data as { id: string }).id };
+    return { id: data.id };
   }
 
   async updateLiveLocation(

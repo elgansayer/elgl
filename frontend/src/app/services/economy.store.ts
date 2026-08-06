@@ -85,7 +85,7 @@ export class EconomyStore {
   async loadInitialData(): Promise<void> {
     this.isLoading.set(true);
     try {
-      if (!this.authService.currentUser()) {
+      if (!this.authService.currentUser() || !this.authService.getAccessToken()) {
         return;
       }
       const [cat, bal, blocked] = await Promise.all([
