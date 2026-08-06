@@ -1,103 +1,121 @@
-# 📚 HELLOTALK EXHAUSTIVE FEATURE SPECIFICATION (FEATURES_SPEC.md)
+Here is the extremely detailed, exhaustive prompt tailored for your Angular architecture to paste into Claude Code Design. It maps every single screen, modal, primitive, interaction, and component implemented in the application, including offline states and architectural requirements.
 
-This document outlines every micro-feature required to build a 1:1 competitor to HelloTalk and Instagram with LingQ interactive reading functionality, mapped directly to our NestJS and Angular architecture.
+```markdown
+# EXHAUSTIVE SYSTEM ARCHITECTURE & UI/UX DESIGN SPECIFICATION: THE ULTIMATE LANGUAGE PLATFORM
 
-## 1. Core Messaging & Chat Engine (Powered by Centrifugo)
+## 1. Executive Summary & Foundational Constraints
 
-The direct messaging ecosystem is highly structured. Messages are not just strings: they are complex JSON payloads routed via Centrifugo and cached in Redis before persistence in Supabase.
+### 1.1 Project Overview
 
-- **Text Messaging:** Real-time bi-directional chat with typing indicators and read receipts.
-- **Asynchronous Voice Notes:** Hold-to-record audio snippets uploaded to Cloudflare R2, sending the URL as the message payload.
-- **VoIP Audio Calling:** 1-on-1 internet phone calls established via LiveKit private rooms.
-- **High-Definition Video Calling:** Direct face-to-face practice sessions, also routed through LiveKit.
-- **Doodle Tool:** An integrated HTML5 canvas allowing users to draw on their screen and send the resulting image to explain concepts visually.
-- **Media Sharing:** Camera integration, gallery uploads, and live GPS location sharing (rendered as static map images).
-- **Favourites (Bookmarking):** Users can save specific messages, corrections, or audio clips into a private `favourites` table in Supabase for later revision.
-- **Message Search:** Local client-side indexing and server-side `pg_trgm` search to query chat history instantly.
-- **Virtual Gifts:** Sending digital, animated stickers or greeting cards, triggering Centrifugo global broadcast events to render full-screen animations.
-- **Group Chats:** Multi-user language exchange rooms (`group_{id}`) supporting collaborative learning, shared vocabulary banks, and group moderation.
+You are tasked with generating the complete, production-ready frontend architecture and UI component library for a massive social language learning platform. This platform merges the social discovery and messaging of HelloTalk, the interactive tokenised reading and SRS flashcards of LingQ, and the structured, monetised tutor marketplace of italki.
 
-## 2. Artificial Intelligence & NLP Tools (Powered by NestJS + Azure/DeepL + NLP.js)
+### 1.2 Technology Stack & Strict Directives
 
-These are the built-in utilities that make the app an educational superpower rather than just a social messaging app.
+- **Framework:** Angular (strictly using Standalone Components, Angular Signals for state management, and heavily typed RxJS observables/Resources).
+- **Styling Engine:** Tailwind CSS. You must strictly use logical CSS properties (`ps-`, `pe-`, `ms-`, `me-`, `text-start`) to ensure perfect Right-To-Left (RTL) language support (e.g., Arabic, Hebrew).
+- **Visual Aesthetic:** Premium "Dark Mode First". Deep obsidian backgrounds (`bg-gray-950`), slate containers (`bg-gray-900`), vibrant purple primary actions (`text-purple-500`), and neon mint secondary indicators.
+- **Accessibility & UX:** Minimum 44px touch targets on mobile, full ARIA roles, skeleton loaders for all async data, empty states for all lists, and keyboard tab-index navigability.
+- **Localisation (i18n):** Zero hardcoded strings. All text across all features (including Sticker Store, Discovery Map, Live Rooms, etc) must pipe through `@ngx-translate` keys or `I18nService.translate()`.
+- **Monetisation Display:** You must always display monetary values in dual currencies simultaneously globally (e.g., 10 UKP / 12.50 USD).
+- **Universal Tokenisation:** `Intl.Segmenter` API must be used to parse all text into clickable word tokens.
+- **Resilience & Security:** The UI must support offline PWA fallbacks (IndexedDB caching), graceful degradation during bad network states, and enforce strict DOMPurify HTML sanitization on all user-generated content (chats, moments).
 
-- **In-line Translation:** Tapping any message triggers a backend request to translate the text into the user's native language (supporting 260+ languages). Tracks daily usage caps in Redis (10/day for free tier, unlimited for VIP at 8 UKP / $10 USD per month).
-- **Transliteration (Romaji/Pinyin/Cyrillic):** Instantly converts non-Latin scripts into phonetic Latin characters to aid reading.
-- **Native Speaker Corrections (Visual Diff):** A specific UI modal where User A edits User B's text. The Angular frontend renders the original text with red strikethroughs and the new text in green using structured JSON diffs (`{ type: 'correction', original: '...', fixed: '...' }`).
-- **Text-to-Voice (TTS):** Tapping text plays an AI-generated audio pronunciation of the sentence.
-- **Voice-to-Text (Transcription):** Converts an incoming voice note into a readable text transcript using backend speech-to-text APIs.
-- **AI Grammar Checker:** A pre-send tool. Users type a draft, hit the grammar button, and the AI flags errors before the message is sent.
-- **AI Pronunciation Scoring:** Users record a phrase, and the backend grades their accent, intonation, and clarity out of 100.
+---
 
-## 3. Global Social Feed / "Moments" (Powered by Redis Fan-Out)
+## 2. Design System & UI Primitives
 
-The Instagram-style community feed where users post public updates, cultural moments, and language questions.
+All UI development must reuse the following established primitives before building custom designs:
 
-- **Multi-modal Posts:** Users can post text, up to 9 images, or 60-second voice recordings to the public timeline.
-- **Community Corrections:** The visual diff correction tool is embedded directly in the comment section of every post.
-- **Feed Filtering:** Users can filter the feed by "All", "Classmates" (users learning the same language), or "Following".
-- **Audio Reading of Posts:** A button that commands the text-to-speech engine to read the entire text of a Moment aloud.
-- **Post Translation:** One-tap translation for entire Moments and their nested comment threads.
-- **Profile Pinning:** VIP users can pin specific Moments to the top of their profile.
+- **Buttons:** `button-primary`, `button-secondary`, `gradient-button`
+- **Inputs:** `input`, `textarea`, `language-picker`, `emoji-picker`, `sticker-picker`
+- **Containers:** `card`, `empty-state` (must be used for all empty lists)
+- **Interactive UI:** `chip`, `pill`, `scrollable-pills`, `user-onboarding-tooltips`
+- **Visual Indicators:** `fluency-indicator`, `audio-equalizer`, `toast`, `skeleton-loaders` (for all pending async states)
 
-## 4. Audio & Video Broadcasting (Powered by LiveKit)
+---
 
-The massive real-time community engagement and voice practice features.
+## 3. Core Functional Modules & Screens
 
-- **24/7 Drop-in Voice Rooms:** Public audio rooms categorised by language pair.
-- **Roles & Stage Management:** Rooms contain Hosts, Speakers (on stage), and Listeners (audience). Listeners must click "Raise Hand" (`/audio-rooms/raise-hand`) and be approved by the Host to be granted a LiveKit publishing token (`canPublish: true`).
-- **Text Chat Overlay:** A synchronised Centrifugo text chat (`room_{id}`) that runs alongside the live audio.
-- **Topic Specialisation:** Rooms are tagged (e.g., "Pronunciation Focus", "Cultural Exchange", "Beginners Only").
-- **Live Streams (Video):** Professional host broadcasting, usually run by certified language teachers or popular community members.
-- **Co-hosting (Joining the Stage):** The video host can invite a viewer to turn on their camera and join a split-screen 1-on-1 conversation.
-- **Real-Time AI Subtitles:** Live speech-to-text generating closed captions for speakers on stage.
-- **Stream Replays:** Recorded archives of previous video lessons saved to Cloudflare R2.
+### 3.1 Authentication & Security (Account Lifecycle)
 
-## 5. Matchmaking & Discovery (Powered by Supabase PostGIS)
+- **Onboarding Wizard (`onboarding`)**: Multi-step flow with tooltips for language pairs, CEFR levels, and goals.
+- **Device Security**: `device-lock` (PIN entry), `device-transfer` (Secure account migration).
+- **Password Management**: `forgot-password`, `reset-password`, `change-password`.
+- **Data Lifecycle**: `account-deletion`, `gdpr` (Personal Data export and management flows).
 
-The search engine used to find the perfect language exchange partners globally and locally.
+### 3.2 Advanced Matchmaking & Discovery (PostGIS Driven)
 
-- **Goal-Based Pairing:** Matches users based on precise native language and target language alignment.
-- **Advanced Search Filters:** Filtering by Country, City, Age range, Gender, and Proficiency level.
-- **"Serious Learner" Toggle:** An algorithmic filter that hides casual users and prioritises accounts with high correction ratios, active study streaks, and completed profiles.
-- **Time-zone Optimisation:** Prioritises showing users who are currently awake and online (tracked via Centrifugo presence).
-- **Proximity Search:** Exact GPS radius searching (`ST_DWithin`) to find language partners in your physical city.
+- **Discovery Map & Feed (`discovery`)**: Geographic map showing nearby learners + scrolling list of recommendations (fully localized).
+- **Filter Mechanics**: `age-range-slider`, `distance-slider`, and location privacy toggles.
+- **Study Buddy (`study-buddy`)**: Intelligent matching for dedicated language partners.
+- **Tags & Interests**: `hobby-tags`, `interests-select`, `topic-following`.
 
-## 6. Interactive Reading Engine (LingQ Clone in Angular)
+### 3.3 The "Moments" Social Feed & Content
 
-The deep immersion reading and vocabulary acquisition system integrated throughout Moments, Chat, and dedicated Reading articles.
+- **Moments Feed (`moments`)**: Social timeline with media attachments, quick replies, and reactions. Content strictly sanitized via DOMPurify.
+- **Content Creation**: `media-attachments`, `cover-photo-uploader`, `image-lightbox`.
+- **Visual Diff Corrections (`visual-diff`, `correction-modal`)**: Inline JSON diffs with red strikethroughs and green highlights for native speaker corrections.
+- **Interactive Elements**: `moment-translate`, `word-definition-modal`, `cultural-tip`.
 
-- **Universal Word Tokenisation:** Every word in any text is parsed using native `Intl.Segmenter(locale, { granularity: 'word' })` to turn plain text into clickable word tokens.
-- **Click-to-Translate & Define:** Clicking any word token opens an instant pop-up showing dictionaries, audio pronunciation, and example sentences.
-- **Spaced Repetition System (SRS) Vocabulary List:** Clicking and saving a word adds it to the user's `flashcards` table with SRS levels:
-  - Level 0: Blue (New / Unknown token encountered)
-  - Level 1-3: Yellow (Learning / In review queue)
-  - Level 4: White (Known / Mastered vocabulary)
-- **Live Vocabulary Highlighting:** Wherever text appears (Chat messages, Moments, Reading texts), word tokens are dynamically styled with CSS colours reflecting the user's personal vocabulary state.
-- **Audio-Synchronised Reading:** When reading articles or listening to voice recordings with transcripts, the `<audio>` `timeupdate` event synchronises with the `Intl.Segmenter` spans to highlight the currently spoken phrase in real time.
+### 3.4 Chat & Direct Messaging (Centrifugo & LiveKit)
 
-## 7. Ecosystem & Multi-Platform Sync
+- **Chat Management**: `chat-list`, `chat-room`, `chat-settings`, `chat-search`, `chat-backup`. Includes IndexedDB offline caching.
+- **Rich Messaging**: Voice notes (`voice-recorder`), HTML5 canvas (`doodle-pad`), `chat-system-bubble`, `sticker-store`.
+- **Context Menus (`message-context-menu`, `long-press-context-menu`)**: Translate, Pronounce, Correct, Add to LingQ SRS.
+- **Audio/Video Calls**: `video-call`, `active-call`, `voip-call`, `incoming-call-modal`, `call-logs`.
 
-- **Desktop Web Platform:** A browser-based version of the chat interface, syncing seamlessly with the mobile app via QR code login. Designed for faster typing and keyboard-optimised workflows.
-- **Cloud Chat Backups:** Syncing the local message database to the cloud to persist message histories across devices.
-- **Sister App Integrations:** Single-sign-on (SSO) links to vocabulary builders and AI avatar conversational bots.
+### 3.5 Live Audio Rooms & Communities ("Language Parties")
 
-## 8. VIP Premium Monetisation & Virtual Economy
+- **Room Discovery (`audio-rooms`, `language-parties`)**: Real-time room lobbies with LiveKit integrations and optimized WebRTC latency.
+- **Stage Dynamics (`audio-stage`, `split-screen-video`)**: Glowing rings for active speakers, audience grid, host moderation.
+- **Interactive Overlays**: `live-chat-overlay`, `voiceroom-notes`, `celebration-overlay`, `gift-animation-overlay`, `soundboard`.
+- **Groups & Events**: `groups-discovery`, `join-group`, `create-group`, `communities`, `events-feed`, `events-calendar`, `create-event-modal`.
 
-The logic enforced by NestJS to drive subscriptions across tiers and power the in-app economy.
+### 3.6 Classrooms & Tutor Marketplace (italki Integration)
 
-- **Consumer VIP Tier (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent):**
-  - Ad Removal: Strips all banner and interstitial advertising from the UI.
-  - Unlimited AI Tool Usage: Removes the daily cap on translations, transcriptions, and transliterations.
-  - Multi-Language Unlocks: Allows studying up to 3 target languages simultaneously (the free tier is locked to 1).
-  - Boosted Search Exposure: Algorithmic priority in the matchmaking database.
-  - Incognito Mode: Allows browsing other profiles without triggering their "Who Viewed Me" notification logs.
-  - Expanded Contact Limits: Increases the number of new user conversations that can be initiated per day.
-- **Developer & Creator Tier (20 UKP / $26 USD per month):** API key generation, advanced analytics, and custom educational bot creation tools.
-- **Virtual Coins Economy (`coins_balance`):** Purchasing virtual coin bundles via Stripe/App Store webhooks. Coins are spent on Virtual Gifts, Audio Room tips for hosts, and premium tutoring sessions.
+- **Lessons & Marketplace**: `lessons`, `classrooms-marketplace`, localized Tutor Profiles.
+- **Diagnostic Tools**: `diagnostic-quiz`, `proficiency-assessment`.
+- **Admin**: `lesson-manager`.
 
-## 9. Trust, Safety, and Privacy Management
+### 3.7 Interactive Reading Engine & SRS (LingQ Integration)
 
-- **Granular Privacy Toggles:** Users can hide their age, hide their exact GPS location, or remove themselves from global search entirely.
-- **Visitor Logs ("Who Viewed Me"):** A dashboard showing exactly who has clicked on a profile (blurred for free users, fully visible for VIPs).
-- **Block & Report System:** Essential moderation tools to combat inappropriate behaviour, scammers, and spam. Reports flag the user ID and message/moment context in the Supabase admin dashboard.
+- **Interactive Tokenisation**: `tokenised-text` rendering interactive spans.
+- **Language Hub**: `vocabulary-dashboard`, `vocabulary-display`, `suggest-flashcards`, `word-of-the-day`.
+- **Pronunciation & Tools**: `pronunciation-feedback`, `audio-sync-reader`, `text-to-speech`.
+- **Content Libs**: `resource-library`, `language-islands`, `ai-conversation`.
+
+### 3.8 User Profiles, Gamification & Stats
+
+- **Profile Rendering**: `profile`, `user-detail`, `business-profile`, `external-profile`, `profile-visitors`.
+- **Social Graph**: `follow-list` (Followers/Following), `liked-by-modal`, `favourites`.
+- **Gamification & Engagement**: `study-streak-counter`, `streak-celebration-overlay`, `daily-login-modal`, `earned-badges`, `leaderboard`, `milestone`, `quests`.
+- **Statistics**: `my-stats`, `visitor-logs`.
+
+### 3.9 Settings, Support & App Management
+
+- **Settings Dashboard (`settings`)**: App-wide configuration, fully translated.
+- **Customization**: `appearance-settings`, `theme-selector`, `font-scale-slider`.
+- **Preferences**: `language-settings`, `notification-preferences`, `notification-customization`, `data-storage`, `blocks`.
+- **Trust & Safety**: `moderation-queue`, `report-user-modal`, `trust-safety-modal` (all localized).
+- **Legal & Help**: `help-centre`, `support-centre`, `help-about`, `terms`, `privacy`, `legal-document-viewer`.
+- **Admin/Developer**: `admin-portal`, `developer-dashboard`, `version-check`, `forced-update-modal`.
+
+### 3.10 Monetisation, Economy & VIP Subscriptions
+
+- **Subscription Management**: `vip`, `subscription-plans`, `my-subscription`, `restore-purchases-button`.
+- **Commerce / Shop**: `shop`, `cart`, `payment-gateway`.
+- **Virtual Economy**: `coins-success`, `coins-cancel`, `virtual-gift-modal`, `gift-picker`, `host-dashboard`.
+- **VIP Tiers**: Display pricing dynamically in dual currencies (e.g., 8 UKP / 10.00 USD).
+
+---
+
+## 4. Implementation Output Expectations
+
+When responding, you must provide:
+
+1.  **Component Architecture:** The file structure and module boundaries based on these exact features.
+2.  **TypeScript Logic:** Angular Signals implementations for state management, resource APIs for fetching, and rigorous type-safety (NO type assertions/`as` casts). All APIs must handle rate-limiting errors and exponential backoff gracefully.
+3.  **HTML Templates:** Clean, semantic structure with proper control flow (`@if`, `@for`), ARIA labels, interactive skeleton loaders, empty states, and Zero hardcoded strings (using `| t`).
+4.  **Tailwind CSS:** Comprehensive styling using the specified dark mode palette and RTL-compliant logical properties.
+5.  **Strict Compliance:** Ensure all monetisation displays use the dual UKP / USD format and all English is strictly British English.
+```
