@@ -639,5 +639,11 @@
   "wordModal.saveLearningBtn": "🟡 Save to learning",
   "wordModal.srsStatus": "Spaced repetition status: {{status}}",
   "wordModal.title": "Dictionary Definition",
-  "wordModal.translationLabel": "Translation"
+  "wordModal.translationLabel": "Translation",
+  "app_lock.unlock_btn": "Unlock",
+  "app_lock.subtitle": "Please verify your identity to access the app.",
+  "app_lock.title": "App Locked",
+  "app_lock.enable_biometric": "Enable Biometric Lock",
+  "app_lock.disable_biometric": "Disable Biometric Lock",
+  "nav.guided_tour": "Guided Tour"
 }
