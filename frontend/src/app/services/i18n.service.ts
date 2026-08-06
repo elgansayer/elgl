@@ -1157,6 +1157,16 @@ export class I18nService {
     // Sticker Store
     'sticker.purchaseSuccess': 'Successfully purchased {{name}}!',
     'sticker.notEnoughCoins': 'Not enough coins!',
+    'sticker.filterAll': 'All',
+    'sticker.filterValue': 'Value',
+    'sticker.filterPopular': 'Popular',
+    'sticker.filterPremium': 'Premium',
+    'stickerStore.title': 'Sticker Store',
+    'stickerStore.subtitle': 'Unlock expressive sticker packs for your chats',
+    'stickerStore.emptyTitle': 'No sticker packs found',
+    'stickerStore.emptyDescription': 'Check back later for new sticker packs.',
+    'stickerStore.ownedBadge': 'OWNED',
+    'stickerStore.unlocked': 'Unlocked',
     // Theme Selection
     'theme.light': 'Light',
     'theme.dark': 'Dark',

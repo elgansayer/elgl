@@ -1075,4 +1075,71 @@ export class EconomyService {
       pack,
     };
   }
+
+  async getStickerPacks(
+    userId: string,
+  ): Promise<{
+    packs: StickerPackRow[];
+    owned_pack_ids: string[];
+    user_coins: number;
+  }> {
+    const supabase = this.supabaseService.getClient();
+
+    const [packsResponse, ownedResponse, balanceResponse] =
+      await Promise.all([
+        supabase
+          .from('sticker_packs')
+          .select('*')
+          .order('cost_coins', { ascending: true }),
+        supabase
+          .from('user_sticker_packs')
+          .select('pack_id')
+          .eq('user_id', userId),
+        supabase
+          .from('users')
+          .select('coins_balance')
+          .eq('id', userId)
+          .single(),
+      ]);
+
+    const packs: StickerPackRow[] = (packsResponse.data ?? [])
+      .filter(
+        (item: unknown): item is StickerPackRow =>
+          typeof item === 'object' &&
+          item !== null &&
+          'id' in item &&
+          'name' in item &&
+          'cost_coins' in item,
+      );
+
+    if (packs.length === 0) {
+      return {
+        packs: this.getDefaultStickerPacks(),
+        owned_pack_ids:
+          ownedResponse.data?.map((r) => r.pack_id) ?? [],
+        user_coins:
+          balanceResponse.data?.coins_balance ?? 0,
+      };
+    }
+
+    return {
+      packs,
+      owned_pack_ids:
+        ownedResponse.data?.map((r) => r.pack_id) ?? [],
+      user_coins: balanceResponse.data?.coins_balance ?? 0,
+    };
+  }
+
+  private getDefaultStickerPacks(): StickerPackRow[] {
+    return [
+      { id: 'stk_pack_1', name: 'Happy Corgi Pack', cost_coins: 50 },
+      { id: 'stk_pack_2', name: 'Rainbow Unicorns', cost_coins: 200 },
+      { id: 'stk_pack_3', name: 'Study Buddies', cost_coins: 100 },
+      { id: 'stk_pack_4', name: 'Golden Dragons', cost_coins: 500 },
+      { id: 'stk_pack_5', name: 'Party Animals', cost_coins: 150 },
+      { id: 'stk_pack_6', name: 'Chill Vibes', cost_coins: 80 },
+      { id: 'stk_pack_7', name: 'Foodie Fun', cost_coins: 120 },
+      { id: 'stk_pack_8', name: 'Travel Stamps', cost_coins: 180 },
+    ];
+  }
 }
