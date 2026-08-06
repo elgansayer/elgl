@@ -1,0 +1,170 @@
+# Artillery Load Test: Trust & Safety Architecture
+#
+# This suite load-tests every Trust & Safety endpoint across the Safety
+# and Moderation modules.  It validates that the architecture can sustain
+# production-level throughput without unacceptable latency or error rates.
+#
+# Prerequisites (see README.md for details):
+#   1. The backend server must be running and reachable.
+#   2. Set TARGET_URL  (default http://127.0.0.1:3000).
+#   3. Set AUTH_TOKEN  (a valid Supabase JWT for a test user).
+#
+# Quick run:
+#   TARGET_URL=http://localhost:3000 AUTH_TOKEN=... \
+#     npx artillery run load-tests/trust-safety.yml
+
+config:
+  target: "{{ $processEnvironment.TARGET_URL }}"
+  http:
+    timeout: 30
+  phases:
+    # ---- Phase 1: Ramp-up (discovery + warm caches) ----
+    - name: warmup
+      duration: 30
+      arrivalRate: 2
+
+    # ---- Phase 2: Sustained peak load ----
+    - name: peak
+      duration: 60
+      arrivalRate: 10
+
+    # ---- Phase 3: Stress spike ----
+    - name: spike
+      duration: 30
+      arrivalRate: 25
+
+  processor: "./processors/trust-safety-processor.js"
+  variables:
+    auth_token: "{{ $processEnvironment.AUTH_TOKEN }}"
+    test_user_id: "{{ $processEnvironment.TEST_USER_ID }}"
+    target_user_id: "test-target-user-{{ $randomNumber(1000, 9999) }}"
+
+  plugins:
+    ensure: {}
+    expect: {}
+
+  ensure:
+    thresholds:
+      - http.response_time.p99: 2000   # 99th percentile must stay under 2 s
+      - http.response_time.p95: 1000   # 95th percentile must stay under 1 s
+    conditions:
+      - expression: "http.codes.5xx.count == 0"
+        strict: true
+
+before:
+  flow:
+    - log: "Starting Trust & Safety load test against {{ target }}"
+
+scenarios:
+  # ------------------------------------------------------------------
+  # Scenario 1 – Read-heavy: report categories, blocked lists, lookups
+  # ------------------------------------------------------------------
+  - name: Safety read flows
+    weight: 40
+    flow:
+      - get:
+          url: "/safety/report-categories"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+          expect:
+            - statusCode: 200
+            - contentType: json
+
+      - think: 1
+
+      - get:
+          url: "/safety/blocked-ids"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+          expect:
+            - statusCode: 200
+
+      - think: 1
+
+      - get:
+          url: "/safety/is-blocked/{{ target_user_id }}"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+          expect:
+            - statusCode: 200
+
+      - think: 1
+
+      - get:
+          url: "/safety/blocked-and-blocker-ids/{{ test_user_id }}"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+          expect:
+            - statusCode: 200
+
+  # ------------------------------------------------------------------
+  # Scenario 2 – Write-heavy: block / unblock user
+  # ------------------------------------------------------------------
+  - name: Block & unblock flows
+    weight: 25
+    flow:
+      - post:
+          url: "/safety/block"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+            Content-Type: "application/json"
+          json:
+            blocked_id: "{{ target_user_id }}"
+          expect:
+            - statusCode: [200, 201, 400, 404]   # 400/404 acceptable in seedless run
+
+      - think: 2
+
+      - post:
+          url: "/safety/unblock"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+            Content-Type: "application/json"
+          json:
+            blocked_id: "{{ target_user_id }}"
+          expect:
+            - statusCode: [200, 400, 404]
+
+  # ------------------------------------------------------------------
+  # Scenario 3 – Report a user
+  # ------------------------------------------------------------------
+  - name: Report user flows
+    weight: 20
+    flow:
+      - post:
+          url: "/safety/report"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+            Content-Type: "application/json"
+          json:
+            reported_id: "{{ target_user_id }}"
+            reason_category: "{{ $randomChoice(['harassment','spam','inappropriate_content','fake_profile','other']) }}"
+            description: "Load-test generated report for user {{ target_user_id }}"
+          expect:
+            - statusCode: [200, 201, 400, 404]
+
+  # ------------------------------------------------------------------
+  # Scenario 4 – Moderation flows (list, analyse, approve, reject)
+  # ------------------------------------------------------------------
+  - name: Moderation flows
+    weight: 15
+    flow:
+      - get:
+          url: "/moderation/items?type=profile&status=pending"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+          expect:
+            - statusCode: 200
+
+      - think: 1
+
+      - get:
+          url: "/moderation/analyse/{{ test_user_id }}"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+          expect:
+            - statusCode: 200
+
+after:
+  flow:
+    - log: "Trust & Safety load test completed."
