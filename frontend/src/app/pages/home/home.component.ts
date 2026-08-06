@@ -59,6 +59,9 @@ export class HomeComponent {
 
   constructor() {
     effect(() => {
+      if (this.streakResource.error()) {
+        return;
+      }
       const current = this.streakResource.value();
       if (current === null || current === undefined) {
         return;

@@ -42,7 +42,10 @@ export class DailyLearningTipComponent {
     },
   });
 
-  protected readonly tip = computed(
-    () => this.tipResource.value()?.tip ?? this.i18nService.translate('home.dailyTip.fallback'),
-  );
+  protected readonly tip = computed(() => {
+    if (this.tipResource.error()) {
+      return this.i18nService.translate('home.dailyTip.fallback');
+    }
+    return this.tipResource.value()?.tip ?? this.i18nService.translate('home.dailyTip.fallback');
+  });
 }

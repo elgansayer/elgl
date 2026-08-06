@@ -100,7 +100,7 @@ export class I18nService {
     'studyStreak.checkin': 'Check In',
     'studyStreak.day': 'Day',
     'studyStreak.days': 'Days',
-    
+
     // Events
     'events.createTitle': 'Create Event',
     'events.title': 'Event Title',
@@ -749,7 +749,8 @@ export class I18nService {
     'profile.vipBadge': 'VIP',
     'privacy.incognitoVisits': 'Incognito profile visiting',
     'privacy.incognitoVisitsHint': 'Visit other profiles without appearing in their visitor list.',
-    'privacy.incognitoVisitsVipRequired': 'Upgrade to VIP (8 UKP / $10 USD per month) to browse profiles incognito.',
+    'privacy.incognitoVisitsVipRequired':
+      'Upgrade to VIP (8 UKP / $10 USD per month) to browse profiles incognito.',
     'profile.visitorsBtn': 'Visitors',
     'profile.audioIntroBtn': 'Audio intro',
     'profile.editBtn': 'Edit profile',
@@ -1127,7 +1128,8 @@ export class I18nService {
 
     // VIP Subscription page
     'vip.heroTitle': 'Unlock Your Language Learning Potential',
-    'vip.heroSubtitle': 'Choose the plan that fits your learning journey. From free basics to premium power tools.',
+    'vip.heroSubtitle':
+      'Choose the plan that fits your learning journey. From free basics to premium power tools.',
     'vip.seePlans': 'See Plans',
     'vip.startFree': 'Start Free',
     'vip.tryAgain': 'Try Again',
@@ -1147,15 +1149,20 @@ export class I18nService {
     'vip.featureTableHeader': 'Feature',
     'vip.faqTitle': 'Frequently Asked Questions',
     'vip.faqSwitchQ': 'Can I switch plans anytime?',
-    'vip.faqSwitchA': 'Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately.',
+    'vip.faqSwitchA':
+      'Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately.',
     'vip.faqTrialQ': 'Is there a free trial for premium plans?',
-    'vip.faqTrialA': 'We offer a 7-day free trial for our Consumer VIP plan. No credit card required to start.',
+    'vip.faqTrialA':
+      'We offer a 7-day free trial for our Consumer VIP plan. No credit card required to start.',
     'vip.faqPaymentQ': 'What payment methods do you accept?',
-    'vip.faqPaymentA': 'We accept all major credit cards, PayPal, and in-app purchases on iOS and Android.',
+    'vip.faqPaymentA':
+      'We accept all major credit cards, PayPal, and in-app purchases on iOS and Android.',
     'vip.faqCancelQ': 'Can I cancel my subscription?',
-    'vip.faqCancelA': 'Absolutely. You can cancel anytime from your account settings. Your benefits continue until the end of the billing period.',
+    'vip.faqCancelA':
+      'Absolutely. You can cancel anytime from your account settings. Your benefits continue until the end of the billing period.',
     'vip.ctaTitle': 'Ready to Accelerate Your Learning?',
-    'vip.ctaSubtitle': 'Join thousands of language learners who have unlocked their full potential with HelloTalk Premium.',
+    'vip.ctaSubtitle':
+      'Join thousands of language learners who have unlocked their full potential with HelloTalk Premium.',
     'vip.viewPlans': 'View Plans',
     'vip.continueFree': 'Continue Free',
     'vip.freePlan': 'Free',
@@ -1348,11 +1355,14 @@ export class I18nService {
     'gdpr.title': 'Personal Data & GDPR',
     'gdpr.description': 'Manage your personal data and account settings according to GDPR.',
     'gdpr.archiveSection': 'Request My Data Archive',
-    'gdpr.archiveInfo': 'Download a copy of all your data. This may include profile info, moments, chat history, and more.',
+    'gdpr.archiveInfo':
+      'Download a copy of all your data. This may include profile info, moments, chat history, and more.',
     'gdpr.requestArchiveBtn': 'Request My Data Archive',
-    'gdpr.archiveSuccess': 'Your data archive request has been submitted. You will receive an email when ready.',
+    'gdpr.archiveSuccess':
+      'Your data archive request has been submitted. You will receive an email when ready.',
     'gdpr.deleteSection': 'Delete My Account',
-    'gdpr.deleteInfo': 'Permanently delete your account and all associated data. This action is irreversible after a 30-day grace period.',
+    'gdpr.deleteInfo':
+      'Permanently delete your account and all associated data. This action is irreversible after a 30-day grace period.',
     'gdpr.deleteConfirmLabel': 'I understand that this action is irreversible.',
     'gdpr.deleteAccountBtn': 'Delete My Account',
     'gdpr.deleteSuccess': 'Account deletion initiated. Check your email for confirmation.',
@@ -1371,7 +1381,8 @@ export class I18nService {
     'settings.fontScale': 'Text size',
     'settings.languageSection': 'Language',
     'settings.languageSelectLabel': 'Interface language',
-    'settings.languageChangeDescription': 'Choose the language used throughout HelloTalk. This will update the UI text immediately.',
+    'settings.languageChangeDescription':
+      'Choose the language used throughout HelloTalk. This will update the UI text immediately.',
     // Pill colour CSS class tokens (kept i18n so themes can override without recompiling templates)
     'pill.colour_primary': 'bg-indigo-500 text-white hover:bg-indigo-600',
     'pill.colour_success': 'bg-emerald-500 text-white hover:bg-emerald-600',
@@ -1404,6 +1415,8 @@ export class I18nService {
     'chat_backup.import_error': 'Failed to import chat history.',
 
     // Daily Learning Tip
+    'home.title': 'Home',
+    'home.wordOfDay.title': 'Word of the day',
     'home.dailyTip.title': 'Daily learning tip',
     'home.dailyTip.loading': 'Fetching your tip...',
     'home.dailyTip.fallback': 'Keep practising every day!',
