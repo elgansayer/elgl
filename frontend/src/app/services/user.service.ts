@@ -277,7 +277,13 @@ export class UserService {
         .patch<UserProfile>(`${this.baseUrl}/me`, update, { headers: this.getHeaders() })
         .pipe(
           catchError(() => {
-            const updated: UserProfile = { ...MOCK_USER_PROFILE, status_text:'Learning new languages!', ...update, auto_download_wifi_only: update.auto_download_wifi_only ?? false, last_active_at: new Date().toISOString() };
+            const updated: UserProfile = {
+              ...MOCK_USER_PROFILE,
+              status_text: 'Learning new languages!',
+              ...update,
+              auto_download_wifi_only: update.auto_download_wifi_only ?? false,
+              last_active_at: new Date().toISOString(),
+            };
             return of(updated);
           }),
         ),
@@ -416,11 +422,13 @@ export class UserService {
 
   async rateCorrector(ratedUserId: string, score: number): Promise<void> {
     return firstValueFrom(
-      this.http.post<void>(
-        `${environment.apiUrl}/corrector-score/rate`,
-        { rated_user_id: ratedUserId, score },
-        { headers: this.getHeaders() },
-      ).pipe(catchError(() => of(undefined))),
+      this.http
+        .post<void>(
+          `${environment.apiUrl}/corrector-score/rate`,
+          { rated_user_id: ratedUserId, score },
+          { headers: this.getHeaders() },
+        )
+        .pipe(catchError(() => of(undefined))),
     );
   }
 
@@ -515,41 +523,62 @@ export class UserService {
   }
 
   async getStudyStreak(): Promise<number> {
+    const token = this.authService.getAccessToken();
+    if (!token) return 0;
+
     const stats = await firstValueFrom(
-      this.http.get<Partial<UserProfile>>(`${this.baseUrl}/me/stats`, { headers: this.getHeaders() })
-        .pipe(catchError(() => of<Partial<UserProfile>>({})))
+      this.http
+        .get<Partial<UserProfile>>(`${this.baseUrl}/me/stats`, { headers: this.getHeaders() })
+        .pipe(catchError(() => of<Partial<UserProfile>>({}))),
     );
     return stats?.study_streak_days ?? 0;
   }
 
   async getAvailableHobbies(): Promise<string[]> {
     return firstValueFrom(
-      this.http.get<string[]>(`${this.baseUrl}/hobbies`, { headers: this.getHeaders() })
-        .pipe(catchError(() => {
+      this.http.get<string[]>(`${this.baseUrl}/hobbies`, { headers: this.getHeaders() }).pipe(
+        catchError(() => {
           // fallback to mock
-          return of(['reading', 'travelling', 'gaming', 'cooking', 'sports', 'music', 'photography']);
-        })),
+          return of([
+            'reading',
+            'travelling',
+            'gaming',
+            'cooking',
+            'sports',
+            'music',
+            'photography',
+          ]);
+        }),
+      ),
     );
   }
 
   async getAvailableInterests(): Promise<string[]> {
     return firstValueFrom(
-      this.http.get<string[]>(`${this.baseUrl}/interests`, { headers: this.getHeaders() })
+      this.http
+        .get<string[]>(`${this.baseUrl}/interests`, { headers: this.getHeaders() })
         .pipe(catchError(() => of([]))),
     );
   }
 
-  async queryUsersByLanguagePairs(languagePairs: { native: string; target: string }[]): Promise<UserProfile[]> {
+  async queryUsersByLanguagePairs(
+    languagePairs: { native: string; target: string }[],
+  ): Promise<UserProfile[]> {
     return firstValueFrom(
       this.http
-        .post<UserProfile[]>(`${this.baseUrl}/query-language-pairs`, { languagePairs }, { headers: this.getHeaders() })
+        .post<UserProfile[]>(
+          `${this.baseUrl}/query-language-pairs`,
+          { languagePairs },
+          { headers: this.getHeaders() },
+        )
         .pipe(catchError(() => of([]))),
     );
   }
 
   async getMyBadges(): Promise<Badge[]> {
     return firstValueFrom(
-      this.http.get<Badge[]>(`${this.baseUrl}/me/badges`, { headers: this.getHeaders() })
+      this.http
+        .get<Badge[]>(`${this.baseUrl}/me/badges`, { headers: this.getHeaders() })
         .pipe(catchError(() => of([]))),
     );
   }
@@ -579,13 +608,16 @@ export class UserService {
           corrections_count: number;
           moments_count: number;
         }>(`${this.baseUrl}/stats/me`, { headers: this.getHeaders() })
-        .pipe(catchError(() => of({ translations_count: 0, corrections_count: 0, moments_count: 0 }))),
+        .pipe(
+          catchError(() => of({ translations_count: 0, corrections_count: 0, moments_count: 0 })),
+        ),
     );
   }
 
   async getMyXpTotal(): Promise<number> {
     const result = await firstValueFrom(
-      this.http.get<{ totalXp: number }>(`${this.baseUrl}/me/xp`, { headers: this.getHeaders() })
+      this.http
+        .get<{ totalXp: number }>(`${this.baseUrl}/me/xp`, { headers: this.getHeaders() })
         .pipe(catchError(() => of({ totalXp: 0 }))),
     );
     return result.totalXp;
@@ -632,35 +664,46 @@ export class UserService {
     catalog?: BusinessCatalogItem[];
   }): Promise<UserProfile> {
     return firstValueFrom(
-      this.http.patch<UserProfile>(
-        `${this.baseUrl}/me/business`,
-        business,
-        { headers: this.getHeaders() },
-      ),
+      this.http.patch<UserProfile>(`${this.baseUrl}/me/business`, business, {
+        headers: this.getHeaders(),
+      }),
     );
   }
 
   async blockUser(userId: string): Promise<void> {
     return firstValueFrom(
-      this.http.post<void>(`${this.baseUrl}/block/${userId}`, {}, { headers: this.getHeaders() })
+      this.http
+        .post<void>(`${this.baseUrl}/block/${userId}`, {}, { headers: this.getHeaders() })
         .pipe(catchError(() => of(undefined))),
     );
   }
 
   async unblockUser(userId: string): Promise<void> {
     return firstValueFrom(
-      this.http.delete<void>(`${this.baseUrl}/block/${userId}`, { headers: this.getHeaders() })
+      this.http
+        .delete<void>(`${this.baseUrl}/block/${userId}`, { headers: this.getHeaders() })
         .pipe(catchError(() => of(undefined))),
     );
   }
 
-  async reportUser(reportedUserId: string, reasonCategory: string, description?: string, contextUrl?: string): Promise<void> {
+  async reportUser(
+    reportedUserId: string,
+    reasonCategory: string,
+    description?: string,
+    contextUrl?: string,
+  ): Promise<void> {
     return firstValueFrom(
-      this.http.post<void>(
-        `${this.baseUrl}/report`,
-        { reported_id: reportedUserId, reason_category: reasonCategory, description, context_url: contextUrl },
-        { headers: this.getHeaders() },
-      )
+      this.http
+        .post<void>(
+          `${this.baseUrl}/report`,
+          {
+            reported_id: reportedUserId,
+            reason_category: reasonCategory,
+            description,
+            context_url: contextUrl,
+          },
+          { headers: this.getHeaders() },
+        )
         .pipe(catchError(() => of(undefined))),
     );
   }
@@ -700,10 +743,9 @@ export class UserService {
   async deleteMyAccount(): Promise<{ message: string; scheduled_for_deletion_at: string }> {
     return firstValueFrom(
       this.http
-        .delete<{ message: string; scheduled_for_deletion_at: string }>(
-          `${this.baseUrl}/me`,
-          { headers: this.getHeaders() },
-        )
+        .delete<{ message: string; scheduled_for_deletion_at: string }>(`${this.baseUrl}/me`, {
+          headers: this.getHeaders(),
+        })
         .pipe(catchError(() => of({ message: '', scheduled_for_deletion_at: '' }))),
     );
   }
@@ -711,11 +753,7 @@ export class UserService {
   async restoreMyAccount(): Promise<{ message: string }> {
     return firstValueFrom(
       this.http
-        .post<{ message: string }>(
-          `${this.baseUrl}/me/restore`,
-          {},
-          { headers: this.getHeaders() },
-        )
+        .post<{ message: string }>(`${this.baseUrl}/me/restore`, {}, { headers: this.getHeaders() })
         .pipe(catchError(() => of({ message: '' }))),
     );
   }
@@ -759,9 +797,11 @@ export class UserService {
     quiet_hours_end?: string;
   }): Promise<UserProfile> {
     return firstValueFrom(
-      this.http.patch<UserProfile>(`${this.baseUrl}/me/dnd`, settings, {
-        headers: this.getHeaders(),
-      }).pipe(catchError(() => of(MOCK_USER_PROFILE))),
+      this.http
+        .patch<UserProfile>(`${this.baseUrl}/me/dnd`, settings, {
+          headers: this.getHeaders(),
+        })
+        .pipe(catchError(() => of(MOCK_USER_PROFILE))),
     );
   }
 
