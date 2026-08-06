@@ -385,6 +385,50 @@ describe('DiscoveryComponent', () => {
     expect(callArgs.sort).toBe('best_match');
   });
 
+  it('should update distance and re-search when onDistanceChanged is called', async () => {
+    await init();
+    mockDiscoveryService.findPartners.mockClear();
+
+    component.onDistanceChanged(120);
+    await flush();
+
+    expect(component.selectedDistanceKm()).toBe(120);
+    const callArgs = mockDiscoveryService.findPartners.mock.calls.at(-1)?.[0];
+    expect(callArgs.radius_metres).toBe(120000);
+  });
+
+  it('should not re-search when distance is unchanged', async () => {
+    await init();
+    expect(component.selectedDistanceKm()).toBe(50);
+    mockDiscoveryService.findPartners.mockClear();
+
+    component.onDistanceChanged(50);
+    await flush();
+
+    expect(mockDiscoveryService.findPartners).not.toHaveBeenCalled();
+  });
+
+  it('should disable the distance slider for non-VIP users', async () => {
+    await init();
+
+    const slider = fixture.nativeElement.querySelector('#distance-range-slider');
+    const vipNote = fixture.nativeElement.querySelector('#distanceVipNote');
+
+    expect(slider.disabled).toBe(true);
+    expect(vipNote).toBeTruthy();
+  });
+
+  it('should enable the distance slider and hide VIP note for VIP users', async () => {
+    mockAuthService.currentUser.set({ is_vip: true });
+    await init();
+
+    const slider = fixture.nativeElement.querySelector('#distance-range-slider');
+    const vipNote = fixture.nativeElement.querySelector('#distanceVipNote');
+
+    expect(slider.disabled).toBe(false);
+    expect(vipNote).toBeFalsy();
+  });
+
   it('should expose translated sort options', async () => {
     await init();
 

@@ -94,27 +94,21 @@
         ></app-age-range-slider>
       </div>
 
-      <!-- Distance Slider (VIP only) -->
+      <!-- Distance / radius slider (VIP gated) -->
       <div class="flex items-center gap-2 px-4 mt-3">
-        @if (isVip()) {
-          <app-distance-slider
-            (distanceChanged)="onDistanceChanged($event)"
-            [initialDistance]="selectedDistanceKm()"
-            [minKm]="1"
-            [maxKm]="250"
-            [step]="1"
-          ></app-distance-slider>
-        } @else {
-          <div class="flex items-center gap-2 w-full">
-            <span class="text-xs font-semibold text-text-secondary whitespace-nowrap">{{ 'discovery.distancePref' | t }}</span>
-            <span class="text-xs text-text-muted bg-surface-200 px-2 py-1 rounded-md">{{ selectedDistanceKm() }} km</span>
-            <a
-              routerLink="/vip"
-              class="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded-md whitespace-nowrap"
-            >
-              {{ 'discovery.distanceVipRequired' | t }}
-            </a>
-          </div>
+        <app-distance-slider
+          (distanceChanged)="onDistanceChanged($event)"
+          [initialDistanceKm]="selectedDistanceKm()"
+          [disabled]="!isVip()"
+        ></app-distance-slider>
+        @if (!isVip()) {
+          <a
+            id="distanceVipNote"
+            routerLink="/vip"
+            class="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded-md whitespace-nowrap"
+          >
+            {{ 'discovery.vipRadiusNote' | t }}
+          </a>
         }
       </div>
 
