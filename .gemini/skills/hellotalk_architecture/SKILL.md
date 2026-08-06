@@ -20,7 +20,6 @@ When modifying or generating code for **HelloTalk**, adhere to this exact full-s
 
 - **British English Only**: Use `colour`, `favourite`, `monetisation`, `tokenise`, `favourite_languages` across variables, database columns, API JSON keys, and UI copy.
 - **Banned Punctuation**: Never use an em dash anywhere in code, comments, or documentation. Use standard hyphens or colons instead.
-- **Monetary Display**: Always render both currencies in UI or logs: `8 UKP / $10 USD` (or `20 UKP / $26 USD`).
 - **RTL, Globalisation & Zero Hard-Coded Strings**: Support ANY language with 0 hard-coded UI strings. Never write raw hard-coded text in Angular templates (`*.html`) or code (`*.ts`); always use `TranslatePipe` (`{{ 'key' | t }}`) or `I18nService.translate('key', params)`. Never use physical layout classes (`pl-4`, `mr-2`, `border-l`). Always use logical equivalents (`ps-4`, `me-2`, `border-s`). Always use native `Intl.Segmenter` (`granularity: 'word'`) for token parsing.
 
 ## 3. Key Architectural Patterns
