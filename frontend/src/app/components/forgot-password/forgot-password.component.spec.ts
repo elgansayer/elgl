@@ -56,8 +56,40 @@ describe('ForgotPasswordComponent', () => {
     await createComponent();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  describe('email form (no token)', () => {
+    it('should show the email form when there is no token query param', () => {
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('#email')).not.toBeNull();
+      expect(compiled.querySelector('#newPassword')).toBeNull();
+    });
+
+    it('should call authService.requestPasswordReset on valid submit', async () => {
+      authService.requestPasswordReset.mockResolvedValue(undefined);
+
+      component.emailForm.setValue({ email: 'test@example.com' });
+      await component.sendResetRequest();
+
+      expect(authService.requestPasswordReset).toHaveBeenCalledWith('test@example.com');
+      expect(component.sendSuccess()).toBe(true);
+      expect(component.isSending()).toBe(false);
+    });
+
+    it('should set sendError on request failure', async () => {
+      authService.requestPasswordReset.mockRejectedValue(new Error('Network error'));
+
+      component.emailForm.setValue({ email: 'test@example.com' });
+      await component.sendResetRequest();
+
+      expect(component.sendError()).toBe('forgot_password.send_error');
+      expect(component.isSending()).toBe(false);
+    });
+
+    it('should not submit if emailForm is invalid', async () => {
+      component.emailForm.setValue({ email: '' });
+      await component.sendResetRequest();
+
+      expect(authService.requestPasswordReset).not.toHaveBeenCalled();
+    });
   });
 
   it('should show email form when no token is present', () => {
