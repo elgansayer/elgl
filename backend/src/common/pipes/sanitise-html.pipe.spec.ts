@@ -1,21 +1,23 @@
+import { ArgumentMetadata } from '@nestjs/common';
 import { SanitiseHtmlPipe } from './sanitise-html.pipe';
 
 describe('SanitiseHtmlPipe', () => {
   let pipe: SanitiseHtmlPipe;
+  const mockMetadata: ArgumentMetadata = { type: 'body' };
 
   beforeEach(() => {
     pipe = new SanitiseHtmlPipe();
   });
 
   it('should sanitize simple string', () => {
-    expect(pipe.transform('<script>alert("xss")</script>', {} as any)).toBe(
+    expect(pipe.transform('<script>alert("xss")</script>', mockMetadata)).toBe(
       '',
     );
   });
 
   it('should sanitize array of strings', () => {
     expect(
-      pipe.transform(['<script>alert("xss")</script>', 'safe'], {} as any),
+      pipe.transform(['<script>alert("xss")</script>', 'safe'], mockMetadata),
     ).toEqual(['', 'safe']);
   });
 
@@ -26,7 +28,7 @@ describe('SanitiseHtmlPipe', () => {
           a: '<script>alert("xss")</script>',
           b: { c: '<a href="javascript:alert(1)">link</a>' },
         },
-        {} as any,
+        mockMetadata,
       ),
     ).toEqual({
       a: '',
@@ -35,9 +37,9 @@ describe('SanitiseHtmlPipe', () => {
   });
 
   it('should ignore numbers, null, and undefined', () => {
-    expect(pipe.transform(123, {} as any)).toBe(123);
-    expect(pipe.transform(null, {} as any)).toBe(null);
-    expect(pipe.transform(undefined, {} as any)).toBe(undefined);
+    expect(pipe.transform(123, mockMetadata)).toBe(123);
+    expect(pipe.transform(null, mockMetadata)).toBe(null);
+    expect(pipe.transform(undefined, mockMetadata)).toBe(undefined);
   });
 
   it('should not mutate class instances', () => {
@@ -45,14 +47,14 @@ describe('SanitiseHtmlPipe', () => {
       a = '<script>alert(1)</script>';
     }
     const instance = new CustomClass();
-    const result = pipe.transform(instance, {} as any);
+    const result = pipe.transform(instance, mockMetadata);
     expect(result).toBe(instance);
-    expect(result.a).toBe('<script>alert(1)</script>');
+    expect((result as CustomClass).a).toBe('<script>alert(1)</script>');
   });
 
   it('should not mutate Buffer objects', () => {
     const buffer = Buffer.from('hello');
-    const result = pipe.transform(buffer, {} as any);
+    const result = pipe.transform(buffer, mockMetadata);
     expect(result).toBe(buffer);
   });
 });
