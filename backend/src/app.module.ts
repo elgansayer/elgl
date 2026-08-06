@@ -16,6 +16,7 @@ import { ProfileVisitsModule } from './profile-visits/profile-visits.module';
 import { ChatModule } from './chat/chat.module';
 import { NlpModule } from './nlp/nlp.module';
 import { FlashcardsModule } from './flashcards/flashcards.module';
+import { DecksModule } from './decks/decks.module';
 import { MomentsModule } from './moments/moments.module';
 import { AudioRoomsModule } from './audio-rooms/audio-rooms.module';
 import { MonetisationModule } from './monetisation/monetisation.module';
@@ -103,6 +104,7 @@ import { AssessmentsService } from './assessments/assessments.service';
     ChatModule,
     NlpModule,
     FlashcardsModule,
+    DecksModule,
     MomentsModule,
     AudioRoomsModule,
     MonetisationModule,
