@@ -6,12 +6,12 @@
         <span class="text-xl">≡</span>
       </button>
       <h1 class="text-base font-bold text-text-primary">{{ 'chatList.topTitle' | t }}</h1>
-      <a [routerLink]="['/discovery']" class="text-text-primary"><span class="text-xl">+</span></a>
+      <a [routerLink]="['/discovery']" class="text-text-primary" [attr.aria-label]="'discovery.title' | t"><span class="text-xl">+</span></a>
     </div>
 
     <!-- Quick Access Row -->
     <div class="flex justify-between items-center mb-6 px-4">
-      <a [routerLink]="['/discovery']" class="flex flex-col items-center gap-1">
+      <a [routerLink]="['/discovery']" class="flex flex-col items-center gap-1" [attr.aria-label]="'chatList.quickCourses' | t">
         <div
           class="w-12 h-12 rounded-[1rem] bg-blue-500 flex items-center justify-center text-white text-xl shadow-lg"
         >
@@ -21,7 +21,7 @@
           'chatList.quickCourses' | t
         }}</span>
       </a>
-      <a [routerLink]="['/moments']" class="flex flex-col items-center gap-1">
+      <a [routerLink]="['/moments']" class="flex flex-col items-center gap-1" [attr.aria-label]="'chatList.quickPlay' | t">
         <div
           class="w-12 h-12 rounded-2xl bg-gradient-to-br from-neon-cyan to-emerald-400 flex items-center justify-center text-white text-xl shadow-lg shadow-green-500/20"
         >
@@ -31,7 +31,7 @@
           'chatList.quickPlay' | t
         }}</span>
       </a>
-      <button (click)="notImplemented()" class="flex flex-col items-center gap-1">
+      <button (click)="notImplemented()" class="flex flex-col items-center gap-1" [attr.aria-label]="'chatList.quickAiTrans' | t">
         <div
           class="w-12 h-12 rounded-2xl bg-gradient-to-br from-neon-purple to-accent-500 flex items-center justify-center text-white text-xl shadow-lg shadow-purple-500/20"
         >
@@ -41,7 +41,7 @@
           'chatList.quickAiTrans' | t
         }}</span>
       </button>
-      <button (click)="notImplemented()" class="flex flex-col items-center gap-1">
+      <button (click)="notImplemented()" class="flex flex-col items-center gap-1" [attr.aria-label]="'chatList.quickJpAi' | t">
         <div
           class="w-12 h-12 rounded-[1rem] bg-pink-500 flex items-center justify-center text-white text-xl shadow-lg"
         >
@@ -51,7 +51,7 @@
           'chatList.quickJpAi' | t
         }}</span>
       </button>
-      <button (click)="notImplemented()" class="flex flex-col items-center gap-1">
+      <button (click)="notImplemented()" class="flex flex-col items-center gap-1" [attr.aria-label]="'chatList.quickMore' | t">
         <div
           class="w-12 h-12 rounded-[1rem] bg-surface-200 flex items-center justify-center text-text-secondary text-lg shadow-lg"
         >
@@ -169,7 +169,7 @@
     <!-- Locked folder section -->
     @if (lockedRoomIds().length > 0) {
       <div class="px-4 py-2 border-t border-surface-200">
-        <button (click)="toggleLockedFolder()" class="flex items-center gap-2 text-text-primary">
+        <button (click)="toggleLockedFolder()" class="flex items-center gap-2 text-text-primary" [attr.aria-label]="'chatList.lockedFolder' | t">
           <span>{{ showLocked() ? '🔓' : '🔒' }}</span>
           <span>{{ 'chatList.lockedFolder' | t }}</span>
           <span class="text-xs text-text-secondary">({{ lockedRoomIds().length }})</span>
