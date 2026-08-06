@@ -1494,7 +1494,10 @@ export class AudioRoomsService implements OnModuleInit {
       .range(query.offset ?? 0, (query.offset ?? 0) + (query.limit ?? 20) - 1);
 
     if (query.callType) {
-      supabaseQuery = supabaseQuery.eq('call_type', query.callType as 'incoming' | 'outgoing' | 'missed');
+      supabaseQuery = supabaseQuery.eq(
+        'call_type',
+        query.callType as 'incoming' | 'outgoing' | 'missed',
+      );
     }
 
     const { data, error } = await supabaseQuery;
