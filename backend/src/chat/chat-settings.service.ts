@@ -46,7 +46,7 @@ export class ChatSettingsService {
     const { error } = await this.supabaseService
       .getClient()
       .from('users')
-      .update({ chat_preferences: merged })
+      .update({ chat_preferences: { ...merged } })
       .eq('id', userId);
 
     if (error) {

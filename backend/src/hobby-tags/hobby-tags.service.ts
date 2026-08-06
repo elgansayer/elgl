@@ -191,8 +191,12 @@ export class HobbyTagsService {
       const hobbyTag = uht.hobby_tag;
       if (!hobbyTag) continue;
 
-      const targetVocab: TargetVocabularyItem[] = Array.isArray(hobbyTag.target_vocabulary)
-        ? hobbyTag.target_vocabulary
+      const rawVocab: unknown = hobbyTag.target_vocabulary;
+      const targetVocab: TargetVocabularyItem[] = Array.isArray(rawVocab)
+        ? rawVocab.filter(
+            (item: unknown): item is TargetVocabularyItem =>
+              typeof item === 'object' && item !== null && 'word' in item && 'language' in item,
+          )
         : [];
 
       const filteredVocab = targetVocab.filter(
