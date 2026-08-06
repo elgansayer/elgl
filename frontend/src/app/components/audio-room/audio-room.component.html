@@ -37,6 +37,12 @@
           </button>
           @if (room.host_id === authService.currentUser()?.id) {
             <button
+              (click)="openPollForm()"
+              class="rounded-app bg-blue-600 ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-white"
+            >
+              {{ 'quickPoll.createBtn' | t }}
+            </button>
+            <button
               (click)="archive()"
               class="rounded-app bg-red-600 ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-white"
             >
@@ -220,6 +226,15 @@
             </section>
           }
 
+          @if (currentPollId()) {
+            <button
+              (click)="viewPollResults(currentPollId()!)"
+              class="mt-2 rounded-app bg-blue-600/20 text-blue-300 ps-3 pe-3 pt-2 pb-2 text-xs font-bold w-full"
+            >
+              {{ 'quickPoll.viewPollResultsBtn' | t }}
+            </button>
+          }
+
           <section class="app-card app-padded">
             <div class="mb-3 flex items-center justify-between">
               <h3 class="text-sm font-black text-text-primary">
@@ -264,6 +279,31 @@
         </div>
       </div>
     </section>
+
+    <!-- Quick Poll Modals -->
+    @if (showPollFormModal()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div class="w-full max-w-md">
+          <app-quick-poll-form
+            (submitPoll)="submitPollForm($event.question, $event.options)"
+            (cancelled)="closePollForm()"
+          ></app-quick-poll-form>
+        </div>
+      </div>
+    }
+
+    @if (showPollResultsModal() && pollResults()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div class="w-full max-w-md relative">
+          <button (click)="showPollResultsModal.set(false)" class="absolute top-2 end-2 text-surface-400 hover:text-white">&times;</button>
+          <app-quick-poll-display
+            [data]="pollResults()!"
+            [allowVote]="true"
+            (vote)="voteInPoll(currentPollId()!, $event)"
+          ></app-quick-poll-display>
+        </div>
+      </div>
+    }
 
     @if (showGiftModal()) {
       <app-virtual-gift-modal
