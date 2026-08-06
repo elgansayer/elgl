@@ -613,5 +613,17 @@
   "achievements.empty": "No achievements yet.",
   "achievements.progressLabel": "{{current}} / {{required}}",
   "achievements.earnedLabel": "Earned",
-  "achievements.lockedLabel": "Locked"
+  "achievements.lockedLabel": "Locked",
+  "admin.userManagement.title": "User Management",
+  "admin.userManagement.loading": "Loading users...",
+  "admin.userManagement.column.user": "User",
+  "admin.userManagement.column.nativeLang": "Native Lang",
+  "admin.userManagement.column.coins": "Coins",
+  "admin.userManagement.column.streak": "Streak",
+  "admin.userManagement.column.vipStatus": "VIP Status",
+  "admin.userManagement.column.actions": "Actions",
+  "admin.userManagement.action.toggleVip": "Toggle VIP",
+  "admin.userManagement.status.free": "Free",
+  "admin.userManagement.unknown": "Unknown",
+  "admin.userManagement.streakDays": "{{days}} days"
 }
