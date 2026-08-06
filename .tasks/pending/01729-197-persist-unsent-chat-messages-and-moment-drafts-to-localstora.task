@@ -1,1 +1,0 @@
-Persist unsent chat messages and Moment drafts to `localStorage`.
