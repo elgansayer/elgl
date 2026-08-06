@@ -6,5 +6,21 @@
     "daily": "Daily Study Streak",
     "day": "day",
     "days": "days"
+  },
+  "myStats": {
+    "title": "My Stats",
+    "studyHoursThisWeek": "Study Hours (This Week)",
+    "activityBreakdown": "Activity Breakdown",
+    "messagesSent": "Messages Sent",
+    "correctionsMade": "Corrections Made",
+    "momentsPosted": "Moments Posted",
+    "studyHours": "Study Hours",
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
   }
 }
