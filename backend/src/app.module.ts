@@ -69,7 +69,7 @@ import { EmailModule } from './email/email.module';
 import { PasswordResetModule } from './password-reset/password-reset.module';
 import { PronunciationScoringService } from './pronunciation-scoring/pronunciation-scoring.service';
 import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.service';
-import { AssessmentsService } from './assessments/assessments.service';
+import { AssessmentsModule } from './assessments/assessments.module';
 
 @Module({
   imports: [
@@ -155,6 +155,7 @@ import { AssessmentsService } from './assessments/assessments.service';
     LanguageIslandsModule,
     EmailModule,
     PasswordResetModule,
+    AssessmentsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -166,7 +167,6 @@ import { AssessmentsService } from './assessments/assessments.service';
     },
     PronunciationScoringService,
     AnkiiIntegrationService,
-    AssessmentsService,
   ],
 })
 export class AppModule {}
