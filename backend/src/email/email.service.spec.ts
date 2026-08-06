@@ -1,4 +1,13 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { EmailService } from './email.service';
+import * as nodemailer from 'nodemailer';
+
+jest.mock('nodemailer', () => ({
+  createTransport: jest.fn().mockReturnValue({
+    sendMail: jest.fn().mockResolvedValue({ messageId: 'mock-message-id' }),
+  }),
+}));
 
 describe('EmailService (unit)', () => {
   let service: EmailService;

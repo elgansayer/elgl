@@ -1,4 +1,9 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ActivatedRoute, Router } from '@angular/router';
+import { of } from 'rxjs';
 import { ForgotPasswordComponent } from './forgot-password.component';
 import { ActivatedRoute, Router } from '@angular/router';
 import { signal } from '@angular/core';
@@ -28,7 +33,7 @@ describe('ForgotPasswordComponent', () => {
 
   async function createComponent(): Promise<void> {
     await TestBed.configureTestingModule({
-      imports: [ForgotPasswordComponent, HttpClientTestingModule],
+      imports: [ForgotPasswordComponent],
       providers: [
         { provide: AuthService, useValue: authServiceMock },
         { provide: ActivatedRoute, useValue: createActivatedRouteMock() },
@@ -56,8 +61,40 @@ describe('ForgotPasswordComponent', () => {
     await createComponent();
   });
 
-  afterEach(() => {
-    httpMock.verify();
+  describe('email form (no token)', () => {
+    it('should show the email form when there is no token query param', () => {
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('#email')).not.toBeNull();
+      expect(compiled.querySelector('#newPassword')).toBeNull();
+    });
+
+    it('should call authService.requestPasswordReset on valid submit', async () => {
+      authService.requestPasswordReset.and.returnValue(Promise.resolve());
+
+      component.emailForm.setValue({ email: 'test@example.com' });
+      await component.sendResetRequest();
+
+      expect(authService.requestPasswordReset).toHaveBeenCalledWith('test@example.com');
+      expect(component.sendSuccess()).toBeTrue();
+      expect(component.isSending()).toBeFalse();
+    });
+
+    it('should set sendError on request failure', async () => {
+      authService.requestPasswordReset.and.returnValue(Promise.reject(new Error('Network error')));
+
+      component.emailForm.setValue({ email: 'test@example.com' });
+      await component.sendResetRequest();
+
+      expect(component.sendError()).toBe('forgot_password.send_error');
+      expect(component.isSending()).toBeFalse();
+    });
+
+    it('should not submit if emailForm is invalid', async () => {
+      component.emailForm.setValue({ email: '' });
+      await component.sendResetRequest();
+
+      expect(authService.requestPasswordReset).not.toHaveBeenCalled();
+    });
   });
 
   it('should show email form when no token is present', () => {
