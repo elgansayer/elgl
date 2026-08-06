@@ -1051,7 +1051,7 @@ export class AudioRoomsService implements OnModuleInit {
 
     // Generate full transcript using speech‑to‑text (implemented via LiveKit egress or external STT)
     let transcriptText =
-      this.transcriptEgress.generateTranscriptFromAudioUrl(recordingUrl);
+      await this.transcriptEgress.generateTranscriptFromAudioUrl(recordingUrl);
 
     if (!transcriptText) {
       // fallback: build transcript from sent captions if egress not available

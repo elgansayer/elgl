@@ -22,12 +22,14 @@ import { XpService } from '../xp/xp.service';
 import { PREDEFINED_HOBBIES, PREDEFINED_INTERESTS } from './constants';
 import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
+import { DataExportWorker } from './data-export.worker';
 
 @Injectable()
 export class UsersService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly xpService: XpService,
+    private readonly dataExportWorker: DataExportWorker,
     @Optional() private readonly notificationsService?: NotificationsService,
     @Optional() private readonly correctorScoreService?: CorrectorScoreService,
   ) {}
@@ -686,33 +688,7 @@ export class UsersService {
   }
 
   async exportUserData(userId: string): Promise<Record<string, unknown>> {
-    const supabase = this.supabaseService.getClient();
-
-    const [
-      profileRes,
-      momentsRes,
-      commentsRes,
-      messagesRes,
-      flashcardsRes,
-      favouritesRes,
-    ] = await Promise.all([
-      supabase.from('users').select('*').eq('id', userId).single(),
-      supabase.from('moments').select('*').eq('author_id', userId),
-      supabase.from('moment_comments').select('*').eq('author_id', userId),
-      supabase.from('chat_messages').select('*').eq('sender_id', userId),
-      supabase.from('flashcards').select('*').eq('user_id', userId),
-      supabase.from('favourites').select('*').eq('user_id', userId),
-    ]);
-
-    return {
-      profile: profileRes.data as unknown,
-      moments: momentsRes.data as unknown,
-      comments: commentsRes.data as unknown,
-      messages: messagesRes.data as unknown,
-      flashcards: flashcardsRes.data as unknown,
-      favourites: favouritesRes.data as unknown,
-      exported_at: new Date().toISOString(),
-    };
+    return this.dataExportWorker.exportUserData(userId);
   }
 
   async getPrivacySettings(userId: string): Promise<{
