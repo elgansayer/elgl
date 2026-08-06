@@ -1,77 +1,58 @@
 import { PasswordResetController } from './password-reset.controller';
+import { PasswordResetService } from './password-reset.service';
 
 describe('PasswordResetController (unit)', () => {
   let controller: PasswordResetController;
-  let resetService: {
-    requestPasswordReset: jest.Mock;
-    resetPassword: jest.Mock;
-  };
+  let resetService: { requestPasswordReset: jest.Mock; resetPassword: jest.Mock };
 
   beforeEach(() => {
     resetService = {
       requestPasswordReset: jest.fn(),
       resetPassword: jest.fn(),
     };
-
-    controller = new (PasswordResetController as any)(
-      resetService,
-    ) as PasswordResetController;
+    controller = new (PasswordResetController as any)(resetService) as PasswordResetController;
   });
 
   describe('requestPasswordReset', () => {
-    it('should call the reset service and return a generic message', async () => {
+    it('should return a generic success message', async () => {
       resetService.requestPasswordReset.mockResolvedValue(undefined);
 
-      const result = await controller.requestPasswordReset({
-        email: 'user@example.com',
-      });
+      const result = await controller.requestPasswordReset({ email: 'user@example.com' });
 
-      expect(resetService.requestPasswordReset).toHaveBeenCalledWith({
-        email: 'user@example.com',
-      });
+      expect(resetService.requestPasswordReset).toHaveBeenCalledWith({ email: 'user@example.com' });
       expect(result).toEqual({
         message: 'If the email address exists, a reset link has been sent.',
       });
     });
 
-    it('should still return the generic message even if the service throws', async () => {
-      resetService.requestPasswordReset.mockRejectedValue(
-        new Error('DB error'),
-      );
+    it('should propagate errors from the service', async () => {
+      resetService.requestPasswordReset.mockRejectedValue(new Error('db error'));
 
       await expect(
-        controller.requestPasswordReset({ email: 'bad@example.com' }),
-      ).rejects.toThrow('DB error');
+        controller.requestPasswordReset({ email: 'user@example.com' }),
+      ).rejects.toThrow('db error');
     });
   });
 
   describe('resetPassword', () => {
-    it('should call the reset service and return a success message', async () => {
+    it('should reset the password and return success', async () => {
       resetService.resetPassword.mockResolvedValue(undefined);
 
-      const result = await controller.resetPassword({
-        token: 'valid-token',
-        newPassword: 'newPass456!',
-      });
+      const result = await controller.resetPassword({ token: 'abc123', newPassword: 'newPass123!' });
 
       expect(resetService.resetPassword).toHaveBeenCalledWith({
-        token: 'valid-token',
-        newPassword: 'newPass456!',
+        token: 'abc123',
+        newPassword: 'newPass123!',
       });
-      expect(result).toEqual({
-        message: 'Password has been successfully reset.',
-      });
+      expect(result).toEqual({ message: 'Password has been successfully reset.' });
     });
 
-    it('should propagate errors from the reset service', async () => {
-      resetService.resetPassword.mockRejectedValue(new Error('Invalid token'));
+    it('should propagate errors from the service', async () => {
+      resetService.resetPassword.mockRejectedValue(new Error('invalid token'));
 
       await expect(
-        controller.resetPassword({
-          token: 'bad',
-          newPassword: 'justalongpassword',
-        }),
-      ).rejects.toThrow('Invalid token');
+        controller.resetPassword({ token: 'bad', newPassword: 'newPass123!' }),
+      ).rejects.toThrow('invalid token');
     });
   });
 });

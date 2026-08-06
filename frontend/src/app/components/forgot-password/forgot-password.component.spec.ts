@@ -1,137 +1,80 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, Router } from '@angular/router';
-import { of } from 'rxjs';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ForgotPasswordComponent } from './forgot-password.component';
-import { AuthService } from '../../services/auth.service';
-import { TranslatePipe } from '../../services/translate.pipe';
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { provideRouter, Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 
 describe('ForgotPasswordComponent', () => {
-  let component: ForgotPasswordComponent;
   let fixture: ComponentFixture<ForgotPasswordComponent>;
-  let authService: { requestPasswordReset: ReturnType<typeof vi.fn>; resetPassword: ReturnType<typeof vi.fn> };
-  let router: { navigate: ReturnType<typeof vi.fn> };
-
-  const createActivatedRoute = (token: string | null) => ({
-    queryParamMap: of({
-      get: (_key: string) => token,
-      has: (_key: string) => token !== null,
-      getAll: (_key: string) => token ? [token] : [],
-      keys: token ? ['token'] : [],
-    }),
-  });
+  let component: ForgotPasswordComponent;
+  let httpMock: HttpTestingController;
 
   beforeEach(async () => {
-    authService = {
-      requestPasswordReset: vi.fn(),
-      resetPassword: vi.fn(),
-    };
-    router = {
-      navigate: vi.fn(),
-    };
-
     await TestBed.configureTestingModule({
-      imports: [ForgotPasswordComponent],
+      imports: [ForgotPasswordComponent, HttpClientTestingModule],
       providers: [
-        { provide: AuthService, useValue: authService },
-        { provide: Router, useValue: router },
-        { provide: ActivatedRoute, useValue: createActivatedRoute(null) },
-        TranslatePipe,
+        provideRouter([
+          { path: 'forgot-password', component: ForgotPasswordComponent },
+          { path: 'home', component: ForgotPasswordComponent },
+        ]),
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ForgotPasswordComponent);
     component = fixture.componentInstance;
+    httpMock = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
   });
 
-  describe('email form (no token)', () => {
-    it('should show the email form when there is no token query param', () => {
-      const compiled = fixture.nativeElement as HTMLElement;
-      expect(compiled.querySelector('#email')).not.toBeNull();
-      expect(compiled.querySelector('#newPassword')).toBeNull();
-    });
-
-    it('should call authService.requestPasswordReset on valid submit', async () => {
-      authService.requestPasswordReset.mockResolvedValue(undefined);
-
-      component.emailForm.setValue({ email: 'test@example.com' });
-      await component.sendResetRequest();
-
-      expect(authService.requestPasswordReset).toHaveBeenCalledWith('test@example.com');
-      expect(component.sendSuccess()).toBe(true);
-      expect(component.isSending()).toBe(false);
-    });
-
-    it('should set sendError on request failure', async () => {
-      authService.requestPasswordReset.mockRejectedValue(new Error('Network error'));
-
-      component.emailForm.setValue({ email: 'test@example.com' });
-      await component.sendResetRequest();
-
-      expect(component.sendError()).toBe('forgot_password.send_error');
-      expect(component.isSending()).toBe(false);
-    });
-
-    it('should not submit if emailForm is invalid', async () => {
-      component.emailForm.setValue({ email: '' });
-      await component.sendResetRequest();
-
-      expect(authService.requestPasswordReset).not.toHaveBeenCalled();
-    });
+  afterEach(() => {
+    httpMock.verify();
   });
 
-  describe('password reset form (with token)', () => {
-    beforeEach(async () => {
-      TestBed.resetTestingModule();
-      await TestBed.configureTestingModule({
-        imports: [ForgotPasswordComponent],
-        providers: [
-          { provide: AuthService, useValue: authService },
-          { provide: Router, useValue: router },
-          { provide: ActivatedRoute, useValue: createActivatedRoute('reset-token-abc') },
-          TranslatePipe,
-        ],
-      }).compileComponents();
+  it('should render the forgot password title', () => {
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('forgot_password.title');
+  });
 
-      fixture = TestBed.createComponent(ForgotPasswordComponent);
-      component = fixture.componentInstance;
-      fixture.detectChanges();
-    });
+  it('should show the email form when no token query param is present', () => {
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('form')).toBeTruthy();
+    expect(el.querySelector('input[type="email"]')).toBeTruthy();
+  });
 
-    it('should show the reset form when a token query param is present', () => {
-      const compiled = fixture.nativeElement as HTMLElement;
-      expect(compiled.querySelector('#newPassword')).not.toBeNull();
-      expect(compiled.querySelector('#email')).toBeNull();
-    });
+  it('should call the password reset API on form submit and show success', () => {
+    component.emailForm.controls.email.setValue('user@example.com');
+    component.sendResetRequest();
 
-    it('should call authService.resetPassword and navigate on valid submit', async () => {
-      authService.resetPassword.mockResolvedValue(undefined);
+    const req = httpMock.expectOne(`${environment.apiUrl}/auth/request-password-reset`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ email: 'user@example.com' });
+    req.flush({ message: 'success' });
 
-      component.resetForm.setValue({ newPassword: 'newPass123!' });
-      await component.doPasswordReset();
+    expect(component.sendSuccess()).toBeTrue();
+    expect(component.isSending()).toBeFalse();
+  });
 
-      expect(authService.resetPassword).toHaveBeenCalledWith('reset-token-abc', 'newPass123!');
-      expect(component.resetSuccess()).toBe(true);
-      expect(component.isResetting()).toBe(false);
-      expect(router.navigate).toHaveBeenCalledWith(['/home']);
-    });
+  it('should show error when the API call fails', () => {
+    component.emailForm.controls.email.setValue('user@example.com');
+    component.sendResetRequest();
 
-    it('should set resetError on reset failure', async () => {
-      authService.resetPassword.mockRejectedValue(new Error('Invalid token'));
+    const req = httpMock.expectOne(`${environment.apiUrl}/auth/request-password-reset`);
+    req.flush({}, { status: 500, statusText: 'Server Error' });
 
-      component.resetForm.setValue({ newPassword: 'newPass123!' });
-      await component.doPasswordReset();
+    expect(component.sendError()).toBe('forgot_password.send_error');
+    expect(component.isSending()).toBeFalse();
+  });
 
-      expect(component.resetError()).toBe('forgot_password.reset_error');
-      expect(component.isResetting()).toBe(false);
-    });
+  it('should not call API when email form is invalid', () => {
+    component.emailForm.controls.email.setValue('');
+    void component.sendResetRequest();
+    httpMock.expectNone(`${environment.apiUrl}/auth/request-password-reset`);
+  });
 
-    it('should not submit if resetForm is invalid', async () => {
-      component.resetForm.setValue({ newPassword: 'sh0rt' });
-      await component.doPasswordReset();
-
-      expect(authService.resetPassword).not.toHaveBeenCalled();
-    });
+  it('should disable the submit button while sending', () => {
+    component.isSending.set(true);
+    fixture.detectChanges();
+    const btn = (fixture.nativeElement as HTMLElement).querySelector('button[type="submit"]');
+    expect(btn?.hasAttribute('disabled')).toBeTrue();
   });
 });

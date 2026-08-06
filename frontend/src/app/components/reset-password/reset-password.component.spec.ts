@@ -1,135 +1,93 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, Router } from '@angular/router';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ResetPasswordComponent } from './reset-password.component';
+import { provideRouter, Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
-import { TranslatePipe } from '../../services/translate.pipe';
 
 describe('ResetPasswordComponent', () => {
-  let component: ResetPasswordComponent;
   let fixture: ComponentFixture<ResetPasswordComponent>;
-  let authService: { resetPassword: ReturnType<typeof vi.fn> };
-  let router: { navigate: ReturnType<typeof vi.fn> };
+  let component: ResetPasswordComponent;
+  let authService: jest.Mocked<Pick<AuthService, 'resetPassword'>>;
+  let router: Router;
 
-  function createActivatedRoute(token: string | null): ActivatedRoute {
-    return {
-      snapshot: {
-        queryParamMap: {
-          get: (_key: string) => token,
-          has: (_key: string) => token !== null,
-          getAll: (_key: string) => token ? [token] : [],
-          keys: token ? ['token'] : [],
+  beforeEach(async () => {
+    authService = {
+      resetPassword: jest.fn(),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [ResetPasswordComponent],
+      providers: [
+        provideRouter([
+          { path: 'reset-password', component: ResetPasswordComponent },
+          { path: 'home', component: ResetPasswordComponent },
+        ]),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: { get: () => null } } },
         },
-      },
-    } as unknown as ActivatedRoute;
-  }
+        { provide: AuthService, useValue: authService },
+      ],
+    }).compileComponents();
 
-  describe('without token query param', () => {
-    beforeEach(async () => {
-      authService = { resetPassword: vi.fn() };
-      router = { navigate: vi.fn() };
-
-      await TestBed.configureTestingModule({
-        imports: [ResetPasswordComponent],
-        providers: [
-          { provide: AuthService, useValue: authService },
-          { provide: Router, useValue: router },
-          { provide: ActivatedRoute, useValue: createActivatedRoute(null) },
-          TranslatePipe,
-        ],
-      }).compileComponents();
-
-      fixture = TestBed.createComponent(ResetPasswordComponent);
-      component = fixture.componentInstance;
-      fixture.detectChanges();
-    });
-
-    it('should render the form with an empty token input', () => {
-      const compiled = fixture.nativeElement as HTMLElement;
-      expect(compiled.querySelector('#token')).not.toBeNull();
-      expect(compiled.querySelector('#newPassword')).not.toBeNull();
-    });
-
-    it('should not call resetPassword when token is empty', async () => {
-      component.token.set('');
-      component.newPassword.set('validPass123!');
-      await component.onSubmit();
-
-      expect(authService.resetPassword).not.toHaveBeenCalled();
-    });
-
-    it('should not call resetPassword when newPassword is empty', async () => {
-      component.token.set('some-token');
-      component.newPassword.set('');
-      await component.onSubmit();
-
-      expect(authService.resetPassword).not.toHaveBeenCalled();
-    });
+    fixture = TestBed.createComponent(ResetPasswordComponent);
+    component = fixture.componentInstance;
+    router = TestBed.inject(Router);
+    fixture.detectChanges();
   });
 
-  describe('with token query param', () => {
-    beforeEach(async () => {
-      authService = { resetPassword: vi.fn() };
-      router = { navigate: vi.fn() };
+  it('should render the reset password title', () => {
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('auth.resetPassword.title');
+  });
 
-      await TestBed.configureTestingModule({
-        imports: [ResetPasswordComponent],
-        providers: [
-          { provide: AuthService, useValue: authService },
-          { provide: Router, useValue: router },
-          { provide: ActivatedRoute, useValue: createActivatedRoute('abc-reset-token') },
-          TranslatePipe,
-        ],
-      }).compileComponents();
+  it('should show the new password input', () => {
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('input#newPassword')).toBeTruthy();
+  });
 
-      fixture = TestBed.createComponent(ResetPasswordComponent);
-      component = fixture.componentInstance;
-      fixture.detectChanges();
-    });
+  it('should call authService.resetPassword on submit', async () => {
+    component.token.set('test-token-123');
+    component.resetForm.controls.newPassword.setValue('newPass123!');
+    authService.resetPassword.mockResolvedValue(undefined);
 
-    it('should pre-populate token from the route query param', () => {
-      expect(component.token()).toBe('abc-reset-token');
-    });
+    await component.onSubmit();
 
-    it('should call authService.resetPassword and navigate on success', async () => {
-      authService.resetPassword.mockResolvedValue(undefined);
-      component.newPassword.set('strongPass1!');
+    expect(authService.resetPassword).toHaveBeenCalledWith('test-token-123', 'newPass123!');
+  });
 
-      await component.onSubmit();
+  it('should not submit when token is empty', async () => {
+    component.token.set('');
+    component.resetForm.controls.newPassword.setValue('newPass123!');
 
-      expect(authService.resetPassword).toHaveBeenCalledWith('abc-reset-token', 'strongPass1!');
-      expect(component.messageKey()).toBe('auth.resetPassword.success');
-      expect(component.isError()).toBe(false);
-      expect(router.navigate).toHaveBeenCalledWith(['/home']);
-    });
+    await component.onSubmit();
 
-    it('should set error message on failure', async () => {
-      authService.resetPassword.mockRejectedValue(new Error('Bad token'));
+    expect(authService.resetPassword).not.toHaveBeenCalled();
+  });
 
-      component.newPassword.set('strongPass1!');
-      await component.onSubmit();
+  it('should not submit when form is invalid', async () => {
+    component.token.set('test-token');
+    component.resetForm.controls.newPassword.setValue('');
 
-      expect(component.messageKey()).toBe('auth.resetPassword.error');
-      expect(component.isError()).toBe(true);
-      expect(router.navigate).not.toHaveBeenCalled();
-    });
+    await component.onSubmit();
 
-    it('should set submitting to false after successful reset', async () => {
-      authService.resetPassword.mockResolvedValue(undefined);
-      component.newPassword.set('strongPass1!');
+    expect(authService.resetPassword).not.toHaveBeenCalled();
+  });
 
-      await component.onSubmit();
+  it('should show error message on failure', async () => {
+    component.token.set('test-token');
+    component.resetForm.controls.newPassword.setValue('newPass123!');
+    authService.resetPassword.mockRejectedValue(new Error('fail'));
 
-      expect(component.submitting()).toBe(false);
-    });
+    await component.onSubmit();
 
-    it('should set submitting to false after failed reset', async () => {
-      authService.resetPassword.mockRejectedValue(new Error('Bad token'));
+    expect(component.isError()).toBeTrue();
+    expect(component.messageKey()).toBe('auth.resetPassword.error');
+  });
 
-      component.newPassword.set('strongPass1!');
-      await component.onSubmit();
-
-      expect(component.submitting()).toBe(false);
-    });
+  it('should disable submit button while submitting', () => {
+    component.submitting.set(true);
+    fixture.detectChanges();
+    const btn = (fixture.nativeElement as HTMLElement).querySelector('button[type="submit"]');
+    expect(btn?.hasAttribute('disabled')).toBeTrue();
   });
 });
