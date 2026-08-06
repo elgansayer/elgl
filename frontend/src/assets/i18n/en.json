@@ -18,6 +18,7 @@
   "achievements.progressLabel": "{{current}} / {{required}}",
   "achievements.title": "Achievements",
 <<<<<<< HEAD
+<<<<<<< HEAD
   "admin.badgeAdmin": "Badge admin",
   "admin.badgeFree": "Badge free",
   "admin.badgeVip": "Badge vip",
@@ -88,6 +89,8 @@
   "admin.userManagement.table.vipStatus": "VIP Status",
   "admin.userManagement.title": "User Management",
   "admin.userManagement.vip.free": "Free",
+=======
+>>>>>>> origin/main
   "app.badgeOpenCore": "Community clone",
   "app.navMe": "Me",
   "app.title": "HelloTalk",
@@ -111,6 +114,7 @@
   "audioRoom.chipStages": "🔴 Host-led stages",
   "audioRoom.chipSubtitles": "💬 Synchronised subtitles",
 <<<<<<< HEAD
+<<<<<<< HEAD
   "audioRoom.coHostBadge": "Co host badge",
   "audioRoom.demoteBtn": "Demote",
   "audioRoom.endArchiveBtn": "💾 End and archive",
@@ -120,9 +124,13 @@
   "audioRoom.hostLabel": "Host",
   "audioRoom.inviteCoHostBtn": "Invite co host btn",
 =======
+=======
+  "audioRoom.coHostBadge": "Co-host",
+>>>>>>> origin/main
   "audioRoom.demoteBtn": "Demote",
   "audioRoom.endArchiveBtn": "💾 End and archive",
   "audioRoom.giftHostBtn": "🎁 Gift host",
+  "audioRoom.host": "Host",
   "audioRoom.hostFallback": "Room Host",
   "audioRoom.hostLabel": "Host",
 >>>>>>> origin/main
@@ -135,13 +143,20 @@
   "audioRoom.leaveBtn": "👋 Leave",
   "audioRoom.listenerAudience": "🎧 Listener audience",
 <<<<<<< HEAD
+<<<<<<< HEAD
   "audioRoom.listenerAudienceDesc": "Listener audience desc",
   "audioRoom.listenerCount": "Listener count",
   "audioRoom.listenerEmpty": "Listener empty",
   "audioRoom.listenerPrefix": "Listener prefix",
 =======
 >>>>>>> origin/main
+=======
+  "audioRoom.listenerCount": "Listeners",
+  "audioRoom.listenerEmpty": "No listeners yet",
+  "audioRoom.listenerGridTitle": "Listeners",
+>>>>>>> origin/main
   "audioRoom.listenersCount": "{{count}} listening",
+  "audioRoom.listening": "Listening",
   "audioRoom.liveSfuBadge": "🔴 Live SFU room",
   "audioRoom.liveTag": "🔴 Live",
   "audioRoom.loading": "Loading live rooms...",
@@ -150,6 +165,7 @@
   "audioRoom.modalTitle": "🎙️ Launch live language room",
   "audioRoom.moderateBtn": "🛡️ Moderate",
   "audioRoom.muteBtn": "Mute",
+  "audioRoom.mutedLabel": "Muted",
   "audioRoom.noActiveRooms": "No active rooms right now",
 <<<<<<< HEAD
   "audioRoom.noRoomsInGroup": "No rooms in group",
@@ -169,11 +185,18 @@
   "audioRoom.speakerCount": "{{count}} speaker(s)",
   "audioRoom.speakerPrefix": "Speaker {{id}}",
   "audioRoom.speakerStage": "🎙️ Speaker stage",
+<<<<<<< HEAD
   "audioRoom.stageEmpty": "Stage empty",
 =======
   "audioRoom.speakerCount": "{{count}} speaker(s)",
   "audioRoom.speakerPrefix": "Speaker {{id}}",
   "audioRoom.speakerStage": "🎙️ Speaker stage",
+>>>>>>> origin/main
+=======
+  "audioRoom.speaking": "Speaking",
+  "audioRoom.stageCount": "Speakers",
+  "audioRoom.stageEmpty": "Stage is empty",
+  "audioRoom.stageGridTitle": "Stage",
 >>>>>>> origin/main
   "audioRoom.targetLangLabel": "Target language",
   "audioRoom.topic.Beginners": "Beginners",
@@ -183,6 +206,7 @@
   "audioRoom.topic.GrammarHelp": "Grammar Help",
   "audioRoom.topic.Pronunciation": "Pronunciation",
   "audioRoom.topicLabel": "Topic",
+<<<<<<< HEAD
 <<<<<<< HEAD
   "audioRoom.videoStreamLabel": "Video stream label",
   "audioRoom.viewByLanguage": "View by language",
@@ -204,6 +228,9 @@
   "auth.login_facebook": "Login facebook",
   "auth.login_google": "Login google",
 =======
+>>>>>>> origin/main
+=======
+  "audioRoom.videoStreamLabel": "Video Stream",
 >>>>>>> origin/main
   "auth.resetPassword.backToHome": "Back to Home",
   "auth.resetPassword.error": "Failed to reset password. The token may be invalid or expired.",
@@ -254,7 +281,14 @@
   "chatList.chatUnlocked": "Chat unlocked",
 =======
   "chat.attachedImageAlt": "Attached image",
+  "chat.cancel_reply": "Cancel Reply",
+  "chat.contextMenu.title": "Chat Options",
   "chat.incomingCallTitle": "Incoming Call",
+  "chat.unknown_user": "Unknown User",
+  "chat.wallpaper.apply": "Apply",
+  "chat.wallpaper.custom_url_label": "Custom Wallpaper URL",
+  "chat.wallpaper.custom_url_placeholder": "https://example.com/image.jpg",
+  "chat.wallpaper.title": "Chat Wallpaper",
   "chatList.allSection": "All chats",
 >>>>>>> origin/main
   "chatList.empty": "No active conversations. Find partners to start chatting!",
@@ -401,6 +435,7 @@
   "coinsSuccess.pending": "Confirming your purchase with our payment provider...",
   "coinsSuccess.title": "🎉 Coins added!",
 <<<<<<< HEAD
+<<<<<<< HEAD
   "common.back": "Back",
   "common.cancel": "Cancel",
   "common.clear": "Clear",
@@ -460,6 +495,9 @@
   "context_menu.favourite": "Favourite",
   "context_menu.reply": "Reply",
 =======
+=======
+  "common.close": "Close",
+>>>>>>> origin/main
   "common.coinsBalance": "{{coins}} Coins",
   "common.demoActive": "Demo / Mock Auth Active",
   "common.languagePartner": "Language Partner",
