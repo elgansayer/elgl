@@ -8,31 +8,24 @@ import { TranslatePipe } from '../../services/translate.pipe';
   standalone: true,
   imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
-    <div class="flex flex-col">
-      <label class="text-xs font-semibold text-text-secondary pb-1" for="distance-slider-input">
-        {{ 'discovery.distanceSliderLabel' | t }}
-        <span class="ps-1 text-accent-500">({{ currentDistance() }} km)</span>
+    <div class="flex flex-col w-full">
+      <label class="text-xs font-semibold text-text-secondary whitespace-nowrap" for="distance-range-slider">
+        {{ 'discovery.radiusLabel' | t: { radius: currentDistanceKm() } }}
       </label>
       <div class="relative h-8">
         <input
-          id="distance-slider-input"
+          id="distance-range-slider"
           type="range"
           [min]="minKm()"
           [max]="maxKm()"
-          [value]="currentDistance()"
+          [value]="currentDistanceKm()"
+          [disabled]="disabled()"
           (input)="onChange($event)"
-          [step]="step()"
-          class="absolute inset-0 w-full h-full z-10 appearance-none bg-transparent cursor-pointer"
-          aria-label="{{ 'discovery.distanceSliderAria' | t }}"
+          step="1"
+          class="w-full h-8 appearance-none bg-transparent cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          [style.accent-color]="'var(--color-primary)'"
+          aria-label="{{ 'discovery.radiusLabel' | t: { radius: currentDistanceKm() } }}"
         />
-        <div class="absolute bottom-1 w-full h-2 bg-surface-container pointer-events-none rounded-full">
-          <div
-            class="h-full bg-accent-500 pointer-events-none rounded-full"
-            [style.width.%]="fillPercent()"
-          ></div>
-        </div>
-        <div class="absolute bottom-[-14px] start-0 text-[9px] text-text-muted pointer-events-none">{{ minKm() }} km</div>
-        <div class="absolute bottom-[-14px] end-0 text-[9px] text-text-muted pointer-events-none">{{ maxKm() }} km</div>
       </div>
     </div>
   `,
@@ -42,21 +35,32 @@ import { TranslatePipe } from '../../services/translate.pipe';
         -webkit-appearance: none;
         appearance: none;
       }
+      input[type='range']::-webkit-slider-runnable-track {
+        height: 6px;
+        border-radius: 3px;
+        background: var(--color-surface-100);
+      }
       input[type='range']::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
         height: 22px;
         width: 22px;
         border-radius: 50%;
-        background: var(--color-accent);
+        background: var(--color-primary);
         cursor: pointer;
         border: 2px solid var(--color-surface);
+        margin-top: -8px;
+      }
+      input[type='range']::-moz-range-track {
+        height: 6px;
+        border-radius: 3px;
+        background: var(--color-surface-100);
       }
       input[type='range']::-moz-range-thumb {
         height: 22px;
         width: 22px;
         border-radius: 50%;
-        background: var(--color-accent);
+        background: var(--color-primary);
         cursor: pointer;
         border: 2px solid var(--color-surface);
       }
@@ -64,27 +68,28 @@ import { TranslatePipe } from '../../services/translate.pipe';
   ],
 })
 export class DistanceSliderComponent {
+  /** Minimum distance in km */
   minKm = input(1);
-  maxKm = input(250);
-  initialDistance = input(50);
-  step = input(1);
+  /** Maximum distance in km */
+  maxKm = input(200);
+  /** Starting distance in km */
+  initialDistanceKm = input<number | undefined>(undefined);
+  /** Whether the slider is disabled */
+  disabled = input(false);
 
+  /** Emits new distance (km) when the thumb is moved */
   distanceChanged = output<number>();
 
-  protected currentDistance = signal(50);
-
-  protected fillPercent = computed(() =>
-    ((this.currentDistance() - this.minKm()) / (this.maxKm() - this.minKm())) * 100,
-  );
+  protected currentDistanceKm = signal(50);
 
   constructor() {
     effect(() => {
-      const init = this.initialDistance();
-      if (init !== undefined) this.currentDistance.set(init);
+      const initial = this.initialDistanceKm();
+      if (initial !== undefined) this.currentDistanceKm.set(initial);
     });
 
     effect(() => {
-      this.distanceChanged.emit(this.currentDistance());
+      this.distanceChanged.emit(this.currentDistanceKm());
     });
   }
 
@@ -92,7 +97,7 @@ export class DistanceSliderComponent {
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) return;
     const value = Number(target.value);
-    const clamped = Math.min(Math.max(value, this.minKm()), this.maxKm());
-    this.currentDistance.set(clamped);
+    const clamped = Math.max(this.minKm(), Math.min(value, this.maxKm()));
+    this.currentDistanceKm.set(clamped);
   }
 }

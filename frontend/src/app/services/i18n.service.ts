@@ -218,7 +218,7 @@ export class I18nService {
     'discovery.distanceSliderAria': 'Distance search radius in kilometres',
     'discovery.distanceVipRequired': 'VIP (8 UKP / $10 USD) unlocks fine-tuned distance control.',
     'discovery.vipRadiusNote':
-      'VIP users (8 UKP / $10 USD) get global discovery and location spoofing.',
+      'VIP (8 UKP / $10 USD) unlocks the distance slider and global discovery.',
     'discovery.searchPlaceholder': 'Search by name, language, or bio...',
     'discovery.emptyState': 'No language partners matched your current filter criteria.',
     'discovery.streakDays': '🔥 {{days}}d Streak',
@@ -471,6 +471,8 @@ export class I18nService {
     'chatRoom.correctBtn': 'Correct',
     'chatRoom.doodleBtn': 'Doodle',
     'chatRoom.voiceBtn': 'Voice',
+    'chatRoom.voiceMessage': 'Voice message',
+    'chatRoom.transcribing': 'Transcribing...',
     'chatRoom.typePlaceholder': 'Type your message',
     'chatRoom.mentionListLabel': 'Mention a participant',
     'chatRoom.mentionError': 'Failed to mention participant.',
@@ -1281,7 +1283,6 @@ export class I18nService {
     'forgot_password.reset_success': 'Password reset successfully.',
     'forgot_password.send_error': 'Failed to send reset request',
     'forgot_password.reset_error': 'Failed to reset password',
-    'forgot_password.back_to_home': 'Back to Home',
 
     'auth.resetPassword.title': 'Reset Password',
     'auth.resetPassword.token': 'Token from your email',

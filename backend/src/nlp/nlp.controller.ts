@@ -11,6 +11,7 @@ import { TranscribeVoiceDto } from './dto/transcribe-voice.dto';
 import { ExplainGrammarDto } from './dto/explain-grammar.dto';
 import { SimplifyDto } from './dto/simplify.dto';
 import { TranslateBioDto } from './dto/translate-bio.dto';
+import { TranscribeAudioDto } from './dto/transcribe-audio.dto';
 import {
   GrammarCheckResult,
   PronunciationScoreResult,
@@ -147,17 +148,10 @@ export class NlpController {
     );
   }
 
-  @Post('transcribe-voice')
-  async transcribeVoice(
-    @CurrentUser() user: User | null,
-    @Body() dto: TranscribeVoiceDto,
-  ): Promise<TranscribeVoiceResult | null> {
-    if (!user) return null;
-    const profile = await this.usersService.getProfile(user.id);
-    return await this.nlpService.transcribeVoice(
-      user.id,
-      profile?.is_vip ?? false,
-      dto,
-    );
+  @Post('transcribe-audio')
+  async transcribeAudio(
+    @Body() dto: TranscribeAudioDto,
+  ): Promise<{ transcription: string; language: string }> {
+    return await this.nlpService.transcribeAudio(dto);
   }
 }

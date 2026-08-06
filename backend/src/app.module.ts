@@ -35,7 +35,6 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { RecommendationsModule } from './recommendations/recommendations.module';
 import { AdminModule } from './admin/admin.module';
 import { HelpModule } from './help/help.module';
-import { PasswordResetModule } from './password-reset/password-reset.module';
 import { ProficiencyModule } from './proficiency/proficiency.module';
 import { VersionModule } from './version/version.module';
 import { GroupsModule } from './groups/groups.module';
@@ -64,9 +63,8 @@ import { SpamDetectionModule } from './spam-detection/spam-detection.module';
 import { UserStatisticsModule } from './user-statistics/user-statistics.module';
 import { LanguageIslandsModule } from './language-islands/language-islands.module';
 import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
-import { PronunciationScoringService } from './pronunciation-scoring/pronunciation-scoring.service';
-import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.service';
-import { AssessmentsService } from './assessments/assessments.service';
+import { EmailModule } from './email/email.module';
+import { PasswordResetModule } from './password-reset/password-reset.module';
 
 @Module({
   imports: [
@@ -119,7 +117,6 @@ import { AssessmentsService } from './assessments/assessments.service';
     RecommendationsModule,
     AdminModule,
     HelpModule,
-    PasswordResetModule,
     ProficiencyModule,
     VersionModule,
     StudyStreakModule,
@@ -149,6 +146,8 @@ import { AssessmentsService } from './assessments/assessments.service';
     SpamDetectionModule,
     UserStatisticsModule,
     LanguageIslandsModule,
+    EmailModule,
+    PasswordResetModule,
   ],
   controllers: [AppController],
   providers: [
