@@ -24,8 +24,21 @@ export class PrivacySettingsDto {
   @IsIn(statusVisibilityValues)
   status_visibility?: string;
 
+
   // VIP-only: suppresses profile_visits records when this user visits others.
   @IsOptional()
   @IsBoolean()
   incognito_visits?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  privacy_hide_exact_location?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  privacy_hide_online_status?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  privacy_hide_vip_status?: boolean;
 }

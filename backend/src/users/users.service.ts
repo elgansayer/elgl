@@ -1004,6 +1004,8 @@ export class UsersService {
       privacy_about_info?: string;
       privacy_status?: string;
       incognito_visits?: boolean;
+      privacy_hide_exact_location?: boolean;
+      privacy_hide_online_status?: boolean;
       privacy_hide_vip_status?: boolean;
       status_visibility?: string;
     },
@@ -1028,6 +1030,11 @@ export class UsersService {
       updatePayload.privacy_status = settings.privacy_status;
     if (settings.incognito_visits !== undefined)
       updatePayload.incognito_visits = settings.incognito_visits;
+    if (settings.privacy_hide_exact_location !== undefined)
+      updatePayload.privacy_hide_exact_location =
+        settings.privacy_hide_exact_location;
+    if (settings.privacy_hide_online_status !== undefined)
+      updatePayload.privacy_hide_online_status = settings.privacy_hide_online_status;
     if (settings.privacy_hide_vip_status !== undefined)
       updatePayload.privacy_hide_vip_status = settings.privacy_hide_vip_status;
     if (settings.status_visibility !== undefined)
