@@ -9,6 +9,7 @@ import { firstValueFrom } from 'rxjs';
 import * as cheerio from 'cheerio';
 import { LinkPreview } from './interfaces/link-preview.interface';
 import Redis from 'ioredis';
+import * as xss from 'xss';
 
 @Injectable()
 export class LinkPreviewService {
@@ -140,8 +141,13 @@ export class LinkPreviewService {
   }
 
   private sanitizeMetaContent(raw: string): string {
-    const $inner = cheerio.load(`<div>${raw}</div>`);
-    $inner('script, style, noscript').remove();
+    const filter = new xss.FilterXSS({
+      whiteList: {}, // Empty whitelist to strip all tags
+      stripIgnoreTagBody: ['script', 'style', 'noscript'],
+      stripIgnoreTag: true
+    });
+    const sanitizedHtml = filter.process(raw);
+    const $inner = cheerio.load(`<div>${sanitizedHtml}</div>`);
     return $inner('div').text().trim();
   }
 }

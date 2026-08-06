@@ -7,7 +7,6 @@
 #   3. Prompts for DeepSeek API key
 #   4. Prompts for optional sudo password
 #   5. Runs setup-debian.sh
-#   6. Starts the swarm via swarmd.py
 set -e
 
 echo "========================================================"
@@ -73,16 +72,6 @@ fi
 
 # ---- 5. Start the swarm ----
 echo ""
-read -rp "Start the 24/7 AI swarm now? [Y/n]: " REPLY
-if [ "$REPLY" != "n" ] && [ "$REPLY" != "N" ]; then
-    bash "$WORKSPACE/start-swarm.sh"
-fi
-
-echo ""
 echo "========================================================"
-echo " All done. Useful commands:"
-echo "   tmux attach -t ai_swarm       # watch the swarm live"
-echo "   ./swarmd.py --status           # check current state"
-echo "   ./swarmd.py --tasks            # view task queue"
-echo "   tmux kill-session -t ai_swarm  # stop everything"
+echo " All done."
 echo "========================================================"

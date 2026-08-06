@@ -136,6 +136,18 @@ describe('LinkPreviewService', () => {
     expect(result.title).toBe('Title');
   });
 
+  it('sanitizes malicious HTML inputs safely', async () => {
+    mockHtmlResponse(`
+      <html><head>
+        <meta property="og:title" content="Hello &lt;b onmouseover=&quot;alert()&quot;&gt;World&lt;/b&gt;" />
+      </head></html>
+    `);
+
+    const result = await service.getPreview('https://example.com/');
+
+    expect(result.title).toBe('Hello World');
+  });
+
   it('rejects non-HTML responses', async () => {
     mockHtmlResponse('{}', 'application/json');
 

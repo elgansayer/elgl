@@ -1,109 +1,83 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ChatService } from '../../services/chat.service';
+import { DiscoveryService } from '../../services/discovery.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
+import { UserProfile } from '../../services/user.service';
 
 @Component({
   selector: 'app-create-group',
   imports: [CommonModule, FormsModule, TranslatePipe],
-  template: `
-    <div class="p-4 bg-[#121212] text-white min-h-screen">
-      <h2 class="text-xl font-bold mb-4">{{ 'group.createTitle' | t }}</h2>
-
-      <div class="mb-4">
-        <label for="groupNameInput" class="block text-sm font-medium mb-1">{{
-          'group.nameLabel' | t
-        }}</label>
-        <input
-          id="groupNameInput"
-          type="text"
-          [(ngModel)]="groupName"
-          class="w-full p-2 rounded bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500"
-          placeholder="{{ 'group.namePlaceholder' | t }}"
-        />
-      </div>
-
-      <div class="mb-4">
-        <label for="newMemberIdInput" class="block text-sm font-medium mb-1"
-          >{{ 'group.addMembers' | t }} ({{ selectedMembers().length }}/49)</label
-        >
-        <div class="flex gap-2 mb-2">
-          <input
-            id="newMemberIdInput"
-            type="text"
-            [(ngModel)]="newMemberId"
-            class="flex-1 p-2 rounded bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500"
-            placeholder="{{ 'group.userIdPlaceholder' | t }}"
-          />
-          <button
-            (click)="addMember()"
-            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded font-bold transition-colors"
-            [disabled]="selectedMembers().length >= 49 || !newMemberId.trim()"
-          >
-            {{ 'group.addBtn' | t }}
-          </button>
-        </div>
-
-        <ul class="space-y-2 mt-4">
-          @for (member of selectedMembers(); track member) {
-            <li class="flex justify-between items-center bg-gray-800 p-2 rounded">
-              <span class="text-sm">{{ member }}</span>
-              <button
-                (click)="removeMember(member)"
-                class="text-red-400 hover:text-red-300 text-sm font-bold"
-              >
-                {{ 'group.removeBtn' | t }}
-              </button>
-            </li>
-          }
-        </ul>
-      </div>
-
-      <button
-        (click)="createGroup()"
-        class="w-full py-3 bg-green-600 hover:bg-green-700 rounded-full font-bold transition-colors mt-6"
-        [disabled]="isCreating() || !groupName.trim() || selectedMembers().length === 0"
-      >
-        @if (isCreating()) {
-          {{ 'group.creatingBtn' | t }}...
-        } @else {
-          {{ 'group.createBtn' | t }}
-        }
-      </button>
-
-      @if (error()) {
-        <p class="text-red-400 mt-4 text-sm text-center">{{ error() }}</p>
-      }
-      @if (success()) {
-        <p class="text-green-400 mt-4 text-sm text-center">{{ 'group.successMsg' | t }}</p>
-      }
-    </div>
-  `,
+  templateUrl: './create-group.component.html',
+  styleUrls: ['./create-group.component.scss'],
 })
 export class CreateGroupComponent {
-  private chatService = inject(ChatService);
+  private readonly chatService = inject(ChatService);
+  private readonly discoveryService = inject(DiscoveryService);
+  private readonly i18n = inject(I18nService);
+  private readonly router = inject(Router);
+
+  readonly MAX_MEMBERS = 49;
 
   groupName = '';
-  newMemberId = '';
-  selectedMembers = signal<string[]>([]);
+  searchQuery = '';
+  selectedMembers = signal<UserProfile[]>([]);
+  selectedMemberIds = computed(() => this.selectedMembers().map((m) => m.id));
+  selectedCount = computed(() => this.selectedMembers().length);
+  canAddMore = computed(() => this.selectedCount() < this.MAX_MEMBERS);
+  searchResults = signal<UserProfile[]>([]);
+  isSearching = signal(false);
   isCreating = signal(false);
   error = signal<string | null>(null);
   success = signal(false);
 
-  addMember() {
-    const id = this.newMemberId.trim();
-    if (id && !this.selectedMembers().includes(id) && this.selectedMembers().length < 49) {
-      this.selectedMembers.update((members) => [...members, id]);
-      this.newMemberId = '';
+  async searchUsers(): Promise<void> {
+    const query = this.searchQuery.trim();
+    if (!query) {
+      this.searchResults.set([]);
+      return;
+    }
+
+    this.isSearching.set(true);
+    try {
+      const results = await this.discoveryService.findPartners({
+        native_languages: query,
+        target_language: query,
+      });
+      const filtered = results.filter(
+        (u) =>
+          !this.selectedMemberIds().includes(u.id) &&
+          (u.display_name?.toLowerCase().includes(query.toLowerCase()) ||
+            u.native_languages?.some((l: string) => l.toLowerCase().includes(query.toLowerCase())) ||
+            u.target_languages?.some((l: string) => l.toLowerCase().includes(query.toLowerCase())) ||
+            u.id.toLowerCase().includes(query.toLowerCase())),
+      );
+      this.searchResults.set(filtered.slice(0, 20));
+    } catch {
+      this.searchResults.set([]);
+    } finally {
+      this.isSearching.set(false);
     }
   }
 
-  removeMember(id: string) {
-    this.selectedMembers.update((members) => members.filter((m) => m !== id));
+  addMember(profile: UserProfile): void {
+    if (!this.canAddMore()) return;
+    if (this.selectedMemberIds().includes(profile.id)) return;
+    this.selectedMembers.update((members) => [...members, profile]);
+    this.searchResults.update((results) => results.filter((r) => r.id !== profile.id));
+    this.searchQuery = '';
   }
 
-  async createGroup() {
+  removeMember(profile: UserProfile): void {
+    this.selectedMembers.update((members) =>
+      members.filter((m) => m.id !== profile.id),
+    );
+  }
+
+  async createGroup(): Promise<void> {
     if (!this.groupName.trim() || this.selectedMembers().length === 0) return;
 
     this.isCreating.set(true);
@@ -111,12 +85,13 @@ export class CreateGroupComponent {
     this.success.set(false);
 
     try {
-      await this.chatService.createGroup(this.groupName.trim(), this.selectedMembers());
+      const memberIds = this.selectedMembers().map((m) => m.id);
+      await this.chatService.createGroup(this.groupName.trim(), memberIds);
       this.success.set(true);
-      this.groupName = '';
-      this.selectedMembers.set([]);
-    } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Failed to create group');
+      await this.router.navigate(['/']);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : this.i18n.translate('group.errorCreate');
+      this.error.set(message);
     } finally {
       this.isCreating.set(false);
     }

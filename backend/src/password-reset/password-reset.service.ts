@@ -2,6 +2,7 @@ import {
   Injectable,
   BadRequestException,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -12,6 +13,8 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Injectable()
 export class PasswordResetService {
+  private readonly logger = new Logger(PasswordResetService.name);
+
   constructor(
     private readonly configService: ConfigService,
     private readonly supabaseService: SupabaseService,
@@ -27,25 +30,25 @@ export class PasswordResetService {
       .select('id')
       .eq('email', dto.email);
 
-    if (userError || !users || users.length === 0) {
+    if (!userId) {
       // Do not reveal whether the email exists
       return;
     }
 
-    const user = users[0];
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
 
     const { error: insertError } = await supabase
       .from('password_reset_tokens')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         token,
         expires_at: expiresAt.toISOString(),
         used: false,
       });
 
     if (insertError) {
+      this.logger.error(`Failed to insert reset token: ${insertError.message}`);
       throw new BadRequestException('Failed to create reset token');
     }
 
@@ -72,13 +75,17 @@ export class PasswordResetService {
       throw new UnauthorizedException('Reset token has expired');
     }
 
-    // Update password via Supabase admin updateUserById
+    // Update password via Supabase admin API
     const { error: authError } = await supabase.auth.admin.updateUserById(
       tokenRecord.user_id,
       { password: dto.newPassword },
     );
 
     if (authError) {
+      this.logger.error(
+        `Failed to update password: ${authError.message}`,
+        authError,
+      );
       throw new BadRequestException('Failed to update password');
     }
 
