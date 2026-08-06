@@ -52,7 +52,8 @@ export class ChatController {
     @CurrentUser() user: User | null,
   ): Promise<{ token: string } | null> {
     if (!user) return null;
-    const token = await this.chatService.generateConnectionToken?.(user.id) ?? '';
+    const token =
+      (await this.chatService.generateConnectionToken?.(user.id)) ?? '';
     return { token };
   }
 

@@ -32,7 +32,8 @@ export class PasswordResetService {
       perPage: 1000,
     });
     const match = allUsers?.users?.find(
-      (u: { email?: string; id?: string }) => u.email?.toLowerCase() === dto.email.toLowerCase(),
+      (u: { email?: string; id?: string }) =>
+        u.email?.toLowerCase() === dto.email.toLowerCase(),
     );
     userId = match?.id ?? null;
 
