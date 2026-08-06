@@ -427,24 +427,30 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
         category: string | null;
       }>;
 
-      for (const event of typedEvents) {
+      const roomNames = typedEvents.map(
+        (event) => `language_party-${event.id}`,
+      );
+
+      const { data: existingRooms, error: roomsCheckErr } = await supabase
+        .from('audio_rooms')
+        .select('room_name')
+        .in('room_name', roomNames);
+
+      if (roomsCheckErr) {
+        this.logger.warn('Could not check existing rooms', roomsCheckErr);
+        return;
+      }
+
+      const existingRoomNames = new Set(
+        existingRooms?.map((r) => r.room_name) ?? [],
+      );
+
+      const eventsToCreateRoomsFor = typedEvents.filter(
+        (event) => !existingRoomNames.has(`language_party-${event.id}`),
+      );
+
+      for (const event of eventsToCreateRoomsFor) {
         const roomName = `language_party-${event.id}`;
-
-        // Check if a room already exists for this event
-        const { data: existingRoom, error: roomCheckErr } = await supabase
-          .from('audio_rooms')
-          .select('id')
-          .eq('room_name', roomName)
-          .maybeSingle();
-
-        if (roomCheckErr) {
-          this.logger.warn('Could not check existing room', roomCheckErr);
-          continue;
-        }
-        if (existingRoom) {
-          // Already created
-          continue;
-        }
 
         // Create the LiveKit audio room via the dedicated service
         const room = await this.audioRoomsService.createRoom(
