@@ -40,6 +40,7 @@ async function bootstrap() {
     credentials: true,
   });
   app.useGlobalPipes(
+    new SanitiseHtmlPipe(),
     new ValidationPipe({
       whitelist: true,
       transform: true,

@@ -54,7 +54,18 @@ export class LivekitService {
     e2eeKey?: string,
   ): Promise<Room> {
     const token = await this.getToken(roomName, userId);
-    let roomOptions: RoomOptions = {};
+    let roomOptions: RoomOptions = {
+      rtcConfig: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          {
+            urls: environment.turnServerUrl,
+            username: environment.turnUsername,
+            credential: environment.turnPassword,
+          },
+        ],
+      },
+    };
 
     if (e2eeKey) {
       const keyProvider = new ExternalE2EEKeyProvider();

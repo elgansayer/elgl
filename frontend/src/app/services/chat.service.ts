@@ -405,6 +405,14 @@ export class ChatService {
     );
   }
 
+  async removeFavourite(favouriteId: string): Promise<void> {
+    await firstValueFrom(
+      this.http.delete(`${this.baseUrl}/favourites/${favouriteId}`, {
+        headers: this.getHeaders(),
+      }),
+    );
+  }
+
   async loadBlockedUsers(): Promise<void> {
     try {
       const blockedIds = await this.safetyService.getBlockedIdsAsync();

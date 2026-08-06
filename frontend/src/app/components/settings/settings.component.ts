@@ -5,14 +5,13 @@ import { I18nService } from '../../services/i18n.service';
 import { FormsModule } from '@angular/forms';
 import { UserService, LinkedAccount } from '../../services/user.service';
 import { CacheService } from '../../services/cache.service';
-import { Router } from '@angular/router';
-import { FontScaleService } from '../../services/font-scale.service';
+import { Router, RouterModule } from '@angular/router';
 import { ChatSettingsService } from '../../services/chat-settings.service';
 import { LanguageSelectorComponent } from '../language-selector/language-selector.component';
 
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule, TranslatePipe, LanguageSelectorComponent],
+  imports: [FormsModule, TranslatePipe, LanguageSelectorComponent, RouterModule],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss'],
 })
@@ -21,7 +20,6 @@ export class SettingsComponent implements OnInit {
   private userService = inject(UserService);
   private location = inject(Location);
   private router = inject(Router);
-  private fontScaleService = inject(FontScaleService);
   private chatSettingsService = inject(ChatSettingsService);
   private i18nService = inject(I18nService);
 
@@ -35,21 +33,9 @@ export class SettingsComponent implements OnInit {
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
 
-  readonly fontScale = computed(() => Math.round(this.fontScaleService.scaleFactor() * 100));
-
   readonly isVip = signal(false);
-  readonly primaryAccentColor = signal<string | null>(null);
   readonly interests = signal<string[]>([]);
   readonly availableInterests = signal<string[]>([]);
-
-  readonly availableColors = [
-    '#4f46e5', // Indigo (default)
-    '#e11d48', // Rose
-    '#16a34a', // Green
-    '#d97706', // Amber
-    '#9333ea', // Purple
-    '#0891b2', // Cyan
-  ];
 
   privacyHideLocation = false;
   privacyHideSearch = false;
@@ -77,7 +63,6 @@ export class SettingsComponent implements OnInit {
       const profile = await this.userService.getMyProfile();
       if (profile) {
         this.isVip.set(Boolean(profile.is_vip));
-        this.primaryAccentColor.set(profile.primary_accent_color || '#4f46e5');
         this.privacyHideLocation = Boolean(profile.privacy_hide_location);
         this.privacyHideSearch = Boolean(profile.privacy_hide_from_search);
         this.privacyHideAge = Boolean(profile.privacy_hide_age);
@@ -178,23 +163,6 @@ export class SettingsComponent implements OnInit {
     this.router.navigate(['/my-subscription']);
   }
 
-  onFontScaleChange(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLInputElement) {
-      const percent = Number(target.value);
-      if (!Number.isNaN(percent)) {
-        const scale = percent / 100;
-        this.fontScaleService.setScale(scale);
-      }
-    }
-  }
-
-  setAccentColor(color: string): void {
-    if (this.isVip()) {
-      this.primaryAccentColor.set(color);
-    }
-  }
-
   toggleInterest(interest: string): void {
     this.interests.update(arr =>
       arr.includes(interest)
@@ -244,7 +212,6 @@ export class SettingsComponent implements OnInit {
         vibration_enabled: this.vibrationEnabled,
         auto_download_preference: this.autoDownloadPreference(),
         auto_download_wifi_only: this.autoDownloadMedia() && this.autoDownloadPreference() === 'wifi',
-        primary_accent_color: this.primaryAccentColor() ?? undefined,
         interests: this.interests(),
       });
 

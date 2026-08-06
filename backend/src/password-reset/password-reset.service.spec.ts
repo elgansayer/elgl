@@ -6,18 +6,40 @@ describe('PasswordResetService (unit)', () => {
   let configService: { get: jest.Mock };
   let supabaseService: { getClient: jest.Mock };
   let emailService: { sendPasswordResetEmail: jest.Mock };
+  let supabaseAdmin: {
+    getUserByEmail: jest.Mock;
+    listUsers: jest.Mock;
+    updateUserById: jest.Mock;
+  };
   let supabaseClient: {
     from: jest.Mock;
-    auth: { admin: { updateUserById: jest.Mock } };
+    auth: { admin: typeof supabaseAdmin };
   };
 
+  function createChain() {
+    return {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      insert: jest.fn().mockReturnThis(),
+      update: jest.fn().mockReturnThis(),
+      single: jest.fn().mockReturnThis(),
+      from: jest.fn().mockReturnThis(),
+    };
+  }
+
   beforeEach(() => {
+    supabaseAdmin = {
+      getUserByEmail: jest.fn().mockRejectedValue(new Error('Not available')),
+      listUsers: jest
+        .fn()
+        .mockResolvedValue({ data: { users: [] }, error: null }),
+      updateUserById: jest.fn(),
+    };
+
     supabaseClient = {
       from: jest.fn().mockReturnThis(),
       auth: {
-        admin: {
-          updateUserById: jest.fn(),
-        },
+        admin: supabaseAdmin,
       },
     };
 
@@ -33,11 +55,14 @@ describe('PasswordResetService (unit)', () => {
   });
 
   describe('requestPasswordReset', () => {
-    it('should silently return when no user found with the given email', async () => {
-      const chain = createChain();
-      supabaseClient.from = jest.fn().mockReturnValue(chain);
-      chain.select = jest.fn().mockReturnValue(chain);
-      chain.eq = jest.fn().mockResolvedValue({ data: [], error: null });
+    it('should silently return when no user is found', async () => {
+      supabaseAdmin.getUserByEmail.mockRejectedValue(
+        new Error('Not available'),
+      );
+      supabaseAdmin.listUsers.mockResolvedValue({
+        data: { users: [] },
+        error: null,
+      });
 
       await service.requestPasswordReset({ email: 'nobody@example.com' });
 
@@ -92,7 +117,37 @@ describe('PasswordResetService (unit)', () => {
         expect.any(String),
       );
       const token = emailService.sendPasswordResetEmail.mock.calls[0][1];
-      expect(token).toHaveLength(64); // hex of 32 bytes
+      expect(token).toHaveLength(64);
+    });
+
+    it('should fall back to listUsers and send reset email', async () => {
+      supabaseAdmin.getUserByEmail.mockRejectedValue(
+        new Error('Not available'),
+      );
+      supabaseAdmin.listUsers.mockResolvedValue({
+        data: {
+          users: [
+            { id: 'user-fallback', email: 'user@example.com' },
+            { id: 'other', email: 'other@example.com' },
+          ],
+        },
+        error: null,
+      });
+
+      const insertChain = createChain();
+      supabaseClient.from = jest.fn().mockReturnValue(insertChain);
+      insertChain.insert = jest.fn().mockResolvedValue({ error: null });
+
+      await service.requestPasswordReset({ email: 'user@example.com' });
+
+      expect(supabaseAdmin.listUsers).toHaveBeenCalled();
+      expect(insertChain.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ user_id: 'user-fallback' }),
+      );
+      expect(emailService.sendPasswordResetEmail).toHaveBeenCalledWith(
+        'user@example.com',
+        expect.any(String),
+      );
     });
 
     it('should throw BadRequestException when token insert fails', async () => {
@@ -143,7 +198,7 @@ describe('PasswordResetService (unit)', () => {
     });
 
     it('should throw UnauthorizedException when token is expired', async () => {
-      const past = new Date(Date.now() - 100 * 60 * 1000); // 100 minutes ago
+      const past = new Date(Date.now() - 100 * 60 * 1000);
       const chain = createChain();
       supabaseClient.from = jest.fn().mockReturnValue(chain);
       chain.select = jest.fn().mockReturnValue(chain);
@@ -161,7 +216,7 @@ describe('PasswordResetService (unit)', () => {
       ).rejects.toThrow(UnauthorizedException);
     });
 
-    it('should update password and mark token as used for valid token', async () => {
+    it('should update password and mark token as used', async () => {
       const future = new Date(Date.now() + 30 * 60 * 1000);
       const findChain = createChain();
       supabaseClient.from = jest.fn().mockReturnValue(findChain);
@@ -197,10 +252,9 @@ describe('PasswordResetService (unit)', () => {
         newPassword: 'newPass123!',
       });
 
-      expect(supabaseClient.auth.admin.updateUserById).toHaveBeenCalledWith(
-        'user-abc',
-        { password: 'newPass123!' },
-      );
+      expect(supabaseAdmin.updateUserById).toHaveBeenCalledWith('user-abc', {
+        password: 'newPass123!',
+      });
       expect(updateChain.eq).toHaveBeenCalledWith('token', 'valid-token');
     });
 
@@ -215,7 +269,7 @@ describe('PasswordResetService (unit)', () => {
         error: null,
       });
 
-      supabaseClient.auth.admin.updateUserById = jest.fn().mockResolvedValue({
+      supabaseAdmin.updateUserById = jest.fn().mockResolvedValue({
         error: new Error('auth update failed'),
       });
 

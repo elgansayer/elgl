@@ -1,0 +1,112 @@
+<div class="min-h-screen bg-surface-50">
+  <header class="sticky top-0 z-10 flex items-center justify-between bg-surface-100 ps-4 pe-4 pt-4 pb-4 border-b border-surface-200">
+    <div class="flex items-center gap-3">
+      <button
+        (click)="goBack()"
+        class="p-2 -ml-2 rounded-full hover:bg-surface-200 transition-colors"
+        aria-label="Go back"
+      >
+        <span class="text-xl">←</span>
+      </button>
+      <h1 class="text-xl font-bold text-text-primary">
+        {{ 'settings.appearanceSection' | t }}
+      </h1>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto ps-4 pe-4 pt-6 pb-20 space-y-8">
+    @if (errorMessage()) {
+      <div class="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm mb-6">
+        {{ errorMessage() }}
+      </div>
+    }
+
+    @if (successMessage()) {
+      <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-xl text-sm mb-6">
+        {{ successMessage() }}
+      </div>
+    }
+
+    @if (isLoading()) {
+      <div class="flex justify-center p-8">
+        <span class="text-text-secondary">{{ 'common.loading' | t }}</span>
+      </div>
+    } @else {
+
+      <section class="space-y-4">
+        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+          {{ 'settings.fontSize' | t }}
+        </h2>
+        <div class="rounded-2xl bg-surface-100 border border-surface-200 shadow-sm p-6">
+          <div class="flex justify-between items-center mb-4 text-text-secondary">
+            <span class="text-xs">A</span>
+            <span class="text-sm">A</span>
+            <span class="text-lg">A</span>
+          </div>
+          <input
+            type="range"
+            min="80"
+            max="120"
+            step="5"
+            [value]="fontScale()"
+            (input)="onFontScaleChange($event)"
+            class="w-full h-2 bg-surface-300 rounded-lg appearance-none cursor-pointer accent-primary"
+            aria-label="Adjust font size"
+          />
+          <div class="text-center mt-4">
+            <span class="text-sm font-medium text-text-primary">{{ fontScale() }}%</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+          {{ 'settings.appearanceSection' | t }}
+        </h2>
+        <div
+          class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm ps-4 pe-4 pt-4 pb-4 space-y-4"
+        >
+          <div class="flex justify-between items-center">
+            <div>
+              <span class="text-sm font-medium text-text-primary block">{{
+                'settings.accentColor' | t
+              }}</span>
+              <span class="text-xs text-text-secondary">{{ 'settings.accentColorDesc' | t }}</span>
+            </div>
+            @if (!isVip()) {
+              <span class="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded-md">{{
+                'settings.vipRequired' | t
+              }}</span>
+            }
+          </div>
+          <div class="flex gap-3 flex-wrap">
+            @for (color of availableColors; track color) {
+              <button
+                type="button"
+                (click)="setAccentColor(color)"
+                [disabled]="!isVip()"
+                [style.backgroundColor]="color"
+                class="w-10 h-10 rounded-full border-2 transition-transform"
+                [class.border-white]="primaryAccentColor() === color"
+                [class.border-transparent]="primaryAccentColor() !== color"
+                [class.scale-110]="primaryAccentColor() === color"
+                [class.opacity-50]="!isVip()"
+                [class.cursor-not-allowed]="!isVip()"
+                aria-label="Select color"
+              ></button>
+            }
+          </div>
+        </div>
+      </section>
+
+      <div class="pt-6">
+        <button
+          (click)="saveSettings()"
+          class="w-full app-button-primary py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95"
+        >
+          {{ 'settings.saveBtn' | t }}
+        </button>
+      </div>
+    }
+  </main>
+</div>
