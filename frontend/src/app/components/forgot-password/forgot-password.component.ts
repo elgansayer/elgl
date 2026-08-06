@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -119,6 +119,7 @@ export class ForgotPasswordComponent {
 
     try {
       await this.authService.requestPasswordReset(this.emailForm.controls.email.value);
+      this.isSending.set(false);
       this.sendSuccess.set(true);
     } catch {
       this.sendError.set('forgot_password.send_error');
@@ -139,6 +140,7 @@ export class ForgotPasswordComponent {
 
     try {
       await this.authService.resetPassword(token, this.resetForm.controls.newPassword.value);
+      this.isResetting.set(false);
       this.resetSuccess.set(true);
       await this.router.navigate(['/home']);
     } catch {
