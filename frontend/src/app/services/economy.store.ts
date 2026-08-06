@@ -6,6 +6,7 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { CentrifugeService } from './centrifuge.service';
 import { I18nService } from './i18n.service';
+import { SafetyService } from './safety.service';
 
 export interface VirtualGift {
   id: string;
@@ -62,6 +63,7 @@ export class EconomyStore {
   private authService = inject(AuthService);
   private centrifugeService = inject(CentrifugeService);
   private i18n = inject(I18nService);
+  private safetyService = inject(SafetyService);
   private baseUrl = `${environment.apiUrl}/economy`;
   private monetisationUrl = `${environment.apiUrl}/monetisation`;
   private safetyUrl = `${environment.apiUrl}/safety`;
@@ -318,13 +320,11 @@ export class EconomyStore {
 
   async reportUser(reportedId: string, reason: string, details?: string): Promise<void> {
     try {
-      await firstValueFrom(
-        this.http.post(
-          `${this.safetyUrl}/report`,
-          { reported_id: reportedId, reason, details },
-          { headers: this.getHeaders() },
-        ),
-      );
+      await this.safetyService.reportUser({
+        reported_id: reportedId,
+        reason_category: reason,
+        description: details,
+      });
       showToast(
         '🛡️ Thank you. Your report has been submitted to our Trust & Safety moderation team for review within 24 hours.',
       );
@@ -336,13 +336,7 @@ export class EconomyStore {
 
   async blockUser(blockedId: string): Promise<void> {
     try {
-      await firstValueFrom(
-        this.http.post(
-          `${this.safetyUrl}/block`,
-          { blocked_id: blockedId },
-          { headers: this.getHeaders() },
-        ),
-      );
+      await this.safetyService.blockUserAsync(blockedId);
       const set = new Set(this.blockedUserIds());
       set.add(blockedId);
       this.blockedUserIds.set(set);

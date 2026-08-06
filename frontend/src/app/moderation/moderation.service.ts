@@ -12,6 +12,8 @@ export interface ModerationItem {
   description?: string;
   reporter: { id: string; display_name: string } | null;
   reported_user: { id: string; display_name: string } | null;
+  moment_content?: string;
+  momentAuthorName?: string | null;
 }
 
 export interface ModerationAnalysis {
@@ -21,6 +23,11 @@ export interface ModerationAnalysis {
 
 export interface ModerationActionResponse {
   success: boolean;
+}
+
+export interface UserAnalysisResult {
+  riskScore: number;
+  flags: string[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -70,6 +77,13 @@ export class ModerationService {
 
   analyseUser(userId: string) {
     return this.http.get<ModerationAnalysis>(
+      `${environment.apiUrl}/moderation/analyse/${userId}`,
+    );
+  }
+
+  /** Alias for analyseUser - used by components that import the older API shape. */
+  getUserRiskAnalysis(userId: string) {
+    return this.http.get<UserAnalysisResult>(
       `${environment.apiUrl}/moderation/analyse/${userId}`,
     );
   }

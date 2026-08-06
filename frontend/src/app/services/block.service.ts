@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface BlockedUser {
@@ -16,15 +16,19 @@ export class BlockService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiUrl}/blocks`;
 
-  getBlockedUsers(): Observable<BlockedUser[]> {
-    return this.http.get<BlockedUser[]>(this.apiUrl);
+  async getBlockedUsers(): Promise<BlockedUser[]> {
+    return firstValueFrom(this.http.get<BlockedUser[]>(this.apiUrl));
   }
 
-  blockUser(blockedId: string): Observable<{ success: boolean }> {
-    return this.http.post<{ success: boolean }>(this.apiUrl, { blocked_id: blockedId });
+  async blockUser(blockedId: string): Promise<{ success: boolean }> {
+    return firstValueFrom(
+      this.http.post<{ success: boolean }>(this.apiUrl, { blocked_id: blockedId }),
+    );
   }
 
-  unblockUser(blockedId: string): Observable<{ success: boolean }> {
-    return this.http.delete<{ success: boolean }>(`${this.apiUrl}/${blockedId}`);
+  async unblockUser(blockedId: string): Promise<{ success: boolean }> {
+    return firstValueFrom(
+      this.http.delete<{ success: boolean }>(`${this.apiUrl}/${blockedId}`),
+    );
   }
 }

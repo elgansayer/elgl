@@ -2,7 +2,7 @@ import { Component, inject, input, output } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
-import { EconomyStore } from '../../services/economy.store';
+import { SafetyService } from '../../services/safety.service';
 
 @Component({
   selector: 'app-trust-safety-modal',
@@ -129,18 +129,22 @@ export class TrustSafetyModalComponent {
   targetName = input.required<string>();
   closed = output<void>();
 
-  readonly store = inject(EconomyStore);
+  private readonly safetyService = inject(SafetyService);
   mode: 'report' | 'block' = 'report';
   reportReason = 'harassment';
   reportDetails = '';
 
   async submitReport(): Promise<void> {
-    await this.store.reportUser(this.targetId(), this.reportReason, this.reportDetails);
+    await this.safetyService.reportUser({
+      reported_id: this.targetId(),
+      reason_category: this.reportReason,
+      description: this.reportDetails,
+    });
     this.closed.emit();
   }
 
   async confirmBlock(): Promise<void> {
-    await this.store.blockUser(this.targetId());
+    await this.safetyService.blockUserAsync(this.targetId());
     this.closed.emit();
   }
 }
