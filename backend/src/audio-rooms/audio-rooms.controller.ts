@@ -98,6 +98,17 @@ export class AudioRoomsController {
     );
   }
 
+  @Get('by-language')
+  async listActiveRoomsByLanguage(): Promise<
+    Array<{
+      language_pair: string;
+      count: number;
+      rooms: AudioRoomRecord[];
+    }>
+  > {
+    return await this.audioRoomsService.listActiveRoomsByLanguage();
+  }
+
   @Get('topics')
   async getDistinctTopics(): Promise<string[]> {
     return await this.audioRoomsService.getDistinctTopics();
