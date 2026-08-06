@@ -1,7 +1,9 @@
+import { ArgumentMetadata } from '@nestjs/common';
 import { SanitiseHtmlPipe } from './sanitise-html.pipe';
 
 describe('SanitiseHtmlPipe', () => {
   let pipe: SanitiseHtmlPipe;
+  const mockMetadata: ArgumentMetadata = { type: 'body' };
 
   beforeEach(() => {
     pipe = new SanitiseHtmlPipe();
@@ -11,65 +13,53 @@ describe('SanitiseHtmlPipe', () => {
     expect(pipe).toBeDefined();
   });
 
-  it('should sanitise XSS in a string', () => {
-    const input = '<script>alert("xss")</script><p>Hello</p>';
-    const result = pipe.transform(input, {} as any);
-    expect(result).toBe('<p>Hello</p>');
+  it('should sanitize simple string', () => {
+    expect(pipe.transform('<script>alert("xss")</script>', mockMetadata)).toBe(
+      '',
+    );
   });
 
-  it('should leave innocent text alone', () => {
-    const input = 'Hello World';
-    const result = pipe.transform(input, {} as any);
-    expect(result).toBe('Hello World');
+  it('should sanitize array of strings', () => {
+    expect(
+      pipe.transform(['<script>alert("xss")</script>', 'safe'], mockMetadata),
+    ).toEqual(['', 'safe']);
   });
 
-  it('should properly traverse objects and sanitise their properties', () => {
-    const input = {
-      message: 'Hello <script>alert("xss")</script>',
-      user: {
-        bio: '<img src="x" onerror="alert(1)">I like coding',
-        nested: {
-          test: '<iframe src="javascript:alert(1)"></iframe>safe',
+  it('should sanitize nested objects', () => {
+    expect(
+      pipe.transform(
+        {
+          a: '<script>alert("xss")</script>',
+          b: { c: '<a href="javascript:alert(1)">link</a>' },
         },
-      },
-    };
-    const result = pipe.transform(input, {} as any);
-    expect(result).toEqual({
-      message: 'Hello ',
-      user: {
-        bio: '<img src="x">I like coding',
-        nested: {
-          test: 'safe',
-        },
-      },
+        mockMetadata,
+      ),
+    ).toEqual({
+      a: '',
+      b: { c: '<a>link</a>' },
     });
   });
 
-  it('should properly traverse arrays and sanitise items', () => {
-    const input = ['<script>alert("xss")</script>item1', 'item2'];
-    const result = pipe.transform(input, {} as any);
-    expect(result).toEqual(['item1', 'item2']);
+  it('should ignore numbers, null, and undefined', () => {
+    expect(pipe.transform(123, mockMetadata)).toBe(123);
+    expect(pipe.transform(null, mockMetadata)).toBe(null);
+    expect(pipe.transform(undefined, mockMetadata)).toBe(undefined);
   });
 
-  it('should leave non-plain objects untouched', () => {
-    class DTO {
-      prop = '<script>alert("xss")</script>';
+  it('should not mutate class instances', () => {
+    class CustomClass {
+      a = '<script>alert(1)</script>';
     }
-    const input = new DTO();
-    const result = pipe.transform(input, {} as any);
-    expect(result).toBe(input); // Object reference should be the same
-    expect(result.prop).toBe('<script>alert("xss")</script>');
+    const instance = new CustomClass();
+    const result = pipe.transform(instance, mockMetadata);
+    expect(result).toBe(instance);
+    expect((result as CustomClass).a).toBe('<script>alert(1)</script>');
   });
 
-  it('should leave Buffers untouched', () => {
-    const input = Buffer.from('<script>alert("xss")</script>');
-    const result = pipe.transform(input, {} as any);
-    expect(result).toBe(input);
-  });
-
-  it('should leave null and undefined untouched', () => {
-    expect(pipe.transform(null, {} as any)).toBe(null);
-    expect(pipe.transform(undefined, {} as any)).toBe(undefined);
+  it('should not mutate Buffer objects', () => {
+    const buffer = Buffer.from('hello');
+    const result = pipe.transform(buffer, mockMetadata);
+    expect(result).toBe(buffer);
   });
 
   it('should skip sanitisation for passwords', () => {
@@ -78,7 +68,7 @@ describe('SanitiseHtmlPipe', () => {
       password: 'my<secret>password',
       confirmPassword: 'my<secret>password',
     };
-    const result = pipe.transform(input, {} as any);
+    const result = pipe.transform(input, mockMetadata);
     expect(result).toEqual({
       username: 'user',
       password: 'my<secret>password',
@@ -86,3 +76,4 @@ describe('SanitiseHtmlPipe', () => {
     });
   });
 });
+
