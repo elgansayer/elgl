@@ -52,7 +52,7 @@ jobs:
           for i in $ALL_ISSUES; do
             [ -z "$i" ] && continue
             gh issue edit "$i" --add-label "swarm-active" --repo ${{ github.repository }} || true
-            gh issue comment "$i" --body "/openhands-fix" --repo ${{ github.repository }} || true
+            gh issue comment "$i" --body "/fast-fix" --repo ${{ github.repository }} || true
             D=$((D+1))
             echo "  [$D/$COUNT] #$i"
           done
