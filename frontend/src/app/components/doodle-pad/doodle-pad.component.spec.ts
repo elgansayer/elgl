@@ -1,6 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Pipe, PipeTransform } from '@angular/core';
 import { DoodlePadComponent } from './doodle-pad.component';
