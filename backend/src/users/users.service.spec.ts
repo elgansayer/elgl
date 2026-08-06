@@ -210,6 +210,39 @@ describe('UsersService', () => {
       );
     });
 
+    it('should throw BadRequestException when non-VIP tries to set custom primary accent colour', async () => {
+      const dto = { primary_accent_color: '#ff0000' };
+
+      await expect(service.updateProfile('user-1', dto, false)).rejects.toThrow(
+        new BadRequestException(
+          'Custom primary accent colours require a VIP subscription (8 UKP / $10 USD per month).',
+        ),
+      );
+    });
+
+    it('should allow VIP to set custom primary accent colour', async () => {
+      const dto = { primary_accent_color: '#ff0000' };
+
+      const updateBuilder = {
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      };
+      const fromBuilder = { update: jest.fn().mockReturnValue(updateBuilder) };
+      mockSupabaseClient.from.mockReturnValue(fromBuilder as any);
+      jest
+        .spyOn(service, 'getProfile')
+        .mockResolvedValue({ id: 'user-1' } as any);
+
+      const result = await service.updateProfile('user-1', dto, true);
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
+      expect(fromBuilder.update).toHaveBeenCalledWith(
+        expect.objectContaining({ primary_accent_color: '#ff0000' }),
+      );
+      expect(result).toEqual(
+        expect.objectContaining({ primary_accent_color: '#ff0000' }),
+      );
+    });
+
     it('should update profile successfully with all possible fields for a VIP user', async () => {
       const dto = {
         display_name: 'Updated Name',

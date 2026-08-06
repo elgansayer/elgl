@@ -81,6 +81,14 @@ export const routes: Routes = [
     title: 'Groups Discovery - HelloTalk',
   },
   {
+    path: 'groups/create',
+    loadComponent: () =>
+      import('./components/create-group/create-group.component').then(
+        (m) => m.CreateGroupComponent,
+      ),
+    title: 'Create Group - HelloTalk',
+  },
+  {
     path: 'communities',
     loadComponent: () =>
       import('./components/communities/communities.component').then(
@@ -163,6 +171,14 @@ export const routes: Routes = [
         (m) => m.NotificationCustomizationComponent,
       ),
     title: 'Notification Customisation - HelloTalk',
+  },
+  {
+    path: 'settings/appearance',
+    loadComponent: () =>
+      import('./pages/settings/appearance-settings/appearance-settings.component').then(
+        (m) => m.AppearanceSettingsComponent,
+      ),
+    title: 'Appearance - HelloTalk',
   },
   {
     path: 'settings/backup-restore',

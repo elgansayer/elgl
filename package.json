@@ -28,12 +28,13 @@
   },
   "dependencies": {
     "@ngx-translate/core": "^15.0.0",
-    "@ngx-translate/http-loader": "^8.0.0"
+    "@ngx-translate/http-loader": "^8.0.0",
+    "xss": "^1.0.15"
   },
   "devDependencies": {
     "husky": "^9.1.7",
-    "prettier": "^3.3.3",
-    "lint-staged": "^15.2.10"
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3"
   },
   "lint-staged": {
     "*.{js,ts,html,css,scss,json,md,mdx,yaml,yml}": [

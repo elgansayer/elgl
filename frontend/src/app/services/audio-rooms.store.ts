@@ -41,6 +41,34 @@ export interface AudioRoomRecord {
   };
 }
 
+export interface StageParticipant {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  isSpeaking: boolean;
+  isMuted: boolean;
+  isHost: boolean;
+  isCoHost: boolean;
+}
+
+export interface StageInfo {
+  room_id: string;
+  room_name: string;
+  host: {
+    id: string;
+    display_name: string;
+    avatar_url: string | null;
+  } | null;
+  co_host_id: string | null;
+  speakers: Array<{
+    user_id: string;
+    display_name: string;
+    avatar_url: string | null;
+  }>;
+  raised_hands: string[];
+  listeners_count: number;
+}
+
 export interface CaptionRecord {
   id: string;
   room_id: string;
@@ -200,6 +228,9 @@ private findRemoteVideoTrack(userId: string): RemoteVideoTrack | null {
     this.currentRoom.set(room);
     this.captions.set([]);
     this.roomMessages.set([]);
+
+    // Load stage info for full speaker/listener details
+    void this.loadStage(room.id);
 
     // Fetch token
     try {
@@ -604,6 +635,7 @@ private findRemoteVideoTrack(userId: string): RemoteVideoTrack | null {
     this.isConnectedToLiveKit.set(false);
     this.currentRoom.set(null);
     this.isSpeaker.set(false);
+    this.stageInfo.set(null);
     this.localVideoTrack.set(null);
     this.remoteVideoTracksByIdentity.set(new Map());
   }

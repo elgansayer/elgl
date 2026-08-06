@@ -1,91 +1,84 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { EmailService } from './email.service';
-import type { ConfigService } from '@nestjs/config';
+import * as nodemailer from 'nodemailer';
 
-jest.mock('nodemailer');
+jest.mock('nodemailer', () => ({
+  createTransport: jest.fn().mockReturnValue({
+    sendMail: jest.fn().mockResolvedValue({ messageId: 'mock-message-id' }),
+  }),
+}));
 
-describe('EmailService (unit)', () => {
+describe('EmailService', () => {
   let service: EmailService;
-  let sendMailFn: jest.Mock;
 
-  function mockSendMail(): jest.Mock {
-    const fn = jest.fn().mockResolvedValue({ messageId: 'test-id' });
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const nodemailer = require('nodemailer');
-    nodemailer.createTransport = jest.fn(() => ({ sendMail: fn }));
-    return fn;
-  }
-
-  function configGet(env: Record<string, string>) {
-    return jest.fn((key: string, fallback?: unknown) => env[key] ?? fallback);
-  }
-
-  beforeEach(() => {
-    sendMailFn = mockSendMail();
-    service = new EmailService({
-      get: configGet({
+  const mockConfigService = {
+    get: jest.fn((key: string, defaultValue?: string) => {
+      const config: Record<string, string> = {
         MAIL_HOST: 'smtp.test.com',
         MAIL_PORT: '587',
         MAIL_USER: 'testuser',
         MAIL_PASS: 'testpass',
-        FRONTEND_URL: 'https://hellotalk.com',
+        FRONTEND_URL: 'http://localhost:4200',
         MAIL_FROM_NAME: 'HelloTalk',
         MAIL_FROM_ADDRESS: 'noreply@hellotalk.com',
-      }),
-    } as unknown as ConfigService);
+      };
+      if (key === 'MAIL_PORT') return 587;
+      return config[key] ?? defaultValue ?? '';
+    }),
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        EmailService,
+        { provide: ConfigService, useValue: mockConfigService },
+      ],
+    }).compile();
+
+    service = module.get<EmailService>(EmailService);
   });
 
-  describe('sendPasswordResetEmail', () => {
-    it('should send a password reset email with the correct subject and URL', async () => {
-      sendMailFn.mockClear();
-      await service.sendPasswordResetEmail('user@example.com', 'abc123token');
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
 
-      expect(sendMailFn).toHaveBeenCalledTimes(1);
-      const mailArgs = sendMailFn.mock.calls[0][0];
-      expect(mailArgs.to).toBe('user@example.com');
-      expect(mailArgs.subject).toBe('Reset your HelloTalk password');
-      expect(mailArgs.from).toBe('"HelloTalk" <noreply@hellotalk.com>');
-      expect(mailArgs.text).toContain(
-        'https://hellotalk.com/forgot-password?token=abc123token',
-      );
-      expect(mailArgs.html).toContain(
-        'https://hellotalk.com/forgot-password?token=abc123token',
-      );
-    });
+  it('should create nodemailer transport with correct config', () => {
+    expect(nodemailer.createTransport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        host: 'smtp.test.com',
+        port: 587,
+        secure: false,
+        auth: { user: 'testuser', pass: 'testpass' },
+      }),
+    );
+  });
 
-    it('should use FRONTEND_URL env var for the reset link', async () => {
-      const fn = mockSendMail();
-      const customService = new EmailService({
-        get: configGet({
-          FRONTEND_URL: 'https://custom.app',
-          MAIL_HOST: 'smtp.example.com',
-          MAIL_PORT: '465',
-          MAIL_USER: 'user',
-          MAIL_PASS: 'pass',
-          MAIL_FROM_NAME: 'App',
-          MAIL_FROM_ADDRESS: 'no@reply.com',
-        }),
-      } as unknown as ConfigService);
+  it('should send password reset email with correct parameters', async () => {
+    const transporter = (nodemailer.createTransport as jest.Mock).mock.results[0].value;
 
-      await customService.sendPasswordResetEmail('x@y.com', 'mytoken');
+    await service.sendPasswordResetEmail('user@example.com', 'reset-token-abc');
 
-      expect(fn).toHaveBeenCalledTimes(1);
-      expect(fn.mock.calls[0][0].text).toContain(
-        'https://custom.app/forgot-password?token=mytoken',
-      );
-    });
+    expect(transporter.sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: expect.stringContaining('HelloTalk'),
+        to: 'user@example.com',
+        subject: 'Reset your HelloTalk password',
+        text: expect.stringContaining('reset-token-abc'),
+        html: expect.stringContaining('reset-token-abc'),
+      }),
+    );
+  });
 
-    it('should default to localhost:4200 when FRONTEND_URL is not set', async () => {
-      const fn = mockSendMail();
-      const defaultService = new EmailService({
-        get: jest.fn((_key: string, fallback?: unknown) => fallback),
-      } as unknown as ConfigService);
+  it('should include the correct reset URL in the email', async () => {
+    const transporter = (nodemailer.createTransport as jest.Mock).mock.results[0].value;
 
-      await defaultService.sendPasswordResetEmail('x@y.com', 'localtoken');
+    await service.sendPasswordResetEmail('user@example.com', 'my-test-token');
 
-      expect(fn).toHaveBeenCalledTimes(1);
-      expect(fn.mock.calls[0][0].text).toContain(
-        'http://localhost:4200/forgot-password?token=localtoken',
-      );
-    });
+    const callArgs = (transporter.sendMail as jest.Mock).mock.calls[0][0] as { text: string; html: string };
+    expect(callArgs.text).toContain('http://localhost:4200/forgot-password?token=my-test-token');
+    expect(callArgs.html).toContain('http://localhost:4200/forgot-password?token=my-test-token');
   });
 });

@@ -18,6 +18,8 @@ import {
   VoiceroomCreateModalComponent,
   VoiceroomCreatePayload,
 } from '../voiceroom-create-modal/voiceroom-create-modal.component';
+import { QuickPollFormComponent } from './quick-poll-form.component';
+import { QuickPollDisplayComponent } from './quick-poll-display.component';
 
 @Component({
   selector: 'app-audio-room',
@@ -29,6 +31,8 @@ import {
     TrustSafetyModalComponent,
     VoiceroomCreateModalComponent,
     AudioEqualizerComponent,
+    QuickPollFormComponent,
+    QuickPollDisplayComponent,
   ],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],
