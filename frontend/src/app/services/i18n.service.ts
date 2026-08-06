@@ -251,6 +251,8 @@ export class I18nService {
     'discovery.langNorwegian': 'Norwegian',
     'discovery.seriousModeToggle': 'Serious Learner Mode',
     'discovery.seriousModeDesc': 'Hide social feeds and prioritise 1-on-1 matching',
+    'discovery.voiceRoomActiveToggle': 'Voice Room Active',
+    'discovery.voiceRoomActiveDesc': 'Show only users currently hosting voice room streams',
     'discovery.bannerPaid': 'Unlock Paid Practice',
     'discovery.bannerDesc': 'Get 1-on-1 native practice',
     'discovery.bannerView': 'View VIP',
