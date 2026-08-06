@@ -122,28 +122,20 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
         const userIds = rsvpsByEventId.get(event.id);
         if (!userIds) continue;
 
-<<<<<<< HEAD
-        if (rsvpError) {
-          this.logger.warn(
-            `Could not fetch RSVPs for event ${event.id}`,
-            rsvpError,
-          );
-          continue;
-        }
-
-        if (!rsvps) continue;
-
-        const userIds = rsvps.map((rsvp) => rsvp.user_id);
-        if (userIds.length > 0) {
-          await this.sendRemindersBatch(event.id, event.title, userIds);
-=======
-        for (const userId of userIds) {
-          await this.sendReminder(event.id, event.title, userId);
->>>>>>> origin/main
-        }
+        await this.processEventReminders(event.id, event.title, userIds);
       }
     } catch (err) {
       this.logger.error('Unexpected error in checkReminders', err);
+    }
+  }
+
+  private async processEventReminders(
+    eventId: string,
+    eventTitle: string,
+    userIds: string[],
+  ): Promise<void> {
+    if (userIds.length > 0) {
+      await this.sendRemindersBatch(eventId, eventTitle, userIds);
     }
   }
 
