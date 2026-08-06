@@ -70,7 +70,7 @@ export type UsersRow = {
   serious_learner_mode?: boolean | null;
   notification_preferences?: Record<string, unknown> | null;
   language_levels?: Record<string, string> | null;
-  chat_preferences?: unknown | null;
+  chat_preferences?: Record<string, unknown> | null;
   developer_api_key?: string | null;
   deletion_requested_at?: string | null;
   deletion_grace_days?: number | null;
@@ -1705,14 +1705,14 @@ export interface Database {
         };
         Returns: unknown[];
       };
-      };
-      location_shares: {
-        Row: LocationShareRow;
-        Insert: Partial<LocationShareRow>;
-        Update: Partial<LocationShareRow>;
-        Relationships: [];
-      };
     };
+    location_shares: {
+      Row: LocationShareRow;
+      Insert: Partial<LocationShareRow>;
+      Update: Partial<LocationShareRow>;
+      Relationships: [];
+    };
+  };
 }
 
 @Injectable()
