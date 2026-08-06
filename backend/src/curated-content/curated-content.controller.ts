@@ -1,7 +1,9 @@
-import { Controller, Get, Param, Post, Body, Query } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body, Query, UseGuards } from '@nestjs/common';
 import { CuratedContentService } from './curated-content.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { CreateDialogueDto } from './dto/create-dialogue.dto';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { AdminGuard } from '../admin/guards/admin.guard';
 
 @Controller('curated-content')
 export class CuratedContentController {
@@ -21,6 +23,7 @@ export class CuratedContentController {
   }
 
   @Post('articles')
+  @UseGuards(SupabaseAuthGuard, AdminGuard)
   async createArticle(@Body() dto: CreateArticleDto) {
     return this.service.createArticle(dto);
   }
@@ -39,6 +42,7 @@ export class CuratedContentController {
   }
 
   @Post('dialogues')
+  @UseGuards(SupabaseAuthGuard, AdminGuard)
   async createDialogue(@Body() dto: CreateDialogueDto) {
     return this.service.createDialogue(dto);
   }
