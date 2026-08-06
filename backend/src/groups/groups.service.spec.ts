@@ -153,7 +153,50 @@ describe('GroupsService', () => {
       eq: jest.fn().mockReturnThis(),
       maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
     };
-    const memberCountBuilder = {
+    const groupMaxBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: { max_members: 2 }, error: null }),
+    };
+    const userExistsBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'member-9' }, error: null }),
+    };
+    const noMembershipBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    const groupMaxBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: { max_members: 2 }, error: null }),
+    };
+    const userExistsBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'member-9' }, error: null }),
+    };
+    const noMembershipBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    // user check
+    const userBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'member-9' }, error: null }),
+    };
+    // membership check: not already a member
+    const membershipCheckBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    // count check: already at 2 (max)
+    const countBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockResolvedValue({ count: 2, error: null }),
     };
