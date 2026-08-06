@@ -13,7 +13,7 @@ describe('PasswordResetService', () => {
   };
   let mockEmailService: { sendPasswordResetEmail: jest.Mock };
 
-  function createMockQB() {
+  function _createMockQB() {
     const qb: Record<string, jest.Mock> = {};
     const methods = ['select', 'eq', 'single', 'insert', 'update'];
     for (const m of methods) {

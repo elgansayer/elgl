@@ -5,7 +5,11 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
-import { SupabaseService, type GroupsRow, type CommunityRow } from '../supabase/supabase.service';
+import {
+  SupabaseService,
+  type GroupsRow,
+  type CommunityRow,
+} from '../supabase/supabase.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { InterestsService } from '../interests/interests.service';
 import { UpdateGroupSettingsDto } from './dto/update-group-settings.dto';
