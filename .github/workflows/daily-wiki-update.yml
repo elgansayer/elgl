@@ -23,9 +23,10 @@ jobs:
           python-version: '3.10'
 
       - name: Checkout Wiki Repository
-        run: |
-          # Use the provided Personal Access Token to clone the wiki
-          git clone https://x-access-token:${{ secrets.WIKI_SYNC_TOKEN }}@github.com/${{ github.repository }}.wiki.git wiki-repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki-repo
 
       - name: Generate Wiki and README
         env:
