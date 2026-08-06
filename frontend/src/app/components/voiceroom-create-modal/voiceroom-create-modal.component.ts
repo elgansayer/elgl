@@ -1,6 +1,7 @@
-import { Component, output, signal } from '@angular/core';
+import { Component, output, signal, computed, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
 
 export interface VoiceroomCreatePayload {
   title: string;
@@ -8,6 +9,38 @@ export interface VoiceroomCreatePayload {
   topicTag: string;
   isVideoStream: boolean;
 }
+
+export interface LanguagePairOption {
+  value: string;
+  primaryLanguage: string;
+  secondaryLanguage: string;
+}
+
+const COMMON_LANGUAGE_PAIRS: LanguagePairOption[] = [
+  { value: 'en-es', primaryLanguage: 'English', secondaryLanguage: 'Spanish' },
+  { value: 'en-fr', primaryLanguage: 'English', secondaryLanguage: 'French' },
+  { value: 'en-ja', primaryLanguage: 'English', secondaryLanguage: 'Japanese' },
+  { value: 'en-ko', primaryLanguage: 'English', secondaryLanguage: 'Korean' },
+  { value: 'en-de', primaryLanguage: 'English', secondaryLanguage: 'German' },
+  { value: 'en-it', primaryLanguage: 'English', secondaryLanguage: 'Italian' },
+  { value: 'en-pt', primaryLanguage: 'English', secondaryLanguage: 'Portuguese' },
+  { value: 'en-zh', primaryLanguage: 'English', secondaryLanguage: 'Mandarin Chinese' },
+  { value: 'en-ar', primaryLanguage: 'English', secondaryLanguage: 'Arabic' },
+  { value: 'en-ru', primaryLanguage: 'English', secondaryLanguage: 'Russian' },
+  { value: 'ar-en', primaryLanguage: 'Arabic', secondaryLanguage: 'English' },
+  { value: 'es-en', primaryLanguage: 'Spanish', secondaryLanguage: 'English' },
+  { value: 'fr-en', primaryLanguage: 'French', secondaryLanguage: 'English' },
+  { value: 'ja-en', primaryLanguage: 'Japanese', secondaryLanguage: 'English' },
+];
+
+const TOPIC_TAGS = [
+  'Pronunciation',
+  'Beginners',
+  'CulturalExchange',
+  'GrammarHelp',
+  'FreeTalk',
+  'BusinessEnglish',
+];
 
 @Component({
   selector: 'app-voiceroom-create-modal',
@@ -25,7 +58,7 @@ export interface VoiceroomCreatePayload {
           <button
             (click)="closeModal()"
             class="text-slate-400 hover:text-slate-200 transition-colors p-2 rounded-full hover:bg-slate-800"
-            aria-label="Close"
+            [attr.aria-label]="'common.close' | t"
           >
             ✕
           </button>
@@ -60,10 +93,11 @@ export interface VoiceroomCreatePayload {
               [(ngModel)]="languagePair"
               class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all appearance-none"
             >
-              <option value="en-es">English ↔ Spanish</option>
-              <option value="en-fr">English ↔ French</option>
-              <option value="en-ja">English ↔ Japanese</option>
-              <option value="ar-en">Arabic ↔ English</option>
+              @for (pair of languagePairs; track pair.value) {
+                <option [value]="pair.value">
+                  {{ pair.primaryLanguage }} ↔ {{ pair.secondaryLanguage }}
+                </option>
+              }
             </select>
           </div>
 
@@ -77,14 +111,11 @@ export interface VoiceroomCreatePayload {
               [(ngModel)]="topicTag"
               class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all appearance-none"
             >
-              <option value="Pronunciation">{{ 'audioRoom.topic.Pronunciation' | t }}</option>
-              <option value="Beginners">{{ 'audioRoom.topic.Beginners' | t }}</option>
-              <option value="Cultural Exchange">
-                {{ 'audioRoom.topic.CulturalExchange' | t }}
-              </option>
-              <option value="Grammar Help">{{ 'audioRoom.topic.GrammarHelp' | t }}</option>
-              <option value="Free Talk">{{ 'audioRoom.topic.FreeTalk' | t }}</option>
-              <option value="Business English">{{ 'audioRoom.topic.BusinessEnglish' | t }}</option>
+              @for (topic of topics; track topic) {
+                <option [value]="topic">
+                  {{ 'audioRoom.topic.' + topic | t }}
+                </option>
+              }
             </select>
           </div>
 
@@ -127,9 +158,12 @@ export class VoiceroomCreateModalComponent {
   readonly closed = output<void>();
   readonly created = output<VoiceroomCreatePayload>();
 
+  readonly languagePairs: LanguagePairOption[] = COMMON_LANGUAGE_PAIRS;
+  readonly topics: string[] = TOPIC_TAGS;
+
   title = signal<string>('');
   languagePair = signal<string>('en-es');
-  topicTag = signal<string>('Free Talk');
+  topicTag = signal<string>('FreeTalk');
   isVideoStream = signal<boolean>(false);
 
   isValid(): boolean {
@@ -159,7 +193,7 @@ export class VoiceroomCreateModalComponent {
   private resetForm(): void {
     this.title.set('');
     this.languagePair.set('en-es');
-    this.topicTag.set('Free Talk');
+    this.topicTag.set('FreeTalk');
     this.isVideoStream.set(false);
   }
 }
