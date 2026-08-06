@@ -370,6 +370,14 @@ export const routes: Routes = [
     title: 'Shop - HelloTalk',
   },
   {
+    path: 'sticker-store',
+    loadComponent: () =>
+      import('./components/sticker-store/sticker-store.component').then(
+        (m) => m.StickerStoreComponent,
+      ),
+    title: 'Sticker Store - HelloTalk',
+  },
+  {
     path: 'cart',
     loadComponent: () =>
       import('./components/cart/cart.component').then((m) => m.CartComponent),
