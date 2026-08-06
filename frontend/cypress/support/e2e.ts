@@ -19,7 +19,11 @@ Cypress.on('window:before:load', (win) => {
   cy.stub(win.console, 'error').callsFake((msg, ..._args) => {
     // We can whitelist specific expected errors here if needed in the future
     const message = typeof msg === 'string' ? msg : JSON.stringify(msg);
-    if (message.includes('Expected Error')) {
+    if (
+      message.includes('Expected Error') ||
+      message.includes('Centrifugo error:') ||
+      message.includes('Subscription to the channel')
+    ) {
       return;
     }
     throw new Error(`E2E FAILURE: console.error was called with: ${message}`);

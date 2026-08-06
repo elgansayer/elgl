@@ -1,9 +1,11 @@
 <div class="min-h-screen bg-surface-50">
-  <header class="sticky top-0 z-10 flex items-center justify-between bg-surface-100 ps-4 pe-4 pt-4 pb-4 border-b border-surface-200">
+  <header
+    class="sticky top-0 z-10 flex items-center justify-between bg-surface-100 ps-4 pe-4 pt-4 pb-4 border-b border-surface-200"
+  >
     <div class="flex items-center gap-3">
       <button
         (click)="goBack()"
-        class="p-2 -ml-2 rounded-full hover:bg-surface-200 transition-colors"
+        class="p-2 -ms-2 rounded-full hover:bg-surface-200 transition-colors"
         aria-label="Go back"
       >
         <span class="text-xl">←</span>
@@ -22,7 +24,9 @@
     }
 
     @if (successMessage()) {
-      <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-xl text-sm mb-6">
+      <div
+        class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-xl text-sm mb-6"
+      >
         {{ successMessage() }}
       </div>
     }
@@ -32,7 +36,6 @@
         <span class="text-text-secondary">{{ 'common.loading' | t }}</span>
       </div>
     } @else {
-
       <section class="space-y-4">
         <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
           {{ 'settings.fontSize' | t }}

@@ -97,7 +97,7 @@ export class QuestsService {
 
   private async ensureDefaults(userId: string): Promise<void> {
     const defaultQuests: Array<{
-  quest_type: string;
+      quest_type: string;
       quest_key: string;
       target: number;
       reward_coins: number;

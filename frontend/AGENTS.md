@@ -63,7 +63,6 @@ In addition to the Angular and TypeScript best practices above, you must adhere 
 
 - **British English:** Always use British English spelling (`colour`, `favourite`, `monetisation`, `tokenise`, etc.).
 - **Banned Punctuation:** Never use an em dash in code, comments, or documentation. Use standard hyphens or colons instead.
-- **Monetary Display:** Always display both currencies (`8 UKP / $10 USD`).
 - **Globalisation, RTL & Zero Hard-Coded Strings:** Support ANY language with 0 hard-coded UI strings. Never write raw hard-coded text inside Angular templates (`*.html`) or component code (`*.ts`). Always pipe UI text through `TranslatePipe` (`{{ 'key' | t }}`) and use `I18nService.translate('key', params)` inside code (`src/app/services/i18n.service.ts`). Use native `Intl.Segmenter` for word tokenisation and strictly use Tailwind logical properties (`ps-4`, `me-2`, `border-s`) for RTL layout compatibility.
 - **API First:** Never connect Angular directly to the database; every request must route through NestJS REST API or Centrifugo WebSockets.
 - **Verification & Test Visiting:** Always run `npm run lint` and `npm test -- --watch=false` and verify no compiler errors or test failures exist before marking tasks complete. Whenever inspecting, adding, or modifying frontend code or components, you must ALWAYS simultaneously open, review, and update/add the associated `.spec.ts` test files. Every UI primitive and feature component must have exhaustive unit tests verifying Signal reactivity, host class bindings, and accessibility.

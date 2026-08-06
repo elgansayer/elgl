@@ -44,21 +44,27 @@ export class UnreadCounterService {
 
   private updateAppBadge(count: number): void {
     if (typeof navigator !== 'undefined') {
-      if (count > 0 && 'setAppBadge' in navigator) {
-        // eslint-disable-next-line no-restricted-syntax
-        (navigator as unknown as { setAppBadge: (c: number) => Promise<void> })
-          .setAppBadge(count)
-          .catch((error: unknown) => {
-            console.error('Failed to set app badge:', error);
-          });
-      } else if (count === 0 && 'clearAppBadge' in navigator) {
-        // eslint-disable-next-line no-restricted-syntax
-        (navigator as unknown as { clearAppBadge: () => Promise<void> })
-          .clearAppBadge()
-          .catch((error: unknown) => {
-            console.error('Failed to clear app badge:', error);
-          });
+      if (count > 0 && this.hasSetAppBadge(navigator)) {
+        navigator.setAppBadge(count).catch((error: unknown) => {
+          console.error('Failed to set app badge:', error);
+        });
+      } else if (count === 0 && this.hasClearAppBadge(navigator)) {
+        navigator.clearAppBadge().catch((error: unknown) => {
+          console.error('Failed to clear app badge:', error);
+        });
       }
     }
+  }
+
+  private hasSetAppBadge(
+    nav: Navigator,
+  ): nav is Navigator & { setAppBadge: (c: number) => Promise<void> } {
+    return 'setAppBadge' in nav;
+  }
+
+  private hasClearAppBadge(
+    nav: Navigator,
+  ): nav is Navigator & { clearAppBadge: () => Promise<void> } {
+    return 'clearAppBadge' in nav;
   }
 }
