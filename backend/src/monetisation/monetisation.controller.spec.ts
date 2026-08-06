@@ -105,20 +105,16 @@ describe('MonetisationController', () => {
   });
 
   describe('handleGoogleWebhook', () => {
-    it('should pass webhook payload and authorization header to service', async () => {
+    it('should pass webhook payload to service', async () => {
       const payload = { version: '1.0' };
       const response = { received: true, status: 'processed' };
       (
         monetisationService.handleGoogleNotification as jest.Mock
       ).mockResolvedValue(response);
 
-      const result = await controller.handleGoogleWebhook(
-        payload,
-        'Bearer google-oidc-token',
-      );
+      const result = await controller.handleGoogleWebhook(payload);
       expect(monetisationService.handleGoogleNotification).toHaveBeenCalledWith(
         payload,
-        'Bearer google-oidc-token',
       );
       expect(result).toEqual(response);
     });

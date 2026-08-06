@@ -58,7 +58,7 @@ export class MomentsStore {
   private baseUrl = `${environment.apiUrl}/moments`;
 
   readonly feed = signal<MomentRecord[]>([]);
-  readonly activeFilter = signal<'All' | 'Classmates' | 'Following'>('All');
+  readonly activeFilter = signal<'All' | 'Classmates' | 'Following' | 'For You'>('All');
   readonly isLoading = signal<boolean>(false);
 
   private getHeaders() {
@@ -68,7 +68,7 @@ export class MomentsStore {
     };
   }
 
-  async loadFeed(filter?: 'All' | 'Classmates' | 'Following', lang?: string): Promise<void> {
+  async loadFeed(filter?: 'All' | 'Classmates' | 'Following' | 'For You', lang?: string): Promise<void> {
     const targetFilter = filter ?? this.activeFilter();
     this.activeFilter.set(targetFilter);
     this.isLoading.set(true);
