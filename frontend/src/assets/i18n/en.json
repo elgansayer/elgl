@@ -101,6 +101,7 @@
   "discovery.activeHoursAgo": "Active {{hours}}h ago",
   "discovery.activeYesterday": "Active yesterday",
   "discovery.activeDaysAgo": "Active {{days}}d ago",
+  "discovery.audioIntroFeed.noAudioIntros": "No audio intros available",
   "moments.title": "Moments",
   "moments.subtitle": "Share, correct, and learn in public.",
   "moments.visitorsLink": "👀 Visitors",
