@@ -25,9 +25,11 @@ export class OfflineQueueService {
         resolve();
       };
       request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
-        // eslint-disable-next-line no-restricted-syntax
-        const request = event.target as IDBOpenDBRequest;
-        const db = request.result;
+        const target = event.target;
+        if (!(target instanceof IDBOpenDBRequest)) {
+          return;
+        }
+        const db = target.result;
         if (!db.objectStoreNames.contains(this.storeName)) {
           db.createObjectStore(this.storeName, { keyPath: 'id' });
         }

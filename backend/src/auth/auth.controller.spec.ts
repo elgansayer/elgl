@@ -10,7 +10,7 @@ describe('AuthController (unit)', () => {
     checkTwoFactorStatus: jest.Mock;
   };
 
-  let transferService: {
+  let _transferService: {
     generateTransferToken: jest.Mock;
     consumeTransferToken: jest.Mock;
     swapTokenForSession: jest.Mock;
@@ -24,7 +24,7 @@ describe('AuthController (unit)', () => {
       disableTwoFactor: jest.fn(),
       checkTwoFactorStatus: jest.fn(),
     };
-    transferService = {
+    _transferService = {
       generateTransferToken: jest.fn(),
       consumeTransferToken: jest.fn(),
       swapTokenForSession: jest.fn(),

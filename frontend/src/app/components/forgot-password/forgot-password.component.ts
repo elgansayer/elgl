@@ -6,7 +6,6 @@ import { map } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
-import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-forgot-password',
@@ -15,7 +14,9 @@ import { environment } from '../../../environments/environment';
   template: `
     <div class="min-h-screen flex items-center justify-center bg-surface p-4">
       <div class="max-w-md w-full space-y-6">
-        <h1 class="text-3xl font-bold text-center text-text-primary">{{ 'forgot_password.title' | t }}</h1>
+        <h1 class="text-3xl font-bold text-center text-text-primary">
+          {{ 'forgot_password.title' | t }}
+        </h1>
 
         @if (!tokenQuery()) {
           <form [formGroup]="emailForm" (ngSubmit)="sendResetRequest()" class="space-y-4">
@@ -33,7 +34,7 @@ import { environment } from '../../../environments/environment';
             </div>
 
             @if (sendError()) {
-              <p class="text-error text-sm">{{ (sendError() ?? '') | t }}</p>
+              <p class="text-error text-sm">{{ sendError() ?? '' | t }}</p>
             }
             @if (sendSuccess()) {
               <p class="text-success text-sm">{{ 'forgot_password.sent_message' | t }}</p>
@@ -64,7 +65,7 @@ import { environment } from '../../../environments/environment';
             </div>
 
             @if (resetError()) {
-              <p class="text-error text-sm">{{ (resetError() ?? '') | t }}</p>
+              <p class="text-error text-sm">{{ resetError() ?? '' | t }}</p>
             }
             @if (resetSuccess()) {
               <p class="text-success text-sm">{{ 'forgot_password.reset_success' | t }}</p>
@@ -75,13 +76,17 @@ import { environment } from '../../../environments/environment';
               [disabled]="resetForm.invalid || isResetting()"
               class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-accent hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
             >
-              {{ (isResetting() ? 'forgot_password.resetting' : 'forgot_password.reset_button') | t }}
+              {{
+                (isResetting() ? 'forgot_password.resetting' : 'forgot_password.reset_button') | t
+              }}
             </button>
           </form>
         }
 
         <div class="text-center">
-          <a routerLink="/home" class="text-sm text-text-secondary hover:underline">{{ 'forgot_password.back_to_home' | t }}</a>
+          <a routerLink="/home" class="text-sm text-text-secondary hover:underline">{{
+            'forgot_password.back_to_home' | t
+          }}</a>
         </div>
       </div>
     </div>

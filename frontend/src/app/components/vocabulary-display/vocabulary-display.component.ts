@@ -1,6 +1,9 @@
 import { Component, inject, computed } from '@angular/core';
 
 import { HobbyTagsStore } from '../../services/hobby-tags.store';
+import { FlashcardService } from '../../services/flashcard.service';
+import { showToast, showErrorToast } from '../../services/toast.service';
+
 
 @Component({
   selector: 'app-vocabulary-display',
@@ -62,7 +65,10 @@ import { HobbyTagsStore } from '../../services/hobby-tags.store';
   `,
 })
 export class VocabularyDisplayComponent {
+
   private readonly store = inject(HobbyTagsStore);
+  private readonly flashcardService = inject(FlashcardService);
+
 
   readonly loading = computed(() => this.store.loading());
   readonly vocabularyByTag = computed(() => this.store.vocabularyByTag());
@@ -89,7 +95,18 @@ export class VocabularyDisplayComponent {
     return this.tagIconMap().get(tagName) || '🏷️';
   }
 
-  addToFlashcards(_item: { word: string; translation: string; hobbyTagName: string }): void {
-    // TODO: Implement flashcard functionality
+  async addToFlashcards(item: { word: string; translation: string; hobbyTagName: string }): Promise<void> {
+    try {
+      await this.flashcardService.createFlashcard({
+        word: item.word,
+        sourceLanguage: 'en', // default for now, could be passed or inferred
+        contextSentence: `Vocabulary from hobby: ${item.hobbyTagName}`,
+        translation: item.translation
+      });
+      showToast('Added to flashcards successfully', 'success');
+    } catch (error) {
+      console.error('Failed to add to flashcards:', error);
+      showErrorToast('Failed to add to flashcards');
+    }
   }
 }

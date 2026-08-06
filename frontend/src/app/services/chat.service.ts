@@ -305,6 +305,9 @@ export class ChatService {
   }
 
   async getMessages(roomId: string, search?: string): Promise<ChatMessage[]> {
+    if (!this.authService.getAccessToken()) {
+      return [];
+    }
     let params = new HttpParams();
     if (search && search.trim().length > 0) {
       params = params.set('search', search.trim());
