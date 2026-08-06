@@ -156,7 +156,10 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `backend/src/help/dto/help-query.dto.ts`
 - *(No methods found or interface/type definition)*
 
+### `backend/src/scheduled-deletion/scheduled-deletion.service.ts`
+- Methods: `processScheduledDeletions`
 
+### `backend/src/scheduled-deletion/scheduled-deletion.module.ts`
 - *(No methods found or interface/type definition)*
 
 ### `backend/src/daily-tip/daily-tip.service.ts`

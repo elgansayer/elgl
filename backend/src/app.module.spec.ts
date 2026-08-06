@@ -54,6 +54,7 @@ const EXPECTED_MODULE_NAMES = [
   'StudyBuddiesModule',
   'AudioIntroModule',
   'StatsModule',
+  'ScheduledDeletionModule',
   'EventsModule',
   'LessonsModule',
   'LinkPreviewModule',

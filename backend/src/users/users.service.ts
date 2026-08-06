@@ -1193,15 +1193,6 @@ export class UsersService {
       );
     }
 
-    // Delete from auth.users (Supabase Auth)
-    try {
-      await supabase.auth.admin.deleteUser(userId);
-    } catch (authErr) {
-      Logger.warn(
-        `Failed to delete auth user ${userId}: ${(authErr as Error).message}`,
-      );
-    }
-
     // Finally delete the user profile
     const { error: userError } = await supabase
       .from('users')

@@ -2178,15 +2178,5 @@
   "wordModal.saveLearningBtn": "🟡 Save to learning",
   "wordModal.srsStatus": "Spaced repetition status: {{status}}",
   "wordModal.title": "Dictionary Definition",
-  "wordModal.translationLabel": "Translation",
-  "sticker.filterAll": "All",
-  "sticker.filterValue": "Value",
-  "sticker.filterPopular": "Popular",
-  "sticker.filterPremium": "Premium",
-  "stickerStore.title": "Sticker Store",
-  "stickerStore.subtitle": "Unlock expressive sticker packs for your chats",
-  "stickerStore.emptyTitle": "No sticker packs found",
-  "stickerStore.emptyDescription": "Check back later for new sticker packs.",
-  "stickerStore.ownedBadge": "OWNED",
-  "stickerStore.unlocked": "Unlocked"
+  "wordModal.translationLabel": "Translation"
 }
