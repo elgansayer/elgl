@@ -101,7 +101,7 @@ describe('ChatController', () => {
     });
 
     it('should return connection token when user is provided', async () => {
-      const mockToken = 'ws-token';
+      const _mockToken = 'ws-token';
       (chatService.generateConnectionToken as jest.Mock).mockResolvedValue(
         tokenString,
       );

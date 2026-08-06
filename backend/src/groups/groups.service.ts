@@ -5,7 +5,11 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
-import { SupabaseService } from '../supabase/supabase.service';
+import {
+  SupabaseService,
+  type GroupsRow,
+  type CommunityRow,
+} from '../supabase/supabase.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { InterestsService } from '../interests/interests.service';
 import { UpdateGroupSettingsDto } from './dto/update-group-settings.dto';
@@ -87,7 +91,7 @@ export interface GroupResource {
 export interface CommunityRecord {
   id: string;
   name: string;
-  description: string | null;
+  description?: string | null | undefined;
   owner_id: string;
   created_at: string;
 }
@@ -303,7 +307,7 @@ export class GroupsService {
     dto: UpdateGroupSettingsDto,
   ): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    const updates: Record<string, unknown> = {};
+    const updates: Partial<GroupsRow> = {};
     if (dto.can_send_messages !== undefined) {
       updates.can_send_messages = dto.can_send_messages;
     }
@@ -442,19 +446,19 @@ export class GroupsService {
 
   async getGroupInfo(groupId: string): Promise<GroupInfo> {
     const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
+    const { data: rawData, error } = await supabase
       .from('groups')
       .select(
         `id, name, owner_id, community_id, interest_id, max_members, created_at,
         interest:interests(name)`,
       )
       .eq('id', groupId)
-      .returns<GroupInfoRow>()
       .single();
 
-    if (error || !data) {
+    if (error || !rawData) {
       throw new NotFoundException('Group not found');
     }
+    const data = rawData as unknown as GroupInfoRow;
     const interestValue = Array.isArray(data.interest)
       ? (data.interest[0] ?? null)
       : data.interest;
@@ -705,7 +709,7 @@ export class GroupsService {
     updates: { name?: string; description?: string },
   ): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    const patch: Record<string, unknown> = {};
+    const patch: Partial<CommunityRow> = {};
     if (updates.name !== undefined) patch.name = updates.name;
     if (updates.description !== undefined) {
       patch.description = updates.description;

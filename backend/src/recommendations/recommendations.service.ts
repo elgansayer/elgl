@@ -4,14 +4,14 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 export interface RecommendedUserDto {
   id: string;
-  displayName: string | null;
-  avatarUrl: string | null;
-  nativeLanguage: string | null;
-  targetLanguages: string[] | null;
+  displayName: string | null | undefined;
+  avatarUrl: string | null | undefined;
+  nativeLanguage: string | null | undefined;
+  targetLanguages: string[] | null | undefined;
   sharedInterests: number;
-  isSeriousLearner: boolean;
-  studyStreakDays: number;
-  correctionRatio: number;
+  isSeriousLearner: boolean | null | undefined;
+  studyStreakDays: number | null | undefined;
+  correctionRatio: number | null | undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -175,7 +175,7 @@ export class RecommendationsService {
           return b.isSeriousLearner ? 1 : -1;
         }
         // 3. Highest streak days
-        return b.studyStreakDays - a.studyStreakDays;
+        return (b.studyStreakDays ?? 0) - (a.studyStreakDays ?? 0);
       })
       .slice(0, 20);
 

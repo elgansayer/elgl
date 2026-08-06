@@ -144,7 +144,7 @@ export class LinkPreviewService {
     const filter = new xss.FilterXSS({
       whiteList: {}, // Empty whitelist to strip all tags
       stripIgnoreTagBody: ['script', 'style', 'noscript'],
-      stripIgnoreTag: true
+      stripIgnoreTag: true,
     });
     const sanitizedHtml = filter.process(raw);
     const $inner = cheerio.load(`<div>${sanitizedHtml}</div>`);

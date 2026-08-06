@@ -42,7 +42,7 @@ export class FlashcardsService {
     // Award XP for creating a flashcard
     void this.xpService.awardXpForActivity(userId, 'create_flashcard');
 
-    return response.data as Flashcard;
+    return response.data;
   }
 
   async updateSrsLevel(
@@ -81,7 +81,7 @@ export class FlashcardsService {
     // Award XP for reviewing a flashcard
     void this.xpService.awardXpForActivity(userId, 'review_flashcard');
 
-    return response.data as Flashcard;
+    return response.data;
   }
 
   async getFlashcards(userId: string, level?: number): Promise<Flashcard[]> {

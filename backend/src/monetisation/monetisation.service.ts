@@ -18,6 +18,8 @@ import {
 import { AppleNotificationService } from './apple-notification.service';
 import { GooglePlayNotificationService } from './google-play-notification.service';
 import { SubscriptionPlansService } from './services/subscription-plans.service';
+import { AppleNotificationDto } from './dto/apple-notification.dto';
+import { GoogleNotificationDto } from './dto/google-notification.dto';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
 
 export interface UserVipRow {

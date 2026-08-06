@@ -42,15 +42,15 @@ function asString(value: unknown): string | undefined {
 
 interface DeletedAwareMessage extends ChatMessage {
   is_deleted?: boolean;
-  deleted_for_user_ids?: string[];
+  deleted_for_user_ids?: string[] | null;
 }
 
 interface GroupMember {
   user_id: string;
   user?: {
-    display_name?: string;
+    display_name?: string | null;
     avatar_url?: string | null;
-  };
+  } | null;
 }
 
 @Injectable()
@@ -355,7 +355,7 @@ export class ChatService {
                 : '';
 
     // Emit push notification event
-    if (roomMembers && roomMembers.length > 0) {
+    if (receiverId) {
       this.eventEmitter.emit(
         'chat.message',
 
@@ -530,7 +530,7 @@ export class ChatService {
       throw new Error('Message not found');
     }
 
-    const message: ChatMessage = messageResponse.data as ChatMessage;
+    const message = messageResponse.data;
 
     // Store the favourite
     const { error } = await supabase.from('favourites').insert({
@@ -899,13 +899,13 @@ export class ChatService {
         correction_payload: null,
         reply_to_id: null,
         correction_request_payload: null,
-        status_reply_payload: {
+        contact_payload: {
           contact_user_id: contact.id,
           display_name: contact.display_name,
           avatar_url: contact.avatar_url,
         },
         is_view_once: false,
-      })
+      } as Record<string, unknown>)
       .select(
         `
         *,
@@ -1183,6 +1183,10 @@ export class ChatService {
     const roomId = asString(originalMsg.room_id);
     const senderId = asString(originalMsg.sender_id);
     const textContent = asString(originalMsg.text_content);
+
+    if (!roomId) {
+      throw new BadRequestException('Message is missing room identifier');
+    }
 
     const { data: membership } = await supabase
       .from('chat_room_members')
