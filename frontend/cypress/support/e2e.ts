@@ -1,7 +1,7 @@
 import './commands';
 
 // Harden Cypress: Fail tests if any network request returns a 401 or 500+ error
-Cypress.on('window:before:load', () => {
+beforeEach(() => {
   cy.intercept('**/*', (req) => {
     req.on('response', (res) => {
       // 401 Unauthorized or 500+ Server Errors indicate a failure state that shouldn't occur
