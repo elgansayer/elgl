@@ -51,6 +51,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       nativeLangs?: { code: string; level: number }[];
       targetLangs?: { code: string; level: number }[];
       formattedDistance?: string;
+      is_partner_of_week?: boolean;
+      shared_interests?: string[];
     })[]
   >([]);
   readonly isLoading = signal<boolean>(true);

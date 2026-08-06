@@ -85,6 +85,9 @@ export class EconomyStore {
   async loadInitialData(): Promise<void> {
     this.isLoading.set(true);
     try {
+      if (!this.authService.currentUser() || !this.authService.getAccessToken()) {
+        return;
+      }
       const [cat, bal, blocked] = await Promise.all([
         firstValueFrom(
           this.http.get<VirtualGift[]>(`${this.baseUrl}/catalog`, { headers: this.getHeaders() }),
@@ -209,10 +212,7 @@ export class EconomyStore {
     } catch (e: unknown) {
       console.error('Send gift error:', e);
       const message = e instanceof Error ? e.message : String(e);
-      showToast(
-        message ||
-          'Failed to send virtual gift. Ensure you have sufficient coin balance.',
-      );
+      showToast(message || 'Failed to send virtual gift. Ensure you have sufficient coin balance.');
       return false;
     }
   }

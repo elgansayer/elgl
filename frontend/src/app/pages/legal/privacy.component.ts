@@ -1,10 +1,9 @@
 import { Component } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { LegalDocumentViewerComponent, LegalSection } from '../../components/legal-document-viewer/legal-document-viewer.component';
 
 @Component({
   selector: 'app-privacy',
-  imports: [LegalDocumentViewerComponent, DatePipe],
+  imports: [LegalDocumentViewerComponent],
   template: `
     <app-legal-document-viewer
       title="Privacy Policy"

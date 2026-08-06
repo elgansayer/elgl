@@ -189,7 +189,7 @@ export class AppleReceiptValidatorService {
             result.pendingRenewalInfo?.[0]?.autoRenewStatus === '1',
           is_active: isActive,
           updated_at: new Date().toISOString(),
-        },
+        } as unknown as Record<string, unknown>,
         { onConflict: 'original_transaction_id' },
       );
 

@@ -5,8 +5,8 @@ export interface Resource {
   url: string;
   category?: string;
   createdBy: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   type?: string;
   content?: string;
   topic?: string;
