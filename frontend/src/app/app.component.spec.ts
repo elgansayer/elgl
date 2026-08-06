@@ -15,6 +15,7 @@ import { UnreadCounterService } from './services/unread-counter.service';
 import { VersionCheckService } from './services/version-check.service';
 import { FontScaleService } from './services/font-scale.service';
 import { I18nService } from './services/i18n.service';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 describe('AppComponent', () => {
   let component: AppComponent;
@@ -150,18 +151,25 @@ describe('AppComponent', () => {
 
     const payload = {
       type: 'virtual_gift',
+      gift_id: 'gift-1',
+      gift_name: 'Rose',
+      icon: '🌹',
+      cost_coins: 10,
+      coin_value: 10,
+      animation_type: 'confetti',
+      animation_url: '',
+      sender_name: 'Alice',
+    };
+    subscribeCallback?.(payload);
+    expect(economyStoreMock.triggerGiftAnimation).toHaveBeenCalledWith({
       gift: {
         id: 'gift-1',
         name: 'Rose',
         icon: '🌹',
         cost_coins: 10,
         animation_type: 'confetti',
+        animationUrl: undefined,
       },
-      sender_name: 'Alice',
-    };
-    subscribeCallback?.(payload);
-    expect(economyStoreMock.triggerGiftAnimation).toHaveBeenCalledWith({
-      gift: payload.gift,
       sender_name: 'Alice',
       receiver_name: 'You',
     });
