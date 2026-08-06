@@ -1,4 +1,52 @@
 import { ArgumentMetadata } from '@nestjs/common';
+
+// Mock jsdom and dompurify at module level to avoid parsing ESM dependencies
+jest.mock('jsdom', () => ({
+  JSDOM: jest.fn().mockImplementation((_html: string) => ({
+    window: {
+      document: {
+        createElement: jest.fn(),
+        createDocumentFragment: jest.fn(),
+      },
+      Node: {
+        ELEMENT_NODE: 1,
+        TEXT_NODE: 3,
+        DOCUMENT_FRAGMENT_NODE: 11,
+      },
+      NodeFilter: {
+        SHOW_ELEMENT: 1,
+        SHOW_TEXT: 4,
+      },
+    },
+  })),
+}));
+
+// Simple DOMPurify mock that strips dangerous HTML
+const mockSanitize = (dirty: string): string => {
+  if (typeof dirty !== 'string') return dirty;
+  return dirty
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/\s+href\s*=\s*"[^"]*"/gi, (match) => {
+      if (/javascript\s*:/i.test(match)) return '';
+      return match;
+    })
+    .replace(/\s+href\s*=\s*'[^']*'/gi, (match) => {
+      if (/javascript\s*:/i.test(match)) return '';
+      return match;
+    })
+    .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/on\w+\s*=\s*'[^']*'/gi, '');
+};
+
+jest.mock('dompurify', () => {
+  return {
+    __esModule: true,
+    default: jest.fn(() => ({
+      sanitize: mockSanitize,
+    })),
+  };
+});
+
 import { SanitiseHtmlPipe } from './sanitise-html.pipe';
 
 describe('SanitiseHtmlPipe', () => {
