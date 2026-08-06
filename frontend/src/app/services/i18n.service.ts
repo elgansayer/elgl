@@ -988,6 +988,21 @@ export class I18nService {
     'safety.submitReportBtn': 'Submit report',
     'safety.confirmBlockBtn': 'Confirm block',
     'safety.closeBtn': 'Close',
+    'safety.blockManagement.title': '🛡️ Blocked Users',
+    'safety.blockManagement.unblock': 'Unblock',
+    'safety.blockManagement.emptyTitle': 'No blocked users',
+    'safety.blockManagement.emptyDesc': 'When you block someone, they will appear here. Blocked users cannot message you or see your activity.',
+    'safety.blockManagement.loadError': 'Failed to load blocked users',
+    'safety.blockManagement.loadErrorDesc': 'Please check your connection and try again.',
+    'safety.moderation.loadingTitle': 'Loading moderation queue...',
+    'safety.moderation.emptyTitle': 'All clear!',
+    'safety.moderation.emptyDesc': 'There are no reports to review at this time.',
+    'safety.moderation.loadError': 'Failed to load moderation items',
+    'safety.moderation.loadErrorDesc': 'Please try again or contact support if the issue persists.',
+    'safety.categoriesLoading': 'Loading categories...',
+    'safety.categoriesError': 'Could not load report categories',
+
+    'common.retry': 'Retry',
 
     // Virtual Gift Modal
     'giftModal.title': '🎁 Send virtual gift to host',
