@@ -146,7 +146,10 @@ describe('PasswordResetService (unit)', () => {
       });
 
       await expect(
-        service.resetPassword({ token: 'bad-token', newPassword: 'newPass123!' }),
+        service.resetPassword({
+          token: 'bad-token',
+          newPassword: 'newPass123!',
+        }),
       ).rejects.toThrow(UnauthorizedException);
     });
 

@@ -80,13 +80,13 @@ export class LanguageIslandsService {
 
   joinIsland(id: string): Promise<void> {
     return firstValueFrom(
-      this.http.post<void>(`${this.baseUrl}/${id}/join`),
+      this.http.post<void>(`${this.baseUrl}/${id}/join`, {}),
     );
   }
 
   leaveIsland(id: string): Promise<void> {
     return firstValueFrom(
-      this.http.post<void>(`${this.baseUrl}/${id}/leave`),
+      this.http.post<void>(`${this.baseUrl}/${id}/leave`, {}),
     );
   }
 

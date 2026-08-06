@@ -560,6 +560,17 @@ export class ChatService {
     return response.data;
   }
 
+  async deleteFavourite(userId: string, favouriteId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('favourites')
+      .delete()
+      .eq('id', favouriteId)
+      .eq('user_id', userId);
+
+    if (error) throw new Error('Failed to delete favourite');
+  }
+
   async getSuggestedReplies(
     userId: string,
     dto: SuggestedRepliesRequestDto,

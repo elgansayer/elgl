@@ -41,6 +41,34 @@ export interface AudioRoomRecord {
   };
 }
 
+export interface StageParticipant {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  isSpeaking: boolean;
+  isMuted: boolean;
+  isHost: boolean;
+  isCoHost: boolean;
+}
+
+export interface StageInfo {
+  room_id: string;
+  room_name: string;
+  host: {
+    id: string;
+    display_name: string;
+    avatar_url: string | null;
+  } | null;
+  co_host_id: string | null;
+  speakers: Array<{
+    user_id: string;
+    display_name: string;
+    avatar_url: string | null;
+  }>;
+  raised_hands: string[];
+  listeners_count: number;
+}
+
 export interface CaptionRecord {
   id: string;
   room_id: string;
@@ -76,6 +104,46 @@ export class AudioRoomsStore {
   readonly captions = signal<CaptionRecord[]>([]);
   readonly roomMessages = signal<RoomChatMessage[]>([]);
   readonly isLoading = signal<boolean>(false);
+  readonly stageInfo = signal<StageInfo | null>(null);
+
+  readonly stageParticipants = computed<StageParticipant[]>(() => {
+    const info = this.stageInfo();
+    if (!info) return [];
+    const participants: StageParticipant[] = [];
+    // Host first
+    if (info.host) {
+      participants.push({
+        user_id: info.host.id,
+        display_name: info.host.display_name,
+        avatar_url: info.host.avatar_url,
+        isSpeaking: false,
+        isMuted: false,
+        isHost: true,
+        isCoHost: false,
+      });
+    }
+    // Then speakers (excluding host)
+    for (const speaker of info.speakers) {
+      if (speaker.user_id === info.host?.id) continue;
+      participants.push({
+        user_id: speaker.user_id,
+        display_name: speaker.display_name,
+        avatar_url: speaker.avatar_url,
+        isSpeaking: false,
+        isMuted: false,
+        isHost: false,
+        isCoHost: speaker.user_id === info.co_host_id,
+      });
+    }
+    return participants;
+  });
+
+  readonly audienceCount = computed(() => {
+    const info = this.stageInfo();
+    const room = this.currentRoom();
+    if (!info) return room?.listeners_count ?? 0;
+    return Math.max(0, info.listeners_count - this.stageParticipants().length);
+  });
 
   // Split-screen co-host video state
   private readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
@@ -148,6 +216,17 @@ private findRemoteVideoTrack(userId: string): RemoteVideoTrack | null {
     }
   }
 
+  async loadStage(roomId: string): Promise<void> {
+    try {
+      const info = await firstValueFrom(
+        this.http.get<StageInfo>(`${this.baseUrl}/${roomId}/stage`, { headers: this.getHeaders() }),
+      );
+      this.stageInfo.set(info);
+    } catch (e) {
+      console.error('Failed to load stage info:', e);
+    }
+  }
+
   async createRoom(
     title: string,
     languagePair: string,
@@ -175,6 +254,9 @@ private findRemoteVideoTrack(userId: string): RemoteVideoTrack | null {
     this.currentRoom.set(room);
     this.captions.set([]);
     this.roomMessages.set([]);
+
+    // Load stage info for full speaker/listener details
+    void this.loadStage(room.id);
 
     // Fetch token
     try {
@@ -579,6 +661,7 @@ private findRemoteVideoTrack(userId: string): RemoteVideoTrack | null {
     this.isConnectedToLiveKit.set(false);
     this.currentRoom.set(null);
     this.isSpeaker.set(false);
+    this.stageInfo.set(null);
     this.localVideoTrack.set(null);
     this.remoteVideoTracksByIdentity.set(new Map());
   }
