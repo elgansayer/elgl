@@ -1,11 +1,8 @@
-import {
-  Component,
-  inject,
-  OnInit,
-} from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { ChatSettingsService } from '../../services/chat-settings.service';
+import { rxResource } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-chat-settings',
@@ -13,7 +10,7 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
   imports: [CommonModule, TranslatePipe],
   templateUrl: './chat-settings.component.html',
 })
-export class ChatSettingsComponent implements OnInit {
+export class ChatSettingsComponent {
   private settingsService = inject(ChatSettingsService);
 
   readonly autoTranslate = this.settingsService.autoTranslate;
@@ -21,9 +18,9 @@ export class ChatSettingsComponent implements OnInit {
   readonly enterToSend = this.settingsService.enterToSend;
   readonly loaded = this.settingsService.loaded;
 
-  ngOnInit(): void {
-    this.settingsService.loadSettings();
-  }
+  settingsResource = rxResource({
+    loader: () => this.settingsService.loadSettings(),
+  });
 
   toggleAutoTranslate(): void {
     this.settingsService.updateSetting('autoTranslate', !this.autoTranslate());
