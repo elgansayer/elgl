@@ -987,6 +987,7 @@ export class I18nService {
     'safety.cancelBtn': 'Cancel',
     'safety.submitReportBtn': 'Submit report',
     'safety.confirmBlockBtn': 'Confirm block',
+    'safety.closeBtn': 'Close',
 
     // Virtual Gift Modal
     'giftModal.title': '🎁 Send virtual gift to host',
