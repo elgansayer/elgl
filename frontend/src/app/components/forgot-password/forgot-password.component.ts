@@ -4,7 +4,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { AuthService } from '../../services/auth.service';
+import { I18nService } from '../../services/i18n.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-forgot-password',
@@ -30,8 +31,8 @@ import { AuthService } from '../../services/auth.service';
               />
             </div>
 
-            @if (sendError(); as error) {
-              <p class="text-error text-sm">{{ error | t }}</p>
+            @if (sendError()) {
+              <p class="text-error text-sm">{{ (sendError() ?? '') | t }}</p>
             }
             @if (sendSuccess()) {
               <p class="text-success text-sm">{{ 'forgot_password.sent_message' | t }}</p>
@@ -61,8 +62,8 @@ import { AuthService } from '../../services/auth.service';
               />
             </div>
 
-            @if (resetError(); as error) {
-              <p class="text-error text-sm">{{ error | t }}</p>
+            @if (resetError()) {
+              <p class="text-error text-sm">{{ (resetError() ?? '') | t }}</p>
             }
             @if (resetSuccess()) {
               <p class="text-success text-sm">{{ 'forgot_password.reset_success' | t }}</p>
@@ -90,6 +91,7 @@ export class ForgotPasswordComponent {
   private authService = inject(AuthService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private i18n = inject(I18nService);
 
   readonly tokenQuery = toSignal(
     this.route.queryParamMap.pipe(map((params) => params.get('token'))),
@@ -118,13 +120,18 @@ export class ForgotPasswordComponent {
     this.sendSuccess.set(false);
 
     try {
-      await this.authService.requestPasswordReset(this.emailForm.controls.email.value);
+      await lastValueFrom(
+        this.http.post<{ message: string }>(`${environment.apiUrl}/auth/request-password-reset`, { email }),
+      );
       this.isSending.set(false);
       this.sendSuccess.set(true);
     } catch {
       this.sendError.set('forgot_password.send_error');
     } finally {
       this.isSending.set(false);
+      this.sendError.set(
+        this.i18n.translate('forgot_password.send_error'),
+      );
     }
   }
 
@@ -147,6 +154,9 @@ export class ForgotPasswordComponent {
       this.resetError.set('forgot_password.reset_error');
     } finally {
       this.isResetting.set(false);
+      this.resetError.set(
+        this.i18n.translate('forgot_password.reset_error'),
+      );
     }
   }
 }

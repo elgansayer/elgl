@@ -1,21 +1,23 @@
+import { Test, TestingModule } from '@nestjs/testing';
 import { PasswordResetController } from './password-reset.controller';
+import { PasswordResetService } from './password-reset.service';
 
-describe('PasswordResetController (unit)', () => {
+describe('PasswordResetController', () => {
   let controller: PasswordResetController;
-  let resetService: {
-    requestPasswordReset: jest.Mock;
-    resetPassword: jest.Mock;
-  };
+  let mockService: { requestPasswordReset: jest.Mock; resetPassword: jest.Mock };
 
-  beforeEach(() => {
-    resetService = {
-      requestPasswordReset: jest.fn(),
-      resetPassword: jest.fn(),
+  beforeEach(async () => {
+    mockService = {
+      requestPasswordReset: jest.fn().mockResolvedValue(undefined),
+      resetPassword: jest.fn().mockResolvedValue(undefined),
     };
 
-    controller = new (PasswordResetController as any)(
-      resetService,
-    ) as PasswordResetController;
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [PasswordResetController],
+      providers: [{ provide: PasswordResetService, useValue: mockService }],
+    }).compile();
+
+    controller = module.get<PasswordResetController>(PasswordResetController);
   });
 
   describe('requestPasswordReset', () => {

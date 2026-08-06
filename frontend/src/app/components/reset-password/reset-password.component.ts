@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink, ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AuthService } from '../../services/auth.service';
 
@@ -12,22 +12,16 @@ import { AuthService } from '../../services/auth.service';
     <section class="min-h-screen flex items-center justify-center p-4 bg-[#121212]">
       <div class="w-full max-w-md bg-surface text-slate-100 rounded-2xl p-6 shadow-xl">
         <h1 class="text-2xl font-bold mb-6">{{ 'auth.resetPassword.title' | t }}</h1>
-        <form [formGroup]="resetForm" (ngSubmit)="onSubmit()">
-          <label class="block mb-1 text-sm" for="token">{{ 'auth.resetPassword.token' | t }}</label>
-          <input
-            id="token"
-            formControlName="token"
-            required
-            class="w-full p-3 mb-4 bg-white/10 border border-white/20 rounded-lg"
-          />
-          <label class="block mb-1 text-sm" for="newPassword">{{ 'auth.resetPassword.newPassword' | t }}</label>
-          <input
-            id="newPassword"
-            type="password"
-            formControlName="newPassword"
-            required
-            class="w-full p-3 mb-4 bg-white/10 border border-white/20 rounded-lg"
-          />
+        <form [formGroup]="resetForm" (ngSubmit)="onSubmit()" class="space-y-4">
+          <div>
+            <label class="block mb-1 text-sm" for="newPassword">{{ 'auth.resetPassword.newPassword' | t }}</label>
+            <input
+              id="newPassword"
+              type="password"
+              formControlName="newPassword"
+              class="w-full p-3 bg-white/10 border border-white/20 rounded-lg"
+            />
+          </div>
           <button
             type="submit"
             [disabled]="resetForm.invalid || submitting()"
@@ -36,9 +30,9 @@ import { AuthService } from '../../services/auth.service';
             {{ (submitting() ? 'common.pleaseWait' : 'common.submit') | t }}
           </button>
         </form>
-        @if (messageKey()) {
+        @if (messageKey(); as msg) {
           <p class="mt-4 text-sm text-center" [class.text-green-400]="!isError()" [class.text-red-400]="isError()">
-            {{ (messageKey() ?? '') | t }}
+            {{ msg | t }}
           </p>
         }
         <div class="mt-4 text-center">
@@ -49,13 +43,15 @@ import { AuthService } from '../../services/auth.service';
   `,
 })
 export class ResetPasswordComponent {
+  private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private fb = inject(FormBuilder);
 
+  readonly token = signal('');
   readonly submitting = signal(false);
-  readonly messageKey = signal<string>('');
+  readonly messageKey = signal<string | null>(null);
   readonly isError = signal(false);
 
   // Read token from query params on init
@@ -67,15 +63,19 @@ export class ResetPasswordComponent {
     }
   }
 
-  async onSubmit(): Promise<void> {
-    if (this.resetForm.invalid) return;
-    const { token, newPassword } = this.resetForm.getRawValue();
-    if (!token || !newPassword) return;
+  constructor() {
+    const tokenParam = this.route.snapshot.queryParamMap.get('token');
+    if (tokenParam) {
+      this.token.set(tokenParam);
+    }
+  }
 
+  async onSubmit(): Promise<void> {
+    if (this.resetForm.invalid || !this.token()) return;
     this.submitting.set(true);
     this.isError.set(false);
     try {
-      await this.authService.resetPassword(token, newPassword);
+      await this.authService.resetPassword(this.token(), this.resetForm.controls.newPassword.value);
       this.messageKey.set('auth.resetPassword.success');
       this.router.navigate(['/home']);
     } catch {
