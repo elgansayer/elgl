@@ -1,4 +1,4 @@
-import { Component, computed, input, output, signal, effect } from '@angular/core';
+import { Component, input, output, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -9,7 +9,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
   imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <div class="flex flex-col w-full">
-      <label class="text-xs font-semibold text-text-secondary whitespace-nowrap" for="distance-range-slider">
+      <label
+        class="text-xs font-semibold text-text-secondary whitespace-nowrap"
+        for="distance-range-slider"
+      >
         {{ 'discovery.radiusLabel' | t: { radius: currentDistanceKm() } }}
       </label>
       <div class="relative h-8">

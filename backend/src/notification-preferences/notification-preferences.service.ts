@@ -13,7 +13,7 @@ export class NotificationPreferencesService {
     const { data, error } = await supabase
       .from(this.table)
       .select('*')
-      .eq('userId', userId)
+      .eq('user_id', userId)
       .single();
     // Not found case
     if (error && error.code !== 'PGRST116') {
@@ -44,7 +44,11 @@ export class NotificationPreferencesService {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from(this.table)
-      .upsert({ userId, ...changes, updatedAt: new Date().toISOString() })
+      .upsert({
+        user_id: userId,
+        ...changes,
+        updated_at: new Date().toISOString(),
+      })
       .single();
     if (error) throw error;
     return data;
@@ -53,7 +57,7 @@ export class NotificationPreferencesService {
   private getDefaultPreferences(userId: string) {
     const defaultCategory = { push: false, email: false, in_app: true };
     return {
-      userId,
+      user_id: userId,
       new_message: { ...defaultCategory },
       call_invite: { ...defaultCategory },
       moment_like: { ...defaultCategory },
@@ -70,7 +74,7 @@ export class NotificationPreferencesService {
       do_not_disturb: false,
       customToneUrl: null,
       vibrationPattern: null,
-      updatedAt: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
   }
 }

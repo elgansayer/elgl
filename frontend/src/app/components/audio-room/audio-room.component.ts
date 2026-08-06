@@ -49,6 +49,11 @@ export class AudioRoomComponent implements OnInit {
   readonly showPollFormModal = signal<boolean>(false);
   readonly showPollResultsModal = signal<boolean>(false);
   readonly currentPollId = signal<string | null>(null);
+
+  readonly audiencePlaceholderAvatars = computed(() => {
+    const count = this.store.audienceCount();
+    return Array.from({ length: Math.min(count, 8) }, (_, i) => i + 1);
+  });
   readonly pollResults = signal<{
     question: string;
     options: string[];

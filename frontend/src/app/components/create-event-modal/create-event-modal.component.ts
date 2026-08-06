@@ -13,11 +13,13 @@ export interface EventData {
   selector: 'app-create-event-modal',
   imports: [CommonModule, TranslatePipe],
   templateUrl: './create-event-modal.component.html',
-  styles: [`
-    :host {
-      display: block;
-    }
-  `],
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+    `,
+  ],
 })
 export class CreateEventModalComponent {
   isOpen = input<boolean>(false);
@@ -30,19 +32,31 @@ export class CreateEventModalComponent {
   description = signal('');
 
   onTitleChange(event: Event) {
-    this.title.set((event.target as HTMLInputElement).value);
+    const target = event.target;
+    if (target instanceof HTMLInputElement) {
+      this.title.set(target.value);
+    }
   }
 
   onDatetimeChange(event: Event) {
-    this.datetime.set((event.target as HTMLInputElement).value);
+    const target = event.target;
+    if (target instanceof HTMLInputElement) {
+      this.datetime.set(target.value);
+    }
   }
 
   onLocationChange(event: Event) {
-    this.location.set((event.target as HTMLSelectElement).value);
+    const target = event.target;
+    if (target instanceof HTMLSelectElement) {
+      this.location.set(target.value);
+    }
   }
 
   onDescriptionChange(event: Event) {
-    this.description.set((event.target as HTMLTextAreaElement).value);
+    const target = event.target;
+    if (target instanceof HTMLTextAreaElement) {
+      this.description.set(target.value);
+    }
   }
 
   submit() {

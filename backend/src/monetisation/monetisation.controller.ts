@@ -23,6 +23,8 @@ import {
 } from './dto/monetisation.dto';
 import { MonetisationService } from './monetisation.service';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
+import { AppleNotificationDto } from './dto/apple-notification.dto';
+import { GoogleNotificationDto } from './dto/google-notification.dto';
 
 @Controller('monetisation')
 export class MonetisationController {

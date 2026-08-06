@@ -12,7 +12,7 @@ export interface AudioRoomRecord {
   speakers: string[];
   raised_hands: string[];
   listeners_count: number;
-  recording_url: string | null;
+  recording_url?: string | null;
   created_at: string;
   is_private?: boolean;
   invited_user_ids?: string[];

@@ -1220,9 +1220,7 @@ export class AudioRoomsService implements OnModuleInit {
       entry.count = entry.rooms.length;
     }
 
-    return Array.from(groups.values()).sort(
-      (a, b) => b.count - a.count,
-    );
+    return Array.from(groups.values()).sort((a, b) => b.count - a.count);
   }
 
   async createPoll(
@@ -1354,7 +1352,7 @@ export class AudioRoomsService implements OnModuleInit {
         `Failed to add note: ${response.error?.message ?? 'Unknown error'}`,
       );
     }
-    const noteRow = response.data as VoiceRoomNote;
+    const noteRow = response.data;
 
     // Broadcast to room via Centrifugo
     void this.centrifugoService.publish(`room_${room.id}`, {
@@ -1388,7 +1386,7 @@ export class AudioRoomsService implements OnModuleInit {
     if (!noteResponse.data) {
       throw new NotFoundException('Note not found');
     }
-    const note = noteResponse.data as VoiceRoomNote;
+    const note = noteResponse.data;
     const room = await this.getRoom(note.room_id);
     // Only note author or host can delete
     if (note.author_id !== userId && room.host_id !== userId) {
@@ -1496,7 +1494,10 @@ export class AudioRoomsService implements OnModuleInit {
       .range(query.offset ?? 0, (query.offset ?? 0) + (query.limit ?? 20) - 1);
 
     if (query.callType) {
-      supabaseQuery = supabaseQuery.eq('call_type', query.callType);
+      supabaseQuery = supabaseQuery.eq(
+        'call_type',
+        query.callType as 'incoming' | 'outgoing' | 'missed',
+      );
     }
 
     const { data, error } = await supabaseQuery;

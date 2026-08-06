@@ -84,7 +84,7 @@ export class NotificationsService {
           do_not_disturb: preferences.do_not_disturb ?? false,
         },
         updated_at: new Date().toISOString(),
-      },
+      } as Record<string, unknown>,
       { onConflict: 'user_id' },
     );
     if (error) {

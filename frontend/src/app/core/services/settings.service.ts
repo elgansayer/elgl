@@ -3,7 +3,6 @@ import { UserSettings, SocialPrivacySettings } from '../models/settings.model';
 
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
-
   // State
   private state = signal<UserSettings | null>(null);
   private loading = signal<boolean>(false);
@@ -22,7 +21,7 @@ export class SettingsService {
       // Mock API fetch
       const data = await this.mockFetchSettings(userId);
       this.state.set(data);
-    } catch (e) {
+    } catch {
       this.error.set('Failed to load settings');
     } finally {
       this.loading.set(false);
@@ -30,22 +29,22 @@ export class SettingsService {
   }
 
   // Optimistic Update Example
-  async updatePrivacySettings(newSettings: Partial<SocialPrivacySettings>) {
+  async updatePrivacySettings(_newSettings: Partial<SocialPrivacySettings>) {
     const currentState = this.state();
     if (!currentState) return;
 
     // 1. Optimistically update UI
-    this.state.update(state => ({
+    this.state.update((state) => ({
       ...state!,
-      social: { ...state!.social, ...newSettings }
+      social: { ...state!.social, ..._newSettings },
     }));
 
     // 2. Perform API Call
     try {
       // Mock API patch
-      await this.mockPatchPrivacySettings(newSettings);
+      await this.mockPatchPrivacySettings(_newSettings);
       // Success: State is already correct
-    } catch (e) {
+    } catch {
       // 3. Rollback on failure
       this.error.set('Failed to update privacy settings. Reverting.');
       this.state.set(currentState);
@@ -63,7 +62,7 @@ export class SettingsService {
             isEmailVerified: true,
             twoFactorEnabled: true,
             hardwareKeysCount: 1,
-            activeSessions: 3
+            activeSessions: 3,
           },
           profile: {
             bio: 'Learning Japanese and exploring new cultures!',
@@ -72,72 +71,74 @@ export class SettingsService {
               {
                 language: 'Japanese',
                 level: 'Beginner',
-                jlptLevel: 'N5'
-              }
+                jlptLevel: 'N5',
+              },
             ],
             displayKana: true,
             ageFilter: { min: 20, max: 35 },
             distanceRadiusKm: 50,
             matchingPreferences: {
               gender: 'Any',
-              onlyVerified: true
-            }
+              onlyVerified: true,
+            },
           },
           social: {
             profileVisibility: 'Everyone',
             status: 'Online',
             customStatus: {
               emoji: '🌸',
-              text: 'Studying hard!'
+              text: 'Studying hard!',
             },
             readReceipts: true,
             directMessages: {
               allowFromServerMembers: true,
-              imageFilterLevel: 'Blurred'
+              imageFilterLevel: 'Blurred',
             },
             friendRequests: {
               allowFromEveryone: true,
               allowFromFriendsOfFriends: true,
-              allowFromServerMembers: true
-            }
+              allowFromServerMembers: true,
+            },
           },
           preferences: {
             accessibility: {
               textToSpeechEnabled: false,
               screenReaderOptimized: false,
-              reduceMotion: false
+              reduceMotion: false,
             },
             appearance: {
               theme: 'Dark',
               compactMode: false,
-              messageDisplay: 'Cozy'
+              messageDisplay: 'Cozy',
             },
             mediaLinks: {
               inlineImageDisplay: true,
               linkPreviews: true,
-              autoplayGifs: false
-            }
+              autoplayGifs: false,
+            },
           },
           notifications: {
             push: {
               communication: true,
               social: true,
               recommendations: false,
-              updates: false
+              updates: false,
             },
             email: {
               communication: false,
               social: false,
               recommendations: true,
-              updates: true
-            }
-          }
+              updates: true,
+            },
+          },
         });
       }, 500);
     });
   }
 
-  private async mockPatchPrivacySettings(newSettings: Partial<SocialPrivacySettings>): Promise<void> {
+  private async mockPatchPrivacySettings(
+    _newSettings: Partial<SocialPrivacySettings>,
+  ): Promise<void> {
     return new Promise((resolve) => {
       setTimeout(() => resolve(), 500);
     });

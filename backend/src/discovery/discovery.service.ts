@@ -287,7 +287,7 @@ export class DiscoveryService {
         search_lon: searchLon,
         radius_m: query.radius_metres || 50000,
         exclude_user_id: currentUserId,
-        filter_native: query.native_languages || null,
+        filter_native: query.native_languages ? [query.native_languages] : null,
         filter_target: query.target_language || null,
         serious_only: Boolean(query.serious_learner_only),
       })) as unknown as {

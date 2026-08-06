@@ -1,16 +1,16 @@
 export interface AdminUserSummary {
   id: string;
-  display_name?: string;
-  avatar_url?: string;
-  native_languages: string[];
-  target_languages: string[];
-  is_vip: boolean;
-  vip_tier: string;
-  is_admin: boolean;
-  coins_balance: number;
-  study_streak_days: number;
+  display_name?: string | null;
+  avatar_url?: string | null;
+  native_languages?: string[] | null;
+  target_languages?: string[] | null;
+  is_vip?: boolean | null;
+  vip_tier?: string | null;
+  is_admin?: boolean | null;
+  coins_balance?: number | null;
+  study_streak_days?: number | null;
   last_active_at?: string | null;
-  created_at: string;
+  created_at?: string | null;
 }
 
 export interface AdminUserListResult {
