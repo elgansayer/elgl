@@ -1,0 +1,62 @@
+name: Daily Documentation Sync
+
+on:
+  schedule:
+    # Runs at 00:00 UTC every day
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: read
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Checkout Wiki Repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki-repo
+
+      - name: Generate Wiki and README
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # The Python script will fetch issues using the gh CLI and read the AST
+          # It generates the markdown files directly.
+          python3 build_granular_wiki.py
+          python3 generate_wiki.py
+          
+          # We update README features list automatically (if the script does it)
+          # Alternatively, ensure the script writes to the wiki-repo folder
+          
+          # Move all generated files to the wiki repo
+          cp -r /home/runner/work/hellotalk/hellotalk/wiki/* wiki-repo/ || true
+          cp /home/runner/work/hellotalk/hellotalk/Exhaustive-Minute-Feature-List.md wiki-repo/ || true
+
+      - name: Commit and Push Main Repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md wiki/
+          git commit -m "docs: auto-update daily README and wiki cache" || echo "No changes to commit"
+          git push
+
+      - name: Commit and Push Wiki Repository
+        run: |
+          cd wiki-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "docs: daily auto-sync of exhaustive feature list and codebase" || echo "No changes to commit"
+          git push

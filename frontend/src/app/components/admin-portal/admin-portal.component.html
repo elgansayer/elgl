@@ -87,11 +87,11 @@
             <div class="mt-2 ps-4 border-s border-surface-100">
               @if (loginHistoryLoadingId() === user.id) {
                 <p class="text-xs text-text-secondary">{{ 'admin.loginHistoryLoading' | t }}</p>
-              } @else if (loginHistoryFor(user.id).length === 0) {
+              } @else if (!loginHistoryByUser()[user.id] || loginHistoryByUser()[user.id].length === 0) {
                 <p class="text-xs text-text-secondary">{{ 'admin.loginHistoryEmpty' | t }}</p>
               } @else {
                 <ul class="space-y-1">
-                  @for (entry of loginHistoryFor(user.id); track entry.id) {
+                  @for (entry of loginHistoryByUser()[user.id]; track entry.id) {
                     <li class="text-xs text-text-secondary">
                       {{ entry.created_at | date: 'medium' }}
                       @if (entry.ip_address) {
