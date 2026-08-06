@@ -49,11 +49,10 @@ describe('App routes', () => {
     }
   });
 
-  it('should define component for routes with component property', () => {
-    const directRoutes = routes.filter((r) => r.path && r.component);
-    expect(directRoutes.length).toBeGreaterThan(0);
-    for (const r of directRoutes) {
-      expect(r.component).toBeDefined();
+  it('should use loadComponent for all non-redirect routes', () => {
+    const definedRoutes = routes.filter((r) => r.path && r.path !== '');
+    for (const r of definedRoutes) {
+      expect(r.loadComponent || r.redirectTo).toBeDefined();
     }
   });
 
@@ -79,11 +78,12 @@ describe('App routes', () => {
     }
   });
 
-  it('should include milestones component route', () => {
+  it('should include milestones lazy route', () => {
     const milestones = routes.find((r) => r.path === 'milestones');
     expect(milestones).toBeDefined();
     if (milestones) {
-      expect(milestones.component).toBeDefined();
+      expect(milestones.loadComponent).toBeDefined();
+      expect(typeof milestones.loadComponent).toBe('function');
     }
   });
 });

@@ -1,8 +1,5 @@
 import { Routes } from '@angular/router';
-import { DiscoveryComponent } from './components/discovery/discovery.component';
 import { adminGuard } from './guards/admin.guard';
-import { MilestoneComponent } from './components/milestone/milestone.component';
-import { StudyBuddyComponent } from './components/study-buddy/study-buddy.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -26,7 +23,11 @@ export const routes: Routes = [
       ),
     title: 'Business Profile - HelloTalk',
   },
-  { path: 'discovery', component: DiscoveryComponent },
+  {
+    path: 'discovery',
+    loadComponent: () =>
+      import('./components/discovery/discovery.component').then((m) => m.DiscoveryComponent),
+  },
   {
     path: 'proficiency',
     loadComponent: () =>
@@ -463,12 +464,14 @@ export const routes: Routes = [
   },
   {
     path: 'milestones',
-    component: MilestoneComponent,
+    loadComponent: () =>
+      import('./components/milestone/milestone.component').then((m) => m.MilestoneComponent),
     title: 'Milestones - HelloTalk',
   },
   {
     path: 'study-buddy',
-    component: StudyBuddyComponent,
+    loadComponent: () =>
+      import('./components/study-buddy/study-buddy.component').then((m) => m.StudyBuddyComponent),
     title: 'Study Buddy Matching - HelloTalk',
   },
   {
