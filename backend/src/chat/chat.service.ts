@@ -1022,15 +1022,24 @@ export class ChatService {
         (r: { room_id: string }) => r.room_id,
       );
 
-      for (const candidateRoomId of mutualRoomIds) {
-        const { data: members } = await supabase
+      if (mutualRoomIds.length > 0) {
+        const { data: allMembers } = await supabase
           .from('chat_room_members')
-          .select('user_id')
-          .eq('room_id', candidateRoomId);
+          .select('room_id, user_id')
+          .in('room_id', mutualRoomIds);
 
-        if (members && members.length === 2) {
-          roomId = candidateRoomId;
-          break;
+        if (allMembers) {
+          const roomCounts = new Map<string, number>();
+          for (const member of allMembers) {
+            roomCounts.set(member.room_id, (roomCounts.get(member.room_id) || 0) + 1);
+          }
+
+          for (const candidateRoomId of mutualRoomIds) {
+            if (roomCounts.get(candidateRoomId) === 2) {
+              roomId = candidateRoomId;
+              break;
+            }
+          }
         }
       }
     }
