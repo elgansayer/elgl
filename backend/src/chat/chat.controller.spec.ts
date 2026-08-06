@@ -40,6 +40,7 @@ describe('ChatController', () => {
             replyToStatusUpdate: jest.fn(),
             correctMessage: jest.fn(),
             fixMessage: jest.fn(),
+            updateMessageStatus: jest.fn(),
             viewMessageMedia: jest.fn(),
             getGroupMembers: jest.fn(),
             lockChat: jest.fn(),
@@ -489,6 +490,28 @@ describe('ChatController', () => {
         'notes',
       );
       expect(result).toEqual({ id: 'msg-1' });
+    });
+  });
+
+  describe('updateMessageStatus', () => {
+    it('should return null if user is not provided', async () => {
+      const dto = { status: 'delivered' as const };
+      const result = await controller.updateMessageStatus(null, 'msg-1', dto);
+      expect(result).toBeNull();
+      expect(chatService.updateMessageStatus).not.toHaveBeenCalled();
+    });
+
+    it('should call chatService.updateMessageStatus when user is provided', async () => {
+      const dto = { status: 'read' as const };
+      (chatService.updateMessageStatus as jest.Mock).mockResolvedValue(undefined);
+
+      const result = await controller.updateMessageStatus(mockUser(), 'msg-1', dto);
+      expect(chatService.updateMessageStatus).toHaveBeenCalledWith(
+        'user-1',
+        'msg-1',
+        'read',
+      );
+      expect(result).toEqual({ success: true });
     });
   });
 

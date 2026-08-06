@@ -21,6 +21,7 @@ export interface ChatMessage {
   correction_payload?: CorrectionPayload | null;
   system_event?: SystemEventPayload | null;
   is_read: boolean;
+  delivery_status?: 'sent' | 'delivered' | 'read';
   created_at: string;
   sender?: {
     id: string;

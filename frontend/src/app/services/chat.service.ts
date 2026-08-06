@@ -40,6 +40,7 @@ export interface ChatMessage {
     [param: string]: unknown;
   };
   is_read: boolean;
+  delivery_status?: 'sent' | 'delivered' | 'read';
   created_at: string;
   sender?: {
     id: string;
@@ -717,6 +718,20 @@ export class ChatService {
       this.http.post(
         `${this.baseUrl}/messages/${messageId}/forward`,
         { room_ids: roomIds },
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
+  /**
+   * Updates the delivery status of a message (delivered / read).
+   * Called by the recipient of a message.
+   */
+  async markMessageStatus(messageId: string, status: 'delivered' | 'read'): Promise<void> {
+    await firstValueFrom(
+      this.http.patch(
+        `${this.baseUrl}/messages/${messageId}/status`,
+        { status },
         { headers: this.getHeaders() },
       ),
     );
