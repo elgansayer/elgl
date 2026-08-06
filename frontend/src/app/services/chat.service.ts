@@ -18,7 +18,16 @@ export interface ChatMessage {
   id: string;
   room_id: string;
   sender_id: string;
-  message_type: 'text' | 'voice' | 'correction' | 'doodle' | 'sticker' | 'system' | 'correction_request' | 'status_reply' | 'view_once_media';
+  message_type:
+    | 'text'
+    | 'voice'
+    | 'correction'
+    | 'doodle'
+    | 'sticker'
+    | 'system'
+    | 'correction_request'
+    | 'status_reply'
+    | 'view_once_media';
   text_content?: string;
   media_url?: string;
   correction_payload?: CorrectionPayload;
@@ -103,6 +112,9 @@ export class ChatService {
   private readonly labels = signal<string[]>([]);
 
   async getLabels(): Promise<string[]> {
+    if (!this.authService.getAccessToken()) {
+      return [];
+    }
     const response = await firstValueFrom(
       this.http.get<string[]>(`${this.baseUrl}/labels`, { headers: this.getHeaders() }),
     );
@@ -128,7 +140,11 @@ export class ChatService {
 
   async assignLabelToRoom(roomId: string, label: string): Promise<void> {
     await firstValueFrom(
-      this.http.post(`${this.baseUrl}/rooms/${roomId}/labels`, { label }, { headers: this.getHeaders() }),
+      this.http.post(
+        `${this.baseUrl}/rooms/${roomId}/labels`,
+        { label },
+        { headers: this.getHeaders() },
+      ),
     );
   }
 
@@ -191,7 +207,14 @@ export class ChatService {
 
   async sendMessage(payload: {
     room_id: string;
-    message_type: 'text' | 'voice' | 'correction' | 'doodle' | 'sticker' | 'correction_request' | 'status_reply';
+    message_type:
+      | 'text'
+      | 'voice'
+      | 'correction'
+      | 'doodle'
+      | 'sticker'
+      | 'correction_request'
+      | 'status_reply';
     text_content?: string;
     media_url?: string;
     correction_payload?: CorrectionPayload;
@@ -307,6 +330,9 @@ export class ChatService {
   }
 
   async getRooms(): Promise<ChatRoom[]> {
+    if (!this.authService.getAccessToken()) {
+      return [];
+    }
     const rooms = await firstValueFrom(
       this.http.get<ChatRoom[]>(`${this.baseUrl}/rooms`, { headers: this.getHeaders() }),
     );
@@ -538,7 +564,9 @@ export class ChatService {
     );
   }
 
-  async transcribeVoice(audioUrl: string): Promise<{ original_text: string; detected_language: string; confidence: number }> {
+  async transcribeVoice(
+    audioUrl: string,
+  ): Promise<{ original_text: string; detected_language: string; confidence: number }> {
     return firstValueFrom(
       this.http.post<{ original_text: string; detected_language: string; confidence: number }>(
         `${environment.apiUrl}/nlp/transcribe-voice`,
@@ -583,7 +611,10 @@ export class ChatService {
    * Requests a real‑time translation of the given text for the voice‑room overlay.
    * The backend will detect the source language and return the translated text.
    */
-  async translateVoiceroomText(text: string, targetLanguage: string): Promise<{ translated_text: string; detected_language: string }> {
+  async translateVoiceroomText(
+    text: string,
+    targetLanguage: string,
+  ): Promise<{ translated_text: string; detected_language: string }> {
     return firstValueFrom(
       this.http.post<{ translated_text: string; detected_language: string }>(
         `${environment.apiUrl}/chat/translate-voiceroom`,
@@ -640,18 +671,14 @@ export class ChatService {
    */
   async getChatWallpaper(roomId: string): Promise<string | null> {
     const response = await firstValueFrom(
-      this.http.get<{ wallpaperUrl: string | null }>(
-        `${this.baseUrl}/rooms/${roomId}/wallpaper`,
-        { headers: this.getHeaders() },
-      ),
+      this.http.get<{ wallpaperUrl: string | null }>(`${this.baseUrl}/rooms/${roomId}/wallpaper`, {
+        headers: this.getHeaders(),
+      }),
     );
     return response.wallpaperUrl;
   }
 
-  async deleteMessage(
-    messageId: string,
-    scope: 'self' | 'everyone' = 'self',
-  ): Promise<void> {
+  async deleteMessage(messageId: string, scope: 'self' | 'everyone' = 'self'): Promise<void> {
     await firstValueFrom(
       this.http.delete(`${this.baseUrl}/messages/${messageId}`, {
         headers: this.getHeaders(),
@@ -667,10 +694,7 @@ export class ChatService {
     await this.deleteMessage(messageId, 'everyone');
   }
 
-  async forwardMessage(
-    messageId: string,
-    roomIds: string[],
-  ): Promise<void> {
+  async forwardMessage(messageId: string, roomIds: string[]): Promise<void> {
     await firstValueFrom(
       this.http.post(
         `${this.baseUrl}/messages/${messageId}/forward`,
