@@ -24,6 +24,7 @@ import {
   IncomingCallData,
 } from './components/incoming-call-modal/incoming-call-modal.component';
 import { ToastComponent } from './components/primitives/toast/toast.component';
+import { OfflineBannerComponent } from './components/primitives/offline-banner/offline-banner.component';
 import { ReportUserModalComponent } from './components/report-user-modal/report-user-modal.component';
 import { ReportUserModalService } from './components/report-user-modal/report-user-modal.service';
 import { DailyLoginModalComponent } from './components/daily-login-modal/daily-login-modal.component';
@@ -54,6 +55,7 @@ function isVirtualGift(v: unknown): v is VirtualGift {
     TranslatePipe,
     IncomingCallModalComponent,
     ToastComponent,
+    OfflineBannerComponent,
     ReportUserModalComponent,
     DailyLoginModalComponent,
     ConfirmDialogComponent,

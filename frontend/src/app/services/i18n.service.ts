@@ -102,6 +102,9 @@ export class I18nService {
     'studyStreak.day': 'Day',
     'studyStreak.days': 'Days',
 
+    // Offline Banner
+    'offlineBanner.message': 'No network connection. Check your internet.',
+
     // Events
     'events.createTitle': 'Create Event',
     'events.title': 'Event Title',
