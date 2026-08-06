@@ -329,12 +329,24 @@
         <h2 class="app-section-title">{{ 'audioRoom.roomsTitle' | t }}</h2>
         <p class="app-muted">{{ 'audioRoom.roomsSubtitle' | t }}</p>
       </div>
-      <button
-        (click)="showCreateModal.set(true)"
-        class="app-button-primary ps-5 pe-5 pt-3 pb-3 text-xs self-start"
-      >
-        {{ 'audioRoom.launchRoomBtn' | t }}
-      </button>
+      <div class="flex flex-wrap gap-2">
+        <button
+          (click)="toggleViewMode()"
+          class="app-button-secondary ps-3.5 pe-3.5 pt-2 pb-2 text-xs"
+        >
+          @if (viewMode() === 'grouped') {
+            {{ 'audioRoom.viewFlatList' | t }}
+          } @else {
+            {{ 'audioRoom.viewByLanguage' | t }}
+          }
+        </button>
+        <button
+          (click)="showCreateModal.set(true)"
+          class="app-button-primary ps-5 pe-5 pt-3 pb-3 text-xs self-start"
+        >
+          {{ 'audioRoom.launchRoomBtn' | t }}
+        </button>
+      </div>
     </section>
 
     <div class="flex flex-wrap gap-1.5">
@@ -354,8 +366,47 @@
       </div>
     }
 
+    @if (viewMode() === 'grouped') {
+      <!-- Language pair grouping pills -->
+      <div class="flex flex-wrap gap-2 overflow-x-auto pb-2">
+        @for (group of store.roomsByLanguage(); track group.language_pair) {
+          <button
+            (click)="selectLanguageGroup(group.language_pair)"
+            class="rounded-card border px-3 py-2 text-xs font-bold transition-colors"
+            [class.border-purple-500]="store.selectedLanguageGroup() === group.language_pair"
+            [class.bg-purple-500/20]="store.selectedLanguageGroup() === group.language_pair"
+            [class.border-surface-100]="store.selectedLanguageGroup() !== group.language_pair"
+            [class.bg-surface]="store.selectedLanguageGroup() !== group.language_pair"
+          >
+            <span class="text-text-primary">{{ group.language_pair }}</span>
+            <span
+              class="ms-2 rounded-full px-2 py-0.5 text-[10px]"
+              [class.bg-purple-600]="store.selectedLanguageGroup() === group.language_pair"
+              [class.bg-surface-100]="store.selectedLanguageGroup() !== group.language_pair"
+            >
+              {{ group.count }}
+            </span>
+          </button>
+        }
+      </div>
+
+      @if (store.selectedLanguageGroup()) {
+        <p class="text-sm text-text-secondary mb-2">
+          {{ 'audioRoom.showingRoomsFor' | t: { pair: store.selectedLanguageGroup() } }}
+        </p>
+      }
+    }
+
+    @if (displayedRooms().length === 0 && !store.isLoading()) {
+      <div class="app-empty-state">
+        <p class="text-lg font-bold text-text-primary">
+          {{ 'audioRoom.noRoomsInGroup' | t }}
+        </p>
+      </div>
+    }
+
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-      @for (room of store.activeRooms(); track room.id) {
+      @for (room of displayedRooms(); track room.id) {
         <article class="app-card app-padded space-y-3">
           <div class="flex items-center justify-between">
             <span class="app-chip bg-red-500/20 text-red-400">{{ 'audioRoom.liveTag' | t }}</span>

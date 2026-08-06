@@ -97,6 +97,13 @@ export class AudioRoomsStore {
   private baseUrl = `${environment.apiUrl}/audio-rooms`;
 
   readonly activeRooms = signal<AudioRoomRecord[]>([]);
+  readonly roomsByLanguage = signal<
+    Array<{
+      language_pair: string;
+      count: number;
+      rooms: AudioRoomRecord[];
+    }>
+  >([]);
   readonly currentRoom = signal<AudioRoomRecord | null>(null);
   readonly isSpeaker = signal<boolean>(false);
   readonly isConnectedToLiveKit = signal<boolean>(false);
@@ -104,46 +111,7 @@ export class AudioRoomsStore {
   readonly captions = signal<CaptionRecord[]>([]);
   readonly roomMessages = signal<RoomChatMessage[]>([]);
   readonly isLoading = signal<boolean>(false);
-  readonly stageInfo = signal<StageInfo | null>(null);
-
-  readonly stageParticipants = computed<StageParticipant[]>(() => {
-    const info = this.stageInfo();
-    if (!info) return [];
-    const participants: StageParticipant[] = [];
-    // Host first
-    if (info.host) {
-      participants.push({
-        user_id: info.host.id,
-        display_name: info.host.display_name,
-        avatar_url: info.host.avatar_url,
-        isSpeaking: false,
-        isMuted: false,
-        isHost: true,
-        isCoHost: false,
-      });
-    }
-    // Then speakers (excluding host)
-    for (const speaker of info.speakers) {
-      if (speaker.user_id === info.host?.id) continue;
-      participants.push({
-        user_id: speaker.user_id,
-        display_name: speaker.display_name,
-        avatar_url: speaker.avatar_url,
-        isSpeaking: false,
-        isMuted: false,
-        isHost: false,
-        isCoHost: speaker.user_id === info.co_host_id,
-      });
-    }
-    return participants;
-  });
-
-  readonly audienceCount = computed(() => {
-    const info = this.stageInfo();
-    const room = this.currentRoom();
-    if (!info) return room?.listeners_count ?? 0;
-    return Math.max(0, info.listeners_count - this.stageParticipants().length);
-  });
+  readonly selectedLanguageGroup = signal<string | null>(null);
 
   // Split-screen co-host video state
   private readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
@@ -216,14 +184,20 @@ private findRemoteVideoTrack(userId: string): RemoteVideoTrack | null {
     }
   }
 
-  async loadStage(roomId: string): Promise<void> {
+  async loadRoomsByLanguage(): Promise<void> {
+    this.isLoading.set(true);
     try {
-      const info = await firstValueFrom(
-        this.http.get<StageInfo>(`${this.baseUrl}/${roomId}/stage`, { headers: this.getHeaders() }),
+      const groups = await firstValueFrom(
+        this.http.get<Array<{ language_pair: string; count: number; rooms: AudioRoomRecord[] }>>(
+          `${this.baseUrl}/by-language`,
+          { headers: this.getHeaders() },
+        ),
       );
-      this.stageInfo.set(info);
+      this.roomsByLanguage.set(groups);
     } catch (e) {
-      console.error('Failed to load stage info:', e);
+      console.error('Failed to load rooms by language:', e);
+    } finally {
+      this.isLoading.set(false);
     }
   }
 

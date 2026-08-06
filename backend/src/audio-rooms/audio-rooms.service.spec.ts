@@ -442,6 +442,67 @@ describe('AudioRoomsService', () => {
     });
   });
 
+  describe('listActiveRoomsByLanguage', () => {
+    it('should return empty array when no active rooms', async () => {
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: [],
+        error: null,
+      });
+
+      const result = await service.listActiveRoomsByLanguage();
+      expect(result).toEqual([]);
+    });
+
+    it('should group rooms by language_pair sorted by count descending', async () => {
+      const activeRooms: any[] = [
+        {
+          id: 'room-1',
+          host_id: 'host-1',
+          language_pair: 'en-es',
+          title: 'Room 1',
+        },
+        {
+          id: 'room-2',
+          host_id: 'host-2',
+          language_pair: 'en-es',
+          title: 'Room 2',
+        },
+        {
+          id: 'room-3',
+          host_id: 'host-3',
+          language_pair: 'ar-en',
+          title: 'Room 3',
+        },
+      ];
+      const hostProfiles: any[] = [
+        { id: 'host-1', display_name: 'Host One', avatar_url: 'one.png' },
+        { id: 'host-2', display_name: 'Host Two', avatar_url: 'two.png' },
+        { id: 'host-3', display_name: 'Host Three', avatar_url: 'three.png' },
+      ];
+
+      mockQueryBuilder.limit.mockResolvedValueOnce({
+        data: activeRooms,
+        error: null,
+      });
+      mockQueryBuilder.in.mockResolvedValueOnce({
+        data: hostProfiles,
+        error: null,
+      });
+
+      const result = await service.listActiveRoomsByLanguage();
+
+      expect(result).toHaveLength(2);
+      // en-es group (count 2) should be first
+      expect(result[0].language_pair).toBe('en-es');
+      expect(result[0].count).toBe(2);
+      expect(result[0].rooms).toHaveLength(2);
+      // ar-en group (count 1) should be second
+      expect(result[1].language_pair).toBe('ar-en');
+      expect(result[1].count).toBe(1);
+      expect(result[1].rooms).toHaveLength(1);
+    });
+  });
+
   describe('getRoom', () => {
     it('should return room record with host profile', async () => {
       const roomRow: any = { id: 'room-1', host_id: 'host-1' };
