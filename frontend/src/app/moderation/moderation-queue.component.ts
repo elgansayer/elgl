@@ -1,8 +1,8 @@
 import { Component, inject, signal, resource } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
-import { ModerationService, ModerationItem, UserAnalysisResult } from '../../services/moderation.service';
-import { TranslatePipe } from '../../services/translate.pipe';
+import { ModerationService, ModerationItem, UserAnalysisResult } from '../services/moderation.service';
+import { TranslatePipe } from '../services/translate.pipe';
 
 @Component({
   selector: 'app-moderation-queue',
@@ -118,8 +118,11 @@ export class ModerationQueueComponent {
   readonly status = signal<string | undefined>(undefined);
 
   readonly items = resource({
-    request: () => ({ type: this.type(), status: this.status() }),
-    loader: ({ request }) => this.moderationService.getItems(request.type, request.status),
+    params: () => ({ type: this.type(), status: this.status() }),
+    loader: (param: { request?: { type?: string; status?: string }; params?: { type?: string; status?: string } }) => {
+      const request = param.request ?? param.params;
+      return firstValueFrom(this.moderationService.getItems(request.type, request.status));
+    }
   });
 
   readonly analysisResult = signal<UserAnalysisResult | null>(null);

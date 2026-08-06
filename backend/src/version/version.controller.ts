@@ -6,7 +6,12 @@ export class VersionController {
   constructor(private readonly versionService: VersionService) {}
 
   @Get()
-  getVersion(): { current: string; latest: string; updateUrl?: string } {
+  getVersion(): { current: string; latest: string; updateUrl?: string; minimumSupported: string } {
     return this.versionService.getVersion();
+  }
+
+  @Get('minimum')
+  getMinimumSupportedVersion(): { minimumSupported: string } {
+    return this.versionService.getMinimumSupportedVersion();
   }
 }

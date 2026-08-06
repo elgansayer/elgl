@@ -69,6 +69,7 @@ export interface AppEventParams {
               id="locationInput"
               formControlName="platform_location"
               type="text"
+              required
               class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
               [placeholder]="'events.wherePlaceholder' | t"
             />
@@ -83,6 +84,7 @@ export interface AppEventParams {
               id="descriptionInput"
               formControlName="description"
               rows="3"
+              required
               class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
               [placeholder]="'events.descriptionPlaceholder' | t"
             ></textarea>
@@ -117,8 +119,8 @@ export class CreateEventModalComponent {
   readonly eventForm = this.fb.group({
     title: ['', Validators.required],
     date_time: ['', Validators.required],
-    platform_location: [''],
-    description: [''],
+    platform_location: ['', Validators.required],
+    description: ['', Validators.required],
   });
 
   /** Emitted when the event is successfully created on the backend. */
