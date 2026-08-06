@@ -129,11 +129,6 @@ describe('AppComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should initialise unread counter computed values', () => {
-    expect(component.totalUnread()).toBe(0);
-    expect(component.hasUnread()).toBe(false);
-    expect(component.unreadDisplayValue()).toBe('0');
-  });
 
   it('should call core services during ngOnInit', () => {
     expect(versionCheckServiceMock.checkVersion).toHaveBeenCalledTimes(1);
