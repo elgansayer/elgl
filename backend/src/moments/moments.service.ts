@@ -301,7 +301,7 @@ export class MomentsService {
 
   async getFeed(
     userId: string,
-    filter: 'All' | 'Classmates' | 'Following',
+    filter: 'All' | 'Classmates' | 'Following' | 'For You',
     targetLang?: string,
   ): Promise<MomentRecord[]> {
     const supabase = this.supabaseService.getClient();
@@ -353,6 +353,24 @@ export class MomentsService {
         .order('created_at', { ascending: false })
         .limit(50);
       if (data) moments = data as unknown as MomentRecord[];
+    } else if (filter === 'For You') {
+      const { data } = await supabase
+        .from('moments')
+        .select('*')
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (data) {
+        moments = (data as unknown as MomentRecord[])
+          .sort((a, b) => {
+            const scoreA =
+              (a.likes_count || 0) * 2 + (a.comments_count || 0) * 3;
+            const scoreB =
+              (b.likes_count || 0) * 2 + (b.comments_count || 0) * 3;
+            return scoreB - scoreA;
+          })
+          .slice(0, 50);
+      }
     } else {
       // All
       const { data } = await supabase

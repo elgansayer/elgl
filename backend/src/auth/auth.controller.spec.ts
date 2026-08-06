@@ -10,6 +10,12 @@ describe('AuthController (unit)', () => {
     checkTwoFactorStatus: jest.Mock;
   };
 
+  let transferService: {
+    generateTransferToken: jest.Mock;
+    consumeTransferToken: jest.Mock;
+    swapTokenForSession: jest.Mock;
+  };
+
   beforeEach(() => {
     authService = {
       changePassword: jest.fn(),
@@ -17,6 +23,11 @@ describe('AuthController (unit)', () => {
       verifyTwoFactor: jest.fn(),
       disableTwoFactor: jest.fn(),
       checkTwoFactorStatus: jest.fn(),
+    };
+    transferService = {
+      generateTransferToken: jest.fn(),
+      consumeTransferToken: jest.fn(),
+      swapTokenForSession: jest.fn(),
     };
 
     controller = new (AuthController as any)(authService) as AuthController;
@@ -27,20 +38,26 @@ describe('AuthController (unit)', () => {
       authService.changePassword.mockResolvedValue(undefined);
 
       const req = { user: { id: 'user-123' } };
-      const result = await controller.changePassword(req, 'newPass123');
+      const result = await controller.changePassword(req, {
+        currentPassword: 'old',
+        newPassword: 'newPass123',
+      });
 
-      expect(authService.changePassword).toHaveBeenCalledWith(
-        'user-123',
-        'newPass123',
-      );
+      expect(authService.changePassword).toHaveBeenCalledWith('user-123', {
+        currentPassword: 'old',
+        newPassword: 'newPass123',
+      });
       expect(result).toEqual({ message: 'Password changed successfully' });
     });
 
     it('should throw an Unauthorized error when no user is present', async () => {
       const req = {};
-      await expect(controller.changePassword(req, 'somePass')).rejects.toThrow(
-        'Unauthorized',
-      );
+      await expect(
+        controller.changePassword(req, {
+          currentPassword: 'old',
+          newPassword: 'somePass',
+        }),
+      ).rejects.toThrow('Unauthorized');
     });
   });
 

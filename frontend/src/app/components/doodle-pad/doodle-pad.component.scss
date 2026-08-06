@@ -1,1 +1,69 @@
-/* Doodle pad styles */
+:host {
+  display: block;
+}
+
+canvas {
+  touch-action: none;
+  border-radius: 0.5rem;
+}
+
+.app-card {
+  background-color: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  border-radius: 1rem;
+}
+
+.app-section-title {
+  color: #e0e0e0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.app-muted {
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+.app-button-primary {
+  background: linear-gradient(135deg, #6c5ce7, #a855f7);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.app-button-secondary {
+  background: transparent;
+  color: #9ca3af;
+  border: 1px solid #374151;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #1f2937;
+  }
+}
+
+.text-text-muted {
+  color: #6b7280;
+}
+
+.hover\:text-text-secondary:hover {
+  color: #d1d5db;
+}
+
+.border-surface-100 {
+  border-color: #374151;
+}
+
+.ring-primary\/40 {
+  --tw-ring-color: rgba(168, 85, 247, 0.4);
+}

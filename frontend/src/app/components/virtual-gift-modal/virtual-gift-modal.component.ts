@@ -1,4 +1,4 @@
-import { Component, input, output, inject, OnInit } from '@angular/core';
+import { Component, input, output, inject, signal } from '@angular/core';
 
 import { EconomyStore, VirtualGift } from '../../services/economy.store';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -38,7 +38,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
                 'giftModal.balanceLabel' | t
               }}</span>
               <span class="text-lg font-extrabold text-amber-950">{{
-                'giftModal.coinsValue' | t: { coins: economyStore.coinsBalance() }
+                'giftModal.coinsValue' | t: { coins: effectiveBalance() }
               }}</span>
             </div>
           </div>
@@ -94,12 +94,15 @@ import { TranslatePipe } from '../../services/translate.pipe';
               @for (gift of economyStore.catalog(); track gift.id) {
                 <button
                   type="button"
-                  (click)="selectedGift = gift"
+                  (click)="selectGift(gift)"
+                  [disabled]="gift.cost_coins > effectiveBalance()"
                   [class]="
-                    'w-full p-3 rounded-2xl border-2 cursor-pointer transition-all flex flex-col items-center text-center space-y-1.5 ' +
+                    'w-full p-3 rounded-2xl border-2 transition-all flex flex-col items-center text-center space-y-1.5 ' +
                     (selectedGift?.id === gift.id
                       ? 'border-primary bg-primary/5 shadow-md scale-105'
-                      : 'border-surface-100 hover:border-surface-100 bg-surface-300')
+                      : gift.cost_coins > effectiveBalance()
+                        ? 'border-surface-100 bg-surface-300 opacity-40 cursor-not-allowed'
+                        : 'border-surface-100 hover:border-primary/50 bg-surface-300 cursor-pointer')
                   "
                 >
                   <span class="text-3xl block">{{ gift.icon }}</span>
@@ -143,7 +146,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
     </div>
   `,
 })
-export class VirtualGiftModalComponent implements OnInit {
+export class VirtualGiftModalComponent {
   receiverId = input.required<string>();
   receiverName = input.required<string>();
   roomId = input<string>();
@@ -153,36 +156,47 @@ export class VirtualGiftModalComponent implements OnInit {
   selectedGift: VirtualGift | null = null;
   showCoinPackages = false;
   isSending = false;
+  deductedAmount = signal(0);
 
-  async ngOnInit(): Promise<void> {
+  effectiveBalance = (): number => this.economyStore.coinsBalance() - this.deductedAmount();
+
+  private ensureDataLoaded(): void {
     if (this.economyStore.catalog().length === 0) {
-      await this.economyStore.loadInitialData();
+      void this.economyStore.loadInitialData();
     }
   }
 
-  async toggleCoinPackages(): Promise<void> {
+  toggleCoinPackages(): void {
     this.showCoinPackages = !this.showCoinPackages;
+    this.ensureDataLoaded();
     if (this.showCoinPackages && this.economyStore.coinPackages().length === 0) {
-      await this.economyStore.loadCoinPackages();
+      void this.economyStore.loadCoinPackages();
     }
   }
 
-  async buyCoins(packageId: string): Promise<void> {
-    await this.economyStore.buyCoins(packageId);
+  buyCoins(packageId: string): void {
+    void this.economyStore.buyCoins(packageId);
+  }
+
+  selectGift(gift: VirtualGift): void {
+    this.selectedGift = gift;
+    // Auto-deduction: preview the remaining balance after the gift cost
+    this.deductedAmount.set(gift.cost_coins);
   }
 
   async confirmSend(): Promise<void> {
     if (!this.selectedGift) return;
     this.isSending = true;
+    const gift = this.selectedGift;
     try {
       const ok = await this.economyStore.sendGift(
         this.receiverId(),
-        this.selectedGift.id,
+        gift.id,
         this.roomId(),
       );
       if (ok) {
         this.economyStore.triggerGiftAnimation({
-          gift: this.selectedGift,
+          gift,
           sender_name: 'You',
           receiver_name: this.receiverName(),
         });

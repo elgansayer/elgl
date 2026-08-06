@@ -80,6 +80,8 @@ export interface ChatRoom {
   is_online: boolean;
   is_pinned: boolean;
   is_locked?: boolean;
+  is_vip?: boolean;
+  native_languages?: string[];
   created_at: string;
   admin_id?: string;
   wallpaper_url?: string | null;
@@ -398,6 +400,14 @@ export class ChatService {
   async getFavourites(): Promise<FavouriteRecord[]> {
     return firstValueFrom(
       this.http.get<FavouriteRecord[]>(`${this.baseUrl}/favourites`, {
+        headers: this.getHeaders(),
+      }),
+    );
+  }
+
+  async removeFavourite(favouriteId: string): Promise<void> {
+    await firstValueFrom(
+      this.http.delete(`${this.baseUrl}/favourites/${favouriteId}`, {
         headers: this.getHeaders(),
       }),
     );

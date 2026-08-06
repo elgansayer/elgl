@@ -18,6 +18,7 @@ export interface UserProfile {
   primary_accent_color?: string;
   interests?: string[];
   hobbies?: string[];
+  mbti_personality_type?: string; // MBTI personality type (e.g. INFP, INFJ) as seen in original HelloTalk
   is_vip: boolean;
   vip_tier: string;
   coins_balance: number;

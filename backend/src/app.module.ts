@@ -157,6 +157,9 @@ import { PasswordResetModule } from './password-reset/password-reset.module';
 
       useClass: ThrottlerGuard,
     },
+    PronunciationScoringService,
+    AnkiiIntegrationService,
+    AssessmentsService,
   ],
 })
 export class AppModule {}
