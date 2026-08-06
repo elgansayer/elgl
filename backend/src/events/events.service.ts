@@ -122,24 +122,8 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
         const userIds = rsvpsByEventId.get(event.id);
         if (!userIds) continue;
 
-<<<<<<< HEAD
-        if (rsvpError) {
-          this.logger.warn(
-            `Could not fetch RSVPs for event ${event.id}`,
-            rsvpError,
-          );
-          continue;
-        }
-
-        if (!rsvps) continue;
-
-        const userIds = rsvps.map((rsvp) => rsvp.user_id);
-        if (userIds.length > 0) {
+if (userIds.length > 0) {
           await this.sendRemindersBatch(event.id, event.title, userIds);
-=======
-        for (const userId of userIds) {
-          await this.sendReminder(event.id, event.title, userId);
->>>>>>> origin/main
         }
       }
     } catch (err) {
