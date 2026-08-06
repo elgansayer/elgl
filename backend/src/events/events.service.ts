@@ -91,26 +91,39 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
         language_pair: string | null;
       }> = events ?? [];
 
+      if (typedEvents.length === 0) return;
+
+      const eventIds = typedEvents.map((e) => e.id);
+
+      const { data: allRsvps, error: rsvpError } = await supabase
+        .from('event_rsvps')
+        .select('event_id, user_id')
+        .in('event_id', eventIds)
+        .eq('status', 'attending');
+
+      if (rsvpError) {
+        this.logger.warn(
+          'Could not fetch RSVPs for upcoming events',
+          rsvpError,
+        );
+        return;
+      }
+
+      if (!allRsvps) return;
+
+      const rsvpsByEventId = new Map<string, string[]>();
+      for (const rsvp of allRsvps) {
+        const users = rsvpsByEventId.get(rsvp.event_id) ?? [];
+        users.push(rsvp.user_id);
+        rsvpsByEventId.set(rsvp.event_id, users);
+      }
+
       for (const event of typedEvents) {
-        // Fetch attending users for this event
-        const { data: rsvps, error: rsvpError } = await supabase
-          .from('event_rsvps')
-          .select('user_id')
-          .eq('event_id', event.id)
-          .eq('status', 'attending');
+        const userIds = rsvpsByEventId.get(event.id);
+        if (!userIds) continue;
 
-        if (rsvpError) {
-          this.logger.warn(
-            `Could not fetch RSVPs for event ${event.id}`,
-            rsvpError,
-          );
-          continue;
-        }
-
-        if (!rsvps) continue;
-
-        for (const rsvp of rsvps) {
-          await this.sendReminder(event.id, event.title, rsvp.user_id);
+if (userIds.length > 0) {
+          await this.sendRemindersBatch(event.id, event.title, userIds);
         }
       }
     } catch (err) {
@@ -119,53 +132,64 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Placeholder method that logs a reminder message and, in the future,
-   * will send an actual push notification via Firebase or a similar service.
+   * Sends an actual push notification via Firebase or a similar service to a batch of users.
    */
-  private async sendReminder(
+  private async sendRemindersBatch(
     eventId: string,
     eventTitle: string,
-    userId: string,
+    userIds: string[],
   ): Promise<void> {
+    if (userIds.length === 0) return;
+
     const supabase = this.supabaseService.getClient();
 
-    // Deduplicate: check if we already sent a reminder for this (event, user)
+    // Deduplicate: check if we already sent a reminder for this event to these users
     const { data: existing, error: fetchErr } = await supabase
       .from('event_reminders_sent')
-      .select('id')
+      .select('user_id')
       .eq('event_id', eventId)
-      .eq('user_id', userId)
-      .maybeSingle();
+      .in('user_id', userIds);
 
     if (fetchErr) {
-      this.logger.warn('Could not check existing reminder', fetchErr);
+      this.logger.warn('Could not check existing reminders', fetchErr);
       return;
     }
-    if (existing) {
-      // Already notified
+
+    const existingUserIds = new Set(existing?.map((r) => r.user_id) ?? []);
+    const usersToNotify = userIds.filter((id) => !existingUserIds.has(id));
+
+    if (usersToNotify.length === 0) {
+      // All users already notified
       return;
     }
 
     // Send push notification using the existing NotificationsService
     const title = `Event Reminder: ${eventTitle}`;
     const body = `Your event "${eventTitle}" starts in 15 minutes.`;
-    await this.notificationsService.sendPushNotification(userId, {
-      type: 'event_reminder',
-      title,
-      body,
-      category: 'groups',
-    });
+
+    await Promise.allSettled(
+      usersToNotify.map((userId) =>
+        this.notificationsService.sendPushNotification(userId, {
+          type: 'event_reminder',
+          title,
+          body,
+          category: 'groups',
+        }),
+      ),
+    );
 
     // Record that we sent the reminder to avoid duplicates
+    const recordsToInsert = usersToNotify.map((userId) => ({
+      event_id: eventId,
+      user_id: userId,
+    }));
+
     const { error: insertErr } = await supabase
       .from('event_reminders_sent')
-      .insert<{ event_id: string; user_id: string }>({
-        event_id: eventId,
-        user_id: userId,
-      });
+      .insert<{ event_id: string; user_id: string }>(recordsToInsert);
 
     if (insertErr) {
-      this.logger.warn('Failed to record sent reminder', insertErr);
+      this.logger.warn('Failed to record sent reminders', insertErr);
     }
   }
 

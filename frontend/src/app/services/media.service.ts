@@ -40,8 +40,6 @@ export class MediaService {
   }
 
   async clearMediaCache(): Promise<void> {
-    // TODO: Implement actual cache clearing once SupabaseService exposes a clear method
-    // Placeholder implementation for cache clearing
-    return Promise.resolve();
+    await this.supabaseService.clearOfflineCache();
   }
 }

@@ -1,6 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, it, expect, beforeEach, vi, afterEach, Mock } from 'vitest';
-import { ThemeService } from './theme.service';
+import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';import { ThemeService } from './theme.service';
 
 describe('ThemeService', () => {
   let service: ThemeService;
