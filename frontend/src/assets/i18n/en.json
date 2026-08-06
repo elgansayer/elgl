@@ -7,6 +7,7 @@
   "achievements.progressLabel": "{{current}} / {{required}}",
   "achievements.title": "Achievements",
 <<<<<<< HEAD
+<<<<<<< HEAD
   "admin.users.actions": "Actions",
   "admin.users.avatar": "Avatar",
   "admin.users.close": "Close",
@@ -55,6 +56,8 @@
   "admin.userManagement.title": "User Management",
   "admin.userManagement.vip.free": "Free",
 >>>>>>> origin/main
+=======
+>>>>>>> origin/main
   "app.badgeOpenCore": "Community clone",
   "app.navMe": "Me",
   "app.title": "HelloTalk",
@@ -73,9 +76,11 @@
   "audioRoom.chipQueue": "✋ Raise hand queue",
   "audioRoom.chipStages": "🔴 Host-led stages",
   "audioRoom.chipSubtitles": "💬 Synchronised subtitles",
+  "audioRoom.coHostBadge": "Co-host",
   "audioRoom.demoteBtn": "Demote",
   "audioRoom.endArchiveBtn": "💾 End and archive",
   "audioRoom.giftHostBtn": "🎁 Gift host",
+  "audioRoom.host": "Host",
   "audioRoom.hostFallback": "Room Host",
   "audioRoom.hostLabel": "Host",
   "audioRoom.joinRoomBtn": "Join room",
@@ -86,7 +91,11 @@
   "audioRoom.learnerAccess": "Learner {{id}}... wants stage access",
   "audioRoom.leaveBtn": "👋 Leave",
   "audioRoom.listenerAudience": "🎧 Listener audience",
+  "audioRoom.listenerCount": "Listeners",
+  "audioRoom.listenerEmpty": "No listeners yet",
+  "audioRoom.listenerGridTitle": "Listeners",
   "audioRoom.listenersCount": "{{count}} listening",
+  "audioRoom.listening": "Listening",
   "audioRoom.liveSfuBadge": "🔴 Live SFU room",
   "audioRoom.liveTag": "🔴 Live",
   "audioRoom.loading": "Loading live rooms...",
@@ -95,6 +104,7 @@
   "audioRoom.modalTitle": "🎙️ Launch live language room",
   "audioRoom.moderateBtn": "🛡️ Moderate",
   "audioRoom.muteBtn": "Mute",
+  "audioRoom.mutedLabel": "Muted",
   "audioRoom.noActiveRooms": "No active rooms right now",
   "audioRoom.raiseHandBtn": "✋ Raise hand",
   "audioRoom.raisedHandsTitle": "✋ Raised hands",
@@ -105,6 +115,10 @@
   "audioRoom.speakerCount": "{{count}} speaker(s)",
   "audioRoom.speakerPrefix": "Speaker {{id}}",
   "audioRoom.speakerStage": "🎙️ Speaker stage",
+  "audioRoom.speaking": "Speaking",
+  "audioRoom.stageCount": "Speakers",
+  "audioRoom.stageEmpty": "Stage is empty",
+  "audioRoom.stageGridTitle": "Stage",
   "audioRoom.targetLangLabel": "Target language",
   "audioRoom.topic.Beginners": "Beginners",
   "audioRoom.topic.BusinessEnglish": "Business English",
@@ -113,6 +127,7 @@
   "audioRoom.topic.GrammarHelp": "Grammar Help",
   "audioRoom.topic.Pronunciation": "Pronunciation",
   "audioRoom.topicLabel": "Topic",
+  "audioRoom.videoStreamLabel": "Video Stream",
   "auth.resetPassword.backToHome": "Back to Home",
   "auth.resetPassword.error": "Failed to reset password. The token may be invalid or expired.",
   "auth.resetPassword.newPassword": "New Password",
@@ -147,7 +162,17 @@
   "chat.statusReply": "Status Reply",
 =======
   "chat.attachedImageAlt": "Attached image",
+  "chat.cancel_reply": "Cancel Reply",
+  "chat.contextMenu.title": "Chat Options",
   "chat.incomingCallTitle": "Incoming Call",
+<<<<<<< HEAD
+>>>>>>> origin/main
+=======
+  "chat.unknown_user": "Unknown User",
+  "chat.wallpaper.apply": "Apply",
+  "chat.wallpaper.custom_url_label": "Custom Wallpaper URL",
+  "chat.wallpaper.custom_url_placeholder": "https://example.com/image.jpg",
+  "chat.wallpaper.title": "Chat Wallpaper",
 >>>>>>> origin/main
   "chatList.allSection": "All chats",
   "chatList.empty": "No active conversations. Find partners to start chatting!",
@@ -217,6 +242,7 @@
   "coinsSuccess.pending": "Confirming your purchase with our payment provider...",
   "coinsSuccess.title": "🎉 Coins added!",
 <<<<<<< HEAD
+<<<<<<< HEAD
   "common.back": "Back",
   "common.coinsBalance": "{{coins}} Coins",
   "common.demoActive": "Demo / Mock Auth Active",
@@ -231,6 +257,9 @@
   "common.previous": "Previous",
   "common.save": "Save",
 =======
+=======
+  "common.close": "Close",
+>>>>>>> origin/main
   "common.coinsBalance": "{{coins}} Coins",
   "common.demoActive": "Demo / Mock Auth Active",
   "common.languagePartner": "Language Partner",
