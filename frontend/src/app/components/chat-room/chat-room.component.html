@@ -277,11 +277,10 @@
       }
     }
 
-    @if (isTyping()) {
-      <div class="ps-2 pe-2 pt-1 pb-1 text-xs font-semibold text-text-secondary">
-        {{ 'chatRoom.someoneTyping' | t }}
-      </div>
-    }
+    <app-typing-indicator
+      class="mt-1 block"
+      [typingUsers]="typingService.typingUsers()"
+    ></app-typing-indicator>
   </div>
 
   @if (activeWordToken(); as token) {
