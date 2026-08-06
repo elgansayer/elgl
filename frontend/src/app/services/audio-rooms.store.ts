@@ -505,6 +505,31 @@ export class AudioRoomsStore {
     }
   }
 
+  async dismissRaisedHand(targetUserId: string): Promise<void> {
+    const room = this.currentRoom();
+    if (!room) return;
+    // Optimistic UI: remove immediately from local list
+    this.currentRoom.update((r) => {
+      if (!r) return r;
+      return { ...r, raised_hands: r.raised_hands.filter((id) => id !== targetUserId) };
+    });
+    try {
+      await firstValueFrom(
+        this.http.post<void>(
+          `${this.baseUrl}/dismiss-raised-hand`,
+          { room_id: room.id, target_user_id: targetUserId },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch {
+      // Rollback on failure
+      this.currentRoom.update((r) => {
+        if (!r) return r;
+        return { ...r, raised_hands: [...r.raised_hands, targetUserId] };
+      });
+    }
+  }
+
   async inviteCoHost(targetUserId: string): Promise<void> {
     const room = this.currentRoom();
     if (!room) return;

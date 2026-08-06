@@ -20,6 +20,10 @@ import {
 } from '../voiceroom-create-modal/voiceroom-create-modal.component';
 import { QuickPollFormComponent } from './quick-poll-form.component';
 import { QuickPollDisplayComponent } from './quick-poll-display.component';
+import {
+  ApproveSpeakerModalComponent,
+  RaisedHandRequest,
+} from '../approve-speaker-modal/approve-speaker-modal.component';
 
 @Component({
   selector: 'app-audio-room',
@@ -33,6 +37,7 @@ import { QuickPollDisplayComponent } from './quick-poll-display.component';
     AudioEqualizerComponent,
     QuickPollFormComponent,
     QuickPollDisplayComponent,
+    ApproveSpeakerModalComponent,
   ],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],
@@ -48,11 +53,23 @@ export class AudioRoomComponent implements OnInit {
   readonly showSafetyModal = signal<boolean>(false);
   readonly showPollFormModal = signal<boolean>(false);
   readonly showPollResultsModal = signal<boolean>(false);
+  readonly showApproveSpeakerModal = signal<boolean>(false);
   readonly currentPollId = signal<string | null>(null);
 
   readonly audiencePlaceholderAvatars = computed(() => {
     const count = this.store.audienceCount();
     return Array.from({ length: Math.min(count, 8) }, (_, i) => i + 1);
+  });
+
+  /** Converts raised hand user IDs into modal-ready request objects */
+  readonly raisedHandRequests = computed<RaisedHandRequest[]>(() => {
+    const room = this.store.currentRoom();
+    if (!room || !room.raised_hands) return [];
+    return room.raised_hands.map((userId) => ({
+      userId,
+      displayName: userId.slice(0, 8),
+      avatarUrl: null,
+    }));
   });
   readonly pollResults = signal<{
     question: string;

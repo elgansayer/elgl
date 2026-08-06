@@ -197,33 +197,18 @@
             </div>
           </section>
 
-          @if (
-            room.host_id === authService.currentUser()?.id &&
-            room.raised_hands &&
-            room.raised_hands.length > 0
-          ) {
-            <section
-              class="rounded-sheet border border-amber-500/30 bg-amber-500/10 p-4 shadow-card space-y-2"
+          @if (room.host_id === authService.currentUser()?.id) {
+            <button
+              (click)="showApproveSpeakerModal.set(true)"
+              class="mt-3 rounded-app border border-amber-500/40 bg-amber-500/10 ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-amber-400 hover:bg-amber-500/20 transition-colors w-full"
             >
-              <h4 class="text-sm font-black text-amber-400">
-                {{ 'audioRoom.raisedHandsTitle' | t }}
-              </h4>
-              @for (reqId of room.raised_hands; track reqId) {
-                <div
-                  class="flex items-center justify-between rounded-card border border-amber-500/30 bg-surface-200 p-3 text-xs"
-                >
-                  <span class="font-semibold text-text-primary">{{
-                    'audioRoom.learnerAccess' | t: { id: reqId.slice(0, 8) }
-                  }}</span>
-                  <button
-                    (click)="approve(reqId)"
-                    class="rounded-app bg-emerald-600 ps-3 pe-3 pt-1.5 pb-1.5 font-bold text-white"
-                  >
-                    {{ 'audioRoom.approveBtn' | t }}
-                  </button>
-                </div>
+              {{ 'audioRoom.raisedHandsTitle' | t }}
+              @if (room.raised_hands && room.raised_hands.length > 0) {
+                <span class="ms-1 rounded-full bg-amber-500/30 px-1.5 py-0.5 text-[10px]">
+                  {{ 'audioRoom.raisedHandsIndicator' | t: { count: room.raised_hands.length } }}
+                </span>
               }
-            </section>
+            </button>
           }
 
           @if (currentPollId()) {
@@ -320,6 +305,13 @@
         [targetName]="room.host?.display_name || ('audioRoom.hostFallback' | t)"
         (closed)="showSafetyModal.set(false)"
       ></app-trust-safety-modal>
+    }
+
+    @if (showApproveSpeakerModal()) {
+      <app-approve-speaker-modal
+        [requests]="raisedHandRequests()"
+        (closed)="showApproveSpeakerModal.set(false)"
+      ></app-approve-speaker-modal>
     }
   } @else {
     <section
