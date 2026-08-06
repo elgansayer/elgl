@@ -613,5 +613,11 @@
   "achievements.empty": "No achievements yet.",
   "achievements.progressLabel": "{{current}} / {{required}}",
   "achievements.earnedLabel": "Earned",
-  "achievements.lockedLabel": "Locked"
+  "achievements.lockedLabel": "Locked",
+  "app_lock.title": "App Locked",
+  "app_lock.subtitle": "Please authenticate to continue",
+  "app_lock.unlock_btn": "Unlock",
+  "app_lock.enable_biometric": "Enable Biometric Lock",
+  "app_lock.disable_biometric": "Disable Biometric Lock",
+  "nav.guided_tour": "Guided Tour"
 }
