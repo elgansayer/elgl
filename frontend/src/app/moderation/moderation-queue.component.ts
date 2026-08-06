@@ -1,7 +1,11 @@
 import { Component, inject, signal, resource } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
-import { ModerationService, ModerationItem, UserAnalysisResult } from '../services/moderation.service';
+import {
+  ModerationService,
+  ModerationItem,
+  UserAnalysisResult,
+} from '../services/moderation.service';
 import { TranslatePipe } from '../services/translate.pipe';
 
 @Component({
@@ -33,13 +37,25 @@ import { TranslatePipe } from '../services/translate.pipe';
         <button class="rounded px-3 py-1" [class.bg-primary]="!status()" (click)="setStatus('')">
           {{ 'moderation.all' | t }}
         </button>
-        <button class="rounded px-3 py-1" [class.bg-primary]="status() === 'pending'" (click)="setStatus('pending')">
+        <button
+          class="rounded px-3 py-1"
+          [class.bg-primary]="status() === 'pending'"
+          (click)="setStatus('pending')"
+        >
           {{ 'moderation.pending' | t }}
         </button>
-        <button class="rounded px-3 py-1" [class.bg-primary]="status() === 'approved'" (click)="setStatus('approved')">
+        <button
+          class="rounded px-3 py-1"
+          [class.bg-primary]="status() === 'approved'"
+          (click)="setStatus('approved')"
+        >
           {{ 'moderation.approved' | t }}
         </button>
-        <button class="rounded px-3 py-1" [class.bg-primary]="status() === 'rejected'" (click)="setStatus('rejected')">
+        <button
+          class="rounded px-3 py-1"
+          [class.bg-primary]="status() === 'rejected'"
+          (click)="setStatus('rejected')"
+        >
           {{ 'moderation.rejected' | t }}
         </button>
       </div>
@@ -60,9 +76,7 @@ import { TranslatePipe } from '../services/translate.pipe';
               </div>
 
               @if (item.type === 'profile' && item.reported_user) {
-                <p>
-                  {{ 'moderation.user' | t }}: {{ item.reported_user.display_name }}
-                </p>
+                <p>{{ 'moderation.user' | t }}: {{ item.reported_user.display_name }}</p>
                 <button
                   class="mt-2 rounded bg-secondary px-3 py-1"
                   (click)="analyse(item)"
@@ -95,8 +109,8 @@ import { TranslatePipe } from '../services/translate.pipe';
 
       @if (analysisResult()) {
         <section class="mt-6 rounded bg-elevated p-4">
-          <h2 class="mb-2 text-lg font-semibold">{{ 'moderation.riskScore' | t }}:
-            {{ analysisResult()?.riskScore }}%
+          <h2 class="mb-2 text-lg font-semibold">
+            {{ 'moderation.riskScore' | t }}: {{ analysisResult()?.riskScore }}%
           </h2>
           @if (analysisResult()?.flags?.length) {
             <p>{{ 'moderation.flags' | t }}: {{ analysisResult()?.flags?.join(', ') }}</p>
@@ -119,14 +133,16 @@ export class ModerationQueueComponent {
 
   readonly items = resource({
     params: () => ({ type: this.type(), status: this.status() }),
-    loader: (param: { request?: { type?: string; status?: string }; params?: { type?: string; status?: string } }) => {
+    loader: (param: {
+      request?: { type?: string; status?: string };
+      params?: { type?: string; status?: string };
+    }) => {
       const request = param.request ?? param.params;
       if (!request) return firstValueFrom(this.moderationService.getItems('profile'));
-      return firstValueFrom(this.moderationService.getItems(
-        (request.type as 'moment' | 'profile') ?? 'profile',
-        request.status,
-      ));
-    }
+      const type =
+        request.type === 'moment' || request.type === 'profile' ? request.type : 'profile';
+      return firstValueFrom(this.moderationService.getItems(type, request.status));
+    },
   });
 
   readonly analysisResult = signal<UserAnalysisResult | null>(null);
