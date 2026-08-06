@@ -50,6 +50,43 @@ describe('LinkPreviewService', () => {
     expect(httpService.get).not.toHaveBeenCalled();
   });
 
+  it('rejects SSRF attempts via local IPs (localhost)', async () => {
+    httpService.get.mockReturnValue(
+      throwError(
+        () => new Error('SSRF blocked: Private IP 127.0.0.1 is not allowed.'),
+      ),
+    );
+
+    await expect(service.getPreview('http://localhost')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('rejects SSRF attempts via cloud metadata IPs', async () => {
+    httpService.get.mockReturnValue(
+      throwError(
+        () =>
+          new Error('SSRF blocked: Private IP 169.254.169.254 is not allowed.'),
+      ),
+    );
+
+    await expect(
+      service.getPreview('http://169.254.169.254/latest/meta-data/'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects SSRF attempts via private network IPs', async () => {
+    httpService.get.mockReturnValue(
+      throwError(
+        () => new Error('SSRF blocked: Private IP 192.168.1.1 is not allowed.'),
+      ),
+    );
+
+    await expect(
+      service.getPreview('http://192.168.1.1/admin'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('rejects non-http(s) protocols', async () => {
     await expect(
       service.getPreview('file:///etc/passwd'),
