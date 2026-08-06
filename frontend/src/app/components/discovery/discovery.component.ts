@@ -108,6 +108,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   }
 
   onDistanceChanged(km: number): void {
+    if (this.selectedDistanceKm() === km) return;
     this.selectedDistanceKm.set(km);
     void this.searchPartners();
   }

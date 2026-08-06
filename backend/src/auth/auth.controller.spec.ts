@@ -30,10 +30,7 @@ describe('AuthController (unit)', () => {
       swapTokenForSession: jest.fn(),
     };
 
-    controller = new (AuthController as any)(
-      authService,
-      transferService,
-    ) as AuthController;
+    controller = new (AuthController as any)(authService) as AuthController;
   });
 
   describe('changePassword', () => {
