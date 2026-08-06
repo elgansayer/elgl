@@ -62,14 +62,39 @@ describe('PasswordResetService (unit)', () => {
       expect(emailService.sendPasswordResetEmail).not.toHaveBeenCalled();
     });
 
-    it('should find user via getUserByEmail and send reset email', async () => {
-      supabaseAdmin.getUserByEmail.mockResolvedValue({
-        data: { user: { id: 'user-abc', email: 'user@example.com' } },
-        error: null,
-      });
+    it('should silently return on database error', async () => {
+      const chain = createChain();
+      supabaseClient.from = jest.fn().mockReturnValue(chain);
+      chain.select = jest.fn().mockReturnValue(chain);
+      chain.eq = jest
+        .fn()
+        .mockResolvedValue({ data: null, error: new Error('db error') });
+
+      await service.requestPasswordReset({ email: 'user@example.com' });
+
+      expect(emailService.sendPasswordResetEmail).not.toHaveBeenCalled();
+    });
+
+    it('should create a reset token and send email for a valid user', async () => {
+      const findChain = createChain();
+      supabaseClient.from = jest.fn().mockReturnValue(findChain);
+      findChain.select = jest.fn().mockReturnValue(findChain);
+      findChain.eq = jest
+        .fn()
+        .mockResolvedValue({ data: [{ id: 'user-abc' }], error: null });
 
       const insertChain = createChain();
-      supabaseClient.from = jest.fn().mockReturnValue(insertChain);
+      // Override from for the insert call
+      supabaseClient.from = jest
+        .fn()
+        .mockReturnValueOnce(findChain) // select
+        .mockReturnValueOnce(insertChain); // insert
+
+      findChain.select = jest.fn().mockReturnValue(findChain);
+      findChain.eq = jest
+        .fn()
+        .mockResolvedValue({ data: [{ id: 'user-abc' }], error: null });
+
       insertChain.insert = jest.fn().mockResolvedValue({ error: null });
 
       await service.requestPasswordReset({ email: 'user@example.com' });
@@ -117,16 +142,27 @@ describe('PasswordResetService (unit)', () => {
     });
 
     it('should throw BadRequestException when token insert fails', async () => {
-      supabaseAdmin.getUserByEmail.mockResolvedValue({
-        data: { user: { id: 'user-abc', email: 'user@example.com' } },
-        error: null,
-      });
+      const findChain = createChain();
+      supabaseClient.from = jest.fn().mockReturnValue(findChain);
+      findChain.select = jest.fn().mockReturnValue(findChain);
+      findChain.eq = jest
+        .fn()
+        .mockResolvedValue({ data: [{ id: 'user-abc' }], error: null });
 
       const insertChain = createChain();
-      supabaseClient.from = jest.fn().mockReturnValue(insertChain);
-      insertChain.insert = jest.fn().mockResolvedValue({
-        error: new Error('insert failed'),
-      });
+      supabaseClient.from = jest
+        .fn()
+        .mockReturnValueOnce(findChain)
+        .mockReturnValueOnce(insertChain);
+
+      findChain.select = jest.fn().mockReturnValue(findChain);
+      findChain.eq = jest
+        .fn()
+        .mockResolvedValue({ data: [{ id: 'user-abc' }], error: null });
+
+      insertChain.insert = jest
+        .fn()
+        .mockResolvedValue({ error: new Error('insert failed') });
 
       await expect(
         service.requestPasswordReset({ email: 'user@example.com' }),
@@ -140,10 +176,9 @@ describe('PasswordResetService (unit)', () => {
       supabaseClient.from = jest.fn().mockReturnValue(chain);
       chain.select = jest.fn().mockReturnValue(chain);
       chain.eq = jest.fn().mockReturnValue(chain);
-      chain.single = jest.fn().mockResolvedValue({
-        data: null,
-        error: new Error('not found'),
-      });
+      chain.single = jest
+        .fn()
+        .mockResolvedValue({ data: null, error: new Error('not found') });
 
       await expect(
         service.resetPassword({
@@ -186,11 +221,10 @@ describe('PasswordResetService (unit)', () => {
       supabaseAdmin.updateUserById = jest.fn().mockResolvedValue({ error: null });
 
       const updateChain = createChain();
-      // First call returns findChain, second returns updateChain
       supabaseClient.from = jest
         .fn()
-        .mockReturnValueOnce(findChain)
-        .mockReturnValueOnce(updateChain);
+        .mockReturnValueOnce(findChain) // select
+        .mockReturnValueOnce(updateChain); // update
 
       findChain.select = jest.fn().mockReturnValue(findChain);
       findChain.eq = jest.fn().mockReturnValue(findChain);
