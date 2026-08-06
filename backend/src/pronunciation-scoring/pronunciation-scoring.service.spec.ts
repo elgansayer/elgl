@@ -9,7 +9,9 @@ describe('PronunciationScoringService', () => {
       providers: [PronunciationScoringService],
     }).compile();
 
-    service = module.get<PronunciationScoringService>(PronunciationScoringService);
+    service = module.get<PronunciationScoringService>(
+      PronunciationScoringService,
+    );
   });
 
   it('should be defined', () => {
