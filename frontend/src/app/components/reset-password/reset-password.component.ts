@@ -54,9 +54,14 @@ export class ResetPasswordComponent {
   readonly messageKey = signal<string | null>(null);
   readonly isError = signal(false);
 
-  readonly resetForm = this.fb.nonNullable.group({
-    newPassword: ['', [Validators.required, Validators.minLength(8)]],
-  });
+  // Read token from query params on init
+  private readonly routeToken = this.route.snapshot.queryParamMap.get('token');
+
+  constructor() {
+    if (this.routeToken) {
+      this.token.set(this.routeToken);
+    }
+  }
 
   constructor() {
     const tokenParam = this.route.snapshot.queryParamMap.get('token');

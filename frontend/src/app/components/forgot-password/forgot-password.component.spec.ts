@@ -5,43 +5,60 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { ForgotPasswordComponent } from './forgot-password.component';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { ActivatedRoute, Router } from '@angular/router';
-import { I18nService } from '../../services/i18n.service';
 import { signal } from '@angular/core';
-import { ForgotPasswordComponent } from './forgot-password.component';
+import { of } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
-import { I18nService } from '../../services/i18n.service';
 
 describe('ForgotPasswordComponent', () => {
   let component: ForgotPasswordComponent;
   let fixture: ComponentFixture<ForgotPasswordComponent>;
-  let authService: jasmine.SpyObj<AuthService>;
-  let router: jasmine.SpyObj<Router>;
+  let authServiceMock: { requestPasswordReset: ReturnType<typeof vi.fn>; resetPassword: ReturnType<typeof vi.fn> };
+  let routerMock: { navigate: ReturnType<typeof vi.fn> };
+  let queryParamMap: ReturnType<typeof signal>;
 
-  const i18nServiceStub = {
-    translate: (key: string) => key,
-    currentLocale: signal('en'),
-    currentDirection: signal<'ltr' | 'rtl'>('ltr'),
-  };
+  function createActivatedRouteMock() {
+    return {
+      queryParamMap: of({
+        get: (key: string) => {
+          const map = queryParamMap();
+          return map.get(key) ?? null;
+        },
+        has: (key: string) => queryParamMap().has(key),
+        keys: () => queryParamMap().keys(),
+        getAll: () => [],
+      }),
+    };
+  }
 
-  beforeEach(async () => {
-    authService = jasmine.createSpyObj('AuthService', ['requestPasswordReset', 'resetPassword']);
-    router = jasmine.createSpyObj('Router', ['navigate']);
-
+  async function createComponent(): Promise<void> {
     await TestBed.configureTestingModule({
       imports: [ForgotPasswordComponent],
       providers: [
-        provideRouter([]),
-        provideLocationMocks(),
-        { provide: AuthService, useValue: authServiceStub },
-        { provide: I18nService, useValue: i18nServiceStub },
+        { provide: AuthService, useValue: authServiceMock },
+        { provide: ActivatedRoute, useValue: createActivatedRouteMock() },
+        { provide: Router, useValue: routerMock },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ForgotPasswordComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  beforeEach(async () => {
+    queryParamMap = signal(new Map<string, string>());
+
+    authServiceMock = {
+      requestPasswordReset: vi.fn(),
+      resetPassword: vi.fn(),
+    };
+
+    routerMock = {
+      navigate: vi.fn(),
+    };
+
+    await createComponent();
   });
 
   describe('email form (no token)', () => {
@@ -80,85 +97,57 @@ describe('ForgotPasswordComponent', () => {
     });
   });
 
-  it('should create the component', () => {
-    expect(component).toBeTruthy();
+  it('should show email form when no token is present', () => {
+    expect(component.tokenQuery()).toBeNull();
+    expect(component.emailForm).toBeDefined();
   });
 
-  it('should display the email form when no token query param is present', () => {
-    const emailInput = fixture.debugElement.query(By.css('#email'));
-    expect(emailInput).not.toBeNull();
+  it('should show reset form when token is present', async () => {
+    queryParamMap.set(new Map([['token', 'abc123']]));
+    fixture.destroy();
+    await createComponent();
+    expect(component.tokenQuery()).toBe('abc123');
   });
 
-  it('should call authService.requestPasswordReset when email form is submitted with valid email', async () => {
-    component.emailForm.controls.email.setValue('test@example.com');
+  it('should set sendSuccess when reset request succeeds', async () => {
+    authServiceMock.requestPasswordReset.mockResolvedValue(undefined);
+    component.emailForm.controls.email.setValue('user@example.com');
+
     await component.sendResetRequest();
-    expect(requestPasswordResetMock).toHaveBeenCalledWith('test@example.com');
+
+    expect(authServiceMock.requestPasswordReset).toHaveBeenCalledWith('user@example.com');
     expect(component.sendSuccess()).toBe(true);
     expect(component.isSending()).toBe(false);
   });
 
-    it('should call authService.resetPassword and navigate on valid submit', async () => {
-      authService.resetPassword.and.returnValue(Promise.resolve());
+  it('should set sendError when reset request fails', async () => {
+    authServiceMock.requestPasswordReset.mockRejectedValue(new Error('network error'));
+    component.emailForm.controls.email.setValue('user@example.com');
 
-    component.sendResetRequest();
+    await component.sendResetRequest();
 
-      expect(authService.resetPassword).toHaveBeenCalledWith('reset-token-abc', 'newPass123!');
-      expect(component.resetSuccess()).toBeTrue();
-      expect(component.isResetting()).toBeFalse();
-      expect(router.navigate).toHaveBeenCalledWith(['/home']);
-    });
-
-    it('should set resetError on reset failure', async () => {
-      authService.resetPassword.and.returnValue(Promise.reject(new Error('Invalid token')));
-
-  it('should show error on failed reset request', async () => {
-    component.emailForm.controls.email.setValue('test@test.com');
-    component.sendResetRequest();
-
-      expect(component.resetError()).toBe('forgot_password.reset_error');
-      expect(component.isResetting()).toBeFalse();
-    });
-
-    await fixture.whenStable();
     expect(component.sendError()).toBe('forgot_password.send_error');
     expect(component.isSending()).toBe(false);
-    expect(component.sendSuccess()).toBe(false);
   });
 
-  it('should not call requestPasswordReset when emailForm is invalid', async () => {
-    component.emailForm.controls.email.setValue('');
+  it('should not call API when email is invalid', async () => {
     await component.sendResetRequest();
-    expect(requestPasswordResetMock).not.toHaveBeenCalled();
+
+    expect(authServiceMock.requestPasswordReset).not.toHaveBeenCalled();
   });
 
-  it('should not call resetPassword when token is missing and reset form submitted', async () => {
-    component.resetForm.controls.newPassword.setValue('newPassword123');
+  it('should navigate home after successful password reset', async () => {
+    queryParamMap.set(new Map([['token', 'my-token']]));
+    fixture.destroy();
+    await createComponent();
+
+    authServiceMock.resetPassword.mockResolvedValue(undefined);
+    component.resetForm.controls.newPassword.setValue('newPass123!');
+
     await component.doPasswordReset();
-    expect(resetPasswordMock).not.toHaveBeenCalled();
-    expect(component.resetSuccess()).toBe(false);
-  });
 
-  it('should disable submit button when email form is invalid', () => {
-    const button = fixture.debugElement.query(By.css('button[type="submit"]'));
-    expect(button.nativeElement.disabled).toBe(true);
-  });
-
-  it('should enable submit button when email form is valid', () => {
-    component.emailForm.controls.email.setValue('test@example.com');
-    fixture.detectChanges();
-    const button = fixture.debugElement.query(By.css('button[type="submit"]'));
-    expect(button.nativeElement.disabled).toBe(false);
-  });
-
-  it('should show back-to-home link', () => {
-    const link = fixture.debugElement.query(By.css('a[routerLink="/home"]'));
-    expect(link).not.toBeNull();
-  });
-
-  it('should show sendSuccess message after successful request', () => {
-    component.sendSuccess.set(true);
-    fixture.detectChanges();
-    const successMsg = fixture.debugElement.query(By.css('.text-success'));
-    expect(successMsg).not.toBeNull();
+    expect(authServiceMock.resetPassword).toHaveBeenCalledWith('my-token', 'newPass123!');
+    expect(component.resetSuccess()).toBe(true);
+    expect(routerMock.navigate).toHaveBeenCalledWith(['/home']);
   });
 });

@@ -1,84 +1,85 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter, ActivatedRoute } from '@angular/router';
-import { of } from 'rxjs';
 import { ResetPasswordComponent } from './reset-password.component';
+import { AuthService } from '../../services/auth.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { signal } from '@angular/core';
+import { of } from 'rxjs';
 
 describe('ResetPasswordComponent', () => {
   let component: ResetPasswordComponent;
   let fixture: ComponentFixture<ResetPasswordComponent>;
+  let authServiceMock: { resetPassword: ReturnType<typeof vi.fn> };
+  let routerMock: { navigate: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
+    authServiceMock = {
+      resetPassword: vi.fn(),
+    };
+
+    routerMock = {
+      navigate: vi.fn(),
+    };
+
+    const activatedRouteMock = {
+      snapshot: {
+        queryParamMap: {
+          get: (key: string) => (key === 'token' ? 'test-token-123' : null),
+        },
+      },
+    };
+
     await TestBed.configureTestingModule({
       imports: [ResetPasswordComponent],
       providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        provideRouter([]),
-        {
-          provide: ActivatedRoute,
-          useValue: {
-            snapshot: {
-              queryParamMap: new Map<string, string>(),
-            },
-          },
-        },
+        { provide: AuthService, useValue: authServiceMock },
+        { provide: ActivatedRoute, useValue: activatedRouteMock },
+        { provide: Router, useValue: routerMock },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ResetPasswordComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should initialise token signal from query parameter', () => {
-    // token starts empty when no query param present
-    expect(component.token()).toBe('');
+  it('should set token from query param on init', () => {
+    expect(component.token()).toBe('test-token-123');
   });
 
-  it('should show reset password title', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const h1 = compiled.querySelector('h1');
-    expect(h1).toBeTruthy();
+  it('should call authService.resetPassword and navigate home on success', async () => {
+    authServiceMock.resetPassword.mockResolvedValue(undefined);
+    component.token.set('tok');
+    component.newPassword.set('newPass123!');
+
+    await component.onSubmit();
+
+    expect(authServiceMock.resetPassword).toHaveBeenCalledWith('tok', 'newPass123!');
+    expect(routerMock.navigate).toHaveBeenCalledWith(['/home']);
+    expect(component.messageKey()).toBe('auth.resetPassword.success');
   });
 
-  it('should start with empty token and password signals', () => {
-    expect(component.token()).toBe('');
-    expect(component.newPassword()).toBe('');
+  it('should show error message on failure', async () => {
+    authServiceMock.resetPassword.mockRejectedValue(new Error('bad token'));
+    component.token.set('tok');
+    component.newPassword.set('newPass123!');
+
+    await component.onSubmit();
+
+    expect(component.messageKey()).toBe('auth.resetPassword.error');
+    expect(component.isError()).toBe(true);
+    expect(routerMock.navigate).not.toHaveBeenCalled();
   });
 
-  it('should not submit when token is empty', () => {
-    expect(component.submitting()).toBeFalse();
-  });
+  it('should not submit when token or password is empty', async () => {
+    component.token.set('');
+    component.newPassword.set('');
 
-  it('should set token from query param in constructor', () => {
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({
-      imports: [ResetPasswordComponent],
-      providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        provideRouter([]),
-        {
-          provide: ActivatedRoute,
-          useValue: {
-            snapshot: {
-              queryParamMap: {
-                get: (key: string) => (key === 'token' ? 'test-token-123' : null),
-              },
-            },
-          },
-        },
-      ],
-    });
+    await component.onSubmit();
 
-    const compFixture = TestBed.createComponent(ResetPasswordComponent);
-    const comp = compFixture.componentInstance;
-    expect(comp.token()).toBe('test-token-123');
+    expect(authServiceMock.resetPassword).not.toHaveBeenCalled();
   });
 });

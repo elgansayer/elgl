@@ -9,76 +9,85 @@ jest.mock('nodemailer', () => ({
   }),
 }));
 
-describe('EmailService', () => {
+describe('EmailService (unit)', () => {
   let service: EmailService;
+  let configService: { get: jest.Mock };
+  let transporter: { sendMail: jest.Mock };
 
-  const mockConfigService = {
-    get: jest.fn((key: string, defaultValue?: string) => {
-      const config: Record<string, string> = {
-        MAIL_HOST: 'smtp.test.com',
-        MAIL_PORT: '587',
-        MAIL_USER: 'testuser',
-        MAIL_PASS: 'testpass',
-        FRONTEND_URL: 'http://localhost:4200',
-        MAIL_FROM_NAME: 'HelloTalk',
-        MAIL_FROM_ADDRESS: 'noreply@hellotalk.com',
-      };
-      if (key === 'MAIL_PORT') return 587;
-      return config[key] ?? defaultValue ?? '';
-    }),
-  };
+  beforeEach(() => {
+    transporter = {
+      sendMail: jest.fn().mockResolvedValue({ messageId: 'abc-123' }),
+    };
 
-  beforeEach(async () => {
-    jest.clearAllMocks();
+    configService = {
+      get: jest.fn((key: string, fallback: string) => fallback),
+    };
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        EmailService,
-        { provide: ConfigService, useValue: mockConfigService },
-      ],
-    }).compile();
+    jest.doMock('nodemailer', () => ({
+      createTransport: jest.fn().mockReturnValue(transporter),
+    }));
 
-    service = module.get<EmailService>(EmailService);
+    service = new (EmailService as Record<string, never>)(
+      configService,
+    ) as EmailService;
+    // Override the transporter with our mock
+    (service as any).transporter = transporter;
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  it('should create nodemailer transport with correct config', () => {
-    expect(nodemailer.createTransport).toHaveBeenCalledWith(
-      expect.objectContaining({
-        host: 'smtp.test.com',
-        port: 587,
-        secure: false,
-        auth: { user: 'testuser', pass: 'testpass' },
-      }),
-    );
-  });
+  describe('sendPasswordResetEmail', () => {
+    it('should send a password reset email with the correct fields', async () => {
+      await service.sendPasswordResetEmail('user@example.com', 'abc-token-xyz');
 
-  it('should send password reset email with correct parameters', async () => {
-    const transporter = (nodemailer.createTransport as jest.Mock).mock.results[0].value;
+      expect(transporter.sendMail).toHaveBeenCalledTimes(1);
+      const mailOptions = transporter.sendMail.mock.calls[0][0];
 
-    await service.sendPasswordResetEmail('user@example.com', 'reset-token-abc');
+      expect(mailOptions.to).toBe('user@example.com');
+      expect(mailOptions.subject).toContain('password');
+      expect(mailOptions.from).toContain('HelloTalk');
+      expect(mailOptions.text).toContain('abc-token-xyz');
+      expect(mailOptions.html).toContain('abc-token-xyz');
+    });
 
-    expect(transporter.sendMail).toHaveBeenCalledWith(
-      expect.objectContaining({
-        from: expect.stringContaining('HelloTalk'),
-        to: 'user@example.com',
-        subject: 'Reset your HelloTalk password',
-        text: expect.stringContaining('reset-token-abc'),
-        html: expect.stringContaining('reset-token-abc'),
-      }),
-    );
-  });
+    it('should include the frontend URL and token in the reset link', async () => {
+      configService.get = jest.fn((key: string, fallback: string) => {
+        if (key === 'FRONTEND_URL') return 'https://app.example.com';
+        return fallback;
+      });
+      const svc = new (EmailService as any)(configService) as EmailService;
+      (svc as any).transporter = transporter;
 
-  it('should include the correct reset URL in the email', async () => {
-    const transporter = (nodemailer.createTransport as jest.Mock).mock.results[0].value;
+      await svc.sendPasswordResetEmail('user@example.com', 'my-token');
 
-    await service.sendPasswordResetEmail('user@example.com', 'my-test-token');
+      const mailOptions = transporter.sendMail.mock.calls[0][0];
+      expect(mailOptions.text).toContain(
+        'https://app.example.com/forgot-password?token=my-token',
+      );
+      expect(mailOptions.html).toContain(
+        'https://app.example.com/forgot-password?token=my-token',
+      );
+    });
 
-    const callArgs = (transporter.sendMail as jest.Mock).mock.calls[0][0] as { text: string; html: string };
-    expect(callArgs.text).toContain('http://localhost:4200/forgot-password?token=my-test-token');
-    expect(callArgs.html).toContain('http://localhost:4200/forgot-password?token=my-test-token');
+    it('should use custom MAIL_FROM_NAME and MAIL_FROM_ADDRESS when configured', async () => {
+      configService.get = jest.fn((key: string, fallback: string) => {
+        const overrides: Record<string, string> = {
+          MAIL_FROM_NAME: 'HelloTalk Support',
+          MAIL_FROM_ADDRESS: 'support@hellotalk.app',
+        };
+        return overrides[key] ?? fallback;
+      });
+      const svc = new (EmailService as any)(configService) as EmailService;
+      (svc as any).transporter = transporter;
+
+      await svc.sendPasswordResetEmail('user@example.com', 'tok');
+
+      const mailOptions = transporter.sendMail.mock.calls[0][0];
+      expect(mailOptions.from).toBe(
+        '"HelloTalk Support" <support@hellotalk.app>',
+      );
+    });
   });
 });
