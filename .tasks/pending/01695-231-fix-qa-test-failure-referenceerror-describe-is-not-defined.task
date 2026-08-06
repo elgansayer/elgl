@@ -1,1 +1,0 @@
-Fix QA test failure: `ReferenceError: describe is not defined`.

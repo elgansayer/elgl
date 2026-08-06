@@ -1,1 +1,0 @@
-Create Supabase SQL migration (`004_flashcards_srs.sql`) for `flashcards` table indexed by `user_id` and `word_token`.

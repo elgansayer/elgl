@@ -3,8 +3,6 @@ name: AI Auto-Resolver
 on:
   issue_comment:
     types: [created]
-  pull_request:
-    types: [opened, synchronize, reopened]
   pull_request_review_comment:
     types: [created]
   issues:
@@ -30,7 +28,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       # ── TIER 1: Claude Code ────────────────────────────────────────────────
       - name: Tier 1 - Claude Code (Claude Pro via OAuth)

@@ -22,6 +22,7 @@ export interface ModerationItem {
   moment_content?: string;
   reportedMomentId?: string | null;
   momentAuthorName?: string;
+  description?: string;
 }
 
 export interface UserAnalysisResult {

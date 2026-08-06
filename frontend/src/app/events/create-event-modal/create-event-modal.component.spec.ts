@@ -105,8 +105,8 @@ describe('CreateEventModalComponent', () => {
     component.eventForm.setValue({
       title: 'Fail Event',
       date_time: '2026-08-02T11:00',
-      platform_location: '',
-      description: '',
+      platform_location: 'Zoom',
+      description: 'Will fail',
     });
 
     await component.onSubmit();
