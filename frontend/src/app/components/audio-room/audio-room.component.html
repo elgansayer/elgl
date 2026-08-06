@@ -202,28 +202,19 @@
             room.raised_hands &&
             room.raised_hands.length > 0
           ) {
-            <section
-              class="rounded-sheet border border-amber-500/30 bg-amber-500/10 p-4 shadow-card space-y-2"
-            >
-              <h4 class="text-sm font-black text-amber-400">
+            <div class="flex justify-center pt-2">
+              <button
+                (click)="showApprovalModal.set(true)"
+                class="rounded-app bg-amber-500 ps-5 pe-5 pt-3 pb-3 text-sm font-bold text-amber-950 hover:bg-amber-400 transition-colors shadow-glow"
+              >
                 {{ 'audioRoom.raisedHandsTitle' | t }}
-              </h4>
-              @for (reqId of room.raised_hands; track reqId) {
-                <div
-                  class="flex items-center justify-between rounded-card border border-amber-500/30 bg-surface-200 p-3 text-xs"
+                <span
+                  class="ms-2 inline-flex items-center justify-center rounded-full bg-amber-950/30 px-2 py-0.5 text-xs font-bold text-amber-950"
                 >
-                  <span class="font-semibold text-text-primary">{{
-                    'audioRoom.learnerAccess' | t: { id: reqId.slice(0, 8) }
-                  }}</span>
-                  <button
-                    (click)="approve(reqId)"
-                    class="rounded-app bg-emerald-600 ps-3 pe-3 pt-1.5 pb-1.5 font-bold text-white"
-                  >
-                    {{ 'audioRoom.approveBtn' | t }}
-                  </button>
-                </div>
-              }
-            </section>
+                  {{ room.raised_hands.length }}
+                </span>
+              </button>
+            </div>
           }
 
           @if (currentPollId()) {
@@ -320,6 +311,14 @@
         [targetName]="room.host?.display_name || ('audioRoom.hostFallback' | t)"
         (closed)="showSafetyModal.set(false)"
       ></app-trust-safety-modal>
+    }
+
+    @if (showApprovalModal() && room.raised_hands) {
+      <app-approve-speaker-modal
+        [raisedHandUserIds]="room.raised_hands"
+        (approve)="handleApproveSpeaker($event)"
+        (dismiss)="showApprovalModal.set(false)"
+      ></app-approve-speaker-modal>
     }
   } @else {
     <section
