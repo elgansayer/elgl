@@ -6,16 +6,6 @@
   "achievements.lockedLabel": "Locked",
   "achievements.progressLabel": "{{current}} / {{required}}",
   "achievements.title": "Achievements",
-<<<<<<< HEAD
-  "app.badgeOpenCore": "Community clone",
-  "app.navMe": "Me",
-  "app.title": "HelloTalk",
-  "app_lock.disable_biometric": "Disable Biometric Lock",
-  "app_lock.enable_biometric": "Enable Biometric Lock",
-  "app_lock.subtitle": "Please unlock the app to continue",
-  "app_lock.title": "App Locked",
-  "app_lock.unlock_btn": "Unlock App",
-=======
   "admin.userManagement.action.toggleVip": "Toggle VIP",
   "admin.userManagement.loading": "Loading users...",
   "admin.userManagement.streakDays": "{{days}} days",
@@ -30,22 +20,15 @@
   "app.badgeOpenCore": "Community clone",
   "app.navMe": "Me",
   "app.title": "HelloTalk",
->>>>>>> origin/main
+  "app_lock.disable_biometric": "Disable Biometric Lock",
+  "app_lock.enable_biometric": "Enable Biometric Lock",
+  "app_lock.subtitle": "Please unlock to continue",
+  "app_lock.title": "App Locked",
+  "app_lock.unlock_btn": "Unlock",
   "audioRoom.approveBtn": "Approve",
   "audioRoom.archiveConfirm": "Are you sure you want to end this room and archive the recording to Cloudflare R2?",
   "audioRoom.beFirst": "Be first to launch one.",
   "audioRoom.cancelBtn": "Cancel",
-<<<<<<< HEAD
-  "audioRoom.chipExchange": "\ud83c\udf0d Language exchange",
-  "audioRoom.chipListening": "\ud83c\udfa7 Live listening",
-  "audioRoom.chipModeration": "\ud83d\udee1\ufe0f Safety moderation",
-  "audioRoom.chipQueue": "\u270b Raise hand queue",
-  "audioRoom.chipStages": "\ud83d\udd34 Host-led stages",
-  "audioRoom.chipSubtitles": "\ud83d\udcac Synchronised subtitles",
-  "audioRoom.demoteBtn": "Demote",
-  "audioRoom.endArchiveBtn": "\ud83d\udcbe End and archive",
-  "audioRoom.giftHostBtn": "\ud83c\udf81 Gift host",
-=======
   "audioRoom.chipExchange": "🌍 Language exchange",
   "audioRoom.chipListening": "🎧 Live listening",
   "audioRoom.chipModeration": "🛡️ Safety moderation",
@@ -55,7 +38,6 @@
   "audioRoom.demoteBtn": "Demote",
   "audioRoom.endArchiveBtn": "💾 End and archive",
   "audioRoom.giftHostBtn": "🎁 Gift host",
->>>>>>> origin/main
   "audioRoom.hostFallback": "Room Host",
   "audioRoom.hostLabel": "Host",
   "audioRoom.joinRoomBtn": "Join room",
@@ -64,29 +46,6 @@
   "audioRoom.launchRoomBtn": "+ Launch live room",
   "audioRoom.launchStageBtn": "Launch stage",
   "audioRoom.learnerAccess": "Learner {{id}}... wants stage access",
-<<<<<<< HEAD
-  "audioRoom.leaveBtn": "\ud83d\udc4b Leave",
-  "audioRoom.listenerAudience": "\ud83c\udfa7 Listener audience",
-  "audioRoom.listenersCount": "{{count}} listening",
-  "audioRoom.liveSfuBadge": "\ud83d\udd34 Live SFU room",
-  "audioRoom.liveTag": "\ud83d\udd34 Live",
-  "audioRoom.loading": "Loading live rooms...",
-  "audioRoom.memberPrefix": "\ud83c\udfa7 Member #{{num}}",
-  "audioRoom.modalSubtitle": "Start a hosted room powered by LiveKit SFU.",
-  "audioRoom.modalTitle": "\ud83c\udf99\ufe0f Launch live language room",
-  "audioRoom.moderateBtn": "\ud83d\udee1\ufe0f Moderate",
-  "audioRoom.muteBtn": "Mute",
-  "audioRoom.noActiveRooms": "No active rooms right now",
-  "audioRoom.raiseHandBtn": "\u270b Raise hand",
-  "audioRoom.raisedHandsTitle": "\u270b Raised hands",
-  "audioRoom.roomTitleLabel": "Room title",
-  "audioRoom.roomTitlePlaceholder": "Conversation practice room",
-  "audioRoom.roomsSubtitle": "Join language rooms, raise your hand to speak, or launch your own room.",
-  "audioRoom.roomsTitle": "\ud83c\udf99\ufe0f Live audio and video rooms",
-  "audioRoom.speakerCount": "{{count}} speaker(s)",
-  "audioRoom.speakerPrefix": "Speaker {{id}}",
-  "audioRoom.speakerStage": "\ud83c\udf99\ufe0f Speaker stage",
-=======
   "audioRoom.leaveBtn": "👋 Leave",
   "audioRoom.listenerAudience": "🎧 Listener audience",
   "audioRoom.listenersCount": "{{count}} listening",
@@ -108,7 +67,6 @@
   "audioRoom.speakerCount": "{{count}} speaker(s)",
   "audioRoom.speakerPrefix": "Speaker {{id}}",
   "audioRoom.speakerStage": "🎙️ Speaker stage",
->>>>>>> origin/main
   "audioRoom.targetLangLabel": "Target language",
   "audioRoom.topic.Beginners": "Beginners",
   "audioRoom.topic.BusinessEnglish": "Business English",
@@ -166,11 +124,7 @@
   "chatRoom.partnerFallback": "Partner",
   "chatRoom.saveBtn": "Save",
   "chatRoom.saveLingqError": "Failed to save sentence or already in your SRS deck.",
-<<<<<<< HEAD
-  "chatRoom.savedLingqAlert": "\ud83d\udcda Saved sentence to your LingQ SRS Learning Deck:\n\"{{text}}\"",
-=======
   "chatRoom.savedLingqAlert": "📚 Saved sentence to your LingQ SRS Learning Deck:\n\"{{text}}\"",
->>>>>>> origin/main
   "chatRoom.searchBtn": "Search",
   "chatRoom.searchPlaceholder": "Search messages",
   "chatRoom.sendBtn": "Send",
@@ -188,11 +142,7 @@
   "coinsSuccess.failureTitle": "Purchase could not be confirmed",
   "coinsSuccess.message": "Thank you. Your coins have been credited to your balance.",
   "coinsSuccess.pending": "Confirming your purchase with our payment provider...",
-<<<<<<< HEAD
-  "coinsSuccess.title": "\ud83c\udf89 Coins added!",
-=======
   "coinsSuccess.title": "🎉 Coins added!",
->>>>>>> origin/main
   "common.coinsBalance": "{{coins}} Coins",
   "common.demoActive": "Demo / Mock Auth Active",
   "common.languagePartner": "Language Partner",
@@ -220,26 +170,6 @@
   "developer.activeKeyLabel": "Active production key",
   "developer.activeRpm": "Active (600 RPM)",
   "developer.apiKeySubtitle": "Send key in Authorization header.",
-<<<<<<< HEAD
-  "developer.apiKeyTitle": "\ud83d\udd10 API key management",
-  "developer.bannerActive": "Active: 20 UKP / $26 USD monthly",
-  "developer.bannerSubtitle": "Inspect PostGIS spatial queries, Centrifugo real-time fan-out, and LiveKit WebRTC stage permissions in real time.",
-  "developer.bannerTier": "\u26a1 Developer tier & AI Sandbox",
-  "developer.bannerTitle": "Programmatic API & Diagnostics Platform",
-  "developer.centrifugoSubtitle": "Inspect real-time WebSocket connection signals and simulated Redis queue broadcasts.",
-  "developer.centrifugoTitle": "\u26a1 Centrifugo v5 & Redis 7 Fan-Out Diagnostics",
-  "developer.connectBtn": "Connect WebSocket",
-  "developer.disconnectBtn": "Disconnect",
-  "developer.distanceAway": "{{distance}}m away",
-  "developer.executeBtn": "\ud83d\udd0d Execute Spatial Query",
-  "developer.executingBtn": "\u23f3 Executing...",
-  "developer.generateBtn": "+ Generate key",
-  "developer.latLabel": "Search Latitude (SRID 4326)",
-  "developer.livekitSubtitle": "Simulate stage hand-raising workflows and token canPublish claims inside live audio/video rooms.",
-  "developer.livekitTitle": "\ud83c\udf99\ufe0f LiveKit WebRTC SFU Stage Permissions (RoomServiceClient)",
-  "developer.lngLabel": "Search Longitude (SRID 4326)",
-  "developer.logsTitle": "\ud83d\udee1\ufe0f Live Architectural Diagnostics Stream",
-=======
   "developer.apiKeyTitle": "🔐 API key management",
   "developer.bannerActive": "Active: 20 UKP / $26 USD monthly",
   "developer.bannerSubtitle": "Inspect PostGIS spatial queries, Centrifugo real-time fan-out, and LiveKit WebRTC stage permissions in real time.",
@@ -258,7 +188,6 @@
   "developer.livekitTitle": "🎙️ LiveKit WebRTC SFU Stage Permissions (RoomServiceClient)",
   "developer.lngLabel": "Search Longitude (SRID 4326)",
   "developer.logsTitle": "🛡️ Live Architectural Diagnostics Stream",
->>>>>>> origin/main
   "developer.nearPoint": "Near point",
   "developer.noKey": "No API key yet. Activate developer tier and generate one.",
   "developer.noResults": "No spatial results generated yet. Click \"Execute Spatial Query\" to test index.",
@@ -266,38 +195,21 @@
   "developer.permLabel": "Publish Permission (canPublish JWT Claim): ",
   "developer.permRestricted": "RESTRICTED (Listener only)",
   "developer.postgisSubtitle": "Simulate spatial indexing calculations and VIP location spoofing without modifying production data.",
-<<<<<<< HEAD
-  "developer.postgisTitle": "\ud83d\uddfa\ufe0f PostGIS Geography Query Simulator (ST_DWithin)",
-  "developer.queryResults": "Query Results: {{count}} matching learners",
-  "developer.radiusLabel": "Radius (Metres): {{radius}}m",
-  "developer.recordingActive": "\ud83d\udd34 RECORDING ACTIVE",
-  "developer.recordingDesc": "Archive live stage audio/video composites directly to Cloudflare R2 bucket with zero egress fees.",
-  "developer.recordingIdle": "\u26aa IDLE",
-=======
   "developer.postgisTitle": "🗺️ PostGIS Geography Query Simulator (ST_DWithin)",
   "developer.queryResults": "Query Results: {{count}} matching learners",
   "developer.radiusLabel": "Radius (Metres): {{radius}}m",
   "developer.recordingActive": "🔴 RECORDING ACTIVE",
   "developer.recordingDesc": "Archive live stage audio/video composites directly to Cloudflare R2 bucket with zero egress fees.",
   "developer.recordingIdle": "⚪ IDLE",
->>>>>>> origin/main
   "developer.recordingTitle": "Composite Recording Engine",
   "developer.redisDesc": "When a user publishes a Moment, TimelineWorker executes RPUSH timeline_queue:[id] to distribute IDs to all subscribers asynchronously.",
   "developer.redisTitle": "Redis Timeline Queue Fan-Out Simulation",
   "developer.showingLogs": "Showing last {{count}} events",
-<<<<<<< HEAD
-  "developer.simApproveBtn": "\u270b Simulate Host Approval (canPublish: true)",
-  "developer.simDemoteBtn": "\u2b07\ufe0f Demote to Audience (canPublish: false)",
-  "developer.simRoleLabel": "Simulated Stage Role",
-  "developer.spoofCheckbox": "Enable VIP mock location spoofing override (8 UKP / $10 USD feature)",
-  "developer.startRecordingBtn": "\ud83d\udd34 Start Composite Recording",
-=======
   "developer.simApproveBtn": "✋ Simulate Host Approval (canPublish: true)",
   "developer.simDemoteBtn": "⬇️ Demote to Audience (canPublish: false)",
   "developer.simRoleLabel": "Simulated Stage Role",
   "developer.spoofCheckbox": "Enable VIP mock location spoofing override (8 UKP / $10 USD feature)",
   "developer.startRecordingBtn": "🔴 Start Composite Recording",
->>>>>>> origin/main
   "developer.statCallsLabel": "Total API calls today",
   "developer.statCallsSub": "Across NLP, moments, and live rooms.",
   "developer.statLatencyLabel": "Average latency",
@@ -307,21 +219,12 @@
   "developer.statRateLabel": "Rate limit",
   "developer.statRateSub": "Tier: {{tier}}",
   "developer.statusPrefix": "Status: {{status}}",
-<<<<<<< HEAD
-  "developer.stopRecordingBtn": "\u23f9\ufe0f Stop & Save R2 Archive",
-  "developer.tabCentrifugo": "\u26a1 Centrifugo & Redis Fan-Out",
-  "developer.tabLivekit": "\ud83c\udf99\ufe0f LiveKit SFU Stage Simulator",
-  "developer.tabOverview": "\ud83d\udcca Telemetry Overview",
-  "developer.tabPostgis": "\ud83d\uddfa\ufe0f PostGIS Spatial Sandbox",
-  "developer.triggerRedisBtn": "\ud83d\ude80 Trigger Simulated Redis Fan-Out (RPUSH)",
-=======
   "developer.stopRecordingBtn": "⏹️ Stop & Save R2 Archive",
   "developer.tabCentrifugo": "⚡ Centrifugo & Redis Fan-Out",
   "developer.tabLivekit": "🎙️ LiveKit SFU Stage Simulator",
   "developer.tabOverview": "📊 Telemetry Overview",
   "developer.tabPostgis": "🗺️ PostGIS Spatial Sandbox",
   "developer.triggerRedisBtn": "🚀 Trigger Simulated Redis Fan-Out (RPUSH)",
->>>>>>> origin/main
   "developer.upgradeConsumerBtn": "Consumer VIP (8 UKP / $10 USD)",
   "developer.upgradeDevBtn": "Upgrade developer tier (20 UKP / $26 USD)",
   "discovery.activeDaysAgo": "Active {{days}}d ago",
@@ -330,17 +233,6 @@
   "discovery.activeNow": "Active now",
   "discovery.activeYesterday": "Active yesterday",
   "discovery.audioIntroFeed.noAudioIntros": "No audio intros available",
-<<<<<<< HEAD
-  "discovery.badge": "\ud83d\udd0e Discovery",
-  "discovery.bannerDesc": "Get 1-on-1 native practice",
-  "discovery.bannerPaid": "Unlock Paid Practice",
-  "discovery.bannerView": "View VIP",
-  "discovery.chipCorrections": "\u2705 Correction-friendly",
-  "discovery.chipGlobal": "\ud83c\udf0d Global partners",
-  "discovery.chipStreaks": "\ud83d\udd25 Active streaks",
-  "discovery.cityPlaceholder": "Search city...",
-  "discovery.correctionBadge": "\u2705 {{ratio}}x corrections",
-=======
   "discovery.badge": "🔎 Discovery",
   "discovery.bannerDesc": "Get 1-on-1 native practice",
   "discovery.bannerPaid": "Unlock Paid Practice",
@@ -350,7 +242,6 @@
   "discovery.chipStreaks": "🔥 Active streaks",
   "discovery.cityPlaceholder": "Search city...",
   "discovery.correctionBadge": "✅ {{ratio}}x corrections",
->>>>>>> origin/main
   "discovery.countryPlaceholder": "Search country...",
   "discovery.distancePref": "Distance preference",
   "discovery.emptyState": "No language partners matched your current filter criteria.",
@@ -377,24 +268,15 @@
   "discovery.pauseAudioIntro": "Pause audio introduction",
   "discovery.playAudioIntro": "Play audio introduction",
   "discovery.radiusLabel": "Maximum Distance: {{radius}} km",
-<<<<<<< HEAD
-  "discovery.ratio": "\u2728 {{ratio}}% Corrections",
-=======
   "discovery.ratio": "✨ {{ratio}}% Corrections",
->>>>>>> origin/main
   "discovery.resetFilters": "Reset filters",
   "discovery.searchPlaceholder": "Search by name, language, or bio...",
   "discovery.searching": "Searching partners...",
   "discovery.seriousOnly": "Serious learners only",
   "discovery.sharedInterests": "You both like {{interests}}",
   "discovery.startChat": "Start chat",
-<<<<<<< HEAD
-  "discovery.streakBadge": "\ud83d\udd25 {{days}}d streak",
-  "discovery.streakDays": "\ud83d\udd25 {{days}}d Streak",
-=======
   "discovery.streakBadge": "🔥 {{days}}d streak",
   "discovery.streakDays": "🔥 {{days}}d Streak",
->>>>>>> origin/main
   "discovery.subtitle": "Filter learners by language goals and learning style.",
   "discovery.targetLang": "Target language",
   "discovery.title": "Find partners",
@@ -404,18 +286,6 @@
   "discovery.vipRadiusNote": "VIP users (8 UKP / $10 USD) get global discovery and location spoofing.",
   "doodle.brushLabel": "Brush",
   "doodle.cancelBtn": "Cancel",
-<<<<<<< HEAD
-  "doodle.clearBtn": "\ud83d\uddd1\ufe0f Clear canvas",
-  "doodle.colorLabel": "Colour",
-  "doodle.sendBtn": "\ud83d\udce4 Send doodle",
-  "doodle.title": "\ud83c\udfa8 Interactive Doodle Pad",
-  "economy.buyCoinsError": "Could not start coin checkout right now.",
-  "economy.purchaseConfirmError": "Could not confirm coin purchase. Please contact support if you were charged.",
-  "economy.purchaseSuccessToast": "\ud83c\udf89 Successfully purchased {{coins}} coins! Your new balance is {{newBalance}} coins.",
-  "favourites.chipCorrections": "\u270f\ufe0f Corrections",
-  "favourites.chipPhrases": "\ud83d\udccc Important phrases",
-  "favourites.chipQueue": "\ud83d\udcda Review queue",
-=======
   "doodle.clearBtn": "🗑️ Clear canvas",
   "doodle.colorLabel": "Colour",
   "doodle.sendBtn": "📤 Send doodle",
@@ -426,7 +296,6 @@
   "favourites.chipCorrections": "✏️ Corrections",
   "favourites.chipPhrases": "📌 Important phrases",
   "favourites.chipQueue": "📚 Review queue",
->>>>>>> origin/main
   "favourites.empty": "No favourites saved yet.",
   "favourites.loading": "Loading favourites...",
   "favourites.partnerFallback": "Language partner",
@@ -446,11 +315,7 @@
   "forgot_password.sending": "Sending...",
   "forgot_password.sent_message": "If the email exists, a reset link has been sent.",
   "forgot_password.title": "Forgot Password",
-<<<<<<< HEAD
-  "gift.broadcastDesc": "\ud83c\udf89 {{sender}} gifted {{receiver}} a {{giftName}}! (\ud83e\ude99 {{cost}} Coins)",
-=======
   "gift.broadcastDesc": "🎉 {{sender}} gifted {{receiver}} a {{giftName}}! (🪙 {{cost}} Coins)",
->>>>>>> origin/main
   "gift.broadcastTitle": "{{giftName}} Broadcast!",
   "giftModal.backToGiftsBtn": "Back to gifts",
   "giftModal.balanceLabel": "Your coin balance:",
@@ -458,17 +323,10 @@
   "giftModal.buyCoinsBtn": "+ Buy coins",
   "giftModal.cancelBtn": "Cancel",
   "giftModal.coinsValue": "{{coins}} coins",
-<<<<<<< HEAD
-  "giftModal.giftCost": "\ud83e\ude99 {{cost}} Coins",
-  "giftModal.package.coins_large.desc": "Unlock crowns and rocket boosts",
-  "giftModal.package.coins_large.title": "Royal Vault ({{coins}} Coins)",
-  "giftModal.package.coins_medium.desc": "\ud83d\udd25 Most popular bundle",
-=======
   "giftModal.giftCost": "🪙 {{cost}} Coins",
   "giftModal.package.coins_large.desc": "Unlock crowns and rocket boosts",
   "giftModal.package.coins_large.title": "Royal Vault ({{coins}} Coins)",
   "giftModal.package.coins_medium.desc": "🔥 Most popular bundle",
->>>>>>> origin/main
   "giftModal.package.coins_medium.title": "Popular Chest ({{coins}} Coins)",
   "giftModal.package.coins_mega.desc": "Best value for top gifters",
   "giftModal.package.coins_mega.title": "Mega Hoard ({{coins}} Coins)",
@@ -477,17 +335,10 @@
   "giftModal.priceLabel": "{{ukp}} UKP / ${{usd}} USD",
   "giftModal.selectGift": "Select a gift",
   "giftModal.selectPrompt": "Select virtual gift to send to {{name}}:",
-<<<<<<< HEAD
-  "giftModal.sendBtnText": "\ud83c\udf81 Send {{icon}} ({{cost}} coins)",
-  "giftModal.sendingBtn": "Sending...",
-  "giftModal.subtitle": "Support language partners with animated tokens",
-  "giftModal.title": "\ud83c\udf81 Send virtual gift to host",
-=======
   "giftModal.sendBtnText": "🎁 Send {{icon}} ({{cost}} coins)",
   "giftModal.sendingBtn": "Sending...",
   "giftModal.subtitle": "Support language partners with animated tokens",
   "giftModal.title": "🎁 Send virtual gift to host",
->>>>>>> origin/main
   "group.addBtn": "Add",
   "group.addMembers": "Add Members",
   "group.createBtn": "Create Group",
@@ -524,15 +375,9 @@
   "lang.zh": "Chinese",
   "moments.addImageBtn": "Add image",
   "moments.addVoiceBtn": "Add voice",
-<<<<<<< HEAD
-  "moments.chipCorrections": "\u270f\ufe0f Native corrections",
-  "moments.chipLingq": "\ud83d\udcda LingQ saving",
-  "moments.chipPublic": "\ud83c\udf0d Public exchange",
-=======
   "moments.chipCorrections": "✏️ Native corrections",
   "moments.chipLingq": "📚 LingQ saving",
   "moments.chipPublic": "🌍 Public exchange",
->>>>>>> origin/main
   "moments.commentBtn": "Comment",
   "moments.commentPlaceholder": "Write a comment",
   "moments.copiedAlert": "Moment text copied.",
@@ -559,11 +404,7 @@
   "moments.publishError": "Failed to publish Moment.",
   "moments.saveErrorAlert": "Failed to save or already in your SRS deck.",
   "moments.saveSentence": "Save sentence",
-<<<<<<< HEAD
-  "moments.savedLingqAlert": "\ud83d\udcda Saved Moment text to your LingQ SRS Learning Deck:\n\"{{text}}\"",
-=======
   "moments.savedLingqAlert": "📚 Saved Moment text to your LingQ SRS Learning Deck:\n\"{{text}}\"",
->>>>>>> origin/main
   "moments.sendCorrection": "Send correction",
   "moments.showLess": "Show less",
   "moments.showMore": "Show more",
@@ -575,25 +416,6 @@
   "moments.transError": "Could not fetch translation right now.",
   "moments.translate": "Translate",
   "moments.unpinBtn": "Unpin",
-<<<<<<< HEAD
-  "moments.visitorsLink": "\ud83d\udc40 Visitors",
-  "nav.chatRoom": "\ud83d\udcac Chat Room",
-  "nav.chats": "Chats",
-  "nav.compose": "Compose",
-  "nav.connect": "\ud83c\udf0d Connect",
-  "nav.developerApi": "\u26a1 Developer API",
-  "nav.discover": "\ud83c\udf0d Discover",
-  "nav.favourites": "\u2b50 Favourites",
-  "nav.guided_tour": "Guided Tour",
-  "nav.helloTalk": "\ud83d\udcac HelloTalk",
-  "nav.lingqReader": "\ud83d\udcda LingQ Reader",
-  "nav.live": "Live",
-  "nav.liveRooms": "\ud83c\udf99\ufe0f Live Rooms",
-  "nav.moments": "Moments",
-  "nav.notifications": "Notifications",
-  "nav.partners": "Partners",
-  "nav.profile": "\ud83d\udc64 Me",
-=======
   "moments.visitorsLink": "👀 Visitors",
   "nav.chatRoom": "💬 Chat Room",
   "nav.chats": "Chats",
@@ -602,6 +424,7 @@
   "nav.developerApi": "⚡ Developer API",
   "nav.discover": "🌍 Discover",
   "nav.favourites": "⭐ Favourites",
+  "nav.guided_tour": "Start Guided Tour",
   "nav.helloTalk": "💬 HelloTalk",
   "nav.lingqReader": "📚 LingQ Reader",
   "nav.live": "Live",
@@ -610,22 +433,10 @@
   "nav.notifications": "Notifications",
   "nav.partners": "Partners",
   "nav.profile": "👤 Me",
->>>>>>> origin/main
   "profile.aboutMe": "About me",
   "profile.audioIntroBtn": "Audio intro",
   "profile.bioPlaceholder": "Bio and learning goals",
   "profile.cancelBtn": "Cancel",
-<<<<<<< HEAD
-  "profile.chipMatching": "\ud83c\udf10 Exchange matching",
-  "profile.chipPrivacy": "\ud83d\udd10 Privacy-first profile",
-  "profile.chipSafety": "\ud83d\udee1\ufe0f Safety controls",
-  "profile.correctionValue": "{{ratio}}x",
-  "profile.correctionsLabel": "Corrections",
-  "profile.devLink": "\u26a1 Developer",
-  "profile.displayNamePlaceholder": "Display name",
-  "profile.editBtn": "Edit profile",
-  "profile.favLink": "\u2b50 Favourites",
-=======
   "profile.chipMatching": "🌐 Exchange matching",
   "profile.chipPrivacy": "🔐 Privacy-first profile",
   "profile.chipSafety": "🛡️ Safety controls",
@@ -635,16 +446,11 @@
   "profile.displayNamePlaceholder": "Display name",
   "profile.editBtn": "Edit profile",
   "profile.favLink": "⭐ Favourites",
->>>>>>> origin/main
   "profile.hideLocation": "Hide my location in discovery",
   "profile.hideSearch": "Hide my profile in search",
   "profile.joined": "Joined {{date}}",
   "profile.learnerFallback": "Language learner",
-<<<<<<< HEAD
-  "profile.liveRoomsLink": "\ud83c\udf99\ufe0f Live rooms",
-=======
   "profile.liveRoomsLink": "🎙️ Live rooms",
->>>>>>> origin/main
   "profile.loadError": "Failed to load profile",
   "profile.loading": "Loading profile...",
   "profile.maxLanguagesError": "Max 3 target languages allowed for VIP, 1 for free users.",
@@ -655,11 +461,7 @@
   "profile.saveChangesBtn": "Save changes",
   "profile.settingsLink": "Settings",
   "profile.streakLabel": "Streak",
-<<<<<<< HEAD
-  "profile.streakValue": "\ud83d\udd25 {{days}}d",
-=======
   "profile.streakValue": "🔥 {{days}}d",
->>>>>>> origin/main
   "profile.targetLabel": "Target",
   "profile.targetPlaceholder": "Target languages (comma separated)",
   "profile.title": "Your Language Profile",
@@ -669,11 +471,7 @@
   "profile.upgradeTitle": "Upgrade for full visitor identities and advanced features",
   "profile.vipBadge": "VIP",
   "profile.visitorsBtn": "Visitors",
-<<<<<<< HEAD
-  "profile.vocabLink": "\ud83d\udcda Vocabulary",
-=======
   "profile.vocabLink": "📚 Vocabulary",
->>>>>>> origin/main
   "report": {
     "title": "Report User",
     "reportReason": "What's the reason for this report?",
@@ -708,17 +506,6 @@
   "roomChat.emptySubtitles": "No live subtitles yet. When speakers talk on stage or use speech-to-text, closed captions broadcast here!",
   "roomChat.inputPlaceholder": "Send a chat message to the room...",
   "roomChat.sendBtn": "Send",
-<<<<<<< HEAD
-  "roomChat.showChatBtn": "\ud83d\udcac Show chat",
-  "roomChat.showSubtitlesBtn": "\ud83c\udf99\ufe0f Show AI subtitles ({{count}})",
-  "roomChat.speakerCaptionPrefix": "\ud83c\udf99\ufe0f {{name}} (Live AI caption):",
-  "roomChat.subtitlePlaceholder": "Simulate speech-to-text live subtitle broadcast...",
-  "roomChat.title": "\ud83d\udcac Synchronised room chat and subtitles",
-  "safety.blockList1": "They will not be able to send you direct chat messages.",
-  "safety.blockList2": "Their Moments will immediately vanish from your timeline.",
-  "safety.blockList3": "They cannot see when you visit their profile.",
-  "safety.blockWarning": "\u26a0\ufe0f What happens when you block {{name}}:",
-=======
   "roomChat.showChatBtn": "💬 Show chat",
   "roomChat.showSubtitlesBtn": "🎙️ Show AI subtitles ({{count}})",
   "roomChat.speakerCaptionPrefix": "🎙️ {{name}} (Live AI caption):",
@@ -728,7 +515,6 @@
   "safety.blockList2": "Their Moments will immediately vanish from your timeline.",
   "safety.blockList3": "They cannot see when you visit their profile.",
   "safety.blockWarning": "⚠️ What happens when you block {{name}}:",
->>>>>>> origin/main
   "safety.cancelBtn": "Cancel",
   "safety.confirmBlockBtn": "Confirm block",
   "safety.detailsLabel": "Additional context (optional):",
@@ -741,15 +527,9 @@
   "safety.reasonLabel": "Select violation category:",
   "safety.submitReportBtn": "Submit report",
   "safety.subtitle": "Report or block {{name}} to keep our community safe",
-<<<<<<< HEAD
-  "safety.tabBlock": "\ud83d\udeab Block user",
-  "safety.tabReport": "\u26a0\ufe0f Report user",
-  "safety.title": "\ud83d\udee1\ufe0f Trust and safety moderation",
-=======
   "safety.tabBlock": "🚫 Block user",
   "safety.tabReport": "⚠️ Report user",
   "safety.title": "🛡️ Trust and safety moderation",
->>>>>>> origin/main
   "settings.accentColor": "Primary Accent Colour",
   "settings.accentColorDesc": "Personalise your app experience.",
   "settings.appearanceSection": "Appearance",
@@ -764,23 +544,14 @@
   "settings.saveBtn": "Save settings",
   "settings.title": "Settings & Privacy",
   "settings.vipRequired": "VIP Only",
-<<<<<<< HEAD
-  "system.announcement": "\ud83d\udce2 {{message}}",
-=======
   "system.announcement": "📢 {{message}}",
->>>>>>> origin/main
   "system.groupRenamed": "Group renamed to \"{{name}}\".",
   "system.memberAdded": "{{count}} member(s) joined the group.",
   "system.memberRemoved": "A member left the group.",
   "system.missedCall": "Missed call",
   "system.profileUpdated": "Profile updated",
-<<<<<<< HEAD
-  "tts.listen": "\ud83d\udd0a Listen",
-  "tts.speaking": "\ud83d\udd0a Speaking...",
-=======
   "tts.listen": "🔊 Listen",
   "tts.speaking": "🔊 Speaking...",
->>>>>>> origin/main
   "tts.title": "Listen to native pronunciation of this text ({{lang}})",
   "tts.unsupported": "Text-to-speech is not supported in this browser environment.",
   "userProfile.follow": "Follow",
@@ -802,18 +573,6 @@
   "visitors.visibleCount": "Visible: {{count}}",
   "visitors.visibleStatus": "Visible",
   "visualDiff.subtitle": "Intl.Segmenter word engine",
-<<<<<<< HEAD
-  "visualDiff.title": "\u270f\ufe0f Language Correction Diff",
-  "visualDiff.tutorExplanation": "\ud83d\udca1 Tutor explanation:",
-  "vocabulary.againBtn": "Again",
-  "vocabulary.aiBannerDesc": "Free usage is capped daily. VIP unlocks full access for 8 UKP / $10 USD per month.",
-  "vocabulary.aiBannerTitle": "\ud83e\udd16 AI grammar and pronunciation",
-  "vocabulary.cardCounter": "Card {{current}} of {{total}}",
-  "vocabulary.checkGrammarBtn": "\u270f\ufe0f Check grammar",
-  "vocabulary.chipGrammar": "\u270f\ufe0f Grammar AI",
-  "vocabulary.chipPronunciation": "\ud83c\udf99\ufe0f Pronunciation AI",
-  "vocabulary.chipRecall": "\ud83d\udcda SRS recall",
-=======
   "visualDiff.title": "✏️ Language Correction Diff",
   "visualDiff.tutorExplanation": "💡 Tutor explanation:",
   "vocabulary.againBtn": "Again",
@@ -824,7 +583,6 @@
   "vocabulary.chipGrammar": "✏️ Grammar AI",
   "vocabulary.chipPronunciation": "🎙️ Pronunciation AI",
   "vocabulary.chipRecall": "📚 SRS recall",
->>>>>>> origin/main
   "vocabulary.correctedLabel": "Corrected: ",
   "vocabulary.goodBtn": "Good",
   "vocabulary.grammarTitle": "Grammar analysis ({{count}} issue(s))",
@@ -837,22 +595,6 @@
   "vocabulary.practiceLabel": "Practice sentence",
   "vocabulary.practicePlaceholder": "Enter sentence to evaluate",
   "vocabulary.pronunciationScore": "Pronunciation score: {{score}} / 100",
-<<<<<<< HEAD
-  "vocabulary.scorePronunciationBtn": "\ud83c\udf99\ufe0f Score pronunciation",
-  "vocabulary.subtitle": "Spaced repetition, word decks, grammar coaching, and pronunciation scoring.",
-  "vocabulary.tabAi": "\ud83e\udd16 AI practice",
-  "vocabulary.tabDeck": "\ud83d\udcd6 Deck ({{count}})",
-  "vocabulary.tabReview": "\ud83c\udfaf Review ({{count}})",
-  "vocabulary.tapToFlip": "Tap to flip",
-  "vocabulary.title": "\ud83d\udcda Vocabulary studio",
-  "voiceRecorder.chipSend": "\ud83d\udce4 Send to chat",
-  "voiceRecorder.chipSpeak": "\ud83c\udf99\ufe0f Speak clearly",
-  "voiceRecorder.sendBtn": "\ud83d\udce4 Send voice note",
-  "voiceRecorder.startBtn": "\u23fa\ufe0f Start recording",
-  "voiceRecorder.stopBtn": "\u23f9\ufe0f Stop recording",
-  "voiceRecorder.title": "\ud83c\udf99\ufe0f Voice Note Recorder",
-  "voiceRecorder.uploadingBtn": "\u23f3 Uploading to Cloudflare R2...",
-=======
   "vocabulary.scorePronunciationBtn": "🎙️ Score pronunciation",
   "vocabulary.subtitle": "Spaced repetition, word decks, grammar coaching, and pronunciation scoring.",
   "vocabulary.tabAi": "🤖 AI practice",
@@ -867,7 +609,6 @@
   "voiceRecorder.stopBtn": "⏹️ Stop recording",
   "voiceRecorder.title": "🎙️ Voice Note Recorder",
   "voiceRecorder.uploadingBtn": "⏳ Uploading to Cloudflare R2...",
->>>>>>> origin/main
   "voip.callEnded": "Call Ended",
   "voip.connected": "Connected",
   "voip.connecting": "Connecting...",
@@ -883,17 +624,10 @@
   "wordModal.definitionLabel": "Dictionary definition",
   "wordModal.levelStatus": "Level {{level}}",
   "wordModal.listenTitle": "Listen to pronunciation",
-<<<<<<< HEAD
-  "wordModal.markKnownBtn": "\u26aa Mark known",
-  "wordModal.newStatus": "New (Blue)",
-  "wordModal.resetBtn": "Reset to new (Level 0 / Blue)",
-  "wordModal.saveLearningBtn": "\ud83d\udfe1 Save to learning",
-=======
   "wordModal.markKnownBtn": "⚪ Mark known",
   "wordModal.newStatus": "New (Blue)",
   "wordModal.resetBtn": "Reset to new (Level 0 / Blue)",
   "wordModal.saveLearningBtn": "🟡 Save to learning",
->>>>>>> origin/main
   "wordModal.srsStatus": "Spaced repetition status: {{status}}",
   "wordModal.title": "Dictionary Definition",
   "wordModal.translationLabel": "Translation"
