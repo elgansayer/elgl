@@ -7,7 +7,7 @@
         <span
           class="text-xs font-bold uppercase tracking-wider bg-surface-200/20 px-2 py-0.5 rounded-full"
         >
-          LingQ Interactive Reader
+          {{ 'components.wordDefinitionModal.title' | t }}
         </span>
         <h3 class="text-2xl font-extrabold mt-1 flex items-center gap-2.5">
           <span>{{ wordToken() }}</span>
@@ -41,7 +41,7 @@
         <div class="space-y-3">
           <div class="bg-surface-300 p-4 rounded-card border border-surface-100">
             <span class="text-xs font-bold text-text-muted uppercase tracking-wider block mb-1"
-              >Translation</span
+              >{{ 'components.wordDefinitionModal.translation' | t }}</span
             >
             <p class="text-lg font-bold text-text-primary">
               {{ trans.translated_text }}
@@ -50,7 +50,7 @@
           @if (trans.definition) {
             <div class="bg-surface-300 p-4 rounded-card border border-surface-100">
               <span class="text-xs font-bold text-text-muted uppercase tracking-wider block mb-1"
-                >Dictionary definition</span
+                >{{ 'components.wordDefinitionModal.definition' | t }}</span
               >
               <p class="text-sm text-text-primary leading-relaxed">
                 {{ trans.definition }}
@@ -61,7 +61,7 @@
             <div
               class="text-xs text-text-secondary italic bg-amber-500/10/50 p-3 rounded-app border border-amber-500/30/50"
             >
-              <span class="font-bold not-italic text-amber-400">Context:</span>
+              <span class="font-bold not-italic text-amber-400">{{ 'components.wordDefinitionModal.context' | t }}</span>
               "{{ contextSentence() }}"
             </div>
           }
@@ -82,7 +82,7 @@
             (click)="setLevel(1)"
             class="py-2.5 px-3 bg-amber-400 hover:bg-amber-500 text-amber-950 rounded-app font-bold text-sm shadow transition-all flex items-center justify-center gap-1"
           >
-            <span>🟡 Save to learning</span>
+            <span>{{ 'components.wordDefinitionModal.saveToLearning' | t }}</span>
           </button>
 
           <button
@@ -90,7 +90,7 @@
             (click)="setLevel(4)"
             class="py-2.5 px-3 bg-surface-100 hover:bg-surface-200 text-text-primary rounded-app font-bold text-sm shadow transition-all flex items-center justify-center gap-1"
           >
-            <span>⚪ Mark known</span>
+            <span>{{ 'components.wordDefinitionModal.markKnown' | t }}</span>
           </button>
         </div>
 

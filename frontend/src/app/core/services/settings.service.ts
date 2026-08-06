@@ -22,7 +22,7 @@ export class SettingsService {
       // Mock API fetch
       const data = await this.mockFetchSettings(userId);
       this.state.set(data);
-    } catch (e) {
+    } catch {
       this.error.set('Failed to load settings');
     } finally {
       this.loading.set(false);
@@ -45,7 +45,7 @@ export class SettingsService {
       // Mock API patch
       await this.mockPatchPrivacySettings(newSettings);
       // Success: State is already correct
-    } catch (e) {
+    } catch {
       // 3. Rollback on failure
       this.error.set('Failed to update privacy settings. Reverting.');
       this.state.set(currentState);
@@ -137,7 +137,7 @@ export class SettingsService {
     });
   }
 
-  private async mockPatchPrivacySettings(newSettings: Partial<SocialPrivacySettings>): Promise<void> {
+  private async mockPatchPrivacySettings(_newSettings: Partial<SocialPrivacySettings>): Promise<void> {
     return new Promise((resolve) => {
       setTimeout(() => resolve(), 500);
     });

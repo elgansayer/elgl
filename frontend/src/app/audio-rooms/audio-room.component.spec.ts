@@ -38,7 +38,7 @@ describe('AudioRoomComponent', () => {
   beforeEach(async () => {
     try {
       TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
-    } catch (e) {
+    } catch {
       // Ignore if already initialized
     }
     await TestBed.configureTestingModule({

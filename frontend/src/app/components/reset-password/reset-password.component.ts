@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AuthService } from '../../services/auth.service';
@@ -71,11 +71,11 @@ export class ResetPasswordComponent {
   }
 
   async onSubmit(): Promise<void> {
-    if (this.resetForm.invalid || !this.token()) return;
+    if (this.form.invalid || !this.token()) return;
     this.submitting.set(true);
     this.isError.set(false);
     try {
-      await this.authService.resetPassword(this.token(), this.resetForm.controls.newPassword.value);
+      await this.authService.resetPassword(this.token(), this.form.controls.newPassword.value);
       this.messageKey.set('auth.resetPassword.success');
       this.router.navigate(['/home']);
     } catch {
