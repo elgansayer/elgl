@@ -2,7 +2,7 @@ name: Scheduled PR Fixer
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/3 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -18,9 +18,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run safe PR fixer
+      - name: Run parallel PR fixer
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          MAX_PARALLEL_PR_FIXER: "20"
         run: |
           chmod +x scripts/fix-rejected-prs.sh
           bash scripts/fix-rejected-prs.sh
