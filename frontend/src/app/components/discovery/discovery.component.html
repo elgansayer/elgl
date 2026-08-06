@@ -94,6 +94,30 @@
         ></app-age-range-slider>
       </div>
 
+      <!-- Distance Slider (VIP only) -->
+      <div class="flex items-center gap-2 px-4 mt-3">
+        @if (isVip()) {
+          <app-distance-slider
+            (distanceChanged)="onDistanceChanged($event)"
+            [initialDistance]="selectedDistanceKm()"
+            [minKm]="1"
+            [maxKm]="250"
+            [step]="1"
+          ></app-distance-slider>
+        } @else {
+          <div class="flex items-center gap-2 w-full">
+            <span class="text-xs font-semibold text-text-secondary whitespace-nowrap">{{ 'discovery.distancePref' | t }}</span>
+            <span class="text-xs text-text-muted bg-surface-200 px-2 py-1 rounded-md">{{ selectedDistanceKm() }} km</span>
+            <a
+              routerLink="/vip"
+              class="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded-md whitespace-nowrap"
+            >
+              {{ 'discovery.distanceVipRequired' | t }}
+            </a>
+          </div>
+        }
+      </div>
+
       <!-- Serious Learner Mode Toggle -->
       <div class="flex items-center gap-3 px-4 mt-3 pb-3">
         <span class="text-xs font-semibold text-text-secondary whitespace-nowrap">{{ 'discovery.seriousModeToggle' | t }}</span>
@@ -148,6 +172,11 @@
       </div>
     </div>
   }
+
+  <!-- Global Search Component -->
+  <div class="px-4 mt-4 mb-2">
+    <app-global-search (searchFilters)="onGlobalSearch($event)"></app-global-search>
+  </div>
 
   <!-- Content States -->
   <main class="p-0">

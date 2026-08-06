@@ -23,7 +23,7 @@ interface LanguageIslandRow {
   updated_at: string;
 }
 
-interface LanguageIslandMemberRow {
+interface _LanguageIslandMemberRow {
   island_id: string;
   user_id: string;
   role: 'host' | 'member';

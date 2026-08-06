@@ -4,7 +4,10 @@ export const environment = {
   supabaseAnonKey: 'mock-anon-key',
   apiUrl: '/api',
   centrifugoUrl: 'wss://example.com/connection/websocket',
-  liveKitUrl: 'wss://livekit.example.com',
+  liveKitUrl: 'wss://livekit.yourdomain.com',
+  turnServerUrl: 'turn:turn.yourdomain.com:3478',
+  turnUsername: 'guest',
+  turnPassword: 'somepassword',
   firebase: {
     apiKey: 'YOUR_API_KEY',
     authDomain: 'YOUR_AUTH_DOMAIN',

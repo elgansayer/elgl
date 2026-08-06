@@ -101,11 +101,11 @@
       >
         <div class="relative">
           <span class="text-2xl leading-none">💬</span>
-          @if (hasUnread()) {
+          @if (unreadCounter.totalUnread() > 0) {
             <span
               class="absolute -top-1 -end-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
             >
-              {{ unreadDisplayValue() }}
+              {{ unreadCounter.totalUnread() > 99 ? '99+' : unreadCounter.totalUnread() }}
             </span>
           }
         </div>
