@@ -44,6 +44,10 @@ describe('GroupsController', () => {
     controller = new GroupsController(mockGroupsService);
   });
 
+  function mockUser(id: string): User {
+    return { id } as User;
+  }
+
   describe('create', () => {
     it('should call groupsService.createGroup with the dto mapped fields', async () => {
       const dto: CreateGroupDto = {

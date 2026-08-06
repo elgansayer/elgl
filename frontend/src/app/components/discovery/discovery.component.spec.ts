@@ -345,6 +345,38 @@ describe('DiscoveryComponent', () => {
     expect(vipNote).toBeFalsy();
   });
 
+  it('should render distance slider for VIP users', async () => {
+    mockAuthService.currentUser.set({ is_vip: true });
+    await init();
+
+    const slider = fixture.nativeElement.querySelector('app-distance-slider');
+    expect(slider).toBeTruthy();
+  });
+
+  it('should show VIP upsell for distance slider when user is not VIP', async () => {
+    await init();
+
+    const slider = fixture.nativeElement.querySelector('app-distance-slider');
+    expect(slider).toBeFalsy();
+
+    // The VIP upsell links should exist (at least one for distance or gender)
+    const vipLinks = fixture.nativeElement.querySelectorAll('a[routerLink="/vip"]');
+    expect(vipLinks.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('should update distance and re-search when distance slider changes', async () => {
+    mockAuthService.currentUser.set({ is_vip: true });
+    await init();
+    mockDiscoveryService.findPartners.mockClear();
+
+    component.onDistanceChanged(75);
+    await flush();
+
+    expect(component.selectedDistanceKm()).toBe(75);
+    const callArgs = mockDiscoveryService.findPartners.mock.calls.at(-1)?.[0];
+    expect(callArgs.radius_metres).toBe(75000);
+  });
+
   it('should default to best_match sort and include it in the search call', async () => {
     await init();
 

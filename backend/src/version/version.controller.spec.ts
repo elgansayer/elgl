@@ -5,6 +5,7 @@ import { VersionService } from './version.service';
 describe('VersionController', () => {
   let controller: VersionController;
   const mockGetVersion = jest.fn();
+  const mockGetMinimumSupportedVersion = jest.fn();
 
   beforeEach(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -14,6 +15,7 @@ describe('VersionController', () => {
           provide: VersionService,
           useValue: {
             getVersion: mockGetVersion,
+            getMinimumSupportedVersion: mockGetMinimumSupportedVersion,
           },
         },
       ],
@@ -35,6 +37,7 @@ describe('VersionController', () => {
       const versionInfo = {
         current: '1.0.0',
         latest: '1.0.0',
+        minimumSupported: '1.0.0',
       };
 
       mockGetVersion.mockReturnValue(versionInfo);
@@ -48,11 +51,25 @@ describe('VersionController', () => {
         current: '1.0.0',
         latest: '2.0.0',
         updateUrl: 'https://example.com/download',
+        minimumSupported: '1.0.0',
       };
 
       mockGetVersion.mockReturnValue(versionInfo);
 
       expect(controller.getVersion()).toEqual(versionInfo);
+    });
+  });
+
+  describe('getMinimumSupportedVersion', () => {
+    it('should return minimum supported version object from the service', () => {
+      const minVersionInfo = {
+        minimumSupported: '1.1.0',
+      };
+
+      mockGetMinimumSupportedVersion.mockReturnValue(minVersionInfo);
+
+      expect(controller.getMinimumSupportedVersion()).toEqual(minVersionInfo);
+      expect(mockGetMinimumSupportedVersion).toHaveBeenCalledTimes(1);
     });
   });
 });

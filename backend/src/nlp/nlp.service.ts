@@ -6,16 +6,19 @@ import { GrammarCheckDto } from './dto/grammar-check.dto';
 import { PronunciationScoreDto } from './dto/pronunciation-score.dto';
 import { TranslateDto } from './dto/translate.dto';
 import { TranslateUiDto } from './dto/translate-ui.dto';
+import { TranscribeVoiceDto } from './dto/transcribe-voice.dto';
 import {
   GrammarCheckResult,
   PronunciationScoreResult,
   TranslationResult,
   TranslateUiResult,
+  TranscribeVoiceResult,
   WordBreakdownItem,
 } from './interfaces/nlp-results.interface';
 import { ExplainGrammarDto } from './dto/explain-grammar.dto';
 import { SimplifyDto } from './dto/simplify.dto';
 import { TranslateBioDto } from './dto/translate-bio.dto';
+import { TranscribeAudioDto } from './dto/transcribe-audio.dto';
 
 @Injectable()
 export class NlpService {
@@ -417,6 +420,74 @@ export class NlpService {
     };
   }
 
+  async transcribeAudio(
+    dto: TranscribeAudioDto,
+  ): Promise<{ transcription: string; language: string }> {
+    const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
+    if (!azureKey) {
+      throw new BadRequestException(
+        'Azure Speech Services API key not configured',
+      );
+    }
+
+    const region = this.configService.get<string>('AZURE_SPEECH_REGION');
+    if (!region) {
+      throw new BadRequestException(
+        'AZURE_SPEECH_REGION environment variable not configured',
+      );
+    }
+
+    // Download the audio file from the provided URL
+    const audioResponse = await fetch(dto.audio_url);
+    if (!audioResponse.ok) {
+      throw new BadRequestException('Failed to fetch audio file from URL');
+    }
+
+    const audioBuffer = await audioResponse.arrayBuffer();
+
+    const lang = dto.language || 'en-US';
+
+    // Azure Speech Services REST API for speech-to-text
+    const sttRes = await fetch(
+      `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${lang}&format=detailed&profanity=raw`,
+      {
+        method: 'POST',
+        headers: {
+          'Ocp-Apim-Subscription-Key': azureKey,
+          'Content-Type': 'audio/webm; codecs=opus',
+          Accept: 'application/json',
+        },
+        body: audioBuffer,
+      },
+    );
+
+    if (!sttRes.ok) {
+      const errorBody = await sttRes.text();
+      throw new BadRequestException(
+        `Azure Speech-to-Text API error: ${sttRes.status} ${errorBody}`,
+      );
+    }
+
+    const sttData = (await sttRes.json()) as {
+      DisplayText?: string;
+      RecognitionStatus?: string;
+      NBest?: Array<{ Display: string }>;
+    };
+
+    const transcription =
+      sttData.DisplayText ??
+      sttData.NBest?.[0]?.Display ??
+      '';
+
+    const detectedLang = (sttData as Record<string, unknown>)
+      .PrimaryLanguage as string | undefined;
+
+    return {
+      transcription,
+      language: detectedLang ?? lang,
+    };
+  }
+
   async simplify(
     userId: string,
     isVip: boolean,
@@ -740,6 +811,73 @@ export class NlpService {
       pronunciation_url: `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(translatedText)}&tl=${dto.target_language}`,
       wordCorrections,
     };
+  }
+
+  async transcribeVoiceOnly(
+    dto: TranscribeVoiceDto,
+  ): Promise<TranscribeVoiceResult> {
+    const azureKey = this.configService.get<string>('AZURE_SPEECH_KEY');
+    const region =
+      this.configService.get<string>('AZURE_SPEECH_REGION') ?? 'eastus';
+
+    if (!azureKey) {
+      return {
+        original_text: '',
+        detected_language: 'en',
+        confidence: 0,
+      };
+    }
+
+    const audioResponse = await fetch(dto.audio_url);
+    if (!audioResponse.ok) {
+      throw new BadRequestException('Failed to fetch audio file from URL');
+    }
+
+    const audioBuffer = await audioResponse.arrayBuffer();
+
+    const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US&format=detailed`;
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Ocp-Apim-Subscription-Key': azureKey,
+        'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
+        Accept: 'application/json',
+      },
+      body: audioBuffer,
+    });
+
+    if (!res.ok) {
+      const errorBody = await res.text();
+      throw new BadRequestException(
+        `Azure Speech API error: ${res.status} ${errorBody}`,
+      );
+    }
+
+    const data = (await res.json()) as {
+      DisplayText?: string;
+      RecognitionStatus?: string;
+      NBest?: Array<{ Confidence?: number }>;
+    };
+
+    const text = data.DisplayText ?? '';
+    const confidence = data.NBest?.[0]?.Confidence ?? 0;
+    const detectedLang = this.detectLanguage(text).language;
+
+    return {
+      original_text: text,
+      detected_language: detectedLang,
+      confidence: Math.round(confidence * 100) / 100,
+    };
+  }
+
+  async transcribeVoice(
+    userId: string,
+    isVip: boolean,
+    dto: TranscribeVoiceDto,
+  ): Promise<TranscribeVoiceResult> {
+    await this.checkRateLimit(userId, isVip);
+    return this.transcribeVoiceOnly(dto);
   }
 
   generateSessionSummary(text: string): {

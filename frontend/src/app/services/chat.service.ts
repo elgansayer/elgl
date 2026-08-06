@@ -80,6 +80,8 @@ export interface ChatRoom {
   is_online: boolean;
   is_pinned: boolean;
   is_locked?: boolean;
+  is_vip?: boolean;
+  native_languages?: string[];
   created_at: string;
   admin_id?: string;
   wallpaper_url?: string | null;
@@ -403,6 +405,14 @@ export class ChatService {
     );
   }
 
+  async removeFavourite(favouriteId: string): Promise<void> {
+    await firstValueFrom(
+      this.http.delete(`${this.baseUrl}/favourites/${favouriteId}`, {
+        headers: this.getHeaders(),
+      }),
+    );
+  }
+
   async loadBlockedUsers(): Promise<void> {
     try {
       const blockedIds = await this.safetyService.getBlockedIdsAsync();
@@ -523,6 +533,16 @@ export class ChatService {
       this.http.post<{ translated_text: string }>(
         `${environment.apiUrl}/nlp/translate`,
         { text, target_language: targetLanguage },
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
+  async transcribeVoice(audioUrl: string): Promise<{ original_text: string; detected_language: string; confidence: number }> {
+    return firstValueFrom(
+      this.http.post<{ original_text: string; detected_language: string; confidence: number }>(
+        `${environment.apiUrl}/nlp/transcribe-voice`,
+        { audio_url: audioUrl },
         { headers: this.getHeaders() },
       ),
     );

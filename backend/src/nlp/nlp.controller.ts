@@ -7,12 +7,15 @@ import { GrammarCheckDto } from './dto/grammar-check.dto';
 import { PronunciationScoreDto } from './dto/pronunciation-score.dto';
 import { TranslateDto } from './dto/translate.dto';
 import { TranslateUiDto } from './dto/translate-ui.dto';
+import { TranscribeVoiceDto } from './dto/transcribe-voice.dto';
 import { ExplainGrammarDto } from './dto/explain-grammar.dto';
 import { SimplifyDto } from './dto/simplify.dto';
 import { TranslateBioDto } from './dto/translate-bio.dto';
+import { TranscribeAudioDto } from './dto/transcribe-audio.dto';
 import {
   GrammarCheckResult,
   PronunciationScoreResult,
+  TranscribeVoiceResult,
   TranslationResult,
   TranslateUiResult,
 } from './interfaces/nlp-results.interface';
@@ -143,5 +146,12 @@ export class NlpController {
       profile?.is_vip ?? false,
       dto,
     );
+  }
+
+  @Post('transcribe-audio')
+  async transcribeAudio(
+    @Body() dto: TranscribeAudioDto,
+  ): Promise<{ transcription: string; language: string }> {
+    return await this.nlpService.transcribeAudio(dto);
   }
 }

@@ -282,12 +282,12 @@
               </tr>
             </thead>
             <tbody>
-              @for (feature of getAllFeatures(); track feature) {
+              @for (feature of allFeatures(); track feature) {
                 <tr class="border-b border-gray-100 dark:border-gray-700/50">
                   <td class="p-4 text-gray-700 dark:text-gray-300">{{ feature }}</td>
                   @for (plan of plans(); track plan.id) {
                     <td class="p-4 text-center">
-                      @if (planHasFeature(plan, feature)) {
+                      @if (planFeaturesMap().get(plan.id)?.has(feature)) {
                         <svg
                           class="w-5 h-5 text-green-500 mx-auto"
                           fill="none"
