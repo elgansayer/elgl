@@ -4,7 +4,13 @@
 
 This project has a `DESIGN.md` at the repo root. Use it for design context.
 
-## Claude Design
+## Open CoDesign (Local Desktop Tool)
+
+Open CoDesign v0.2.1 is installed at `~/.local/bin/open-codesign`.
+Launch it to generate prototypes and UI mockups locally with your own API key.
+It reads `DESIGN.md` from the project root for brand tokens and component primitives.
+
+## Claude Design (Web)
 
 When working on UI changes, run `/design-sync` to pull the latest design system into Claude Design.
 Use `/design` to prototype new components and pages before implementing them.
