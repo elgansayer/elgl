@@ -101,7 +101,7 @@ describe('ChatController', () => {
     });
 
     it('should return connection token when user is provided', async () => {
-      const tokenString = 'ws-token';
+      const mockToken = 'ws-token';
       (chatService.generateConnectionToken as jest.Mock).mockResolvedValue(
         tokenString,
       );
@@ -110,7 +110,7 @@ describe('ChatController', () => {
       expect(chatService.generateConnectionToken).toHaveBeenCalledWith(
         mockUser().id,
       );
-      expect(result).toEqual({ token: tokenString });
+      expect(result).toEqual({ token: mockToken });
     });
   });
 

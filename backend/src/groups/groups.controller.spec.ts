@@ -67,7 +67,7 @@ describe('GroupsController', () => {
         created_at: '2020-01-01T00:00:00.000Z',
       });
 
-      const result = await controller.create(dto, user);
+      const result = await controller.create(dto, req.user);
 
       expect(mockGroupsService.createGroup).toHaveBeenCalledWith(
         'user-1',
@@ -84,7 +84,7 @@ describe('GroupsController', () => {
       const user = mockUser('user-2');
       mockGroupsService.createGroup.mockResolvedValue({} as GroupRecord);
 
-      await controller.create(dto, user);
+      await controller.create(dto, req.user);
 
       expect(mockGroupsService.createGroup).toHaveBeenCalledWith(
         'user-2',
@@ -101,7 +101,7 @@ describe('GroupsController', () => {
       const user = mockUser('user-1');
       mockGroupsService.getGroupsByInterest.mockResolvedValue([]);
 
-      await controller.getGroups(user, 'interest-123');
+      await controller.getGroups(req.user, 'interest-123');
 
       expect(mockGroupsService.getGroupsByInterest).toHaveBeenCalledWith(
         'interest-123',
@@ -113,7 +113,7 @@ describe('GroupsController', () => {
       const user = mockUser('user-1');
       mockGroupsService.getDiscoverableGroups.mockResolvedValue([]);
 
-      await controller.getGroups(user, undefined);
+      await controller.getGroups(req.user, undefined);
 
       expect(mockGroupsService.getDiscoverableGroups).toHaveBeenCalledWith(
         'user-1',
@@ -127,7 +127,7 @@ describe('GroupsController', () => {
       const user = mockUser('user-1');
       mockGroupsService.getDiscoverableGroups.mockResolvedValue([]);
 
-      await controller.getDiscoverableGroups(user);
+      await controller.getDiscoverableGroups(req.user);
 
       expect(mockGroupsService.getDiscoverableGroups).toHaveBeenCalledWith(
         'user-1',
@@ -206,7 +206,7 @@ describe('GroupsController', () => {
       mockGroupsService.isAdmin.mockResolvedValue(true);
       mockGroupsService.addMember.mockResolvedValue(undefined);
 
-      await controller.addMember(groupId, dto, user);
+      await controller.addMember(groupId, dto, req.user);
 
       expect(mockGroupsService.isAdmin).toHaveBeenCalledWith(
         'admin-1',
@@ -223,7 +223,7 @@ describe('GroupsController', () => {
       const user = mockUser('non-admin');
       mockGroupsService.isAdmin.mockResolvedValue(false);
 
-      await expect(controller.addMember(groupId, dto, user)).rejects.toThrow(
+      await expect(controller.addMember(groupId, dto, req.user)).rejects.toThrow(
         UnauthorizedException,
       );
       expect(mockGroupsService.addMember).not.toHaveBeenCalled();
@@ -239,7 +239,7 @@ describe('GroupsController', () => {
       mockGroupsService.isAdmin.mockResolvedValue(true);
       mockGroupsService.removeMember.mockResolvedValue(undefined);
 
-      await controller.removeMember(groupId, dto, user);
+      await controller.removeMember(groupId, dto, req.user);
 
       expect(mockGroupsService.isAdmin).toHaveBeenCalledWith(
         'admin-1',
@@ -256,7 +256,7 @@ describe('GroupsController', () => {
       const user = mockUser('non-admin');
       mockGroupsService.isAdmin.mockResolvedValue(false);
 
-      await expect(controller.removeMember(groupId, dto, user)).rejects.toThrow(
+      await expect(controller.removeMember(groupId, dto, req.user)).rejects.toThrow(
         UnauthorizedException,
       );
       expect(mockGroupsService.removeMember).not.toHaveBeenCalled();
@@ -275,7 +275,7 @@ describe('GroupsController', () => {
       mockGroupsService.isAdmin.mockResolvedValue(true);
       mockGroupsService.updateSettings.mockResolvedValue(undefined);
 
-      await controller.updateSettings(groupId, dto, user);
+      await controller.updateSettings(groupId, dto, req.user);
 
       expect(mockGroupsService.isAdmin).toHaveBeenCalledWith(
         'admin-1',
@@ -292,7 +292,7 @@ describe('GroupsController', () => {
       mockGroupsService.isAdmin.mockResolvedValue(false);
 
       await expect(
-        controller.updateSettings(groupId, dto, user),
+        controller.updateSettings(groupId, dto, req.user),
       ).rejects.toThrow(UnauthorizedException);
       expect(mockGroupsService.updateSettings).not.toHaveBeenCalled();
     });
@@ -307,7 +307,7 @@ describe('GroupsController', () => {
       mockGroupsService.isAdmin.mockResolvedValue(true);
       mockGroupsService.sendAnnouncement.mockResolvedValue({ success: true });
 
-      const result = await controller.sendAnnouncement(groupId, dto, user);
+      const result = await controller.sendAnnouncement(groupId, dto, req.user);
 
       expect(mockGroupsService.isAdmin).toHaveBeenCalledWith(
         'admin-1',
@@ -326,7 +326,7 @@ describe('GroupsController', () => {
       mockGroupsService.isAdmin.mockResolvedValue(false);
 
       await expect(
-        controller.sendAnnouncement(groupId, dto, user),
+        controller.sendAnnouncement(groupId, dto, req.user),
       ).rejects.toThrow(UnauthorizedException);
       expect(mockGroupsService.sendAnnouncement).not.toHaveBeenCalled();
     });
@@ -337,7 +337,7 @@ describe('GroupsController', () => {
       const user = mockUser('member-1');
       mockGroupsService.joinGroup.mockResolvedValue({ success: true });
 
-      const result = await controller.joinGroup('group-5', user);
+      const result = await controller.joinGroup('group-5', req.user);
 
       expect(mockGroupsService.joinGroup).toHaveBeenCalledWith(
         'group-5',
@@ -364,7 +364,7 @@ describe('GroupsController', () => {
       const user = mockUser('admin-1');
       mockGroupsService.deleteGroupResource.mockResolvedValue(undefined);
 
-      await controller.deleteGroupResource('group-1', 'resource-1', user);
+      await controller.deleteGroupResource('group-1', 'resource-1', req.user);
 
       expect(mockGroupsService.deleteGroupResource).toHaveBeenCalledWith(
         'group-1',

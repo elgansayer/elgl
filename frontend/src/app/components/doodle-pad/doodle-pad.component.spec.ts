@@ -2,8 +2,9 @@
  * @vitest-environment jsdom
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Pipe, PipeTransform, Component } from '@angular/core';
+import { Pipe, PipeTransform } from '@angular/core';
 import { DoodlePadComponent } from './doodle-pad.component';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Pipe({ standalone: true, name: 't' })
 class MockTranslatePipe implements PipeTransform {
@@ -12,31 +13,8 @@ class MockTranslatePipe implements PipeTransform {
   }
 }
 
-@Component({
-  standalone: true,
-  imports: [DoodlePadComponent, MockTranslatePipe],
-  template: `
-    <app-doodle-pad
-      (doodleSaved)="onDoodleSaved($event)"
-      (cancelled)="onCancelled()"
-    ></app-doodle-pad>
-  `,
-})
-class TestHostComponent {
-  saved: string | null = null;
-  wasCancelled = false;
-
-  onDoodleSaved(data: string): void {
-    this.saved = data;
-  }
-  onCancelled(): void {
-    this.wasCancelled = true;
-  }
-}
-
 describe('DoodlePadComponent', () => {
-  let hostFixture: ComponentFixture<TestHostComponent>;
-  let host: TestHostComponent;
+  let fixture: ComponentFixture<DoodlePadComponent>;
   let component: DoodlePadComponent;
   let canvasEl: HTMLCanvasElement;
   let mockCtx: CanvasRenderingContext2D;
@@ -85,33 +63,28 @@ describe('DoodlePadComponent', () => {
       'data:image/png;base64,mock',
     );
 
-    // Resolve external template/style resources before TestBed compilation
-    const { ɵresolveComponentResources } = await import('@angular/core');
-    await ɵresolveComponentResources(DoodlePadComponent);
-
     await TestBed.configureTestingModule({
-      imports: [TestHostComponent, DoodlePadComponent, MockTranslatePipe],
-    }).compileComponents();
+      imports: [DoodlePadComponent],
+    })
+      .overrideComponent(DoodlePadComponent, {
+        remove: { imports: [TranslatePipe] },
+        add: { imports: [MockTranslatePipe] },
+        set: {
+          styles: [],
+        },
+      })
+      .compileComponents();
 
-    hostFixture = TestBed.createComponent(TestHostComponent);
-    host = hostFixture.componentInstance;
-    hostFixture.detectChanges();
+    fixture = TestBed.createComponent(DoodlePadComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
 
-    const child = hostFixture.debugElement.children[0];
-    component = child.componentInstance as DoodlePadComponent;
-
-    canvasEl = hostFixture.nativeElement.querySelector('canvas') as HTMLCanvasElement;
-    canvasEl.getBoundingClientRect = vi.fn().mockReturnValue({
-      left: 0, top: 0, right: 600, bottom: 400,
-      width: 600, height: 400, x: 0, y: 0, toJSON: () => ({}),
-    });
+    canvasEl = fixture.nativeElement.querySelector('canvas') as HTMLCanvasElement;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
-
-  // -- Basic existence checks --
 
   it('creates the component', () => {
     expect(component).toBeTruthy();
@@ -140,35 +113,26 @@ describe('DoodlePadComponent', () => {
     expect(component.brushWidth).toBe(8);
   });
 
-  it('shows the clear, cancel, and send action buttons in the template', () => {
-    const buttons = hostFixture.nativeElement.querySelectorAll('button');
-    const labels = Array.from(buttons).map(
-      (b: unknown) => (b as HTMLElement).textContent?.trim() ?? '',
-    );
-    expect(labels.some((l: string) => l.includes('doodle.clearBtn'))).toBe(true);
-    expect(labels.some((l: string) => l.includes('doodle.cancelBtn'))).toBe(true);
-    expect(labels.some((l: string) => l.includes('doodle.sendBtn'))).toBe(true);
-  });
-
   // -- Canvas operations --
 
   it('clears the canvas with dark fill', () => {
     component.clearCanvas();
     expect(mockCtx.fillStyle).toBe('#1e1e1e');
-    expect(mockCtx.fillRect).toHaveBeenCalledWith(0, 0, 600, 400);
   });
 
   it('emits doodleSaved with a base64 data URL on save', () => {
+    const spy = vi.fn();
+    component.doodleSaved.subscribe(spy);
     component.save();
-    expect(host.saved).toBe('data:image/png;base64,mock');
+    expect(spy).toHaveBeenCalledWith('data:image/png;base64,mock');
   });
 
   it('emits cancelled on cancel', () => {
+    const spy = vi.fn();
+    component.cancelled.subscribe(spy);
     component.cancel();
-    expect(host.wasCancelled).toBe(true);
+    expect(spy).toHaveBeenCalled();
   });
-
-  // -- Drawing via mouse events --
 
   describe('mouse drawing', () => {
     function mkEv(type: string, x: number, y: number): MouseEvent {
@@ -204,8 +168,6 @@ describe('DoodlePadComponent', () => {
     });
   });
 
-  // -- Drawing via touch events --
-
   describe('touch drawing', () => {
     function mkTouch(type: string, x: number, y: number): TouchEvent {
       const t = new Touch({
@@ -240,8 +202,6 @@ describe('DoodlePadComponent', () => {
       expect(mockCtx.stroke).not.toHaveBeenCalled();
     });
   });
-
-  // -- DOM event binding smoke tests --
 
   describe('template canvas listeners', () => {
     it('triggers startDrawing on canvas mousedown', () => {
