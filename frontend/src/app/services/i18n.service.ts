@@ -471,6 +471,8 @@ export class I18nService {
     'chatRoom.correctBtn': 'Correct',
     'chatRoom.doodleBtn': 'Doodle',
     'chatRoom.voiceBtn': 'Voice',
+    'chatRoom.voiceMessage': 'Voice message',
+    'chatRoom.transcribing': 'Transcribing...',
     'chatRoom.typePlaceholder': 'Type your message',
     'chatRoom.mentionListLabel': 'Mention a participant',
     'chatRoom.mentionError': 'Failed to mention participant.',
