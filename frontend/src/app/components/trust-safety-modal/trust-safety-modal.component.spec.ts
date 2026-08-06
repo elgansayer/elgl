@@ -1,10 +1,15 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = resolve(__filename, '..');
+
 describe('TrustSafetyModalComponent', () => {
   describe('RTL logical CSS compliance', () => {
     let templateContent: string;
 
     beforeAll(() => {
-      const { readFileSync } = require('node:fs');
-      const { resolve } = require('node:path');
       const content = readFileSync(
         resolve(__dirname, 'trust-safety-modal.component.ts'),
         'utf-8',
