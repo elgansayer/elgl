@@ -1,6 +1,6 @@
 import { EmailService } from './email.service';
 
-describe('EmailService', () => {
+describe('EmailService (unit)', () => {
   let service: EmailService;
   let configService: { get: jest.Mock };
   let sendMailMock: jest.Mock;

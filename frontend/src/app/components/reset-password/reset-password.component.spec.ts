@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ResetPasswordComponent } from './reset-password.component';
 import { AuthService } from '../../services/auth.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -41,9 +42,47 @@ describe('ResetPasswordComponent', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(ResetPasswordComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
+  describe('without token query param', () => {
+    beforeEach(async () => {
+      authService = { resetPassword: vi.fn() };
+      router = { navigate: vi.fn() };
+
+      await TestBed.configureTestingModule({
+        imports: [ResetPasswordComponent],
+        providers: [
+          { provide: AuthService, useValue: authService },
+          { provide: Router, useValue: router },
+          { provide: ActivatedRoute, useValue: createActivatedRoute(null) },
+          TranslatePipe,
+        ],
+      }).compileComponents();
+
+      fixture = TestBed.createComponent(ResetPasswordComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+    });
+
+    it('should render the form with an empty token input', () => {
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('#token')).not.toBeNull();
+      expect(compiled.querySelector('#newPassword')).not.toBeNull();
+    });
+
+    it('should not call resetPassword when token is empty', async () => {
+      component.token.set('');
+      component.newPassword.set('validPass123!');
+      await component.onSubmit();
+
+      expect(authService.resetPassword).not.toHaveBeenCalled();
+    });
+
+    it('should not call resetPassword when newPassword is empty', async () => {
+      component.token.set('some-token');
+      component.newPassword.set('');
+      await component.onSubmit();
+
+      expect(authService.resetPassword).not.toHaveBeenCalled();
+    });
   });
 
   it('should create', () => {
