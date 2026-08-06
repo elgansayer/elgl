@@ -33,8 +33,11 @@ export class DailyLearningTipComponent {
   protected readonly tipResource = resource<DailyTipResponse, unknown>({
     loader: () => {
       const token = this.authService.getAccessToken();
+      if (!token) {
+        return Promise.reject(new Error('No access token available'));
+      }
       return fetch(`${environment.apiUrl}/daily-tip`, {
-        headers: { Authorization: `Bearer ${token ?? ''}` },
+        headers: { Authorization: `Bearer ${token}` },
       }).then((r) => {
         if (!r.ok) throw new Error('Failed to fetch daily tip');
         return r.json();
@@ -42,7 +45,10 @@ export class DailyLearningTipComponent {
     },
   });
 
-  protected readonly tip = computed(
-    () => this.tipResource.value()?.tip ?? this.i18nService.translate('home.dailyTip.fallback'),
-  );
+  protected readonly tip = computed(() => {
+    if (this.tipResource.error()) {
+      return this.i18nService.translate('home.dailyTip.fallback');
+    }
+    return this.tipResource.value()?.tip ?? this.i18nService.translate('home.dailyTip.fallback');
+  });
 }

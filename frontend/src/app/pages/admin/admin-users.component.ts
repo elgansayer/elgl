@@ -1,10 +1,7 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
-import {
-  AdminService,
-  AdminUserSummary,
-} from '../../services/admin.service';
+import { AdminService, AdminUserSummary } from '../../services/admin.service';
 
 @Component({
   selector: 'app-admin-users',
@@ -37,9 +34,7 @@ export class AdminUsersComponent {
   readonly total = computed(() => this.usersResource.value()?.total ?? 0);
   readonly isLoading = computed(() => this.usersResource.isLoading());
 
-  readonly pageTotal = computed(() =>
-    Math.max(1, Math.ceil(this.total() / this.pageSize())),
-  );
+  readonly pageTotal = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
 
   readonly selectedUserId = signal<string | null>(null);
   readonly showHistory = signal(false);
@@ -58,7 +53,10 @@ export class AdminUsersComponent {
   readonly loginHistory = computed(() => this.historyResource.value() ?? []);
 
   onSearchInput(event: Event): void {
-    this.searchTerm.set((event.target as HTMLInputElement).value);
+    const target = event.target;
+    if (target instanceof HTMLInputElement) {
+      this.searchTerm.set(target.value);
+    }
     this.page.set(1);
     this.refreshToken.update((v) => v + 1);
   }

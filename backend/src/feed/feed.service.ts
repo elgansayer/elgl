@@ -5,7 +5,7 @@ import { SafetyService } from '../safety/safety.service';
 // Define Moment interface locally to avoid import issues
 export interface Moment {
   id: string;
-  author_id: string;
+  author_id: string | null | undefined;
   content_text?: string | null;
   media_urls?: string[];
   voice_note_url?: string | null;
@@ -16,7 +16,7 @@ export interface Moment {
   created_at: string;
   author?: {
     id: string;
-    display_name: string;
+    display_name: string | null | undefined;
     avatar_url?: string | null;
     native_languages?: string[];
     target_languages?: string[];
@@ -252,7 +252,7 @@ export class FeedService {
 
     const typed = momentRow;
 
-    if (blockedUserIds.includes(typed.author_id)) {
+    if (blockedUserIds.includes(typed.author_id ?? '')) {
       return null;
     }
 
@@ -261,7 +261,7 @@ export class FeedService {
       .select(
         'id, display_name, avatar_url, native_languages, target_languages',
       )
-      .eq('id', typed.author_id)
+      .eq('id', typed.author_id ?? '')
       .single();
 
     let author: Moment['author'] = null;
@@ -327,7 +327,7 @@ export class FeedService {
       .select(
         'id, display_name, avatar_url, native_languages, target_languages',
       )
-      .eq('id', typed.author_id)
+      .eq('id', typed.author_id ?? '')
       .single();
 
     let author: Moment['author'] = null;
@@ -372,7 +372,7 @@ export class FeedService {
     }
 
     const momentData = momentResponse.data as unknown as {
-      author_id: string;
+      author_id: string | null | undefined;
     } | null;
 
     if (!momentData || momentData.author_id !== userId) {

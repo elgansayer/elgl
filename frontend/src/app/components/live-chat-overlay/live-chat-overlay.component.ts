@@ -11,7 +11,6 @@ import {
 import { CommonModule } from '@angular/common';
 import { CentrifugoService } from '../../services/centrifugo.service';
 import { I18nService } from '../../services/i18n.service';
-import { TranslatePipe } from '../../services/translate.pipe';
 
 interface LiveMessage {
   id: string;
@@ -29,7 +28,7 @@ interface CentrifugoMessageData {
 
 @Component({
   selector: 'app-live-chat-overlay',
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule],
   template: `
     <!-- Overlay container positioned at the bottom of the video stream -->
     <div

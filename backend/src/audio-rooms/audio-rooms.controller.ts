@@ -22,6 +22,7 @@ import { SubmitVoteDto } from './dto/submit-vote.dto';
 import { PlaySoundDto } from './dto/play-sound.dto';
 import {
   ApproveSpeakerDto,
+  ArchiveRecordingDto,
   ArchiveRoomDto,
   CreateAudioRoomDto,
   DemoteSpeakerDto,
@@ -70,7 +71,7 @@ export class AudioRoomsController {
   @Post('archive-recording')
   async archiveRecording(
     @CurrentUser() user: AuthUser | null,
-    @Body() dto: ArchiveRoomDto,
+    @Body() dto: ArchiveRecordingDto,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
     return await this.audioRoomsService.archiveRecording(user.id, dto);

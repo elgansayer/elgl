@@ -19,7 +19,7 @@
 
     <div class="form-group">
       <label class="form-label">
-        {{ 'group.addMembers' | t }} ({{ selectedCount }}/{{ MAX_MEMBERS }})
+        {{ 'group.addMembers' | t }} ({{ selectedCount() }}/{{ MAX_MEMBERS }})
       </label>
 
       <div class="search-row">
@@ -34,7 +34,7 @@
             (ngModelChange)="searchUsers()"
             class="search-input"
             [placeholder]="'group.searchPlaceholder' | t"
-            [disabled]="!canAddMore"
+            [disabled]="!canAddMore()"
           />
           @if (isSearching()) {
             <span class="search-spinner"></span>
@@ -42,7 +42,7 @@
         </div>
       </div>
 
-      @if (!canAddMore) {
+      @if (!canAddMore()) {
         <p class="max-hint">{{ 'group.maxMembersReached' | t: { max: MAX_MEMBERS } }}</p>
       }
 
@@ -75,7 +75,7 @@
 
       <div class="selected-section">
         <h3 class="selected-heading">
-          {{ 'group.selectedMembers' | t }} ({{ selectedCount }})
+          {{ 'group.selectedMembers' | t }} ({{ selectedCount() }})
         </h3>
         @if (selectedMembers().length === 0) {
           <div class="no-selection">

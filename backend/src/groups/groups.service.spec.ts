@@ -90,7 +90,9 @@ describe('GroupsService', () => {
     const usersBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'member-9' }, error: null }),
+      maybeSingle: jest
+        .fn()
+        .mockResolvedValue({ data: { id: 'member-9' }, error: null }),
     };
     // For group_members: first call = no membership, second = count
     let memberCalls = 0;
@@ -146,72 +148,88 @@ describe('GroupsService', () => {
     const usersBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'member-9' }, error: null }),
+      maybeSingle: jest
+        .fn()
+        .mockResolvedValue({ data: { id: 'member-9' }, error: null }),
     };
     const memberNoExistingBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
     };
-    const groupMaxBuilder = {
+    const _groupMaxBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      single: jest.fn().mockResolvedValue({ data: { max_members: 2 }, error: null }),
+      single: jest
+        .fn()
+        .mockResolvedValue({ data: { max_members: 2 }, error: null }),
     };
-    const userExistsBuilder = {
+    const _userExistsBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'member-9' }, error: null }),
+      maybeSingle: jest
+        .fn()
+        .mockResolvedValue({ data: { id: 'member-9' }, error: null }),
     };
-    const noMembershipBuilder = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
-    };
-    const groupMaxBuilder = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      single: jest.fn().mockResolvedValue({ data: { max_members: 2 }, error: null }),
-    };
-    const userExistsBuilder = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'member-9' }, error: null }),
-    };
-    const noMembershipBuilder = {
+    const _noMembershipBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
     };
-    const groupMaxBuilder = {
+    const _groupMaxBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      single: jest.fn().mockResolvedValue({ data: { max_members: 2 }, error: null }),
+      single: jest
+        .fn()
+        .mockResolvedValue({ data: { max_members: 2 }, error: null }),
     };
-    const userExistsBuilder = {
+    const _userExistsBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'member-9' }, error: null }),
+      maybeSingle: jest
+        .fn()
+        .mockResolvedValue({ data: { id: 'member-9' }, error: null }),
     };
-    const noMembershipBuilder = {
+    const _noMembershipBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    const _groupMaxBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest
+        .fn()
+        .mockResolvedValue({ data: { max_members: 2 }, error: null }),
+    };
+    const _userExistsBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest
+        .fn()
+        .mockResolvedValue({ data: { id: 'member-9' }, error: null }),
+    };
+    const _noMembershipBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
     };
     // user check
-    const userBuilder = {
+    const _userBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'member-9' }, error: null }),
+      maybeSingle: jest
+        .fn()
+        .mockResolvedValue({ data: { id: 'member-9' }, error: null }),
     };
     // membership check: not already a member
-    const membershipCheckBuilder = {
+    const _membershipCheckBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
     };
     // count check: already at 2 (max)
-    const countBuilder = {
+    const _countBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockResolvedValue({ count: 2, error: null }),
     };
@@ -279,7 +297,6 @@ describe('GroupsService', () => {
       service.removeMember('group-1', 'member-9', 'admin-1'),
     ).resolves.not.toThrow();
   });
-
 
   it('createGroup enforces size limits and adds the owner as a member', async () => {
     const interestRow = { id: 'inter-1', name: 'Football' };
@@ -535,7 +552,7 @@ describe('GroupsService', () => {
       eq: jest.fn().mockReturnThis(),
       maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
     };
-    const countBuilder = {
+    const _countBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockResolvedValue({ count: 2, error: null }),
     };

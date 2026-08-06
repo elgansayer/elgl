@@ -42,15 +42,15 @@ function asString(value: unknown): string | undefined {
 
 interface DeletedAwareMessage extends ChatMessage {
   is_deleted?: boolean;
-  deleted_for_user_ids?: string[];
+  deleted_for_user_ids?: string[] | null;
 }
 
 interface GroupMember {
   user_id: string;
   user?: {
-    display_name?: string;
+    display_name?: string | null;
     avatar_url?: string | null;
-  };
+  } | null;
 }
 
 @Injectable()
@@ -355,7 +355,7 @@ export class ChatService {
                 : '';
 
     // Emit push notification event
-    if (roomMembers && roomMembers.length > 0) {
+    if (receiverId) {
       this.eventEmitter.emit(
         'chat.message',
 
@@ -530,7 +530,7 @@ export class ChatService {
       throw new Error('Message not found');
     }
 
-    const message: ChatMessage = messageResponse.data as ChatMessage;
+    const message = messageResponse.data;
 
     // Store the favourite
     const { error } = await supabase.from('favourites').insert({
@@ -899,13 +899,13 @@ export class ChatService {
         correction_payload: null,
         reply_to_id: null,
         correction_request_payload: null,
-        status_reply_payload: {
+        contact_payload: {
           contact_user_id: contact.id,
           display_name: contact.display_name,
           avatar_url: contact.avatar_url,
         },
         is_view_once: false,
-      })
+      } as Record<string, unknown>)
       .select(
         `
         *,
@@ -1022,15 +1022,24 @@ export class ChatService {
         (r: { room_id: string }) => r.room_id,
       );
 
-      for (const candidateRoomId of mutualRoomIds) {
-        const { data: members } = await supabase
+      if (mutualRoomIds.length > 0) {
+        const { data: allMembers } = await supabase
           .from('chat_room_members')
-          .select('user_id')
-          .eq('room_id', candidateRoomId);
+          .select('room_id, user_id')
+          .in('room_id', mutualRoomIds);
 
-        if (members && members.length === 2) {
-          roomId = candidateRoomId;
-          break;
+        if (allMembers) {
+          const roomCounts = new Map<string, number>();
+          for (const member of allMembers) {
+            roomCounts.set(member.room_id, (roomCounts.get(member.room_id) || 0) + 1);
+          }
+
+          for (const candidateRoomId of mutualRoomIds) {
+            if (roomCounts.get(candidateRoomId) === 2) {
+              roomId = candidateRoomId;
+              break;
+            }
+          }
         }
       }
     }
@@ -1183,6 +1192,10 @@ export class ChatService {
     const roomId = asString(originalMsg.room_id);
     const senderId = asString(originalMsg.sender_id);
     const textContent = asString(originalMsg.text_content);
+
+    if (!roomId) {
+      throw new BadRequestException('Message is missing room identifier');
+    }
 
     const { data: membership } = await supabase
       .from('chat_room_members')
