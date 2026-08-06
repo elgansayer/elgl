@@ -180,7 +180,7 @@ describe('DiscoveryService', () => {
           search_lon: -0.1278,
           radius_m: 10000,
           exclude_user_id: 'user-1',
-          filter_native: 'FR',
+          filter_native: ['FR'],
           filter_target: null,
           serious_only: false,
         },
