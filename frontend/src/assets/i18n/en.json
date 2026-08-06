@@ -6,6 +6,7 @@
   "achievements.lockedLabel": "Locked",
   "achievements.progressLabel": "{{current}} / {{required}}",
   "achievements.title": "Achievements",
+<<<<<<< HEAD
   "admin.users.actions": "Actions",
   "admin.users.avatar": "Avatar",
   "admin.users.close": "Close",
@@ -41,6 +42,19 @@
   "aiPartner.start": "Start",
   "aiPartner.title": "Title",
   "aiPartner.typing": "Typing",
+=======
+  "admin.userManagement.action.toggleVip": "Toggle VIP",
+  "admin.userManagement.loading": "Loading users...",
+  "admin.userManagement.streakDays": "{{days}} days",
+  "admin.userManagement.table.actions": "Actions",
+  "admin.userManagement.table.coins": "Coins",
+  "admin.userManagement.table.nativeLang": "Native Lang",
+  "admin.userManagement.table.streak": "Streak",
+  "admin.userManagement.table.user": "User",
+  "admin.userManagement.table.vipStatus": "VIP Status",
+  "admin.userManagement.title": "User Management",
+  "admin.userManagement.vip.free": "Free",
+>>>>>>> origin/main
   "app.badgeOpenCore": "Community clone",
   "app.navMe": "Me",
   "app.title": "HelloTalk",
@@ -100,6 +114,7 @@
   "auth.resetPassword.success": "Password has been reset successfully.",
   "auth.resetPassword.title": "Reset Password",
   "auth.resetPassword.token": "Reset Token",
+<<<<<<< HEAD
   "backupRestore.exportBtn": "Export Btn",
   "backupRestore.exportError": "Export Error",
   "backupRestore.exportSuccess": "Export Success",
@@ -125,6 +140,10 @@
   "chat.replyToStatus": "Reply To Status",
   "chat.rooms": "Rooms",
   "chat.statusReply": "Status Reply",
+=======
+  "chat.attachedImageAlt": "Attached image",
+  "chat.incomingCallTitle": "Incoming Call",
+>>>>>>> origin/main
   "chatList.allSection": "All chats",
   "chatList.empty": "No active conversations. Find partners to start chatting!",
   "chatList.filterAll": "All",
@@ -176,10 +195,13 @@
   "chatRoom.typePlaceholder": "Type your message",
   "chatRoom.typing": "Someone is typing...",
   "chatRoom.voiceBtn": "Voice",
+<<<<<<< HEAD
   "chat_settings.auto_translate": "Auto Translate",
   "chat_settings.enter_to_send": "Enter To Send",
   "chat_settings.read_receipts": "Read Receipts",
   "chat_settings.title": "Title",
+=======
+>>>>>>> origin/main
   "coinsCancel.backBtn": "Back to Dashboard",
   "coinsCancel.message": "Your checkout was cancelled. No charges were made. You can try again anytime.",
   "coinsCancel.title": "Checkout Cancelled",
@@ -189,6 +211,7 @@
   "coinsSuccess.message": "Thank you. Your coins have been credited to your balance.",
   "coinsSuccess.pending": "Confirming your purchase with our payment provider...",
   "coinsSuccess.title": "🎉 Coins added!",
+<<<<<<< HEAD
   "common.back": "Back",
   "common.coinsBalance": "{{coins}} Coins",
   "common.demoActive": "Demo / Mock Auth Active",
@@ -202,6 +225,13 @@
   "common.pleaseWait": "Please wait...",
   "common.previous": "Previous",
   "common.save": "Save",
+=======
+  "common.coinsBalance": "{{coins}} Coins",
+  "common.demoActive": "Demo / Mock Auth Active",
+  "common.languagePartner": "Language Partner",
+  "common.loading": "Loading...",
+  "common.pleaseWait": "Please wait...",
+>>>>>>> origin/main
   "common.signOut": "Sign out",
   "common.submit": "Submit",
   "common.unknownCaller": "Unknown Caller",
@@ -209,11 +239,14 @@
   "common.unknownUser": "Unknown User",
   "common.vipDevLabel": "20 UKP / $26 USD Dev VIP",
   "common.vipStdLabel": "8 UKP / $10 USD VIP",
+<<<<<<< HEAD
   "communities.create": "Create",
   "communities.descriptionLabel": "Description Label",
   "communities.groupsInCommunity": "Groups In Community",
   "communities.nameLabel": "Name Label",
   "communities.title": "Title",
+=======
+>>>>>>> origin/main
   "context_menu.block": "Block",
   "context_menu.copy": "Copy",
   "context_menu.correct": "Correct",
@@ -226,9 +259,12 @@
   "dailyLoginModal.body": "You received {coins} coins for logging in today.",
   "dailyLoginModal.cta": "Awesome!",
   "dailyLoginModal.title": "Daily Reward!",
+<<<<<<< HEAD
   "dataStorage.cellularAutoDownload": "Cellular Auto Download",
   "dataStorage.clearCache": "Clear Cache",
   "dataStorage.title": "Title",
+=======
+>>>>>>> origin/main
   "developer.activeKeyLabel": "Active production key",
   "developer.activeRpm": "Active (600 RPM)",
   "developer.apiKeySubtitle": "Send key in Authorization header.",
@@ -414,6 +450,7 @@
   "help.centre.noResults": "No matching articles found.",
   "help.centre.searchPlaceholder": "Search FAQ...",
   "help.centre.title": "Help Centre",
+<<<<<<< HEAD
   "helpAbout.appVersion": "App Version",
   "helpAbout.buildNumber": "Build Number",
   "helpAbout.openSourceLicences": "Open Source Licences",
@@ -428,6 +465,10 @@
   "join.joinButton": "Join Button",
   "join.joining": "Joining",
   "join.loading": "Loading",
+=======
+  "hobby.add": "+ Add Hobby",
+  "interests.save": "Save Interests",
+>>>>>>> origin/main
   "lang.anyNative": "Any native language",
   "lang.anyTarget": "Any target language",
   "lang.applyCustom": "Switch Language",
@@ -447,6 +488,7 @@
   "lang.selectTitle": "Select App Language (Any Language)",
   "lang.tr": "Turkish",
   "lang.zh": "Chinese",
+<<<<<<< HEAD
   "languageIslands.title": "Title",
   "languageSettings.currentLang": "Current Lang",
   "languageSettings.description": "Description",
@@ -456,6 +498,8 @@
   "lessons.none": "None",
   "lessons.title": "Title",
   "lessons.words": "Words",
+=======
+>>>>>>> origin/main
   "moments.addImageBtn": "Add image",
   "moments.addVoiceBtn": "Add voice",
   "moments.chipCorrections": "✏️ Native corrections",
@@ -515,6 +559,7 @@
   "nav.notifications": "Notifications",
   "nav.partners": "Partners",
   "nav.profile": "👤 Me",
+<<<<<<< HEAD
   "notification_settings.custom_tone_label": "Custom Tone Label",
   "notification_settings.custom_tone_placeholder": "Custom Tone Placeholder",
   "notification_settings.saved_message": "Saved Message",
@@ -523,6 +568,8 @@
   "notification_settings.vibration_pattern_hint": "Vibration Pattern Hint",
   "notification_settings.vibration_pattern_label": "Vibration Pattern Label",
   "notification_settings.vibration_pattern_placeholder": "Vibration Pattern Placeholder",
+=======
+>>>>>>> origin/main
   "profile.aboutMe": "About me",
   "profile.audioIntroBtn": "Audio intro",
   "profile.bioPlaceholder": "Bio and learning goals",
@@ -562,6 +609,7 @@
   "profile.vipBadge": "VIP",
   "profile.visitorsBtn": "Visitors",
   "profile.vocabLink": "📚 Vocabulary",
+<<<<<<< HEAD
   "report.additionalDetails": "Additional details (optional)",
   "report.additionalDetailsPlaceholder": "Describe the issue...",
   "report.backToCategories": "Back to categories",
@@ -585,6 +633,37 @@
   "report.title": "Report User",
   "report.toast.error": "Failed to submit report",
   "report.toast.success": "Report submitted successfully",
+=======
+  "report": {
+    "title": "Report User",
+    "reportReason": "What's the reason for this report?",
+    "loadingCategories": "Loading categories...",
+    "harassment": "Harassment",
+    "spam": "Spam",
+    "inappropriate_content": "Inappropriate Content",
+    "fake_profile": "Fake Profile",
+    "other": "Other",
+    "backToCategories": "Back to categories",
+    "additionalDetails": "Additional details (optional)",
+    "additionalDetailsPlaceholder": "Describe the issue...",
+    "linkToContent": "Link to content (optional)",
+    "linkToContentPlaceholder": "Paste a URL...",
+    "cancel": "Cancel",
+    "submitReport": "Submit Report",
+    "submitting": "Submitting...",
+    "reportSubmitted": "Report Submitted",
+    "reportSubmittedMessage": "Thank you for helping keep the community safe. We'll review your report shortly.",
+    "done": "Done",
+    "toast": {
+      "success": "Report submitted successfully",
+      "error": "Failed to submit report"
+    },
+    "error": {
+      "load_categories": "Could not load categories. Using default list.",
+      "submit_failed": "Failed to submit report. Please try again."
+    }
+  },
+>>>>>>> origin/main
   "roomChat.broadcastBtn": "Broadcast caption",
   "roomChat.emptyChat": "No messages in this live room yet. Say hello to the stage speakers!",
   "roomChat.emptySubtitles": "No live subtitles yet. When speakers talk on stage or use speech-to-text, closed captions broadcast here!",
@@ -620,11 +699,15 @@
   "settings.dataSection": "Data & Storage",
   "settings.downloadDataBtn": "Download My Data",
   "settings.downloadDataDesc": "Download a copy of your personal data, including messages, moments, and flashcards.",
+<<<<<<< HEAD
   "settings.fontSize": "Font Size",
+=======
+>>>>>>> origin/main
   "settings.hideAge": "Hide my age",
   "settings.hideGender": "Hide my gender",
   "settings.hideLocation": "Hide location in discovery",
   "settings.hideSearch": "Hide profile from search",
+<<<<<<< HEAD
   "settings.linkedAccounts.active": "Active",
   "settings.linkedAccounts.inactive": "Inactive",
   "settings.linkedAccounts.linkApple": "Link Apple",
@@ -633,10 +716,13 @@
   "settings.linkedAccounts.none": "None",
   "settings.linkedAccounts.title": "Title",
   "settings.linkedAccounts.unlink": "Unlink",
+=======
+>>>>>>> origin/main
   "settings.privacySection": "Privacy settings",
   "settings.saveBtn": "Save settings",
   "settings.title": "Settings & Privacy",
   "settings.vipRequired": "VIP Only",
+<<<<<<< HEAD
   "subscription.actionError": "Action Error",
   "subscription.active": "Active",
   "subscription.availablePlans": "Available Plans",
@@ -673,6 +759,8 @@
   "support.noResults": "No Results",
   "support.subtitle": "Subtitle",
   "support.title": "Title",
+=======
+>>>>>>> origin/main
   "system.announcement": "📢 {{message}}",
   "system.groupRenamed": "Group renamed to \"{{name}}\".",
   "system.memberAdded": "{{count}} member(s) joined the group.",
@@ -687,6 +775,7 @@
   "userProfile.following": "Following",
   "userProfile.loadError": "Failed to load profile. Please try again.",
   "userProfile.notFound": "User not found.",
+<<<<<<< HEAD
   "vip.allFeatures": "All Features",
   "vip.billedMonthly": "Billed Monthly",
   "vip.choosePlan": "Choose Plan",
@@ -724,6 +813,8 @@
   "vip.subscribeNow": "Subscribe Now",
   "vip.tryAgain": "Try Again",
   "vip.viewPlans": "View Plans",
+=======
+>>>>>>> origin/main
   "visitors.blurredCount": "Blurred: {{count}}",
   "visitors.empty": "No visitors yet.",
   "visitors.hideBlurredBtn": "Hide blurred",
@@ -797,4 +888,8 @@
   "wordModal.srsStatus": "Spaced repetition status: {{status}}",
   "wordModal.title": "Dictionary Definition",
   "wordModal.translationLabel": "Translation"
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/main

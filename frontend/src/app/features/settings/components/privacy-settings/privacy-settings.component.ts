@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, effect } from '@angular/core';
+import { Component, inject, effect } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { SettingsService } from '../../../../core/services/settings.service';
 
@@ -10,7 +10,7 @@ import { SettingsService } from '../../../../core/services/settings.service';
     <form [formGroup]="form">
       <h3>Direct Messages</h3>
       <label>
-        <input type="checkbox" formControlName="allowFromServerMembers">
+        <input type="checkbox" formControlName="allowFromServerMembers" />
         Allow direct messages from server members
       </label>
 
@@ -25,7 +25,7 @@ import { SettingsService } from '../../../../core/services/settings.service';
 
       <button (click)="save()" [disabled]="form.pristine">Save Changes</button>
     </form>
-  `
+  `,
 })
 export class PrivacySettingsComponent {
   private fb = inject(NonNullableFormBuilder);
@@ -33,7 +33,7 @@ export class PrivacySettingsComponent {
 
   form = this.fb.group({
     allowFromServerMembers: [false],
-    imageFilterLevel: this.fb.control<'All' | 'Blurred' | 'None'>('Blurred')
+    imageFilterLevel: this.fb.control<'All' | 'Blurred' | 'None'>('Blurred'),
   });
 
   constructor() {
@@ -41,10 +41,13 @@ export class PrivacySettingsComponent {
     effect(() => {
       const privacyData = this.settingsService.privacySettings();
       if (privacyData) {
-        this.form.patchValue({
-          allowFromServerMembers: privacyData.directMessages.allowFromServerMembers,
-          imageFilterLevel: privacyData.directMessages.imageFilterLevel
-        }, { emitEvent: false }); // Prevent triggering valueChanges loop
+        this.form.patchValue(
+          {
+            allowFromServerMembers: privacyData.directMessages.allowFromServerMembers,
+            imageFilterLevel: privacyData.directMessages.imageFilterLevel,
+          },
+          { emitEvent: false },
+        ); // Prevent triggering valueChanges loop
       }
     });
   }
@@ -55,8 +58,8 @@ export class PrivacySettingsComponent {
       const updateData = {
         directMessages: {
           allowFromServerMembers: this.form.value.allowFromServerMembers!,
-          imageFilterLevel: this.form.value.imageFilterLevel!
-        }
+          imageFilterLevel: this.form.value.imageFilterLevel!,
+        },
       };
 
       this.settingsService.updatePrivacySettings(updateData);

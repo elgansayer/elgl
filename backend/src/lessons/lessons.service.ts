@@ -1,19 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { SupabaseService } from '../supabase/supabase.service';
+import { SupabaseService, type LessonRow } from '../supabase/supabase.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 
 export interface LessonRecord {
   id: string;
   title: string;
-  description?: string;
-  content_json?: Record<string, unknown>;
+  description?: string | null;
+  content_json?: Record<string, unknown> | null;
   language_code: string;
-  difficulty_level?: number;
-  cover_image_url?: string;
-  audio_url?: string;
-  created_at: string;
-  updated_at?: string;
+  difficulty_level?: number | null;
+  cover_image_url?: string | null;
+  audio_url?: string | null;
+  created_at?: string;
+  updated_at?: string | null;
 }
 
 @Injectable()
@@ -65,7 +65,7 @@ export class LessonsService {
 
   async updateLesson(id: string, dto: UpdateLessonDto): Promise<LessonRecord> {
     const supabase = this.supabaseService.getClient();
-    const updates: Record<string, unknown> = {};
+    const updates: Partial<LessonRow> = {};
     if (dto.title !== undefined) updates.title = dto.title;
     if (dto.description !== undefined) updates.description = dto.description;
     if (dto.content_json !== undefined) updates.content_json = dto.content_json;

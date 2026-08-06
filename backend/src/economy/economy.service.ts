@@ -195,6 +195,7 @@ function isStickerPackRow(value: unknown): value is StickerPackRow {
 }
 
 export interface GiftEventPayload {
+  [key: string]: unknown;
   type: 'virtual_gift';
   gift_id: string;
   gift_name: string;
