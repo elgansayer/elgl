@@ -6,4 +6,3 @@ export class TranscribeVoiceDto {
   @IsUrl({ require_tld: false })
   audio_url!: string;
 }
-

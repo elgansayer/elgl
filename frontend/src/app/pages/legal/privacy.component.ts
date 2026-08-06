@@ -1,27 +1,31 @@
 import { Component } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { DocumentViewerComponent } from '../../components/document-viewer/document-viewer.component';
+import { LegalDocumentViewerComponent, LegalSection } from '../../components/legal-document-viewer/legal-document-viewer.component';
 
 @Component({
   selector: 'app-privacy',
-  imports: [DocumentViewerComponent, DatePipe],
+  imports: [LegalDocumentViewerComponent, DatePipe],
   template: `
-    <app-document-viewer title="Privacy Policy">
-      <p class="mb-4">Last updated: {{ currentDate | date }}</p>
-      <h2 class="text-xl font-semibold mt-6 mb-2 text-white">1. Information We Collect</h2>
-      <p class="mb-4">
-        We collect information you provide directly to us, such as when you create or modify your
-        account, request on-demand services, contact customer support, or otherwise communicate with
-        us.
-      </p>
-      <h2 class="text-xl font-semibold mt-6 mb-2 text-white">2. How We Use Information</h2>
-      <p class="mb-4">
-        We may use the information we collect about you to provide, maintain, and improve our
-        services.
-      </p>
-    </app-document-viewer>
+    <app-legal-document-viewer
+      title="Privacy Policy"
+      [lastUpdated]="currentDate"
+      [sections]="sections"
+    ></app-legal-document-viewer>
   `,
 })
 export class PrivacyComponent {
   currentDate = new Date();
+
+  sections: LegalSection[] = [
+    {
+      id: 'information-we-collect',
+      heading: '1. Information We Collect',
+      content: 'We collect information you provide directly to us, such as when you create or modify your account, request on-demand services, contact customer support, or otherwise communicate with us.',
+    },
+    {
+      id: 'how-we-use-information',
+      heading: '2. How We Use Information',
+      content: 'We may use the information we collect about you to provide, maintain, and improve our services.',
+    }
+  ];
 }

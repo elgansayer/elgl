@@ -1,5 +1,5 @@
 import { showToast } from '../../services/toast.service';
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
@@ -18,6 +18,8 @@ import {
   VoiceroomCreateModalComponent,
   VoiceroomCreatePayload,
 } from '../voiceroom-create-modal/voiceroom-create-modal.component';
+import { QuickPollFormComponent } from './quick-poll-form.component';
+import { QuickPollDisplayComponent } from './quick-poll-display.component';
 
 @Component({
   selector: 'app-audio-room',
@@ -29,6 +31,8 @@ import {
     TrustSafetyModalComponent,
     VoiceroomCreateModalComponent,
     AudioEqualizerComponent,
+    QuickPollFormComponent,
+    QuickPollDisplayComponent,
   ],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],
@@ -56,6 +60,14 @@ export class AudioRoomComponent implements OnInit {
 
   readonly exclusiveEmojis = signal<{emojiId:string;name:string;animationUrl:string}[]>([]);
   readonly showExclusivePicker = signal<boolean>(false);
+
+  /** Generate placeholder avatar indices for the audience list (max 8 visible, remainder in +N badge). */
+  readonly audiencePlaceholderAvatars = computed<number[]>(() => {
+    const count = this.store.audienceCount();
+    if (count <= 0) return [];
+    const visible = count > 8 ? 8 : count;
+    return Array.from({ length: visible }, (_, i) => i + 1);
+  });
 
   async ngOnInit(): Promise<void> {
     await this.store.loadActiveRooms();
