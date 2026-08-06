@@ -47,6 +47,7 @@ export class ResetPasswordComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private fb = inject(FormBuilder);
 
   readonly token = signal('');
   readonly submitting = signal(false);

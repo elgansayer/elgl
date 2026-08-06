@@ -52,8 +52,7 @@ export class ChatController {
     @CurrentUser() user: User | null,
   ): Promise<{ token: string } | null> {
     if (!user) return null;
-    const token = await this.chatService.generateConnectionToken?.(user.id);
-    return { token };
+    return await this.chatService.generateConnectionToken?.(user.id);
   }
 
   @Post('messages')
@@ -109,6 +108,16 @@ export class ChatController {
   ): Promise<FavouriteRecord[]> {
     if (!user) return [];
     return await this.chatService.getFavourites(user.id);
+  }
+
+  @Delete('favourites/:id')
+  async deleteFavourite(
+    @CurrentUser() user: User | null,
+    @Param('id') id: string,
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.chatService.deleteFavourite(user.id, id);
+    return { success: true };
   }
 
   @Post('llm-proxy')
