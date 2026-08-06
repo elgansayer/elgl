@@ -102,10 +102,7 @@
     ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
-    "transformIgnorePatterns": [
-      "/node_modules/(?!(uuid|@supabase|@aws-sdk)/)"
-    ],
-    "transform": {
+    "transformIgnorePatterns": ["/node_modules/(?!(uuid|@supabase|@aws-sdk|jwks-rsa|jose)/)"], "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
