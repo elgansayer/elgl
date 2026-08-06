@@ -1031,7 +1031,10 @@ export class ChatService {
         if (allMembers) {
           const roomCounts = new Map<string, number>();
           for (const member of allMembers) {
-            roomCounts.set(member.room_id, (roomCounts.get(member.room_id) || 0) + 1);
+            roomCounts.set(
+              member.room_id,
+              (roomCounts.get(member.room_id) || 0) + 1,
+            );
           }
 
           for (const candidateRoomId of mutualRoomIds) {

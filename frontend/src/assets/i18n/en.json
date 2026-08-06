@@ -7,6 +7,7 @@
   "achievements.progressLabel": "{{current}} / {{required}}",
   "achievements.title": "Achievements",
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
   "admin.userManagement.action.toggleVip": "Toggle VIP",
   "admin.userManagement.loading": "Loading users...",
@@ -19,6 +20,8 @@
   "admin.userManagement.table.vipStatus": "VIP Status",
   "admin.userManagement.title": "User Management",
   "admin.userManagement.vip.free": "Free",
+>>>>>>> origin/main
+=======
 >>>>>>> origin/main
   "app.badgeOpenCore": "Community clone",
   "app.navMe": "Me",
@@ -97,7 +100,14 @@
   "auth.resetPassword.title": "Reset Password",
   "auth.resetPassword.token": "Reset Token",
   "chat.attachedImageAlt": "Attached image",
+  "chat.cancel_reply": "Cancel Reply",
+  "chat.contextMenu.title": "Chat Options",
   "chat.incomingCallTitle": "Incoming Call",
+  "chat.unknown_user": "Unknown User",
+  "chat.wallpaper.apply": "Apply",
+  "chat.wallpaper.custom_url_label": "Custom Wallpaper URL",
+  "chat.wallpaper.custom_url_placeholder": "https://example.com/image.jpg",
+  "chat.wallpaper.title": "Chat Wallpaper",
   "chatList.allSection": "All chats",
   "chatList.empty": "No active conversations. Find partners to start chatting!",
   "chatList.filterAll": "All",
@@ -158,6 +168,7 @@
   "coinsSuccess.message": "Thank you. Your coins have been credited to your balance.",
   "coinsSuccess.pending": "Confirming your purchase with our payment provider...",
   "coinsSuccess.title": "🎉 Coins added!",
+  "common.close": "Close",
   "common.coinsBalance": "{{coins}} Coins",
   "common.demoActive": "Demo / Mock Auth Active",
   "common.languagePartner": "Language Partner",
