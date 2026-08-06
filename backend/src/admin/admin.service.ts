@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { SupabaseService } from '../supabase/supabase.service';
+import { SupabaseService, type UsersRow } from '../supabase/supabase.service';
 import { AdminUserQueryDto } from './dto/admin-user-query.dto';
 import { ToggleVipDto } from './dto/toggle-vip.dto';
 import {
@@ -54,7 +54,7 @@ export class AdminService {
     dto: ToggleVipDto,
   ): Promise<AdminUserSummary> {
     const supabase = this.supabaseService.getClient();
-    const updatePayload: Record<string, unknown> = { is_vip: dto.is_vip };
+    const updatePayload: Partial<UsersRow> = { is_vip: dto.is_vip };
     if (dto.vip_tier !== undefined) {
       updatePayload.vip_tier = dto.vip_tier;
     } else if (!dto.is_vip) {

@@ -3,14 +3,19 @@ import { PasswordResetService } from './password-reset.service';
 
 describe('PasswordResetController (unit)', () => {
   let controller: PasswordResetController;
-  let resetService: { requestPasswordReset: jest.Mock; resetPassword: jest.Mock };
+  let resetService: {
+    requestPasswordReset: jest.Mock;
+    resetPassword: jest.Mock;
+  };
 
   beforeEach(() => {
     resetService = {
       requestPasswordReset: jest.fn(),
       resetPassword: jest.fn(),
     };
-    controller = new (PasswordResetController as any)(resetService) as PasswordResetController;
+    controller = new (PasswordResetController as any)(
+      resetService,
+    ) as PasswordResetController;
   });
 
   describe('requestPasswordReset', () => {

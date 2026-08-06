@@ -5,6 +5,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
+import { AuthService } from '../../services/auth.service';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -123,12 +124,9 @@ export class ForgotPasswordComponent {
       await this.authService.requestPasswordReset(this.emailForm.controls.email.value);
       this.sendSuccess.set(true);
     } catch {
-      this.sendError.set('forgot_password.send_error');
+      this.sendError.set(this.i18n.translate('forgot_password.send_error'));
     } finally {
       this.isSending.set(false);
-      this.sendError.set(
-        this.i18n.translate('forgot_password.send_error'),
-      );
     }
   }
 
@@ -147,12 +145,9 @@ export class ForgotPasswordComponent {
       this.resetSuccess.set(true);
       await this.router.navigate(['/home']);
     } catch {
-      this.resetError.set('forgot_password.reset_error');
+      this.resetError.set(this.i18n.translate('forgot_password.reset_error'));
     } finally {
       this.isResetting.set(false);
-      this.resetError.set(
-        this.i18n.translate('forgot_password.reset_error'),
-      );
     }
   }
 }

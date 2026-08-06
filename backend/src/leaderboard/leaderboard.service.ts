@@ -3,10 +3,10 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 export interface Corrector {
   id: string;
-  display_name: string;
-  avatar_url: string | null;
-  correction_ratio: number;
-  study_streak_days: number;
+  display_name: string | null | undefined;
+  avatar_url: string | null | undefined;
+  correction_ratio: number | null | undefined;
+  study_streak_days: number | null | undefined;
   is_serious_learner: boolean;
 }
 
@@ -31,7 +31,7 @@ export class LeaderboardService {
     return (data ?? []).map((user) => ({
       ...user,
       is_serious_learner:
-        user.study_streak_days > 7 && (user.correction_ratio ?? 0) >= 0.8,
+        (user.study_streak_days ?? 0) > 7 && (user.correction_ratio ?? 0) >= 0.8,
     }));
   }
 }

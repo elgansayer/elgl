@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal, viewChild, afterNextRender, effect, DestroyRef } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, viewChild, afterNextRender, effect, DestroyRef, PLATFORM_ID } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { AuthService } from './services/auth.service';
 import { EconomyStore, VirtualGift } from './services/economy.store';
@@ -7,7 +7,7 @@ import { FcmService } from './services/fcm.service';
 import { SafetyService } from './services/safety.service';
 import { TranslatePipe } from './services/translate.pipe';
 import { routeAnimations } from './animations/route.animations';
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, isPlatformServer } from '@angular/common';
 import {
   IncomingCallModalComponent,
   IncomingCallData,
@@ -77,12 +77,16 @@ export class AppComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
   readonly appLockService = inject(AppLockService);
   private readonly router = inject(Router);
+  private platformId = inject(PLATFORM_ID);
 
   private routerOutlet = viewChild.required(RouterOutlet);
 
   protected prepareRoute(): string {
+    if (isPlatformServer(this.platformId)) {
+      return 'default';
+    }
     const outlet = this.routerOutlet();
-    if (!outlet?.activatedRoute) {
+    if (!outlet?.isActivated) {
       return 'default';
     }
     const url = outlet.activatedRoute.snapshot.url.join('/');

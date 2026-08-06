@@ -121,7 +121,11 @@ export class ModerationQueueComponent {
     params: () => ({ type: this.type(), status: this.status() }),
     loader: (param: { request?: { type?: string; status?: string }; params?: { type?: string; status?: string } }) => {
       const request = param.request ?? param.params;
-      return firstValueFrom(this.moderationService.getItems(request.type, request.status));
+      if (!request) return firstValueFrom(this.moderationService.getItems('profile'));
+      return firstValueFrom(this.moderationService.getItems(
+        (request.type as 'moment' | 'profile') ?? 'profile',
+        request.status,
+      ));
     }
   });
 

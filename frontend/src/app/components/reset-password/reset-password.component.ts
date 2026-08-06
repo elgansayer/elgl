@@ -1,6 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AuthService } from '../../services/auth.service';
 
@@ -47,28 +49,19 @@ export class ResetPasswordComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
-  private fb = inject(FormBuilder);
 
-  readonly token = signal('');
+  readonly token = toSignal(
+    this.route.queryParamMap.pipe(map((params) => params.get('token') || '')),
+    { initialValue: '' },
+  );
+
+  readonly resetForm = this.fb.nonNullable.group({
+    newPassword: ['', [Validators.required, Validators.minLength(8)]],
+  });
+
   readonly submitting = signal(false);
   readonly messageKey = signal<string | null>(null);
   readonly isError = signal(false);
-
-  // Read token from query params on init
-  private readonly routeToken = this.route.snapshot.queryParamMap.get('token');
-
-  constructor() {
-    if (this.routeToken) {
-      this.token.set(this.routeToken);
-    }
-  }
-
-  constructor() {
-    const tokenParam = this.route.snapshot.queryParamMap.get('token');
-    if (tokenParam) {
-      this.token.set(tokenParam);
-    }
-  }
 
   async onSubmit(): Promise<void> {
     if (this.resetForm.invalid || !this.token()) return;

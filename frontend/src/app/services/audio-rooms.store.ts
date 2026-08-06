@@ -112,6 +112,9 @@ export class AudioRoomsStore {
   readonly roomMessages = signal<RoomChatMessage[]>([]);
   readonly isLoading = signal<boolean>(false);
   readonly selectedLanguageGroup = signal<string | null>(null);
+  readonly stageInfo = signal<StageInfo | null>(null);
+  readonly stageParticipants = signal<StageParticipant[]>([]);
+  readonly audienceCount = signal<number>(0);
 
   // Split-screen co-host video state
   private readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
@@ -230,7 +233,7 @@ private findRemoteVideoTrack(userId: string): RemoteVideoTrack | null {
     this.roomMessages.set([]);
 
     // Load stage info for full speaker/listener details
-    void this.loadStage(room.id);
+    void this.fetchStage(room.id);
 
     // Fetch token
     try {
@@ -623,6 +626,29 @@ private findRemoteVideoTrack(userId: string): RemoteVideoTrack | null {
     }
   }
 
+  private async fetchStage(roomId: string): Promise<void> {
+    try {
+      const result = await firstValueFrom(
+        this.http.get<StageInfo>(`${this.baseUrl}/${roomId}/stage`, { headers: this.getHeaders() }),
+      );
+      this.stageInfo.set(result);
+      this.stageParticipants.set(
+        result.speakers.map((s) => ({
+          user_id: s.user_id,
+          display_name: s.display_name,
+          avatar_url: s.avatar_url,
+          isSpeaking: false,
+          isMuted: false,
+          isHost: s.user_id === (result.host?.id ?? ''),
+          isCoHost: s.user_id === (result.co_host_id ?? ''),
+        })),
+      );
+      this.audienceCount.set(result.listeners_count);
+    } catch {
+      // Non-critical, stage info is best-effort
+    }
+  }
+
   leaveRoom(): void {
     if (this.livekitRoom) {
       this.livekitRoom.disconnect();
@@ -636,6 +662,8 @@ private findRemoteVideoTrack(userId: string): RemoteVideoTrack | null {
     this.currentRoom.set(null);
     this.isSpeaker.set(false);
     this.stageInfo.set(null);
+    this.stageParticipants.set([]);
+    this.audienceCount.set(0);
     this.localVideoTrack.set(null);
     this.remoteVideoTracksByIdentity.set(new Map());
   }

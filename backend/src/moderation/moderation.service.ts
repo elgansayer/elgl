@@ -18,7 +18,7 @@ export interface ModerationItem {
   reported_user: Reporter | null;
   reportedMomentId?: string | null;
   moment_content?: string;
-  momentAuthorName?: string;
+  momentAuthorName?: string | null;
 }
 
 @Injectable()
@@ -159,7 +159,7 @@ export class ModerationService {
       .from('reports')
       .update({
         status: 'rejected',
-        reason_category: dto.reason ?? null,
+        reason_category: dto.reason ?? undefined,
       })
       .eq('id', dto.itemId);
 

@@ -1,4 +1,4 @@
-import { Injectable, signal, effect } from '@angular/core';
+import { Injectable, signal, computed, effect } from '@angular/core';
 import { environment } from '../../environments/environment';
 
 export interface LanguageInfo {
@@ -14,6 +14,11 @@ export interface LanguageInfo {
 })
 export class I18nService {
   readonly currentLang = signal<string>('en-GB');
+
+  readonly direction = computed(() => {
+    const lang = this.currentLang().toLowerCase();
+    return ['ar', 'he', 'fa', 'ur'].includes(lang) ? 'rtl' : 'ltr';
+  });
 
   readonly availableLanguages: LanguageInfo[] = [
     {

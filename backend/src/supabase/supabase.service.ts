@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import Redis from 'ioredis';
 
-type UsersRow = {
+export type UsersRow = {
   id: string;
   study_streak_days: number | null;
   correction_ratio: number | null;
@@ -24,6 +24,7 @@ type UsersRow = {
   away_message?: string | null;
   coins_balance?: number | null;
   is_vip?: boolean | null;
+  is_admin?: boolean | null;
   vip_tier?: string | null;
   updated_at?: string | null;
   target_languages?: string[] | null;
@@ -65,8 +66,15 @@ type UsersRow = {
   enable_location_spoofing?: boolean | null;
   audio_intro_url?: string | null;
   cover_photo_url?: string | null;
+  cover_url?: string | null;
   serious_learner_mode?: boolean | null;
   notification_preferences?: Record<string, unknown> | null;
+  language_levels?: Record<string, string> | null;
+  chat_preferences?: unknown | null;
+  developer_api_key?: string | null;
+  deletion_requested_at?: string | null;
+  deletion_grace_days?: number | null;
+  is_deletion_pending?: boolean | null;
 };
 
 type AudioRoomsRow = {
@@ -85,6 +93,7 @@ type AudioRoomsRow = {
   speakers: string[];
   raised_hands: string[];
   listeners_count: number;
+  participants_count?: number | null;
   recording_url?: string | null;
   egress_id?: string | null;
   is_private?: boolean | null;
@@ -217,7 +226,7 @@ type InterestVocabularyRow = {
   created_at?: string | null;
 };
 
-type CommunityRow = {
+export type CommunityRow = {
   id: string;
   name: string;
   description?: string | null;
@@ -312,7 +321,7 @@ type ResourceLibraryRow = {
   updated_at?: string;
 };
 
-type LessonRow = {
+export type LessonRow = {
   id: string;
   title: string;
   description?: string | null;
@@ -349,7 +358,7 @@ type CorrectorRatingRow = {
   created_at?: string;
 };
 
-type GroupsRow = {
+export type GroupsRow = {
   id: string;
   name: string;
   owner_id: string;
@@ -427,6 +436,15 @@ type StatusViewRow = {
   status_owner_id: string;
   status_id?: string | null;
   created_at: string;
+};
+
+type LocationShareRow = {
+  id: string;
+  sharer_user_id: string;
+  viewer_user_id: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
 };
 
 type VirtualGiftRow = {
@@ -540,8 +558,13 @@ type TranslationRow = {
 type FlashcardRow = {
   id: string;
   user_id: string;
-  front: string;
-  back: string;
+  word_token: string;
+  original_context?: string | null;
+  translation: string;
+  definition?: string | null;
+  pronunciation_url?: string | null;
+  srs_level: number;
+  next_review_at: string;
   created_at: string;
 };
 
@@ -562,13 +585,14 @@ type LoginHistoryRow = {
   created_at: string;
 };
 
-type ChatMessageRow = {
+export type ChatMessageRow = {
   id: string;
   room_id: string;
   sender_id: string;
   message_type: string;
   text_content?: string | null;
   media_url?: string | null;
+  channel_id?: string | null;
   correction_payload?: {
     original: string;
     corrected: string;
@@ -595,6 +619,7 @@ type ChatMessageRow = {
   is_forwarded?: boolean;
   delivery_status?: string;
   expires_at?: string | null;
+  deleted_for_user_ids?: string[] | null;
 };
 
 type BlockRow = {
@@ -635,6 +660,7 @@ export interface Database {
           language_pair: string | null;
           max_participants: number | null;
           host_id: string;
+          proficiency?: string | null;
         };
         Insert: Partial<{
           id?: string;
@@ -646,6 +672,7 @@ export interface Database {
           language_pair?: string | null;
           max_participants?: number | null;
           host_id: string;
+          proficiency?: string | null;
         }>;
         Update: Partial<{
           id?: string;
@@ -657,6 +684,7 @@ export interface Database {
           language_pair?: string | null;
           max_participants?: number | null;
           host_id?: string;
+          proficiency?: string | null;
         }>;
         Relationships: [];
       };
@@ -1087,6 +1115,7 @@ export interface Database {
           custom_tone_url: string | null;
           vibration_pattern: string | null;
           updated_at: string;
+          preferences?: Record<string, unknown> | null;
         };
         Insert: Partial<{
           user_id: string;
@@ -1651,6 +1680,12 @@ export interface Database {
           },
         ];
       };
+      location_shares: {
+        Row: LocationShareRow;
+        Insert: Partial<LocationShareRow>;
+        Update: Partial<LocationShareRow>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -1658,8 +1693,26 @@ export interface Database {
         Args: { user_id: string; amount: number };
         Returns: void;
       };
+      search_nearby_users: {
+        Args: {
+          search_lat: number;
+          search_lon: number;
+          radius_m: number;
+          exclude_user_id: string;
+          filter_native: string[] | null;
+          filter_target: string | null;
+          serious_only: boolean;
+        };
+        Returns: unknown[];
+      };
+      };
+      location_shares: {
+        Row: LocationShareRow;
+        Insert: Partial<LocationShareRow>;
+        Update: Partial<LocationShareRow>;
+        Relationships: [];
+      };
     };
-  };
 }
 
 @Injectable()

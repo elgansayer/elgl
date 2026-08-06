@@ -5,7 +5,7 @@ import { UsersService } from '../users/users.service';
 export interface Quest {
   id: string;
   user_id: string;
-  quest_type: 'daily' | 'weekly';
+  quest_type: string;
   quest_key: string;
   progress: number;
   target: number;
@@ -97,7 +97,7 @@ export class QuestsService {
 
   private async ensureDefaults(userId: string): Promise<void> {
     const defaultQuests: Array<{
-      quest_type: 'daily' | 'weekly';
+  quest_type: string;
       quest_key: string;
       target: number;
       reward_coins: number;
