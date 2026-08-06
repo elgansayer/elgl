@@ -3,7 +3,7 @@ import { PrivacyComponent } from './privacy.component';
 import { DatePipe } from '@angular/common';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { LegalDocumentViewerComponent, LegalSection } from '../../components/legal-document-viewer/legal-document-viewer.component';
-import { Component, Input } from '@angular/core';
+import { Component, Input, input } from '@angular/core';
 
 @Component({
   selector: 'app-legal-document-viewer',
@@ -11,7 +11,7 @@ import { Component, Input } from '@angular/core';
   standalone: true
 })
 class MockLegalDocumentViewerComponent {
-  @Input() title!: string;
+  title = input.required<string>();
   @Input() lastUpdated!: Date | string;
   @Input() sections!: LegalSection[];
 }
