@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach } from "vitest";
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { of, throwError } from 'rxjs';
@@ -23,7 +24,7 @@ describe('CreateEventModalComponent', () => {
     updated_at: '2026-08-01T09:00:00Z',
   };
 
-  beforeEach(async () => {
+  beforeEach(async () => { TestBed.resetTestingModule();
     eventsServiceSpy = { createEvent: vi.fn() };
 
     const translateStub = {
