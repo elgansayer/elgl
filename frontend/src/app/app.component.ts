@@ -77,12 +77,6 @@ export class AppComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
   readonly appLockService = inject(AppLockService);
   private readonly router = inject(Router);
-  readonly totalUnread = computed(() => this.unreadCounter.totalUnread());
-  readonly hasUnread = computed(() => this.totalUnread() > 0);
-
-  readonly unreadDisplayValue = computed(() =>
-    this.totalUnread() > 99 ? '99+' : String(this.totalUnread()),
-  );
 
   private routerOutlet = viewChild.required(RouterOutlet);
 
