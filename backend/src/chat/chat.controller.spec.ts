@@ -110,7 +110,7 @@ describe('ChatController', () => {
       expect(chatService.generateConnectionToken).toHaveBeenCalledWith(
         mockUser().id,
       );
-      expect(result).toEqual({ token: mockToken });
+      expect(result).toEqual(mockToken);
     });
   });
 
