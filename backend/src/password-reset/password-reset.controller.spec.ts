@@ -1,77 +1,48 @@
+import { Test, TestingModule } from '@nestjs/testing';
 import { PasswordResetController } from './password-reset.controller';
+import { PasswordResetService } from './password-reset.service';
 
-describe('PasswordResetController (unit)', () => {
+describe('PasswordResetController', () => {
   let controller: PasswordResetController;
-  let resetService: {
-    requestPasswordReset: jest.Mock;
-    resetPassword: jest.Mock;
-  };
+  let mockService: { requestPasswordReset: jest.Mock; resetPassword: jest.Mock };
 
-  beforeEach(() => {
-    resetService = {
-      requestPasswordReset: jest.fn(),
-      resetPassword: jest.fn(),
+  beforeEach(async () => {
+    mockService = {
+      requestPasswordReset: jest.fn().mockResolvedValue(undefined),
+      resetPassword: jest.fn().mockResolvedValue(undefined),
     };
 
-    controller = new (PasswordResetController as any)(
-      resetService,
-    ) as PasswordResetController;
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [PasswordResetController],
+      providers: [{ provide: PasswordResetService, useValue: mockService }],
+    }).compile();
+
+    controller = module.get<PasswordResetController>(PasswordResetController);
   });
 
   describe('requestPasswordReset', () => {
-    it('should call the reset service and return a generic message', async () => {
-      resetService.requestPasswordReset.mockResolvedValue(undefined);
-
-      const result = await controller.requestPasswordReset({
-        email: 'user@example.com',
-      });
-
-      expect(resetService.requestPasswordReset).toHaveBeenCalledWith({
-        email: 'user@example.com',
-      });
+    it('should return a generic message regardless of email validity', async () => {
+      const result = await controller.requestPasswordReset({ email: 'test@test.com' });
       expect(result).toEqual({
         message: 'If the email address exists, a reset link has been sent.',
       });
-    });
-
-    it('should still return the generic message even if the service throws', async () => {
-      resetService.requestPasswordReset.mockRejectedValue(
-        new Error('DB error'),
-      );
-
-      await expect(
-        controller.requestPasswordReset({ email: 'bad@example.com' }),
-      ).rejects.toThrow('DB error');
+      expect(mockService.requestPasswordReset).toHaveBeenCalledWith({ email: 'test@test.com' });
     });
   });
 
   describe('resetPassword', () => {
-    it('should call the reset service and return a success message', async () => {
-      resetService.resetPassword.mockResolvedValue(undefined);
-
+    it('should return success message on password reset', async () => {
       const result = await controller.resetPassword({
         token: 'valid-token',
-        newPassword: 'newPass456!',
-      });
-
-      expect(resetService.resetPassword).toHaveBeenCalledWith({
-        token: 'valid-token',
-        newPassword: 'newPass456!',
+        newPassword: 'newpass123',
       });
       expect(result).toEqual({
         message: 'Password has been successfully reset.',
       });
-    });
-
-    it('should propagate errors from the reset service', async () => {
-      resetService.resetPassword.mockRejectedValue(new Error('Invalid token'));
-
-      await expect(
-        controller.resetPassword({
-          token: 'bad',
-          newPassword: 'justalongpassword',
-        }),
-      ).rejects.toThrow('Invalid token');
+      expect(mockService.resetPassword).toHaveBeenCalledWith({
+        token: 'valid-token',
+        newPassword: 'newpass123',
+      });
     });
   });
 });

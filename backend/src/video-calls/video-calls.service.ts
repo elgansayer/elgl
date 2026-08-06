@@ -5,7 +5,7 @@ import {
   RoomServiceClient,
   CreateOptions,
 } from 'livekit-server-sdk';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID as uuidv4 } from 'crypto';
 
 @Injectable()
 export class VideoCallsService {
