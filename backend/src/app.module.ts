@@ -64,6 +64,9 @@ import { SpamDetectionModule } from './spam-detection/spam-detection.module';
 import { UserStatisticsModule } from './user-statistics/user-statistics.module';
 import { LanguageIslandsModule } from './language-islands/language-islands.module';
 import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
+import { PronunciationScoringService } from './pronunciation-scoring/pronunciation-scoring.service';
+import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.service';
+import { AssessmentsService } from './assessments/assessments.service';
 
 @Module({
   imports: [
@@ -155,6 +158,9 @@ import { NotificationPreferencesModule } from './notification-preferences/notifi
 
       useClass: ThrottlerGuard,
     },
+    PronunciationScoringService,
+    AnkiiIntegrationService,
+    AssessmentsService,
   ],
 })
 export class AppModule {}
