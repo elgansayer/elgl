@@ -95,17 +95,27 @@ export class VipSubscriptionComponent {
     ];
   }
 
-  getAllFeatures(): string[] {
+  // ⚡ Bolt Performance Optimization:
+  // Pre-calculate all available features once via computed signal instead of
+  // executing the mapping logic during every template change detection cycle.
+  readonly allFeatures = computed(() => {
     const featureSet = new Set<string>();
     this.plans().forEach((plan) => {
       plan.features.forEach((feature) => featureSet.add(feature));
     });
     return Array.from(featureSet);
-  }
+  });
 
-  planHasFeature(plan: SubscriptionPlan, feature: string): boolean {
-    return plan.features.includes(feature);
-  }
+  // ⚡ Bolt Performance Optimization:
+  // Cache the result of plan feature lookups to an O(1) hash map rather than
+  // doing an O(n) `.includes` search per feature per plan on every render cycle.
+  readonly planFeaturesMap = computed(() => {
+    const map = new Map<string, Set<string>>();
+    this.plans().forEach((plan) => {
+      map.set(plan.id, new Set(plan.features));
+    });
+    return map;
+  });
 
   scrollToPlans(): void {
     const element = document.getElementById('plans');

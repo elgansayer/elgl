@@ -45,7 +45,7 @@ export class MomentsController {
   @Get('feed')
   async getFeed(
     @CurrentUser() user: User | null,
-    @Query('filter') filter?: 'All' | 'Classmates' | 'Following',
+    @Query('filter') filter?: 'All' | 'Classmates' | 'Following' | 'For You',
     @Query('lang') lang?: string,
   ): Promise<MomentRecord[]> {
     if (!user) return [];

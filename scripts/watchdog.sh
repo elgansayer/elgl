@@ -181,7 +181,7 @@ else
     echo 0 > "$NO_COMMIT_COUNT"
 fi
 
-# CHECK 3 (Pane Hung) and CHECK 4 (Sudo prompt) removed because swarmd.py handles liveness internally.
+# CHECK 3 (Pane Hung) and CHECK 4 (Sudo prompt) removed.
 
 # --- CHECK 5: Heartbeat stale? -----------------------------------------
 if [ -f "$HEARTBEAT" ]; then
@@ -197,7 +197,7 @@ if [ -f "$HEARTBEAT" ]; then
             local_log "Heartbeat stale for $((shc * 5)) mins. Triggering full restart."
             alert "swarm_blocked" \
                 "SWARM BLOCKED - Heartbeat stale" \
-                "Main loop heartbeat stale for $((shc * 5)) mins.\nState: ${summary}\n\nTriggering full restart via swarmd.py..."
+                "Main loop heartbeat stale for $((shc * 5)) mins.\nState: ${summary}\n\nTriggering full restart..."
             recover_full_restart
             echo 0 > "$STALE_HEARTBEAT"
         fi
