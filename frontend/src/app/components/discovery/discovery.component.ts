@@ -15,8 +15,10 @@ import {
   LanguagePickerComponent,
   getLanguageFlag,
 } from '../primitives/language-picker/language-picker.component';
+import { GlobalSearchComponent } from './global-search/global-search.component';
 import { RouterLink } from '@angular/router';
 import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range-slider.component';
+import { DistanceSliderComponent } from '../distance-slider/distance-slider.component';
 
 @Component({
   selector: 'app-discovery',
@@ -27,8 +29,10 @@ import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range
     FluencyIndicatorComponent,
     AppGradientButtonComponent,
     LanguagePickerComponent,
+    GlobalSearchComponent,
     RouterLink,
     AgeRangeSliderComponent,
+    DistanceSliderComponent,
   ],
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
@@ -57,6 +61,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly selectedDistanceKm = signal<number>(50);
   readonly selectedNativeLanguage = signal<string>('');
   readonly selectedTargetLanguage = signal<string>('');
+  readonly selectedProficiencyLevel = signal<string>('');
   readonly selectedGender = signal<string>('');
   readonly seriousLearnerOnly = signal<boolean>(false);
   readonly seriousLearnerMode = signal<boolean>(false);
@@ -71,6 +76,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       { id: 'all', label: this.i18n.translate('discovery.filterAll') },
       { id: 'serious', label: this.i18n.translate('discovery.filterSerious') },
       { id: 'nearby', label: this.i18n.translate('discovery.filterNearMe') },
+      { id: 'city', label: this.i18n.translate('discovery.filterCity') },
+      { id: 'paid', label: this.i18n.translate('discovery.filterPaidPractice') },
     ];
   });
   readonly selectedFilter = signal<string>('all');
@@ -100,10 +107,21 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     void this.searchPartners();
   }
 
+  onDistanceChanged(km: number): void {
+    this.selectedDistanceKm.set(km);
+    void this.searchPartners();
+  }
+
   onFilterSelect(id: string) {
     this.selectedFilter.set(id);
     this.seriousLearnerOnly.set(id === 'serious');
-    this.selectedDistanceKm.set(id === 'nearby' ? 10 : 50); // 10km for nearby, 50km default
+    if (id === 'nearby') {
+      this.selectedDistanceKm.set(10); // 10km for nearby
+    } else if (id === 'city') {
+      this.selectedDistanceKm.set(25); // 25km for city-level
+    } else {
+      this.selectedDistanceKm.set(50);
+    }
     void this.searchPartners();
   }
 
@@ -166,6 +184,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
         age_min: this.ageRangeMin(),
         age_max: this.ageRangeMax(),
         serious_learner_mode: this.seriousLearnerMode(),
+        proficiency_level: this.selectedProficiencyLevel() || undefined,
         available_time_start:
           this.availableTimeStart() || undefined,
         available_time_end:
@@ -249,14 +268,51 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.playingPartnerId.set(null);
   }
 
+  getActiveStatus(lastActiveAt: string): string {
+    if (!lastActiveAt) return '';
+    const last = new Date(lastActiveAt).getTime();
+    const now = Date.now();
+    const diffSec = Math.floor((now - last) / 1000);
+    if (diffSec < 60) return this.i18n.translate('discovery.activeNow');
+    if (diffSec < 3600) {
+      const mins = Math.floor(diffSec / 60);
+      return this.i18n.translate('discovery.activeMinutesAgo', { minutes: mins });
+    }
+    if (diffSec < 86400) {
+      const hours = Math.floor(diffSec / 3600);
+      return this.i18n.translate('discovery.activeHoursAgo', { hours });
+    }
+    const days = Math.floor(diffSec / 86400);
+    if (days === 1) return this.i18n.translate('discovery.activeYesterday');
+    return this.i18n.translate('discovery.activeDaysAgo', { days });
+  }
+
   ngOnDestroy(): void {
     this.stopAudioIntro();
+  }
+
+  onGlobalSearch(filters: {
+    native_languages?: string;
+    target_language?: string;
+    proficiency_level?: string;
+  }): void {
+    if (filters.native_languages !== undefined) {
+      this.selectedNativeLanguage.set(filters.native_languages);
+    }
+    if (filters.target_language !== undefined) {
+      this.selectedTargetLanguage.set(filters.target_language);
+    }
+    if (filters.proficiency_level !== undefined) {
+      this.selectedProficiencyLevel.set(filters.proficiency_level);
+    }
+    void this.searchPartners();
   }
 
   resetFilters(): void {
     this.selectedDistanceKm.set(50);
     this.selectedNativeLanguage.set('');
     this.selectedTargetLanguage.set('');
+    this.selectedProficiencyLevel.set('');
     this.selectedGender.set('');
     this.seriousLearnerOnly.set(false);
     this.seriousLearnerMode.set(false);

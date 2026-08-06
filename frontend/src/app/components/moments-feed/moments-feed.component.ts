@@ -75,6 +75,7 @@ export class MomentsFeedComponent {
     this.i18n.translations();
     return [
       { id: 'All', label: this.i18n.translate('moments.tabAll') },
+      { id: 'For You', label: this.i18n.translate('moments.tabForYou') },
       { id: 'Classmates', label: this.i18n.translate('moments.tabClassmates') },
       { id: 'Following', label: this.i18n.translate('moments.tabFollowing') },
     ];
@@ -138,7 +139,7 @@ export class MomentsFeedComponent {
 
   async setFilter(filter: string): Promise<void> {
     this.visibleCount.set(this.pageSize);
-    if (filter === 'All' || filter === 'Classmates' || filter === 'Following') {
+    if (filter === 'All' || filter === 'Classmates' || filter === 'Following' || filter === 'For You') {
       await this.momentsStore.loadFeed(filter);
     } else {
       await this.momentsStore.loadFeed('All');

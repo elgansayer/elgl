@@ -31,3 +31,9 @@ export interface TranslateUiResult {
   translations: Record<string, string>;
   cached: boolean;
 }
+
+export interface TranscribeVoiceResult {
+  original_text: string;
+  detected_language: string;
+  confidence: number;
+}
