@@ -605,5 +605,6 @@
   "auth.resetPassword.error": "Failed to reset password. The token may be invalid or expired.",
   "auth.resetPassword.backToHome": "Back to Home",
   "common.pleaseWait": "Please wait...",
-  "common.submit": "Submit"
+  "common.submit": "Submit",
+  "interests.save": "Save"
 }
