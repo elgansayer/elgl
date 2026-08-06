@@ -35,8 +35,7 @@ export class ChatBackupService {
 
     // Prepare rows for insert (strip any `id` to let Supabase generate new UUIDs)
     const rows = messages.map((msg) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { id, ...rest } = msg;
+      const { id: _id, ...rest } = msg;
       return {
         ...rest,
         channel_id: channelId,
