@@ -261,6 +261,7 @@ export class I18nService {
     'moments.subtitle': 'Share, correct, and learn in public.',
     'moments.visitorsLink': '👀 Visitors',
     'moments.tabAll': 'All',
+    'moments.tabForYou': 'For You',
     'moments.tabClassmates': 'Classmates',
     'moments.tabFollowing': 'Following',
     'moments.chipPublic': '🌍 Public exchange',

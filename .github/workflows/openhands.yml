@@ -82,7 +82,7 @@ jobs:
         uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: 'deepseek/deepseek-v4-pro'
+          llm_model: "deepseek/deepseek-v4-pro"
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
           prompt: >
             Please resolve issue #${{ github.event.issue.number }}: "${{ github.event.issue.title }}".
@@ -92,9 +92,9 @@ jobs:
             3. Commit your changes with a descriptive message.
             4. Create a PR: gh pr create --title "Fixes #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" --body "Fixes #${{ github.event.issue.number }}"
             CRITICAL: DO NOT FINISH until the PR is created and visible on GitHub.
-          cli_args: '--max-iterations 50'
-          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
-          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
+          cli_args: "--max-iterations 50"
+          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
+          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
 
       # ── TIER 3: Gemini 3.6 Flash (lightweight last resort) ────────────────
       - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
@@ -103,7 +103,7 @@ jobs:
         uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: 'gemini/gemini-3.5-flash'
+          llm_model: "gemini/gemini-3.5-flash"
           llm_api_key: ${{ secrets.GEMINI_API_KEY }}
           prompt: >
             Please resolve issue #${{ github.event.issue.number }}: "${{ github.event.issue.title }}".
@@ -112,6 +112,6 @@ jobs:
             2. Commit your changes with a descriptive message.
             3. Create a PR: gh pr create --title "Fixes #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" --body "Fixes #${{ github.event.issue.number }}"
             CRITICAL: DO NOT FINISH until the PR is created.
-          cli_args: '--max-iterations 30'
-          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
-          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
+          cli_args: "--max-iterations 30"
+          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
+          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
