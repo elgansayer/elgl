@@ -157,7 +157,6 @@ export class UserService {
   }
 
   async getMyProfile(): Promise<UserProfile | null> {
-    void of;
     const fallbackProfile: UserProfile = {
       ...MOCK_USER_PROFILE,
       status_text: 'Learning new languages!',
@@ -167,6 +166,11 @@ export class UserService {
       auto_download_preference: 'wifi',
       last_active_at: new Date().toISOString(),
     };
+
+    if (!this.authService.getAccessToken()) {
+      return fallbackProfile;
+    }
+
     return firstValueFrom(
       this.http
         .get<UserProfile>(`${this.baseUrl}/me`, { headers: this.getHeaders() })

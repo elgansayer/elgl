@@ -1,5 +1,6 @@
-import { Injectable, signal, computed, effect } from '@angular/core';
+import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
 
 export interface LanguageInfo {
   code: string;
@@ -1444,6 +1445,8 @@ export class I18nService {
     }
   }
 
+  private authService = inject(AuthService);
+
   private applyDocumentRtlAndLocale(lang: string): void {
     if (typeof document !== 'undefined' && document.documentElement) {
       document.documentElement.lang = lang;
@@ -1482,10 +1485,14 @@ export class I18nService {
 
     // Call backend dynamic ANY-language translation API
     try {
+      const token = this.authService.getAccessToken();
+      if (!token) return;
+
       const response = await fetch(`${environment.apiUrl}/nlp/translate-ui`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           target_language: code,
