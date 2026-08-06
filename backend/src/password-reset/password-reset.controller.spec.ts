@@ -1,5 +1,4 @@
 import { PasswordResetController } from './password-reset.controller';
-import { PasswordResetService } from './password-reset.service';
 
 describe('PasswordResetController (unit)', () => {
   let controller: PasswordResetController;

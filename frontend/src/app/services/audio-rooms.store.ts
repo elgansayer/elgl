@@ -142,23 +142,21 @@ export class AudioRoomsStore {
   private livekitRoom: Room | null = null;
   private roomSubscription: unknown = null;
 
-/**
- * Type guard that narrows the raw Centrifugo payload into the expected shape.
- * This avoids production `as` type assertions.
- */
-private isRoomEvent(
-  data: unknown,
-): data is {
-  type?: string;
-  user_id?: string;
-  target_user_id?: string;
-  caption?: CaptionRecord;
-  message?: RoomChatMessage;
-} {
-  return typeof data === 'object' && data !== null;
-}
+  /**
+   * Type guard that narrows the raw Centrifugo payload into the expected shape.
+   * This avoids production `as` type assertions.
+   */
+  private isRoomEvent(data: unknown): data is {
+    type?: string;
+    user_id?: string;
+    target_user_id?: string;
+    caption?: CaptionRecord;
+    message?: RoomChatMessage;
+  } {
+    return typeof data === 'object' && data !== null;
+  }
 
-private findRemoteVideoTrack(userId: string): RemoteVideoTrack | null {
+  private findRemoteVideoTrack(userId: string): RemoteVideoTrack | null {
     const suffix = `_${userId.slice(0, 6)}`;
     for (const [identity, track] of this.remoteVideoTracksByIdentity()) {
       if (identity === userId || identity.endsWith(suffix)) return track;
@@ -406,12 +404,10 @@ private findRemoteVideoTrack(userId: string): RemoteVideoTrack | null {
     _publication: RemoteTrackPublication,
     participant: RemoteParticipant,
   ): void {
-    if (track.kind === Track.Kind.Video) {
-      // eslint-disable-next-line no-restricted-syntax
-      const videoTrack = track as RemoteVideoTrack;
+    if (track instanceof RemoteVideoTrack) {
       this.remoteVideoTracksByIdentity.update((map) => {
         const next = new Map(map);
-        next.set(participant.identity, videoTrack);
+        next.set(participant.identity, track);
         return next;
       });
     }
