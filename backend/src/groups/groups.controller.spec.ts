@@ -219,9 +219,9 @@ describe('GroupsController', () => {
       const req = { user: { id: 'non-admin' } };
       mockGroupsService.isAdmin.mockResolvedValue(false);
 
-      await expect(controller.addMember(groupId, dto, req.user)).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(
+        controller.addMember(groupId, dto, req.user),
+      ).rejects.toThrow(UnauthorizedException);
       expect(mockGroupsService.addMember).not.toHaveBeenCalled();
     });
   });
@@ -252,9 +252,9 @@ describe('GroupsController', () => {
       const req = { user: { id: 'non-admin' } };
       mockGroupsService.isAdmin.mockResolvedValue(false);
 
-      await expect(controller.removeMember(groupId, dto, req.user)).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(
+        controller.removeMember(groupId, dto, req.user),
+      ).rejects.toThrow(UnauthorizedException);
       expect(mockGroupsService.removeMember).not.toHaveBeenCalled();
     });
   });

@@ -119,7 +119,7 @@ export class ModerationQueueComponent {
 
   readonly items = resource({
     params: () => ({ type: this.type(), status: this.status() }),
-    loader: (param: any) => {
+    loader: (param: { request?: { type?: string; status?: string }; params?: { type?: string; status?: string } }) => {
       const request = param.request ?? param.params;
       return firstValueFrom(this.moderationService.getItems(request.type, request.status));
     }

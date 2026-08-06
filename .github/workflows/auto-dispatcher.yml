@@ -5,7 +5,7 @@ on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_run:
-    workflows: ['AI Auto-Resolver']
+    workflows: ["AI Auto-Resolver"]
     types:
       - completed
 

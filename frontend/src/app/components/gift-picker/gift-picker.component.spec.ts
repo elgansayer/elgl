@@ -139,7 +139,6 @@ describe('GiftPickerComponent', () => {
     fixture.detectChanges();
 
     // Clear it
-    const clearButton = fixture.debugElement.queryAll(By.css('.text-text-muted button, button.text-text-muted'));
     // The clear button is inside the selected gift row
     const selectedRow = fixture.debugElement.query(By.css('.bg-primary\\/5'));
     const clearBtn = selectedRow?.query(By.css('button'));

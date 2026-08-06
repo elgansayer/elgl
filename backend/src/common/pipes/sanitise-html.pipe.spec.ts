@@ -9,6 +9,10 @@ describe('SanitiseHtmlPipe', () => {
     pipe = new SanitiseHtmlPipe();
   });
 
+  it('should be defined', () => {
+    expect(pipe).toBeDefined();
+  });
+
   it('should sanitize simple string', () => {
     expect(pipe.transform('<script>alert("xss")</script>', mockMetadata)).toBe(
       '',
@@ -57,4 +61,19 @@ describe('SanitiseHtmlPipe', () => {
     const result = pipe.transform(buffer, mockMetadata);
     expect(result).toBe(buffer);
   });
+
+  it('should skip sanitisation for passwords', () => {
+    const input = {
+      username: '<script>alert("xss")</script>user',
+      password: 'my<secret>password',
+      confirmPassword: 'my<secret>password',
+    };
+    const result = pipe.transform(input, mockMetadata);
+    expect(result).toEqual({
+      username: 'user',
+      password: 'my<secret>password',
+      confirmPassword: 'my<secret>password',
+    });
+  });
 });
+
