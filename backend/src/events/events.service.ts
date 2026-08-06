@@ -91,26 +91,39 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
         language_pair: string | null;
       }> = events ?? [];
 
+      if (typedEvents.length === 0) return;
+
+      const eventIds = typedEvents.map((e) => e.id);
+
+      const { data: allRsvps, error: rsvpError } = await supabase
+        .from('event_rsvps')
+        .select('event_id, user_id')
+        .in('event_id', eventIds)
+        .eq('status', 'attending');
+
+      if (rsvpError) {
+        this.logger.warn(
+          'Could not fetch RSVPs for upcoming events',
+          rsvpError,
+        );
+        return;
+      }
+
+      if (!allRsvps) return;
+
+      const rsvpsByEventId = new Map<string, string[]>();
+      for (const rsvp of allRsvps) {
+        const users = rsvpsByEventId.get(rsvp.event_id) ?? [];
+        users.push(rsvp.user_id);
+        rsvpsByEventId.set(rsvp.event_id, users);
+      }
+
       for (const event of typedEvents) {
-        // Fetch attending users for this event
-        const { data: rsvps, error: rsvpError } = await supabase
-          .from('event_rsvps')
-          .select('user_id')
-          .eq('event_id', event.id)
-          .eq('status', 'attending');
+        const userIds = rsvpsByEventId.get(event.id);
+        if (!userIds) continue;
 
-        if (rsvpError) {
-          this.logger.warn(
-            `Could not fetch RSVPs for event ${event.id}`,
-            rsvpError,
-          );
-          continue;
-        }
-
-        if (!rsvps) continue;
-
-        for (const rsvp of rsvps) {
-          await this.sendReminder(event.id, event.title, rsvp.user_id);
+        for (const userId of userIds) {
+          await this.sendReminder(event.id, event.title, userId);
         }
       }
     } catch (err) {
