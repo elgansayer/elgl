@@ -6,6 +6,23 @@
   "achievements.lockedLabel": "Locked",
   "achievements.progressLabel": "{{current}} / {{required}}",
   "achievements.title": "Achievements",
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+  "admin.userManagement.action.toggleVip": "Toggle VIP",
+  "admin.userManagement.loading": "Loading users...",
+  "admin.userManagement.streakDays": "{{days}} days",
+  "admin.userManagement.table.actions": "Actions",
+  "admin.userManagement.table.coins": "Coins",
+  "admin.userManagement.table.nativeLang": "Native Lang",
+  "admin.userManagement.table.streak": "Streak",
+  "admin.userManagement.table.user": "User",
+  "admin.userManagement.table.vipStatus": "VIP Status",
+  "admin.userManagement.title": "User Management",
+  "admin.userManagement.vip.free": "Free",
+>>>>>>> origin/main
+=======
+>>>>>>> origin/main
   "app.badgeOpenCore": "Community clone",
 <<<<<<< HEAD
   "nav.discover": "🌍 Discover",
@@ -58,9 +75,9 @@
   "audioRoom.learnerAccess": "Learner {{id}}... wants stage access",
   "audioRoom.leaveBtn": "👋 Leave",
   "audioRoom.listenerAudience": "🎧 Listener audience",
-  "audioRoom.listenerCount": "Listeners",
-  "audioRoom.listenerEmpty": "No listeners yet",
-  "audioRoom.listenerGridTitle": "Listeners",
+"audioRoom.listenerCount": "{{count}} listener",
+  "audioRoom.listenerEmpty": "No listeners yet.",
+  "audioRoom.listenerGridTitle": "Listener Audience",
   "audioRoom.listenersCount": "{{count}} listening",
   "audioRoom.listening": "Listening",
   "audioRoom.liveSfuBadge": "🔴 Live SFU room",
@@ -83,9 +100,9 @@
   "audioRoom.speakerPrefix": "Speaker {{id}}",
   "audioRoom.speakerStage": "🎙️ Speaker stage",
   "audioRoom.speaking": "Speaking",
-  "audioRoom.stageCount": "Speakers",
-  "audioRoom.stageEmpty": "Stage is empty",
-  "audioRoom.stageGridTitle": "Stage",
+"audioRoom.stageCount": "{{count}} on stage",
+  "audioRoom.stageEmpty": "The stage is empty.",
+  "audioRoom.stageGridTitle": "Speaker Stage",
   "audioRoom.targetLangLabel": "Target language",
   "audioRoom.topic.Beginners": "Beginners",
   "audioRoom.topic.BusinessEnglish": "Business English",
@@ -94,7 +111,7 @@
   "audioRoom.topic.GrammarHelp": "Grammar Help",
   "audioRoom.topic.Pronunciation": "Pronunciation",
   "audioRoom.topicLabel": "Topic",
-  "audioRoom.videoStreamLabel": "Video Stream",
+"audioRoom.videoStreamLabel": "Video stream active",
   "auth.resetPassword.backToHome": "Back to Home",
   "auth.resetPassword.error": "Failed to reset password. The token may be invalid or expired.",
   "auth.resetPassword.newPassword": "New Password",
@@ -392,6 +409,20 @@
   "economy.buyCoinsError": "Could not start coin checkout right now.",
   "economy.purchaseConfirmError": "Could not confirm coin purchase. Please contact support if you were charged.",
   "economy.purchaseSuccessToast": "🎉 Successfully purchased {{coins}} coins! Your new balance is {{newBalance}} coins.",
+<<<<<<< HEAD
+  "events.cancel": "Cancel",
+  "events.create": "Create",
+  "events.createEvent": "Create Event",
+  "events.dateTime": "Date & Time",
+  "events.description": "Description",
+  "events.descriptionPlaceholder": "What will this event be about?",
+  "events.title": "Title",
+  "events.titlePlaceholder": "e.g., Weekly Conversation Practice",
+  "events.where": "Where",
+  "events.whereHint": "e.g., Zoom link, Discord server, or physical location",
+  "events.wherePlaceholder": "Enter platform or location",
+=======
+>>>>>>> origin/main
   "favourites.chipCorrections": "✏️ Corrections",
   "favourites.chipPhrases": "📌 Important phrases",
   "favourites.chipQueue": "📚 Review queue",
@@ -1084,6 +1115,7 @@
   "achievements.progressLabel": "{{current}} / {{required}}",
   "achievements.earnedLabel": "Earned",
   "achievements.lockedLabel": "Locked",
+<<<<<<< HEAD
   "audioIntro.title": "Audio Introduction",
   "audioIntro.stop": "Stop",
   "audioIntro.pause": "Pause",
@@ -1091,6 +1123,26 @@
   "audioIntro.record": "Record",
   "audioIntro.play": "Play",
   "audioIntro.noRecording": "No recording available"
+=======
+  "settings.linkedAccounts.unlink": "Unlink",
+  "vip.subscribeNow": "Subscribe Now",
+  "vip.startFree": "Start Free Trial",
+  "admin.users.no": "No Users Found",
+  "aiPartner.inputPlaceholder": "Type your message here...",
+  "support.subtitle": "How can we help you today?",
+  "communities.create": "Create Community",
+  "vip.featureTableHeader": "Features",
+  "chat_settings.title": "Chat Settings",
+  "join.joining": "Joining...",
+  "vip.popular": "Popular",
+  "help.centre.noArticles": "No articles found.",
+  "help.centre.previous": "Previous",
+  "help.centre.next": "Next",
+  "help.centre.page": "Page {{page}} of {{totalPages}}",
+  "help.centre.all": "All",
+  "help.centre.search": "Search..."
+}
+>>>>>>> origin/main
 =======
   "system.missedCall": "Missed call",
   "system.profileUpdated": "Profile updated",
@@ -1175,10 +1227,14 @@
   "wordModal.srsStatus": "Spaced repetition status: {{status}}",
   "wordModal.title": "Dictionary Definition",
 <<<<<<< HEAD
+<<<<<<< HEAD
   "wordModal.translationLabel": "Translation"
 >>>>>>> origin/main
 =======
   "wordModal.translationLabel": "Translation",
+=======
+"wordModal.translationLabel": "Translation",
+>>>>>>> origin/main
   "app_lock.unlock_btn": "Unlock",
   "app_lock.subtitle": "Please verify your identity to access the app.",
   "app_lock.title": "App Locked",
@@ -1187,3 +1243,4 @@
   "nav.guided_tour": "Guided Tour"
 >>>>>>> origin/main
 }
+>>>>>>> origin/main
