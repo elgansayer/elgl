@@ -91,6 +91,14 @@
   "app.badgeOpenCore": "Community clone",
   "app.navMe": "Me",
   "app.title": "HelloTalk",
+<<<<<<< HEAD
+>>>>>>> origin/main
+=======
+  "app_lock.disable_biometric": "Disable Biometric Lock",
+  "app_lock.enable_biometric": "Enable Biometric Lock",
+  "app_lock.subtitle": "Please unlock to continue",
+  "app_lock.title": "App Locked",
+  "app_lock.unlock_btn": "Unlock",
 >>>>>>> origin/main
   "audioRoom.approveBtn": "Approve",
   "audioRoom.archiveConfirm": "Are you sure you want to end this room and archive the recording to Cloudflare R2?",
@@ -1003,6 +1011,7 @@
   "nav.developerApi": "⚡ Developer API",
   "nav.discover": "🌍 Discover",
   "nav.favourites": "⭐ Favourites",
+  "nav.guided_tour": "Start Guided Tour",
   "nav.helloTalk": "💬 HelloTalk",
   "nav.lingqReader": "📚 LingQ Reader",
   "nav.live": "Live",
