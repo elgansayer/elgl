@@ -3,18 +3,21 @@ name: AI PR Reviewer & Fixer
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_run:
+    workflows: ["Deploy"]
+    types: [completed]
 
 concurrency:
-  group: pr-reviewer-${{ github.event.pull_request.number }}
+  group: pr-reviewer-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
   review_and_fix:
-    # Guard: only skip if the PR reviewer itself pushed the commit (true self-review loop).
-    # AI-created PRs (openhands-agent, jules, etc.) MUST be reviewed and merged.
-    # WARNING: Do NOT block all [bot] actors — that prevents all AI PRs from being reviewed!
     if: github.actor != 'claude-code[bot]'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: write
       pull-requests: write
@@ -27,10 +30,63 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
-      # ── TIER 1: Claude Code ────────────────────────────────────────────────
+      - name: Wait for checks (fast-path if already green)
+        if: github.event.pull_request.number != ''
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          PR="${{ github.event.pull_request.number }}"
+          echo "Checking status of all checks on PR #$PR..."
+
+          CHECKS=$(gh pr checks "$PR" --repo ${{ github.repository }} --json state,conclusion,name 2>/dev/null || echo "[]")
+          if [ "$CHECKS" = "[]" ]; then
+            echo "No checks registered yet - proceeding immediately (checks will gate merge)."
+            exit 0
+          fi
+
+          PENDING=$(echo "$CHECKS" | jq '[.[] | select(.state=="IN_PROGRESS" or .state=="PENDING" or .state=="QUEUED")] | length')
+          if [ "$PENDING" -eq 0 ]; then
+            echo "All checks already completed - fast path, proceeding."
+            echo "$CHECKS" | jq -r '.[] | "  \(.name): \(.conclusion // .state)"'
+            exit 0
+          fi
+
+          echo "$PENDING check(s) still running. Waiting (max 5 min)..."
+          for i in $(seq 1 30); do
+            CHECKS=$(gh pr checks "$PR" --repo ${{ github.repository }} --json state,conclusion,name 2>/dev/null || echo "[]")
+            PENDING=$(echo "$CHECKS" | jq '[.[] | select(.state=="IN_PROGRESS" or .state=="PENDING" or .state=="QUEUED")] | length')
+            if [ "$PENDING" -eq 0 ]; then
+              echo "All checks completed."
+              break
+            fi
+            NAMES=$(echo "$CHECKS" | jq -r '[.[] | select(.state=="IN_PROGRESS") | .name] | join(", ")')
+            echo "[$i/30] $PENDING pending: $NAMES"
+            sleep 10
+          done
+
+      - name: Fetch main and safe merge
+        if: github.event.pull_request.number != ''
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          git fetch origin main
+          git config user.email "swarm@hellotalk.ai"
+          git config user.name "AI Swarm"
+
+          if git merge origin/main --no-edit 2>/dev/null; then
+            echo "Clean merge - no conflicts."
+          else
+            echo "Merge conflicts. Accepting markers (both sides preserved) for AI resolution."
+            git diff --name-only --diff-filter=U || true
+            git add .
+            git commit -m "merge: accept conflict markers with main for AI resolution" 2>/dev/null || true
+            git push origin HEAD 2>/dev/null || true
+          fi
+
       - name: Tier 1 - Claude Code (Claude Pro via OAuth)
         id: primary
         continue-on-error: true
+        timeout-minutes: 5
         uses: anthropics/claude-code-action@v1
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -40,34 +96,42 @@ jobs:
             You are the AI PR Reviewer and Fixer.
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
 
-            1. Review the code changes in this branch.
-            2. Run the local tests and linters to verify the code is correct.
-            3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
-            4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
-            5. CRITICAL: Once all tests pass, execute:
-               gh pr merge ${{ github.event.pull_request.number }} --admin --squash
-               If checks are still running, poll 'gh pr checks ${{ github.event.pull_request.number }} --watch'
-               and retry. DO NOT FINISH until the PR is successfully merged.
+            ## Merge Conflict Resolution (CRITICAL - NEVER DISCARD CHANGES)
+            If there are merge conflicts (files with <<<<<<< markers):
+            - Read BOTH sides. Create a combined solution that PRESERVES ALL CHANGES from both main and this branch.
+            - NEVER discard changes from either side. Merge them intelligently.
+            - After resolving, remove all conflict markers, commit, and push.
 
-      # Auto-skip: check if Claude actually merged the PR
+            ## Review Checklist
+            1. Review all code changes for correctness, security, and style.
+            2. Run tests: `npm test` in backend/, `npm test -- --watch=false` in frontend/.
+            3. Run linters: `npm run lint` in both backend/ and frontend/.
+            4. If tests/lint fail, write fixes, commit, and push.
+            5. Resolve any merge conflicts (see above).
+
+            ## Merge Gate (CRITICAL)
+            6. Wait for all GitHub checks: gh pr checks ${{ github.event.pull_request.number }} --watch
+            7. If any check failed, fix, commit, push, go back to step 1.
+            8. Once ALL checks pass: gh pr merge ${{ github.event.pull_request.number }} --admin --squash
+            9. DO NOT FINISH until the PR is successfully merged.
+
       - name: Check if Claude merged the PR
         id: check_claude
+        if: github.event.pull_request.number != ''
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           STATE=$(gh pr view ${{ github.event.pull_request.number }} \
             --repo ${{ github.repository }} --json state -q '.state' 2>/dev/null || echo "OPEN")
-          echo "pr_state=$STATE"
           if [ "$STATE" = "MERGED" ]; then
             echo "merged=true" >> $GITHUB_OUTPUT
-            echo "PR already merged by Claude."
+            echo "PR merged by Claude."
           else
             echo "merged=false" >> $GITHUB_OUTPUT
-            echo "PR not merged — falling through to Tier 2."
+            echo "PR not merged - instantly falling through to Tier 2 (DeepSeek)."
           fi
 
-      # ── TIER 2: DeepSeek V3 Chat (paid, heavy lifting) ────────────────────
-      - name: Tier 2 - OpenHands (DeepSeek V3 — paid heavy fallback)
+      - name: Tier 2 - OpenHands (DeepSeek - unlimited credits)
         id: secondary
         if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.merged == 'false'
         continue-on-error: true
@@ -80,20 +144,29 @@ jobs:
           runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
           prompt: >
             You are the AI PR Reviewer and Fixer.
-            Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
+            Pull Request #${{ github.event.pull_request.number }} is open and needs review.
 
-            1. Review the code changes in this branch.
-            2. Run the local tests and linters to verify the code is correct.
-            3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
-            4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
-            5. CRITICAL: Once all tests pass, execute:
-               gh pr merge ${{ github.event.pull_request.number }} --admin --squash
-               If checks are still running, poll 'gh pr checks ${{ github.event.pull_request.number }} --watch'
-               and retry. DO NOT FINISH until the PR is successfully merged.
-          cli_args: "--max-iterations 50"
+            ## Merge Conflict Resolution (CRITICAL - NEVER DISCARD CHANGES)
+            If there are merge conflicts (files with <<<<<<< markers):
+            - Read BOTH sides. Create a combined solution that PRESERVES ALL CHANGES from both main and this branch.
+            - NEVER discard changes from either side. Merge them intelligently.
+            - After resolving, remove all conflict markers, commit, and push.
 
-      # ── TIER 3: Gemini 3.6 Flash (lightweight last resort) ────────────────
-      - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
+            ## Review Checklist
+            1. Review all code changes for correctness, security, and style.
+            2. Run tests: `npm test` in backend/, `npm test -- --watch=false` in frontend/.
+            3. Run linters: `npm run lint` in both backend/ and frontend/.
+            4. If tests/lint fail, write fixes, commit, and push.
+            5. Resolve any merge conflicts (see above).
+
+            ## Merge Gate (CRITICAL)
+            6. Wait for all checks: gh pr checks ${{ github.event.pull_request.number }} --watch
+            7. If any check failed, fix, commit, push, go back to step 1.
+            8. Once ALL checks pass: gh pr merge ${{ github.event.pull_request.number }} --admin --squash
+            9. DO NOT FINISH until merged or 3 full fix cycles exhausted.
+          cli_args: "--max-iterations 80"
+
+      - name: Tier 3 - OpenHands (Gemini Flash - last resort)
         id: tertiary
         if: steps.secondary.outcome == 'failure'
         uses: xinbenlv/openhands-action@v1.0.1
@@ -105,10 +178,36 @@ jobs:
           runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
           prompt: >
             You are the AI PR Reviewer and Fixer.
-            Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
+            Pull Request #${{ github.event.pull_request.number }} is open and needs review.
 
-            1. Review the code changes in this branch.
-            2. Run local tests. Fix any failures, commit, and push.
-            3. CRITICAL: Execute gh pr merge ${{ github.event.pull_request.number }} --admin --squash
-               Poll checks if needed. DO NOT FINISH until the PR is merged.
-          cli_args: "--max-iterations 30"
+            ## Merge Conflict Resolution (NEVER DISCARD CHANGES)
+            If there are merge conflicts: read BOTH sides, preserve ALL changes, merge into one result.
+
+            ## Checklist
+            1. Review code changes. Run tests if possible.
+            2. Fix any failures, commit, push.
+            3. Resolve merge conflicts.
+            4. Wait: gh pr checks ${{ github.event.pull_request.number }} --watch
+            5. Once green: gh pr merge ${{ github.event.pull_request.number }} --admin --squash
+            6. DO NOT FINISH until merged.
+          cli_args: "--max-iterations 40"
+
+  review_stale_prs:
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run parallel PR fixer on all stale PRs
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          MAX_PARALLEL_PR_FIXER: "20"
+        run: |
+          chmod +x scripts/fix-rejected-prs.sh
+          bash scripts/fix-rejected-prs.sh
