@@ -372,7 +372,7 @@ export class FeedService {
     }
 
     const momentData = momentResponse.data as unknown as {
-  author_id: string | null | undefined;
+      author_id: string | null | undefined;
     } | null;
 
     if (!momentData || momentData.author_id !== userId) {

@@ -16,7 +16,6 @@ You are strictly forbidden from substituting these core technologies:
 
 - **British English:** You must use British English spelling for all variables, database columns, and UI copy (e.g., `colour`, `monetisation`, `tokenise`, `favourite`).
 - **Banned Punctuation:** You must never use an em dash in your code, comments, or documentation. Use standard hyphens or colons instead.
-- **Monetary Display:** Whenever rendering a price in the UI or documentation, you must display both currencies (e.g., "8 UKP / $10 USD" or "20 UKP / $26 USD").
 
 ## 3. Globalisation & RTL Layout Rules
 
@@ -123,7 +122,7 @@ Limited exceptions for `ngOnInit`/`ngOnDestroy`: ONLY allowed when integrating w
 - **Design primitives first:** Reuse shared primitives (`app-card`, `app-button-primary`, `app-button-secondary`, `app-input`, `app-textarea`, `app-chip`, `app-pill`, `app-empty-state`) before adding ad hoc utility combinations.
 - **Token fidelity:** Prefer values from Tailwind tokens and global app tokens (`surface`, radius, shadow, motion). Do not invent one-off values if an existing token covers the use case.
 - **RTL-safe utilities only:** Use logical spacing and borders (`ps`, `pe`, `ms`, `me`, `border-s`, `border-e`) in preference to physical direction utilities.
-- **VIP and monetisation copy:** Any price shown in UI must include dual currency format (for example `8 UKP / $10 USD`).
+- **VIP and monetisation copy:** - **VIP and monetisation copy:** Ensure any price shown in UI is formatted properly.
 - **Discovery UX parity:** The discovery surface must follow a `Find partners` model, not a `Nearby`-first model. Prioritise partner intent, filter controls, and profile quality signals over distance framing.
 - **Filter controls policy:** Do not use free-text input boxes for discovery filters. Use compact controls only (segmented buttons, selects, toggles, chips, and controlled lists). Language filters must be list-driven and searchable via control behaviour.
 - **Completion gate for frontend changes:** Before marking frontend work complete, run:
