@@ -65,6 +65,7 @@ import { UserStatisticsModule } from './user-statistics/user-statistics.module';
 import { LanguageIslandsModule } from './language-islands/language-islands.module';
 import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
 import { PronunciationScoringService } from './pronunciation-scoring/pronunciation-scoring.service';
+import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.service';
 
 @Module({
   imports: [
@@ -157,6 +158,7 @@ import { PronunciationScoringService } from './pronunciation-scoring/pronunciati
       useClass: ThrottlerGuard,
     },
     PronunciationScoringService,
+    AnkiiIntegrationService,
   ],
 })
 export class AppModule {}
