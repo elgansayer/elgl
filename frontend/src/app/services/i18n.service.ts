@@ -95,7 +95,16 @@ export class I18nService {
     'studyStreak.checkin': 'Check In',
     'studyStreak.day': 'Day',
     'studyStreak.days': 'Days',
-
+    
+    // Events
+    'events.createTitle': 'Create Event',
+    'events.title': 'Event Title',
+    'events.datetime': 'Date & Time',
+    'events.location': 'Platform/Location',
+    'events.locationAudio': 'Audio Room',
+    'events.locationZoom': 'Zoom',
+    'events.locationInPerson': 'In Person',
+    'events.description': 'Description',
     // Audio Intro Recorder
     'audioIntro.title': 'Audio Introduction',
     'audioIntro.noRecording': 'No recording yet.',
@@ -252,6 +261,7 @@ export class I18nService {
     'moments.subtitle': 'Share, correct, and learn in public.',
     'moments.visitorsLink': '👀 Visitors',
     'moments.tabAll': 'All',
+    'moments.tabForYou': 'For You',
     'moments.tabClassmates': 'Classmates',
     'moments.tabFollowing': 'Following',
     'moments.chipPublic': '🌍 Public exchange',

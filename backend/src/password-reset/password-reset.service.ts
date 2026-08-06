@@ -28,13 +28,16 @@ export class PasswordResetService {
     // auth.users, not in the public.users table (which has no email column).
     let userId: string | null = null;
     try {
-      const { data: authData } =
-        await supabase.auth.admin.getUserByEmail(dto.email);
+      const { data: authData } = await supabase.auth.admin.getUserByEmail(
+        dto.email,
+      );
       userId = authData.user?.id ?? null;
     } catch {
       // If getUserByEmail is not available, fall back to scanning auth users
-      const { data: allUsers } =
-        await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const { data: allUsers } = await supabase.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
       const match = allUsers?.users?.find(
         (u) => u.email?.toLowerCase() === dto.email.toLowerCase(),
       );
@@ -59,9 +62,7 @@ export class PasswordResetService {
       });
 
     if (insertError) {
-      this.logger.error(
-        `Failed to insert reset token: ${insertError.message}`,
-      );
+      this.logger.error(`Failed to insert reset token: ${insertError.message}`);
       throw new BadRequestException('Failed to create reset token');
     }
 

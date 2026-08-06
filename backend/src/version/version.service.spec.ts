@@ -7,11 +7,13 @@ describe('VersionService', () => {
   beforeAll(() => {
     process.env.npm_package_version = '1.2.3';
     process.env.GITHUB_REPO = '';
+    process.env.MINIMUM_SUPPORTED_APP_VERSION = '1.1.0';
   });
 
   afterAll(() => {
     delete process.env.npm_package_version;
     delete process.env.GITHUB_REPO;
+    delete process.env.MINIMUM_SUPPORTED_APP_VERSION;
     if (originalFetch) {
       (global as any).fetch = originalFetch;
     } else {
@@ -48,6 +50,7 @@ describe('VersionService', () => {
       current: '1.2.3',
       latest: '1.2.3',
       updateUrl: undefined,
+      minimumSupported: '1.1.0',
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -84,6 +87,7 @@ describe('VersionService', () => {
       current: '1.2.3',
       latest: '2.3.4',
       updateUrl: 'https://github.com/username/repo/releases/tag/v2.3.4',
+      minimumSupported: '1.1.0',
     });
   });
 
@@ -101,6 +105,7 @@ describe('VersionService', () => {
       current: '1.2.3',
       latest: '1.2.3',
       updateUrl: undefined,
+      minimumSupported: '1.1.0',
     });
   });
 
@@ -115,6 +120,7 @@ describe('VersionService', () => {
       current: '1.2.3',
       latest: '1.2.3',
       updateUrl: undefined,
+      minimumSupported: '1.1.0',
     });
   });
 
@@ -145,5 +151,22 @@ describe('VersionService', () => {
     const version = service.getVersion();
     expect(version.latest).toBe('9.9.9');
     expect(version.updateUrl).toBeUndefined();
+  });
+
+  it('should get minimumSupportedVersion from env and return in getMinimumSupportedVersion', () => {
+    const service = new VersionService();
+    expect(service.getMinimumSupportedVersion()).toEqual({
+      minimumSupported: '1.1.0',
+    });
+  });
+
+  it('should default minimumSupportedVersion to 1.0.0 when MINIMUM_SUPPORTED_APP_VERSION missing', () => {
+    const saved = process.env.MINIMUM_SUPPORTED_APP_VERSION;
+    delete process.env.MINIMUM_SUPPORTED_APP_VERSION;
+    const service = new VersionService();
+    expect(service.getMinimumSupportedVersion()).toEqual({
+      minimumSupported: '1.0.0',
+    });
+    process.env.MINIMUM_SUPPORTED_APP_VERSION = saved;
   });
 });

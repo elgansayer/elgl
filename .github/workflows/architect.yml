@@ -63,10 +63,10 @@ jobs:
         uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: 'deepseek/deepseek-v4-pro'
+          llm_model: "deepseek/deepseek-v4-pro"
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
-          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
-          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
+          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
+          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
           prompt: >
             You are the Lead AI Architect for this project.
             Your job is to evaluate the current state of the app against its goals.
@@ -80,7 +80,7 @@ jobs:
                Use priority:high for core features/bugs, priority:medium for enhancements, priority:low for nice-to-haves.
 
             IMPORTANT: Do NOT write code. Only plan and create tickets.
-          cli_args: '--max-iterations 50'
+          cli_args: "--max-iterations 50"
 
       # ── TIER 3: Gemini 3.6 Flash (last resort) ────────────────────────────
       - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
@@ -89,10 +89,10 @@ jobs:
         uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: 'gemini/gemini-3.5-flash'
+          llm_model: "gemini/gemini-3.5-flash"
           llm_api_key: ${{ secrets.GEMINI_API_KEY }}
-          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
-          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
+          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
+          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
           prompt: >
             You are the Lead AI Architect for this project.
 
@@ -101,4 +101,4 @@ jobs:
             3. Create GitHub issues: gh issue create --title "..." --body "..." --label "ai-agent-task,priority:high"
 
             IMPORTANT: Do NOT write code. Only create tickets.
-          cli_args: '--max-iterations 30'
+          cli_args: "--max-iterations 30"
