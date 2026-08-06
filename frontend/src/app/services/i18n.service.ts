@@ -1349,6 +1349,7 @@ export class I18nService {
     'moderation.noItems': 'No reports to review',
     'moderation.user': 'Reported user',
     'moderation.content': 'Moment content',
+    'moderation.date': 'Date',
     'moderation.description': 'Description',
 
     // Password Policy & Reset
