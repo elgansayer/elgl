@@ -93,6 +93,15 @@ import { environment } from '../../../environments/environment';
                 </button>
                 <span class="text-sm">{{ 'chatRoom.voiceMessage' | t }}</span>
               </div>
+              @if (message().media_url) {
+                <div class="mt-2 text-xs opacity-80 italic border-s-2 border-blue-400 ps-2">
+                  @if (voiceTranscribing()) {
+                    <span>{{ 'chatRoom.transcribing' | t }}</span>
+                  } @else if (voiceTranscription()) {
+                    <span>{{ voiceTranscription() }}</span>
+                  }
+                </div>
+              }
             }
 
             @if (message().message_type === 'correction' && message().correction_payload) {
@@ -174,6 +183,8 @@ export class ChatMessageComponent {
   isBlocked = signal(false);
   simplifiedText = signal<string | null>(null);
   simplifying = signal(false);
+  voiceTranscription = signal<string | null>(null);
+  voiceTranscribing = signal(false);
 
   textSegments = computed(() => {
     const text = this.message()?.text_content ?? '';
@@ -204,6 +215,13 @@ export class ChatMessageComponent {
         this.messageBlocked.emit(senderId);
       }
     });
+
+    effect(() => {
+      const msg = this.message();
+      if (msg.message_type === 'voice' && msg.media_url && !this.voiceTranscribing() && !this.voiceTranscription()) {
+        void this.fetchTranscription(msg.media_url);
+      }
+    });
   }
 
   isOwnMessage(): boolean {
@@ -217,6 +235,27 @@ export class ChatMessageComponent {
     if (this.message().media_url) {
       const audio = new Audio(this.message().media_url);
       audio.play().catch(console.error);
+    }
+  }
+
+  async fetchTranscription(audioUrl: string): Promise<void> {
+    this.voiceTranscribing.set(true);
+    try {
+      const res = await fetch(`${environment.apiUrl}/nlp/transcribe-audio`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio_url: audioUrl }),
+      });
+      if (!res.ok) {
+        throw new Error('Transcription request failed');
+      }
+      const data = await res.json();
+      this.voiceTranscription.set(data.transcription || null);
+    } catch (err) {
+      console.error('Transcription error:', err);
+      this.voiceTranscription.set(null);
+    } finally {
+      this.voiceTranscribing.set(false);
     }
   }
 
