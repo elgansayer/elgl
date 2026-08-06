@@ -1,1 +1,0 @@
-Build NestJS endpoint (`POST /chat/token`) to mint Centrifugo connection JWTs with user sub claims.

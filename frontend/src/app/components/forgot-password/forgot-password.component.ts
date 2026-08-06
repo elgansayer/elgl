@@ -9,14 +9,13 @@ import { AuthService } from '../../services/auth.service';
 @Component({
   selector: 'app-forgot-password',
   standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe],
+  imports: [ReactiveFormsModule, TranslatePipe, RouterLink],
   template: `
     <div class="min-h-screen flex items-center justify-center bg-surface p-4">
       <div class="max-w-md w-full space-y-6">
         <h1 class="text-3xl font-bold text-center text-text-primary">{{ 'forgot_password.title' | t }}</h1>
 
         @if (!tokenQuery()) {
-          <!-- Email form -->
           <form [formGroup]="emailForm" (ngSubmit)="sendResetRequest()" class="space-y-4">
             <div>
               <label for="email" class="block text-sm font-medium text-text-secondary">{{
@@ -47,7 +46,6 @@ import { AuthService } from '../../services/auth.service';
             </button>
           </form>
         } @else {
-          <!-- Password reset form -->
           <form [formGroup]="resetForm" (ngSubmit)="doPasswordReset()" class="space-y-4">
             <div>
               <label for="newPassword" class="block text-sm font-medium text-text-secondary">{{
@@ -79,6 +77,10 @@ import { AuthService } from '../../services/auth.service';
             </button>
           </form>
         }
+
+        <div class="text-center">
+          <a routerLink="/home" class="text-sm text-text-secondary hover:underline">{{ 'forgot_password.back_to_home' | t }}</a>
+        </div>
       </div>
     </div>
   `,
@@ -120,8 +122,9 @@ export class ForgotPasswordComponent {
       this.isSending.set(false);
       this.sendSuccess.set(true);
     } catch {
-      this.isSending.set(false);
       this.sendError.set('forgot_password.send_error');
+    } finally {
+      this.isSending.set(false);
     }
   }
 
@@ -139,10 +142,11 @@ export class ForgotPasswordComponent {
       await this.authService.resetPassword(token, this.resetForm.controls.newPassword.value);
       this.isResetting.set(false);
       this.resetSuccess.set(true);
-      this.router.navigate(['/home']);
+      await this.router.navigate(['/home']);
     } catch {
-      this.isResetting.set(false);
       this.resetError.set('forgot_password.reset_error');
+    } finally {
+      this.isResetting.set(false);
     }
   }
 }
