@@ -150,8 +150,8 @@ describe('ThemeService', () => {
     }));
 
     expect(changeListener).toBeTruthy();
-    if (changeListener && typeof changeListener === 'function') {
-      changeListener(new Event('change'));
+    if (changeListener) {
+      (changeListener as EventListener)(new Event('change'));
     }
 
     expect(document.documentElement.classList.toggle).toHaveBeenCalledWith('dark', true);

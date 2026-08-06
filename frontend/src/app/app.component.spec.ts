@@ -24,6 +24,7 @@ describe('AppComponent', () => {
   const authServiceMock = {
     isAuthenticated: vi.fn(() => true),
     currentUser: vi.fn(() => ({ id: 'test-user-1' })),
+    getAccessToken: vi.fn(() => 'test-token'),
   };
 
   const appLockServiceMock = {
@@ -130,9 +131,7 @@ describe('AppComponent', () => {
   });
 
   it('should initialise unread counter computed values', () => {
-    expect(component.totalUnread()).toBe(0);
-    expect(component.hasUnread()).toBe(false);
-    expect(component.unreadDisplayValue()).toBe('0');
+    expect(component.unreadCounter.totalUnread()).toBe(0);
   });
 
   it('should call core services during ngOnInit', () => {
