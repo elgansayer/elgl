@@ -33,6 +33,7 @@ describe('ForgotPasswordComponent', () => {
   }
 
   async function createComponent(): Promise<void> {
+    TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [ForgotPasswordComponent],
       providers: [
