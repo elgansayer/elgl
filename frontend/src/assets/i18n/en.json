@@ -605,5 +605,12 @@
   "auth.resetPassword.error": "Failed to reset password. The token may be invalid or expired.",
   "auth.resetPassword.backToHome": "Back to Home",
   "common.pleaseWait": "Please wait...",
-  "common.submit": "Submit"
+  "common.submit": "Submit",
+  "achievements.title": "Achievements",
+  "achievements.loading": "Loading achievements...",
+  "achievements.loadError": "Failed to load achievements.",
+  "achievements.empty": "No achievements yet.",
+  "achievements.progressLabel": "{{current}} / {{required}}",
+  "achievements.earnedLabel": "Earned",
+  "achievements.lockedLabel": "Locked"
 }
