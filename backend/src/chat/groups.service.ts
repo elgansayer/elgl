@@ -202,7 +202,11 @@ export class GroupsService {
       throw new NotFoundException('Invalid or expired invite link');
     }
 
-    const roomData = room as unknown as { id: string; title: string; max_members: number };
+    const roomData = room as unknown as {
+      id: string;
+      title: string;
+      max_members: number;
+    };
 
     // Check if the group is full
     const { count: memberCount } = await supabase
@@ -227,7 +231,11 @@ export class GroupsService {
       throw new NotFoundException('Invalid or expired invite code');
     }
 
-    const roomData = room as unknown as { id: string; title: string; max_members: number };
+    const roomData = room as unknown as {
+      id: string;
+      title: string;
+      max_members: number;
+    };
 
     // Check if the group is full
     const { count: memberCount } = await supabase
