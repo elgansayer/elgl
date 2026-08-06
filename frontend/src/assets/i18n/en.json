@@ -39,15 +39,9 @@
   "audioRoom.learnerAccess": "Learner {{id}}... wants stage access",
   "audioRoom.leaveBtn": "👋 Leave",
   "audioRoom.listenerAudience": "🎧 Listener audience",
-<<<<<<< HEAD
-  "audioRoom.listenerCount": "{{count}} listener",
+"audioRoom.listenerCount": "{{count}} listener",
   "audioRoom.listenerEmpty": "No listeners yet.",
   "audioRoom.listenerGridTitle": "Listener Audience",
-=======
-  "audioRoom.listenerCount": "Listeners",
-  "audioRoom.listenerEmpty": "No listeners yet",
-  "audioRoom.listenerGridTitle": "Listeners",
->>>>>>> origin/main
   "audioRoom.listenersCount": "{{count}} listening",
   "audioRoom.listening": "Listening",
   "audioRoom.liveSfuBadge": "🔴 Live SFU room",
@@ -70,15 +64,9 @@
   "audioRoom.speakerPrefix": "Speaker {{id}}",
   "audioRoom.speakerStage": "🎙️ Speaker stage",
   "audioRoom.speaking": "Speaking",
-<<<<<<< HEAD
-  "audioRoom.stageCount": "{{count}} on stage",
+"audioRoom.stageCount": "{{count}} on stage",
   "audioRoom.stageEmpty": "The stage is empty.",
   "audioRoom.stageGridTitle": "Speaker Stage",
-=======
-  "audioRoom.stageCount": "Speakers",
-  "audioRoom.stageEmpty": "Stage is empty",
-  "audioRoom.stageGridTitle": "Stage",
->>>>>>> origin/main
   "audioRoom.targetLangLabel": "Target language",
   "audioRoom.topic.Beginners": "Beginners",
   "audioRoom.topic.BusinessEnglish": "Business English",
@@ -87,11 +75,7 @@
   "audioRoom.topic.GrammarHelp": "Grammar Help",
   "audioRoom.topic.Pronunciation": "Pronunciation",
   "audioRoom.topicLabel": "Topic",
-<<<<<<< HEAD
-  "audioRoom.videoStreamLabel": "Video stream active",
-=======
-  "audioRoom.videoStreamLabel": "Video Stream",
->>>>>>> origin/main
+"audioRoom.videoStreamLabel": "Video stream active",
   "auth.resetPassword.backToHome": "Back to Home",
   "auth.resetPassword.error": "Failed to reset password. The token may be invalid or expired.",
   "auth.resetPassword.newPassword": "New Password",
@@ -655,11 +639,7 @@
   "wordModal.saveLearningBtn": "🟡 Save to learning",
   "wordModal.srsStatus": "Spaced repetition status: {{status}}",
   "wordModal.title": "Dictionary Definition",
-<<<<<<< HEAD
-  "wordModal.translationLabel": "Translation"
-}
-=======
-  "wordModal.translationLabel": "Translation",
+"wordModal.translationLabel": "Translation",
   "app_lock.unlock_btn": "Unlock",
   "app_lock.subtitle": "Please verify your identity to access the app.",
   "app_lock.title": "App Locked",
@@ -667,4 +647,3 @@
   "app_lock.disable_biometric": "Disable Biometric Lock",
   "nav.guided_tour": "Guided Tour"
 }
->>>>>>> origin/main
