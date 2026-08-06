@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "account_deletion.delete_button": "Delete button",
   "account_deletion.description": "Description",
   "account_deletion.export_button": "Export button",
@@ -7,6 +8,8 @@
   "account_deletion.restore_button": "Restore button",
   "account_deletion.scheduled": "Scheduled",
   "account_deletion.title": "Title",
+=======
+>>>>>>> origin/main
   "achievements.earnedLabel": "Earned",
   "achievements.empty": "No achievements yet.",
   "achievements.loadError": "Failed to load achievements.",
@@ -14,6 +17,7 @@
   "achievements.lockedLabel": "Locked",
   "achievements.progressLabel": "{{current}} / {{required}}",
   "achievements.title": "Achievements",
+<<<<<<< HEAD
   "admin.badgeAdmin": "Badge admin",
   "admin.badgeFree": "Badge free",
   "admin.badgeVip": "Badge vip",
@@ -72,6 +76,22 @@
   "audioPlayer.error": "Error",
   "audioPlayer.groupLabel": "Group label",
   "audioPlayer.seekLabel": "Seek label",
+=======
+  "admin.userManagement.action.toggleVip": "Toggle VIP",
+  "admin.userManagement.loading": "Loading users...",
+  "admin.userManagement.streakDays": "{{days}} days",
+  "admin.userManagement.table.actions": "Actions",
+  "admin.userManagement.table.coins": "Coins",
+  "admin.userManagement.table.nativeLang": "Native Lang",
+  "admin.userManagement.table.streak": "Streak",
+  "admin.userManagement.table.user": "User",
+  "admin.userManagement.table.vipStatus": "VIP Status",
+  "admin.userManagement.title": "User Management",
+  "admin.userManagement.vip.free": "Free",
+  "app.badgeOpenCore": "Community clone",
+  "app.navMe": "Me",
+  "app.title": "HelloTalk",
+>>>>>>> origin/main
   "audioRoom.approveBtn": "Approve",
   "audioRoom.archiveConfirm": "Are you sure you want to end this room and archive the recording to Cloudflare R2?",
   "audioRoom.beFirst": "Be first to launch one.",
@@ -82,6 +102,7 @@
   "audioRoom.chipQueue": "✋ Raise hand queue",
   "audioRoom.chipStages": "🔴 Host-led stages",
   "audioRoom.chipSubtitles": "💬 Synchronised subtitles",
+<<<<<<< HEAD
   "audioRoom.coHostBadge": "Co host badge",
   "audioRoom.demoteBtn": "Demote",
   "audioRoom.endArchiveBtn": "💾 End and archive",
@@ -90,6 +111,13 @@
   "audioRoom.hostFallback": "Room Host",
   "audioRoom.hostLabel": "Host",
   "audioRoom.inviteCoHostBtn": "Invite co host btn",
+=======
+  "audioRoom.demoteBtn": "Demote",
+  "audioRoom.endArchiveBtn": "💾 End and archive",
+  "audioRoom.giftHostBtn": "🎁 Gift host",
+  "audioRoom.hostFallback": "Room Host",
+  "audioRoom.hostLabel": "Host",
+>>>>>>> origin/main
   "audioRoom.joinRoomBtn": "Join room",
   "audioRoom.languagePairLabel": "Language pair",
   "audioRoom.launchError": "Failed to launch audio room.",
@@ -98,10 +126,13 @@
   "audioRoom.learnerAccess": "Learner {{id}}... wants stage access",
   "audioRoom.leaveBtn": "👋 Leave",
   "audioRoom.listenerAudience": "🎧 Listener audience",
+<<<<<<< HEAD
   "audioRoom.listenerAudienceDesc": "Listener audience desc",
   "audioRoom.listenerCount": "Listener count",
   "audioRoom.listenerEmpty": "Listener empty",
   "audioRoom.listenerPrefix": "Listener prefix",
+=======
+>>>>>>> origin/main
   "audioRoom.listenersCount": "{{count}} listening",
   "audioRoom.liveSfuBadge": "🔴 Live SFU room",
   "audioRoom.liveTag": "🔴 Live",
@@ -112,19 +143,30 @@
   "audioRoom.moderateBtn": "🛡️ Moderate",
   "audioRoom.muteBtn": "Mute",
   "audioRoom.noActiveRooms": "No active rooms right now",
+<<<<<<< HEAD
   "audioRoom.noRoomsInGroup": "No rooms in group",
   "audioRoom.raiseHandBtn": "✋ Raise hand",
   "audioRoom.raisedHandsTitle": "✋ Raised hands",
   "audioRoom.reactionSent": "Reaction sent",
+=======
+  "audioRoom.raiseHandBtn": "✋ Raise hand",
+  "audioRoom.raisedHandsTitle": "✋ Raised hands",
+>>>>>>> origin/main
   "audioRoom.roomTitleLabel": "Room title",
   "audioRoom.roomTitlePlaceholder": "Conversation practice room",
   "audioRoom.roomsSubtitle": "Join language rooms, raise your hand to speak, or launch your own room.",
   "audioRoom.roomsTitle": "🎙️ Live audio and video rooms",
+<<<<<<< HEAD
   "audioRoom.showingRoomsFor": "Showing rooms for",
   "audioRoom.speakerCount": "{{count}} speaker(s)",
   "audioRoom.speakerPrefix": "Speaker {{id}}",
   "audioRoom.speakerStage": "🎙️ Speaker stage",
   "audioRoom.stageEmpty": "Stage empty",
+=======
+  "audioRoom.speakerCount": "{{count}} speaker(s)",
+  "audioRoom.speakerPrefix": "Speaker {{id}}",
+  "audioRoom.speakerStage": "🎙️ Speaker stage",
+>>>>>>> origin/main
   "audioRoom.targetLangLabel": "Target language",
   "audioRoom.topic.Beginners": "Beginners",
   "audioRoom.topic.BusinessEnglish": "Business English",
@@ -133,6 +175,7 @@
   "audioRoom.topic.GrammarHelp": "Grammar Help",
   "audioRoom.topic.Pronunciation": "Pronunciation",
   "audioRoom.topicLabel": "Topic",
+<<<<<<< HEAD
   "audioRoom.videoStreamLabel": "Video stream label",
   "audioRoom.viewByLanguage": "View by language",
   "audioRoom.viewFlatList": "View flat list",
@@ -152,12 +195,15 @@
   "auth.login_apple": "Login apple",
   "auth.login_facebook": "Login facebook",
   "auth.login_google": "Login google",
+=======
+>>>>>>> origin/main
   "auth.resetPassword.backToHome": "Back to Home",
   "auth.resetPassword.error": "Failed to reset password. The token may be invalid or expired.",
   "auth.resetPassword.newPassword": "New Password",
   "auth.resetPassword.success": "Password has been reset successfully.",
   "auth.resetPassword.title": "Reset Password",
   "auth.resetPassword.token": "Reset Token",
+<<<<<<< HEAD
   "avatar.cancel": "Cancel",
   "avatar.crop_and_upload": "Crop and upload",
   "avatar.preview": "Preview",
@@ -198,12 +244,18 @@
   "chatList.allSection": "All chats",
   "chatList.chatLocked": "Chat locked",
   "chatList.chatUnlocked": "Chat unlocked",
+=======
+  "chat.attachedImageAlt": "Attached image",
+  "chat.incomingCallTitle": "Incoming Call",
+  "chatList.allSection": "All chats",
+>>>>>>> origin/main
   "chatList.empty": "No active conversations. Find partners to start chatting!",
   "chatList.filterAll": "All",
   "chatList.filterMyTurn": "My turn",
   "chatList.filterOnline": "Online",
   "chatList.filterTimezone": "Timezone proximity",
   "chatList.filterUnread": "Unread",
+<<<<<<< HEAD
   "chatList.labelAddFailed": "Label add failed",
   "chatList.labelAdded": "Label added",
   "chatList.labelAssignFailed": "Label assign failed",
@@ -218,6 +270,10 @@
   "chatList.lockedFolder": "Locked folder",
   "chatList.noMessages": "No messages yet. Start a chat.",
   "chatList.noMessagesYet": "No messages yet",
+=======
+  "chatList.loading": "Loading conversations...",
+  "chatList.noMessages": "No messages yet. Start a chat.",
+>>>>>>> origin/main
   "chatList.openFirstBtn": "+ Open first room",
   "chatList.pinnedSection": "Pinned chats",
   "chatList.quickAiTrans": "AI Translation",
@@ -234,6 +290,7 @@
   "chatList.textMessage": "Text message",
   "chatList.title": "Chats",
   "chatList.topTitle": "Language Talks",
+<<<<<<< HEAD
   "chatList.unlockChat": "Unlock chat",
   "chatRoom.bookmarkError": "Already bookmarked or failed.",
   "chatRoom.bookmarkErrorAlert": "Bookmark error alert",
@@ -265,11 +322,29 @@
   "chatRoom.replyPreviewFallback": "Reply preview fallback",
   "chatRoom.saveBtn": "Save",
   "chatRoom.saveErrorAlert": "Save error alert",
+=======
+  "chatRoom.bookmarkError": "Already bookmarked or failed.",
+  "chatRoom.bookmarkSuccess": "Message bookmarked to Favourites!",
+  "chatRoom.cancelBtn": "Cancel",
+  "chatRoom.connecting": "Connecting...",
+  "chatRoom.correctBtn": "Correct",
+  "chatRoom.correctedPlaceholder": "Corrected sentence",
+  "chatRoom.doodleBtn": "Doodle",
+  "chatRoom.empty": "No messages yet.",
+  "chatRoom.explanationPlaceholder": "Explanation",
+  "chatRoom.favBtn": "Fav",
+  "chatRoom.liveNow": "Live now",
+  "chatRoom.loading": "Loading messages...",
+  "chatRoom.originalPlaceholder": "Original sentence",
+  "chatRoom.partnerFallback": "Partner",
+  "chatRoom.saveBtn": "Save",
+>>>>>>> origin/main
   "chatRoom.saveLingqError": "Failed to save sentence or already in your SRS deck.",
   "chatRoom.savedLingqAlert": "📚 Saved sentence to your LingQ SRS Learning Deck:\n\"{{text}}\"",
   "chatRoom.searchBtn": "Search",
   "chatRoom.searchPlaceholder": "Search messages",
   "chatRoom.sendBtn": "Send",
+<<<<<<< HEAD
   "chatRoom.sendCorrection": "Send correction",
   "chatRoom.sendCorrectionBtn": "Send correction",
   "chatRoom.simplifiedTitle": "Simplified title",
@@ -300,6 +375,14 @@
   "chat_backup.title": "Title",
   "checkForUpdates": "Check for updates",
   "coins": "Coins",
+=======
+  "chatRoom.sendCorrectionBtn": "Send correction",
+  "chatRoom.stickerBtn": "Sticker",
+  "chatRoom.stickerCaption": "Sent a sticker",
+  "chatRoom.typePlaceholder": "Type your message",
+  "chatRoom.typing": "Someone is typing...",
+  "chatRoom.voiceBtn": "Voice",
+>>>>>>> origin/main
   "coinsCancel.backBtn": "Back to Dashboard",
   "coinsCancel.message": "Your checkout was cancelled. No charges were made. You can try again anytime.",
   "coinsCancel.title": "Checkout Cancelled",
@@ -309,6 +392,7 @@
   "coinsSuccess.message": "Thank you. Your coins have been credited to your balance.",
   "coinsSuccess.pending": "Confirming your purchase with our payment provider...",
   "coinsSuccess.title": "🎉 Coins added!",
+<<<<<<< HEAD
   "common.back": "Back",
   "common.cancel": "Cancel",
   "common.clear": "Clear",
@@ -367,11 +451,30 @@
   "context_menu.correct": "Correct",
   "context_menu.favourite": "Favourite",
   "context_menu.reply": "Reply",
+=======
+  "common.coinsBalance": "{{coins}} Coins",
+  "common.demoActive": "Demo / Mock Auth Active",
+  "common.languagePartner": "Language Partner",
+  "common.loading": "Loading...",
+  "common.pleaseWait": "Please wait...",
+  "common.signOut": "Sign out",
+  "common.submit": "Submit",
+  "common.unknownCaller": "Unknown Caller",
+  "common.unknownSender": "Unknown",
+  "common.unknownUser": "Unknown User",
+  "common.vipDevLabel": "20 UKP / $26 USD Dev VIP",
+  "common.vipStdLabel": "8 UKP / $10 USD VIP",
+  "context_menu.block": "Block",
+  "context_menu.copy": "Copy",
+  "context_menu.correct": "Correct",
+  "context_menu.favourite": "Favourite",
+>>>>>>> origin/main
   "context_menu.report": "Report",
   "context_menu.speak": "Speak",
   "context_menu.translate": "Translate",
   "context_menu.transliterate": "Transliterate",
   "context_menu.unblock": "Unblock",
+<<<<<<< HEAD
   "coverPhoto.cancel": "Cancel",
   "coverPhoto.previewAlt": "Preview alt",
   "coverPhoto.save": "Save",
@@ -384,6 +487,11 @@
   "dailyLoginModal.title": "Daily Reward!",
   "daily_login_modal.message": "Message",
   "daily_login_modal.title": "Title",
+=======
+  "dailyLoginModal.body": "You received {coins} coins for logging in today.",
+  "dailyLoginModal.cta": "Awesome!",
+  "dailyLoginModal.title": "Daily Reward!",
+>>>>>>> origin/main
   "developer.activeKeyLabel": "Active production key",
   "developer.activeRpm": "Active (600 RPM)",
   "developer.apiKeySubtitle": "Send key in Authorization header.",
@@ -444,16 +552,22 @@
   "developer.triggerRedisBtn": "🚀 Trigger Simulated Redis Fan-Out (RPUSH)",
   "developer.upgradeConsumerBtn": "Consumer VIP (8 UKP / $10 USD)",
   "developer.upgradeDevBtn": "Upgrade developer tier (20 UKP / $26 USD)",
+<<<<<<< HEAD
   "deviceLock.message": "Message",
   "deviceLock.title": "Title",
   "deviceLock.unlock": "Unlock",
+=======
+>>>>>>> origin/main
   "discovery.activeDaysAgo": "Active {{days}}d ago",
   "discovery.activeHoursAgo": "Active {{hours}}h ago",
   "discovery.activeMinutesAgo": "Active {{minutes}}m ago",
   "discovery.activeNow": "Active now",
   "discovery.activeYesterday": "Active yesterday",
+<<<<<<< HEAD
   "discovery.any_language": "Any language",
   "discovery.any_level": "Any level",
+=======
+>>>>>>> origin/main
   "discovery.audioIntroFeed.noAudioIntros": "No audio intros available",
   "discovery.badge": "🔎 Discovery",
   "discovery.bannerDesc": "Get 1-on-1 native practice",
@@ -472,12 +586,15 @@
   "discovery.filterNearMe": "Near Me (Radius)",
   "discovery.filterPaidPractice": "Paid Practice",
   "discovery.filterSerious": "Serious Learners Only",
+<<<<<<< HEAD
   "discovery.genderAny": "Gender any",
   "discovery.genderFemale": "Gender female",
   "discovery.genderLabel": "Gender label",
   "discovery.genderMale": "Gender male",
   "discovery.genderVipRequired": "Gender vip required",
   "discovery.global_search_title": "Global search title",
+=======
+>>>>>>> origin/main
   "discovery.langAny": "Any",
   "discovery.langJapanese": "Japanese",
   "discovery.langKorean": "Korean",
@@ -486,7 +603,10 @@
   "discovery.matchCount": "{{count}} partner match(es)",
   "discovery.native": "Native: {{lang}}",
   "discovery.nativeLang": "Native language",
+<<<<<<< HEAD
   "discovery.native_languages": "Native languages",
+=======
+>>>>>>> origin/main
   "discovery.noBio": "No profile bio yet.",
   "discovery.noMatches": "No partner matches yet.",
   "discovery.off": "Off",
@@ -496,11 +616,15 @@
   "discovery.partnerOfWeek": "Partner of Week",
   "discovery.pauseAudioIntro": "Pause audio introduction",
   "discovery.playAudioIntro": "Play audio introduction",
+<<<<<<< HEAD
   "discovery.proficiency_level": "Proficiency level",
+=======
+>>>>>>> origin/main
   "discovery.radiusLabel": "Maximum Distance: {{radius}} km",
   "discovery.ratio": "✨ {{ratio}}% Corrections",
   "discovery.resetFilters": "Reset filters",
   "discovery.searchPlaceholder": "Search by name, language, or bio...",
+<<<<<<< HEAD
   "discovery.search_button": "Search button",
   "discovery.searching": "Searching partners...",
   "discovery.seriousModeDesc": "Serious mode desc",
@@ -512,12 +636,20 @@
   "discovery.sortNearest": "Sort nearest",
   "discovery.sortNewest": "Sort newest",
   "discovery.sortOnlineNow": "Sort online now",
+=======
+  "discovery.searching": "Searching partners...",
+  "discovery.seriousOnly": "Serious learners only",
+  "discovery.sharedInterests": "You both like {{interests}}",
+>>>>>>> origin/main
   "discovery.startChat": "Start chat",
   "discovery.streakBadge": "🔥 {{days}}d streak",
   "discovery.streakDays": "🔥 {{days}}d Streak",
   "discovery.subtitle": "Filter learners by language goals and learning style.",
   "discovery.targetLang": "Target language",
+<<<<<<< HEAD
   "discovery.target_language": "Target language",
+=======
+>>>>>>> origin/main
   "discovery.title": "Find partners",
   "discovery.tryBroadening": "Try broadening distance or language filters.",
   "discovery.viewProfile": "View Profile",
@@ -529,6 +661,7 @@
   "doodle.colorLabel": "Colour",
   "doodle.sendBtn": "📤 Send doodle",
   "doodle.title": "🎨 Interactive Doodle Pad",
+<<<<<<< HEAD
   "downloadUpdate": "Download update",
   "economy.buyCoinsError": "Could not start coin checkout right now.",
   "economy.purchaseConfirmError": "Could not confirm coin purchase. Please contact support if you were charged.",
@@ -567,11 +700,28 @@
   "forcedUpdateModal.title": "Update Required",
   "forcedUpdateModal.updateButton": "Update Now",
   "forgot_password.back_to_home": "Back to home",
+=======
+  "economy.buyCoinsError": "Could not start coin checkout right now.",
+  "economy.purchaseConfirmError": "Could not confirm coin purchase. Please contact support if you were charged.",
+  "economy.purchaseSuccessToast": "🎉 Successfully purchased {{coins}} coins! Your new balance is {{newBalance}} coins.",
+  "favourites.chipCorrections": "✏️ Corrections",
+  "favourites.chipPhrases": "📌 Important phrases",
+  "favourites.chipQueue": "📚 Review queue",
+  "favourites.empty": "No favourites saved yet.",
+  "favourites.loading": "Loading favourites...",
+  "favourites.partnerFallback": "Language partner",
+  "favourites.subtitle": "Saved chat highlights for spaced revision.",
+  "favourites.title": "Favourites",
+  "forcedUpdateModal.message": "A new version of the app is available. Please update to continue.",
+  "forcedUpdateModal.title": "Update Required",
+  "forcedUpdateModal.updateButton": "Update Now",
+>>>>>>> origin/main
   "forgot_password.email_label": "Email address",
   "forgot_password.error_reset": "Failed to reset password",
   "forgot_password.error_send": "Failed to send reset request",
   "forgot_password.new_password_label": "New Password",
   "forgot_password.reset_button": "Reset Password",
+<<<<<<< HEAD
   "forgot_password.reset_error": "Reset error",
   "forgot_password.reset_success": "Password reset successful! Redirecting...",
   "forgot_password.resetting": "Resetting...",
@@ -592,6 +742,14 @@
   "gdpr.description": "Description",
   "gdpr.requestArchiveBtn": "Request archive btn",
   "gdpr.title": "Title",
+=======
+  "forgot_password.reset_success": "Password reset successful! Redirecting...",
+  "forgot_password.resetting": "Resetting...",
+  "forgot_password.send_button": "Send Reset Link",
+  "forgot_password.sending": "Sending...",
+  "forgot_password.sent_message": "If the email exists, a reset link has been sent.",
+  "forgot_password.title": "Forgot Password",
+>>>>>>> origin/main
   "gift.broadcastDesc": "🎉 {{sender}} gifted {{receiver}} a {{giftName}}! (🪙 {{cost}} Coins)",
   "gift.broadcastTitle": "{{giftName}} Broadcast!",
   "giftModal.backToGiftsBtn": "Back to gifts",
@@ -616,6 +774,7 @@
   "giftModal.sendingBtn": "Sending...",
   "giftModal.subtitle": "Support language partners with animated tokens",
   "giftModal.title": "🎁 Send virtual gift to host",
+<<<<<<< HEAD
   "global.error": "Error",
   "global.loading": "Loading",
   "group.addBtn": "Add",
@@ -638,10 +797,23 @@
   "group.successMsg": "Group created successfully!",
   "group.userIdPlaceholder": "Enter User ID...",
   "groups_discovery_title": "Groups discovery title",
+=======
+  "group.addBtn": "Add",
+  "group.addMembers": "Add Members",
+  "group.createBtn": "Create Group",
+  "group.createTitle": "Create Group Chat",
+  "group.creatingBtn": "Creating",
+  "group.nameLabel": "Group Name",
+  "group.namePlaceholder": "Enter group name...",
+  "group.removeBtn": "Remove",
+  "group.successMsg": "Group created successfully!",
+  "group.userIdPlaceholder": "Enter User ID...",
+>>>>>>> origin/main
   "help.centre.noResults": "No matching articles found.",
   "help.centre.searchPlaceholder": "Search FAQ...",
   "help.centre.title": "Help Centre",
   "hobby.add": "+ Add Hobby",
+<<<<<<< HEAD
   "hobby.addTagLabel": "Add tag label",
   "hobby.createTag": "Create tag",
   "hobby.noHobbiesYet": "No hobbies yet",
@@ -665,6 +837,9 @@
   "join": "Join",
   "join_button": "Join button",
   "joined": "Joined",
+=======
+  "interests.save": "Save Interests",
+>>>>>>> origin/main
   "lang.anyNative": "Any native language",
   "lang.anyTarget": "Any target language",
   "lang.applyCustom": "Switch Language",
@@ -681,6 +856,7 @@
   "lang.label": "Language",
   "lang.pt": "Portuguese",
   "lang.ru": "Russian",
+<<<<<<< HEAD
   "lang.searchPlaceholder": "Search placeholder",
   "lang.selectLanguage": "Select language",
   "lang.selectPlaceholder": "Select placeholder",
@@ -719,6 +895,11 @@
   "moderation.reportedUser": "Reported user",
   "moderation.riskScore": "Risk score",
   "moderation.title": "Title",
+=======
+  "lang.selectTitle": "Select App Language (Any Language)",
+  "lang.tr": "Turkish",
+  "lang.zh": "Chinese",
+>>>>>>> origin/main
   "moments.addImageBtn": "Add image",
   "moments.addVoiceBtn": "Add voice",
   "moments.chipCorrections": "✏️ Native corrections",
@@ -726,6 +907,7 @@
   "moments.chipPublic": "🌍 Public exchange",
   "moments.commentBtn": "Comment",
   "moments.commentPlaceholder": "Write a comment",
+<<<<<<< HEAD
   "moments.commentReplyPlaceholder": "Comment reply placeholder",
   "moments.copiedAlert": "Moment text copied.",
   "moments.copyErrorAlert": "Could not copy text right now.",
@@ -748,6 +930,21 @@
   "moments.memberFallback": "Member",
   "moments.noLikesYet": "No likes yet",
   "moments.noQuestions": "No questions",
+=======
+  "moments.copiedAlert": "Moment text copied.",
+  "moments.copyErrorAlert": "Could not copy text right now.",
+  "moments.copyText": "Copy text",
+  "moments.correctedSentence": "Corrected sentence",
+  "moments.correctionMode": "Correction mode",
+  "moments.empty": "No moments yet in this feed.",
+  "moments.explanation": "Explanation",
+  "moments.hideTranslation": "Hide translation",
+  "moments.imageUrlPlaceholder": "Image URL",
+  "moments.likeBtn": "Like",
+  "moments.loading": "Loading moments...",
+  "moments.maxMediaAlert": "You may upload a maximum of 9 media items per Moment.",
+  "moments.memberFallback": "Member",
+>>>>>>> origin/main
   "moments.normalComment": "Normal comment",
   "moments.originalSentence": "Original sentence",
   "moments.pinBtn": "Pin",
@@ -757,6 +954,7 @@
   "moments.postPlaceholder": "Share what you are practising today...",
   "moments.postingBtn": "Posting...",
   "moments.publishError": "Failed to publish Moment.",
+<<<<<<< HEAD
   "moments.questions": "Questions",
   "moments.quoteBtn": "Quote btn",
   "moments.quotedTextAlert": "Quoted text alert",
@@ -764,17 +962,23 @@
   "moments.replyBtn": "Reply btn",
   "moments.replyingTo": "Replying to",
   "moments.resetGhost": "Reset ghost",
+=======
+>>>>>>> origin/main
   "moments.saveErrorAlert": "Failed to save or already in your SRS deck.",
   "moments.saveSentence": "Save sentence",
   "moments.savedLingqAlert": "📚 Saved Moment text to your LingQ SRS Learning Deck:\n\"{{text}}\"",
   "moments.sendCorrection": "Send correction",
   "moments.showLess": "Show less",
   "moments.showMore": "Show more",
+<<<<<<< HEAD
   "moments.stopReading": "Stop reading",
+=======
+>>>>>>> origin/main
   "moments.subtitle": "Share, correct, and learn in public.",
   "moments.tabAll": "All",
   "moments.tabClassmates": "Classmates",
   "moments.tabFollowing": "Following",
+<<<<<<< HEAD
   "moments.tabForYou": "Tab for you",
   "moments.targetLanguageBadge": "Target language badge",
   "moments.targetLanguageLabel": "Target language label",
@@ -785,6 +989,13 @@
   "moments.unpinBtn": "Unpin",
   "moments.visitorsLink": "👀 Visitors",
   "moments.voiceTooLongAlert": "Voice too long alert",
+=======
+  "moments.title": "Moments",
+  "moments.transError": "Could not fetch translation right now.",
+  "moments.translate": "Translate",
+  "moments.unpinBtn": "Unpin",
+  "moments.visitorsLink": "👀 Visitors",
+>>>>>>> origin/main
   "nav.chatRoom": "💬 Chat Room",
   "nav.chats": "Chats",
   "nav.compose": "Compose",
@@ -800,6 +1011,7 @@
   "nav.notifications": "Notifications",
   "nav.partners": "Partners",
   "nav.profile": "👤 Me",
+<<<<<<< HEAD
   "no_active_language_parties": "No active language parties",
   "no_groups": "No groups",
   "notification_customization.title": "Title",
@@ -878,19 +1090,29 @@
   "profile.catalogTitle": "Catalog title",
   "profile.changePhoto": "Change photo",
   "profile.chipExchange": "Chip exchange",
+=======
+  "profile.aboutMe": "About me",
+  "profile.audioIntroBtn": "Audio intro",
+  "profile.bioPlaceholder": "Bio and learning goals",
+  "profile.cancelBtn": "Cancel",
+>>>>>>> origin/main
   "profile.chipMatching": "🌐 Exchange matching",
   "profile.chipPrivacy": "🔐 Privacy-first profile",
   "profile.chipSafety": "🛡️ Safety controls",
   "profile.correctionValue": "{{ratio}}x",
   "profile.correctionsLabel": "Corrections",
+<<<<<<< HEAD
   "profile.correctorScore": "Corrector score",
   "profile.coverUpdated": "Cover updated",
   "profile.customAvatarLabel": "Custom avatar label",
   "profile.defaultName": "Default name",
+=======
+>>>>>>> origin/main
   "profile.devLink": "⚡ Developer",
   "profile.displayNamePlaceholder": "Display name",
   "profile.editBtn": "Edit profile",
   "profile.favLink": "⭐ Favourites",
+<<<<<<< HEAD
   "profile.follow": "Follow",
   "profile.followersLabel": "Followers label",
   "profile.followingLabel": "Following label",
@@ -902,11 +1124,17 @@
   "profile.hideSearch": "Hide my profile in search",
   "profile.joined": "Joined {{date}}",
   "profile.joinedPrefix": "Joined prefix",
+=======
+  "profile.hideLocation": "Hide my location in discovery",
+  "profile.hideSearch": "Hide my profile in search",
+  "profile.joined": "Joined {{date}}",
+>>>>>>> origin/main
   "profile.learnerFallback": "Language learner",
   "profile.liveRoomsLink": "🎙️ Live rooms",
   "profile.loadError": "Failed to load profile",
   "profile.loading": "Loading profile...",
   "profile.maxLanguagesError": "Max 3 target languages allowed for VIP, 1 for free users.",
+<<<<<<< HEAD
   "profile.nationality": "Nationality",
   "profile.nativeLabel": "Native",
   "profile.nativeLang": "Native lang",
@@ -948,11 +1176,25 @@
   "profile.title": "Your Language Profile",
   "profile.unblockUser": "Unblock user",
   "profile.unfollow": "Unfollow",
+=======
+  "profile.nativeLabel": "Native",
+  "profile.nativePlaceholder": "Native language (ISO)",
+  "profile.noBio": "No bio provided yet.",
+  "profile.playAudioIntro": "Play Introduction",
+  "profile.saveChangesBtn": "Save changes",
+  "profile.settingsLink": "Settings",
+  "profile.streakLabel": "Streak",
+  "profile.streakValue": "🔥 {{days}}d",
+  "profile.targetLabel": "Target",
+  "profile.targetPlaceholder": "Target languages (comma separated)",
+  "profile.title": "Your Language Profile",
+>>>>>>> origin/main
   "profile.updateError": "Failed to update profile",
   "profile.updateSuccess": "Profile updated successfully.",
   "profile.upgradePrice": "8 UKP / $10 USD per month",
   "profile.upgradeTitle": "Upgrade for full visitor identities and advanced features",
   "profile.vipBadge": "VIP",
+<<<<<<< HEAD
   "profile.vipBannerPrice": "Vip banner price",
   "profile.vipBannerTitle": "Vip banner title",
   "profile.visibility.everyone": "Everyone",
@@ -990,6 +1232,10 @@
   "quickPoll.viewPollResultsBtn": "View poll results btn",
   "quickPoll.vote": "Vote",
   "quickPoll.yourVote": "Your vote",
+=======
+  "profile.visitorsBtn": "Visitors",
+  "profile.vocabLink": "📚 Vocabulary",
+>>>>>>> origin/main
   "report": {
     "title": "Report User",
     "reportReason": "What's the reason for this report?",
@@ -1019,6 +1265,7 @@
       "submit_failed": "Failed to submit report. Please try again."
     }
   },
+<<<<<<< HEAD
   "report.block_user": "Block user",
   "report.button_label": "Button label",
   "report.cancel": "Cancel",
@@ -1064,6 +1311,8 @@
   "resource_library.url_placeholder": "Url placeholder",
   "restore_purchases": "Restore purchases",
   "restoring": "Restoring",
+=======
+>>>>>>> origin/main
   "roomChat.broadcastBtn": "Broadcast caption",
   "roomChat.emptyChat": "No messages in this live room yet. Say hello to the stage speakers!",
   "roomChat.emptySubtitles": "No live subtitles yet. When speakers talk on stage or use speech-to-text, closed captions broadcast here!",
@@ -1078,7 +1327,10 @@
   "safety.blockList2": "Their Moments will immediately vanish from your timeline.",
   "safety.blockList3": "They cannot see when you visit their profile.",
   "safety.blockWarning": "⚠️ What happens when you block {{name}}:",
+<<<<<<< HEAD
   "safety.blockedAlert": "Blocked alert",
+=======
+>>>>>>> origin/main
   "safety.cancelBtn": "Cancel",
   "safety.confirmBlockBtn": "Confirm block",
   "safety.detailsLabel": "Additional context (optional):",
@@ -1094,6 +1346,7 @@
   "safety.tabBlock": "🚫 Block user",
   "safety.tabReport": "⚠️ Report user",
   "safety.title": "🛡️ Trust and safety moderation",
+<<<<<<< HEAD
   "safety.unblockedAlert": "Unblocked alert",
   "seconds": "Seconds",
   "settings.accentColor": "Primary Accent Colour",
@@ -1182,12 +1435,29 @@
   "suggest_flashcards.placeholder": "Placeholder",
   "suggest_flashcards.suggest_button": "Suggest button",
   "suggest_flashcards.title": "Title",
+=======
+  "settings.accentColor": "Primary Accent Colour",
+  "settings.accentColorDesc": "Personalise your app experience.",
+  "settings.appearanceSection": "Appearance",
+  "settings.dataSection": "Data & Storage",
+  "settings.downloadDataBtn": "Download My Data",
+  "settings.downloadDataDesc": "Download a copy of your personal data, including messages, moments, and flashcards.",
+  "settings.hideAge": "Hide my age",
+  "settings.hideGender": "Hide my gender",
+  "settings.hideLocation": "Hide location in discovery",
+  "settings.hideSearch": "Hide profile from search",
+  "settings.privacySection": "Privacy settings",
+  "settings.saveBtn": "Save settings",
+  "settings.title": "Settings & Privacy",
+  "settings.vipRequired": "VIP Only",
+>>>>>>> origin/main
   "system.announcement": "📢 {{message}}",
   "system.groupRenamed": "Group renamed to \"{{name}}\".",
   "system.memberAdded": "{{count}} member(s) joined the group.",
   "system.memberRemoved": "A member left the group.",
   "system.missedCall": "Missed call",
   "system.profileUpdated": "Profile updated",
+<<<<<<< HEAD
   "theme.dark": "Dark",
   "theme.label": "Label",
   "theme.light": "Light",
@@ -1196,10 +1466,13 @@
   "topics.follow": "Follow",
   "topics.following": "Following",
   "topics.title": "Title",
+=======
+>>>>>>> origin/main
   "tts.listen": "🔊 Listen",
   "tts.speaking": "🔊 Speaking...",
   "tts.title": "Listen to native pronunciation of this text ({{lang}})",
   "tts.unsupported": "Text-to-speech is not supported in this browser environment.",
+<<<<<<< HEAD
   "upToDate": "Up to date",
   "updateAvailable": "Update available",
   "upload": "Upload",
@@ -1220,6 +1493,12 @@
   "video_call.waiting_for": "Waiting for",
   "video_call.you_are_presenting": "You are presenting",
   "vip.seePlans": "See plans",
+=======
+  "userProfile.follow": "Follow",
+  "userProfile.following": "Following",
+  "userProfile.loadError": "Failed to load profile. Please try again.",
+  "userProfile.notFound": "User not found.",
+>>>>>>> origin/main
   "visitors.blurredCount": "Blurred: {{count}}",
   "visitors.empty": "No visitors yet.",
   "visitors.hideBlurredBtn": "Hide blurred",
@@ -1237,9 +1516,12 @@
   "visualDiff.subtitle": "Intl.Segmenter word engine",
   "visualDiff.title": "✏️ Language Correction Diff",
   "visualDiff.tutorExplanation": "💡 Tutor explanation:",
+<<<<<<< HEAD
   "visual_diff.engine": "Engine",
   "visual_diff.explanation_label": "Explanation label",
   "visual_diff.title": "Title",
+=======
+>>>>>>> origin/main
   "vocabulary.againBtn": "Again",
   "vocabulary.aiBannerDesc": "Free usage is capped daily. VIP unlocks full access for 8 UKP / $10 USD per month.",
   "vocabulary.aiBannerTitle": "🤖 AI grammar and pronunciation",
@@ -1260,7 +1542,10 @@
   "vocabulary.practiceLabel": "Practice sentence",
   "vocabulary.practicePlaceholder": "Enter sentence to evaluate",
   "vocabulary.pronunciationScore": "Pronunciation score: {{score}} / 100",
+<<<<<<< HEAD
   "vocabulary.restart": "Restart",
+=======
+>>>>>>> origin/main
   "vocabulary.scorePronunciationBtn": "🎙️ Score pronunciation",
   "vocabulary.subtitle": "Spaced repetition, word decks, grammar coaching, and pronunciation scoring.",
   "vocabulary.tabAi": "🤖 AI practice",
@@ -1275,6 +1560,7 @@
   "voiceRecorder.stopBtn": "⏹️ Stop recording",
   "voiceRecorder.title": "🎙️ Voice Note Recorder",
   "voiceRecorder.uploadingBtn": "⏳ Uploading to Cloudflare R2...",
+<<<<<<< HEAD
   "voices.notes.content_label": "Content label",
   "voices.notes.delete": "Delete",
   "voices.notes.post": "Post",
@@ -1284,16 +1570,25 @@
   "voip.avatarPlaceholder": "Avatar placeholder",
   "voip.callEnded": "Call Ended",
   "voip.callerAvatar": "Caller avatar",
+=======
+  "voip.callEnded": "Call Ended",
+>>>>>>> origin/main
   "voip.connected": "Connected",
   "voip.connecting": "Connecting...",
   "voip.dismiss": "Dismiss",
   "voip.endCall": "End Call",
+<<<<<<< HEAD
   "voip.endToEndEncrypted": "End to end encrypted",
   "voip.endToEndEncryptedIcon": "End to end encrypted icon",
   "voip.incomingVideoCall": "Incoming video call...",
   "voip.incomingVoiceCall": "Incoming voice call...",
   "voip.mute": "Mute",
   "voip.rejectIcon": "Reject icon",
+=======
+  "voip.incomingVideoCall": "Incoming video call...",
+  "voip.incomingVoiceCall": "Incoming voice call...",
+  "voip.mute": "Mute",
+>>>>>>> origin/main
   "voip.ringing": "Ringing...",
   "voip.speaker": "Speaker",
   "wordModal.badge": "LingQ Interactive Reader",

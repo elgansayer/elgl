@@ -5,6 +5,10 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
+<<<<<<< HEAD
+=======
+import { AuthService } from '../../services/auth.service';
+>>>>>>> origin/main
 
 @Component({
   selector: 'app-forgot-password',
@@ -13,7 +17,9 @@ import { I18nService } from '../../services/i18n.service';
   template: `
     <div class="min-h-screen flex items-center justify-center bg-surface p-4">
       <div class="max-w-md w-full space-y-6">
-        <h1 class="text-3xl font-bold text-center text-text-primary">{{ 'forgot_password.title' | t }}</h1>
+        <h1 class="text-3xl font-bold text-center text-text-primary">
+          {{ 'forgot_password.title' | t }}
+        </h1>
 
         @if (!tokenQuery()) {
           <form [formGroup]="emailForm" (ngSubmit)="sendResetRequest()" class="space-y-4">
@@ -31,7 +37,7 @@ import { I18nService } from '../../services/i18n.service';
             </div>
 
             @if (sendError()) {
-              <p class="text-error text-sm">{{ (sendError() ?? '') | t }}</p>
+              <p class="text-error text-sm">{{ sendError() ?? '' | t }}</p>
             }
             @if (sendSuccess()) {
               <p class="text-success text-sm">{{ 'forgot_password.sent_message' | t }}</p>
@@ -62,7 +68,7 @@ import { I18nService } from '../../services/i18n.service';
             </div>
 
             @if (resetError()) {
-              <p class="text-error text-sm">{{ (resetError() ?? '') | t }}</p>
+              <p class="text-error text-sm">{{ resetError() ?? '' | t }}</p>
             }
             @if (resetSuccess()) {
               <p class="text-success text-sm">{{ 'forgot_password.reset_success' | t }}</p>
@@ -73,13 +79,17 @@ import { I18nService } from '../../services/i18n.service';
               [disabled]="resetForm.invalid || isResetting()"
               class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-accent hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
             >
-              {{ (isResetting() ? 'forgot_password.resetting' : 'forgot_password.reset_button') | t }}
+              {{
+                (isResetting() ? 'forgot_password.resetting' : 'forgot_password.reset_button') | t
+              }}
             </button>
           </form>
         }
 
         <div class="text-center">
-          <a routerLink="/home" class="text-sm text-text-secondary hover:underline">{{ 'forgot_password.back_to_home' | t }}</a>
+          <a routerLink="/home" class="text-sm text-text-secondary hover:underline">{{
+            'forgot_password.back_to_home' | t
+          }}</a>
         </div>
       </div>
     </div>
@@ -122,12 +132,9 @@ export class ForgotPasswordComponent {
       await this.authService.requestPasswordReset(this.emailForm.controls.email.value);
       this.sendSuccess.set(true);
     } catch {
-      this.sendError.set('forgot_password.send_error');
+      this.sendError.set(this.i18n.translate('forgot_password.send_error'));
     } finally {
       this.isSending.set(false);
-      this.sendError.set(
-        this.i18n.translate('forgot_password.send_error'),
-      );
     }
   }
 
@@ -146,12 +153,9 @@ export class ForgotPasswordComponent {
       this.resetSuccess.set(true);
       await this.router.navigate(['/home']);
     } catch {
-      this.resetError.set('forgot_password.reset_error');
+      this.resetError.set(this.i18n.translate('forgot_password.reset_error'));
     } finally {
       this.isResetting.set(false);
-      this.resetError.set(
-        this.i18n.translate('forgot_password.reset_error'),
-      );
     }
   }
 }

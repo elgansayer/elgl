@@ -41,24 +41,16 @@ export class FavouritesComponent {
     if (tab === 'all') return all;
     if (tab === 'messages') {
       return all.filter(
-        (f) =>
-          f.item_type === 'message' &&
-          f.item_payload?.message_type === 'text',
+        (f) => f.item_type === 'message' && f.item_payload?.message_type === 'text',
       );
     }
     if (tab === 'corrections') {
       return all.filter(
-        (f) =>
-          f.item_payload?.message_type === 'correction' ||
-          f.item_type === 'correction',
+        (f) => f.item_payload?.message_type === 'correction' || f.item_type === 'correction',
       );
     }
     if (tab === 'audio') {
-      return all.filter(
-        (f) =>
-          f.item_type === 'audio' ||
-          f.item_payload?.message_type === 'voice',
-      );
+      return all.filter((f) => f.item_type === 'audio' || f.item_payload?.message_type === 'voice');
     }
     if (tab === 'moments') {
       return all.filter((f) => f.item_type === 'moment');
@@ -143,7 +135,22 @@ export class FavouritesComponent {
     this.audioPlayingId.set(null);
   }
 
+  private isChatMessage(payload: unknown): payload is ChatMessage {
+    return (
+      typeof payload === 'object' &&
+      payload !== null &&
+      'id' in payload &&
+      'room_id' in payload &&
+      'sender_id' in payload &&
+      'created_at' in payload
+    );
+  }
+
   getPayloadMessage(fav: FavouriteRecord): ChatMessage | null {
-    return (fav.item_payload as unknown as ChatMessage) ?? null;
+    const payload = fav.item_payload;
+    if (this.isChatMessage(payload)) {
+      return payload;
+    }
+    return null;
   }
 }

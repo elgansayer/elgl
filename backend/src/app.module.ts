@@ -65,6 +65,9 @@ import { LanguageIslandsModule } from './language-islands/language-islands.modul
 import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
 import { EmailModule } from './email/email.module';
 import { PasswordResetModule } from './password-reset/password-reset.module';
+import { PronunciationScoringService } from './pronunciation-scoring/pronunciation-scoring.service';
+import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.service';
+import { AssessmentsService } from './assessments/assessments.service';
 
 @Module({
   imports: [

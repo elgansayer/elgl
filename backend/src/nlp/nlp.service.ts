@@ -475,9 +475,7 @@ export class NlpService {
     };
 
     const transcription =
-      sttData.DisplayText ??
-      sttData.NBest?.[0]?.Display ??
-      '';
+      sttData.DisplayText ?? sttData.NBest?.[0]?.Display ?? '';
 
     const detectedLang = (sttData as Record<string, unknown>)
       .PrimaryLanguage as string | undefined;

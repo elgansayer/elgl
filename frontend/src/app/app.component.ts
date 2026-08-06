@@ -1,4 +1,15 @@
-import { Component, computed, inject, OnInit, signal, viewChild, afterNextRender, effect, DestroyRef } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+  viewChild,
+  afterNextRender,
+  effect,
+  DestroyRef,
+  PLATFORM_ID,
+} from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { AuthService } from './services/auth.service';
 import { EconomyStore, VirtualGift } from './services/economy.store';
@@ -7,7 +18,7 @@ import { FcmService } from './services/fcm.service';
 import { SafetyService } from './services/safety.service';
 import { TranslatePipe } from './services/translate.pipe';
 import { routeAnimations } from './animations/route.animations';
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, isPlatformServer } from '@angular/common';
 import {
   IncomingCallModalComponent,
   IncomingCallData,
@@ -77,12 +88,16 @@ export class AppComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
   readonly appLockService = inject(AppLockService);
   private readonly router = inject(Router);
+  private platformId = inject(PLATFORM_ID);
 
   private routerOutlet = viewChild.required(RouterOutlet);
 
   protected prepareRoute(): string {
+    if (isPlatformServer(this.platformId)) {
+      return 'default';
+    }
     const outlet = this.routerOutlet();
-    if (!outlet?.activatedRoute) {
+    if (!outlet?.isActivated) {
       return 'default';
     }
     const url = outlet.activatedRoute.snapshot.url.join('/');
@@ -98,7 +113,6 @@ export class AppComponent implements OnInit {
   readonly biometricControlsVisible = computed(
     () => this.authService.isAuthenticated() && this.biometricAvailable(),
   );
-
 
   // Daily reward state
   readonly dailyRewardCoins = signal<number>(0);
@@ -123,7 +137,9 @@ export class AppComponent implements OnInit {
         }
       };
       doc.addEventListener('visibilitychange', handleVisibility);
-      this.destroyRef.onDestroy(() => doc.removeEventListener('visibilitychange', handleVisibility));
+      this.destroyRef.onDestroy(() =>
+        doc.removeEventListener('visibilitychange', handleVisibility),
+      );
     });
 
     // Apply font scale to the root rem unit
@@ -151,14 +167,15 @@ export class AppComponent implements OnInit {
     // Block the app immediately if the installed version is deprecated.
     await this.versionCheckService.checkVersion();
 
-    await this.economyStore.loadInitialData();
-
     // Subscribe to personal user notification channel for direct virtual gifts
     const user = this.authService.currentUser();
-    if (user) {
+    const token = this.authService.getAccessToken();
+
+    if (user && token) {
+      await this.economyStore.loadInitialData();
+
       // Load the blocked user list once the user is available
       await this.safetyService.loadBlockedUsers();
-
 
       // Check for daily login reward
       const checkIn = await this.economyStore.claimDailyCheckIn();
@@ -175,7 +192,8 @@ export class AppComponent implements OnInit {
         if (eventType === 'virtual_gift' && isVirtualGift(data['gift'])) {
           this.economyStore.triggerGiftAnimation({
             gift: data['gift'],
-            sender_name: typeof data['sender_name'] === 'string' ? data['sender_name'] : 'Language Partner',
+            sender_name:
+              typeof data['sender_name'] === 'string' ? data['sender_name'] : 'Language Partner',
             receiver_name: 'You',
           });
         }
@@ -184,9 +202,11 @@ export class AppComponent implements OnInit {
         if (eventType === 'incoming_call') {
           const callerId = typeof data['callerId'] === 'string' ? data['callerId'] : '';
           const callerName = typeof data['callerName'] === 'string' ? data['callerName'] : '';
-          const callerAvatarUrl = typeof data['callerAvatarUrl'] === 'string' ? data['callerAvatarUrl'] : undefined;
+          const callerAvatarUrl =
+            typeof data['callerAvatarUrl'] === 'string' ? data['callerAvatarUrl'] : undefined;
           const roomName = typeof data['roomName'] === 'string' ? data['roomName'] : '';
-          const isVideoCall = typeof data['isVideoCall'] === 'boolean' ? data['isVideoCall'] : false;
+          const isVideoCall =
+            typeof data['isVideoCall'] === 'boolean' ? data['isVideoCall'] : false;
           this.incomingCallData.set({
             callerId,
             callerName,
@@ -263,5 +283,4 @@ export class AppComponent implements OnInit {
       this.biometricBusy.set(false);
     }
   }
-
 }
