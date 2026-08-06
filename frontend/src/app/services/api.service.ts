@@ -38,30 +38,33 @@ export class ApiService {
    */
   private getAuthHeaders(
     customHeaders?: HttpHeaders | Record<string, string | string[]>,
-  ): Record<string, string | string[]> {
+  ): HttpHeaders | Record<string, string | string[]> {
     const token = this.authService.getAccessToken();
-    const headers = customHeaders ? (customHeaders as Record<string, string | string[]>) : {};
 
-    if (token) {
-      return { ...headers, Authorization: `Bearer ${token}` };
+    if (!token) {
+      return customHeaders ?? {};
     }
-    return headers;
+
+    if (customHeaders instanceof HttpHeaders) {
+      return customHeaders.set('Authorization', `Bearer ${token}`);
+    }
+
+    return { ...(customHeaders ?? {}), Authorization: `Bearer ${token}` };
   }
 
-  /**
-   * Centralized intercept logic to prevent network calls when unauthenticated.
-   */
   private checkAuth<TFallback>(
     url: string,
     options: ApiOptions<TFallback>,
-  ): { shouldAbort: boolean; fallback?: TFallback } {
+  ): { shouldAbort: true; fallback: TFallback } | { shouldAbort: false } {
     const requireAuth = options.requireAuth ?? true;
     if (requireAuth && !this.authService.getAccessToken()) {
       if ('fallback' in options) {
-        return { shouldAbort: true, fallback: options.fallback };
+        // Since 'fallback' is in options, it exists, but TS treats it as TFallback | undefined
+        // We can safely return it by using an explicit type annotation on a variable.
+        const fallbackValue: TFallback = options.fallback!;
+        return { shouldAbort: true, fallback: fallbackValue };
       }
       // If no fallback is provided, we throw an error to prevent the request.
-      // You could optionally return `null` as a default fallback depending on strictness.
       throw new Error(`[ApiService] Prevented unauthorized request to: ${url}`);
     }
     return { shouldAbort: false };
@@ -70,7 +73,7 @@ export class ApiService {
   async get<T, F = T>(url: string, options: ApiOptions<F> = {}): Promise<T | F> {
     const authCheck = this.checkAuth(url, options);
     if (authCheck.shouldAbort) {
-      return authCheck.fallback as F;
+      return authCheck.fallback;
     }
 
     return firstValueFrom(
@@ -84,7 +87,7 @@ export class ApiService {
   async post<T, F = T>(url: string, body: unknown, options: ApiOptions<F> = {}): Promise<T | F> {
     const authCheck = this.checkAuth(url, options);
     if (authCheck.shouldAbort) {
-      return authCheck.fallback as F;
+      return authCheck.fallback;
     }
 
     return firstValueFrom(
@@ -98,7 +101,7 @@ export class ApiService {
   async put<T, F = T>(url: string, body: unknown, options: ApiOptions<F> = {}): Promise<T | F> {
     const authCheck = this.checkAuth(url, options);
     if (authCheck.shouldAbort) {
-      return authCheck.fallback as F;
+      return authCheck.fallback;
     }
 
     return firstValueFrom(
@@ -112,7 +115,7 @@ export class ApiService {
   async patch<T, F = T>(url: string, body: unknown, options: ApiOptions<F> = {}): Promise<T | F> {
     const authCheck = this.checkAuth(url, options);
     if (authCheck.shouldAbort) {
-      return authCheck.fallback as F;
+      return authCheck.fallback;
     }
 
     return firstValueFrom(
@@ -126,7 +129,7 @@ export class ApiService {
   async delete<T, F = T>(url: string, options: ApiOptions<F> = {}): Promise<T | F> {
     const authCheck = this.checkAuth(url, options);
     if (authCheck.shouldAbort) {
-      return authCheck.fallback as F;
+      return authCheck.fallback;
     }
 
     return firstValueFrom(

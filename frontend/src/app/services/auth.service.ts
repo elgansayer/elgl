@@ -63,7 +63,7 @@ export class AuthService {
         refresh_token: 'mock-refresh-token',
         expires_in: 3600,
         token_type: 'bearer',
-        user: MOCK_CURRENT_USER as User,
+        user: MOCK_CURRENT_USER,
       });
     }
     this.isLoading.set(false);
@@ -82,7 +82,7 @@ export class AuthService {
           refresh_token: 'mock-refresh-token',
           expires_in: 3600,
           token_type: 'bearer',
-          user: MOCK_CURRENT_USER as User,
+          user: MOCK_CURRENT_USER,
         });
       }
     });
