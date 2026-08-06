@@ -8,6 +8,8 @@ import { CentrifugeService } from '../../services/centrifuge.service';
 import { ChatService, ChatMessage, ChatRoom, GroupMember } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
+import { TypingService } from '../../services/typing.service';
+import { TypingIndicatorComponent } from '../primitives/typing-indicator/typing-indicator.component';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { DoodlePadComponent } from '../doodle-pad/doodle-pad.component';
@@ -28,6 +30,7 @@ import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.
     CommonModule,
     FormsModule,
     TranslatePipe,
+    TypingIndicatorComponent,
     VisualDiffComponent,
     DoodlePadComponent,
     VoiceRecorderComponent,
@@ -47,6 +50,7 @@ export class ChatRoomComponent implements OnDestroy {
   private chatService = inject(ChatService);
   readonly authService = inject(AuthService);
   private userService = inject(UserService);
+  readonly typingService = inject(TypingService);
   readonly vocabStore = inject(VocabularyStore);
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
@@ -243,6 +247,7 @@ export class ChatRoomComponent implements OnDestroy {
     if (this.subscription) {
       this.centrifugeService.unsubscribe(`chat:${this.roomId}`);
     }
+    this.typingService.disconnect();
   }
 
   async loadMessages(): Promise<void> {
@@ -271,6 +276,8 @@ export class ChatRoomComponent implements OnDestroy {
         setTimeout(() => this.isTyping.set(false), 3000);
       }
     });
+
+    this.typingService.connect(this.roomId);
   }
 
   onWordClicked(event: { token: string; context: string }): void {
@@ -293,6 +300,7 @@ export class ChatRoomComponent implements OnDestroy {
     } else {
       this.mentionQuery.set(null);
     }
+    this.typingService.sendTyping(target.value.length > 0);
   }
 
   onComposerKeydown(event: KeyboardEvent): void {
@@ -343,6 +351,7 @@ export class ChatRoomComponent implements OnDestroy {
     const replyToId = this.replyingTo()?.id;
     this.textInput = '';
     this.mentionQuery.set(null);
+    this.typingService.sendTyping(false);
 
     try {
       const sent = await this.chatService.sendMessage({

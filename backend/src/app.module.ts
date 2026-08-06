@@ -16,6 +16,7 @@ import { ProfileVisitsModule } from './profile-visits/profile-visits.module';
 import { ChatModule } from './chat/chat.module';
 import { NlpModule } from './nlp/nlp.module';
 import { FlashcardsModule } from './flashcards/flashcards.module';
+import { DecksModule } from './decks/decks.module';
 import { MomentsModule } from './moments/moments.module';
 import { AudioRoomsModule } from './audio-rooms/audio-rooms.module';
 import { MonetisationModule } from './monetisation/monetisation.module';
@@ -42,6 +43,7 @@ import { ShoppingModule } from './shopping/shopping.module';
 import { StudyStreakModule } from './study-streak/study-streak.module';
 import { HostDashboardModule } from './host-dashboard/host-dashboard.module';
 import { PrivacyModule } from './privacy/privacy.module';
+import { LegalModule } from './legal/legal.module';
 import { AiConversationModule } from './ai-conversation/ai-conversation.module';
 import { CorrectorScoreModule } from './corrector-score/corrector-score.module';
 import { AchievementsModule } from './achievements/achievements.module';
@@ -103,6 +105,7 @@ import { AssessmentsService } from './assessments/assessments.service';
     ChatModule,
     NlpModule,
     FlashcardsModule,
+    DecksModule,
     MomentsModule,
     AudioRoomsModule,
     MonetisationModule,
@@ -125,6 +128,7 @@ import { AssessmentsService } from './assessments/assessments.service';
     StudyStreakModule,
     HostDashboardModule,
     PrivacyModule,
+    LegalModule,
     AiConversationModule,
     AchievementsModule,
     CulturalModule,

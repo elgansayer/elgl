@@ -7,6 +7,9 @@
       (click)="authService.unlockApp()"
       (keyup.enter)="authService.unlockApp()"
       tabindex="0"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="'app_lock.title' | t"
     >
       <div class="text-center text-white">
         <p class="mb-4 text-lg font-medium">{{ 'app_lock.title' | t }}</p>
@@ -100,6 +103,7 @@
         routerLinkActive="text-primary"
         [routerLinkActiveOptions]="{ exact: false }"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        [attr.aria-label]="'nav.helloTalk' | t"
       >
         <div class="relative">
           <span class="text-2xl leading-none">💬</span>
@@ -118,6 +122,7 @@
         routerLink="/moments"
         routerLinkActive="text-primary"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        [attr.aria-label]="'nav.moments' | t"
       >
         <span class="text-2xl leading-none">⭕</span>
         <span class="text-[10px] font-bold">{{ 'nav.moments' | t }}</span>
@@ -127,6 +132,7 @@
         routerLink="/discovery"
         routerLinkActive="text-primary"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        [attr.aria-label]="'nav.connect' | t"
       >
         <span class="text-2xl leading-none">🌍</span>
         <span class="text-[10px] font-bold">{{ 'nav.connect' | t }}</span>
@@ -136,6 +142,7 @@
         routerLink="/audio-rooms"
         routerLinkActive="text-primary"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        [attr.aria-label]="'nav.liveRooms' | t"
       >
         <span class="text-2xl leading-none">🎙️</span>
         <span class="text-[10px] font-bold">{{ 'nav.liveRooms' | t }}</span>
@@ -145,6 +152,7 @@
         routerLink="/profile"
         routerLinkActive="text-primary"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        [attr.aria-label]="'nav.profile' | t"
       >
         <span class="text-2xl leading-none">👤</span>
         <span class="text-[10px] font-bold">{{ 'nav.profile' | t }}</span>

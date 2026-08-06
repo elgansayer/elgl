@@ -1,6 +1,5 @@
 import { Component, signal, inject, resource } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { firstValueFrom } from 'rxjs';
 import { ModerationService, ModerationItem } from '../../services/moderation.service';
 
 @Component({
@@ -29,12 +28,12 @@ export class ModerationQueueComponent {
       try {
         if (params.tab === 'moment') {
           this.loadingMoments.set(true);
-          const items = await firstValueFrom(this.moderationService.getItems('moment', 'pending'));
+          const items = await this.moderationService.getItems('moment', 'pending');
           this.momentItems.set(items);
           return items;
         } else {
           this.loadingProfiles.set(true);
-          const items = await firstValueFrom(this.moderationService.getItems('profile', 'pending'));
+          const items = await this.moderationService.getItems('profile', 'pending');
           this.profileItems.set(items);
           return items;
         }

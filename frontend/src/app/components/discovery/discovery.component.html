@@ -5,7 +5,7 @@
       <h1 class="text-xl font-black text-text-primary tracking-tight">
         {{ 'discovery.title' | t }}
       </h1>
-      <a routerLink="/notifications" class="p-2 text-xl hover:opacity-80 transition-opacity">🔔</a>
+      <a routerLink="/notifications" class="p-2 text-xl hover:opacity-80 transition-opacity" [attr.aria-label]="'nav.notifications' | t">🔔</a>
     </div>
 
     <!-- Top Filter Pills (Horizontal Scroll) -->

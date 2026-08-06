@@ -53,6 +53,7 @@
             class="h-10 w-10 rounded-full border border-surface-100 bg-surface-300 flex items-center justify-center transition-colors"
             [class.text-neon-pink]="isLiked()"
             [class.border-neon-pink]="isLiked()"
+            aria-label="{{ isLiked() ? 'Unlike profile' : 'Like profile' }}"
           >
             {{ isLiked() ? '❤️' : '🤍' }}
           </button>

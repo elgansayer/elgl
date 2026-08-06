@@ -295,7 +295,7 @@
     @if (showPollResultsModal() && pollResults()) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
         <div class="w-full max-w-md relative">
-          <button (click)="showPollResultsModal.set(false)" class="absolute top-2 end-2 text-surface-400 hover:text-white">&times;</button>
+          <button (click)="showPollResultsModal.set(false)" class="absolute top-2 end-2 text-surface-400 hover:text-white" aria-label="Close">&times;</button>
           <app-quick-poll-display
             [data]="pollResults()!"
             [allowVote]="true"

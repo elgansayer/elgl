@@ -114,6 +114,14 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'decks',
+    loadComponent: () =>
+      import('./components/flashcard-deck/flashcard-deck.component').then(
+        (m) => m.FlashcardDeckComponent,
+      ),
+    title: 'Flashcard Decks - HelloTalk',
+  },
+  {
     path: 'profile',
     loadComponent: () =>
       import('./components/profile/profile.component').then((m) => m.ProfileComponent),
