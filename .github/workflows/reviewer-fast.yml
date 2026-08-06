@@ -62,7 +62,18 @@ jobs:
             git push origin HEAD 2>/dev/null || true
           fi
 
+      - name: Check SKIP_CLAUDE
+        id: skip
+        run: |
+          if [ "${{ vars.SKIP_CLAUDE || 'false' }}" = "true" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "SKIP_CLAUDE=true — bypassing Claude, going straight to DeepSeek."
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Tier 1 - Claude Code
+        if: steps.skip.outputs.skip != 'true'
         id: primary
         continue-on-error: true
         timeout-minutes: 5
@@ -95,7 +106,7 @@ jobs:
 
       - name: Tier 2 - DeepSeek
         id: secondary
-        if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.merged == 'false'
+        if: steps.primary.outcome == 'failure' || steps.primary.outcome == 'skipped' || steps.check_claude.outputs.merged == 'false'
         continue-on-error: true
         uses: xinbenlv/openhands-action@v1.0.1
         with:

@@ -21,7 +21,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check SKIP_CLAUDE
+        id: skip
+        run: |
+          if [ "${{ vars.SKIP_CLAUDE || 'false' }}" = "true" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "SKIP_CLAUDE=true — bypassing Claude, going straight to DeepSeek."
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Tier 1 - Claude Code
+        if: steps.skip.outputs.skip != 'true'
         id: primary
         continue-on-error: true
         timeout-minutes: 5
@@ -44,12 +55,12 @@ jobs:
         run: |
           ISSUE="${{ github.event.issue.number }}"
           COUNT=$(gh pr list --repo ${{ github.repository }} --search "Fixes #${ISSUE} in:body" --state open --json number -q 'length' 2>/dev/null || echo "0")
-          if [ "$COUNT" -gt 0 ]; then echo "pr_exists=true" >> $GITHUB_OUTPUT; echo "Claude created PR.";
-          else echo "pr_exists=false" >> $GITHUB_OUTPUT; echo "Falling to DeepSeek."; fi
+          if [ "$COUNT" -gt 0 ]; then echo "pr_exists=true" >> $GITHUB_OUTPUT; echo "PR exists.";
+          else echo "pr_exists=false" >> $GITHUB_OUTPUT; echo "No PR yet - falling to DeepSeek."; fi
 
       - name: Tier 2 - DeepSeek
         id: secondary
-        if: steps.primary.outcome == 'failure' || steps.check.outputs.pr_exists == 'false'
+        if: steps.primary.outcome == 'failure' || steps.primary.outcome == 'skipped' || steps.check.outputs.pr_exists == 'false'
         continue-on-error: true
         uses: xinbenlv/openhands-action@v1.0.1
         with:
