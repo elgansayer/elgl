@@ -429,6 +429,15 @@ export class UsersService {
     // Build fix: declare before use to satisfy TS2448
     const updatePayload: Record<string, unknown> = {};
 
+    if (dto.primary_accent_color !== undefined) {
+      if (!isVip) {
+        throw new BadRequestException(
+          'Custom primary accent colours require a VIP subscription (8 UKP / $10 USD per month).',
+        );
+      }
+      updatePayload.primary_accent_color = dto.primary_accent_color;
+    }
+
     if (dto.enable_location_spoofing !== undefined) {
       updatePayload.enable_location_spoofing = dto.enable_location_spoofing;
     }
