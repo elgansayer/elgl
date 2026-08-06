@@ -66,13 +66,14 @@ export class PrivacyService {
     }
 
     const supabase = this.supabaseService.getClient();
+    const deletionDate = new Date();
+    deletionDate.setDate(deletionDate.getDate() + 30);
+
     const { error } = await supabase
       .from('users')
       .update({
-        deletion_requested_at: new Date().toISOString(),
-        deletion_grace_days: 30,
-        is_deletion_pending: true,
-      })
+        scheduled_for_deletion_at: deletionDate.toISOString(),
+      } as never)
       .eq('id', userId);
 
     if (error) {
@@ -82,7 +83,7 @@ export class PrivacyService {
       throw new BadRequestException('Failed to initiate account deletion');
     }
 
-    this.logger.log(`Deletion pending for user ${userId}`);
+    this.logger.log(`Deletion scheduled for user ${userId}`);
   }
 
   // -----------------------------------------------------------------------
