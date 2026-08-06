@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AuthService } from '../../services/auth.service';
@@ -7,30 +7,25 @@ import { AuthService } from '../../services/auth.service';
 @Component({
   selector: 'app-reset-password',
   standalone: true,
-  imports: [FormsModule, RouterLink, TranslatePipe],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
   template: `
     <section class="min-h-screen flex items-center justify-center p-4 bg-[#121212]">
       <div class="w-full max-w-md bg-surface text-slate-100 rounded-2xl p-6 shadow-xl">
         <h1 class="text-2xl font-bold mb-6">{{ 'auth.resetPassword.title' | t }}</h1>
-        <form (ngSubmit)="onSubmit()" #resetForm="ngForm">
+        <form [formGroup]="resetForm" (ngSubmit)="onSubmit()">
           <label class="block mb-1 text-sm" for="token">{{ 'auth.resetPassword.token' | t }}</label>
           <input
             id="token"
-            name="token"
-            [ngModel]="token()"
-            (ngModelChange)="token.set($event)"
+            formControlName="token"
             required
             class="w-full p-3 mb-4 bg-white/10 border border-white/20 rounded-lg"
           />
           <label class="block mb-1 text-sm" for="newPassword">{{ 'auth.resetPassword.newPassword' | t }}</label>
           <input
             id="newPassword"
-            name="newPassword"
             type="password"
-            [ngModel]="newPassword()"
-            (ngModelChange)="newPassword.set($event)"
+            formControlName="newPassword"
             required
-            minlength="8"
             class="w-full p-3 mb-4 bg-white/10 border border-white/20 rounded-lg"
           />
           <button
@@ -57,26 +52,26 @@ export class ResetPasswordComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private fb = inject(FormBuilder);
 
-  readonly token = signal('');
-  readonly newPassword = signal('');
   readonly submitting = signal(false);
   readonly messageKey = signal<string>('');
   readonly isError = signal(false);
 
-  constructor() {
-    const tokenParam = this.route.snapshot.queryParamMap.get('token');
-    if (tokenParam) {
-      this.token.set(tokenParam);
-    }
-  }
+  readonly resetForm = this.fb.nonNullable.group({
+    token: [this.route.snapshot.queryParamMap.get('token') ?? '', [Validators.required]],
+    newPassword: ['', [Validators.required, Validators.minLength(8)]],
+  });
 
   async onSubmit(): Promise<void> {
-    if (!this.token() || !this.newPassword()) return;
+    if (this.resetForm.invalid) return;
+    const { token, newPassword } = this.resetForm.getRawValue();
+    if (!token || !newPassword) return;
+
     this.submitting.set(true);
     this.isError.set(false);
     try {
-      await this.authService.resetPassword(this.token(), this.newPassword());
+      await this.authService.resetPassword(token, newPassword);
       this.messageKey.set('auth.resetPassword.success');
       this.router.navigate(['/home']);
     } catch {

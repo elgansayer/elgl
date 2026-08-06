@@ -14,7 +14,7 @@ import { I18nService } from '../../services/i18n.service';
           id="new-password"
           type="password"
           [value]="newPassword()"
-          (input)="newPassword.set($any($event.target).value)"
+          (input)="onNewPasswordInput($event)"
         />
       </div>
 
@@ -39,7 +39,7 @@ import { I18nService } from '../../services/i18n.service';
           id="confirm-password"
           type="password"
           [value]="confirmPassword()"
-          (input)="confirmPassword.set($any($event.target).value)"
+          (input)="onConfirmPasswordInput($event)"
         />
       </div>
 
@@ -162,6 +162,18 @@ export class PasswordPolicyResetComponent {
   readonly hasSymbol = computed(() => /[!@#$%^&*(),.?":{}|<>]/.test(this.newPassword()));
   readonly passwordsMatch = computed(() => this.newPassword() === this.confirmPassword());
   readonly allValid = computed(() => this.hasMinLength() && this.hasNumber() && this.hasSymbol() && this.passwordsMatch());
+
+  onNewPasswordInput(event: Event): void {
+    if (event.target instanceof HTMLInputElement) {
+      this.newPassword.set(event.target.value);
+    }
+  }
+
+  onConfirmPasswordInput(event: Event): void {
+    if (event.target instanceof HTMLInputElement) {
+      this.confirmPassword.set(event.target.value);
+    }
+  }
 
   resetPassword(): void {
     // TODO: implement actual password update via Supabase or backend.

@@ -93,10 +93,6 @@ export class AdminPortalComponent implements OnInit {
     }
   }
 
-  loginHistoryFor(userId: string): LoginHistoryEntry[] {
-    return this.loginHistoryByUser()[userId] ?? [];
-  }
-
   displayNameFor(user: AdminUserSummary): string {
     return user.display_name || this.i18n.translate('common.unknownUser');
   }
