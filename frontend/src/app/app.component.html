@@ -7,6 +7,9 @@
       (click)="authService.unlockApp()"
       (keyup.enter)="authService.unlockApp()"
       tabindex="0"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="'app_lock.title' | t"
     >
       <div class="text-center text-white">
         <p class="mb-4 text-lg font-medium">{{ 'app_lock.title' | t }}</p>
