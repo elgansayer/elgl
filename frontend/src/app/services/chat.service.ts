@@ -390,6 +390,9 @@ export class ChatService {
   }
 
   async getLockedRoomIds(): Promise<string[]> {
+    if (!this.authService.getAccessToken()) {
+      return [];
+    }
     return firstValueFrom(
       this.http.get<string[]>(`${this.baseUrl}/locked-rooms`, { headers: this.getHeaders() }),
     );
@@ -424,6 +427,9 @@ export class ChatService {
   }
 
   async getFavourites(): Promise<FavouriteRecord[]> {
+    if (!this.authService.getAccessToken()) {
+      return [];
+    }
     return firstValueFrom(
       this.http.get<FavouriteRecord[]>(`${this.baseUrl}/favourites`, {
         headers: this.getHeaders(),
@@ -449,6 +455,9 @@ export class ChatService {
   }
 
   async isBlocked(userId: string): Promise<boolean> {
+    if (!this.authService.getAccessToken()) {
+      return false;
+    }
     try {
       const response = await firstValueFrom(
         this.http.get<{ blocked: boolean }>(`${environment.apiUrl}/safety/is-blocked/${userId}`, {
@@ -536,6 +545,9 @@ export class ChatService {
   }
 
   async getGroupMembers(roomId: string): Promise<GroupMember[]> {
+    if (!this.authService.getAccessToken()) {
+      return [];
+    }
     return firstValueFrom(
       this.http.get<GroupMember[]>(`${this.baseUrl}/groups/${roomId}/members`, {
         headers: this.getHeaders(),
@@ -546,6 +558,9 @@ export class ChatService {
   async getRoomMembers(
     roomId: string,
   ): Promise<{ user_id: string; display_name?: string; avatar_url?: string | null }[]> {
+    if (!this.authService.getAccessToken()) {
+      return [];
+    }
     return firstValueFrom(
       this.http.get<{ user_id: string; display_name?: string; avatar_url?: string | null }[]>(
         `${this.baseUrl}/rooms/${roomId}/members`,
