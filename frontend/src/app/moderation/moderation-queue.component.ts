@@ -1,6 +1,5 @@
 import { Component, inject, signal, resource } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { firstValueFrom } from 'rxjs';
 import {
   ModerationService,
   ModerationItem,
@@ -138,10 +137,10 @@ export class ModerationQueueComponent {
       params?: { type?: string; status?: string };
     }) => {
       const request = param.request ?? param.params;
-      if (!request) return firstValueFrom(this.moderationService.getItems('profile'));
+      if (!request) return this.moderationService.getItems('profile');
       const type =
         request.type === 'moment' || request.type === 'profile' ? request.type : 'profile';
-      return firstValueFrom(this.moderationService.getItems(type, request.status));
+      return this.moderationService.getItems(type, request.status);
     },
   });
 
@@ -158,12 +157,12 @@ export class ModerationQueueComponent {
   }
 
   async approve(item: ModerationItem): Promise<void> {
-    await firstValueFrom(this.moderationService.approveItem(item.id, item.type));
+    await this.moderationService.approveItem(item.id, item.type);
     this.items.reload();
   }
 
   async reject(item: ModerationItem): Promise<void> {
-    await firstValueFrom(this.moderationService.rejectItem(item.id, item.type));
+    await this.moderationService.rejectItem(item.id, item.type);
     this.items.reload();
   }
 
@@ -176,7 +175,7 @@ export class ModerationQueueComponent {
     this.analysisResult.set(null);
     try {
       this.analysisResult.set(
-        await firstValueFrom(this.moderationService.getUserRiskAnalysis(userId)),
+        await this.moderationService.getUserRiskAnalysis(userId),
       );
     } finally {
       this.analysisLoading.set(false);

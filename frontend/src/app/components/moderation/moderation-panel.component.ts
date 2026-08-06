@@ -1,6 +1,5 @@
 import {Component, inject, signal} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import {
   ModerationService,
@@ -35,7 +34,7 @@ export class ModerationPanelComponent {
   private async loadItems() {
     this.loading.set(true);
     try {
-      const items = await firstValueFrom(this.moderationService.getItems(this.currentFilter()));
+      const items = await this.moderationService.getItems(this.currentFilter());
       this.items.set(items);
     } finally {
       this.loading.set(false);
@@ -43,12 +42,12 @@ export class ModerationPanelComponent {
   }
 
   async approve(item: ModerationItem) {
-    await firstValueFrom(this.moderationService.approveItem(item.id, item.type));
+    await this.moderationService.approveItem(item.id, item.type);
     this.loadItems();
   }
 
   async reject(item: ModerationItem) {
-    await firstValueFrom(this.moderationService.rejectItem(item.id, item.type));
+    await this.moderationService.rejectItem(item.id, item.type);
     this.loadItems();
   }
 
@@ -56,7 +55,7 @@ export class ModerationPanelComponent {
     this.analysing.set(true);
     this.analysisResult.set(null);
     try {
-      const result = await firstValueFrom(this.moderationService.getUserRiskAnalysis(userId));
+      const result = await this.moderationService.getUserRiskAnalysis(userId);
       this.analysisResult.set(result);
     } finally {
       this.analysing.set(false);
