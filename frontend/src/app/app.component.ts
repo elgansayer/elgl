@@ -260,9 +260,28 @@ export class AppComponent implements OnInit {
     );
   }
 
-  onAcceptCall(_callData: IncomingCallData): void {
+  onAcceptCall(callData: IncomingCallData): void {
     this.incomingCallData.set(null);
-    // TODO: Navigate to call room or start LiveKit session
+
+    if (callData.isVideoCall) {
+      void this.router.navigate(['/video-call'], {
+        queryParams: {
+          roomName: callData.roomName,
+          otherUserId: callData.callerId,
+          otherUserName: callData.callerName,
+          currentUserId: this.authService.currentUser()?.id || '',
+        },
+      });
+    } else {
+      void this.router.navigate(['/active-call'], {
+        queryParams: {
+          roomName: callData.roomName,
+          callerName: callData.callerName,
+          callerAvatar: callData.callerAvatarUrl || '',
+          callDirection: 'incoming',
+        },
+      });
+    }
   }
 
   onDeclineCall(_callData: IncomingCallData): void {
