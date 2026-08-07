@@ -1,17 +1,21 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SuggestFlashcardsService } from './suggest-flashcards.service';
 import { SuggestFlashcardsDto } from './dto/suggest-flashcards.dto';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { SrsRateLimit, SrsRateLimiterGuard } from './srs-rate-limiter.guard';
 
 @ApiTags('Spaced Repetition (SRS) / Suggest')
 @Controller('flashcards/suggest')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseAuthGuard, SrsRateLimiterGuard)
 @ApiBearerAuth()
 export class SuggestFlashcardsController {
   constructor(private readonly suggestService: SuggestFlashcardsService) {}
 
   @Get()
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @SrsRateLimit({ maxRequests: 20, windowSeconds: 60 })
   @ApiOperation({
     summary: 'Suggest new vocabulary from a user message',
     description:
