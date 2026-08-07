@@ -1570,6 +1570,18 @@ export class I18nService {
     'chat_backup.export_error': 'Failed to export chat history.',
     'chat_backup.import_error': 'Failed to import chat history.',
 
+    // Chat Settings - Initial Message Filter
+    'chat_settings.initial_message_filter': 'Initial Message Filter',
+    'chat_settings.filter_enable': 'Filter who can message you first',
+    'chat_settings.age_range': 'Age Range',
+    'chat_settings.native_language_filter': 'Native Language',
+    'chat_settings.select_languages': 'Select languages...',
+    'chat_settings.add_more_languages': 'Add more languages...',
+    'chat_settings.filter_description':
+      'Only users matching these criteria can send you an initial message. Once a conversation has started, any messages are allowed.',
+    'to': 'to',
+    'search': 'Search',
+
     // Daily Learning Tip
     'home.title': 'Home',
     'home.wordOfDay.title': 'Word of the day',

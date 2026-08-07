@@ -11,6 +11,13 @@ export interface ChatSettings {
   textSize: 'small' | 'medium' | 'large';
 }
 
+export interface InitialMessageFilterSettings {
+  enabled: boolean;
+  min_age?: number;
+  max_age?: number;
+  native_languages?: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ChatSettingsService {
   private http = inject(HttpClient);
@@ -23,22 +30,75 @@ export class ChatSettingsService {
   readonly textSize = signal<'small' | 'medium' | 'large'>('medium');
   readonly loaded = signal<boolean>(false);
 
+  readonly initialMessageFilter = signal<InitialMessageFilterSettings>({
+    enabled: false,
+  });
+  readonly filterLoaded = signal<boolean>(false);
+
   async loadSettings(): Promise<void> {
     try {
       const headers = this.auth.getBearerHeaders();
-      const result = await firstValueFrom(this.http.get<ChatSettings>(this.baseUrl, { headers }));
+      const result = await firstValueFrom(
+        this.http.get<ChatSettings>(this.baseUrl, { headers }),
+      );
       this.autoTranslate.set(result.autoTranslate);
       this.readReceipts.set(result.readReceipts);
       this.enterToSend.set(result.enterToSend);
       this.textSize.set(result.textSize ?? 'medium');
       this.loaded.set(true);
     } catch {
-      // fallback to defaults
       this.autoTranslate.set(false);
       this.readReceipts.set(false);
       this.enterToSend.set(false);
       this.textSize.set('medium');
       this.loaded.set(true);
+    }
+  }
+
+  async loadInitialMessageFilter(): Promise<void> {
+    try {
+      const headers = this.auth.getBearerHeaders();
+      const result = await firstValueFrom(
+        this.http.get<InitialMessageFilterSettings>(
+          `${this.baseUrl}/initial-message-filter`,
+          { headers },
+        ),
+      );
+      this.initialMessageFilter.set({
+        enabled: result.enabled ?? false,
+        min_age: result.min_age,
+        max_age: result.max_age,
+        native_languages: result.native_languages,
+      });
+    } catch {
+      this.initialMessageFilter.set({ enabled: false });
+    } finally {
+      this.filterLoaded.set(true);
+    }
+  }
+
+  async updateInitialMessageFilter(
+    filter: InitialMessageFilterSettings,
+  ): Promise<void> {
+    const previous = this.initialMessageFilter();
+    this.initialMessageFilter.set(filter);
+    try {
+      const headers = this.auth.getBearerHeaders();
+      const result = await firstValueFrom(
+        this.http.put<InitialMessageFilterSettings>(
+          `${this.baseUrl}/initial-message-filter`,
+          filter,
+          { headers },
+        ),
+      );
+      this.initialMessageFilter.set({
+        enabled: result.enabled ?? false,
+        min_age: result.min_age,
+        max_age: result.max_age,
+        native_languages: result.native_languages,
+      });
+    } catch {
+      this.initialMessageFilter.set(previous);
     }
   }
 
@@ -50,9 +110,10 @@ export class ChatSettingsService {
     this.setLocal(key, value);
     try {
       const headers = this.auth.getBearerHeaders();
-      await firstValueFrom(this.http.put(this.baseUrl, { [key]: value }, { headers }));
+      await firstValueFrom(
+        this.http.put(this.baseUrl, { [key]: value }, { headers }),
+      );
     } catch {
-      // revert on failure
       this.setLocal(key, previous);
     }
   }

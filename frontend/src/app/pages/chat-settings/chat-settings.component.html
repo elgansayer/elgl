@@ -57,4 +57,119 @@
       ></span>
     </button>
   </div>
+
+  <!-- Initial Message Filter Section -->
+  <hr class="border-gray-700" />
+  <h3 class="text-lg font-medium">{{ 'chat_settings.initial_message_filter' | t }}</h3>
+
+  <!-- Enable/Disable toggle -->
+  <div class="flex items-center justify-between">
+    <span>{{ 'chat_settings.filter_enable' | t }}</span>
+    <button aria-label="Toggle initial message filter"
+      class="relative inline-flex h-6 w-11 items-center rounded-full transition"
+      [class.bg-green-500]="filterEnabled()"
+      [class.bg-gray-600]="!filterEnabled()"
+      (click)="toggleFilterEnabled()"
+      role="switch"
+      [attr.aria-checked]="filterEnabled()"
+    >
+      <span
+        class="inline-block h-4 w-4 transform rounded-full bg-white transition"
+        [class.translate-x-6]="filterEnabled()"
+        [class.translate-x-1]="!filterEnabled()"
+      ></span>
+    </button>
+  </div>
+
+  @if (filterEnabled()) {
+    <div class="space-y-4 rounded-lg border border-gray-700 p-4">
+      <!-- Age Range -->
+      <div>
+        <label class="block text-sm mb-2">{{ 'chat_settings.age_range' | t }}</label>
+        <div class="flex items-center gap-2">
+          <input
+            type="number"
+            class="w-20 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-sm text-white"
+            placeholder="13"
+            [value]="minAge() ?? ''"
+            (input)="onMinAgeChange($event)"
+            min="13"
+            max="120"
+            aria-label="Minimum age"
+          />
+          <span class="text-gray-400">{{ 'to' | t }}</span>
+          <input
+            type="number"
+            class="w-20 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-sm text-white"
+            placeholder="120"
+            [value]="maxAge() ?? ''"
+            (input)="onMaxAgeChange($event)"
+            min="13"
+            max="120"
+            aria-label="Maximum age"
+          />
+        </div>
+      </div>
+
+      <!-- Native Language Filter -->
+      <div>
+        <label class="block text-sm mb-2">{{ 'chat_settings.native_language_filter' | t }}</label>
+        <div class="flex flex-wrap gap-1 mb-2">
+          @for (lang of selectedLanguageNames(); track lang.code) {
+            <span
+              class="inline-flex items-center gap-1 rounded-full bg-blue-600 px-2 py-1 text-xs"
+            >
+              {{ lang.flag }} {{ lang.nativeName }}
+              <button
+                class="ms-1 text-gray-300 hover:text-white"
+                (click)="removeLanguage(lang.code)"
+                aria-label="Remove {{ lang.nativeName }}"
+              >
+                &times;
+              </button>
+            </span>
+          }
+        </div>
+        <div class="relative">
+          <button
+            class="w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-start text-sm text-white"
+            (click)="showLanguagePicker.set(!showLanguagePicker())"
+          >
+            @if (selectedNativeLangs().length === 0) {
+              {{ 'chat_settings.select_languages' | t }}
+            } @else {
+              {{ 'chat_settings.add_more_languages' | t }}
+            }
+          </button>
+          @if (showLanguagePicker()) {
+            <div class="absolute z-20 mt-1 w-full rounded border border-gray-600 bg-gray-800 shadow-lg">
+              <input
+                type="text"
+                class="w-full border-b border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-400"
+                [placeholder]="('search' | t)"
+                (input)="languageSearchQuery.set($any($event.target).value)"
+              />
+              <div class="max-h-48 overflow-y-auto">
+                @for (lang of availableLanguages(); track lang.code) {
+                  <button
+                    class="flex w-full items-center gap-2 px-3 py-2 text-start text-sm text-white hover:bg-gray-700"
+                    [class.bg-blue-700]="selectedNativeLangs().includes(lang.code)"
+                    (click)="toggleLanguage(lang.code)"
+                  >
+                    <span>{{ lang.flag }}</span>
+                    <span>{{ lang.nativeName }}</span>
+                    <span class="text-xs text-gray-400">({{ lang.name }})</span>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <p class="text-xs text-gray-400">
+        {{ 'chat_settings.filter_description' | t }}
+      </p>
+    </div>
+  }
 </div>

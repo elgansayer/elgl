@@ -12,6 +12,7 @@ import { LinkPreviewService } from '../link-preview/link-preview.service';
 import { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
 import { SpamDetectionService } from '../spam-detection/spam-detection.service';
 import { ChatLlmService } from './chat-llm.service';
+import { ChatSettingsService } from './chat-settings.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { SendMessageDto } from './dto/send-message.dto';
@@ -65,6 +66,7 @@ export class ChatService {
     private readonly chatLlmService: ChatLlmService,
     private readonly systemMessageService: SystemMessageService,
     private readonly xpService: XpService,
+    private readonly chatSettingsService: ChatSettingsService,
   ) {}
 
   async generateConnectionToken(userId: string): Promise<string> {
@@ -248,6 +250,27 @@ export class ChatService {
         await this.safetyService.getBlockedAndBlockerIds(senderId);
       if (senderBlockedIds.includes(receiverId)) {
         throw new Error('You cannot send messages to this user.');
+      }
+    }
+
+    // Check initial message filter for first-time messages
+    if (receiverId && dto.message_type !== 'system') {
+      const { count: existingCount } = await supabase
+        .from('chat_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('room_id', dto.room_id);
+
+      if ((existingCount ?? 0) === 0) {
+        const isAllowed =
+          await this.chatSettingsService.checkInitialMessageAllowed(
+            receiverId,
+            senderId,
+          );
+        if (!isAllowed) {
+          throw new ForbiddenException(
+            'The recipient is not accepting initial messages from you due to their filter settings.',
+          );
+        }
       }
     }
 
