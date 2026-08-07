@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Language } from 'node-nlp';
 import { SupabaseService } from '../supabase/supabase.service';
+import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
 import { GrammarCheckDto } from './dto/grammar-check.dto';
 import { PronunciationScoreDto } from './dto/pronunciation-score.dto';
 import { TranslateDto } from './dto/translate.dto';
@@ -23,10 +24,12 @@ import { TranscribeAudioDto } from './dto/transcribe-audio.dto';
 @Injectable()
 export class NlpService {
   private nlpLanguage = new Language();
+  private readonly logger = new Logger(NlpService.name);
 
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
+    private readonly llmProxyService: LlmProxyService,
   ) {}
 
   detectLanguage(text: string): { language: string; confidence: number } {
@@ -878,13 +881,53 @@ export class NlpService {
     return this.transcribeVoiceOnly(dto);
   }
 
-  generateSessionSummary(text: string): {
+  async generateSessionSummary(text: string): Promise<{
     summary: string;
     vocabulary: string[];
-  } {
+  }> {
     if (!text || text.trim().length === 0) {
       return { summary: 'No transcript available.', vocabulary: [] };
     }
+
+    const apiKey = this.configService.get<string>('LLM_API_KEY');
+    if (!apiKey) {
+      this.logger.warn('LLM_API_KEY not configured, using fallback summary extraction');
+      return this.extractSummaryFallback(text);
+    }
+
+    try {
+      const prompt = `You are an assistant that analyses audio room transcripts for a language-learning app. Given the following transcript, produce a JSON object with two fields:
+1. "summary": A concise paragraph (2-4 sentences) describing the key topics discussed, themes covered, and the nature of the conversation. Write it in the style of a language-learning session recap.
+2. "vocabulary": An array of 5-10 notable vocabulary words, phrases, or expressions that appeared in the conversation and would be valuable for language learners to review. Prioritise words that appear in the transcript. Return only the JSON object, nothing else.
+
+Transcript:
+${text.slice(0, 8000)}`;
+
+      const { response } = await this.llmProxyService.proxyMessage(prompt);
+
+      // Parse the JSON from the LLM response
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          summary: parsed.summary ?? 'No summary available.',
+          vocabulary: Array.isArray(parsed.vocabulary) ? parsed.vocabulary : [],
+        };
+      }
+
+      this.logger.warn('LLM response could not be parsed as JSON, using fallback');
+      return this.extractSummaryFallback(text);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`LLM session summary generation failed: ${message}, using fallback`);
+      return this.extractSummaryFallback(text);
+    }
+  }
+
+  private extractSummaryFallback(text: string): {
+    summary: string;
+    vocabulary: string[];
+  } {
     const sentences = text.match(/[^.!?]+[.!?]/g) || [text];
     const cleanSentences = sentences
       .map((s) => s.trim())
