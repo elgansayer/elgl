@@ -1,5 +1,6 @@
 export interface EscrowTransaction {
   id: string;
+<<<<<<< HEAD
   sender_id: string;
   recipient_id: string;
   transaction_subject: string;
@@ -58,3 +59,39 @@ export interface DataScrubbingResult {
   scrubbed_fields: string[];
   performed_at: string;
 }
+=======
+  payer_id: string;
+  payee_id: string;
+  amount_coins: number;
+  status: EscrowStatus;
+  description: string | null;
+  reference_id: string | null;
+  created_at: string;
+  updated_at: string;
+  released_at: string | null;
+  refunded_at: string | null;
+}
+
+export type EscrowStatus = 'held' | 'released' | 'refunded' | 'disputed';
+
+export interface CreateEscrowResult {
+  id: string;
+  status: EscrowStatus;
+  amount_coins: number;
+  payer_balance: number;
+}
+
+export interface ReleaseEscrowResult {
+  id: string;
+  status: EscrowStatus;
+  amount_coins: number;
+  payee_balance: number;
+}
+
+export interface RefundEscrowResult {
+  id: string;
+  status: EscrowStatus;
+  amount_coins: number;
+  payer_balance: number;
+}
+>>>>>>> origin/main
