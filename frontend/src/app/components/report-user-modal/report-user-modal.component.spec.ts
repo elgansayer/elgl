@@ -10,11 +10,18 @@ describe('ReportUserModalComponent', () => {
     let templateContent: string;
 
     beforeAll(() => {
+<<<<<<< HEAD
       const content = readFileSync(
         resolve(__dirname, 'report-user-modal.component.html'),
         'utf-8',
       );
       templateContent = content;
+=======
+      templateContent = readFileSync(
+        resolve(__dirname, 'report-user-modal.component.html'),
+        'utf-8',
+      );
+>>>>>>> origin/main
     });
 
     it('should not contain any physical direction CSS utilities', () => {
@@ -29,6 +36,7 @@ describe('ReportUserModalComponent', () => {
       }
     });
 
+<<<<<<< HEAD
     it('should use logical CSS utilities for inline start padding (ps-)', () => {
       expect(templateContent).toContain('ps-1');
     });
@@ -62,10 +70,46 @@ describe('ReportUserModalComponent', () => {
       ];
       for (const key of keys) {
         expect(templateContent).toContain("'" + key + "'");
+=======
+    it('should use logical CSS utilities for inline start padding', () => {
+      expect(templateContent).toContain('ps-1');
+    });
+
+    it('should use logical CSS utilities for inline start/end margin', () => {
+      expect(templateContent).toContain('ms-');
+      expect(templateContent).toContain('me-');
+    });
+
+    it('should use logical pseudo-element positioning (after:start)', () => {
+      expect(templateContent).toContain("after:start-[2px]");
+    });
+
+    it('should support RTL toggle switch translation', () => {
+      expect(templateContent).toContain('rtl:peer-checked:after:-translate-x-full');
+    });
+
+    it('should use i18n translate pipe for all user-facing strings', () => {
+      const keys = [
+        "'report.title'",
+        "'report.close'",
+        "'report.reason_label'",
+        "'report.details_label'",
+        "'report.details_placeholder'",
+        "'report.block_user'",
+        "'report.cancel'",
+        "'report.submit'",
+        "'report.submitting'",
+        "'report.load_error'",
+        "'report.retry'",
+      ];
+      for (const key of keys) {
+        expect(templateContent).toContain(key);
+>>>>>>> origin/main
       }
     });
 
     it('should not hardcode English user-facing strings', () => {
+<<<<<<< HEAD
       expect(templateContent).not.toMatch(/>Report User</);
       expect(templateContent).not.toMatch(/>Report</);
       expect(templateContent).not.toMatch(/Submit Report/);
@@ -108,6 +152,14 @@ describe('ReportUserModalComponent', () => {
     it('should not hardcode English text in the template', () => {
       expect(templateContent).not.toMatch(/>Report</);
       expect(templateContent).not.toMatch(/Flag/);
+=======
+      expect(templateContent).not.toMatch(/Report user/i);
+      expect(templateContent).not.toMatch(/Submit report/i);
+      expect(templateContent).not.toMatch(/Cancel/);
+      expect(templateContent).not.toMatch(/Block this user/i);
+      expect(templateContent).not.toMatch(/Select a reason/i);
+      expect(templateContent).not.toMatch(/Additional details/i);
+>>>>>>> origin/main
     });
   });
 });
