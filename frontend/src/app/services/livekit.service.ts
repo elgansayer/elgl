@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -16,12 +16,18 @@ import {
 })
 export class LivekitService {
   private http = inject(HttpClient);
+
+  /** Callback-style subscriber (for backward-compat; prefer using the new signal-based API) */
   onTrackSubscribed?: (track: RemoteTrack, publication: unknown) => void;
 
   private room: Room | null = null;
   private _localAudioTrack: LocalTrack | null = null;
-  private _muted = false;
-  private _speakerphone = false;
+
+  /** Reactive signal for mute state exposed to components. */
+  readonly isMuted = signal(false);
+
+  /** Reactive signal for speakerphone state exposed to components. */
+  readonly isSpeakerphone = signal(false);
 
   private createRoom(options: RoomOptions): Room {
     return new Room(options);
@@ -105,20 +111,20 @@ export class LivekitService {
       } else {
         await this._localAudioTrack.mute();
       }
-      this._muted = this._localAudioTrack.isMuted;
+      this.isMuted.set(this._localAudioTrack.isMuted);
     } else {
-      this._muted = !this._muted;
+      this.isMuted.update((v) => !v);
     }
-    return this._muted;
+    return this.isMuted();
   }
 
   /** Toggle the speakerphone (loudspeaker) state and return the new state. */
   toggleSpeakerphone(): boolean {
-    this._speakerphone = !this._speakerphone;
+    this.isSpeakerphone.update((v) => !v);
     // In a production app we would also ask the user to select an audio
     // output device via navigator.mediaDevices.enumerateDevices(), but
     // for now we simply keep an internal flag so the UI can reflect it.
-    return this._speakerphone;
+    return this.isSpeakerphone();
   }
 
   /** Start or stop screen sharing based on the enabled flag. */

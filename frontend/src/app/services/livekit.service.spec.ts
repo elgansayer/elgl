@@ -19,8 +19,6 @@ vi.mock('livekit-client', () => ({
 interface LivekitServiceInternals {
   room: unknown;
   _localAudioTrack: unknown;
-  _muted: boolean;
-  _speakerphone: boolean;
 }
 
 function internals(service: LivekitService): LivekitServiceInternals {
@@ -156,7 +154,7 @@ describe('LivekitService', () => {
       expect(req.request.method).toBe('POST');
       req.flush({ token: 'test-token' });
       const room = await roomPromise;
-      expect(mockRoomConnect).toHaveBeenCalledWith(environment.liveKitUrl, 'test-token');
+      expect(mockRoomConnect).toHaveBeenCalledWith(environment.liveKitUrl, 'test-token', expect.any(Object));
       expect(room).toBe(fakeRoom);
       expect(internals(service).room).toEqual(fakeRoom);
     });
@@ -209,30 +207,36 @@ describe('LivekitService', () => {
         }),
       });
       internals(service)._localAudioTrack = mockAudioTrack;
-      internals(service)._muted = false;
+      service.isMuted.set(false);
 
       const firstResult = await service.toggleMute();
       expect(firstResult).toBe(true);
       expect(mockAudioTrack.isMuted).toBe(true);
+      expect(service.isMuted()).toBe(true);
 
       const secondResult = await service.toggleMute();
       expect(secondResult).toBe(false);
       expect(mockAudioTrack.isMuted).toBe(false);
+      expect(service.isMuted()).toBe(false);
     });
 
     it('should toggle the internal flag when no local audio track exists', async () => {
       internals(service)._localAudioTrack = null;
-      internals(service)._muted = false;
+      service.isMuted.set(false);
       expect(await service.toggleMute()).toBe(true);
+      expect(service.isMuted()).toBe(true);
       expect(await service.toggleMute()).toBe(false);
+      expect(service.isMuted()).toBe(false);
     });
   });
 
   describe('toggleSpeakerphone', () => {
     it('should flip the speakerphone flag and return the new state', () => {
-      internals(service)._speakerphone = false;
+      service.isSpeakerphone.set(false);
       expect(service.toggleSpeakerphone()).toBe(true);
+      expect(service.isSpeakerphone()).toBe(true);
       expect(service.toggleSpeakerphone()).toBe(false);
+      expect(service.isSpeakerphone()).toBe(false);
     });
   });
 

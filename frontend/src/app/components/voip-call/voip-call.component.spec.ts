@@ -5,6 +5,7 @@ import { ComponentRef } from '@angular/core';
 import { LivekitService } from '../../services/livekit.service';
 import { AuthService } from '../../services/auth.service';
 import { ChatService } from '../../services/chat.service';
+import { I18nService } from '../../services/i18n.service';
 import { LocalTrack, Room, Track } from 'livekit-client';
 
 (globalThis as unknown as { MediaStreamTrack: typeof MediaStreamTrack }).MediaStreamTrack =
@@ -22,6 +23,7 @@ describe('VoipCallComponent', () => {
   let mockLocalAudioTrack: Mocked<LocalTrack>;
   let mockLocalVideoTrack: Mocked<LocalTrack>;
   let mockRoom: Mocked<Room>;
+  let mockI18n: Mocked<I18nService>;
 
   beforeEach(async () => {
     mockLocalAudioTrack = {
@@ -73,12 +75,17 @@ describe('VoipCallComponent', () => {
       sendMessage: vi.fn().mockResolvedValue(undefined),
     } as unknown as Mocked<ChatService>;
 
+    mockI18n = {
+      translate: vi.fn((key: string) => key),
+    } as unknown as Mocked<I18nService>;
+
     await TestBed.configureTestingModule({
       imports: [VoipCallComponent],
       providers: [
         { provide: LivekitService, useValue: mockLivekitService },
         { provide: AuthService, useValue: mockAuthService },
         { provide: ChatService, useValue: mockChatService },
+        { provide: I18nService, useValue: mockI18n },
       ],
     }).compileComponents();
 
@@ -104,7 +111,7 @@ describe('VoipCallComponent', () => {
     expect(component.isMuted()).toBe(false);
     expect(component.isVideoEnabled()).toBe(false);
     expect(component.callState()).toBe('ringing');
-    expect(component.formattedDuration).toBe('00:00');
+    expect(component.formattedDuration()).toBe('00:00');
   });
 
   it('should toggle mute state', () => {
@@ -153,7 +160,7 @@ describe('VoipCallComponent', () => {
 
   it('should show connecting state initially', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Incoming call...');
+    expect(compiled.textContent).toContain('voip.incomingCall');
   });
 
   it('should show connected state after connection', () => {
@@ -161,7 +168,7 @@ describe('VoipCallComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Connected');
+    expect(compiled.textContent).toContain('voip.connected');
   });
 
   // removed skipped LiveKit SDK test (show ended state after endCall)
@@ -173,10 +180,10 @@ describe('VoipCallComponent', () => {
     fixture.detectChanges();
 
     vi.advanceTimersByTime(5000);
-    expect(component.formattedDuration).toBe('00:05');
+    expect(component.formattedDuration()).toBe('00:05');
 
     vi.advanceTimersByTime(55000);
-    expect(component.formattedDuration).toBe('01:00');
+    expect(component.formattedDuration()).toBe('01:00');
 
     vi.useRealTimers();
   });

@@ -2,6 +2,7 @@ import { showToast } from './toast.service';
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { Subscription } from 'centrifuge';
 import {
   createLocalVideoTrack,
   LocalVideoTrack,
@@ -142,7 +143,7 @@ export class AudioRoomsStore {
   });
 
   private livekitRoom: Room | null = null;
-  private roomSubscription: unknown = null;
+  private roomSubscription: Subscription | null = null;
 
   /**
    * Type guard that narrows the raw Centrifugo payload into the expected shape.
@@ -833,8 +834,9 @@ export class AudioRoomsStore {
       this.livekitRoom.disconnect();
       this.livekitRoom = null;
     }
-    if (this.roomSubscription && this.currentRoom()) {
-      this.centrifugeService.unsubscribe(`room_${this.currentRoom()!.id}`);
+    const currentRoomId = this.currentRoom()?.id;
+    if (this.roomSubscription && currentRoomId) {
+      this.centrifugeService.unsubscribe(`room_${currentRoomId}`);
       this.roomSubscription = null;
     }
     this.isConnectedToLiveKit.set(false);

@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { Room, RoomEvent, Track, RemoteParticipant, VideoPresets } from 'livekit-client';
+import { Room, RoomEvent, Track, RemoteParticipant, RemoteTrack, RemoteTrackPublication, VideoPresets } from 'livekit-client';
 import { firstValueFrom } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
@@ -118,6 +118,7 @@ export class VideoCallService {
 
   async endCall(): Promise<void> {
     if (this.room) {
+      this.removeRoomListeners();
       this.room.disconnect();
       this.room = null;
     }
@@ -177,40 +178,62 @@ export class VideoCallService {
     await this.room.switchActiveDevice('videoinput', nextDevice.deviceId);
   }
 
+  private onParticipantConnected = (participant: RemoteParticipant) => {
+    this.handleRemoteParticipantTracks(participant);
+  };
+
+  private onTrackSubscribed = (
+    track: RemoteTrack,
+    _publication: RemoteTrackPublication,
+    participant: RemoteParticipant,
+  ) => {
+    if (participant instanceof RemoteParticipant) {
+      if (track.kind === 'video') {
+        this.remoteVideoTrack.set(track.mediaStreamTrack);
+      } else if (track.kind === 'audio') {
+        this.remoteAudioTrack.set(track.mediaStreamTrack);
+      }
+    }
+  };
+
+  private onTrackUnsubscribed = (track: RemoteTrack) => {
+    if (track.kind === 'video') {
+      this.remoteVideoTrack.set(null);
+    } else if (track.kind === 'audio') {
+      this.remoteAudioTrack.set(null);
+    }
+  };
+
+  private onRoomDisconnected = () => {
+    this.endCall();
+  };
+
+  private onConnectionStateChanged = (state: 'connected' | 'connecting' | 'disconnected' | 'reconnecting') => {
+    if (state === 'disconnected') {
+      this.endCall();
+    }
+  };
+
   private setupRoomListeners(): void {
     if (!this.room) return;
 
-    this.room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
-      this.handleRemoteParticipantTracks(participant);
-    });
+    this.room
+      .on(RoomEvent.ParticipantConnected, this.onParticipantConnected)
+      .on(RoomEvent.TrackSubscribed, this.onTrackSubscribed)
+      .on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribed)
+      .on(RoomEvent.Disconnected, this.onRoomDisconnected)
+      .on(RoomEvent.ConnectionStateChanged, this.onConnectionStateChanged);
+  }
 
-    this.room.on(RoomEvent.TrackSubscribed, (track, _publication, participant) => {
-      if (participant instanceof RemoteParticipant) {
-        if (track.kind === 'video') {
-          this.remoteVideoTrack.set(track.mediaStreamTrack);
-        } else if (track.kind === 'audio') {
-          this.remoteAudioTrack.set(track.mediaStreamTrack);
-        }
-      }
-    });
+  private removeRoomListeners(): void {
+    if (!this.room) return;
 
-    this.room.on(RoomEvent.TrackUnsubscribed, (track) => {
-      if (track.kind === 'video') {
-        this.remoteVideoTrack.set(null);
-      } else if (track.kind === 'audio') {
-        this.remoteAudioTrack.set(null);
-      }
-    });
-
-    this.room.on(RoomEvent.Disconnected, () => {
-      this.endCall();
-    });
-
-    this.room.on(RoomEvent.ConnectionStateChanged, (state) => {
-      if (state === 'disconnected') {
-        this.endCall();
-      }
-    });
+    this.room
+      .off(RoomEvent.ParticipantConnected, this.onParticipantConnected)
+      .off(RoomEvent.TrackSubscribed, this.onTrackSubscribed)
+      .off(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribed)
+      .off(RoomEvent.Disconnected, this.onRoomDisconnected)
+      .off(RoomEvent.ConnectionStateChanged, this.onConnectionStateChanged);
   }
 
   private handleRemoteParticipantTracks(participant: RemoteParticipant): void {

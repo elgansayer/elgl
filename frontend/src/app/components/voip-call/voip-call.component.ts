@@ -1,9 +1,10 @@
-import { Component, inject, input, output, signal, OnDestroy, effect } from '@angular/core';
+import { Component, inject, input, output, signal, computed, OnDestroy, effect } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { LivekitService } from '../../services/livekit.service';
 import { AuthService } from '../../services/auth.service';
 import { ChatService } from '../../services/chat.service';
+import { I18nService } from '../../services/i18n.service';
 import { Room, LocalTrack, RemoteTrack, Track } from 'livekit-client';
 
 export type CallDirection = 'incoming' | 'outgoing';
@@ -26,13 +27,13 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
               {{ displayName()[0]?.toUpperCase() || '?' }}
             </div>
             <h2 class="text-xl font-semibold text-white">{{ displayName() }}</h2>
-            <p class="text-text-muted text-sm mt-1">{{ callStatusText }}</p>
+            <p class="text-text-muted text-sm mt-1">{{ callStatusText() }}</p>
           </div>
 
           <!-- Call Timer (when connected) -->
           @if (callState() === 'connected') {
             <div class="text-3xl font-mono text-white mb-6">
-              {{ formattedDuration }}
+              {{ formattedDuration() }}
             </div>
           }
 
@@ -149,6 +150,7 @@ export class VoipCallComponent implements OnDestroy {
   private livekitService = inject(LivekitService);
   private authService = inject(AuthService);
   private chatService = inject(ChatService);
+  private i18n = inject(I18nService);
 
   // Inputs
   readonly callDirection = input.required<CallDirection>();
@@ -195,31 +197,33 @@ export class VoipCallComponent implements OnDestroy {
     });
   }
 
-  get callStatusText(): string {
+  readonly callStatusText = computed((): string => {
     switch (this.callState()) {
       case 'ringing':
-        return this.callDirection() === 'incoming' ? 'Incoming call...' : 'Ringing...';
+        return this.callDirection() === 'incoming'
+          ? this.i18n.translate('voip.incomingCall')
+          : this.i18n.translate('voip.ringing');
       case 'connecting':
-        return 'Connecting...';
+        return this.i18n.translate('voip.connecting');
       case 'connected':
-        return 'Connected';
+        return this.i18n.translate('voip.connected');
       case 'ended':
-        return 'Call ended';
+        return this.i18n.translate('voip.callEnded');
       case 'missed':
-        return 'Missed call';
+        return this.i18n.translate('voip.missedCall');
       case 'rejected':
-        return 'Call rejected';
+        return this.i18n.translate('voip.callRejected');
       default:
         return '';
     }
-  }
+  });
 
-  get formattedDuration(): string {
+  readonly formattedDuration = computed((): string => {
     const totalSeconds = this.callDuration();
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  }
+  });
 
   async acceptCall(): Promise<void> {
     this.callState.set('connecting');
