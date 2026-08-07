@@ -5,6 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateBusinessProfileDto } from './dto/update-business-profile.dto';
@@ -19,6 +20,7 @@ import { Optional } from '@nestjs/common';
 import { CorrectorScoreService } from '../corrector-score/corrector-score.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { XpService } from '../xp/xp.service';
+import { ProfileUpdatedEvent } from '../notifications/events/notification.events';
 import { PREDEFINED_HOBBIES, PREDEFINED_INTERESTS } from './constants';
 import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
@@ -30,6 +32,7 @@ export class UsersService {
     private readonly supabaseService: SupabaseService,
     private readonly xpService: XpService,
     private readonly dataExportWorker: DataExportWorker,
+    @Optional() private readonly eventEmitter?: EventEmitter2,
     @Optional() private readonly notificationsService?: NotificationsService,
     @Optional() private readonly correctorScoreService?: CorrectorScoreService,
   ) {}
@@ -539,6 +542,15 @@ export class UsersService {
       );
     }
     const profile = await this.getProfile(userId);
+
+    // Emit profile.updated event for cache invalidation listeners
+    if (this.eventEmitter) {
+      this.eventEmitter.emit(
+        'profile.updated',
+        new ProfileUpdatedEvent(userId, Object.keys(updatePayload)),
+      );
+    }
+
     return { ...profile, ...updatePayload };
   }
 
