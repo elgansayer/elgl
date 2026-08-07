@@ -1,4 +1,5 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { ReportUserDto } from './dto/report-user.dto';
@@ -50,12 +51,16 @@ const DATING_REGEXES: { flag: string; regex: RegExp }[] = DATING_FLAGS.map((flag
 
 @Injectable()
 export class ModerationService {
-  private readonly logger = new Logger(ModerationService.name);
   private readonly supabase: ReturnType<SupabaseService['getClient']>;
 
   constructor(
     private readonly supabaseService: SupabaseService,
+<<<<<<< HEAD
     private readonly metricsService: MetricsService,
+=======
+    @InjectPinoLogger(ModerationService.name)
+    private readonly logger: PinoLogger,
+>>>>>>> origin/main
   ) {
     this.supabase = this.supabaseService.getClient();
   }
@@ -96,7 +101,7 @@ export class ModerationService {
       const { data, error } = await query;
 
       if (error) {
-        this.logger.warn(`Failed to fetch moderation items: ${error.message}`);
+        this.logger.warn(error, 'Failed to fetch moderation items');
         return [];
       }
 
@@ -173,8 +178,8 @@ export class ModerationService {
       });
     } catch (err) {
       this.logger.warn(
-        'Failed to fetch moderation items, returning empty result',
         err,
+        'Failed to fetch moderation items, returning empty result',
       );
       return [];
     }
@@ -191,7 +196,7 @@ export class ModerationService {
       .in('id', momentIds);
 
     if (error || !data) {
-      this.logger.warn(`Failed to batch-fetch moment content: ${error?.message ?? 'no data'}`);
+      this.logger.warn(error, 'Failed to batch-fetch moment content');
       return result;
     }
 
@@ -223,20 +228,26 @@ export class ModerationService {
       });
 
       if (error) {
-        this.logger.warn(`Failed to create report: ${error.message}`);
+        this.logger.warn(error, 'Failed to create report');
         return { success: false, error: 'Failed to create report' };
       }
 
       this.metricsService.recordTsReportSubmitted(dto.reasonCategory);
       return { success: true };
     } catch (err) {
-      this.logger.warn('Failed to create report, degraded', err);
+      this.logger.warn(err, 'Failed to create report, degraded');
       return { success: false, error: 'Service temporarily unavailable' };
     }
   }
 
+<<<<<<< HEAD
   async approveItem(dto: ModerationActionDto): Promise<ModerationDegradedResponse> {
     const startTime = Date.now();
+=======
+  async approveItem(
+    dto: ModerationActionDto,
+  ): Promise<ModerationDegradedResponse> {
+>>>>>>> origin/main
     try {
       const { error } = await this.supabase
         .from('reports')
@@ -244,7 +255,7 @@ export class ModerationService {
         .eq('id', dto.itemId);
 
       if (error) {
-        this.logger.warn(`Failed to approve item ${dto.itemId}: ${error.message}`);
+        this.logger.warn(error, `Failed to approve item ${dto.itemId}`);
         return { success: false, error: 'Failed to approve item' };
       }
 
@@ -255,13 +266,19 @@ export class ModerationService {
       );
       return { success: true };
     } catch (err) {
-      this.logger.warn('Failed to approve item, degraded', err);
+      this.logger.warn(err, 'Failed to approve item, degraded');
       return { success: false, error: 'Service temporarily unavailable' };
     }
   }
 
+<<<<<<< HEAD
   async rejectItem(dto: ModerationActionDto): Promise<ModerationDegradedResponse> {
     const startTime = Date.now();
+=======
+  async rejectItem(
+    dto: ModerationActionDto,
+  ): Promise<ModerationDegradedResponse> {
+>>>>>>> origin/main
     try {
       const { error } = await this.supabase
         .from('reports')
@@ -272,7 +289,7 @@ export class ModerationService {
         .eq('id', dto.itemId);
 
       if (error) {
-        this.logger.warn(`Failed to reject item ${dto.itemId}: ${error.message}`);
+        this.logger.warn(error, `Failed to reject item ${dto.itemId}`);
         return { success: false, error: 'Failed to reject item' };
       }
 
@@ -283,7 +300,7 @@ export class ModerationService {
       );
       return { success: true };
     } catch (err) {
-      this.logger.warn('Failed to reject item, degraded', err);
+      this.logger.warn(err, 'Failed to reject item, degraded');
       return { success: false, error: 'Service temporarily unavailable' };
     }
   }
@@ -301,7 +318,7 @@ export class ModerationService {
         .single();
 
       if (userError || !userData) {
-        this.logger.warn(`User ${userId} not found for analysis`);
+        this.logger.warn(userError, `User ${userId} not found for analysis`);
         return { riskScore: 0, flags: [] };
       }
 
@@ -368,7 +385,7 @@ export class ModerationService {
       return { riskScore, flags: uniqueFlags };
 >>>>>>> origin/main
     } catch (err) {
-      this.logger.warn(`Failed to analyse user ${userId}, degraded`, err);
+      this.logger.warn(err, `Failed to analyse user ${userId}, degraded`);
       return { riskScore: 0, flags: [] };
     }
   }

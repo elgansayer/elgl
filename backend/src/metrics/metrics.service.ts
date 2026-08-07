@@ -48,6 +48,19 @@ export class MetricsService {
   readonly readingEngineSessionDuration: Histogram<string>;
   readonly readingEngineUserWordsLookedUp: Counter<string>;
   readonly readingEngineDailyActiveReaders: Gauge<string>;
+
+  // Escrow Payment metrics
+  readonly escrowTransactionsCreated: Counter<string>;
+  readonly escrowTransactionsReleased: Counter<string>;
+  readonly escrowTransactionsRefunded: Counter<string>;
+  readonly escrowTransactionsCancelled: Counter<string>;
+  readonly escrowTotalHeld: Gauge<string>;
+  readonly escrowTotalCoinsHeld: Gauge<string>;
+  readonly escrowAmountPerTransaction: Histogram<string>;
+  readonly escrowStaleHeldCount: Gauge<string>;
+  readonly escrowAutoRefundCount: Counter<string>;
+  readonly escrowDegradedQueueSize: Gauge<string>;
+
   // Virtual Coin Economy metrics
   readonly coinPurchaseTotal: Counter<string>;
   readonly coinPurchaseValue: Counter<string>;
@@ -293,6 +306,72 @@ export class MetricsService {
       help: 'Number of unique users who started a reading session in the last 24h',
       registers: [this.register],
     });
+
+    // --- Escrow Payment Metrics ---
+
+    this.escrowTransactionsCreated = new Counter({
+      name: 'hellotalk_escrow_transactions_created_total',
+      help: 'Total number of escrow transactions created',
+      labelNames: ['status'],
+      registers: [this.register],
+    });
+
+    this.escrowTransactionsReleased = new Counter({
+      name: 'hellotalk_escrow_transactions_released_total',
+      help: 'Total number of escrow transactions released to payee',
+      registers: [this.register],
+    });
+
+    this.escrowTransactionsRefunded = new Counter({
+      name: 'hellotalk_escrow_transactions_refunded_total',
+      help: 'Total number of escrow transactions refunded to payer',
+      labelNames: ['reason'],
+      registers: [this.register],
+    });
+
+    this.escrowTransactionsCancelled = new Counter({
+      name: 'hellotalk_escrow_transactions_cancelled_total',
+      help: 'Total number of escrow transactions cancelled',
+      registers: [this.register],
+    });
+
+    this.escrowTotalHeld = new Gauge({
+      name: 'hellotalk_escrow_total_held',
+      help: 'Number of escrow transactions currently in held status',
+      registers: [this.register],
+    });
+
+    this.escrowTotalCoinsHeld = new Gauge({
+      name: 'hellotalk_escrow_total_coins_held',
+      help: 'Total amount of coins held in escrow',
+      registers: [this.register],
+    });
+
+    this.escrowAmountPerTransaction = new Histogram({
+      name: 'hellotalk_escrow_amount_per_transaction',
+      help: 'Distribution of coin amounts per escrow transaction',
+      registers: [this.register],
+      buckets: [10, 50, 100, 250, 500, 1000, 2500, 5000, 10000],
+    });
+
+    this.escrowStaleHeldCount = new Gauge({
+      name: 'hellotalk_escrow_stale_held_count',
+      help: 'Number of escrows held for more than 30 days (stale)',
+      registers: [this.register],
+    });
+
+    this.escrowAutoRefundCount = new Counter({
+      name: 'hellotalk_escrow_auto_refund_total',
+      help: 'Total number of escrows auto-refunded by the expiry cleanup job',
+      registers: [this.register],
+    });
+
+    this.escrowDegradedQueueSize = new Gauge({
+      name: 'hellotalk_escrow_degraded_queue_size',
+      help: 'Number of escrow operations queued in the degraded (fallback) queue',
+      registers: [this.register],
+    });
+
     // --- Virtual Coin Economy Metrics ---
 
     this.coinPurchaseTotal = new Counter({
@@ -586,6 +665,41 @@ export class MetricsService {
 
   observeCoinTransactionLatency(operation: string, durationSeconds: number): void {
     this.coinTransactionLatency.observe({ operation }, durationSeconds);
+  }
+
+  // --- Escrow Payment metric helpers ---
+
+  recordEscrowCreated(amountCoins: number): void {
+    this.escrowTransactionsCreated.inc({ status: 'held' });
+    this.escrowAmountPerTransaction.observe(amountCoins);
+  }
+
+  recordEscrowReleased(amountCoins: number): void {
+    this.escrowTransactionsReleased.inc();
+  }
+
+  recordEscrowRefunded(amountCoins: number, reason: string = 'manual'): void {
+    this.escrowTransactionsRefunded.inc({ reason });
+  }
+
+  recordEscrowCancelled(amountCoins: number): void {
+    this.escrowTransactionsCancelled.inc();
+  }
+
+  recordEscrowAutoRefunded(amountCoins: number): void {
+    this.escrowAutoRefundCount.inc();
+  }
+
+  recordEscrowDegradedOperation(): void {
+    this.escrowDegradedQueueSize.inc();
+  }
+
+  setEscrowDegradedQueueSize(count: number): void {
+    this.escrowDegradedQueueSize.set(count);
+  }
+
+  setEscrowStaleHeldCount(count: number): void {
+    this.escrowStaleHeldCount.set(count);
   }
 
   getRegister(): Registry {

@@ -7,9 +7,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-virtual-gift-modal',
   imports: [TranslatePipe],
   template: `
-    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-2 sm:p-4">
       <div
-        class="bg-surface-200 rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-surface-100 space-y-5 animate-fadeIn"
+        class="bg-surface-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-lg w-full shadow-2xl border border-surface-100 space-y-4 sm:space-y-5 animate-fadeIn max-h-[90vh] overflow-y-auto"
       >
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">
           <div>
