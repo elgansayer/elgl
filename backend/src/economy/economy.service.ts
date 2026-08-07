@@ -1383,86 +1383,110 @@ this.invalidateUserEconomyCaches(userId);
     owned_pack_ids: string[];
     user_coins: number;
   }> {
-    const redis = this.supabaseService.getRedisClient();
+    // Graceful: check Redis cache with full failure tolerance
     const cacheKey = `${EconomyService.STICKER_PACKS_CACHE_PREFIX}${userId}`;
-
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      try {
-        const parsed: unknown = JSON.parse(cached);
-        if (
-          typeof parsed === 'object' &&
-          parsed !== null &&
-          'packs' in parsed &&
-          'owned_pack_ids' in parsed &&
-          'user_coins' in parsed
-        ) {
-          return parsed as {
-            packs: StickerPackRow[];
-            owned_pack_ids: string[];
-            user_coins: number;
-          };
+    try {
+      const redis = this.supabaseService.getRedisClient();
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        try {
+          const parsed: unknown = JSON.parse(cached);
+          if (
+            typeof parsed === 'object' &&
+            parsed !== null &&
+            'packs' in parsed &&
+            'owned_pack_ids' in parsed &&
+            'user_coins' in parsed
+          ) {
+            return parsed as {
+              packs: StickerPackRow[];
+              owned_pack_ids: string[];
+              user_coins: number;
+            };
+          }
+        } catch {
+          this.logger.warn(
+            `Invalid sticker packs cache entry for user ${userId}, falling back to DB`,
+          );
         }
-      } catch {
-        this.logger.warn(
-          `Invalid sticker packs cache entry for user ${userId}, falling back to DB`,
-        );
       }
+    } catch (redisError: unknown) {
+      this.logger.warn(
+        `Redis unavailable for sticker packs cache: ${redisError instanceof Error ? redisError.message : 'unknown error'}, falling back to DB`,
+      );
     }
 
-    const supabase = this.supabaseService.getClient();
+    // Graceful: DB query with fallback to default sticker packs on failure
+    try {
+      const supabase = this.supabaseService.getClient();
 
-    const [packsResponse, ownedResponse, balanceResponse] = await Promise.all([
-      supabase
-        .from('sticker_packs')
-        .select('*')
-        .order('cost_coins', { ascending: true }),
-      supabase
-        .from('user_sticker_packs')
-        .select('pack_id')
-        .eq('user_id', userId),
-      supabase.from('users').select('coins_balance').eq('id', userId).single(),
-    ]);
+      const [packsResponse, ownedResponse, balanceResponse] = await Promise.all([
+        supabase
+          .from('sticker_packs')
+          .select('*')
+          .order('cost_coins', { ascending: true }),
+        supabase
+          .from('user_sticker_packs')
+          .select('pack_id')
+          .eq('user_id', userId),
+        supabase.from('users').select('coins_balance').eq('id', userId).single(),
+      ]);
 
-    const packs: StickerPackRow[] = (packsResponse.data ?? []).filter(
-      (item: unknown): item is StickerPackRow =>
-        typeof item === 'object' &&
-        item !== null &&
-        'id' in item &&
-        'name' in item &&
-        'cost_coins' in item,
-    );
+      const packs: StickerPackRow[] = (packsResponse.data ?? []).filter(
+        (item: unknown): item is StickerPackRow =>
+          typeof item === 'object' &&
+          item !== null &&
+          'id' in item &&
+          'name' in item &&
+          'cost_coins' in item,
+      );
 
-    let result: {
-      packs: StickerPackRow[];
-      owned_pack_ids: string[];
-      user_coins: number;
-    };
+      let result: {
+        packs: StickerPackRow[];
+        owned_pack_ids: string[];
+        user_coins: number;
+      };
 
-    if (packs.length === 0) {
-      result = sanitiseEconomyData({
+      if (packs.length === 0) {
+        result = sanitiseEconomyData({
+          packs: this.getDefaultStickerPacks(),
+          owned_pack_ids: ownedResponse.data?.map((r) => r.pack_id) ?? [],
+          user_coins: balanceResponse.data?.coins_balance ?? 0,
+        });
+      } else {
+        result = sanitiseEconomyData({
+          packs,
+          owned_pack_ids: ownedResponse.data?.map((r) => r.pack_id) ?? [],
+          user_coins: balanceResponse.data?.coins_balance ?? 0,
+        });
+      }
+
+      // Best-effort cache write; non-critical if it fails
+      try {
+        const redis = this.supabaseService.getRedisClient();
+        redis.set(
+          cacheKey,
+          JSON.stringify(result),
+          'EX',
+          EconomyService.STICKER_PACKS_CACHE_TTL,
+        ).catch(() => {
+          // Redis write failure is non-critical
+        });
+      } catch {
+        // Redis client access failure is non-critical
+      }
+
+      return result;
+    } catch (dbError: unknown) {
+      this.logger.warn(
+        `Database unavailable for sticker packs query: ${dbError instanceof Error ? dbError.message : 'unknown error'}, returning default sticker packs`,
+      );
+      return sanitiseEconomyData({
         packs: this.getDefaultStickerPacks(),
-        owned_pack_ids: ownedResponse.data?.map((r) => r.pack_id) ?? [],
-        user_coins: balanceResponse.data?.coins_balance ?? 0,
-      });
-    } else {
-      result = sanitiseEconomyData({
-        packs,
-        owned_pack_ids: ownedResponse.data?.map((r) => r.pack_id) ?? [],
-        user_coins: balanceResponse.data?.coins_balance ?? 0,
+        owned_pack_ids: [],
+        user_coins: 50,
       });
     }
-
-    redis.set(
-      cacheKey,
-      JSON.stringify(result),
-      'EX',
-      EconomyService.STICKER_PACKS_CACHE_TTL,
-    ).catch(() => {
-      // Redis write failure is non-critical
-    });
-
-    return result;
   }
 
   /**
