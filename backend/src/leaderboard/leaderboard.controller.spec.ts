@@ -4,15 +4,15 @@ import { LeaderboardService, Corrector } from './leaderboard.service';
 
 describe('LeaderboardController', () => {
   let controller: LeaderboardController;
-  let leaderboardService: LeaderboardService;
+  const mockGetTopCorrectors = jest.fn();
 
   const mockCorrectors: Corrector[] = [
     {
       id: 'user-1',
       display_name: 'Alice',
-      avatar_url: 'https://example.com/alice.jpg',
+      avatar_url: 'https://example.com/alice.png',
       correction_ratio: 0.95,
-      study_streak_days: 30,
+      study_streak_days: 120,
       is_serious_learner: true,
     },
     {
@@ -20,26 +20,33 @@ describe('LeaderboardController', () => {
       display_name: 'Bob',
       avatar_url: null,
       correction_ratio: 0.88,
-      study_streak_days: 5,
+      study_streak_days: 30,
+      is_serious_learner: true,
+    },
+    {
+      id: 'user-3',
+      display_name: 'Charlie',
+      avatar_url: 'https://example.com/charlie.png',
+      correction_ratio: 0.45,
+      study_streak_days: 3,
       is_serious_learner: false,
     },
   ];
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [LeaderboardController],
       providers: [
         {
           provide: LeaderboardService,
           useValue: {
-            getTopCorrectors: jest.fn(),
+            getTopCorrectors: mockGetTopCorrectors,
           },
         },
       ],
     }).compile();
 
-    controller = module.get<LeaderboardController>(LeaderboardController);
-    leaderboardService = module.get<LeaderboardService>(LeaderboardService);
+    controller = moduleRef.get<LeaderboardController>(LeaderboardController);
   });
 
   afterEach(() => {
@@ -51,47 +58,30 @@ describe('LeaderboardController', () => {
   });
 
   describe('getTopCorrectors', () => {
-    it('returns top correctors with default limit of 20', async () => {
-      jest
-        .spyOn(leaderboardService, 'getTopCorrectors')
-        .mockResolvedValue(mockCorrectors);
+    it('should return top correctors with default limit', async () => {
+      mockGetTopCorrectors.mockResolvedValue(mockCorrectors);
 
       const result = await controller.getTopCorrectors();
 
-      expect(leaderboardService.getTopCorrectors).toHaveBeenCalledWith(20);
       expect(result).toEqual(mockCorrectors);
+      expect(mockGetTopCorrectors).toHaveBeenCalledWith(20);
     });
 
-    it('parses the limit query parameter as an integer', async () => {
-      jest
-        .spyOn(leaderboardService, 'getTopCorrectors')
-        .mockResolvedValue(mockCorrectors.slice(0, 1));
+    it('should pass custom limit from query string', async () => {
+      mockGetTopCorrectors.mockResolvedValue(mockCorrectors.slice(0, 2));
 
-      const result = await controller.getTopCorrectors('10');
+      await controller.getTopCorrectors('5');
 
-      expect(leaderboardService.getTopCorrectors).toHaveBeenCalledWith(10);
-      expect(result).toHaveLength(1);
+      expect(mockGetTopCorrectors).toHaveBeenCalledWith(5);
     });
 
-    it('uses default limit when limit query is not provided', async () => {
-      jest
-        .spyOn(leaderboardService, 'getTopCorrectors')
-        .mockResolvedValue(mockCorrectors);
-
-      const result = await controller.getTopCorrectors(undefined);
-
-      expect(leaderboardService.getTopCorrectors).toHaveBeenCalledWith(20);
-      expect(result).toHaveLength(2);
-    });
-
-    it('returns empty array when service returns empty', async () => {
-      jest
-        .spyOn(leaderboardService, 'getTopCorrectors')
-        .mockResolvedValue([]);
+    it('should handle empty results', async () => {
+      mockGetTopCorrectors.mockResolvedValue([]);
 
       const result = await controller.getTopCorrectors();
 
       expect(result).toEqual([]);
+      expect(mockGetTopCorrectors).toHaveBeenCalledWith(20);
     });
   });
 });

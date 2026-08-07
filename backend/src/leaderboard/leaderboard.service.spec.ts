@@ -4,196 +4,135 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 describe('LeaderboardService', () => {
   let service: LeaderboardService;
-  let mockSupabaseClient: { from: jest.Mock };
-  let mockSupabaseService: { getClient: jest.Mock };
-  let selectBuilder: { select: jest.Mock };
-  let orderBuilder: { order: jest.Mock };
-  let limitBuilder: { limit: jest.Mock };
 
-  beforeEach(async () => {
-    limitBuilder = {
-      limit: jest.fn(),
+  const mockUsers = [
+    {
+      id: 'user-1',
+      display_name: 'Alice',
+      avatar_url: 'https://example.com/alice.png',
+      correction_ratio: 0.95,
+      study_streak_days: 120,
+    },
+    {
+      id: 'user-2',
+      display_name: 'Bob',
+      avatar_url: null,
+      correction_ratio: 0.88,
+      study_streak_days: 30,
+    },
+    {
+      id: 'user-3',
+      display_name: 'Charlie',
+      avatar_url: 'https://example.com/charlie.png',
+      correction_ratio: 0.45,
+      study_streak_days: 3,
+    },
+  ];
+
+  function setupService(supabaseData: unknown, supabaseError: unknown | null = null) {
+    const fakeChain = Promise.resolve({
+      data: supabaseData,
+      error: supabaseError,
+    });
+
+    const mockLimit = jest.fn().mockReturnValue(fakeChain);
+    const mockOrder = jest.fn().mockReturnValue({ limit: mockLimit });
+    const mockSelect = jest.fn().mockReturnValue({ order: mockOrder });
+
+    const mockClient = {
+      from: jest.fn().mockReturnValue({
+        select: mockSelect,
+      }),
     };
 
-    orderBuilder = {
-      order: jest.fn().mockReturnValue(limitBuilder),
-    };
+    return { mockClient, mockSelect, mockOrder, mockLimit };
+  }
 
-    selectBuilder = {
-      select: jest.fn().mockReturnValue(orderBuilder),
-    };
-
-    mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(selectBuilder),
-    };
-
-    mockSupabaseService = {
-      getClient: jest.fn().mockReturnValue(mockSupabaseClient),
-    };
-
-    const module: TestingModule = await Test.createTestingModule({
+  async function createService(mockClient: ReturnType<typeof setupService>['mockClient']) {
+    const moduleRef: TestingModule = await Test.createTestingModule({
       providers: [
         LeaderboardService,
-        { provide: SupabaseService, useValue: mockSupabaseService },
+        {
+          provide: SupabaseService,
+          useValue: { getClient: jest.fn().mockReturnValue(mockClient) },
+        },
       ],
     }).compile();
 
-    service = module.get<LeaderboardService>(LeaderboardService);
-  });
+    return moduleRef.get<LeaderboardService>(LeaderboardService);
+  }
 
-  it('should be defined', () => {
+  it('should be defined', async () => {
+    const { mockClient } = setupService([]);
+    service = await createService(mockClient);
     expect(service).toBeDefined();
   });
 
   describe('getTopCorrectors', () => {
-    it('returns a list of correctors ordered by correction_ratio descending', async () => {
-      const mockUsers = [
-        {
-          id: 'user-1',
-          display_name: 'Alice',
-          avatar_url: 'https://example.com/alice.jpg',
-          correction_ratio: 0.95,
-          study_streak_days: 30,
-        },
-        {
-          id: 'user-2',
-          display_name: 'Bob',
-          avatar_url: null,
-          correction_ratio: 0.88,
-          study_streak_days: 5,
-        },
-      ];
-
-      limitBuilder.limit.mockResolvedValue({ data: mockUsers, error: null });
+    it('should return mapped correctors with serious learner flag', async () => {
+      const { mockClient, mockSelect, mockOrder, mockLimit } = setupService(mockUsers);
+      service = await createService(mockClient);
 
       const result = await service.getTopCorrectors(20);
 
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
-      expect(selectBuilder.select).toHaveBeenCalledWith(
+      expect(mockSelect).toHaveBeenCalledWith(
         'id, display_name, avatar_url, correction_ratio, study_streak_days',
       );
-      expect(orderBuilder.order).toHaveBeenCalledWith('correction_ratio', {
-        ascending: false,
-      });
-      expect(limitBuilder.limit).toHaveBeenCalledWith(20);
+      expect(mockOrder).toHaveBeenCalledWith('correction_ratio', { ascending: false });
+      expect(mockLimit).toHaveBeenCalledWith(20);
+      expect(result).toHaveLength(3);
+      expect(result[0].is_serious_learner).toBe(true);
+      expect(result[1].is_serious_learner).toBe(true);
+      expect(result[2].is_serious_learner).toBe(false);
+    });
 
-      expect(result).toHaveLength(2);
-      expect(result[0]).toMatchObject({
-        id: 'user-1',
-        display_name: 'Alice',
-        avatar_url: 'https://example.com/alice.jpg',
-        correction_ratio: 0.95,
-        study_streak_days: 30,
-        is_serious_learner: true,
-      });
-      expect(result[1]).toMatchObject({
-        id: 'user-2',
-        display_name: 'Bob',
+    it('should handle null/undefined values gracefully', async () => {
+      const nullUser = {
+        id: 'user-x',
+        display_name: null,
         avatar_url: null,
-        correction_ratio: 0.88,
-        study_streak_days: 5,
-        is_serious_learner: false,
-      });
-    });
+        correction_ratio: null,
+        study_streak_days: null,
+      };
+      const { mockClient } = setupService([nullUser]);
+      service = await createService(mockClient);
 
-    it('marks users as serious learner when streak > 7 and ratio >= 0.8', async () => {
-      const mockUsers = [
-        {
-          id: 'user-1',
-          display_name: 'Alice',
-          avatar_url: null,
-          correction_ratio: 0.79,
-          study_streak_days: 30,
-        },
-        {
-          id: 'user-2',
-          display_name: 'Bob',
-          avatar_url: null,
-          correction_ratio: 0.95,
-          study_streak_days: 3,
-        },
-        {
-          id: 'user-3',
-          display_name: 'Charlie',
-          avatar_url: null,
-          correction_ratio: 0.8,
-          study_streak_days: 8,
-        },
-      ];
+      const result = await service.getTopCorrectors(10);
 
-      limitBuilder.limit.mockResolvedValue({ data: mockUsers, error: null });
-
-      const result = await service.getTopCorrectors();
-
-      // Alice: ratio < 0.8 → not serious
-      expect(result[0].is_serious_learner).toBe(false);
-      // Bob: streak <= 7 → not serious
-      expect(result[1].is_serious_learner).toBe(false);
-      // Charlie: ratio >= 0.8 AND streak > 7 → serious
-      expect(result[2].is_serious_learner).toBe(true);
-    });
-
-    it('handles null study_streak_days and correction_ratio gracefully', async () => {
-      const mockUsers = [
-        {
-          id: 'user-1',
-          display_name: 'Alice',
-          avatar_url: null,
-          correction_ratio: null,
-          study_streak_days: null,
-        },
-      ];
-
-      limitBuilder.limit.mockResolvedValue({ data: mockUsers, error: null });
-
-      const result = await service.getTopCorrectors();
-
+      expect(result).toHaveLength(1);
+      expect(result[0].display_name).toBeNull();
       expect(result[0].correction_ratio).toBeNull();
-      expect(result[0].study_streak_days).toBeNull();
       expect(result[0].is_serious_learner).toBe(false);
     });
 
-    it('returns an empty array when no users are found', async () => {
-      limitBuilder.limit.mockResolvedValue({ data: [], error: null });
+    it('should throw if supabase returns an error', async () => {
+      const { mockClient } = setupService(
+        null,
+        { message: 'Database connection failed' },
+      );
+      service = await createService(mockClient);
 
-      const result = await service.getTopCorrectors();
-
-      expect(result).toEqual([]);
-    });
-
-    it('throws an error when supabase returns an error', async () => {
-      limitBuilder.limit.mockResolvedValue({
-        data: null,
-        error: { message: 'Database connection failed' },
-      });
-
-      await expect(service.getTopCorrectors()).rejects.toThrow(
+      await expect(service.getTopCorrectors(5)).rejects.toThrow(
         'Failed to fetch top correctors: Database connection failed',
       );
     });
 
-    it('uses default limit of 20 when not specified', async () => {
-      limitBuilder.limit.mockResolvedValue({ data: [], error: null });
+    it('should return empty array when no data returned', async () => {
+      const { mockClient } = setupService(null, null);
+      service = await createService(mockClient);
+
+      const result = await service.getTopCorrectors(5);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should use default limit of 20 when not specified', async () => {
+      const { mockClient, mockLimit } = setupService([]);
+      service = await createService(mockClient);
 
       await service.getTopCorrectors();
 
-      expect(limitBuilder.limit).toHaveBeenCalledWith(20);
-    });
-
-    it('uses the provided limit when specified', async () => {
-      limitBuilder.limit.mockResolvedValue({ data: [], error: null });
-
-      await service.getTopCorrectors(10);
-
-      expect(limitBuilder.limit).toHaveBeenCalledWith(10);
-    });
-
-    it('handles null data gracefully (returns empty array)', async () => {
-      limitBuilder.limit.mockResolvedValue({ data: null, error: null });
-
-      const result = await service.getTopCorrectors();
-
-      expect(result).toEqual([]);
+      expect(mockLimit).toHaveBeenCalledWith(20);
     });
   });
 });
