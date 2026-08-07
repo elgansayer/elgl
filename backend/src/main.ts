@@ -85,6 +85,7 @@ All endpoints are rate-limited via \`@nestjs/throttler\`. Check individual endpo
     .addTag('Admin - Blocks', 'Administrative block management operations')
     .addTag('Moderation', 'Content moderation and reporting operations')
 <<<<<<< HEAD
+<<<<<<< HEAD
     .addTag('Video Classrooms', 'Video classroom and direct call operations powered by LiveKit WebRTC SFU: create, join, end, list active rooms, and get room details')
 =======
 <<<<<<< HEAD
@@ -99,6 +100,12 @@ All endpoints are rate-limited via \`@nestjs/throttler\`. Check individual endpo
 >>>>>>> origin/main
 =======
 >>>>>>> origin/main
+>>>>>>> origin/main
+=======
+.addTag(
+      'Escrow Payments',
+      'Escrow payment system for holding and releasing coins between users for service transactions',
+    )
 >>>>>>> origin/main
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
