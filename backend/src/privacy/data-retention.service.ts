@@ -157,10 +157,7 @@ export class DataRetentionService {
     // Chat / social content
     await supabase.from('chat_messages').delete().eq('sender_id', userId);
     await supabase.from('moments').delete().eq('author_id', userId);
-    await supabase
-      .from('moment_comments')
-      .delete()
-      .eq('author_id', userId);
+    await supabase.from('moment_comments').delete().eq('author_id', userId);
 
     // Flashcards / decks
     await supabase.from('flashcards').delete().eq('user_id', userId);
@@ -180,10 +177,7 @@ export class DataRetentionService {
     await supabase.from('reports').delete().eq('reporter_id', userId);
 
     // Notifications
-    await supabase
-      .from('notifications')
-      .delete()
-      .eq('recipient_id', userId);
+    await supabase.from('notifications').delete().eq('recipient_id', userId);
 
     // LingQ Reading Engine: reading progress and authored resources
     await supabase
@@ -207,26 +201,19 @@ export class DataRetentionService {
     await supabase.from('coin_purchases').delete().eq('user_id', userId);
 
     // Gift transactions (both sent and received)
-    await supabase
-      .from('gift_transactions')
-      .delete()
-      .eq('sender_id', userId);
-    await supabase
-      .from('gift_transactions')
-      .delete()
-      .eq('receiver_id', userId);
+    await supabase.from('gift_transactions').delete().eq('sender_id', userId);
+    await supabase.from('gift_transactions').delete().eq('receiver_id', userId);
+
+    // Escrow transactions (payer_id and payee_id link to users; reason and
+    // metadata may contain PII under GDPR)
+    await supabase.from('escrow_transactions').delete().eq('payer_id', userId);
+    await supabase.from('escrow_transactions').delete().eq('payee_id', userId);
 
     // Sticker pack ownership
-    await supabase
-      .from('user_sticker_packs')
-      .delete()
-      .eq('user_id', userId);
+    await supabase.from('user_sticker_packs').delete().eq('user_id', userId);
 
     // User statistics (may contain coin-related aggregated data)
-    await supabase
-      .from('user_statistics')
-      .delete()
-      .eq('user_id', userId);
+    await supabase.from('user_statistics').delete().eq('user_id', userId);
 
     // Purge recommendation cache (GDPR "right to erasure")
     // The Redis cache contains PII (display names, avatar URLs) and must be

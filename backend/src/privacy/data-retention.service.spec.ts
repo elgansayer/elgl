@@ -161,6 +161,7 @@ let mockRedis: { del: jest.Mock };
       // Verify economy tables are included in the wipe
       expect(calledTables).toContain('coin_purchases');
       expect(calledTables).toContain('gift_transactions');
+      expect(calledTables).toContain('escrow_transactions');
       expect(calledTables).toContain('user_sticker_packs');
       expect(calledTables).toContain('user_statistics');
       // Verify LingQ Reading Engine tables are included
@@ -203,9 +204,7 @@ let mockRedis: { del: jest.Mock };
         error: { message: 'query error' },
       });
 
-      await expect(
-        service.finaliseAccountDeletions(),
-      ).resolves.toBeUndefined();
+      await expect(service.finaliseAccountDeletions()).resolves.toBeUndefined();
     });
   });
 });

@@ -71,9 +71,7 @@ export class DataScrubbingService {
    *
    * Modifies each entry's `ip_address` field using `scrubIpAddress()`.
    */
-  scrubLoginHistory(
-    entries: Array<{ ip_address?: string | null }>,
-  ): void {
+  scrubLoginHistory(entries: Array<{ ip_address?: string | null }>): void {
     for (const entry of entries) {
       if (entry.ip_address) {
         entry.ip_address = this.scrubIpAddress(entry.ip_address);
@@ -177,5 +175,117 @@ export class DataScrubbingService {
       record.ip_address = this.scrubIpAddress(record.ip_address);
     }
     // sender_id / receiver_id are internal UUIDs; pass through per policy
+  }
+
+  /**
+   * Scrub a single escrow transaction record for GDPR-safe admin/moderation
+   * display.
+   *
+   * Policies applied:
+   * - `reason` -- user-authored free text that may contain PII (names,
+   *   contact details, etc.). We log a debug audit entry but do NOT
+   *   automatically redact because the field is essential for dispute
+   *   resolution. The caller (admin dashboard) should apply additional
+   *   masking if displaying to non-privileged staff.
+   * - `metadata` -- JSONB blob that may contain PII. Same policy as `reason`.
+   * - `payer_id` / `payee_id` -- internal UUIDs; pass through (same policy
+   *   as gift transaction sender/receiver IDs).
+   * - `last_error` -- system-generated; may contain internal paths or
+   *   identifiers. Pass through for debugging.
+   *
+   * This method exists as an explicit audit point where these decisions are
+   * documented. It modifies the record in-place.
+   */
+  scrubEscrowRecord(record: {
+    payer_id?: string | null;
+    payee_id?: string | null;
+    reason?: string | null;
+    metadata?: Record<string, unknown> | null;
+    last_error?: string | null;
+  }): void {
+    // payer_id / payee_id are internal UUIDs -- pass through.
+    // reason / metadata are user-authored; document the policy decision.
+    if (record.reason) {
+      this.logger.debug(
+        'Escrow reason field passed through (essential for dispute resolution)',
+      );
+    }
+    if (record.metadata && Object.keys(record.metadata).length > 0) {
+      this.logger.debug(
+        'Escrow metadata field passed through (essential for dispute resolution)',
+      );
+    }
+    // last_error may contain internal identifiers; pass through for debugging.
+  }
+
+  /**
+   * Scrub an array of escrow transaction records in-place for GDPR-safe
+   * admin/moderation display.
+   *
+   * Applies `scrubEscrowRecord()` to every entry.
+   */
+  scrubEscrowTransactionRecords(
+    records: Array<{
+      payer_id?: string | null;
+      payee_id?: string | null;
+      reason?: string | null;
+      metadata?: Record<string, unknown> | null;
+      last_error?: string | null;
+    }>,
+  ): void {
+    for (const record of records) {
+      this.scrubEscrowRecord(record);
+    }
+    if (records.length > 0) {
+      this.logger.debug(
+        `Scrubbed ${records.length} escrow transaction records (pass-through per current policy)`,
+      );
+    }
+  }
+
+  /**
+   * Scrub a crash report record for GDPR-safe admin display.
+   *
+   * Policies:
+   * - `user_id` -- internal UUID; pass through.
+   * - `context` -- may contain PII (e.g., payer IDs, amounts, email
+   *   addresses logged during error handling). We log an audit entry but
+   *   pass through because context is essential for crash resolution.
+   * - `error_message` / `stack_trace` -- system-generated; pass through.
+   */
+  scrubCrashReport(record: {
+    user_id?: string | null;
+    context?: Record<string, unknown> | null;
+    error_message?: string | null;
+    stack_trace?: string | null;
+  }): void {
+    if (record.context && Object.keys(record.context).length > 0) {
+      this.logger.debug(
+        'Crash report context passed through (essential for crash resolution)',
+      );
+    }
+    // user_id is an internal UUID; pass through.
+    // error_message / stack_trace are system-generated; pass through.
+  }
+
+  /**
+   * Scrub an array of crash report records in-place.
+   */
+  scrubCrashReportRecords(
+    records: Array<{
+      user_id?: string | null;
+      context?: Record<string, unknown> | null;
+      error_message?: string | null;
+      stack_trace?: string | null;
+    }>,
+  ): void {
+    for (const record of records) {
+      this.scrubCrashReport(record);
+    }
+    if (records.length > 0) {
+      this.logger.debug(
+        `Scrubbed ${records.length} crash report records (pass-through per current policy)`,
+      );
+    }
   }
 }

@@ -201,6 +201,30 @@ export class PrivacyService {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
+    // 7b) Escrow transactions (payer and payee)
+    const { data: escrowAsPayer } = await supabase
+      .from('escrow_transactions')
+      .select('*')
+      .eq('payer_id', userId)
+      .order('created_at', { ascending: false });
+
+    const { data: escrowAsPayee } = await supabase
+      .from('escrow_transactions')
+      .select('*')
+      .eq('payee_id', userId)
+      .order('created_at', { ascending: false });
+
+    const escrowTransactions = [
+      ...(escrowAsPayer ?? []).map((e: Record<string, unknown>) => ({
+        ...e,
+        role: 'payer',
+      })),
+      ...(escrowAsPayee ?? []).map((e: Record<string, unknown>) => ({
+        ...e,
+        role: 'payee',
+      })),
+    ];
+
     // 8) Gift transactions (sent and received)
     const { data: sentGifts } = await supabase
       .from('gift_transactions')
@@ -266,6 +290,7 @@ export class PrivacyService {
       deck_flashcards: userDeckFlashcards,
       favourites: userFavourites ?? [],
       coin_purchases: scrubCoinPurchasesForArchive(coinPurchases ?? []),
+      escrow_transactions: escrowTransactions ?? [],
       gift_transactions: giftTransactions ?? [],
       user_sticker_packs: userStickerPacks ?? [],
       reading_progress: userReadingProgress,

@@ -30,9 +30,9 @@ describe('DataScrubbingService', () => {
     });
 
     it('zeroes host portion of a full IPv6 address', () => {
-      expect(service.scrubIpAddress('2001:db8:85a3:8d3:1319:8a2e:370:7348')).toBe(
-        '2001:db8:85a3:0:0:0:0:0',
-      );
+      expect(
+        service.scrubIpAddress('2001:db8:85a3:8d3:1319:8a2e:370:7348'),
+      ).toBe('2001:db8:85a3:0:0:0:0:0');
     });
 
     it('returns unrecognized strings unchanged', () => {
@@ -80,8 +80,12 @@ describe('DataScrubbingService', () => {
     });
 
     it('preserves only the last 4 characters with asterisks', () => {
-      expect(service.scrubReceiptToken('cs_live_a1b2c3d4e5f6g7h8')).toBe('***g7h8');
-      expect(service.scrubReceiptToken('ios_MIIaVeryLongBase64String==')).toBe('***ng==');
+      expect(service.scrubReceiptToken('cs_live_a1b2c3d4e5f6g7h8')).toBe(
+        '***g7h8',
+      );
+      expect(service.scrubReceiptToken('ios_MIIaVeryLongBase64String==')).toBe(
+        '***ng==',
+      );
     });
 
     it('handles Stripe session ID format', () => {
@@ -185,6 +189,140 @@ describe('DataScrubbingService', () => {
 
     it('handles an empty array gracefully', () => {
       expect(() => service.scrubGiftTransactionRecords([])).not.toThrow();
+    });
+  });
+
+  describe('scrubEscrowRecord', () => {
+    it('passes through payer_id and payee_id unmodified (documented policy)', () => {
+      const record = {
+        payer_id: 'payer-uuid-1',
+        payee_id: 'payee-uuid-1',
+        reason: 'Payment for language lesson',
+        metadata: { lesson_type: 'conversation' },
+      };
+
+      service.scrubEscrowRecord(record);
+
+      expect(record.payer_id).toBe('payer-uuid-1');
+      expect(record.payee_id).toBe('payee-uuid-1');
+    });
+
+    it('passes through reason unmodified (essential for dispute resolution)', () => {
+      const record = {
+        payer_id: 'payer-1',
+        reason: 'Payment for 30-minute session with Jane',
+      };
+
+      service.scrubEscrowRecord(record);
+
+      expect(record.reason).toBe('Payment for 30-minute session with Jane');
+    });
+
+    it('passes through metadata unmodified', () => {
+      const record = {
+        payer_id: 'payer-1',
+        metadata: { note: 'contact: jane@example.com', lesson_id: 'abc-123' },
+      };
+
+      service.scrubEscrowRecord(record);
+
+      expect(record.metadata).toEqual({
+        note: 'contact: jane@example.com',
+        lesson_id: 'abc-123',
+      });
+    });
+
+    it('handles null and undefined fields gracefully', () => {
+      const record = {
+        payer_id: null,
+        payee_id: null,
+        reason: null,
+        metadata: null,
+        last_error: null,
+      };
+
+      expect(() => service.scrubEscrowRecord(record)).not.toThrow();
+    });
+  });
+
+  describe('scrubEscrowTransactionRecords', () => {
+    it('scrubs each record in the array in-place', () => {
+      const records = [
+        {
+          payer_id: 'payer-1',
+          payee_id: 'payee-1',
+          reason: 'Lesson payment',
+          metadata: { type: 'lesson' },
+        },
+        {
+          payer_id: 'payer-2',
+          payee_id: 'payee-2',
+          reason: 'Translation service',
+          metadata: null,
+        },
+      ];
+
+      service.scrubEscrowTransactionRecords(records);
+
+      expect(records[0].payer_id).toBe('payer-1');
+      expect(records[0].reason).toBe('Lesson payment');
+      expect(records[1].payer_id).toBe('payer-2');
+      expect(records[1].reason).toBe('Translation service');
+    });
+
+    it('handles an empty array gracefully', () => {
+      expect(() => service.scrubEscrowTransactionRecords([])).not.toThrow();
+    });
+  });
+
+  describe('scrubCrashReport', () => {
+    it('passes through user_id and context unmodified', () => {
+      const report = {
+        user_id: 'user-uuid-1',
+        context: { escrow_id: 'esc-123', payer_id: 'payer-1' },
+        error_message: 'Database connection failed',
+        stack_trace: 'Error: connect ECONNREFUSED',
+      };
+
+      service.scrubCrashReport(report);
+
+      expect(report.user_id).toBe('user-uuid-1');
+      expect(report.context).toEqual({
+        escrow_id: 'esc-123',
+        payer_id: 'payer-1',
+      });
+      expect(report.error_message).toBe('Database connection failed');
+      expect(report.stack_trace).toBe('Error: connect ECONNREFUSED');
+    });
+
+    it('handles null fields gracefully', () => {
+      const report = {
+        user_id: null,
+        context: null,
+        error_message: null,
+        stack_trace: null,
+      };
+
+      expect(() => service.scrubCrashReport(report)).not.toThrow();
+    });
+  });
+
+  describe('scrubCrashReportRecords', () => {
+    it('scrubs each report in the array in-place', () => {
+      const reports = [
+        { user_id: 'user-1', context: { key: 'val' } },
+        { user_id: 'user-2', context: null },
+      ];
+
+      service.scrubCrashReportRecords(reports);
+
+      expect(reports[0].user_id).toBe('user-1');
+      expect(reports[0].context).toEqual({ key: 'val' });
+      expect(reports[1].user_id).toBe('user-2');
+    });
+
+    it('handles an empty array gracefully', () => {
+      expect(() => service.scrubCrashReportRecords([])).not.toThrow();
     });
   });
 });
