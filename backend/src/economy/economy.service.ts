@@ -234,29 +234,44 @@ export class EconomyService {
   }
 
   async getCatalog(): Promise<VirtualGiftRow[]> {
-    const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('virtual_gifts')
-      .select('*')
-      .order('cost_coins', { ascending: true });
-    const rows = response.data;
-    if (!Array.isArray(rows)) {
+    try {
+      const supabase = this.supabaseService.getClient();
+      const response = await supabase
+        .from('virtual_gifts')
+        .select('*')
+        .order('cost_coins', { ascending: true });
+      const rows = response.data;
+      if (!Array.isArray(rows)) {
+        this.logger.warn(
+          'Virtual gifts catalog returned non-array data; falling back to default catalog.',
+        );
+        return sanitiseEconomyData(this.getDefaultGiftCatalog());
+      }
+      const gifts = rows.filter(
+        (item: unknown): item is VirtualGiftRow =>
+          typeof item === 'object' &&
+          item !== null &&
+          'id' in item &&
+          'name' in item &&
+          'icon' in item &&
+          'cost_coins' in item &&
+          'animation_type' in item,
+      );
+      if (gifts.length === 0) {
+        this.logger.warn(
+          'Virtual gifts catalog returned empty array; falling back to default catalog.',
+        );
+        return sanitiseEconomyData(this.getDefaultGiftCatalog());
+      }
+      return sanitiseEconomyData(gifts);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Failed to fetch virtual gifts catalog (${errorMessage}); serving default catalog as fallback.`,
+      );
       return sanitiseEconomyData(this.getDefaultGiftCatalog());
     }
-    const gifts = rows.filter(
-      (item: unknown): item is VirtualGiftRow =>
-        typeof item === 'object' &&
-        item !== null &&
-        'id' in item &&
-        'name' in item &&
-        'icon' in item &&
-        'cost_coins' in item &&
-        'animation_type' in item,
-    );
-    if (gifts.length === 0) {
-      return sanitiseEconomyData(this.getDefaultGiftCatalog());
-    }
-    return sanitiseEconomyData(gifts);
   }
 
   private getDefaultGiftCatalog(): VirtualGiftRow[] {
@@ -312,25 +327,38 @@ export class EconomyService {
     const frontendUrl =
       this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4200';
 
-    const session = await this.stripe.checkout.sessions.create({
-      mode: 'payment',
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: { name: coinPackage.name },
-            unit_amount: coinPackage.price,
+    // Attempt to create Stripe Checkout session with graceful fallback
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await this.stripe.checkout.sessions.create({
+        mode: 'payment',
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: { name: coinPackage.name },
+              unit_amount: coinPackage.price,
+            },
+            quantity: 1,
           },
-          quantity: 1,
+        ],
+        metadata: {
+          userId,
+          product_id: productId,
         },
-      ],
-      metadata: {
-        userId,
-        product_id: productId,
-      },
-      success_url: `${frontendUrl}/coins/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${frontendUrl}/coins/cancel`,
-    });
+        success_url: `${frontendUrl}/coins/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${frontendUrl}/coins/cancel`,
+      });
+    } catch (stripeError: unknown) {
+      const stripeMsg =
+        stripeError instanceof Error ? stripeError.message : 'Unknown error';
+      this.logger.error(
+        `Stripe checkout session creation failed for user ${userId}: ${stripeMsg}`,
+      );
+      throw new InternalServerErrorException(
+        'Payment service is temporarily unavailable. Please try again later.',
+      );
+    }
 
     const { error: insertPendingError } = await supabase
       .from('coin_purchases')
@@ -362,21 +390,37 @@ export class EconomyService {
   }
 
   async getBalance(userId: string): Promise<{ coins_balance: number }> {
-    const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('users')
-      .select('coins_balance')
-      .eq('id', userId)
-      .single();
-    if (response.error || !response.data) {
-      const profile = await this.usersService.getProfile(userId);
-      return { coins_balance: profile.coins_balance ?? 50 };
+    try {
+      const supabase = this.supabaseService.getClient();
+      const response = await supabase
+        .from('users')
+        .select('coins_balance')
+        .eq('id', userId)
+        .single();
+      if (response.error || !response.data) {
+        const profile = await this.usersService.getProfile(userId);
+        return { coins_balance: profile.coins_balance ?? 50 };
+      }
+      const row = response.data;
+      if (!isCoinBalanceRow(row)) {
+        throw new BadRequestException('Invalid user coin balance');
+      }
+      return { coins_balance: row.coins_balance };
+    } catch (error: unknown) {
+      // Don't swallow BadRequestException or other NestJS HTTP exceptions
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Failed to fetch coin balance for user ${userId} (${errorMessage}); returning fallback balance of 0.`,
+      );
+      return { coins_balance: 0 };
     }
-    const row = response.data;
-    if (!isCoinBalanceRow(row)) {
-      throw new BadRequestException('Invalid user coin balance');
-    }
-    return { coins_balance: row.coins_balance };
   }
 
   async claimDailyCheckIn(userId: string): Promise<{
@@ -384,11 +428,23 @@ export class EconomyService {
     coins_rewarded: number;
     new_balance: number;
   }> {
-    const redis = this.supabaseService.getRedisClient();
     const today = new Date().toISOString().slice(0, 10);
     const key = `daily_checkin:${userId}:${today}`;
 
-    const alreadyClaimed = await redis.get(key);
+    // Attempt Redis check for duplicate claim; degrade gracefully if Redis
+    // is unavailable by allowing the check-in (idempotency is not critical).
+    let alreadyClaimed = false;
+    try {
+      const redis = this.supabaseService.getRedisClient();
+      alreadyClaimed = !!(await redis.get(key));
+    } catch (redisError: unknown) {
+      const redisMsg =
+        redisError instanceof Error ? redisError.message : 'Unknown error';
+      this.logger.warn(
+        `Redis unavailable for daily check-in dedup (${redisMsg}); proceeding without idempotency guard for user ${userId}.`,
+      );
+    }
+
     if (alreadyClaimed) {
       const { coins_balance } = await this.getBalance(userId);
       return { claimed: false, coins_rewarded: 0, new_balance: coins_balance };
@@ -411,8 +467,17 @@ export class EconomyService {
       );
     }
 
-    // Set key to expire in 24 hours
-    await redis.set(key, '1', 'EX', 86400);
+    // Mark as claimed in Redis (best-effort; failure is non-critical).
+    try {
+      const redis = this.supabaseService.getRedisClient();
+      await redis.set(key, '1', 'EX', 86400);
+    } catch (redisError: unknown) {
+      const redisMsg =
+        redisError instanceof Error ? redisError.message : 'Unknown error';
+      this.logger.warn(
+        `Redis set failed for daily check-in (${redisMsg}); check-in persisted to DB for user ${userId}.`,
+      );
+    }
 
     this.logger.debug(
       `User ${userId} claimed daily check-in reward of ${reward} coins.`,
@@ -1004,9 +1069,27 @@ export class EconomyService {
 
     // Broadcast the animated gift to the recipient's user channel
     // and, when applicable, the room channel for the live feed.
-    void this.centrifugoService.publish(`user_${dto.receiver_id}`, giftEvent);
+    // Fire-and-forget with error recovery -- Centrifugo failures must
+    // never block a successful gift transaction.
+    this.centrifugoService
+      .publish(`user_${dto.receiver_id}`, giftEvent)
+      .catch((pubError: unknown) => {
+        const pubMsg =
+          pubError instanceof Error ? pubError.message : 'Unknown error';
+        this.logger.warn(
+          `Centrifugo publish to user_${dto.receiver_id} failed (${pubMsg}); gift ${gift.id} transaction is still valid.`,
+        );
+      });
     if (dto.room_id) {
-      void this.centrifugoService.publish(`room_${dto.room_id}`, giftEvent);
+      this.centrifugoService
+        .publish(`room_${dto.room_id}`, giftEvent)
+        .catch((pubError: unknown) => {
+          const pubMsg =
+            pubError instanceof Error ? pubError.message : 'Unknown error';
+          this.logger.warn(
+            `Centrifugo publish to room_${dto.room_id} failed (${pubMsg}); gift ${gift.id} transaction is still valid.`,
+          );
+        });
     }
 
     return sanitiseEconomyData({
@@ -1027,11 +1110,23 @@ export class EconomyService {
     const supabase = this.supabaseService.getClient();
 
     // 1. Fetch the sticker pack details
-    const packResponse = await supabase
-      .from('sticker_packs')
-      .select('*')
-      .eq('id', dto.pack_id)
-      .single();
+    let packResponse: { data: unknown; error: unknown };
+    try {
+      packResponse = await supabase
+        .from('sticker_packs')
+        .select('*')
+        .eq('id', dto.pack_id)
+        .single();
+    } catch (fetchError: unknown) {
+      const fetchMsg =
+        fetchError instanceof Error ? fetchError.message : 'Unknown error';
+      this.logger.error(
+        `Failed to fetch sticker pack ${dto.pack_id} for user ${userId} (${fetchMsg}).`,
+      );
+      throw new InternalServerErrorException(
+        'Sticker pack store is temporarily unavailable.',
+      );
+    }
 
     if (!packResponse.data) {
       throw new NotFoundException(`Sticker pack '${dto.pack_id}' not found.`);
@@ -1061,7 +1156,7 @@ export class EconomyService {
       throw new InternalServerErrorException('Failed to deduct coins');
     }
 
-    // 4. Record ownership
+    // 4. Record ownership (with rollback on failure)
     const { error: insertError } = await supabase
       .from('user_sticker_packs')
       .insert({
@@ -1070,9 +1165,21 @@ export class EconomyService {
       });
 
     if (insertError) {
-      // Note: In a robust system, you'd want to rollback the coin deduction here
+      // Rollback the coin deduction to prevent lost coins
       this.logger.error(
-        `Failed to record sticker pack ownership for user ${userId}: ${insertError.message}`,
+        `Failed to record sticker pack ownership for user ${userId}: ${insertError.message}; rolling back coin deduction.`,
+      );
+      const { error: rollbackError } = await supabase
+        .from('users')
+        .update({ coins_balance: coins_balance })
+        .eq('id', userId);
+      if (rollbackError) {
+        this.logger.error(
+          `CRITICAL: Failed to rollback coin deduction for user ${userId} after sticker pack unlock failure: ${rollbackError.message}.`,
+        );
+      }
+      throw new InternalServerErrorException(
+        'Failed to unlock sticker pack. Your coins have been restored.',
       );
     }
 
@@ -1088,42 +1195,63 @@ export class EconomyService {
     owned_pack_ids: string[];
     user_coins: number;
   }> {
-    const supabase = this.supabaseService.getClient();
+    try {
+      const supabase = this.supabaseService.getClient();
 
-    const [packsResponse, ownedResponse, balanceResponse] = await Promise.all([
-      supabase
-        .from('sticker_packs')
-        .select('*')
-        .order('cost_coins', { ascending: true }),
-      supabase
-        .from('user_sticker_packs')
-        .select('pack_id')
-        .eq('user_id', userId),
-      supabase.from('users').select('coins_balance').eq('id', userId).single(),
-    ]);
+      const [packsResponse, ownedResponse, balanceResponse] =
+        await Promise.all([
+          supabase
+            .from('sticker_packs')
+            .select('*')
+            .order('cost_coins', { ascending: true }),
+          supabase
+            .from('user_sticker_packs')
+            .select('pack_id')
+            .eq('user_id', userId),
+          supabase
+            .from('users')
+            .select('coins_balance')
+            .eq('id', userId)
+            .single(),
+        ]);
 
-    const packs: StickerPackRow[] = (packsResponse.data ?? []).filter(
-      (item: unknown): item is StickerPackRow =>
-        typeof item === 'object' &&
-        item !== null &&
-        'id' in item &&
-        'name' in item &&
-        'cost_coins' in item,
-    );
+      const packs: StickerPackRow[] = (packsResponse.data ?? []).filter(
+        (item: unknown): item is StickerPackRow =>
+          typeof item === 'object' &&
+          item !== null &&
+          'id' in item &&
+          'name' in item &&
+          'cost_coins' in item,
+      );
 
-    if (packs.length === 0) {
+      if (packs.length === 0) {
+        this.logger.warn(
+          'Sticker packs query returned empty; serving default sticker packs as fallback.',
+        );
+        return sanitiseEconomyData({
+          packs: this.getDefaultStickerPacks(),
+          owned_pack_ids: ownedResponse.data?.map((r) => r.pack_id) ?? [],
+          user_coins: balanceResponse.data?.coins_balance ?? 0,
+        });
+      }
+
       return sanitiseEconomyData({
-        packs: this.getDefaultStickerPacks(),
+        packs,
         owned_pack_ids: ownedResponse.data?.map((r) => r.pack_id) ?? [],
         user_coins: balanceResponse.data?.coins_balance ?? 0,
       });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Failed to fetch sticker packs for user ${userId} (${errorMessage}); serving default sticker packs as fallback.`,
+      );
+      return sanitiseEconomyData({
+        packs: this.getDefaultStickerPacks(),
+        owned_pack_ids: [],
+        user_coins: 0,
+      });
     }
-
-    return sanitiseEconomyData({
-      packs,
-      owned_pack_ids: ownedResponse.data?.map((r) => r.pack_id) ?? [],
-      user_coins: balanceResponse.data?.coins_balance ?? 0,
-    });
   }
 
   private getDefaultStickerPacks(): StickerPackRow[] {

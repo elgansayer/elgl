@@ -205,6 +205,30 @@ describe('EconomyService', () => {
         },
       ]);
     });
+
+    it('should return the default gift catalog when supabase throws an error', async () => {
+      mockQueryBuilder.order.mockRejectedValue(new Error('Connection refused'));
+
+      const result = await service.getCatalog();
+      expect(result).toEqual([
+        {
+          id: 'gift_rose',
+          name: 'Rose',
+          icon: '🌹',
+          cost_coins: 10,
+          animation_type: 'float',
+          animation_url: 'https://r2.example.com/rose.json',
+        },
+        {
+          id: 'gift_heart',
+          name: 'Heart',
+          icon: '❤️',
+          cost_coins: 20,
+          animation_type: 'float',
+          animation_url: 'https://r2.example.com/heart.json',
+        },
+      ]);
+    });
   });
 
   describe('getBalance', () => {
@@ -226,6 +250,13 @@ describe('EconomyService', () => {
 
       const result = await service.getBalance('user-1');
       expect(result).toEqual({ coins_balance: 250 });
+    });
+
+    it('should return fallback balance of 0 when supabase throws an unexpected error', async () => {
+      mockQueryBuilder.single.mockRejectedValue(new Error('Connection refused'));
+
+      const result = await service.getBalance('user-1');
+      expect(result).toEqual({ coins_balance: 0 });
     });
   });
 
@@ -449,6 +480,25 @@ describe('EconomyService', () => {
       expect(mockRedisClient.set).not.toHaveBeenCalled();
       expect(mockQueryBuilder.update).not.toHaveBeenCalled();
     });
+
+    it('should still grant coins when Redis is unavailable', async () => {
+      mockRedisClient.get.mockRejectedValue(new Error('Redis connection refused'));
+      mockRedisClient.set.mockRejectedValue(new Error('Redis connection refused'));
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-1', coins_balance: 100 },
+        error: null,
+      });
+
+      const result = await service.claimDailyCheckIn('user-1');
+
+      expect(result.claimed).toBe(true);
+      expect(result.coins_rewarded).toBeGreaterThanOrEqual(5);
+      expect(result.coins_rewarded).toBeLessThanOrEqual(10);
+      expect(result.new_balance).toBe(100 + result.coins_rewarded);
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        coins_balance: result.new_balance,
+      });
+    });
   });
 
   describe('sendGift', () => {
@@ -619,6 +669,50 @@ describe('EconomyService', () => {
       expect(result.success).toBe(true);
       expect(result.coins_remaining).toBe(80);
     });
+
+    it('should still complete the gift transaction even when Centrifugo publish fails', async () => {
+      const giftRow = {
+        id: 'gift-3',
+        name: 'Cake',
+        cost_coins: 30,
+        icon: 'cake.png',
+        animation_type: 'pop',
+      };
+      // supress rejected promise warnings in test
+      (centrifugoService.publish as jest.Mock).mockRejectedValue(
+        new Error('Centrifugo unavailable'),
+      );
+
+      // 1st call: get gift (maybeSingle)
+      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
+        data: giftRow,
+        error: null,
+      });
+      // 2nd single() call: getBalance(senderId)
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { id: 'sender-1', coins_balance: 200 },
+        error: null,
+      });
+      // 2nd maybeSingle() call: receiver existence check
+      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
+        data: { id: 'receiver-1' },
+        error: null,
+      });
+      // 3rd single() call: getBalance(receiverId)
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { id: 'receiver-1', coins_balance: 100 },
+        error: null,
+      });
+
+      const result = await service.sendGift('sender-1', {
+        gift_id: 'gift-3',
+        receiver_id: 'receiver-1',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.coins_remaining).toBe(170);
+      expect(result.gift).toEqual(giftRow);
+    });
   });
 
   describe('getStickerPacks', () => {
@@ -764,6 +858,47 @@ describe('EconomyService', () => {
       await expect(
         service.unlockStickerPack('user-1', { pack_id: 'stk_pack_4' }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should rollback coin deduction when ownership insert fails', async () => {
+      // Build fresh mocks for this test to avoid cross-test pollution
+      const localMock = {
+        select: jest.fn().mockReturnThis(),
+        insert: jest.fn(),
+        update: jest.fn(),
+        eq: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        single: jest.fn(),
+        maybeSingle: jest.fn(),
+      };
+
+      localMock.single
+        .mockResolvedValueOnce({
+          data: {
+            id: 'stk_pack_1',
+            name: 'Happy Corgi Pack',
+            cost_coins: 50,
+          },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: { id: 'user-1', coins_balance: 200 },
+          error: null,
+        });
+
+      // First update (deduct): success
+      // Second update (rollback): succeeds
+      localMock.update.mockReturnValueOnce({ eq: jest.fn().mockResolvedValue({ error: null }) })
+        .mockReturnValueOnce({ eq: jest.fn().mockResolvedValue({ error: null }) });
+
+      // Insert ownership record: fails
+      localMock.insert.mockResolvedValue({ error: { message: 'duplicate entry' } });
+
+      mockSupabaseClient.from = jest.fn().mockReturnValue(localMock);
+
+      await expect(
+        service.unlockStickerPack('user-1', { pack_id: 'stk_pack_1' }),
+      ).rejects.toThrow('coins have been restored');
     });
   });
 });
