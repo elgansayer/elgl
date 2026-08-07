@@ -944,6 +944,7 @@ export class I18nService {
     'safety.blockList2': 'Their Moments will immediately vanish from your timeline.',
     'safety.blockList3': 'They cannot see when you visit their profile.',
     'safety.cancelBtn': 'Cancel',
+    'safety.closeBtn': 'Close',
     'safety.submitReportBtn': 'Submit report',
     'safety.confirmBlockBtn': 'Confirm block',
 
