@@ -200,9 +200,13 @@ describe('EconomyController', () => {
   });
 
   describe('claimDailyCheckIn', () => {
-    it('should return null if user is not provided', async () => {
+    it('should return a default object if user is not provided', async () => {
       const result = await controller.claimDailyCheckIn(null);
-      expect(result).toBeNull();
+      expect(result).toEqual({
+        claimed: false,
+        coins_rewarded: 0,
+        new_balance: 0,
+      });
       expect(economyService.claimDailyCheckIn).not.toHaveBeenCalled();
     });
 
