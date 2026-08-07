@@ -1,9 +1,15 @@
+<<<<<<< HEAD
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import { Injectable, Optional } from '@nestjs/common';
+=======
+import { Injectable } from '@nestjs/common';
+>>>>>>> origin/main
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
+import { NotificationDto } from './dto/notification.dto';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FirebaseAdmin = any;
 
 interface CentrifugoServiceLike {
@@ -422,7 +428,7 @@ export class NotificationsService {
   async getNotifications(
     recipientId: string,
     filterType?: string,
-  ): Promise<any[]> {
+  ): Promise<NotificationDto[]> {
     const supabase = this.supabaseService.getClient();
     let query = supabase
       .from('notifications')
@@ -469,7 +475,7 @@ export class NotificationsService {
     if (error || !data || data.length === 0) {
       return this.getMockNotifications(recipientId, filterType);
     }
-    return data;
+    return data as NotificationDto[];
   }
 
   async getUnreadCount(recipientId: string): Promise<{ unreadCount: number }> {

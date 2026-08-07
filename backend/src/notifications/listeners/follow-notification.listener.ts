@@ -1,20 +1,24 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationsService } from '../notifications.service';
-import { NotificationPreferencesService } from '../notification-preferences.service';
 import { FollowEvent } from '../events/notification.events';
 
 @Injectable()
 export class FollowNotificationListener {
+<<<<<<< HEAD
   private readonly logger = new Logger(FollowNotificationListener.name);
 
   constructor(
     private readonly notificationsService: NotificationsService,
     private readonly notificationPreferencesService: NotificationPreferencesService,
   ) {}
+=======
+  constructor(private readonly notificationsService: NotificationsService) {}
+>>>>>>> origin/main
 
-  @OnEvent('user.follow')
+  @OnEvent('user.followed')
   async handleFollow(payload: FollowEvent): Promise<void> {
+<<<<<<< HEAD
     const recipientId = payload.followedUserId;
 
     await this.notificationsService.createNotification(
@@ -49,5 +53,12 @@ export class FollowNotificationListener {
       data: {},
       category: 'likes',
     });
+=======
+    await this.notificationsService.createNotification(
+      payload.followedUserId,
+      payload.followerId,
+      'follow',
+    );
+>>>>>>> origin/main
   }
 }

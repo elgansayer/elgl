@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationsService } from '../notifications.service';
-import { NotificationPreferencesService } from '../notification-preferences.service';
 import { LikeEvent } from '../events/notification.events';
 
 @Injectable()
 export class LikeNotificationListener {
+<<<<<<< HEAD
   private readonly logger = new Logger(LikeNotificationListener.name);
 
   constructor(
@@ -17,9 +17,18 @@ export class LikeNotificationListener {
   async handleMomentLike(payload: LikeEvent): Promise<void> {
     const recipientId = payload.ownerId;
 
+=======
+  constructor(private readonly notificationsService: NotificationsService) {}
+
+  @OnEvent('user.liked')
+  async handleLike(payload: LikeEvent): Promise<void> {
+    const type =
+      payload.targetType === 'profile' ? 'like_profile' : 'like_moment';
+>>>>>>> origin/main
     await this.notificationsService.createNotification(
-      recipientId,
+      payload.targetUserId,
       payload.actorId,
+<<<<<<< HEAD
       'like_moment',
       payload.entityId,
     );
@@ -60,6 +69,10 @@ export class LikeNotificationListener {
       recipientId,
       payload.actorId,
       'like_profile',
+=======
+      type,
+      payload.targetId,
+>>>>>>> origin/main
     );
 
     try {

@@ -9,7 +9,10 @@
   },
   "common": {
     "loading": "Loading...",
-    "back": "Back"
+    "back": "Back",
+    "save": "Save",
+    "error_generic": "Something went wrong. Please try again.",
+    "reset": "Reset"
   },
   "settings": {
     "linkBtn": "Link",
@@ -35,6 +38,22 @@
       "unlinkFailed": "Failed to unlink account. Please try again."
     }
   },
+  "notification_settings": {
+    "title": "Notification Settings",
+    "subtitle": "Choose which push alerts and badge notifications you would like to receive.",
+    "toggle_header": "Push Alerts & Badges",
+    "channel": {
+      "push": "Push",
+      "badge": "Badge"
+    },
+    "category": {
+      "direct_messages": "Direct Messages",
+      "groups": "Groups",
+      "likes": "Likes",
+      "voice_rooms": "Voicerooms"
+    },
+    "saved_message": "Notification preferences saved."
+  },
   "admin": {
     "blocks": {
       "title": "Block Management",
@@ -53,5 +72,13 @@
       "pageIndicator": "Page {page} of {totalPages}",
       "paginationAria": "Block list pagination"
     }
+  },
+  "aiConversation": {
+    "chooseScenario": "Choose a role-play scenario",
+    "chooseScenarioDesc": "Practise real-life conversations with an AI partner. Pick a scenario to get started.",
+    "typeMessage": "Type your message...",
+    "send": "Send",
+    "typing": "Writing...",
+    "backToScenarios": "Back to scenarios"
   }
 }
