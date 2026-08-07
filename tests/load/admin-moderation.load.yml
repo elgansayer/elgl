@@ -1,0 +1,100 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - name: "warmup"
+      duration: 30
+      arrivalRate: 1
+    - name: "ramp"
+      duration: 60
+      arrivalRate: 3
+      rampTo: 10
+    - name: "sustained"
+      duration: 120
+      arrivalRate: 10
+    - name: "spike"
+      duration: 30
+      arrivalRate: 25
+  defaults:
+    headers:
+      Content-Type: "application/json"
+      Authorization: "Bearer {{ $processEnvironment.TEST_ADMIN_TOKEN || 'test-admin-token' }}"
+  processor: "./helpers/admin-helpers.js"
+  variables:
+    admin_user_ids:
+      - "00000000-0000-0000-0000-000000000001"
+      - "00000000-0000-0000-0000-000000000002"
+      - "00000000-0000-0000-0000-000000000003"
+      - "00000000-0000-0000-0000-000000000004"
+      - "00000000-0000-0000-0000-000000000005"
+    vip_tiers:
+      - "free"
+      - "plus"
+      - "premium"
+
+scenarios:
+  - name: "Admin: list users"
+    weight: 30
+    flow:
+      - get:
+          url: "/admin/users?page={{ $randomNumber(1, 5) }}&pageSize=20"
+          expect:
+            - statusCode: 200
+
+  - name: "Admin: list users with search"
+    weight: 15
+    flow:
+      - get:
+          url: "/admin/users?page=1&pageSize=20&search={{ $randomChoice('john', 'maria', 'alex', 'test', 'hello') }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Admin: get user login history"
+    weight: 15
+    flow:
+      - get:
+          url: "/admin/users/{{ admin_user_ids }}/login-history"
+          expect:
+            - statusCode: 200
+
+  - name: "Admin: set VIP status"
+    weight: 10
+    flow:
+      - patch:
+          url: "/admin/users/{{ admin_user_ids }}/vip"
+          json:
+            is_vip: "{{ $randomChoice(true, false) }}"
+            vip_tier: "{{ vip_tiers }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Admin: ban user"
+    weight: 8
+    flow:
+      - post:
+          url: "/admin/users/{{ admin_user_ids }}/ban"
+          expect:
+            - statusCode: 200
+
+  - name: "Admin: warn user"
+    weight: 8
+    flow:
+      - post:
+          url: "/admin/users/{{ admin_user_ids }}/warn"
+          expect:
+            - statusCode: 200
+
+  - name: "Admin: list all blocks"
+    weight: 10
+    flow:
+      - get:
+          url: "/admin/blocks?page={{ $randomNumber(1, 3) }}&pageSize=20"
+          expect:
+            - statusCode: 200
+
+  - name: "Admin: remove block"
+    weight: 4
+    flow:
+      - delete:
+          url: "/admin/blocks/{{ $randomChoice('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000102', '00000000-0000-0000-0000-000000000103') }}"
+          expect:
+            - statusCode: 200

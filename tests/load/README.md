@@ -19,6 +19,9 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:trust-safe
 
 # Run the Spam Detection load test
 API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:spam-detection
+
+# Run the Admin Moderation Dashboard load test
+API_URL=http://localhost:3000 TEST_ADMIN_TOKEN=<your-admin-jwt> npm run test:admin-moderation
 ```
 
 ## Test Scripts
@@ -27,7 +30,9 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:spam-detec
 |--------|------|-------------|
 | `test:trust-safety` | `trust-and-safety.load.yml` | Load tests all Safety, Moderation, and Blocks endpoints |
 | `test:spam-detection` | `spam-detection.load.yml` | Load tests the SpamDetectionService `/spam-detection/check` endpoint |
+| `test:admin-moderation` | `admin-moderation.load.yml` | Load tests the Admin Moderation Dashboard (`/admin/*`) endpoints |
 | `test:trust-safety:report` | (output + HTML) | Runs the Trust & Safety test and generates an HTML report |
+| `test:admin-moderation:report` | (output + HTML) | Runs the Admin Moderation test and generates an HTML report |
 
 ## Configuration
 
@@ -80,3 +85,12 @@ Both test scripts include the following phases:
 
 ### Spam Detection (`/spam-detection`)
 - `POST /spam-detection/check` - Content spam check
+
+### Admin Moderation Dashboard (`/admin`)
+- `GET /admin/users` - List all users with pagination and search
+- `GET /admin/users/:id/login-history` - User login history
+- `PATCH /admin/users/:id/vip` - Set user VIP status
+- `POST /admin/users/:id/ban` - Ban a user
+- `POST /admin/users/:id/warn` - Warn a user
+- `GET /admin/blocks` - List all blocks
+- `DELETE /admin/blocks/:blockId` - Remove a block entry
