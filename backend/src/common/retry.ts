@@ -3,6 +3,14 @@ import { PinoLogger } from 'nestjs-pino';
 /**
  * Default retry options for exponential backoff.
  * Targets HTTP 429 (Too Many Requests) from Supabase PostgREST API.
+ *
+ * @example
+ * ```ts
+ * const result = await withRetry(
+ *   () => supabase.from('flashcards').select().single(),
+ *   { maxRetries: 3, baseDelayMs: 500, logger: this.logger },
+ * );
+ * ```
  */
 export interface RetryOptions {
   /** Maximum number of retry attempts (default: 3). */
