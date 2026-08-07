@@ -9,11 +9,12 @@ import { ConfirmService } from '../../services/confirm.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
+import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-chat-message',
-  imports: [CommonModule, LongPressContextMenuComponent, TranslatePipe, CulturalTipComponent],
+  imports: [CommonModule, LongPressContextMenuComponent, TranslatePipe, CulturalTipComponent, LinkPreviewCardComponent],
   template: `
     @if (!isBlocked()) {
       @if (isFirstMessage() && partnerLanguage(); as lang) {
@@ -62,6 +63,15 @@ import { environment } from '../../../environments/environment';
                   }
                 }
               </p>
+              @if (message().link_preview; as lp) {
+                <app-link-preview-card
+                  [url]="lp.url"
+                  [title]="lp.title"
+                  [description]="lp.description"
+                  [image]="lp.image"
+                  [siteName]="lp.siteName"
+                ></app-link-preview-card>
+              }
               <button
                 (click)="simplifyText()"
                 class="text-xs text-blue-400 ms-2 mt-1"

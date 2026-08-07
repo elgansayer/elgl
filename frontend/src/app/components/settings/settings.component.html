@@ -66,7 +66,20 @@
         <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
           {{ 'settings.languageSection' | t }}
         </h2>
-        <app-language-selector />
+        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm">
+          <a
+            routerLink="/language"
+            class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-xl">🌐</span>
+              <span class="text-sm font-medium text-text-primary">{{
+                'settings.languageSelectLabel' | t
+              }}</span>
+            </div>
+            <span class="text-text-secondary">→</span>
+          </a>
+        </div>
       </section>
 
       <section class="space-y-4">
@@ -353,45 +366,30 @@
         </div>
       </section>
 
-      <section class="space-y-4">
-        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
-          {{ 'settings.linkedAccountsSection' | t }}
-        </h2>
-
-        <div
-          class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm"
-        >
-          @for (provider of supportedProviders; track provider) {
-            <div class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors">
+        <section class="space-y-4">
+          <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+            {{ 'settings.linkedAccountsSection' | t }}
+          </h2>
+          <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm">
+            <a
+              routerLink="/settings/linked-accounts"
+              class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
+            >
               <div class="flex items-center gap-3">
-                <span class="text-lg">{{ providerIcon(provider) }}</span>
-                <span class="text-sm font-medium text-text-primary">{{ ('settings.provider_' + provider) | t }}</span>
-                @if (isLinked(provider)) {
-                  <span
-                    class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded"
-                  >
-                    {{ 'settings.linked' | t }}
+                <span class="text-xl">&#128279;</span>
+                <span class="text-sm font-medium text-text-primary">{{
+                  'settings.linkedAccounts.title' | t
+                }}</span>
+                @if (linkedCount() > 0) {
+                  <span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                    {{ linkedCount() }} {{ 'settings.linkedAccounts.active' | t }}
                   </span>
                 }
               </div>
-              @if (isLinked(provider)) {
-                <button
-                  (click)="unlinkAccount(provider)"
-                  class="text-xs font-semibold text-red-400 hover:text-red-300 transition-colors"
-                >
-                  {{ 'settings.unlinkBtn' | t }}
-                </button>
-              } @else {
-                <button
-                  (click)="linkAccount(provider)"
-                  class="app-button-secondary text-xs py-1 px-3 rounded-lg"
-                >
-                  {{ 'settings.linkBtn' | t }}
-                </button>
-              }
-            </div>
-          }
-        </div>
+              <span class="text-text-secondary">&rarr;</span>
+            </a>
+          </div>
+        </section>
       </section>
 
       <section class="space-y-4 pt-2">

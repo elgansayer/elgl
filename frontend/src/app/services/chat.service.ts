@@ -14,6 +14,14 @@ export interface CorrectionPayload {
   explanation?: string;
 }
 
+export interface LinkPreview {
+  url: string;
+  title: string;
+  description: string;
+  image: string;
+  siteName: string;
+}
+
 export interface ChatMessage {
   id: string;
   room_id: string;
@@ -47,6 +55,8 @@ export interface ChatMessage {
     display_name?: string;
     avatar_url?: string | null;
   };
+  /** OpenGraph link preview scraped from URLs in the message */
+  link_preview?: LinkPreview | null;
   /** ID of the parent message this replies to (threaded replies) */
   reply_to_id?: string;
   /** Preview of the parent message for inline display */
@@ -71,6 +81,9 @@ export interface ChatMessage {
 
   /** True when the message has been soft‑deleted for all users */
   is_deleted?: boolean;
+
+  /** OpenGraph link preview for URLs embedded in the message text */
+  link_preview?: LinkPreview | null;
 }
 
 export interface FavouriteRecord {

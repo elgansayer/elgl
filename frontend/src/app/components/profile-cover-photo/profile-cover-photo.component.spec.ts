@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ProfileCoverPhotoComponent } from './profile-cover-photo.component';
 import { CoverPhotoService } from '../../services/cover-photo.service';

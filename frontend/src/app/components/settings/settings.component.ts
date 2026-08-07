@@ -1,17 +1,14 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { I18nService } from '../../services/i18n.service';
 import { FormsModule } from '@angular/forms';
 import { UserService, LinkedAccount } from '../../services/user.service';
 import { CacheService } from '../../services/cache.service';
 import { Router, RouterModule } from '@angular/router';
 import { ChatSettingsService } from '../../services/chat-settings.service';
-import { LanguageSelectorComponent } from '../language-selector/language-selector.component';
-
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule, TranslatePipe, LanguageSelectorComponent, RouterModule],
+  imports: [FormsModule, TranslatePipe, RouterModule],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss'],
 })
@@ -21,10 +18,6 @@ export class SettingsComponent implements OnInit {
   private location = inject(Location);
   private router = inject(Router);
   private chatSettingsService = inject(ChatSettingsService);
-  private i18nService = inject(I18nService);
-
-  readonly availableLanguages = this.i18nService.availableLanguages;
-  readonly uiLanguage = computed(() => this.i18nService.currentLang());
 
   readonly isLoading = signal(true);
   readonly isDownloading = signal(false);
@@ -49,6 +42,7 @@ export class SettingsComponent implements OnInit {
   vibrationEnabled = false;
 
   readonly linkedAccounts = signal<LinkedAccount[]>([]);
+  readonly linkedCount = computed(() => this.linkedAccounts().filter(a => a.active).length);
   readonly autoDownloadMedia = signal(false);
   readonly autoDownloadPreference = signal<'wifi' | 'cellular'>('wifi');
   protected chatEnterToSend = signal(false);
@@ -153,10 +147,6 @@ export class SettingsComponent implements OnInit {
 
   goBack(): void {
     this.location.back();
-  }
-
-  changeUiLanguage(lang: string): void {
-    this.i18nService.setLanguage(lang);
   }
 
   goToMySubscription(): void {
