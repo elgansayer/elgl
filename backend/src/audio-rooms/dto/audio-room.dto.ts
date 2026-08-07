@@ -111,3 +111,13 @@ export class RemoveCoHostDto {
   @IsNotEmpty()
   room_id!: string;
 }
+
+export class KickSpeakerDto {
+  @IsString()
+  @IsNotEmpty()
+  room_id!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  target_user_id!: string;
+}
