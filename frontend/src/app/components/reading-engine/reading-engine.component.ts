@@ -1,5 +1,6 @@
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
@@ -19,8 +20,13 @@ interface ReadingArticle {
 @Component({
   selector: 'app-reading-engine',
   standalone: true,
+<<<<<<< HEAD
   imports: [TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   template: `<div class="reading-engine mx-auto max-w-4xl space-y-4 sm:space-y-6 pb-20 pt-2 sm:pt-4">
+=======
+  imports: [TranslatePipe, SanitiseHtmlPipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+  template: `<div class="reading-engine mx-auto max-w-4xl space-y-6 pb-20 pt-4">
+>>>>>>> origin/main
   <!-- Header & Tab Navigation -->
   <header class="app-card app-padded space-y-3 sm:space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
@@ -90,11 +96,19 @@ interface ReadingArticle {
               {{ 'readingEngine.wordCount' | t: { count: article.wordCount } }}
             </span>
           </div>
+<<<<<<< HEAD
           <h2 class="text-base sm:text-lg font-black text-text-primary">{{ article.title }}</h2>
         </div>
 
         <div class="app-card app-padded space-y-3">
           <p class="text-sm sm:text-base leading-relaxed text-text-primary whitespace-pre-line">{{ article.content }}</p>
+=======
+          <h2 class="text-lg font-black text-text-primary">{{ article.title | sanitiseHtml }}</h2>
+        </div>
+
+        <div class="app-card app-padded space-y-3">
+          <p class="text-base leading-relaxed text-text-primary whitespace-pre-line">{{ article.content | sanitiseHtml }}</p>
+>>>>>>> origin/main
         </div>
 
         <div class="flex flex-wrap gap-2">
@@ -222,8 +236,8 @@ interface ReadingArticle {
                   {{ 'readingEngine.wordCountShort' | t: { count: article.wordCount } }}
                 </span>
               </div>
-              <h3 class="text-sm font-bold text-text-primary">{{ article.title }}</h3>
-              <p class="text-xs text-text-secondary line-clamp-2">{{ article.content }}</p>
+              <h3 class="text-sm font-bold text-text-primary">{{ article.title | sanitiseHtml }}</h3>
+              <p class="text-xs text-text-secondary line-clamp-2">{{ article.content | sanitiseHtml }}</p>
             </button>
           }
         </div>
