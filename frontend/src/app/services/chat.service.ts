@@ -80,6 +80,10 @@ export interface ChatMessage {
   deleted_for_user_ids?: string[];
 
   /** True when the message has been soft‑deleted for all users */
+<<<<<<< HEAD
+=======
+  is_deleted?: boolean;
+>>>>>>> origin/main
 }
 
 export interface FavouriteRecord {
@@ -112,6 +116,9 @@ export interface GroupMember {
     id: string;
     display_name?: string;
     avatar_url?: string | null;
+    native_language?: string | null;
+    target_languages?: string[] | null;
+    is_vip?: boolean | null;
   };
 }
 
@@ -287,7 +294,13 @@ export class ChatService {
     return message;
   }
 
-  private async syncOfflineMessages(): Promise<void> {
+  /** Attempt to sync all offline queued messages. Individual failures do not block the rest. */
+  async syncOfflineMessages(): Promise<{ sent: number; failed: number }> {
+    let sent = 0;
+    let failed = 0;
+    const token = this.authService.getAccessToken();
+    if (!token) return { sent, failed };
+
     try {
       const messages = await this.offlineQueue.getQueuedMessages();
       for (const msg of messages) {
@@ -302,16 +315,22 @@ export class ChatService {
           status_reply_payload: msg.status_reply_payload,
         };
 
-        await firstValueFrom(
-          this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, {
-            headers: this.getHeaders(),
-          }),
-        );
-        await this.offlineQueue.removeMessage(msg.id);
+        try {
+          await firstValueFrom(
+            this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, {
+              headers: this.getHeaders(),
+            }),
+          );
+          await this.offlineQueue.removeMessage(msg.id);
+          sent++;
+        } catch {
+          failed++;
+        }
       }
     } catch (error) {
       console.error('Failed to sync offline messages:', error);
     }
+    return { sent, failed };
   }
 
   async getMessages(roomId: string, search?: string): Promise<ChatMessage[]> {

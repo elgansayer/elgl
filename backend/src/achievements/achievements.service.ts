@@ -192,42 +192,45 @@ export class AchievementsService implements OnModuleInit {
   }
 
   async evaluateAchievements(userId: string): Promise<void> {
-    // Message count
-    const msgCount = await this.getUserMessageCount(userId);
+    // Fetch user's existing achievements once
+    const earnedRows = await this.getUserAchievements(userId);
+    const earnedCodes = new Set<string>();
+    for (const row of earnedRows) {
+      const code = row.achievements?.code;
+      if (code) earnedCodes.add(code);
+    }
 
-    // Study streak
-    const streakDays = await this.getStudyStreakDays(userId);
+    // Check if we need to evaluate message milestones
+    const needsMessageEval =
+      !earnedCodes.has('first_message') ||
+      !earnedCodes.has('100_messages') ||
+      !earnedCodes.has('500_messages');
 
-    // Award milestones based on thresholds
-    if (
-      msgCount >= 1 &&
-      !(await this.hasAchievement(userId, 'first_message'))
-    ) {
-      await this.awardAchievement(userId, 'first_message');
+    if (needsMessageEval) {
+      const msgCount = await this.getUserMessageCount(userId);
+      if (msgCount >= 1 && !earnedCodes.has('first_message')) {
+        await this.awardAchievement(userId, 'first_message');
+      }
+      if (msgCount >= 100 && !earnedCodes.has('100_messages')) {
+        await this.awardAchievement(userId, '100_messages');
+      }
+      if (msgCount >= 500 && !earnedCodes.has('500_messages')) {
+        await this.awardAchievement(userId, '500_messages');
+      }
     }
-    if (
-      msgCount >= 100 &&
-      !(await this.hasAchievement(userId, '100_messages'))
-    ) {
-      await this.awardAchievement(userId, '100_messages');
-    }
-    if (
-      msgCount >= 500 &&
-      !(await this.hasAchievement(userId, '500_messages'))
-    ) {
-      await this.awardAchievement(userId, '500_messages');
-    }
-    if (
-      streakDays >= 7 &&
-      !(await this.hasAchievement(userId, '7_day_streak'))
-    ) {
-      await this.awardAchievement(userId, '7_day_streak');
-    }
-    if (
-      streakDays >= 30 &&
-      !(await this.hasAchievement(userId, '30_day_streak'))
-    ) {
-      await this.awardAchievement(userId, '30_day_streak');
+
+    // Check if we need to evaluate streak milestones
+    const needsStreakEval =
+      !earnedCodes.has('7_day_streak') || !earnedCodes.has('30_day_streak');
+
+    if (needsStreakEval) {
+      const streakDays = await this.getStudyStreakDays(userId);
+      if (streakDays >= 7 && !earnedCodes.has('7_day_streak')) {
+        await this.awardAchievement(userId, '7_day_streak');
+      }
+      if (streakDays >= 30 && !earnedCodes.has('30_day_streak')) {
+        await this.awardAchievement(userId, '30_day_streak');
+      }
     }
   }
 

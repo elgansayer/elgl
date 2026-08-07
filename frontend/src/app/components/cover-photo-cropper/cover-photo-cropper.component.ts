@@ -21,7 +21,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         tabindex="0"
         role="button"
       >
-        <h3 class="text-lg font-semibold text-white mb-4">{{ 'coverPhoto.cropTitle' | t }}</h3>
+        <h3 class="text-lg font-semibold text-white mb-4">{{ 'coverPhoto.crop' | t }}</h3>
 
         <div class="relative max-h-64 overflow-hidden rounded-lg mb-4">
           <image-cropper

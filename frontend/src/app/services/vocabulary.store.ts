@@ -63,6 +63,9 @@ export class VocabularyStore {
   readonly dueReviews = signal<Flashcard[]>([]);
   readonly isLoading = signal<boolean>(false);
 
+  /** Cards queued for a deck-specific review session */
+  readonly pendingReviewCards = signal<Flashcard[]>([]);
+
   private getHeaders() {
     const token = this.authService.getAccessToken();
     return {

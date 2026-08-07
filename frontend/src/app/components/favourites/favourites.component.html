@@ -14,7 +14,7 @@
           class="app-chip whitespace-nowrap transition-colors"
           [class.app-chip-active]="activeTab() === tab.id"
           (click)="setTab(tab.id)"
-        >
+         [attr.aria-label]=\"tab.labelKey | t\">
           {{ tab.icon }} {{ tab.labelKey | t }}
           @if (tab.id === 'all') {
             <span class="ms-1 text-[10px] opacity-60">({{ favourites().length }})</span>
@@ -44,7 +44,7 @@
       <!-- Header row: avatar, name, date, delete -->
       <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-2.5">
-          <img
+          <img loading="lazy"
             [src]="fav.item_payload?.sender?.avatar_url || 'https://via.placeholder.com/80'"
             alt="avatar"
             class="h-8 w-8 rounded-full border border-surface-100 object-cover"
@@ -111,7 +111,7 @@
             type="button"
             class="flex items-center gap-2 rounded-full bg-surface-300 px-4 py-2 text-sm text-text-primary hover:bg-surface-200 transition-colors"
             (click)="toggleAudio(fav)"
-          >
+           [attr.aria-label]="'favourites.audioPause' | t">
             <span>{{ audioPlayingId() === fav.id ? '\u23F8' : '\u25B6' }}</span>
             <span>{{ audioPlayingId() === fav.id ? ('favourites.audioPause' | t) : ('favourites.audioPlay' | t) }}</span>
           </button>

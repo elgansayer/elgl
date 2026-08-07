@@ -2,6 +2,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideLocationMocks } from '@angular/common/testing';
 import { DOCUMENT } from '@angular/common';
+<<<<<<< HEAD
+=======
+import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
+>>>>>>> origin/main
 import { AppComponent } from './app.component';
 import { AuthService } from './services/auth.service';
 import { AppLockService } from './services/app-lock.service';
@@ -14,7 +18,6 @@ import { UnreadCounterService } from './services/unread-counter.service';
 import { VersionCheckService } from './services/version-check.service';
 import { FontScaleService } from './services/font-scale.service';
 import { I18nService } from './services/i18n.service';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 describe('AppComponent', () => {
   let component: AppComponent;
@@ -24,7 +27,10 @@ describe('AppComponent', () => {
   const authServiceMock = {
     isAuthenticated: vi.fn(() => true),
     currentUser: vi.fn(() => ({ id: 'test-user-1' })),
-    getAccessToken: vi.fn(() => 'test-token'),
+getAccessToken: vi.fn(() => 'mock-token'),
+  unlockApp: vi.fn(),
+  appLocked: vi.fn(() => false),
+  biometricLockEnabled: vi.fn(() => false),
   };
 
   const appLockServiceMock = {
@@ -42,6 +48,7 @@ describe('AppComponent', () => {
       Promise.resolve({ claimed: true, coins_rewarded: 123 }),
     ),
     triggerGiftAnimation: vi.fn(),
+    activeGiftAnimation: vi.fn(() => null),
   };
 
   const centrifugeServiceMock = {
@@ -66,10 +73,16 @@ describe('AppComponent', () => {
 
   const unreadCounterMock = {
     totalUnread: vi.fn(() => 0),
+    tabCount: vi.fn(() => 0),
+    set: vi.fn(),
+    increment: vi.fn(),
+    decrement: vi.fn(),
+    resetAll: vi.fn(),
   };
 
   const versionCheckServiceMock = {
-    checkVersion: vi.fn(() => Promise.resolve()),
+    checkVersion: vi.fn(),
+    isDeprecated: vi.fn(() => false),
   };
 
   const fontScaleServiceMock = {
@@ -78,13 +91,13 @@ describe('AppComponent', () => {
 
   const i18nServiceMock = {
     translate: vi.fn(() => ''),
+    currentLocale: vi.fn(() => 'en'),
   };
 
   beforeEach(async () => {
     vi.clearAllMocks();
     subscribeCallback = undefined;
 
-    // Default resetts that keep the component in a known state
     authServiceMock.isAuthenticated.mockReturnValue(true);
     authServiceMock.currentUser.mockReturnValue({ id: 'test-user-1' });
     appLockServiceMock.biometricEnabled.mockReturnValue(false);
@@ -104,14 +117,13 @@ describe('AppComponent', () => {
         { provide: UnreadCounterService, useValue: unreadCounterMock },
         { provide: VersionCheckService, useValue: versionCheckServiceMock },
         { provide: FontScaleService, useValue: fontScaleServiceMock },
-        { provide: I18nService, useValue: i18nServiceMock as unknown as I18nService },
+        { provide: I18nService, useValue: i18nServiceMock },
         { provide: DOCUMENT, useValue: document },
       ],
     })
       .overrideComponent(AppComponent, {
         set: {
-          template:
-            '<router-outlet></router-outlet><div #reportModal></div>',
+          template: '<router-outlet></router-outlet><div #reportModal></div>',
         },
       })
       .compileComponents();
@@ -130,7 +142,7 @@ describe('AppComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should initialise unread counter computed values', () => {
+it('should initialise unread counter', () => {
     expect(component.unreadCounter.totalUnread()).toBe(0);
   });
 
@@ -224,5 +236,10 @@ describe('AppComponent', () => {
     expect(component.biometricBusy()).toBe(true);
     await promise;
     expect(component.biometricBusy()).toBe(false);
+  });
+
+  it('should call versionCheckService on init', () => {
+    expect(versionCheckServiceMock.checkVersion).toHaveBeenCalled();
+    expect(component.versionCheckService.isDeprecated()).toBe(false);
   });
 });

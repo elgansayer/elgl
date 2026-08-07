@@ -11,15 +11,21 @@ export class AiConversationController {
   }
 
   @Post('message')
-  handleMessage(@Body() dto: { message: string; scenarioId?: string }): {
-    reply: string;
-  } {
+  async handleMessage(
+    @Body()
+    dto: {
+      message: string;
+      scenarioId?: string;
+      conversationHistory?: { role: 'user' | 'assistant'; content: string }[];
+    },
+  ): Promise<{ reply: string }> {
     if (!dto.message || dto.message.trim().length === 0) {
       return { reply: 'Please say something first!' };
     }
-    const reply = this.aiConversationService.generateReply(
+    const reply = await this.aiConversationService.generateReply(
       dto.message,
       dto.scenarioId,
+      dto.conversationHistory,
     );
     return { reply };
   }

@@ -9,7 +9,11 @@ import { TranslatePipe } from '../../../services/translate.pipe';
 describe('LinkedAccountsComponent', () => {
   let component: LinkedAccountsComponent;
   let fixture: ComponentFixture<LinkedAccountsComponent>;
+<<<<<<< HEAD
   let linkedAccountsService: LinkedAccountsService;
+=======
+  let linkedAccountsService: { getLinkedAccounts: ReturnType<typeof vi.fn>; linkAccount: ReturnType<typeof vi.fn>; unlinkAccount: ReturnType<typeof vi.fn> };
+>>>>>>> origin/main
 
   beforeEach(async () => {
     const spy = {
@@ -19,7 +23,11 @@ describe('LinkedAccountsComponent', () => {
       ]),
       linkAccount: vi.fn().mockResolvedValue(undefined),
       unlinkAccount: vi.fn().mockResolvedValue(undefined),
+<<<<<<< HEAD
     } as unknown as LinkedAccountsService;
+=======
+    };
+>>>>>>> origin/main
 
     await TestBed.configureTestingModule({
       imports: [LinkedAccountsComponent, TranslatePipe],
@@ -30,7 +38,11 @@ describe('LinkedAccountsComponent', () => {
       ],
     }).compileComponents();
 
+<<<<<<< HEAD
     linkedAccountsService = TestBed.inject(LinkedAccountsService);
+=======
+    linkedAccountsService = TestBed.inject(LinkedAccountsService) as typeof linkedAccountsService;
+>>>>>>> origin/main
     fixture = TestBed.createComponent(LinkedAccountsComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
@@ -61,7 +73,11 @@ describe('LinkedAccountsComponent', () => {
   });
 
   it('should allow unlinking when multiple providers are linked', async () => {
+<<<<<<< HEAD
     (linkedAccountsService.getLinkedAccounts as ReturnType<typeof vi.fn>).mockResolvedValue([
+=======
+    linkedAccountsService.getLinkedAccounts.mockResolvedValue([
+>>>>>>> origin/main
       { provider: 'google', active: true, created_at: '2024-01-01' },
       { provider: 'email', active: true, created_at: '2024-01-02' },
     ]);
@@ -74,13 +90,21 @@ describe('LinkedAccountsComponent', () => {
   });
 
   it('should call linkAccount on link', async () => {
+<<<<<<< HEAD
     (linkedAccountsService.linkAccount as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+=======
+    linkedAccountsService.linkAccount.mockResolvedValue(undefined);
+>>>>>>> origin/main
     await component.link('facebook');
     expect(linkedAccountsService.linkAccount).toHaveBeenCalledWith('facebook');
   });
 
   it('should call unlinkAccount on unlink when allowed', async () => {
+<<<<<<< HEAD
     (linkedAccountsService.getLinkedAccounts as ReturnType<typeof vi.fn>).mockResolvedValue([
+=======
+    linkedAccountsService.getLinkedAccounts.mockResolvedValue([
+>>>>>>> origin/main
       { provider: 'google', active: true, created_at: '2024-01-01' },
       { provider: 'email', active: true, created_at: '2024-01-02' },
     ]);
@@ -88,26 +112,42 @@ describe('LinkedAccountsComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
+<<<<<<< HEAD
     (linkedAccountsService.unlinkAccount as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+=======
+    linkedAccountsService.unlinkAccount.mockResolvedValue(undefined);
+>>>>>>> origin/main
     await component.unlink('email');
     expect(linkedAccountsService.unlinkAccount).toHaveBeenCalledWith('email');
   });
 
   it('should not call unlinkAccount when cannot unlink', async () => {
+<<<<<<< HEAD
     (linkedAccountsService.unlinkAccount as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+=======
+    linkedAccountsService.unlinkAccount.mockResolvedValue(undefined);
+>>>>>>> origin/main
     await component.unlink('google');
     expect(linkedAccountsService.unlinkAccount).not.toHaveBeenCalled();
   });
 
   it('should handle link error gracefully', async () => {
+<<<<<<< HEAD
     (linkedAccountsService.linkAccount as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'));
+=======
+    linkedAccountsService.linkAccount.mockRejectedValue(new Error('Network error'));
+>>>>>>> origin/main
     await component.link('google');
     expect(component.errorMessage()).toBeTruthy();
     expect(component.loading()).toBeFalsy();
   });
 
   it('should handle unlink error gracefully', async () => {
+<<<<<<< HEAD
     (linkedAccountsService.getLinkedAccounts as ReturnType<typeof vi.fn>).mockResolvedValue([
+=======
+    linkedAccountsService.getLinkedAccounts.mockResolvedValue([
+>>>>>>> origin/main
       { provider: 'google', active: true, created_at: '2024-01-01' },
       { provider: 'email', active: true, created_at: '2024-01-02' },
     ]);
@@ -115,7 +155,11 @@ describe('LinkedAccountsComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
+<<<<<<< HEAD
     (linkedAccountsService.unlinkAccount as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'));
+=======
+    linkedAccountsService.unlinkAccount.mockRejectedValue(new Error('Network error'));
+>>>>>>> origin/main
     await component.unlink('google');
     expect(component.errorMessage()).toBeTruthy();
     expect(component.loading()).toBeFalsy();

@@ -1,5 +1,5 @@
 @if (isOpen()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" (click)="closed.emit()">
+  <div appA11yClickable class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" (click)="closed.emit()">
     <div 
       class="bg-surface-200 w-full max-w-sm rounded-2xl shadow-xl overflow-hidden" 
       (click)="$event.stopPropagation()"
@@ -17,7 +17,7 @@
       <div class="p-4">
         <div class="flex gap-3 bg-surface-300 p-3 rounded-lg items-center border border-surface-100">
           @if (entity().thumbnailUrl) {
-            <img [src]="entity().thumbnailUrl" class="w-12 h-12 rounded object-cover" alt="Preview">
+            <img loading="lazy" [src]="entity().thumbnailUrl" class="w-12 h-12 rounded object-cover" alt="Preview">
           } @else {
             <div class="w-12 h-12 bg-primary/20 rounded flex items-center justify-center text-primary text-xl">
               🔗
@@ -59,7 +59,7 @@
             [value]="shareUrl()" 
             readonly 
             class="flex-1 bg-transparent text-sm text-text-primary px-2 outline-none"
-          >
+           [attr.aria-label]="'text input'">
           <button 
             class="px-4 py-2 rounded-md text-sm font-bold transition-colors"
             [class.bg-primary]="!isCopying()"
@@ -67,7 +67,7 @@
             [class.bg-green-500]="isCopying()"
             [class.text-white]="isCopying()"
             (click)="copyLink()"
-          >
+           [attr.aria-label]="'share.copied' | t">
             {{ isCopying() ? ('share.copied' | t) : ('share.copy' | t) }}
           </button>
         </div>

@@ -1,6 +1,8 @@
 import { Injectable, signal, inject } from '@angular/core';
-import { MonetisationService } from './monetisation.service';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { showToast } from './toast.service';
+import { environment } from '../../environments/environment';
 
 export interface RestoreResult {
   success: boolean;
@@ -8,16 +10,9 @@ export interface RestoreResult {
   message: string;
 }
 
-/**
- * Detects the platform (iOS, Android, or web) from user-agent.
- * Returns 'ios', 'android', or 'stripe' for the web platform.
- */
-function detectPlatform(): 'ios' | 'android' | 'stripe' {
-  if (typeof navigator === 'undefined') return 'stripe';
-  const ua = navigator.userAgent.toLowerCase();
-  if (/iphone|ipad|ipod/.test(ua)) return 'ios';
-  if (/android/.test(ua)) return 'android';
-  return 'stripe';
+export interface RestorePurchasesApiResponse {
+  received: boolean;
+  status: string;
 }
 
 @Injectable({
@@ -27,44 +22,40 @@ export class RestorePurchasesService {
   readonly isRestoring = signal<boolean>(false);
   readonly lastRestoreResult = signal<RestoreResult | null>(null);
 
-  private monetisationService = inject(MonetisationService);
+  private http = inject(HttpClient);
 
-  async restorePurchases(receiptData?: string): Promise<RestoreResult> {
+  async restorePurchases(platform: 'ios' | 'android' | 'stripe' = 'stripe', receiptData?: string): Promise<RestoreResult> {
     this.isRestoring.set(true);
     this.lastRestoreResult.set(null);
 
     try {
-      const platform = detectPlatform();
-      const response = await this.monetisationService.restorePurchases(platform, receiptData);
+      const response = await firstValueFrom(
+        this.http.post<RestorePurchasesApiResponse>(
+          `${environment.apiUrl}/monetisation/restore-purchases`,
+          { platform, receipt_data: receiptData },
+        ),
+      );
 
-      if (response.status === 'restored') {
-        const result: RestoreResult = {
-          success: true,
-          restoredPlans: [],
-          message: 'Your purchases have been restored successfully.',
-        };
-        this.lastRestoreResult.set(result);
+      const success = response.status === 'restored';
+      const result: RestoreResult = {
+        success,
+        restoredPlans: success ? [response.status] : [],
+        message: success
+          ? 'Successfully restored your purchase(s).'
+          : response.status === 'no_valid_subscription'
+            ? 'No previous purchases found to restore.'
+            : 'Failed to restore purchases. Please try again later.',
+      };
+
+      this.lastRestoreResult.set(result);
+
+      if (result.success) {
         showToast(result.message, 'success', 4000);
-        return result;
-      } else if (response.status === 'no_valid_subscription') {
-        const result: RestoreResult = {
-          success: false,
-          restoredPlans: [],
-          message: 'No previous purchases found to restore.',
-        };
-        this.lastRestoreResult.set(result);
-        showToast(result.message, 'info', 4000);
-        return result;
       } else {
-        const result: RestoreResult = {
-          success: false,
-          restoredPlans: [],
-          message: 'Failed to restore purchases. Please try again later.',
-        };
-        this.lastRestoreResult.set(result);
         showToast(result.message, 'info', 4000);
-        return result;
       }
+
+      return result;
     } catch {
       const result: RestoreResult = {
         success: false,
