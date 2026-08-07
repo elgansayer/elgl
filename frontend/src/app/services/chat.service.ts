@@ -228,26 +228,9 @@ export class ChatService {
       status_text: string;
     };
   }): Promise<ChatMessage> {
-    // Check if the receiver is blocked before sending
     const currentUser = this.authService.currentUser();
-    if (currentUser?.id) {
-      // Get room members to find the receiver
-      const roomMembers = await firstValueFrom(
-        this.http.get<{ user_id: string }[]>(`${this.baseUrl}/rooms/${payload.room_id}/members`, {
-          headers: this.getHeaders(),
-        }),
-      ).catch(() => []);
-      if (roomMembers && roomMembers.length > 0) {
-        const receiverId = roomMembers.find((m) => m.user_id !== currentUser.id)?.user_id;
-        if (receiverId) {
-          const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
-          if (blockedIds.includes(receiverId)) {
-            throw new Error('You cannot send messages to this user.');
-          }
-        }
-      }
-    }
 
+    // Check offline status first -- do NOT make HTTP calls when offline
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       const queuedMsg: ChatMessage = {
         id: crypto.randomUUID(),
@@ -266,6 +249,25 @@ export class ChatService {
       await this.offlineQueue.enqueueMessage(queuedMsg);
       this.hapticFeedback.tap();
       return queuedMsg;
+    }
+
+    // Check if the receiver is blocked before sending
+    if (currentUser?.id) {
+      // Get room members to find the receiver
+      const roomMembers = await firstValueFrom(
+        this.http.get<{ user_id: string }[]>(`${this.baseUrl}/rooms/${payload.room_id}/members`, {
+          headers: this.getHeaders(),
+        }),
+      ).catch(() => []);
+      if (roomMembers && roomMembers.length > 0) {
+        const receiverId = roomMembers.find((m) => m.user_id !== currentUser.id)?.user_id;
+        if (receiverId) {
+          const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
+          if (blockedIds.includes(receiverId)) {
+            throw new Error('You cannot send messages to this user.');
+          }
+        }
+      }
     }
 
     const message = await firstValueFrom(
@@ -292,12 +294,17 @@ export class ChatService {
           status_reply_payload: msg.status_reply_payload,
         };
 
-        await firstValueFrom(
-          this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, {
-            headers: this.getHeaders(),
-          }),
-        );
-        await this.offlineQueue.removeMessage(msg.id);
+        try {
+          await firstValueFrom(
+            this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, {
+              headers: this.getHeaders(),
+            }),
+          );
+          await this.offlineQueue.removeMessage(msg.id);
+        } catch {
+          // Increment retry count; message stays in queue for subsequent sync attempts
+          await this.offlineQueue.incrementRetryCount(msg.id);
+        }
       }
     } catch (error) {
       console.error('Failed to sync offline messages:', error);
