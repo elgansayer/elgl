@@ -109,7 +109,9 @@ describe('AdminController', () => {
 
   describe('removeBlock', () => {
     it('delegates to AdminService.removeBlock with the block id', async () => {
-      (adminService.removeBlock as jest.Mock).mockResolvedValue({ success: true });
+      (adminService.removeBlock as jest.Mock).mockResolvedValue({
+        success: true,
+      });
 
       const result = await controller.removeBlock('block-42');
 

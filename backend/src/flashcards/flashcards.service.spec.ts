@@ -261,9 +261,7 @@ describe('FlashcardsService', () => {
 
       await expect(
         service.updateSrsLevel('user-1', 'card-1', { quality: 3 }),
-      ).rejects.toThrow(
-        'Failed to update SRS review level: Card not found',
-      );
+      ).rejects.toThrow('Failed to update SRS review level: Card not found');
     });
   });
 
