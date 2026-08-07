@@ -688,6 +688,171 @@ describe('ChatService', () => {
     });
   });
 
+  describe('updateMessageStatus', () => {
+    it('should update delivery_status from sent to delivered', async () => {
+      const message = {
+        id: 'msg-1',
+        room_id: 'room-1',
+        delivery_status: 'sent',
+      };
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: message, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: { user_id: 'user-1' }, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ error: null }),
+        );
+
+      await service.updateMessageStatus('user-1', 'msg-1', 'delivered');
+
+      expect(mockSupabaseClient.from).toHaveBeenNthCalledWith(
+        1,
+        'chat_messages',
+      );
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        delivery_status: 'delivered',
+      });
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'msg-1');
+      expect(centrifugoService.publish).toHaveBeenCalledWith(
+        'chat:room-1',
+        expect.objectContaining({
+          status_update: expect.objectContaining({
+            message_id: 'msg-1',
+            delivery_status: 'delivered',
+          }),
+        }),
+      );
+    });
+
+    it('should update delivery_status from delivered to read', async () => {
+      const message = {
+        id: 'msg-2',
+        room_id: 'room-2',
+        delivery_status: 'delivered',
+      };
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: message, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: { user_id: 'user-1' }, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ error: null }),
+        );
+
+      await service.updateMessageStatus('user-1', 'msg-2', 'read');
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        delivery_status: 'read',
+      });
+      expect(centrifugoService.publish).toHaveBeenCalledWith(
+        'chat:room-2',
+        expect.objectContaining({
+          status_update: expect.objectContaining({
+            message_id: 'msg-2',
+            delivery_status: 'read',
+          }),
+        }),
+      );
+    });
+
+    it('should not downgrade status from read to delivered', async () => {
+      const message = {
+        id: 'msg-3',
+        room_id: 'room-3',
+        delivery_status: 'read',
+      };
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({ data: message, error: null }),
+      );
+
+      await service.updateMessageStatus('user-1', 'msg-3', 'delivered');
+
+      // The method should return early without calling update
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when message does not exist', async () => {
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({ data: null, error: null }),
+      );
+
+      await expect(
+        service.updateMessageStatus('user-1', 'msg-nonexistent', 'delivered'),
+      ).rejects.toThrow('Message not found');
+    });
+
+    it('should throw ForbiddenException when user is not a room member', async () => {
+      const message = {
+        id: 'msg-4',
+        room_id: 'room-4',
+        delivery_status: 'sent',
+      };
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: message, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: null, error: null }),
+        );
+
+      await expect(
+        service.updateMessageStatus('user-1', 'msg-4', 'delivered'),
+      ).rejects.toThrow('Not a member of this room');
+    });
+
+    it('should throw Error when update fails', async () => {
+      const message = {
+        id: 'msg-5',
+        room_id: 'room-5',
+        delivery_status: 'sent',
+      };
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: message, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: { user_id: 'user-1' }, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ error: { message: 'DB error' } }),
+        );
+
+      await expect(
+        service.updateMessageStatus('user-1', 'msg-5', 'read'),
+      ).rejects.toThrow('Failed to update message status: DB error');
+    });
+
+    it('should treat missing delivery_status as sent', async () => {
+      const message = {
+        id: 'msg-6',
+        room_id: 'room-6',
+        delivery_status: null as string | null,
+      };
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: message, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: { user_id: 'user-1' }, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ error: null }),
+        );
+
+      await service.updateMessageStatus('user-1', 'msg-6', 'delivered');
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        delivery_status: 'delivered',
+      });
+    });
+  });
+
   describe('exportChatHistory', () => {
     it('should return the list of messages for a room when the user is a member', async () => {
       const roomId = 'room-export-1';
