@@ -9,6 +9,7 @@ import {
   Post,
   Query,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -46,6 +47,18 @@ import { CreatePrivatePartyDto } from './dto/create-private-party.dto';
 import { SendReactionDto } from './dto/send-reaction.dto';
 import { TipHostDto } from './dto/tip-host.dto';
 import { ReorderStageDto } from './dto/reorder-stage.dto';
+import {
+  CacheControlInterceptor,
+  CACHE_PUBLIC_LONG,
+  CACHE_PUBLIC_VERY_SHORT,
+  CACHE_PUBLIC_SHORT,
+  CACHE_EDGE_SHORT,
+  CACHE_EDGE_MEDIUM,
+  CACHE_NO_STORE,
+  CACHE_TAG_AUDIO_ROOMS,
+  CACHE_TAG_AUDIO_ROOM_STAGE,
+  CACHE_TAG_AUDIO_ROOM_POLLS,
+} from '../common/cache.interceptor';
 
 // Type representing the authenticated user fields used in the controller.
 interface AuthUser {
@@ -60,6 +73,7 @@ export class AudioRoomsController {
 
   @Post('create')
   @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async createRoom(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: CreateAudioRoomDto,
@@ -69,6 +83,7 @@ export class AudioRoomsController {
   }
 
   @Post('archive-recording')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async archiveRecording(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: ArchiveRecordingDto,
@@ -78,6 +93,7 @@ export class AudioRoomsController {
   }
 
   @Post('token')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async generateToken(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: AudioRoomTokenDto,
@@ -87,6 +103,7 @@ export class AudioRoomsController {
   }
 
   @Get('list')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_VERY_SHORT, [CACHE_TAG_AUDIO_ROOMS]))
   async listActiveRooms(
     @Query('type') partyType?: string,
     @Query('topic') topic?: string,
@@ -100,6 +117,7 @@ export class AudioRoomsController {
   }
 
   @Get('by-language')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_VERY_SHORT, [CACHE_TAG_AUDIO_ROOMS]))
   async listActiveRoomsByLanguage(): Promise<
     Array<{
       language_pair: string;
@@ -111,16 +129,19 @@ export class AudioRoomsController {
   }
 
   @Get('topics')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
   async getDistinctTopics(): Promise<string[]> {
     return await this.audioRoomsService.getDistinctTopics();
   }
 
   @Get('levels')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
   async getDistinctLevels(): Promise<string[]> {
     return await this.audioRoomsService.getDistinctLevels();
   }
 
   @Get('private')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_MEDIUM))
   async getPrivateRooms(
     @CurrentUser() user: AuthUser | null,
   ): Promise<AudioRoomRecord[]> {
@@ -129,6 +150,7 @@ export class AudioRoomsController {
   }
 
   @Get('call-logs')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_MEDIUM))
   async getCallLogs(
     @CurrentUser() user: AuthUser | null,
     @Query() query: GetCallLogsQueryDto,
@@ -138,6 +160,7 @@ export class AudioRoomsController {
   }
 
   @Get('exclusive-emojis')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
   getExclusiveEmojis(): {
     emojiId: string;
     name: string;
@@ -147,16 +170,19 @@ export class AudioRoomsController {
   }
 
   @Get(':id')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_VERY_SHORT, [CACHE_TAG_AUDIO_ROOM_STAGE]))
   async getRoom(@Param('id') id: string): Promise<AudioRoomRecord> {
     return await this.audioRoomsService.getRoom(id);
   }
 
   @Get(':id/stage')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_VERY_SHORT, [CACHE_TAG_AUDIO_ROOM_STAGE]))
   async getStage(@Param('id') roomId: string): Promise<StageInfo> {
     return this.audioRoomsService.getStage(roomId);
   }
 
   @Post(':id/stage/reorder')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async reorderSpeakers(
     @CurrentUser() user: AuthUser | null,
     @Param('id') roomId: string,
@@ -171,6 +197,7 @@ export class AudioRoomsController {
   }
 
   @Post(':id/stage/clear')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async clearStage(
     @CurrentUser() user: AuthUser | null,
     @Param('id') roomId: string,
@@ -180,6 +207,7 @@ export class AudioRoomsController {
   }
 
   @Post('language-parties')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async createLanguageParty(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: CreateLanguagePartyDto,
@@ -189,6 +217,7 @@ export class AudioRoomsController {
   }
 
   @Post('private')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async createPrivateParty(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: CreatePrivatePartyDto,
@@ -198,6 +227,7 @@ export class AudioRoomsController {
   }
 
   @Post('raise-hand')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async raiseHand(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: RaiseHandDto,
@@ -207,6 +237,7 @@ export class AudioRoomsController {
   }
 
   @Post('approve-speaker')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async approveSpeaker(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: ApproveSpeakerDto,
@@ -216,6 +247,7 @@ export class AudioRoomsController {
   }
 
   @Post('mute-speaker')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async muteSpeaker(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: DemoteSpeakerDto,
@@ -225,6 +257,7 @@ export class AudioRoomsController {
   }
 
   @Post('demote-speaker')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async demoteSpeaker(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: DemoteSpeakerDto,
@@ -234,6 +267,7 @@ export class AudioRoomsController {
   }
 
   @Post('invite-co-host')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async inviteCoHost(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: InviteCoHostDto,
@@ -243,6 +277,7 @@ export class AudioRoomsController {
   }
 
   @Post('remove-co-host')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async removeCoHost(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: RemoveCoHostDto,
@@ -252,6 +287,7 @@ export class AudioRoomsController {
   }
 
   @Post('captions')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async sendCaption(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: SendCaptionDto,
@@ -261,11 +297,13 @@ export class AudioRoomsController {
   }
 
   @Post('ai-captions')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async broadcastAICaption(@Body() dto: SendCaptionDto): Promise<void> {
     await this.audioRoomsService.broadcastAICaption(dto);
   }
 
   @Post('archive')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async archiveRoom(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: ArchiveRoomDto,
@@ -275,6 +313,7 @@ export class AudioRoomsController {
   }
 
   @Post(':roomId/notes')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async addNote(
     @CurrentUser() user: AuthUser | null,
     @Param('roomId') roomId: string,
@@ -285,11 +324,13 @@ export class AudioRoomsController {
   }
 
   @Get(':roomId/notes')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_SHORT))
   async getNotes(@Param('roomId') roomId: string): Promise<VoiceRoomNote[]> {
     return await this.audioRoomsService.getNotes(roomId);
   }
 
   @Delete(':roomId/notes/:noteId')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async deleteNote(
     @CurrentUser() user: AuthUser | null,
     @Param('roomId') _roomId: string,
@@ -305,6 +346,7 @@ export class AudioRoomsController {
    */
   @Get(':id/transcript')
   @HttpCode(HttpStatus.OK)
+  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_MEDIUM))
   async getTranscript(@Param('id') roomId: string): Promise<{
     recording_url: string | null;
     transcript_text: string | null;
@@ -315,6 +357,7 @@ export class AudioRoomsController {
   }
 
   @Post(':roomId/polls')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async createPoll(
     @CurrentUser() user: AuthUser | null,
     @Param('roomId') roomId: string,
@@ -325,6 +368,7 @@ export class AudioRoomsController {
   }
 
   @Post('polls/vote')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async submitVote(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: SubmitVoteDto,
@@ -334,6 +378,7 @@ export class AudioRoomsController {
   }
 
   @Get(':roomId/polls/:pollId')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_VERY_SHORT, [CACHE_TAG_AUDIO_ROOM_POLLS]))
   async getPollResults(
     @Param('roomId') _roomId: string,
     @Param('pollId') pollId: string,
@@ -347,11 +392,13 @@ export class AudioRoomsController {
   }
 
   @Get('soundboard/list')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_LONG))
   listSoundboardSounds(): { sounds: SoundboardSound[] } {
     return this.audioRoomsService.getSoundboardSounds();
   }
 
   @Post('soundboard/play')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async playSound(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: PlaySoundDto,
@@ -361,6 +408,7 @@ export class AudioRoomsController {
   }
 
   @Post(':roomId/reactions')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async sendReaction(
     @CurrentUser() user: AuthUser | null,
     @Param('roomId') roomId: string,
@@ -371,6 +419,7 @@ export class AudioRoomsController {
   }
 
   @Post(':roomId/tip')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async tipHost(
     @CurrentUser() user: AuthUser | null,
     @Param('roomId') roomId: string,

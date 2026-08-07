@@ -3,40 +3,50 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { Router } from '@angular/router';
 import { EscrowPaymentsComponent } from './escrow-payments.component';
-import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
+import { EscrowService } from '../../services/escrow.service';
+import { NetworkStatusService } from '../../services/network-status.service';
 import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
-import { JoyrideService } from 'ngx-joyride';
 
 describe('EscrowPaymentsComponent', () => {
   let component: EscrowPaymentsComponent;
   let fixture: ComponentFixture<EscrowPaymentsComponent>;
-  let mockAuthService: { getAccessToken: ReturnType<typeof vi.fn> };
-  let mockI18nService: { translate: ReturnType<typeof vi.fn>; currentLang: ReturnType<typeof signal>; direction: ReturnType<typeof signal> };
-  let mockOnboardingService: { isCompleted: ReturnType<typeof vi.fn>; isTourInProgress: ReturnType<typeof signal>; markComplete: ReturnType<typeof vi.fn>; stepNames: string[] };
-  let mockJoyrideService: { startTour: ReturnType<typeof vi.fn> };
+  let mockI18nService: { translate: ReturnType<typeof vi.fn> };
+  let mockEscrowService: { escrows: ReturnType<typeof signal>; loading: ReturnType<typeof signal>; pendingOperationCount: ReturnType<typeof signal>; listUserEscrows: ReturnType<typeof vi.fn>; releaseEscrow: ReturnType<typeof vi.fn>; refundEscrow: ReturnType<typeof vi.fn>; disputeEscrow: ReturnType<typeof vi.fn>; syncOfflineOperations: ReturnType<typeof vi.fn> };
+  let mockNetworkService: { isOnline: ReturnType<typeof signal> };
+  let mockOnboardingService: { isCompleted: ReturnType<typeof vi.fn>; isTourInProgress: ReturnType<typeof signal>; markComplete: ReturnType<typeof vi.fn> };
+  let mockRouter: { navigate: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
-    mockAuthService = {
-      getAccessToken: vi.fn().mockReturnValue('test-token'),
-    };
-
     mockI18nService = {
       translate: vi.fn().mockImplementation((key: string) => key),
-      currentLang: signal('en-GB'),
-      direction: signal('ltr'),
+    };
+
+    mockEscrowService = {
+      escrows: signal([]),
+      loading: signal(false),
+      pendingOperationCount: signal(0),
+      listUserEscrows: vi.fn().mockResolvedValue([]),
+      releaseEscrow: vi.fn().mockResolvedValue({}),
+      refundEscrow: vi.fn().mockResolvedValue({}),
+      disputeEscrow: vi.fn().mockResolvedValue({}),
+      syncOfflineOperations: vi.fn().mockResolvedValue({}),
+    };
+
+    mockNetworkService = {
+      isOnline: signal(true),
     };
 
     mockOnboardingService = {
       isCompleted: vi.fn().mockReturnValue(true),
       isTourInProgress: signal(false),
       markComplete: vi.fn(),
-      stepNames: ['escrowStepTitle', 'escrowStepCreate', 'escrowStepFilters', 'escrowStepTransactions'],
     };
 
-    mockJoyrideService = {
-      startTour: vi.fn().mockReturnValue({ subscribe: vi.fn() }),
+    mockRouter = {
+      navigate: vi.fn(),
     };
 
     await TestBed.configureTestingModule({
@@ -44,10 +54,11 @@ describe('EscrowPaymentsComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: AuthService, useValue: mockAuthService },
         { provide: I18nService, useValue: mockI18nService },
+        { provide: EscrowService, useValue: mockEscrowService },
+        { provide: NetworkStatusService, useValue: mockNetworkService },
         { provide: EscrowOnboardingService, useValue: mockOnboardingService },
-        { provide: JoyrideService, useValue: mockJoyrideService },
+        { provide: Router, useValue: mockRouter },
       ],
     }).compileComponents();
 
@@ -61,45 +72,31 @@ describe('EscrowPaymentsComponent', () => {
   });
 
   it('should initialise with default signal values', () => {
-    expect(component.statusFilter()).toBe('all');
-    expect(component.showCreateForm()).toBe(false);
-    expect(component.showDisputeForm()).toBeNull();
-    expect(component.loading()).toBe(false);
+    expect(component.selectedStatus()).toBe('all');
+    expect(component.actionInProgress()).toBe(false);
     expect(component.error()).toBeNull();
     expect(component.successMessage()).toBeNull();
   });
 
-  it('should set status filter and compute filtered transactions', () => {
-    component.statusFilter.set('pending');
-    expect(component.statusFilter()).toBe('pending');
-    component.statusFilter.set('all');
-    expect(component.statusFilter()).toBe('all');
+  it('should set status filter', () => {
+    component.setStatusFilter('pending');
+    expect(component.selectedStatus()).toBe('pending');
+    component.setStatusFilter('all');
+    expect(component.selectedStatus()).toBe('all');
   });
 
-  it('should toggle create form', () => {
-    expect(component.showCreateForm()).toBe(false);
-    component.showCreateForm.set(true);
-    expect(component.showCreateForm()).toBe(true);
+  it('should have status filters', () => {
+    expect(component.statusFilters).toHaveLength(6);
+    expect(component.statusFilters[0].value).toBe('all');
+    expect(component.statusFilters[1].value).toBe('pending');
   });
 
-  it('should return correct status class', () => {
-    expect(component.getStatusClass('pending')).toContain('amber');
-    expect(component.getStatusClass('released')).toContain('emerald');
-    expect(component.getStatusClass('disputed')).toContain('rose');
-    expect(component.getStatusClass('refunded')).toContain('slate');
-    expect(component.getStatusClass('cancelled')).toContain('zinc');
-  });
-
-  it('should return status label using i18n', () => {
-    const label = component.getStatusLabel('pending');
-    expect(label).toBe('escrow.status.pending');
-    expect(mockI18nService.translate).toHaveBeenCalledWith('escrow.status.pending');
-  });
-
-  it('should return service type label using i18n', () => {
-    const label = component.getServiceTypeLabel('lesson');
-    expect(label).toBe('escrow.serviceType.lesson');
-    expect(mockI18nService.translate).toHaveBeenCalledWith('escrow.serviceType.lesson');
+  it('should return correct status badge class', () => {
+    expect(component.statusBadgeClass('pending')).toContain('amber');
+    expect(component.statusBadgeClass('released')).toContain('emerald');
+    expect(component.statusBadgeClass('disputed')).toContain('rose');
+    expect(component.statusBadgeClass('refunded')).toContain('slate');
+    expect(component.statusBadgeClass('cancelled')).toContain('zinc');
   });
 
   it('should clear messages', () => {
@@ -110,33 +107,42 @@ describe('EscrowPaymentsComponent', () => {
     expect(component.successMessage()).toBeNull();
   });
 
-  it('should return status filters', () => {
-    expect(component.statusFilters).toContain('all');
-    expect(component.statusFilters).toContain('pending');
+  it('should delegate release to escrow service', async () => {
+    await component.handleRelease('test-escrow-id');
+    expect(mockEscrowService.releaseEscrow).toHaveBeenCalledWith('test-escrow-id');
   });
 
-  it('should not start onboarding tour when already completed', () => {
-    mockOnboardingService.isCompleted.mockReturnValue(true);
-    fixture = TestBed.createComponent(EscrowPaymentsComponent);
-    expect(mockJoyrideService.startTour).not.toHaveBeenCalled();
+  it('should delegate refund to escrow service', async () => {
+    await component.handleRefund('test-escrow-id');
+    expect(mockEscrowService.refundEscrow).toHaveBeenCalledWith('test-escrow-id');
   });
 
-  it('should start onboarding tour when not completed', () => {
-    const startTourSpy = vi.fn().mockReturnValue({ subscribe: vi.fn() });
-    mockJoyrideService.startTour = startTourSpy;
-    mockOnboardingService.isCompleted.mockReturnValue(false);
+  it('should navigate back on goBack', () => {
+    component.goBack();
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/']);
+  });
 
-    const freshFixture = TestBed.createComponent(EscrowPaymentsComponent);
-    freshFixture.detectChanges();
-    freshFixture.componentInstance.ngAfterViewInit();
+  it('should verify RTL logical CSS properties (ps-, pe-, ms-, me-) are used instead of physical direction classes', () => {
+    const componentHtml = fixture.nativeElement.innerHTML;
 
-    // The tour starts after a 500ms setTimeout, so check after
-    vi.advanceTimersByTime?.(600);
+    // Physical direction classes must NOT appear
+    expect(componentHtml).not.toMatch(/\bpl-\d/);
+    expect(componentHtml).not.toMatch(/\bpr-\d/);
+    expect(componentHtml).not.toMatch(/\bml-\d/);
+    expect(componentHtml).not.toMatch(/\bmr-\d/);
 
-    expect(startTourSpy).toHaveBeenCalled();
-    const callArgs = startTourSpy.mock.calls[0]?.[0];
-    expect(callArgs).toBeDefined();
-    expect(callArgs.steps).toEqual(mockOnboardingService.stepNames);
-    expect(callArgs.startWith).toBe('escrowStepTitle');
+    // Physical border classes must NOT appear
+    expect(componentHtml).not.toMatch(/\bborder-l\b/);
+    expect(componentHtml).not.toMatch(/\bborder-r\b/);
+
+    // Physical position classes must NOT appear
+    expect(componentHtml).not.toMatch(/\bleft-\d/);
+    expect(componentHtml).not.toMatch(/\bright-\d/);
+
+    // Logical direction classes SHOULD appear
+    expect(componentHtml).toMatch(/\bps-\d/);
+    expect(componentHtml).toMatch(/\bpe-\d/);
+    expect(componentHtml).toMatch(/\bms-\d/);
+    expect(componentHtml).toMatch(/\bme-\d/);
   });
 });
