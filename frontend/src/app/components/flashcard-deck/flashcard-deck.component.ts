@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, ErrorHandler } from '@angular/core';
+import { Component, inject, signal, computed, afterNextRender, ErrorHandler } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -6,6 +6,8 @@ import { DeckService, Deck, CreateDeckDto } from '../../services/deck.service';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
+import { SrsOnboardingTourService } from '../../services/srs-onboarding-tour.service';
+import { JoyrideModule } from 'ngx-joyride';
 
 type DeckView = 'list' | 'detail';
 
@@ -15,7 +17,7 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
 @Component({
   selector: 'app-flashcard-deck',
   standalone: true,
-  imports: [FormsModule, TranslatePipe, SrsErrorBoundaryComponent],
+  imports: [FormsModule, TranslatePipe, SrsErrorBoundaryComponent, JoyrideModule],
   template: `
     <app-srs-error-boundary
       [context]="errorContext()"
@@ -24,7 +26,13 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
     >
     <div class="mx-auto max-w-4xl space-y-6 pb-20">
       <!-- Header -->
-      <section class="app-card app-padded space-y-4">
+      <section
+        class="app-card app-padded space-y-4"
+        joyrideStep="srsTourStep1DeckList"
+        [title]="'srsTour.deckListTitle' | t"
+        [text]="'srsTour.deckListText' | t"
+        stepPosition="bottom"
+      >
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="app-section-title">{{ 'deck.title' | t }}</h2>
@@ -49,6 +57,10 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
               type="button"
               (click)="toggleCreateForm()"
               class="app-button-primary ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold disabled:opacity-60"
+              joyrideStep="srsTourStep2CreateDeck"
+              [title]="'srsTour.createDeckTitle' | t"
+              [text]="'srsTour.createDeckText' | t"
+              stepPosition="right"
             >
               {{ (showCreateForm() ? 'deck.cancelBtn' : 'deck.createBtn') | t }}
             </button>
@@ -374,6 +386,7 @@ export class FlashcardDeckComponent {
   private i18n = inject(I18nService);
   private router = inject(Router);
   private errorHandler = inject(ErrorHandler);
+  private srsTourService = inject(SrsOnboardingTourService);
 
   // View state
   readonly activeView = signal<DeckView>('list');
@@ -432,6 +445,11 @@ export class FlashcardDeckComponent {
 
   constructor() {
     this.loadDecks();
+    afterNextRender(() => {
+      if (!this.srsTourService.hasCompletedTour() && !this.srsTourService.isTourInProgress()) {
+        setTimeout(() => this.srsTourService.startTour(), 500);
+      }
+    });
   }
 
   async loadDecks(): Promise<void> {

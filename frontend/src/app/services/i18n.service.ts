@@ -1934,6 +1934,18 @@ export class I18nService {
     'stats.dayAbbr.thu': 'Thu',
     'stats.dayAbbr.fri': 'Fri',
     'stats.dayAbbr.sat': 'Sat',
+
+    // SRS Onboarding Tour
+    'srsTour.prev': 'Previous',
+    'srsTour.next': 'Next',
+    'srsTour.done': 'Got it!',
+    'srsTour.close': 'Skip',
+    'srsTour.deckListTitle': 'Your Flashcard Decks',
+    'srsTour.deckListText': 'Manage your SRS flashcard decks here. Browse existing decks or create a new one to start memorising vocabulary with spaced repetition.',
+    'srsTour.createDeckTitle': 'Create a New Deck',
+    'srsTour.createDeckText': 'Tap here to create a new flashcard deck. Choose a name, colour, and icon, then add vocabulary cards to practise.',
+    'srsTour.reviewTitle': 'Review Cards',
+    'srsTour.reviewText': 'Review your due flashcards here. Tap to flip a card, then grade yourself: Again, Good, or Known. The SRS algorithm schedules cards based on your responses.',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });

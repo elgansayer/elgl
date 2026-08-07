@@ -1,17 +1,19 @@
-import { Component, inject, signal, computed, input, viewChild, ElementRef, effect, ErrorHandler } from '@angular/core';
+import { Component, inject, signal, computed, input, viewChild, ElementRef, effect, afterNextRender, ErrorHandler } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { SrsOnboardingTourService } from '../../services/srs-onboarding-tour.service';
+import { JoyrideModule } from 'ngx-joyride';
 
 type ReviewGrade = 'again' | 'good' | 'known';
 
 @Component({
   selector: 'app-flashcard-review',
   standalone: true,
-  imports: [TranslatePipe, SrsErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
+  imports: [TranslatePipe, SrsErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent, JoyrideModule],
   template: `
     <app-srs-error-boundary
       [context]="errorContext()"
@@ -50,7 +52,14 @@ type ReviewGrade = 'again' | 'good' | 'known';
         />
       } @else {
         <!-- Header with progress -->
-        <section class="app-card app-padded space-y-3" aria-label="{{ 'review.title' | t }}">
+        <section
+          class="app-card app-padded space-y-3"
+          aria-label="{{ 'review.title' | t }}"
+          joyrideStep="srsTourStep3Review"
+          [title]="'srsTour.reviewTitle' | t"
+          [text]="'srsTour.reviewText' | t"
+          stepPosition="bottom"
+        >
           <div class="flex items-center justify-between">
             <h2 class="app-section-title">{{ 'review.title' | t }}</h2>
             <span class="text-xs font-bold text-text-muted" aria-live="polite">
@@ -342,6 +351,7 @@ export class FlashcardReviewComponent {
   private vocabStore = inject(VocabularyStore);
   private i18n = inject(I18nService);
   private errorHandler = inject(ErrorHandler);
+  private srsTourService = inject(SrsOnboardingTourService);
 
   readonly flashcardEl = viewChild<ElementRef<HTMLElement>>('flashcardEl');
 
@@ -407,6 +417,12 @@ export class FlashcardReviewComponent {
         setTimeout(() => {
           this.flashcardEl()?.nativeElement?.focus();
         }, 0);
+      }
+    });
+
+    afterNextRender(() => {
+      if (!this.srsTourService.hasCompletedTour() && !this.srsTourService.isTourInProgress()) {
+        setTimeout(() => this.srsTourService.startTour(), 500);
       }
     });
   }
