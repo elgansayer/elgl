@@ -1175,6 +1175,8 @@ export class I18nService {
     // Sticker Store
     'sticker.purchaseSuccess': 'Successfully purchased {{name}}!',
     'sticker.notEnoughCoins': 'Not enough coins!',
+    'sticker.pickerTitle': 'Stickers',
+    'sticker.openStore': 'Store',
     'sticker.filterAll': 'All',
     'sticker.filterValue': 'Value',
     'sticker.filterPopular': 'Popular',

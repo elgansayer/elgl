@@ -23,7 +23,10 @@ interface CatalogItem {
     <div class="p-4">
       <h1 class="text-xl font-bold mb-4">{{ 'shop.title' | t }}</h1>
       <p class="mb-6 text-sm opacity-70">{{ 'shop.subtitle' | t }}</p>
-      <a routerLink="/cart" class="mb-6 block text-sm font-medium text-indigo-400 underline">{{ 'cart.title' | t }}</a>
+      <div class="mb-6 flex flex-wrap gap-3">
+        <a routerLink="/cart" class="text-sm font-medium text-indigo-400 underline">{{ 'cart.title' | t }}</a>
+        <a routerLink="/sticker-store" class="text-sm font-medium text-violet-400 underline">{{ 'stickerStore.title' | t }}</a>
+      </div>
       @if (message()) {
         <p class="mb-4 text-sm text-indigo-300">{{ message() }}</p>
       }
