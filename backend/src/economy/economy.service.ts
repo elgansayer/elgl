@@ -32,6 +32,9 @@ export interface StickerPackRow {
   id: string;
   name: string;
   cost_coins: number;
+  cover_image_url?: string;
+  is_premium?: boolean;
+  sticker_count?: number;
 }
 
 export interface UserCoinRow {
@@ -1007,6 +1010,67 @@ export class EconomyService {
       coins_remaining: newSenderBalance,
       gift,
     };
+  }
+
+  async getStickerPacks(): Promise<StickerPackRow[]> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('sticker_packs')
+      .select('*')
+      .order('cost_coins', { ascending: true });
+    const rows = response.data;
+    if (!Array.isArray(rows)) {
+      return this.getDefaultStickerPacks();
+    }
+    const packs = rows.filter(
+      (item: unknown): item is StickerPackRow =>
+        typeof item === 'object' &&
+        item !== null &&
+        'id' in item &&
+        'name' in item &&
+        'cost_coins' in item,
+    );
+    if (packs.length === 0) {
+      return this.getDefaultStickerPacks();
+    }
+    return packs;
+  }
+
+  private getDefaultStickerPacks(): StickerPackRow[] {
+    return [
+      {
+        id: 'sticker_pack_happy',
+        name: 'Happy Corgi',
+        cost_coins: 50,
+        cover_image_url: 'assets/stickers/happy.png',
+        is_premium: false,
+        sticker_count: 8,
+      },
+      {
+        id: 'sticker_pack_study',
+        name: 'Study Owl',
+        cost_coins: 100,
+        cover_image_url: 'assets/stickers/love.png',
+        is_premium: false,
+        sticker_count: 6,
+      },
+      {
+        id: 'sticker_pack_party',
+        name: 'Party Parrot',
+        cost_coins: 150,
+        cover_image_url: 'assets/stickers/laugh.png',
+        is_premium: false,
+        sticker_count: 10,
+      },
+      {
+        id: 'sticker_pack_dragon',
+        name: 'Golden Dragon',
+        cost_coins: 500,
+        cover_image_url: 'assets/stickers/thumbs-up.png',
+        is_premium: true,
+        sticker_count: 12,
+      },
+    ];
   }
 
   async unlockStickerPack(

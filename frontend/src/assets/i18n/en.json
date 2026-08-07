@@ -2168,5 +2168,15 @@
   "wordModal.saveLearningBtn": "🟡 Save to learning",
   "wordModal.srsStatus": "Spaced repetition status: {{status}}",
   "wordModal.title": "Dictionary Definition",
-  "wordModal.translationLabel": "Translation"
+  "wordModal.translationLabel": "Translation",
+  "stickerStore.coins": "Coins",
+  "stickerStore.empty": "No sticker packs available right now. Check back soon!",
+  "stickerStore.loadError": "Failed to load sticker packs. Please try again.",
+  "stickerStore.notEnoughCoins": "Not enough coins! Visit the shop to purchase more.",
+  "stickerStore.retry": "Try Again",
+  "stickerStore.subtitle": "Unlock animated sticker packs to use in your chats",
+  "stickerStore.title": "Sticker Store",
+  "stickerStore.unlockFailed": "Failed to unlock sticker pack. Please try again.",
+  "stickerStore.unlockSuccess": "{{name}} unlocked successfully!",
+  "stickerStore.vip": "VIP"
 }

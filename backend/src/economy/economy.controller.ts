@@ -64,6 +64,11 @@ export class EconomyController {
     return await this.economyService.sendGift(user.id, dto);
   }
 
+  @Get('sticker-packs')
+  async getStickerPacks() {
+    return this.economyService.getStickerPacks();
+  }
+
   @Post('unlock-sticker-pack')
   async unlockStickerPack(
     @CurrentUser() user: User | null,
