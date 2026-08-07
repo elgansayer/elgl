@@ -9,12 +9,15 @@ import {
   viewChild,
   OnInit,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { CentrifugoService } from '../../services/centrifugo.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { AuthService } from '../../services/auth.service';
 
 interface LiveMessage {
   id: string;
+  senderId: string;
   senderName: string;
   text: string;
   timestamp: number;
@@ -23,25 +26,30 @@ interface LiveMessage {
 interface CentrifugoMessageData {
   type?: string;
   id?: string;
+  sender_id?: string;
   senderName?: string;
   content: string;
 }
 
 @Component({
   selector: 'app-live-chat-overlay',
-  imports: [TranslatePipe],
+  imports: [FormsModule, TranslatePipe],
   templateUrl: './live-chat-overlay.component.html',
   styleUrl: './live-chat-overlay.component.scss',
 })
 export class LiveChatOverlayComponent implements OnInit {
-  roomId = input.required<string>();
+  readonly roomId = input.required<string>();
 
-  private centrifugo = inject(CentrifugoService);
-  private i18n = inject(I18nService);
-  private destroyRef = inject(DestroyRef);
-  private scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
+  private readonly centrifugo = inject(CentrifugoService);
+  private readonly i18n = inject(I18nService);
+  private readonly authService = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
 
-  messages = signal<LiveMessage[]>([]);
+  readonly messages = signal<LiveMessage[]>([]);
+  readonly inputText = signal('');
+  readonly isExpanded = signal<boolean>(false);
+
   private channelName = '';
   private subscription: unknown = null;
 
@@ -57,9 +65,7 @@ export class LiveChatOverlayComponent implements OnInit {
   ngOnInit() {
     this.channelName = `room_${this.roomId()}`;
 
-    // Subscribe directly to the channel and listen for publications
     this.subscription = this.centrifugo.subscribe(this.channelName, (data: unknown) => {
-      // Type guard to verify the payload shape
       const isCentrifugoMessageData = (value: unknown): value is CentrifugoMessageData => {
         if (typeof value !== 'object' || value === null) return false;
         if (!('type' in value) || !('content' in value)) return false;
@@ -75,6 +81,7 @@ export class LiveChatOverlayComponent implements OnInit {
       if (event.type === 'text') {
         this.addMessage({
           id: event.id || Math.random().toString(36).substring(2),
+          senderId: event.sender_id || '',
           senderName: event.senderName || this.i18n.translate('common.user'),
           text: event.content,
           timestamp: Date.now(),
@@ -83,10 +90,45 @@ export class LiveChatOverlayComponent implements OnInit {
     });
   }
 
+  toggle(): void {
+    this.isExpanded.update((v) => !v);
+  }
+
+  sendMessage(): void {
+    const content = this.inputText().trim();
+    if (!content) return;
+
+    const currentUser = this.authService.currentUser();
+    const senderName = currentUser?.display_name ?? this.i18n.translate('common.user');
+
+    this.centrifugo.publish(this.channelName, {
+      type: 'text',
+      content,
+      senderName,
+      sender_id: currentUser?.id ?? '',
+      id: Math.random().toString(36).substring(2),
+    });
+
+    this.inputText.set('');
+  }
+
+  onInput(event: Event): void {
+    const target = event.target;
+    if (target instanceof HTMLInputElement) {
+      this.inputText.set(target.value);
+    }
+  }
+
+  onKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      this.sendMessage();
+    }
+  }
+
   private addMessage(msg: LiveMessage) {
     this.messages.update((msgs) => {
       const newMsgs = [...msgs, msg];
-      // Cap at 50 messages to maintain 60 FPS rendering performance
       if (newMsgs.length > 50) {
         newMsgs.shift();
       }
