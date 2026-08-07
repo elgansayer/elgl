@@ -68,7 +68,7 @@
               [class.bg-opacity-10]="selectedCode() === lang.code"
               [class.text-primary]="selectedCode() === lang.code"
               [class.hover:bg-surface-300]="selectedCode() !== lang.code"
-             [attr.aria-label]=\"lang.name || lang.nativeName\">
+             [attr.aria-label]="lang.name || lang.nativeName">
               <div class="flex items-center gap-3">
                 <span class="text-2xl leading-none">{{ lang.flag }}</span>
                 <div class="flex flex-col">

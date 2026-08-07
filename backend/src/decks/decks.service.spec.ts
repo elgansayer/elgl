@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DecksService } from './decks.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 describe('DecksService', () => {
   let service: DecksService;
@@ -35,6 +36,20 @@ describe('DecksService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DecksService,
+        {
+          provide: MetricsService,
+          useValue: {
+            recordSrsFlashcardCreated: jest.fn(),
+            recordSrsReviewCompleted: jest.fn(),
+            setSrsDueCards: jest.fn(),
+            setSrsAverageEasinessFactor: jest.fn(),
+            setSrsReviewSuccessRate: jest.fn(),
+            setSrsCardsPerLevel: jest.fn(),
+            setSrsCardsStuck: jest.fn(),
+            setSrsDecksTotal: jest.fn(),
+            recordSrsDeckCreated: jest.fn(),
+          },
+        },
         {
           provide: SupabaseService,
           useValue: {
