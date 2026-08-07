@@ -12,6 +12,13 @@ const testDefaults: Record<string, string> = {
   LIVEKIT_URL: 'http://localhost:7880',
   LIVEKIT_API_KEY: 'test-livekit-api-key',
   LIVEKIT_SECRET: 'test-livekit-secret',
+  LIVEKIT_TURN_ENABLED: 'false',
+  LIVEKIT_TURN_DOMAIN: 'turn.example.com',
+  LIVEKIT_TURN_CERT_FILE: '',
+  LIVEKIT_TURN_KEY_FILE: '',
+  LIVEKIT_TURN_TLS_PORT: '5349',
+  LIVEKIT_TURN_UDP_PORT: '3478',
+  LIVEKIT_RTC_STUN_SERVERS: 'stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302',
   CLOUDFLARE_R2_ENDPOINT: 'https://example.r2.cloudflarestorage.com',
   CLOUDFLARE_R2_ACCESS_KEY_ID: 'test-r2-access-key-id',
   CLOUDFLARE_R2_SECRET_ACCESS_KEY: 'test-r2-secret-access-key',
@@ -53,6 +60,21 @@ export const validationSchema = Joi.object({
   LIVEKIT_URL: Joi.string().default(testDefaults.LIVEKIT_URL),
   LIVEKIT_API_KEY: Joi.string().default(testDefaults.LIVEKIT_API_KEY),
   LIVEKIT_SECRET: Joi.string().default(testDefaults.LIVEKIT_SECRET),
+  LIVEKIT_TURN_ENABLED: Joi.string()
+    .valid('true', 'false')
+    .default(testDefaults.LIVEKIT_TURN_ENABLED),
+  LIVEKIT_TURN_DOMAIN: Joi.string().default(testDefaults.LIVEKIT_TURN_DOMAIN),
+  LIVEKIT_TURN_CERT_FILE: Joi.string()
+    .allow('')
+    .default(testDefaults.LIVEKIT_TURN_CERT_FILE),
+  LIVEKIT_TURN_KEY_FILE: Joi.string()
+    .allow('')
+    .default(testDefaults.LIVEKIT_TURN_KEY_FILE),
+  LIVEKIT_TURN_TLS_PORT: Joi.string().default(testDefaults.LIVEKIT_TURN_TLS_PORT),
+  LIVEKIT_TURN_UDP_PORT: Joi.string().default(testDefaults.LIVEKIT_TURN_UDP_PORT),
+  LIVEKIT_RTC_STUN_SERVERS: Joi.string().default(
+    testDefaults.LIVEKIT_RTC_STUN_SERVERS,
+  ),
   CLOUDFLARE_R2_ENDPOINT: Joi.string()
     .uri()
     .default(testDefaults.CLOUDFLARE_R2_ENDPOINT),
