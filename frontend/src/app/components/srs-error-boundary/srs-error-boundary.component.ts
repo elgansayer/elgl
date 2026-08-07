@@ -78,7 +78,7 @@ export class SrsErrorBoundaryComponent {
   readonly context = input<SrsErrorContext>({ component: 'unknown' });
   readonly showReportButton = input(true);
   readonly retry = output<void>();
-  readonly report = output<SrsErrorContext>();
+  readonly reportError = output<SrsErrorContext>();
 
   readonly hasError = signal(false);
   readonly errorMessage = signal('');
@@ -113,7 +113,7 @@ export class SrsErrorBoundaryComponent {
     );
     enrichedError.name = 'SrsManualReport';
     this.reportErrorInternal(enrichedError);
-    this.report.emit(this.context());
+    this.reportError.emit(this.context());
   }
 
   private reportErrorInternal(error: Error): void {

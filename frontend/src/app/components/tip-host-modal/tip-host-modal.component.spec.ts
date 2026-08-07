@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TipHostModalComponent } from './tip-host-modal.component';
 import { AudioRoomsStore } from '../../services/audio-rooms.store';
-import { EconomyStore } from '../../services/economy.store';
+
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 
@@ -9,14 +9,12 @@ describe('TipHostModalComponent', () => {
   let component: TipHostModalComponent;
   let fixture: ComponentFixture<TipHostModalComponent>;
   let audioRoomsStore: AudioRoomsStore;
-  let economyStore: EconomyStore;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [TipHostModalComponent],
       providers: [
         AudioRoomsStore,
-        EconomyStore,
         provideHttpClient(),
         provideHttpClientTesting(),
       ],
@@ -25,7 +23,6 @@ describe('TipHostModalComponent', () => {
     fixture = TestBed.createComponent(TipHostModalComponent);
     component = fixture.componentInstance;
     audioRoomsStore = TestBed.inject(AudioRoomsStore);
-    economyStore = TestBed.inject(EconomyStore);
 
     // Set required inputs
     fixture.componentRef.setInput('roomId', 'room-1');
@@ -55,11 +52,6 @@ describe('TipHostModalComponent', () => {
     const spy = jest.spyOn(component.closed, 'emit');
     component.onBackdropClick(new MouseEvent('click'));
     expect(spy).not.toHaveBeenCalled(); // event target !== currentTarget in unit test
-
-    // Simulate backdrop click where target === currentTarget
-    const event = { target: {} } as MouseEvent;
-    const spy2 = jest.spyOn(component.closed, 'emit');
-    // Can't easily mock event.target === event.currentTarget without DOM
   });
 
   it('should call tipHost on confirmSend', async () => {
