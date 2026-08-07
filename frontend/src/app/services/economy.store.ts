@@ -38,6 +38,13 @@ export interface ActiveGiftOverlay {
   receiver_name: string;
 }
 
+export interface StickerPack {
+  id: string;
+  name: string;
+  cost_coins: number;
+  owned?: boolean;
+}
+
 export interface DiagnosticLog {
   id: string;
   timestamp: string;
@@ -67,6 +74,7 @@ export class EconomyStore {
   private safetyUrl = `${environment.apiUrl}/safety`;
 
   readonly coinsBalance = signal<number>(50);
+  readonly stickerPacks = signal<StickerPack[]>([]);
   readonly catalog = signal<VirtualGift[]>([]);
   readonly coinPackages = signal<CoinPackage[]>([]);
   readonly developerStats = signal<DeveloperAnalytics | null>(null);
@@ -360,6 +368,63 @@ export class EconomyStore {
     setTimeout(() => {
       this.activeGiftAnimation.set(null);
     }, 4500);
+  }
+
+  async loadStickerPacks(): Promise<void> {
+    try {
+      const res = await firstValueFrom(
+        this.http.get<{
+          packs: StickerPack[];
+          owned_pack_ids: string[];
+          user_coins: number;
+        }>(`${this.baseUrl}/sticker-packs`, { headers: this.getHeaders() }),
+      );
+      this.coinsBalance.set(res.user_coins);
+      const ownedSet = new Set(res.owned_pack_ids);
+      this.stickerPacks.set(
+        res.packs.map((pack) => ({
+          ...pack,
+          owned: ownedSet.has(pack.id),
+        })),
+      );
+    } catch (e) {
+      console.error('Load sticker packs error:', e);
+    }
+  }
+
+  async unlockStickerPack(packId: string): Promise<boolean> {
+    try {
+      const res = await firstValueFrom(
+        this.http.post<{
+          success: boolean;
+          coins_remaining: number;
+          pack: StickerPack;
+        }>(
+          `${this.baseUrl}/unlock-sticker-pack`,
+          { pack_id: packId },
+          { headers: this.getHeaders() },
+        ),
+      );
+      if (res.success) {
+        this.coinsBalance.set(res.coins_remaining);
+        this.stickerPacks.update((packs) =>
+          packs.map((p) =>
+            p.id === packId ? { ...p, owned: true } : p,
+          ),
+        );
+        showToast(
+          this.i18n.translate('sticker.purchaseSuccess', {
+            name: res.pack.name,
+          }),
+        );
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error('Unlock sticker pack error:', e);
+      showToast(this.i18n.translate('sticker.notEnoughCoins'));
+      return false;
+    }
   }
 
   private mapDiagnosticLog(log: DiagnosticLogApiRecord): DiagnosticLog {

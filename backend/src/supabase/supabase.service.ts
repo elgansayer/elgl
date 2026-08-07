@@ -1686,6 +1686,63 @@ export interface Database {
         Update: Partial<LocationShareRow>;
         Relationships: [];
       };
+      decks: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          description: string | null;
+          colour: string;
+          icon: string;
+          card_count: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          user_id: string;
+          name: string;
+          description?: string | null;
+          colour?: string;
+          icon?: string;
+          card_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          user_id?: string;
+          name?: string;
+          description?: string | null;
+          colour?: string;
+          icon?: string;
+          card_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        }>;
+        Relationships: [];
+      };
+      deck_flashcards: {
+        Row: {
+          id: string;
+          deck_id: string;
+          flashcard_id: string;
+          added_at: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          deck_id: string;
+          flashcard_id: string;
+          added_at?: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          deck_id?: string;
+          flashcard_id?: string;
+          added_at?: string;
+        }>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

@@ -87,6 +87,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly ageRangeMin = signal<number>(18);
   readonly ageRangeMax = signal<number>(100);
 
+  readonly voiceRoomActive = signal<boolean>(false);
   readonly selectedSort = signal<string>('best_match');
   readonly sortOptions = computed(() => {
     this.i18n.translations();
@@ -193,6 +194,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
         available_time_end:
           this.availableTimeEnd() || undefined,
         sort: this.selectedSort(),
+        voice_room_active: this.voiceRoomActive() || undefined,
       });
       // Filter out blocked users
       const blocked = this.blockedUserIds();
@@ -215,6 +217,11 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  toggleVoiceRoomActive(): void {
+    this.voiceRoomActive.update((v) => !v);
+    void this.searchPartners();
   }
 
   async toggleSeriousLearnerMode(): Promise<void> {
@@ -324,6 +331,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.availableTimeStart.set('');
     this.availableTimeEnd.set('');
     this.selectedSort.set('best_match');
+    this.voiceRoomActive.set(false);
     void this.searchPartners();
   }
 }

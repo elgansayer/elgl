@@ -5,7 +5,7 @@
       <h1 class="text-xl font-black text-text-primary tracking-tight">
         {{ 'discovery.title' | t }}
       </h1>
-      <a routerLink="/notifications" class="p-2 text-xl hover:opacity-80 transition-opacity">🔔</a>
+      <a routerLink="/notifications" class="p-2 text-xl hover:opacity-80 transition-opacity" [attr.aria-label]="'nav.notifications' | t">🔔</a>
     </div>
 
     <!-- Top Filter Pills (Horizontal Scroll) -->
@@ -126,6 +126,22 @@
           <label for="seriousModeCheckbox" class="sr-only">{{ 'discovery.seriousModeToggle' | t }}</label>
         </div>
         <span class="text-[10px] text-text-secondary leading-tight">{{ 'discovery.seriousModeDesc' | t }}</span>
+      </div>
+
+      <!-- Voice Room Active Toggle -->
+      <div class="flex items-center gap-3 px-4 mt-2 pb-3">
+        <span class="text-xs font-semibold text-text-secondary whitespace-nowrap">{{ 'discovery.voiceRoomActiveToggle' | t }}</span>
+        <div class="flex items-center">
+          <input
+            type="checkbox"
+            id="voiceRoomActiveCheckbox"
+            [checked]="voiceRoomActive()"
+            (change)="toggleVoiceRoomActive()"
+            class="h-4 w-4 text-accent-500 border-surface-300 rounded focus:ring-accent-400"
+          />
+          <label for="voiceRoomActiveCheckbox" class="sr-only">{{ 'discovery.voiceRoomActiveToggle' | t }}</label>
+        </div>
+        <span class="text-[10px] text-text-secondary leading-tight">{{ 'discovery.voiceRoomActiveDesc' | t }}</span>
       </div>
   </header>
 

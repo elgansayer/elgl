@@ -7,6 +7,9 @@
       (click)="authService.unlockApp()"
       (keyup.enter)="authService.unlockApp()"
       tabindex="0"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="'app_lock.title' | t"
     >
       <div class="text-center text-white">
         <p class="mb-4 text-lg font-medium">{{ 'app_lock.title' | t }}</p>
@@ -50,40 +53,8 @@
     </div>
   </div>
   <app-toast />
-  <!-- Global Animated Virtual Gift Broadcast Overlay -->
-  @if (economyStore.activeGiftAnimation(); as overlay) {
-    <div
-      class="fixed inset-0 z-[100] pointer-events-none flex flex-col items-center justify-center"
-    >
-      @if (overlay.gift.animationUrl) {
-        <img
-          [src]="overlay.gift.animationUrl"
-          class="w-full h-full absolute inset-0 object-contain z-[-1] animate-pulse"
-          alt="Gift Animation"
-        />
-      }
-      <div
-        class="bg-gradient-to-r from-amber-500 via-purple-600 to-amber-500 text-white px-8 py-6 rounded-3xl shadow-2xl border-4 border-amber-500/30 flex flex-col items-center gap-2 transform scale-125 z-10 animate-bounce"
-      >
-        <span class="text-6xl animate-pulse">{{ overlay.gift.icon }}</span>
-        <h3 class="text-2xl font-black tracking-wide">
-          {{ 'gift.broadcastTitle' | t: { giftName: overlay.gift.name } }}
-        </h3>
-        <p class="text-sm font-extrabold text-amber-100">
-          {{
-            'gift.broadcastDesc'
-              | t
-                : {
-                    sender: overlay.sender_name,
-                    receiver: overlay.receiver_name,
-                    giftName: overlay.gift.name,
-                    cost: overlay.gift.cost_coins,
-                  }
-          }}
-        </p>
-      </div>
-    </div>
-  }
+  <!-- Global Full-Screen SVG Gift Animation Broadcast Overlay -->
+  <app-gift-animation-overlay />
 
   <!-- Main Content Area (padding-bottom to account for bottom nav) -->
   <main class="flex-1 pb-[72px] lg:pb-0">
@@ -100,6 +71,7 @@
         routerLinkActive="text-primary"
         [routerLinkActiveOptions]="{ exact: false }"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        [attr.aria-label]="'nav.helloTalk' | t"
       >
         <div class="relative">
           <span class="text-2xl leading-none">💬</span>
@@ -118,6 +90,7 @@
         routerLink="/moments"
         routerLinkActive="text-primary"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        [attr.aria-label]="'nav.moments' | t"
       >
         <span class="text-2xl leading-none">⭕</span>
         <span class="text-[10px] font-bold">{{ 'nav.moments' | t }}</span>
@@ -127,6 +100,7 @@
         routerLink="/discovery"
         routerLinkActive="text-primary"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        [attr.aria-label]="'nav.connect' | t"
       >
         <span class="text-2xl leading-none">🌍</span>
         <span class="text-[10px] font-bold">{{ 'nav.connect' | t }}</span>
@@ -136,6 +110,7 @@
         routerLink="/audio-rooms"
         routerLinkActive="text-primary"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        [attr.aria-label]="'nav.liveRooms' | t"
       >
         <span class="text-2xl leading-none">🎙️</span>
         <span class="text-[10px] font-bold">{{ 'nav.liveRooms' | t }}</span>
@@ -145,6 +120,7 @@
         routerLink="/profile"
         routerLinkActive="text-primary"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        [attr.aria-label]="'nav.profile' | t"
       >
         <span class="text-2xl leading-none">👤</span>
         <span class="text-[10px] font-bold">{{ 'nav.profile' | t }}</span>
