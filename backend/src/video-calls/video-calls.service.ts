@@ -6,12 +6,16 @@ import {
   CreateOptions,
 } from 'livekit-server-sdk';
 import { randomUUID as uuidv4 } from 'crypto';
+import { RetryService } from '../common/retry/retry.service';
 
 @Injectable()
 export class VideoCallsService {
   private roomService: RoomServiceClient;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private retryService: RetryService,
+  ) {
     this.roomService = new RoomServiceClient(
       this.configService.get<string>('LIVEKIT_URL') as string,
       this.configService.get<string>('LIVEKIT_API_KEY'),
@@ -30,7 +34,10 @@ export class VideoCallsService {
       maxParticipants: 2,
     };
 
-    await this.roomService.createRoom(createOptions);
+    await this.retryService.withRetry(
+      () => this.roomService.createRoom(createOptions),
+      { maxRetries: 3, baseDelayMs: 1000, maxDelayMs: 30000 },
+    );
 
     const token = await this.generateToken(userId, roomName, true);
 

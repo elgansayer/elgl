@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { withRetry } from './http-retry';
 
 export interface VideoCallState {
   roomName: string;
@@ -34,12 +35,16 @@ export class VideoCallService {
       const token = this.authService.getAccessToken();
       if (!token) throw new Error('Not authenticated');
 
-      const response = await firstValueFrom(
-        this.http.post<{ token: string; roomName: string }>(
-          `${environment.apiUrl}/video-calls/start`,
-          { remoteUserId },
-          { headers: { Authorization: `Bearer ${token}` } },
-        ),
+      const response = await withRetry(
+        () =>
+          firstValueFrom(
+            this.http.post<{ token: string; roomName: string }>(
+              `${environment.apiUrl}/video-calls/start`,
+              { remoteUserId },
+              { headers: { Authorization: `Bearer ${token}` } },
+            ),
+          ),
+        { maxRetries: 3, baseDelayMs: 1000 },
       );
 
       this.room = new Room({
@@ -89,7 +94,13 @@ export class VideoCallService {
       });
 
       this.setupRoomListeners();
-      await this.room.connect(environment.liveKitUrl, token);
+
+      // Connect to LiveKit with retry for HTTP 429 rate-limiting
+      await withRetry(
+        () => this.room!.connect(environment.liveKitUrl, token),
+        { maxRetries: 3, baseDelayMs: 1000 },
+      );
+
       await this.room.localParticipant.enableCameraAndMicrophone();
 
       this.callState.set({
