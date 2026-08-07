@@ -1175,6 +1175,9 @@ export class I18nService {
     'voip.dismiss': 'Dismiss',
     'voip.incomingVoiceCall': 'Incoming voice call...',
     'voip.incomingVideoCall': 'Incoming video call...',
+    'voip.decline': 'Decline',
+    'voip.accept': 'Accept',
+    'voip.callerAvatar': 'Caller avatar',
     'common.unknownCaller': 'Unknown Caller',
 
     // Admin Portal (User Management)

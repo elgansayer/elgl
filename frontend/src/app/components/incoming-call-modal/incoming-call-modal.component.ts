@@ -169,7 +169,7 @@ export class IncomingCallModalComponent {
   callData = input<IncomingCallData | null>(null);
 
   /** Input: URL to a ringtone audio file (optional, defaults to a built-in beep) */
-  ringtoneUrl = input<string>('/assets/audio/ringtone.mp3');
+  ringtoneUrl = input<string>('/assets/audio/ringtone.wav');
 
   /** Emits when user accepts the call */
   acceptCall = output<IncomingCallData>();
