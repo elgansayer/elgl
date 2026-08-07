@@ -60,10 +60,15 @@ describe('BlockManagementComponent RTL logical CSS compliance', () => {
   });
 
   it('should not hardcode English user-facing strings', () => {
-    expect(templateContent).not.toMatch(/Blocked Users/);
-    expect(templateContent).not.toMatch(/Unblock/);
-    expect(templateContent).not.toMatch(/Failed to load/);
-    expect(templateContent).not.toMatch(/No blocked users/);
+    // Strip i18n expressions (both template and attribute forms) to check
+    // for hardcoded English remaining in pure HTML text nodes
+    const withoutI18n = templateContent
+      .replace(/\{\{.*?\}\}/gs, '')
+      .replace(/'[^']*'\s*\|\s*t/g, '');
+    expect(withoutI18n).not.toMatch(/Blocked Users/);
+    expect(withoutI18n).not.toMatch(/\bUnblock\b/);
+    expect(withoutI18n).not.toMatch(/Failed to load/);
+    expect(withoutI18n).not.toMatch(/No blocked users/);
   });
 });
 

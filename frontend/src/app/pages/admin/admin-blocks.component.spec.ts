@@ -11,41 +11,44 @@ import { I18nService } from '../../services/i18n.service';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = resolve(__filename, '..');
 
-describe('AdminBlocksComponent', () => {
-  describe('RTL logical CSS compliance', () => {
-    let templateContent: string;
+describe('AdminBlocksComponent RTL logical CSS compliance', () => {
+  let templateContent: string;
 
-    beforeAll(() => {
-      templateContent = readFileSync(
-        resolve(__dirname, 'admin-blocks.component.html'),
-        'utf-8',
-      );
-    });
-
-    it('should not contain any physical direction CSS utilities', () => {
-      const violations = [
-        /\bpl-\d/, /\bpr-\d/, /\bml-\d/, /\bmr-\d/,
-        /\bleft-[0-9]/, /\bright-[0-9]/,
-        /\bborder-l\b/, /\bborder-r\b/,
-        /\btext-left\b/, /\btext-right\b/,
-      ];
-      for (const pattern of violations) {
-        expect(templateContent).not.toMatch(pattern);
-      }
-    });
-
-    it('should use logical text alignment for table headers', () => {
-      expect(templateContent).toContain('text-start');
-    });
-
-    it('should not hardcode English user-facing strings', () => {
-      expect(templateContent).not.toMatch(/Blocker/);
-      expect(templateContent).not.toMatch(/Blocked/);
-      expect(templateContent).not.toMatch(/Unblock/);
-      expect(templateContent).not.toMatch(/Actions/);
-    });
+  beforeAll(() => {
+    templateContent = readFileSync(
+      resolve(__dirname, 'admin-blocks.component.html'),
+      'utf-8',
+    );
   });
 
+  it('should not contain any physical direction CSS utilities', () => {
+    const violations = [
+      /\bpl-\d/, /\bpr-\d/, /\bml-\d/, /\bmr-\d/,
+      /\bleft-[0-9]/, /\bright-[0-9]/,
+      /\bborder-l\b/, /\bborder-r\b/,
+      /\btext-left\b/, /\btext-right\b/,
+    ];
+    for (const pattern of violations) {
+      expect(templateContent).not.toMatch(pattern);
+    }
+  });
+
+  it('should use logical text alignment for table headers', () => {
+    expect(templateContent).toContain('text-start');
+  });
+
+  it('should not hardcode English user-facing strings', () => {
+    const withoutI18n = templateContent
+      .replace(/\{\{.*?\}\}/gs, '')
+      .replace(/'[^']*'\s*\|\s*t/g, '');
+    expect(withoutI18n).not.toMatch(/Blocker/);
+    expect(withoutI18n).not.toMatch(/Blocked/);
+    expect(withoutI18n).not.toMatch(/Unblock/);
+    expect(withoutI18n).not.toMatch(/Actions/);
+  });
+});
+
+describe('AdminBlocksComponent', () => {
   let component: AdminBlocksComponent;
   let fixture: ComponentFixture<AdminBlocksComponent>;
   let listAllBlocksSpy: ReturnType<typeof vi.fn>;

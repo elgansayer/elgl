@@ -38,8 +38,8 @@ describe('AdminBlocksComponent RTL logical CSS compliance', () => {
     expect(templateContent).toContain('pe-4');
   });
 
-  it('should use logical CSS utilities for inline start margin', () => {
-    expect(templateContent).toContain('ms-1');
+  it('should use logical gap utilities for inline spacing', () => {
+    expect(templateContent).toContain('gap-3');
   });
 
   it('should use i18n translate pipe for all user-facing strings', () => {
@@ -58,10 +58,15 @@ describe('AdminBlocksComponent RTL logical CSS compliance', () => {
   });
 
   it('should not hardcode English user-facing strings', () => {
-    expect(templateContent).not.toMatch(/Blocked Users/i);
-    expect(templateContent).not.toMatch(/Unblock/);
-    expect(templateContent).not.toMatch(/Failed to load/i);
-    expect(templateContent).not.toMatch(/No blocked users/i);
+    // Strip i18n expressions (both template and attribute forms) to check
+    // for hardcoded English remaining in pure HTML text nodes
+    const withoutI18n = templateContent
+      .replace(/\{\{.*?\}\}/gs, '')
+      .replace(/'[^']*'\s*\|\s*t/g, '');
+    expect(withoutI18n).not.toMatch(/Blocked Users/i);
+    expect(withoutI18n).not.toMatch(/\bUnblock\b/);
+    expect(withoutI18n).not.toMatch(/Failed to load/i);
+    expect(withoutI18n).not.toMatch(/No blocked users/i);
   });
 });
 
