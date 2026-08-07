@@ -30,61 +30,62 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
       </div>
 
       @if (loading()) {
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" role="status" aria-busy="true">
-          @for (_ of [0, 1, 2]; track _) {
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" role="status" [attr.aria-label]="'vocabDisplay.loading' | t">
+          @for (i of [1, 2, 3]; track i) {
             <div class="app-card app-padded space-y-3">
               <div class="flex items-center gap-2">
-                <app-skeleton-loader [height]="'1.25rem'" [width]="'1.25rem'" [borderRadius]="'8px'" />
-                <app-skeleton-loader [height]="'14px'" [width]="'50%'" [borderRadius]="'6px'" />
+                <app-skeleton-loader height="24px" width="24px" borderRadius="50%" variant="circle" />
+                <app-skeleton-loader height="18px" width="120px" borderRadius="4px" />
               </div>
               <div class="space-y-2">
-                <div class="rounded-card border border-surface-100 px-3 py-2 flex items-center justify-between">
-                  <div class="flex-1 space-y-1">
-                    <app-skeleton-loader [height]="'13px'" [width]="'60%'" [borderRadius]="'6px'" />
-                    <app-skeleton-loader [height]="'11px'" [width]="'40%'" [borderRadius]="'6px'" />
+                @for (j of [1, 2, 3]; track j) {
+                  <div class="flex items-center justify-between rounded-card border border-surface-100 bg-surface-300 px-3 py-2">
+                    <div class="space-y-1">
+                      <app-skeleton-loader height="14px" width="80px" borderRadius="3px" />
+                      <app-skeleton-loader height="12px" width="60px" borderRadius="3px" />
+                    </div>
+                    <app-skeleton-loader height="24px" width="60px" borderRadius="6px" />
                   </div>
-                  <app-skeleton-loader [height]="'24px'" [width]="'48px'" [borderRadius]="'8px'" />
-                </div>
+                }
               </div>
             </div>
           }
         </div>
       } @else if (vocabularyByTag().size === 0) {
         <app-empty-state
-          [icon]="'📖'"
+          icon="&#128214;"
           [title]="'vocabDisplay.emptyTitle' | t"
           [description]="'vocabDisplay.emptyDesc' | t"
         />
       } @else {
-
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        @for (entry of vocabularyByTagEntries(); track entry[0]) {
-          <section class="app-card app-padded space-y-3">
-            <h4 class="text-sm font-bold text-text-primary flex items-center gap-2">
-              <span aria-hidden="true">{{ getTagIcon(entry[0]) }}</span>
-              <span>{{ entry[0] }}</span>
-            </h4>
-            <div class="space-y-2">
-              @for (item of entry[1]; track item.word) {
-                <div
-                  class="rounded-card flex items-center justify-between border border-surface-100 bg-surface-300 px-3 py-2"
-                >
-                  <div class="min-w-0">
-                    <p class="text-sm font-bold text-text-primary truncate">{{ item.word }}</p>
-                    <p class="text-xs text-text-secondary truncate">{{ item.translation }}</p>
-                  </div>
-                  <button
-                    (click)="addToFlashcards(item)"
-                    class="rounded-app ms-2 bg-primary ps-2.5 pe-2.5 pt-1 pb-1 text-[11px] font-bold text-white hover:opacity-90 flex-shrink-0"
-                    [attr.aria-label]="'vocabDisplay.addToSrsAriaLabel' | t: { word: item.word }"
+          @for (entry of vocabularyByTagEntries(); track entry[0]) {
+            <section class="app-card app-padded space-y-3">
+              <h4 class="text-sm font-bold text-text-primary flex items-center gap-2">
+                <span aria-hidden="true">{{ getTagIcon(entry[0]) }}</span>
+                <span>{{ entry[0] }}</span>
+              </h4>
+              <div class="space-y-2">
+                @for (item of entry[1]; track item.word) {
+                  <div
+                    class="rounded-card flex items-center justify-between border border-surface-100 bg-surface-300 px-3 py-2"
                   >
-                    {{ 'vocabDisplay.addToSrs' | t }}
-                  </button>
-                </div>
-              }
-            </div>
-          </section>
-        }
+                    <div class="min-w-0">
+                      <p class="text-sm font-bold text-text-primary truncate">{{ item.word }}</p>
+                      <p class="text-xs text-text-secondary truncate">{{ item.translation }}</p>
+                    </div>
+                    <button
+                      (click)="addToFlashcards(item)"
+                      class="rounded-app ms-2 bg-primary ps-2.5 pe-2.5 pt-1 pb-1 text-[11px] font-bold text-white hover:opacity-90 flex-shrink-0"
+                      [attr.aria-label]="'vocabDisplay.addToSrsAriaLabel' | t: { word: item.word }"
+                    >
+                      {{ 'vocabDisplay.addToSrs' | t }}
+                    </button>
+                  </div>
+                }
+              </div>
+            </section>
+          }
         </div>
       }
     </div>
