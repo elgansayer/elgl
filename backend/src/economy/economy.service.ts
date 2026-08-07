@@ -441,7 +441,14 @@ export class EconomyService {
     const today = new Date().toISOString().slice(0, 10);
     const key = `daily_checkin:${userId}:${today}`;
 
-    const alreadyClaimed = await redis.get(key);
+    // Graceful: Redis unavailable means we proceed as not-yet-claimed
+    let alreadyClaimed = false;
+    try {
+      alreadyClaimed = !!(await redis.get(key));
+    } catch (redisReadErr: unknown) {
+      const redisMsg = redisReadErr instanceof Error ? redisReadErr.message : String(redisReadErr);
+      this.logger.warn(`Redis read failed for daily check-in, assuming not claimed: ${redisMsg}`);
+    }
     if (alreadyClaimed) {
       this.metricsService.recordDailyCheckInClaim(false);
       this.metricsService.observeCoinTransactionLatency(
@@ -470,14 +477,19 @@ export class EconomyService {
     );
 
     if (error) {
-      this.metricsService.recordCoinPurchaseError('daily_checkin', 'supabase_update');
-      throw new InternalServerErrorException(
-        'Failed to update coin balance for daily check-in',
-      );
+      this.logger.error(`Failed to update coin balance for daily check-in: ${error.message}`);
+        this.metricsService.recordCoinPurchaseError('daily_checkin', 'supabase_update');
+      return { claimed: false, coins_rewarded: 0, new_balance: coins_balance };
     }
 
-    // Set key to expire in 24 hours
-    await redis.set(key, '1', 'EX', 86400);
+    // Best-effort: set Redis key to expire in 24 hours
+    try {
+      const redis = this.supabaseService.getRedisClient();
+      await redis.set(key, '1', 'EX', 86400);
+    } catch (redisWriteErr: unknown) {
+      const redisMsg = redisWriteErr instanceof Error ? redisWriteErr.message : String(redisWriteErr);
+      this.logger.warn(`Redis write failed for daily check-in: ${redisMsg}. DB update succeeded.`);
+    }
 
     this.metricsService.recordDailyCheckInClaim(true);
     this.metricsService.observeCoinTransactionLatency(
@@ -1210,9 +1222,16 @@ export class EconomyService {
 
     // Broadcast the animated gift to the recipient's user channel
     // and, when applicable, the room channel for the live feed.
-    void this.centrifugoService.publish(`user_${dto.receiver_id}`, giftEvent);
+    // Fire-and-forget: Centrifugo failures must not fail gift-send
+    this.centrifugoService.publish(`user_${dto.receiver_id}`, giftEvent).catch((pubErr: unknown) => {
+      const pubMsg = pubErr instanceof Error ? pubErr.message : String(pubErr);
+      this.logger.warn(`Centrifugo publish to user_${dto.receiver_id} failed: ${pubMsg}`);
+    });
     if (dto.room_id) {
-      void this.centrifugoService.publish(`room_${dto.room_id}`, giftEvent);
+      this.centrifugoService.publish(`room_${dto.room_id}`, giftEvent).catch((pubErr: unknown) => {
+        const pubMsg = pubErr instanceof Error ? pubErr.message : String(pubErr);
+        this.logger.warn(`Centrifugo publish to room_${dto.room_id} failed: ${pubMsg}`);
+      });
     }
 
     this.invalidateUserEconomyCaches(senderId);

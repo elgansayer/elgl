@@ -1,9 +1,11 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { CrashReportService } from './crash-report.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { EscrowController } from './escrow.controller';
 import { EscrowExceptionFilter } from './escrow-exception.filter';
 import { EscrowService } from './escrow.service';
+import { CrashReportService } from './crash-report.service';
 
 // Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
 jest.mock('./sanitise-escrow.helper', () => ({

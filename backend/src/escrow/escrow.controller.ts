@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
@@ -9,6 +8,7 @@ import {
   Post,
   Query,
   Req,
+  UseFilters,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -27,8 +27,12 @@ import {
   ApiInternalServerErrorResponse,
 } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { CrashReportService } from './crash-report.service';
+import { EscrowExceptionFilter } from './escrow-exception.filter';
 import { EscrowService } from './escrow.service';
+import { CrashReportService } from './crash-report.service';
 import {
+  AcknowledgeCrashReportDto,
   CreateEscrowHoldDto,
   ReleaseEscrowDto,
   RefundEscrowDto,
@@ -45,6 +49,7 @@ interface AuthenticatedRequest {
 @ApiTags('Escrow Payments')
 @Controller('escrow')
 @UseGuards(SupabaseAuthGuard)
+@UseFilters(EscrowExceptionFilter)
 @ApiBearerAuth()
 export class EscrowController {
   constructor(
@@ -337,5 +342,66 @@ export class EscrowController {
   resetCircuitBreaker(): { reset: boolean } {
     this.escrowService.resetCircuitBreaker();
     return { reset: true };
+  }
+
+  @Get('crash-reports')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'List unresolved crash reports for escrow service (admin)',
+    description:
+      'Returns all unresolved crash reports for the escrow service, ordered by most recent first. Used for admin triage of escrow service errors.',
+  })
+  @ApiOkResponse({ description: 'List of crash reports' })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+  async listCrashReports() {
+    return this.crashReportService.listUnresolved();
+  }
+
+  @Post('crash-reports/acknowledge')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Acknowledge a crash report (admin)',
+    description:
+      'Marks a crash report as acknowledged by an administrator after reviewing it.',
+  })
+  @ApiBody({ type: AcknowledgeCrashReportDto })
+  @ApiOkResponse({
+    description: 'Crash report acknowledged',
+    schema: {
+      properties: {
+        acknowledged: { type: 'boolean', example: true },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+  async acknowledgeCrashReport(
+    @Body() dto: AcknowledgeCrashReportDto,
+  ): Promise<{ acknowledged: boolean }> {
+    const result = await this.crashReportService.acknowledgeReport(dto.report_id);
+    return { acknowledged: result };
+  }
+
+  @Post('crash-reports/resolve')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Resolve a crash report (admin)',
+    description:
+      'Marks a crash report as resolved by an administrator after the underlying issue has been fixed.',
+  })
+  @ApiBody({ type: AcknowledgeCrashReportDto })
+  @ApiOkResponse({
+    description: 'Crash report resolved',
+    schema: {
+      properties: {
+        resolved: { type: 'boolean', example: true },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+  async resolveCrashReport(
+    @Body() dto: AcknowledgeCrashReportDto,
+  ): Promise<{ resolved: boolean }> {
+    const result = await this.crashReportService.resolveReport(dto.report_id);
+    return { resolved: result };
   }
 }

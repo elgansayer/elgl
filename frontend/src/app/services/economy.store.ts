@@ -99,25 +99,32 @@ export class EconomyStore {
     this.isLoading.set(true);
     try {
       if (!this.authService.currentUser() || !this.authService.getAccessToken()) {
+        this.isLoading.set(false);
         return;
       }
-      const [cat, bal, blocked] = await Promise.all([
-        firstValueFrom(
-          this.http.get<VirtualGift[]>(`${this.baseUrl}/catalog`, { headers: this.getHeaders() }),
-        ),
-        firstValueFrom(
-          this.http.get<{ coins_balance: number }>(`${this.baseUrl}/balance`, {
-            headers: this.getHeaders(),
-          }),
-        ),
-        firstValueFrom(
-          this.http.get<string[]>(`${this.safetyUrl}/blocked-ids`, { headers: this.getHeaders() }),
-        ),
-      ]);
 
-      this.catalog.set(cat);
-      this.coinsBalance.set(bal.coins_balance);
-      this.blockedUserIds.set(new Set(blocked));
+      // Load each independently so one failure does not block the others
+      const loadCatalog = firstValueFrom(
+        this.http.get<VirtualGift[]>(`${this.baseUrl}/catalog`, { headers: this.getHeaders() }),
+      ).then((cat) => this.catalog.set(cat)).catch((e) => {
+        console.error('Error loading catalog:', e);
+      });
+
+      const loadBalance = firstValueFrom(
+        this.http.get<{ coins_balance: number }>(`${this.baseUrl}/balance`, {
+          headers: this.getHeaders(),
+        }),
+      ).then((bal) => this.coinsBalance.set(bal.coins_balance)).catch((e) => {
+        console.error('Error loading balance:', e);
+      });
+
+      const loadBlocked = firstValueFrom(
+        this.http.get<string[]>(`${this.safetyUrl}/blocked-ids`, { headers: this.getHeaders() }),
+      ).then((blocked) => this.blockedUserIds.set(new Set(blocked))).catch((e) => {
+        console.error('Error loading blocked users:', e);
+      });
+
+      await Promise.allSettled([loadCatalog, loadBalance, loadBlocked]);
     } catch (e) {
       console.error('Error loading economy/safety data:', e);
     } finally {
