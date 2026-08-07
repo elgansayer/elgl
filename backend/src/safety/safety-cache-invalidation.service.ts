@@ -74,10 +74,7 @@ export class SafetyCacheInvalidationService {
         );
       }
     } catch (err) {
-      this.logger.error(
-        'Failed to invalidate trust & safety caches',
-        err,
-      );
+      this.logger.error('Failed to invalidate trust & safety caches', err);
     }
   }
 
@@ -171,7 +168,10 @@ export class SafetyCacheInvalidationService {
     return deleted;
   }
 
-  private async deleteByPattern(redis: Redis, pattern: string): Promise<number> {
+  private async deleteByPattern(
+    redis: Redis,
+    pattern: string,
+  ): Promise<number> {
     const keys = await redis.keys(pattern);
     if (keys.length === 0) {
       return 0;

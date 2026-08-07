@@ -120,7 +120,7 @@ describe('SafetyCacheInvalidationService', () => {
     it('should handle scan with multiple iterations', async () => {
       // admin:users:list:* scan: two iterations (cursor '1' then '0')
       // admin:blocks:list:* scan: one iteration (default mock returns ['0', []])
-      (mockRedis.scan as jest.Mock)
+      mockRedis.scan
         .mockResolvedValueOnce(['1', ['admin:users:list:1:20:']])
         .mockResolvedValueOnce(['0', ['admin:users:list:2:20:']]);
       mockRedis.del
@@ -189,7 +189,7 @@ describe('SafetyCacheInvalidationService', () => {
   describe('SCAN-based deletion (deleteByScan)', () => {
     it('should iterate until cursor returns 0 and accumulate deleted count', async () => {
       // admin:users:list:* scan: 2 iterations
-      (mockRedis.scan as jest.Mock)
+      mockRedis.scan
         .mockResolvedValueOnce(['5', ['key1', 'key2']])
         .mockResolvedValueOnce(['0', ['key3']]);
       // admin:blocks:list:* scan: 1 iteration (default mock)
