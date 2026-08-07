@@ -84,6 +84,7 @@ All endpoints are rate-limited via \`@nestjs/throttler\`. Check individual endpo
     .addTag('Admin - Users', 'Administrative user management operations')
     .addTag('Admin - Blocks', 'Administrative block management operations')
     .addTag('Moderation', 'Content moderation and reporting operations')
+    .addTag('Video Classrooms', 'Video classroom and direct call operations powered by LiveKit WebRTC SFU: create, join, end, list active rooms, and get room details')
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, documentFactory);
