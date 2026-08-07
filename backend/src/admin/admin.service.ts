@@ -5,6 +5,8 @@ import { ToggleVipDto } from './dto/toggle-vip.dto';
 import {
   AdminUserListResult,
   AdminUserSummary,
+  AdminBlockEntry,
+  AdminBlocksListResult,
   LoginHistoryEntry,
 } from './interfaces/admin-user.interface';
 
@@ -123,5 +125,63 @@ export class AdminService {
       );
       throw new NotFoundException(`Unable to warn user ${targetUserId}`);
     }
+  }
+
+  async listAllBlocks(page = 1, pageSize = 20): Promise<AdminBlocksListResult> {
+    const supabase = this.supabaseService.getClient();
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data, error, count } = await supabase
+      .from('blocks')
+      .select(
+        'id, blocker_id, blocked_id, created_at, blocker:blocker_id ( display_name, avatar_url ), blocked:blocked_id ( display_name, avatar_url )',
+        { count: 'exact' },
+      )
+      .order('created_at', { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      this.logger.warn(`Failed to list blocks: ${error.message}`);
+      return { blocks: [], total: 0, page, pageSize };
+    }
+
+    const blocks: AdminBlockEntry[] = (data ?? []).map(
+      (row: Record<string, unknown>) => {
+        const blocker = row.blocker as {
+          display_name?: string;
+          avatar_url?: string;
+        } | null;
+        const blocked = row.blocked as {
+          display_name?: string;
+          avatar_url?: string;
+        } | null;
+        return {
+          id: row.id as string,
+          blocker_id: row.blocker_id as string,
+          blocked_id: row.blocked_id as string,
+          blocker_name: blocker?.display_name ?? null,
+          blocked_name: blocked?.display_name ?? null,
+          blocker_avatar: blocker?.avatar_url ?? null,
+          blocked_avatar: blocked?.avatar_url ?? null,
+          created_at: row.created_at as string,
+        };
+      },
+    );
+
+    return { blocks, total: count ?? 0, page, pageSize };
+  }
+
+  async removeBlock(blockId: string): Promise<{ success: boolean }> {
+    const supabase = this.supabaseService.getClient();
+
+    const { error } = await supabase.from('blocks').delete().eq('id', blockId);
+
+    if (error) {
+      this.logger.error(`Failed to remove block ${blockId}: ${error.message}`);
+      throw new NotFoundException(`Unable to remove block ${blockId}`);
+    }
+
+    return { success: true };
   }
 }

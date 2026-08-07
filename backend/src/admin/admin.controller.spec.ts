@@ -18,6 +18,8 @@ describe('AdminController', () => {
             listUsers: jest.fn(),
             setVipStatus: jest.fn(),
             getLoginHistory: jest.fn(),
+            listAllBlocks: jest.fn(),
+            removeBlock: jest.fn(),
           },
         },
       ],
@@ -80,6 +82,41 @@ describe('AdminController', () => {
 
       expect(adminService.getLoginHistory).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(history);
+    });
+  });
+
+  describe('listAllBlocks', () => {
+    it('delegates to AdminService.listAllBlocks with default page params', async () => {
+      const response = { blocks: [], total: 0, page: 1, pageSize: 20 };
+      (adminService.listAllBlocks as jest.Mock).mockResolvedValue(response);
+
+      const result = await controller.listAllBlocks(undefined, undefined);
+
+      expect(adminService.listAllBlocks).toHaveBeenCalledWith(1, 20);
+      expect(result).toEqual(response);
+    });
+
+    it('parses page and pageSize query params', async () => {
+      const response = { blocks: [], total: 0, page: 2, pageSize: 10 };
+      (adminService.listAllBlocks as jest.Mock).mockResolvedValue(response);
+
+      const result = await controller.listAllBlocks('2', '10');
+
+      expect(adminService.listAllBlocks).toHaveBeenCalledWith(2, 10);
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('removeBlock', () => {
+    it('delegates to AdminService.removeBlock with the block id', async () => {
+      (adminService.removeBlock as jest.Mock).mockResolvedValue({
+        success: true,
+      });
+
+      const result = await controller.removeBlock('block-42');
+
+      expect(adminService.removeBlock).toHaveBeenCalledWith('block-42');
+      expect(result).toEqual({ success: true });
     });
   });
 });

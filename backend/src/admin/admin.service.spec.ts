@@ -168,4 +168,108 @@ describe('AdminService', () => {
       expect(result).toEqual([]);
     });
   });
+
+  describe('listAllBlocks', () => {
+    it('returns paginated blocks with blocker and blocked details', async () => {
+      const blockRows = [
+        {
+          id: 'block-1',
+          blocker_id: 'user-1',
+          blocked_id: 'user-2',
+          created_at: '2026-01-01T00:00:00Z',
+          blocker: { display_name: 'Ada', avatar_url: null },
+          blocked: {
+            display_name: 'Bob',
+            avatar_url: 'https://example.com/bob.png',
+          },
+        },
+      ];
+      mockQueryBuilder.range.mockResolvedValue({
+        data: blockRows,
+        error: null,
+        count: 1,
+      });
+
+      const result = await service.listAllBlocks(1, 20);
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
+      expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 19);
+      expect(result).toEqual({
+        blocks: [
+          {
+            id: 'block-1',
+            blocker_id: 'user-1',
+            blocked_id: 'user-2',
+            blocker_name: 'Ada',
+            blocked_name: 'Bob',
+            blocker_avatar: null,
+            blocked_avatar: 'https://example.com/bob.png',
+            created_at: '2026-01-01T00:00:00Z',
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+      });
+    });
+
+    it('handles null blocker/blocked relations gracefully', async () => {
+      const blockRows = [
+        {
+          id: 'block-1',
+          blocker_id: 'user-1',
+          blocked_id: 'user-2',
+          created_at: '2026-01-01T00:00:00Z',
+          blocker: null,
+          blocked: null,
+        },
+      ];
+      mockQueryBuilder.range.mockResolvedValue({
+        data: blockRows,
+        error: null,
+        count: 1,
+      });
+
+      const result = await service.listAllBlocks(1, 20);
+
+      expect(result.blocks[0].blocker_name).toBeNull();
+      expect(result.blocks[0].blocked_name).toBeNull();
+      expect(result.blocks[0].blocker_avatar).toBeNull();
+    });
+
+    it('returns an empty result when the query errors', async () => {
+      mockQueryBuilder.range.mockResolvedValue({
+        data: null,
+        error: { message: 'boom' },
+        count: null,
+      });
+
+      const result = await service.listAllBlocks(1, 20);
+
+      expect(result).toEqual({ blocks: [], total: 0, page: 1, pageSize: 20 });
+    });
+  });
+
+  describe('removeBlock', () => {
+    it('deletes the block and returns success', async () => {
+      mockQueryBuilder.delete = jest
+        .fn()
+        .mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) });
+
+      const result = await service.removeBlock('block-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
+      expect(result).toEqual({ success: true });
+    });
+
+    it('throws NotFoundException when delete fails', async () => {
+      mockQueryBuilder.delete = jest.fn().mockReturnValue({
+        eq: jest.fn().mockResolvedValue({ error: { message: 'not found' } }),
+      });
+
+      await expect(service.removeBlock('missing-block')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
 });
