@@ -38,6 +38,7 @@ import { I18nService } from './services/i18n.service';
 import { AppLanguageSelectorComponent } from './components/app-language-selector/app-language-selector.component';
 import { AppLockService } from './services/app-lock.service';
 import { GiftAnimationOverlayComponent } from './components/gift-animation-overlay/gift-animation-overlay.component';
+import { NoNetworkBannerComponent } from './components/primitives/no-network-banner/no-network-banner.component';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
@@ -58,8 +59,9 @@ function isRecord(v: unknown): v is Record<string, unknown> {
     ThemeSelectorComponent,
     FontScaleSliderComponent,
     AppLanguageSelectorComponent,
-GiftAnimationOverlayComponent,
+    GiftAnimationOverlayComponent,
     ForcedUpdateModalComponent,
+    NoNetworkBannerComponent,
   ],
   templateUrl: './app.component.html',
   host: {

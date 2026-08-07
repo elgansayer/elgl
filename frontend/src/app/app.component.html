@@ -6,6 +6,7 @@
       [storeUrl]="'https://yourapp.com/update'"
     />
   }
+  <app-no-network-banner />
   @if (authService.appLocked()) {
     <div
       class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90"

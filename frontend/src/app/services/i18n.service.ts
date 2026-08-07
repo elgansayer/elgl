@@ -1547,6 +1547,7 @@ export class I18nService {
     'pill.colour_info': 'bg-sky-500 text-white hover:bg-sky-600',
     'pill.colour_neutral': 'bg-slate-200 text-slate-800 hover:bg-slate-300',
     'card.base_classes': 'block rounded-2xl bg-surface-200 transition-all',
+    'no_network_banner.message': 'No network connection. Please check your internet.',
 
     // Daily login modal
     'daily_login_modal.title': 'Daily Login Reward',
