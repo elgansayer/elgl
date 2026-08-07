@@ -1,15 +1,17 @@
-<div class="flex w-full h-full gap-2" [class.flex-col]="true" [class.md:flex-row]="true">
+<div class="flex w-full h-full gap-2 flex-col md:flex-row" role="group" aria-label="Split screen video">
   <!-- Host Video -->
-  <div class="relative flex-1 bg-black rounded-xl overflow-hidden shadow-lg">
+  <div class="relative flex-1 bg-black rounded-xl overflow-hidden shadow-lg" role="region" [attr.aria-label]="'splitScreen.hostVideoAria' | t">
     <video
       [src]="hostVideoUrl()"
       autoplay
       playsinline
       muted
       class="w-full h-full object-cover"
+      [attr.aria-label]="'splitScreen.hostVideoAria' | t"
     ></video>
     <div
       class="absolute bottom-4 start-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md"
+      role="status"
     >
       {{ hostName() }} (Host)
     </div>
@@ -17,15 +19,17 @@
 
   <!-- Co-Host Video or Invite Placeholder -->
   @if (hasCoHost()) {
-    <div class="relative flex-1 bg-black rounded-xl overflow-hidden shadow-lg">
+    <div class="relative flex-1 bg-black rounded-xl overflow-hidden shadow-lg" role="region" [attr.aria-label]="'splitScreen.coHostVideoAria' | t">
       <video
         [src]="coHostVideoUrl()"
         autoplay
         playsinline
         class="w-full h-full object-cover"
+        [attr.aria-label]="'splitScreen.coHostVideoAria' | t"
       ></video>
       <div
         class="absolute bottom-4 start-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md"
+        role="status"
       >
         {{ coHostName() }} (Co-Host)
       </div>
@@ -36,8 +40,9 @@
     >
       <button
         (click)="onInviteClick()"
-        class="flex flex-col items-center text-slate-400 hover:text-white transition-colors p-6 rounded-xl hover:bg-slate-800"
-       [attr.aria-label]="'Invite Co-Host'">
+        class="flex flex-col items-center text-slate-400 hover:text-white transition-colors p-6 rounded-xl hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-white"
+        [attr.aria-label]="'splitScreen.inviteCoHostAria' | t"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           class="h-12 w-12 mb-3"
@@ -45,6 +50,7 @@
           viewBox="0 0 24 24"
           stroke="currentColor"
           stroke-width="2"
+          aria-hidden="true"
         >
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
         </svg>
