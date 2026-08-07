@@ -138,7 +138,10 @@ export class UsersService {
       )
       .eq('viewed_id', userId)
       .order('created_at', { ascending: false })
-      .limit(50)) as unknown as { data: ProfileVisitor[] | null; error: { message?: string } | null };
+      .limit(50)) as unknown as {
+      data: ProfileVisitor[] | null;
+      error: { message?: string } | null;
+    };
 
     if (response.error) {
       throw new InternalServerErrorException('Failed to fetch visitors');
