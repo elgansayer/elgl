@@ -1636,8 +1636,14 @@ export class I18nService {
     'gdpr.deleteConfirmLabel': 'I understand that this action is irreversible.',
     'gdpr.deleteAccountBtn': 'Delete My Account',
     'gdpr.deleteSuccess': 'Account deletion initiated. Check your email for confirmation.',
+    'gdpr.cancelDeletionSection': 'Cancel Account Deletion',
+    'gdpr.cancelDeletionInfo': 'Your account is currently scheduled for deletion. You can cancel this request during the 30-day grace period.',
+    'gdpr.cancelDeletionBtn': 'Cancel Account Deletion',
+    'gdpr.cancelDeletionSuccess': 'Account deletion has been cancelled successfully.',
 
     'culturalGuide.title': 'Cultural Etiquette Guide',
+    'settings.gdprHub': 'Personal Data & GDPR',
+    'settings.gdprHubDesc': 'Request your data archive or manage account deletion.',
     'settings.linkedAccountsSection': 'Linked Accounts',
     'settings.linkedAccounts.title': 'Linked Accounts',
     'settings.linkedAccounts.subtitle': 'Connect your social accounts to sign in with multiple providers and keep your account secure.',
@@ -1689,9 +1695,6 @@ export class I18nService {
     'settings.languageSelectLabel': 'Interface language',
     'settings.languageChangeDescription':
       'Choose the language used throughout HelloTalk. This will update the UI text immediately.',
-    'settings.legalSection': 'Legal',
-    'settings.termsOfService': 'Terms of Service',
-    'settings.privacyPolicy': 'Privacy Policy',
     'settings.messageFiltersSection': 'Message Filters',
     'settings.messageFiltersDescription':
       'Restrict who can send you an initial message based on their profile. These filters only apply to first-time messages.',
