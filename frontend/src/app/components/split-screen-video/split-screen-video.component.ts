@@ -1,9 +1,9 @@
 import { Component, input, computed, output } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-split-screen-video',
-  imports: [CommonModule],
+  imports: [TranslatePipe],
   templateUrl: './split-screen-video.component.html',
 })
 export class SplitScreenVideoComponent {
