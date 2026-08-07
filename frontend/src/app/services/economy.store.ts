@@ -388,7 +388,13 @@ export class EconomyStore {
     });
   }
 
-  private readonly validAnimationTypes = new Set<string>(['float', 'confetti', 'premium', 'sparkle', 'hearts']);
+  private readonly validAnimationTypes = new Set<string>([
+    'float',
+    'confetti',
+    'premium',
+    'sparkle',
+    'hearts',
+  ]);
   private sanitiseAnimationType(raw: string): GiftAnimationType {
     if (this.isAnimationType(raw)) return raw;
     return 'float';
@@ -458,9 +464,7 @@ export class EconomyStore {
       if (res.success) {
         this.coinsBalance.set(res.coins_remaining);
         this.stickerPacks.update((packs) =>
-          packs.map((p) =>
-            p.id === packId ? { ...p, owned: true } : p,
-          ),
+          packs.map((p) => (p.id === packId ? { ...p, owned: true } : p)),
         );
         showToast(
           this.i18n.translate('sticker.purchaseSuccess', {
@@ -481,7 +485,7 @@ export class EconomyStore {
     return this.stickerPacks()
       .filter((pack) => pack.owned && pack.sticker_urls && pack.sticker_urls.length > 0)
       .flatMap((pack) =>
-        pack.sticker_urls.map((url) => ({
+        (pack.sticker_urls ?? []).map((url) => ({
           id: `${pack.id}_${url.split('/').pop() ?? url}`,
           url,
           pack_name: pack.name,

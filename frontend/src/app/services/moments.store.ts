@@ -46,6 +46,7 @@ export interface MomentRecord {
   comments?: MomentComment[];
 
   // Translation cache managed by moments-feed component
+  isTranslating?: boolean;
 }
 
 @Injectable({
@@ -68,7 +69,10 @@ export class MomentsStore {
     };
   }
 
-  async loadFeed(filter?: 'All' | 'Classmates' | 'Following' | 'For You', lang?: string): Promise<void> {
+  async loadFeed(
+    filter?: 'All' | 'Classmates' | 'Following' | 'For You',
+    lang?: string,
+  ): Promise<void> {
     const targetFilter = filter ?? this.activeFilter();
     this.activeFilter.set(targetFilter);
     this.isLoading.set(true);

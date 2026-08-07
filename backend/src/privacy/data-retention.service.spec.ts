@@ -125,6 +125,33 @@ describe('DataRetentionService', () => {
       expect(mockQueryBuilder.update).toHaveBeenCalled();
     });
 
+    it('wipes coin-economy tables for deleted users', async () => {
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: [{ id: 'user-abc-123' }],
+        error: null,
+      });
+      const mockDeleteBuilder = {
+        delete: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      };
+      const calledTables: string[] = [];
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'users') {
+          return mockQueryBuilder;
+        }
+        calledTables.push(table);
+        return mockDeleteBuilder;
+      });
+
+      await service.finaliseAccountDeletions();
+
+      // Verify economy tables are included in the wipe
+      expect(calledTables).toContain('coin_purchases');
+      expect(calledTables).toContain('gift_transactions');
+      expect(calledTables).toContain('user_sticker_packs');
+      expect(calledTables).toContain('user_statistics');
+    });
+
     it('handles error when querying users to delete', async () => {
       mockQueryBuilder.limit.mockResolvedValue({
         data: null,

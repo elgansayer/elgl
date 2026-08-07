@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import * as jwt from 'jsonwebtoken';
 import Redis from 'ioredis';
 
@@ -12,7 +13,11 @@ export class CentrifugoService implements OnModuleInit {
   private clientConnectionRateWindowSec: number;
   private redis: Redis | null = null;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @InjectPinoLogger(CentrifugoService.name)
+    private readonly logger: PinoLogger,
+  ) {
     this.connectionRateLimitPerSec = this.parseLimit(
       this.configService.get<string>('CENTRIFUGO_CONNECTION_RATE_LIMIT'),
       5,
@@ -129,7 +134,10 @@ export class CentrifugoService implements OnModuleInit {
       });
       return response.ok;
     } catch (e) {
-      console.error('Centrifugo publish error:', e);
+      this.logger.error(
+        { error: (e as Error).message, channel },
+        'Centrifugo publish error',
+      );
       return false;
     }
   }

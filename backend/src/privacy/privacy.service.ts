@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ArchiveRequestDto } from './dto/archive-request.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
+import { scrubCoinPurchasesForArchive } from '../economy/sanitise-economy.helper';
 
 @Injectable()
 export class PrivacyService {
@@ -182,6 +183,44 @@ export class PrivacyService {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
+// 7) Coin purchases (GDPR: receipt tokens + transaction IDs scrubbed)
+    const { data: coinPurchases } = await supabase
+      .from('coin_purchases')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    // 8) Gift transactions (sent and received)
+    const { data: sentGifts } = await supabase
+      .from('gift_transactions')
+      .select('*')
+      .eq('sender_id', userId)
+      .order('created_at', { ascending: false });
+
+    const { data: receivedGifts } = await supabase
+      .from('gift_transactions')
+      .select('*')
+      .eq('receiver_id', userId)
+      .order('created_at', { ascending: false });
+
+    const giftTransactions = [
+      ...(sentGifts ?? []).map((g: Record<string, unknown>) => ({
+        ...g,
+        direction: 'sent',
+      })),
+      ...(receivedGifts ?? []).map((g: Record<string, unknown>) => ({
+        ...g,
+        direction: 'received',
+      })),
+    ];
+
+    // 10) Sticker pack ownership
+    const { data: userStickerPacks } = await supabase
+      .from('user_sticker_packs')
+      .select('*')
+      .eq('user_id', userId)
+      .order('unlocked_at', { ascending: false });
+
     return {
       export_generated_at: new Date().toISOString(),
       user_profile: userProfile ?? null,
@@ -192,6 +231,9 @@ export class PrivacyService {
       decks: userDecks ?? [],
       deck_flashcards: userDeckFlashcards,
       favourites: userFavourites ?? [],
+      coin_purchases: scrubCoinPurchasesForArchive(coinPurchases ?? []),
+      gift_transactions: giftTransactions ?? [],
+      user_sticker_packs: userStickerPacks ?? [],
     };
   }
 }
