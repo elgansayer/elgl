@@ -36,7 +36,9 @@ describe('EscrowService', () => {
         EscrowService,
         {
           provide: SupabaseService,
-          useValue: { getClient: jest.fn().mockReturnValue(mockSupabaseClient) },
+          useValue: {
+            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+          },
         },
         {
           provide: MonetisationService,
@@ -69,8 +71,13 @@ describe('EscrowService', () => {
     });
 
     it('should throw if payee does not exist', async () => {
-      mockQueryBuilder.single.mockResolvedValue({ data: null, error: { message: 'Not found' } });
-      await expect(service.createEscrow(payerId, dto)).rejects.toThrow(NotFoundException);
+      mockQueryBuilder.single.mockResolvedValue({
+        data: null,
+        error: { message: 'Not found' },
+      });
+      await expect(service.createEscrow(payerId, dto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should create escrow successfully', async () => {
@@ -93,7 +100,10 @@ describe('EscrowService', () => {
 
       const result = await service.createEscrow(payerId, dto);
 
-      expect(monetisationService.deductCoins).toHaveBeenCalledWith(payerId, 100);
+      expect(monetisationService.deductCoins).toHaveBeenCalledWith(
+        payerId,
+        100,
+      );
       expect(result).toEqual({
         id: 'escrow-1',
         status: 'held',
@@ -105,12 +115,17 @@ describe('EscrowService', () => {
     it('should refund coins if escrow insert fails', async () => {
       mockQueryBuilder.single
         .mockResolvedValueOnce({ data: { id: 'payee-1' }, error: null })
-        .mockResolvedValueOnce({ data: null, error: { message: 'Insert failed' } });
+        .mockResolvedValueOnce({
+          data: null,
+          error: { message: 'Insert failed' },
+        });
 
       (monetisationService.deductCoins as jest.Mock).mockResolvedValue(50);
       (monetisationService.addCoins as jest.Mock).mockResolvedValue(150);
 
-      await expect(service.createEscrow(payerId, dto)).rejects.toThrow(BadRequestException);
+      await expect(service.createEscrow(payerId, dto)).rejects.toThrow(
+        BadRequestException,
+      );
       expect(monetisationService.addCoins).toHaveBeenCalledWith(payerId, 100);
     });
   });
@@ -133,8 +148,13 @@ describe('EscrowService', () => {
     };
 
     it('should throw if escrow not found', async () => {
-      mockQueryBuilder.single.mockResolvedValue({ data: null, error: { message: 'Not found' } });
-      await expect(service.releaseEscrow(userId, escrowId)).rejects.toThrow(NotFoundException);
+      mockQueryBuilder.single.mockResolvedValue({
+        data: null,
+        error: { message: 'Not found' },
+      });
+      await expect(service.releaseEscrow(userId, escrowId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw if user is not the payer', async () => {
@@ -142,7 +162,9 @@ describe('EscrowService', () => {
         data: { ...heldEscrow, payer_id: 'other-user' },
         error: null,
       });
-      await expect(service.releaseEscrow(userId, escrowId)).rejects.toThrow(ForbiddenException);
+      await expect(service.releaseEscrow(userId, escrowId)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should throw if escrow is not in held status', async () => {
@@ -150,11 +172,16 @@ describe('EscrowService', () => {
         data: { ...heldEscrow, status: 'released' },
         error: null,
       });
-      await expect(service.releaseEscrow(userId, escrowId)).rejects.toThrow(ConflictException);
+      await expect(service.releaseEscrow(userId, escrowId)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should release escrow successfully', async () => {
-      mockQueryBuilder.single.mockResolvedValue({ data: heldEscrow, error: null });
+      mockQueryBuilder.single.mockResolvedValue({
+        data: heldEscrow,
+        error: null,
+      });
       (monetisationService.addCoins as jest.Mock).mockResolvedValue(200);
 
       const result = await service.releaseEscrow(userId, escrowId);
@@ -192,8 +219,13 @@ describe('EscrowService', () => {
     };
 
     it('should throw if escrow not found', async () => {
-      mockQueryBuilder.single.mockResolvedValue({ data: null, error: { message: 'Not found' } });
-      await expect(service.refundEscrow(userId, escrowId)).rejects.toThrow(NotFoundException);
+      mockQueryBuilder.single.mockResolvedValue({
+        data: null,
+        error: { message: 'Not found' },
+      });
+      await expect(service.refundEscrow(userId, escrowId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw if user is not the payer', async () => {
@@ -201,7 +233,9 @@ describe('EscrowService', () => {
         data: { ...heldEscrow, payer_id: 'other-user' },
         error: null,
       });
-      await expect(service.refundEscrow(userId, escrowId)).rejects.toThrow(ForbiddenException);
+      await expect(service.refundEscrow(userId, escrowId)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should throw if escrow is not in held status', async () => {
@@ -209,11 +243,16 @@ describe('EscrowService', () => {
         data: { ...heldEscrow, status: 'refunded' },
         error: null,
       });
-      await expect(service.refundEscrow(userId, escrowId)).rejects.toThrow(ConflictException);
+      await expect(service.refundEscrow(userId, escrowId)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should refund escrow successfully', async () => {
-      mockQueryBuilder.single.mockResolvedValue({ data: heldEscrow, error: null });
+      mockQueryBuilder.single.mockResolvedValue({
+        data: heldEscrow,
+        error: null,
+      });
       (monetisationService.addCoins as jest.Mock).mockResolvedValue(150);
 
       const result = await service.refundEscrow(userId, escrowId);
@@ -237,8 +276,13 @@ describe('EscrowService', () => {
     const userId = 'payer-1';
 
     it('should throw if escrow not found', async () => {
-      mockQueryBuilder.single.mockResolvedValue({ data: null, error: { message: 'Not found' } });
-      await expect(service.getEscrow(userId, escrowId)).rejects.toThrow(NotFoundException);
+      mockQueryBuilder.single.mockResolvedValue({
+        data: null,
+        error: { message: 'Not found' },
+      });
+      await expect(service.getEscrow(userId, escrowId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw if user is not a participant', async () => {
@@ -246,12 +290,23 @@ describe('EscrowService', () => {
         data: { id: escrowId, payer_id: 'other-1', payee_id: 'other-2' },
         error: null,
       });
-      await expect(service.getEscrow(userId, escrowId)).rejects.toThrow(ForbiddenException);
+      await expect(service.getEscrow(userId, escrowId)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should return escrow for payer', async () => {
-      const escrowData = { id: escrowId, payer_id: userId, payee_id: 'payee-1', amount_coins: 50, status: 'held' };
-      mockQueryBuilder.single.mockResolvedValue({ data: escrowData, error: null });
+      const escrowData = {
+        id: escrowId,
+        payer_id: userId,
+        payee_id: 'payee-1',
+        amount_coins: 50,
+        status: 'held',
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: escrowData,
+        error: null,
+      });
       const result = await service.getEscrow(userId, escrowId);
       expect(result).toEqual(escrowData);
     });
@@ -262,16 +317,30 @@ describe('EscrowService', () => {
 
     it('should return escrow list with count', async () => {
       const escrowData = [
-        { id: 'escrow-1', payer_id: userId, payee_id: 'payee-1', amount_coins: 50, status: 'held' },
+        {
+          id: 'escrow-1',
+          payer_id: userId,
+          payee_id: 'payee-1',
+          amount_coins: 50,
+          status: 'held',
+        },
       ];
-      mockQueryBuilder.range.mockResolvedValue({ data: escrowData, error: null, count: 1 });
+      mockQueryBuilder.range.mockResolvedValue({
+        data: escrowData,
+        error: null,
+        count: 1,
+      });
 
       const result = await service.listEscrows(userId);
       expect(result).toEqual({ escrows: escrowData, total: 1 });
     });
 
     it('should handle empty results', async () => {
-      mockQueryBuilder.range.mockResolvedValue({ data: [], error: null, count: 0 });
+      mockQueryBuilder.range.mockResolvedValue({
+        data: [],
+        error: null,
+        count: 0,
+      });
       const result = await service.listEscrows(userId);
       expect(result).toEqual({ escrows: [], total: 0 });
     });

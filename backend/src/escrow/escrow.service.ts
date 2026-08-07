@@ -123,7 +123,7 @@ export class EscrowService {
     const { error: updateError } = await supabase
       .from('escrow_transactions')
       .update({
-        status: 'released' as EscrowStatus,
+        status: 'released',
         released_at: now,
         updated_at: now,
       })
@@ -162,9 +162,7 @@ export class EscrowService {
     const escrow = await this.findEscrowOrThrow(escrowId);
 
     if (escrow.payer_id !== userId) {
-      throw new ForbiddenException(
-        'Only the payer can refund escrowed funds.',
-      );
+      throw new ForbiddenException('Only the payer can refund escrowed funds.');
     }
 
     if (escrow.status !== 'held') {
@@ -179,7 +177,7 @@ export class EscrowService {
     const { error: updateError } = await supabase
       .from('escrow_transactions')
       .update({
-        status: 'refunded' as EscrowStatus,
+        status: 'refunded',
         refunded_at: now,
         updated_at: now,
       })
@@ -211,7 +209,10 @@ export class EscrowService {
    * Get a single escrow transaction by ID. The caller must be
    * either the payer or the payee.
    */
-  async getEscrow(userId: string, escrowId: string): Promise<EscrowTransaction> {
+  async getEscrow(
+    userId: string,
+    escrowId: string,
+  ): Promise<EscrowTransaction> {
     const escrow = await this.findEscrowOrThrow(escrowId);
 
     if (escrow.payer_id !== userId && escrow.payee_id !== userId) {
@@ -245,7 +246,7 @@ export class EscrowService {
     }
 
     return {
-      escrows: (data ?? []) as EscrowTransaction[],
+      escrows: data ?? [],
       total: count ?? 0,
     };
   }
@@ -262,11 +263,9 @@ export class EscrowService {
       .single();
 
     if (error || !data) {
-      throw new NotFoundException(
-        `Escrow transaction ${escrowId} not found.`,
-      );
+      throw new NotFoundException(`Escrow transaction ${escrowId} not found.`);
     }
 
-    return data as EscrowTransaction;
+    return data;
   }
 }

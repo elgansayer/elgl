@@ -12,7 +12,11 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { EscrowService } from './escrow.service';
-import { CreateEscrowDto, ReleaseEscrowDto, RefundEscrowDto } from './dto/escrow.dto';
+import {
+  CreateEscrowDto,
+  ReleaseEscrowDto,
+  RefundEscrowDto,
+} from './dto/escrow.dto';
 
 @Controller('escrow')
 @UseGuards(SupabaseAuthGuard)

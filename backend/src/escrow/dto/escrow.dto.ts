@@ -1,4 +1,11 @@
-import { IsString, IsInt, Min, MaxLength, IsOptional, Max } from 'class-validator';
+import {
+  IsString,
+  IsInt,
+  Min,
+  MaxLength,
+  IsOptional,
+  Max,
+} from 'class-validator';
 
 export class CreateEscrowDto {
   @IsString()

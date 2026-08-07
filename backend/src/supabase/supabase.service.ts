@@ -1585,6 +1585,48 @@ export interface Database {
         }>;
         Relationships: [];
       };
+      escrow_transactions: {
+        Row: {
+          id: string;
+          payer_id: string;
+          payee_id: string;
+          amount_coins: number;
+          status: 'held' | 'released' | 'refunded' | 'disputed';
+          description: string | null;
+          reference_id: string | null;
+          created_at: string;
+          updated_at: string;
+          released_at: string | null;
+          refunded_at: string | null;
+        };
+        Insert: Partial<{
+          id?: string;
+          payer_id: string;
+          payee_id: string;
+          amount_coins: number;
+          status?: 'held' | 'released' | 'refunded' | 'disputed';
+          description?: string | null;
+          reference_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          released_at?: string | null;
+          refunded_at?: string | null;
+        }>;
+        Update: Partial<{
+          id?: string;
+          payer_id?: string;
+          payee_id?: string;
+          amount_coins?: number;
+          status?: 'held' | 'released' | 'refunded' | 'disputed';
+          description?: string | null;
+          reference_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          released_at?: string | null;
+          refunded_at?: string | null;
+        }>;
+        Relationships: [];
+      };
       blocks: {
         Row: BlockRow;
         Insert: {
