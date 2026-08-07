@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ReportUserDto } from './dto/report-user.dto';
 import { ModerationActionDto } from './dto/moderation-action.dto';
@@ -26,6 +26,60 @@ export interface ModerationDegradedResponse {
   error?: string;
 }
 
+const DATING_FLAGS: ReadonlyArray<string> = [
+  'dating',
+  'date',
+  'relationship',
+  'boyfriend',
+  'girlfriend',
+  'love',
+  'marry',
+  'marriage',
+  'romance',
+  'romantic',
+  'sex',
+  'hookup',
+  'flirt',
+  'hot',
+  'sexy',
+  'single',
+  'looking for',
+  'meetup',
+  'in a relationship',
+  'partner',
+  'romantically',
+  'kiss',
+  'kissing',
+  'date me',
+  'looking for a man',
+  'looking for a woman',
+  'man for me',
+  'woman for me',
+  'marry me',
+  'fwb',
+  'friends with benefits',
+  'casual sex',
+  'affair',
+  'dinner',
+  'coffee',
+  'drinks',
+  'hang out',
+  'meet up',
+  'hook up',
+  'one night',
+  'sexting',
+  'daddy',
+  'mommy',
+  'horny',
+] as const;
+
+const DATING_REGEXPS: ReadonlyArray<RegExp> = [...new Set(DATING_FLAGS)].map(
+  (flag) => {
+    const escaped = flag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`\\b${escaped}\\b`, 'i');
+  },
+);
+
 @Injectable()
 export class ModerationService {
   private readonly logger = new Logger(ModerationService.name);
@@ -47,8 +101,6 @@ export class ModerationService {
         status,
         reason_category,
         created_at,
-        reporter_id,
-        reported_user_id,
         reported_moment_id,
         description,
         reporter:reporter_id ( id, display_name ),
@@ -59,6 +111,13 @@ export class ModerationService {
 
     if (status) {
       query = query.eq('status', status);
+    }
+
+    // DB-level filtering: profile type requires reported_user_id, moment type requires reported_moment_id
+    if (type === 'profile') {
+      query = query.not('reported_user_id', 'is', null);
+    } else {
+      query = query.not('reported_moment_id', 'is', null);
     }
 
     try {
@@ -85,28 +144,27 @@ export class ModerationService {
         };
       });
 
-      if (type === 'profile') {
-        return items.filter((item) => item.reported_user != null);
-      }
+      // Batch-fetch moment content for all moment items in a single query
+      if (type !== 'profile') {
+        const momentIds = items
+          .map((item) => item.reportedMomentId)
+          .filter((id): id is string => id != null);
 
-      // For moment reports, fetch the attached moment content
-      const momentItems = items.filter((item) => item.reportedMomentId != null);
-
-      const hydrated: ModerationItem[] = [];
-      for (const item of momentItems) {
-        const moment = await this.getMomentContent(
-          item.reportedMomentId as string,
-        );
-        if (moment) {
-          hydrated.push({
-            ...item,
-            moment_content: moment.content_text,
-            momentAuthorName: moment.authorName,
-          });
+        if (momentIds.length > 0) {
+          const momentContentMap = await this.batchGetMomentContent(momentIds);
+          for (const item of items) {
+            if (item.reportedMomentId) {
+              const moment = momentContentMap.get(item.reportedMomentId);
+              if (moment) {
+                item.moment_content = moment.content_text;
+                item.momentAuthorName = moment.authorName;
+              }
+            }
+          }
         }
       }
 
-      return hydrated;
+      return items;
     } catch (err) {
       this.logger.warn(
         'Failed to fetch moderation items, returning empty result',
@@ -116,28 +174,37 @@ export class ModerationService {
     }
   }
 
-  private async getMomentContent(
-    momentId: string,
-  ): Promise<{ content_text: string; authorName: string | null } | null> {
+  private async batchGetMomentContent(
+    momentIds: string[],
+  ): Promise<Map<string, { content_text: string; authorName: string | null }>> {
+    const result = new Map<
+      string,
+      { content_text: string; authorName: string | null }
+    >();
+
     const { data, error } = await this.supabase
       .from('moments')
-      .select('content_text, author_id, author:author_id ( display_name )')
-      .eq('id', momentId)
-      .maybeSingle();
+      .select('id, content_text, author_id, author:author_id ( display_name )')
+      .in('id', momentIds);
 
     if (error || !data) {
-      return null;
+      return result;
     }
 
-    const row = data as {
+    const rows = data as Array<{
+      id: string;
       content_text: string;
       author: { display_name?: string } | null;
-    };
+    }>;
 
-    return {
-      content_text: row.content_text ?? '',
-      authorName: row.author?.display_name ?? null,
-    };
+    for (const row of rows) {
+      result.set(row.id, {
+        content_text: row.content_text ?? '',
+        authorName: row.author?.display_name ?? null,
+      });
+    }
+
+    return result;
   }
 
   async reportUser(
@@ -260,76 +327,27 @@ export class ModerationService {
 
       const fullText = (combinedText + ' ' + momentText).toLowerCase();
 
-      const datingFlags = [
-        'dating',
-        'date',
-        'relationship',
-        'boyfriend',
-        'girlfriend',
-        'love',
-        'marry',
-        'marriage',
-        'romance',
-        'romantic',
-        'sex',
-        'hookup',
-        'flirt',
-        'hot',
-        'sexy',
-        'single',
-        'looking for',
-        'meetup',
-        'in a relationship',
-        'partner',
-        'romantically',
-        'kiss',
-        'kissing',
-        'date me',
-        'looking for a man',
-        'looking for a woman',
-        'man for me',
-        'woman for me',
-        'marry me',
-        'fwb',
-        'friends with benefits',
-        'casual sex',
-        'affair',
-        'dinner',
-        'coffee',
-        'drinks',
-        'hang out',
-        'meet up',
-        'hook up',
-        'one night',
-        'sexting',
-        'daddy',
-        'mommy',
-        'horny',
-      ];
-
       const flags: string[] = [];
-      const regexFlags = [...new Set(datingFlags)];
+      const uniqueFlags = [...new Set(DATING_FLAGS)];
 
-      for (const flag of regexFlags) {
-        const escaped = flag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(`\\b${escaped}\\b`, 'i');
-        if (regex.test(fullText)) {
-          flags.push(flag);
+      for (let i = 0; i < uniqueFlags.length; i++) {
+        if (DATING_REGEXPS[i].test(fullText)) {
+          flags.push(uniqueFlags[i]);
         }
       }
 
-      const uniqueFlags = [...new Set(flags)];
-      const hitRatio = uniqueFlags.length / regexFlags.length;
+      const matchedFlags = [...new Set(flags)];
+      const hitRatio = matchedFlags.length / uniqueFlags.length;
       const riskScore = Math.min(
         100,
         Math.round(
           hitRatio * 100 +
-            (uniqueFlags.length > 5 ? 20 : 0) +
-            (uniqueFlags.length > 10 ? 10 : 0),
+            (matchedFlags.length > 5 ? 20 : 0) +
+            (matchedFlags.length > 10 ? 10 : 0),
         ),
       );
 
-      return { riskScore, flags: uniqueFlags };
+      return { riskScore, flags: matchedFlags };
     } catch (err) {
       this.logger.warn(`Failed to analyse user ${userId}, degraded`, err);
       return { riskScore: 0, flags: [] };
