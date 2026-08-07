@@ -1,119 +1,143 @@
-import { Component, inject, signal, computed, resource, afterNextRender, effect } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { Component, inject, signal, computed, resource, afterNextRender } from '@angular/core';
+import { Location } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
-import { Router } from '@angular/router';
-import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { EscrowService } from '../../services/escrow.service';
 import { NetworkStatusService } from '../../services/network-status.service';
 import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
-import type { EscrowRow, EscrowStatus, EscrowServiceType } from '../../services/escrow-offline.service';
+import { EscrowService } from '../../services/escrow.service';
 
+type EscrowStatus = 'pending' | 'released' | 'refunded' | 'disputed' | 'cancelled';
+type EscrowServiceType = 'lesson' | 'language_exchange' | 'proofreading' | 'translation' | 'other';
 type StatusFilter = 'all' | EscrowStatus;
 
-interface StatusFilterItem {
+interface StatusFilterOption {
   value: StatusFilter;
   label: string;
 }
 
 @Component({
   selector: 'app-escrow-payments',
-  imports: [DatePipe, TranslatePipe],
+  imports: [FormsModule, DatePipe, TranslatePipe],
   templateUrl: './escrow-payments.component.html',
 })
 export class EscrowPaymentsComponent {
+  private readonly location = inject(Location);
+  private readonly auth = inject(AuthService);
   private readonly i18n = inject(I18nService);
-  private readonly router = inject(Router);
-  private readonly escrowService = inject(EscrowService);
   private readonly network = inject(NetworkStatusService);
   private readonly onboardingService = inject(EscrowOnboardingService);
+  private readonly escrowService = inject(EscrowService);
 
-  readonly isOnline = this.network.isOnline;
-  readonly escrows = this.escrowService.escrows;
-  readonly loading = this.escrowService.loading;
-  readonly pendingOperationCount = this.escrowService.pendingOperationCount;
+  protected readonly isOnline = this.network.isOnline;
+  protected readonly pendingOperationCount = this.escrowService.pendingOperationCount;
 
-
-  private http = inject(HttpClient);
-  private auth = inject(AuthService);
-  private i18n = inject(I18nService);
-  private readonly joyrideService = inject(JoyrideService);
-  private readonly onboardingService = inject(EscrowOnboardingService);
-
-  /** Signal to trigger transaction list resource reload after mutations. */
-  private readonly refreshTrigger = signal(0);
-
-  readonly transactions = signal<EscrowRow[]>([]);
-  readonly loading = signal(false);
-  readonly error = signal<string | null>(null);
-  readonly successMessage = signal<string | null>(null);
   readonly selectedStatus = signal<StatusFilter>('all');
   readonly actionInProgress = signal(false);
+  readonly error = signal<string | null>(null);
+  readonly successMessage = signal<string | null>(null);
 
-  readonly statusFilters: StatusFilterItem[] = [
-    { value: 'all', label: 'escrow.filter.all' },
-    { value: 'pending', label: 'escrow.filter.pending' },
-    { value: 'released', label: 'escrow.filter.released' },
-    { value: 'refunded', label: 'escrow.filter.refunded' },
-    { value: 'disputed', label: 'escrow.filter.disputed' },
-    { value: 'cancelled', label: 'escrow.filter.cancelled' },
+  readonly statusFilters: StatusFilterOption[] = [
+    { value: 'all', label: 'escrow.status.all' },
+    { value: 'pending', label: 'escrow.status.pending' },
+    { value: 'released', label: 'escrow.status.released' },
+    { value: 'refunded', label: 'escrow.status.refunded' },
+    { value: 'disputed', label: 'escrow.status.disputed' },
+    { value: 'cancelled', label: 'escrow.status.cancelled' },
   ];
 
-  readonly filteredEscrows = computed(() => {
-    const filter = this.selectedStatus();
-    const txs = this.escrows();
-    if (filter === 'all') return txs;
-    return txs.filter((tx) => tx.status === filter);
+  private readonly escrowsResource = resource({
+    loader: async () => {
+      this.actionInProgress.set(true);
+      this.error.set(null);
+      try {
+        return await this.escrowService.listEscrows();
+      } catch {
+        this.error.set(this.i18n.translate('escrow.loadError'));
+        return [];
+      } finally {
+        this.actionInProgress.set(false);
+      }
+    },
   });
 
-  async loadEscrows(): Promise<void> {
-    await this.escrowService.listUserEscrows();
+  readonly escrows = computed(() => this.escrowsResource.value() ?? []);
+  readonly loading = computed(() => this.escrowsResource.isLoading());
 
-  }
-
-  setStatusFilter(filter: StatusFilter): void {
-    this.selectedStatus.set(filter);
+  constructor() {
+    afterNextRender(() => {
+      this.maybeStartTour();
+    });
   }
 
   async handleRelease(escrowId: string): Promise<void> {
-    await this.escrowService.releaseEscrow(escrowId);
-    this.successMessage.set(this.i18n.translate('escrow.releaseSuccess'));
-  }
-
-  async handleRefund(escrowId: string): Promise<void> {
-    await this.escrowService.refundEscrow(escrowId);
-    this.successMessage.set(this.i18n.translate('escrow.refundSuccess'));
-  }
-
-  async handleDispute(escrowId: string): Promise<void> {
-    await this.escrowService.disputeEscrow(escrowId, 'Reason: ');
-    this.successMessage.set(this.i18n.translate('escrow.disputeSuccess'));
-  }
-
-  async handleSync(): Promise<void> {
     this.actionInProgress.set(true);
+    this.error.set(null);
     try {
-      await this.escrowService.syncOfflineOperations();
+      await this.escrowService.releaseEscrow(escrowId);
+      this.successMessage.set(this.i18n.translate('escrow.releaseSuccess'));
+      this.escrowsResource.reload();
+    } catch {
+      this.error.set(this.i18n.translate('escrow.releaseError'));
     } finally {
       this.actionInProgress.set(false);
     }
   }
 
-  goBack(): void {
-    this.router.navigate(['/']);
+  async handleRefund(escrowId: string): Promise<void> {
+    this.actionInProgress.set(true);
+    this.error.set(null);
+    try {
+      await this.escrowService.refundEscrow(escrowId);
+      this.successMessage.set(this.i18n.translate('escrow.refundSuccess'));
+      this.escrowsResource.reload();
+    } catch {
+      this.error.set(this.i18n.translate('escrow.refundError'));
+    } finally {
+      this.actionInProgress.set(false);
+    }
+  }
+
+  async handleDispute(escrowId: string): Promise<void> {
+    this.actionInProgress.set(true);
+    this.error.set(null);
+    try {
+      await this.escrowService.disputeEscrow(escrowId, '');
+      this.successMessage.set(this.i18n.translate('escrow.disputeSuccess'));
+      this.escrowsResource.reload();
+    } catch {
+      this.error.set(this.i18n.translate('escrow.disputeError'));
+    } finally {
+      this.actionInProgress.set(false);
+    }
+  }
+
+  async handleSync(): Promise<void> {
+    this.actionInProgress.set(true);
+    try {
+      const result = await this.escrowService.syncOfflineOperations();
+      this.successMessage.set(
+        this.i18n.translate('escrow.syncSuccess', {
+          sent: String(result.sent),
+          failed: String(result.failed),
+        }),
+      );
+      this.escrowsResource.reload();
+    } catch {
+      this.error.set(this.i18n.translate('escrow.syncError'));
+    } finally {
+      this.actionInProgress.set(false);
+    }
   }
 
   startOnboardingTour(): void {
-    if (this.onboardingService.isCompleted()) return;
-    this.onboardingService.isTourInProgress.set(true);
+    this.onboardingService.startTour();
+  }
 
-    setTimeout(() => {
-      this.onboardingService.isTourInProgress.set(false);
-      this.onboardingService.markComplete();
-    }, 500);
+  setStatusFilter(filter: StatusFilter): void {
+    this.selectedStatus.set(filter);
   }
 
   statusBadgeClass(status: EscrowStatus): string {
@@ -133,9 +157,17 @@ export class EscrowPaymentsComponent {
     }
   }
 
-  clearMessages(): void {
-    this.error.set(null);
-    this.successMessage.set(null);
+  goBack(): void {
+    this.location.back();
   }
 
+  private maybeStartTour(): void {
+    if (this.onboardingService.isCompleted()) {
+      return;
+    }
+    if (this.onboardingService.isTourInProgress()) {
+      return;
+    }
+    this.onboardingService.startTour();
+  }
 }
