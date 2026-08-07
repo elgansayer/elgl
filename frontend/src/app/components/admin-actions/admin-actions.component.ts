@@ -8,6 +8,7 @@ import { showToast, showErrorToast } from '../../services/toast.service';
   selector: 'app-admin-actions',
   imports: [TranslatePipe],
   template: `
+<<<<<<< HEAD
     <div class="p-4">
       <h2 class="text-xl font-bold mb-4 text-text-primary">{{ 'moderation.quickActions' | t }}</h2>
       <ul class="space-y-2" role="list">
@@ -28,11 +29,39 @@ import { showToast, showErrorToast } from '../../services/toast.service';
                 [attr.aria-label]="'admin.warnBtn' | t"
               >{{ 'admin.warnBtn' | t }}</button>
             </div>
+=======
+    <div class="admin-actions" role="region" [attr.aria-label]="'admin.quickModerationAria' | t">
+      <h2>{{ 'admin.quickModeration' | t }}</h2>
+      <ul role="list">
+        @for (user of users(); track user.id) {
+          <li>
+            <span>{{ user.display_name ?? user.id }}</span>
+            <button
+              type="button"
+              [attr.aria-label]="'admin.banUserAria' | t: { name: user.display_name ?? user.id }"
+              (click)="ban(user.id)"
+            >{{ 'admin.banBtn' | t }}</button>
+            <button
+              type="button"
+              [attr.aria-label]="'admin.warnUserAria' | t: { name: user.display_name ?? user.id }"
+              (click)="warn(user.id)"
+            >{{ 'admin.warnBtn' | t }}</button>
+>>>>>>> origin/main
           </li>
         }
       </ul>
     </div>
   `,
+  styles: [
+    `
+      .admin-actions {
+        margin: 16px;
+      }
+      button {
+        margin-left: 8px;
+      }
+    `,
+  ],
 })
 export class AdminActionsComponent implements OnInit {
   private readonly adminService = inject(AdminService);
