@@ -1,5 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { LinkedAccountsService, LinkedAccount } from './linked-accounts.service';
+import {
+  LinkedAccountsService,
+  LinkedAccount,
+} from './linked-accounts.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 describe('LinkedAccountsService', () => {
@@ -88,7 +91,9 @@ describe('LinkedAccountsService', () => {
     it('should return empty array on supabase error', async () => {
       const select = jest.fn().mockReturnThis();
       const eq = jest.fn().mockReturnThis();
-      const order = jest.fn().mockResolvedValue({ data: null, error: { message: 'DB error' } });
+      const order = jest
+        .fn()
+        .mockResolvedValue({ data: null, error: { message: 'DB error' } });
       (supabaseService.getClient as jest.Mock).mockReturnValue({
         from: jest.fn().mockReturnValue({ select, eq, order }),
       });
@@ -111,14 +116,16 @@ describe('LinkedAccountsService', () => {
     });
 
     it('should throw on error', async () => {
-      const upsert = jest.fn().mockResolvedValue({ error: { message: 'DB error' } });
+      const upsert = jest
+        .fn()
+        .mockResolvedValue({ error: { message: 'DB error' } });
       (supabaseService.getClient as jest.Mock).mockReturnValue({
         from: jest.fn().mockReturnValue({ upsert }),
       });
 
-      await expect(
-        service.linkAccount('user-1', 'google'),
-      ).rejects.toThrow('Could not link account');
+      await expect(service.linkAccount('user-1', 'google')).rejects.toThrow(
+        'Could not link account',
+      );
     });
   });
 
@@ -137,14 +144,16 @@ describe('LinkedAccountsService', () => {
 
     it('should throw on error', async () => {
       const deleteFn = jest.fn().mockReturnThis();
-      const match = jest.fn().mockResolvedValue({ error: { message: 'DB error' } });
+      const match = jest
+        .fn()
+        .mockResolvedValue({ error: { message: 'DB error' } });
       (supabaseService.getClient as jest.Mock).mockReturnValue({
         from: jest.fn().mockReturnValue({ delete: deleteFn, match }),
       });
 
-      await expect(
-        service.unlinkAccount('user-1', 'google'),
-      ).rejects.toThrow('Could not unlink account');
+      await expect(service.unlinkAccount('user-1', 'google')).rejects.toThrow(
+        'Could not unlink account',
+      );
     });
   });
 });
