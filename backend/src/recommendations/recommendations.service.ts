@@ -617,7 +617,10 @@ export class RecommendationsService {
       }));
   }
 
-  /** Records matchmaking success metrics in a single call. */
+  /** Records matchmaking success metrics in a single call.
+ *  Centralises metric emission for consistent telemetry across all
+ *  recommendation endpoints (getRecommendations, getDailyRecommendations,
+ *  getRecommendationsWithFallback). */
   private recordMatchmakingSuccess(
     endpoint: string,
     tier: string,
