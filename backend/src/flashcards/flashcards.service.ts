@@ -24,6 +24,12 @@ export class FlashcardsService {
   /** Count of degraded operations since last successful sync. */
   private degradedOperationCount = 0;
 
+  /** Maximum number of degraded entries to retain in memory to prevent unbounded growth. */
+  private readonly MAX_DEGRADED_ENTRIES = 5000;
+
+  /** TTL for degraded entries in milliseconds (1 hour). */
+  private readonly DEGRADED_ENTRY_TTL_MS = 3600000;
+
   constructor(
     @InjectPinoLogger(FlashcardsService.name)
     private readonly logger: PinoLogger,
@@ -355,13 +361,19 @@ export class FlashcardsService {
     };
   }
 
-  async getFlashcards(userId: string, level?: number): Promise<Flashcard[]> {
+  async getFlashcards(
+    userId: string,
+    level?: number,
+    limit = 200,
+    offset = 0,
+  ): Promise<{ cards: Flashcard[]; total: number }> {
     const supabase = this.supabaseService.getClient();
     let query = supabase
       .from('flashcards')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (level !== undefined && !isNaN(level)) {
       query = query.eq('srs_level', level);
@@ -375,21 +387,23 @@ export class FlashcardsService {
             { userId },
             'Database unavailable for getFlashcards, returning from memory store',
           );
-          return this.getCachedFlashcards(userId, level);
+          const cards = this.getCachedFlashcards(userId, level);
+          return { cards, total: cards.length };
         }
-        return [];
+        return { cards: [], total: 0 };
       }
-      return response.data;
+      return { cards: response.data, total: response.count ?? 0 };
     } catch (error) {
       this.logger.warn(
         { userId, error: (error as Error).message },
         'getFlashcards failed, returning from memory store',
       );
-      return this.getCachedFlashcards(userId, level);
+      const cards = this.getCachedFlashcards(userId, level);
+      return { cards, total: cards.length };
     }
   }
 
-  async getDueReviews(userId: string): Promise<Flashcard[]> {
+  async getDueReviews(userId: string, limit = 100): Promise<Flashcard[]> {
     const supabase = this.supabaseService.getClient();
     try {
       const response = await supabase
@@ -398,7 +412,8 @@ export class FlashcardsService {
         .eq('user_id', userId)
         .lt('srs_level', 4)
         .lte('next_review_at', new Date().toISOString())
-        .order('next_review_at', { ascending: true });
+        .order('next_review_at', { ascending: true })
+        .limit(limit);
 
       if (response.error || !response.data) {
         if (this.isConnectivityError(response.error)) {
@@ -432,6 +447,8 @@ export class FlashcardsService {
     cleanToken: string,
     dto: CreateFlashcardDto,
   ): Flashcard {
+    this.evictStaleDegradedEntries();
+
     const card: Flashcard = {
       id: `degraded-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       user_id: userId,
@@ -451,6 +468,43 @@ export class FlashcardsService {
     this.memoryStore.set(card.id, card);
     this.degradedOperationCount++;
     return card;
+  }
+
+  /**
+   * Evicts stale degraded entries from memory to prevent unbounded growth.
+   * Removes entries older than DEGRADED_ENTRY_TTL_MS (1 hour) and
+   * truncates oldest entries if the store exceeds MAX_DEGRADED_ENTRIES.
+   */
+  private evictStaleDegradedEntries(): void {
+    const now = Date.now();
+    const keys = Array.from(this.memoryStore.keys());
+
+    // Remove expired entries
+    for (const key of keys) {
+      const entry = this.memoryStore.get(key);
+      if (!entry?.degraded) continue;
+      const createdAt = new Date(entry.created_at).getTime();
+      if (now - createdAt > this.DEGRADED_ENTRY_TTL_MS) {
+        this.memoryStore.delete(key);
+        this.degradedOperationCount = Math.max(0, this.degradedOperationCount - 1);
+      }
+    }
+
+    // Enforce size cap: remove oldest entries if over limit
+    if (this.memoryStore.size > this.MAX_DEGRADED_ENTRIES) {
+      const degradedKeys = Array.from(this.memoryStore.entries())
+        .filter(([, v]) => v.degraded)
+        .sort(([, a], [, b]) =>
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+        )
+        .map(([k]) => k);
+
+      const excess = this.memoryStore.size - this.MAX_DEGRADED_ENTRIES;
+      for (let i = 0; i < excess && i < degradedKeys.length; i++) {
+        this.memoryStore.delete(degradedKeys[i]);
+        this.degradedOperationCount = Math.max(0, this.degradedOperationCount - 1);
+      }
+    }
   }
 
   private recordReviewMetrics(reviewStartTime: number, quality: number): void {

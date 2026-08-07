@@ -148,7 +148,7 @@ export class FlashcardsController {
   @ApiOperation({
     summary: 'List flashcards for the authenticated user',
     description:
-      'Returns all flashcards owned by the user, ordered by creation date descending. Optionally filters by SRS level (0-4).',
+      'Returns paginated flashcards owned by the user, ordered by creation date descending. Optionally filters by SRS level (0-4).',
   })
   @ApiQuery({
     name: 'level',
@@ -157,17 +157,38 @@ export class FlashcardsController {
       'Optional SRS level filter. 0: New (Blue), 1-3: Learning (Yellow), 4: Known (White).',
     example: '2',
   })
-  @ApiResponse({ status: 200, description: 'Array of flashcards.' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum number of flashcards to return (default 200, max 500).',
+    example: '50',
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    description: 'Number of flashcards to skip for pagination (default 0).',
+    example: '0',
+  })
+  @ApiResponse({ status: 200, description: 'Paginated flashcards response.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async getFlashcards(
     @CurrentUser() user: User | null,
     @Query('level') level?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
     @Res({ passthrough: true }) res?: Response,
-  ): Promise<Flashcard[]> {
-    if (!user) return [];
+  ): Promise<{ cards: Flashcard[]; total: number }> {
+    if (!user) return { cards: [], total: 0 };
     const lvlNum = level !== undefined ? parseInt(level, 10) : undefined;
-    const result = await this.flashcardsService.getFlashcards(user.id, lvlNum);
-    if (result.some((c) => c.degraded) && res) {
+    const safeLimit = Math.min(limit ? parseInt(limit, 10) : 200, 500);
+    const safeOffset = offset ? parseInt(offset, 10) : 0;
+    const result = await this.flashcardsService.getFlashcards(
+      user.id,
+      lvlNum,
+      safeLimit,
+      safeOffset,
+    );
+    if (result.cards.some((c) => c.degraded) && res) {
       res.header('X-SRS-Degraded', 'true');
     }
     return result;

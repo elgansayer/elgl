@@ -6,10 +6,11 @@ import { SrsOfflineService } from './srs-offline.service';
 import type { Flashcard } from './vocabulary.store';
 
 export interface CreateFlashcardDto {
-  word: string;
-  sourceLanguage: string;
-  contextSentence: string;
-  translation?: string;
+  word_token: string;
+  original_context?: string;
+  translation: string;
+  definition?: string;
+  pronunciation_url?: string;
 }
 
 export interface UpdateSrsDto {
@@ -84,8 +85,8 @@ export class FlashcardService {
       const degradedCard: Flashcard = {
         id: `offline-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
         user_id: '',
-        word_token: dto.word,
-        original_context: dto.contextSentence,
+        word_token: dto.word_token,
+        original_context: dto.original_context,
         translation: dto.translation ?? '',
         srs_level: 0,
         easiness_factor: 2.5,
@@ -132,26 +133,34 @@ export class FlashcardService {
     }
   }
 
-  async getFlashcards(level?: number): Promise<Flashcard[]> {
+  async getFlashcards(
+    level?: number,
+    limit = 200,
+    offset = 0,
+  ): Promise<{ cards: Flashcard[]; total: number }> {
     try {
-      const params: Record<string, string> = {};
+      const params: Record<string, string> = {
+        limit: String(limit),
+        offset: String(offset),
+      };
       if (level !== undefined) {
         params['level'] = String(level);
       }
       const result = await firstValueFrom(
-        this.http.get<Flashcard[]>(this.baseUrl, {
+        this.http.get<{ cards: Flashcard[]; total: number }>(this.baseUrl, {
           params,
           observe: 'response',
         }),
       );
       this.checkDegradedHeader(result);
-      const cards = result.body ?? [];
+      const paginated = result.body ?? { cards: [], total: 0 };
       // Cache for offline use
-      void this.srsOffline.cacheFlashcards(cards);
-      return cards;
+      void this.srsOffline.cacheFlashcards(paginated.cards);
+      return paginated;
     } catch {
       this.degraded = true;
-      return this.srsOffline.getCachedFlashcards();
+      const cached = await this.srsOffline.getCachedFlashcards();
+      return { cards: cached, total: cached.length };
     }
   }
 

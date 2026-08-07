@@ -46,11 +46,12 @@ export class SrsMetricsAggregator {
         this.metricsService.setSrsCardsPerLevel(level, count ?? 0);
       }
 
-      // Average easiness factor
+      // Average easiness factor (sample-based to avoid scanning millions of rows)
       const { data: efData } = await supabase
         .from('flashcards')
         .select('easiness_factor')
-        .not('easiness_factor', 'is', null);
+        .not('easiness_factor', 'is', null)
+        .limit(10000);
       if (efData && efData.length > 0) {
         const avgEf =
           efData.reduce((sum, row) => sum + (row.easiness_factor ?? 2.5), 0) /

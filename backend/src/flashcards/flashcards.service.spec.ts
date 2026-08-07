@@ -3,6 +3,7 @@ import { FlashcardsService } from './flashcards.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { XpService } from '../xp/xp.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { Flashcard, SrsHealthStatus } from './interfaces/flashcard.interface';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 
@@ -29,6 +30,8 @@ interface MockQueryBuilder {
   lte: jest.Mock;
   order: jest.Mock;
   single: jest.Mock;
+  range: jest.Mock;
+  limit: jest.Mock;
   then?: jest.Mock;
 }
 
@@ -100,6 +103,8 @@ describe('FlashcardsService', () => {
       lte: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       single: jest.fn(),
+      range: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
     };
 
     mockSupabaseClient = {
@@ -438,12 +443,12 @@ describe('FlashcardsService', () => {
   });
 
   describe('getFlashcards', () => {
-    it('should query all flashcards for user when level is not specified', async () => {
+    it('should return paginated flashcards for user when level is not specified', async () => {
       const cards = [{ id: 'card-1' }];
-      mockQueryBuilder.order.mockResolvedValue({
-        data: cards,
-        error: null,
-      });
+      mockQueryBuilder.range.mockReturnThis();
+      mockQueryBuilder.then = (
+        resolve: (value: { data: unknown[]; error: null; count: number }) => void,
+      ) => resolve({ data: cards, error: null, count: 1 });
 
       const result = await service.getFlashcards('user-1');
 
@@ -452,40 +457,40 @@ describe('FlashcardsService', () => {
       expect(mockQueryBuilder.order).toHaveBeenCalledWith('created_at', {
         ascending: false,
       });
-      expect(result).toEqual(cards);
+      expect(result).toEqual({ cards, total: 1 });
     });
 
     it('should filter by level when a valid number is provided', async () => {
       const cards = [{ id: 'card-2', srs_level: 2 }];
-      mockQueryBuilder.eq.mockReturnThis();
+      mockQueryBuilder.range.mockReturnThis();
       mockQueryBuilder.then = (
-        resolve: (value: { data: unknown[]; error: null }) => void,
-      ) => resolve({ data: cards, error: null });
+        resolve: (value: { data: unknown[]; error: null; count: number }) => void,
+      ) => resolve({ data: cards, error: null, count: 1 });
 
       const result = await service.getFlashcards('user-1', 2);
 
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('srs_level', 2);
-      expect(result).toEqual(cards);
+      expect(result).toEqual({ cards, total: 1 });
     });
 
-    it('should return empty array when query errors or returns null data', async () => {
-      mockQueryBuilder.order.mockResolvedValue({
-        data: null,
-        error: { message: 'Query error' },
-      });
+    it('should return empty paginated result when query errors or returns null data', async () => {
+      mockQueryBuilder.range.mockReturnThis();
+      mockQueryBuilder.then = (
+        resolve: (value: { data: null; error: { message: string } }) => void,
+      ) => resolve({ data: null, error: { message: 'Query error' } });
 
       const result = await service.getFlashcards('user-1');
-      expect(result).toEqual([]);
+      expect(result).toEqual({ cards: [], total: 0 });
     });
 
     it('should fall back to memory store when connectivity error occurs', async () => {
-      mockQueryBuilder.order.mockResolvedValue({
-        data: null,
-        error: { message: 'fetch failed' },
-      });
+      mockQueryBuilder.range.mockReturnThis();
+      mockQueryBuilder.then = (
+        resolve: (value: { data: null; error: { message: string } }) => void,
+      ) => resolve({ data: null, error: { message: 'fetch failed' } });
 
       const result = await service.getFlashcards('user-1');
-      expect(result).toEqual([]);
+      expect(result).toEqual({ cards: [], total: 0 });
       expect(mockLogger.warn).toHaveBeenCalled();
     });
   });
@@ -493,7 +498,7 @@ describe('FlashcardsService', () => {
   describe('getDueReviews', () => {
     it('should return due cards ordered by next_review_at', async () => {
       const cards = [{ id: 'card-1' }];
-      mockQueryBuilder.order.mockResolvedValue({
+      mockQueryBuilder.limit.mockResolvedValue({
         data: cards,
         error: null,
       });
@@ -514,7 +519,7 @@ describe('FlashcardsService', () => {
     });
 
     it('should return empty array when getDueReviews query errors', async () => {
-      mockQueryBuilder.order.mockResolvedValue({
+      mockQueryBuilder.limit.mockResolvedValue({
         data: null,
         error: { message: 'Error' },
       });

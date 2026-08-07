@@ -38,7 +38,8 @@ export class SuggestFlashcardsService {
         .from('flashcards')
         .select('word_token')
         .eq('user_id', user_id)
-        .eq('srs_level', 4);
+        .eq('srs_level', 4)
+        .limit(5000);
       if (data && data.length > 0) {
         knownWords = new Set(data.map((r) => r.word_token.toLowerCase()));
       }

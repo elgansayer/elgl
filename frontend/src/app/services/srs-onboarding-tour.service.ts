@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core';
+import { Injectable, inject, signal, PLATFORM_ID, DestroyRef } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { JoyrideService } from 'ngx-joyride';
 import { I18nService } from './i18n.service';
@@ -10,9 +10,13 @@ export class SrsOnboardingTourService {
   private joyrideService = inject(JoyrideService);
   private i18n = inject(I18nService);
   private platformId = inject(PLATFORM_ID);
+  private destroyRef = inject(DestroyRef);
 
   readonly isTourInProgress = signal(false);
   readonly hasCompletedTour = signal(this.loadTourCompletionState());
+
+  /** Tracks the active tour subscription for cleanup on service destruction. */
+  private activeTourSubscription: { unsubscribe(): void } | null = null;
 
   private loadTourCompletionState(): boolean {
     if (!isPlatformBrowser(this.platformId)) return true;
@@ -27,6 +31,8 @@ export class SrsOnboardingTourService {
     if (!isPlatformBrowser(this.platformId)) return;
     if (this.isTourInProgress()) return;
 
+    // Clean up any previous subscription before starting a new tour
+    this.activeTourSubscription?.unsubscribe();
     this.isTourInProgress.set(true);
 
     const options = {
@@ -46,21 +52,25 @@ export class SrsOnboardingTourService {
       },
     };
 
-    this.joyrideService.startTour(options).subscribe({
+    this.activeTourSubscription = this.joyrideService.startTour(options).subscribe({
       next: () => {
         // Tour step advanced
       },
       error: () => {
         this.isTourInProgress.set(false);
+        this.activeTourSubscription = null;
       },
       complete: () => {
         this.isTourInProgress.set(false);
         this.markTourCompleted();
+        this.activeTourSubscription = null;
       },
     });
   }
 
   closeTour(): void {
+    this.activeTourSubscription?.unsubscribe();
+    this.activeTourSubscription = null;
     this.joyrideService.closeTour();
     this.isTourInProgress.set(false);
   }

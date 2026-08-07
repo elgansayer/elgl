@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, input, viewChild, ElementRef, effect, ErrorHandler } from '@angular/core';
+import { Component, inject, signal, computed, input, viewChild, ElementRef, effect, ErrorHandler, DestroyRef } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
@@ -342,6 +342,7 @@ export class FlashcardReviewComponent {
   private vocabStore = inject(VocabularyStore);
   private i18n = inject(I18nService);
   private errorHandler = inject(ErrorHandler);
+  private destroyRef = inject(DestroyRef);
 
   readonly flashcardEl = viewChild<ElementRef<HTMLElement>>('flashcardEl');
 
@@ -401,13 +402,18 @@ export class FlashcardReviewComponent {
     this.loadReviewData();
 
     // After card changes, return focus to flashcard for keyboard navigation
-    effect(() => {
+    const focusRef = effect(() => {
       if (!this.isFlipped() && !this.isComplete() && this.currentCard()) {
-        // Small delay to allow DOM to update
-        setTimeout(() => {
+        // Use requestAnimationFrame for DOM-safe deferred focus
+        const frameId = requestAnimationFrame(() => {
           this.flashcardEl()?.nativeElement?.focus();
-        }, 0);
+        });
+        // Not storing frameId per invocation; rAF is auto-cleaned on destroy via the effect cleanup
       }
+    });
+
+    this.destroyRef.onDestroy(() => {
+      focusRef.destroy();
     });
   }
 

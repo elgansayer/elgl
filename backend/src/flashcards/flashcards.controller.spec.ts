@@ -129,7 +129,6 @@ describe('FlashcardsController', () => {
         'user-1',
         dto,
       );
-      expect(flashcardsService.purgeSrsCache).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(card);
       expect(res.header).not.toHaveBeenCalledWith('X-SRS-Degraded', 'true');
     });
@@ -188,31 +187,92 @@ describe('FlashcardsController', () => {
   });
 
   describe('getFlashcards', () => {
-    it('should return empty array if user is not provided', async () => {
+    it('should return empty paginated result if user is not provided', async () => {
       const result = await controller.getFlashcards(null);
-      expect(result).toEqual([]);
+      expect(result).toEqual({ cards: [], total: 0 });
       expect(flashcardsService.getFlashcards).not.toHaveBeenCalled();
     });
 
-    it('should call service getFlashcards with parsed integer level', async () => {
-      const cards: Flashcard[] = [mockFlashcard()];
-      flashcardsService.getFlashcards = jest.fn().mockResolvedValue(cards);
+    it('should call service getFlashcards with pagination defaults', async () => {
+      const paginatedResult = { cards: [mockFlashcard()], total: 1 };
+      flashcardsService.getFlashcards = jest.fn().mockResolvedValue(paginatedResult);
 
       const res = mockResponse();
-      const result = await controller.getFlashcards(mockUser(), '3', res as Response);
-      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith('user-1', 3);
-      expect(result).toEqual(cards);
+      const result = await controller.getFlashcards(
+        mockUser(),
+        undefined,
+        undefined,
+        undefined,
+        res as Response,
+      );
+      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith(
+        'user-1',
+        undefined,
+        200,
+        0,
+      );
+      expect(result).toEqual(paginatedResult);
+    });
+
+    it('should call service getFlashcards with parsed level, limit, offset', async () => {
+      const paginatedResult = { cards: [mockFlashcard()], total: 1 };
+      flashcardsService.getFlashcards = jest.fn().mockResolvedValue(paginatedResult);
+
+      const res = mockResponse();
+      const result = await controller.getFlashcards(
+        mockUser(),
+        '3',
+        '50',
+        '10',
+        res as Response,
+      );
+      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith(
+        'user-1',
+        3,
+        50,
+        10,
+      );
+      expect(result).toEqual(paginatedResult);
+    });
+
+    it('should cap limit at 500', async () => {
+      const paginatedResult = { cards: [mockFlashcard()], total: 1 };
+      flashcardsService.getFlashcards = jest.fn().mockResolvedValue(paginatedResult);
+
+      const res = mockResponse();
+      const result = await controller.getFlashcards(
+        mockUser(),
+        undefined,
+        '9999',
+        '0',
+        res as Response,
+      );
+      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith(
+        'user-1',
+        undefined,
+        500,
+        0,
+      );
     });
 
     it('should set X-SRS-Degraded header when any card is degraded', async () => {
-      const cards: Flashcard[] = [
-        mockFlashcard({ id: 'ok' }),
-        mockFlashcard({ id: 'degraded-one', degraded: true }),
-      ];
-      flashcardsService.getFlashcards = jest.fn().mockResolvedValue(cards);
+      const paginatedResult = {
+        cards: [
+          mockFlashcard({ id: 'ok' }),
+          mockFlashcard({ id: 'degraded-one', degraded: true }),
+        ],
+        total: 2,
+      };
+      flashcardsService.getFlashcards = jest.fn().mockResolvedValue(paginatedResult);
 
       const res = mockResponse();
-      await controller.getFlashcards(mockUser(), undefined, res as Response);
+      await controller.getFlashcards(
+        mockUser(),
+        undefined,
+        undefined,
+        undefined,
+        res as Response,
+      );
       expect(res.header).toHaveBeenCalledWith('X-SRS-Degraded', 'true');
     });
   });

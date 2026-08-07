@@ -1,4 +1,4 @@
-import { Directive, inject, input, ElementRef, ErrorHandler } from '@angular/core';
+import { Directive, inject, input, ElementRef, ErrorHandler, OnDestroy } from '@angular/core';
 import { FlashcardService } from './flashcard.service';
 
 @Directive({
@@ -9,7 +9,7 @@ import { FlashcardService } from './flashcard.service';
     '(touchstart)': 'onTouchStart($event)',
   },
 })
-export class FlashcardContextMenuDirective {
+export class FlashcardContextMenuDirective implements OnDestroy {
   /** Source language of the selected text (could be read from a data attribute or input). */
   readonly sourceLanguage = input<string>('en');
 
@@ -18,6 +18,7 @@ export class FlashcardContextMenuDirective {
   private errorHandler = inject(ErrorHandler);
 
   private overlay: HTMLElement | null = null;
+  private overlayCloseHandler: EventListener | null = null;
 
   onContextMenu(event: MouseEvent): void {
     event.preventDefault();
@@ -52,14 +53,12 @@ export class FlashcardContextMenuDirective {
     div.addEventListener('click', async () => {
       try {
         await this.flashcardService.createFlashcard({
-          word,
-          sourceLanguage: lang,
-          contextSentence: context,
+          word_token: word,
+          original_context: context,
+          translation: '',
         });
-        // Notify user with a toast if implemented
       } catch (err) {
         this.reportError('createFlashcard', err);
-        // Show error toast
       }
       this.removeOverlay();
     });
@@ -74,9 +73,12 @@ export class FlashcardContextMenuDirective {
       }
       if (!div.contains(target)) {
         document.removeEventListener('click', closeHandler);
+        this.overlayCloseHandler = null;
         this.removeOverlay();
       }
     };
+
+    this.overlayCloseHandler = closeHandler;
 
     // Delay to avoid immediate close from the context menu event itself
     setTimeout(() => {
@@ -85,10 +87,18 @@ export class FlashcardContextMenuDirective {
   }
 
   private removeOverlay(): void {
+    if (this.overlayCloseHandler) {
+      document.removeEventListener('click', this.overlayCloseHandler);
+      this.overlayCloseHandler = null;
+    }
     if (this.overlay && this.overlay.parentNode) {
       this.overlay.parentNode.removeChild(this.overlay);
     }
     this.overlay = null;
+  }
+
+  ngOnDestroy(): void {
+    this.removeOverlay();
   }
 
   private reportError(operation: string, err: unknown): void {
