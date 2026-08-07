@@ -462,6 +462,9 @@ type StickerPackRow = {
   cost_coins: number;
   icon_url?: string | null;
   description?: string | null;
+  is_animated?: boolean | null;
+  sticker_urls?: string[] | null;
+  animation_url?: string | null;
 };
 
 type GiftTransactionRow = {
