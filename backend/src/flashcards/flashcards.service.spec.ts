@@ -7,8 +7,16 @@ describe('FlashcardsService', () => {
   let service: FlashcardsService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let mockLogger: any;
 
   beforeEach(async () => {
+    mockLogger = {
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+    };
+
     mockQueryBuilder = {
       upsert: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
@@ -27,6 +35,10 @@ describe('FlashcardsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FlashcardsService,
+        {
+          provide: 'PinoLogger:FlashcardsService',
+          useValue: mockLogger,
+        },
         {
           provide: SupabaseService,
           useValue: {
