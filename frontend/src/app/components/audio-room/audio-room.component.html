@@ -66,6 +66,13 @@
               {{ 'audioRoom.exclusiveEmojiBtn' | t }}
             </button>
           }
+          <button
+            (click)="showNotesPanel.set(!showNotesPanel())"
+            class="app-button-secondary ps-3.5 pe-3.5 pt-2 pb-2 text-xs"
+            [attr.aria-label]="'audioRoom.notesBtn' | t"
+          >
+            {{ 'audioRoom.notesBtn' | t }}
+          </button>
         </div>
       </div>
 
@@ -280,8 +287,11 @@
           </section>
         </div>
 
-        <div>
+        <div class="space-y-4">
           <app-room-chat></app-room-chat>
+          @if (showNotesPanel()) {
+            <app-voiceroom-notes [roomId]="room.id"></app-voiceroom-notes>
+          }
         </div>
       </div>
     </section>
