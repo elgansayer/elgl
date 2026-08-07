@@ -36,6 +36,7 @@ export class AudioSyncReaderComponent implements OnDestroy {
   readonly activeTokenIndex = signal<number>(-1);
   readonly isPlaying = signal<boolean>(false);
   readonly selectedToken = signal<{ token: string; context: string } | null>(null);
+  readonly selectedTokenIndex = signal<number>(-1);
 
   private audioElement: HTMLAudioElement | null = null;
   private currentUtterance: SpeechSynthesisUtterance | null = null;
@@ -217,6 +218,7 @@ export class AudioSyncReaderComponent implements OnDestroy {
       token: token.segment,
       context: this.text(),
     });
+    this.selectedTokenIndex.set(token.index);
     this.wordClicked.emit({
       token: token.segment,
       context: this.text(),

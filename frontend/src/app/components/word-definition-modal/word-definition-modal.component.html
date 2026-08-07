@@ -1,5 +1,12 @@
-<div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 animate-fadeIn">
+<div
+  class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 animate-fadeIn"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-label]="'wordDef.lingqDialogAriaLabel' | t: { word: wordToken() }"
+  (keydown.escape)="close()"
+>
   <div class="app-card max-w-md w-full overflow-hidden shadow-lift">
+    <!-- Header -->
     <div
       class="bg-gradient-to-r from-primary to-primary-dark p-6 text-white flex items-center justify-between"
     >
@@ -9,15 +16,16 @@
         >
           {{ 'wordDef.lingqTitle' | t }}
         </span>
-        <h3 class="text-2xl font-extrabold mt-1 flex items-center gap-2.5">
+        <h3 class="text-2xl font-extrabold mt-1 flex items-center gap-2.5" id="lingq-dialog-title">
           <span>{{ wordToken() }}</span>
           @if (translationResult()?.pronunciation_url) {
-            <button [attr.aria-label]="'wordDef.pronunciationAria' | t"
+            <button
+              [attr.aria-label]="'wordDef.pronunciationAria' | t"
               (click)="playAudio()"
               class="text-xl hover:scale-125 transition-transform bg-surface-200/20 p-1.5 rounded-full"
               [title]="'wordDef.pronunciationAria' | t"
             >
-              🔊
+              <span aria-hidden="true">🔊</span>
             </button>
           }
         </h3>
@@ -27,12 +35,23 @@
           </p>
         }
       </div>
-      <button aria-label="Close" (click)="close()" class="text-white/80 hover:text-white font-bold text-2xl">✕</button>
+      <button
+        [attr.aria-label]="'wordDef.closeDialogAriaLabel' | t"
+        (click)="close()"
+        class="text-white/80 hover:text-white font-bold text-2xl">
+        <span aria-hidden="true">✕</span>
+      </button>
     </div>
 
+    <!-- Body -->
     <div class="p-6 space-y-4">
       @if (isLoading()) {
-        <div class="flex justify-center items-center py-8">
+        <div
+          class="flex justify-center items-center py-8"
+          role="status"
+          aria-live="polite"
+          [attr.aria-label]="'wordDef.loadingDefinition' | t"
+        >
           <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
         </div>
       }
@@ -43,7 +62,7 @@
             <span class="text-xs font-bold text-text-muted uppercase tracking-wider block mb-1"
               >{{ 'wordDef.translationLabel' | t }}</span
             >
-            <p class="text-lg font-bold text-text-primary">
+            <p class="text-lg font-bold text-text-primary" aria-live="polite">
               {{ trans.translated_text }}
             </p>
           </div>
@@ -61,13 +80,14 @@
             <div
               class="text-xs text-text-secondary italic bg-amber-500/10/50 p-3 rounded-app border border-amber-500/30/50"
             >
-              <span class="font-bold not-italic text-amber-400">Context:</span>
-              "{{ contextSentence() }}"
+              <span class="font-bold not-italic text-amber-400">{{ 'wordDef.contextLabel' | t }}:</span>
+              &ldquo;{{ contextSentence() }}&rdquo;
             </div>
           }
         </div>
       }
 
+      <!-- SRS Actions -->
       <div class="pt-3 border-t border-surface-100 space-y-2">
         <span
           class="text-xs font-bold text-text-secondary uppercase tracking-wider block text-center"
@@ -76,12 +96,12 @@
           {{ existingCard() ? 'Level ' + existingCard()!.srs_level : ('wordDef.newBlue' | t) }}
         </span>
 
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-2 gap-2" role="group" [attr.aria-label]="'wordDef.srsGroupLabel' | t">
           <button
             [disabled]="isSaving()"
             (click)="setLevel(1)"
             class="py-2.5 px-3 bg-amber-400 hover:bg-amber-500 text-amber-950 rounded-app font-bold text-sm shadow transition-all flex items-center justify-center gap-1"
-           [attr.aria-label]="'wordDef.saveLearning' | t">
+            [attr.aria-label]="'wordDef.saveLearning' | t">
             <span>{{ 'wordDef.saveLearning' | t }}</span>
           </button>
 
@@ -89,7 +109,7 @@
             [disabled]="isSaving()"
             (click)="setLevel(4)"
             class="py-2.5 px-3 bg-surface-100 hover:bg-surface-200 text-text-primary rounded-app font-bold text-sm shadow transition-all flex items-center justify-center gap-1"
-           [attr.aria-label]="'wordDef.markKnown' | t">
+            [attr.aria-label]="'wordDef.markKnown' | t">
             <span>{{ 'wordDef.markKnown' | t }}</span>
           </button>
         </div>
@@ -99,7 +119,7 @@
             [disabled]="isSaving()"
             (click)="setLevel(0)"
             class="w-full py-2 bg-blue-500/20 hover:bg-blue-200 text-blue-400 rounded-app font-semibold text-xs transition-colors"
-           [attr.aria-label]="'wordDef.resetNew' | t">
+            [attr.aria-label]="'wordDef.resetNew' | t">
             {{ 'wordDef.resetNew' | t }}
           </button>
         }
