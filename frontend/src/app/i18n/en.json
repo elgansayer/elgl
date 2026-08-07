@@ -72,5 +72,13 @@
       "pageIndicator": "Page {page} of {totalPages}",
       "paginationAria": "Block list pagination"
     }
+  },
+  "aiConversation": {
+    "chooseScenario": "Choose a role-play scenario",
+    "chooseScenarioDesc": "Practise real-life conversations with an AI partner. Pick a scenario to get started.",
+    "typeMessage": "Type your message...",
+    "send": "Send",
+    "typing": "Writing...",
+    "backToScenarios": "Back to scenarios"
   }
 }
