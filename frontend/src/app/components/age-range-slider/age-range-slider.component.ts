@@ -10,7 +10,6 @@ export interface AgeRange {
 
 @Component({
   selector: 'app-age-range-slider',
-  standalone: true,
   imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <div class="flex flex-col">
@@ -117,11 +116,10 @@ export class AgeRangeSliderComponent {
       if (initMin !== undefined) this.minAge.set(initMin);
       if (initMax !== undefined) this.maxAge.set(initMax);
     });
+  }
 
-    // emit changes
-    effect(() => {
-      this.ageRangeChanged.emit({ min: this.minAge(), max: this.maxAge() });
-    });
+  private emitRange(): void {
+    this.ageRangeChanged.emit({ min: this.minAge(), max: this.maxAge() });
   }
 
   protected onMinChange(event: Event): void {
@@ -131,6 +129,7 @@ export class AgeRangeSliderComponent {
     // Clamp to maxAge and ensure it doesn't exceed maxLimit
     const clamped = Math.min(value, this.maxAge(), this.maxLimit());
     this.minAge.set(clamped);
+    this.emitRange();
   }
 
   protected onMaxChange(event: Event): void {
@@ -140,5 +139,6 @@ export class AgeRangeSliderComponent {
     // Clamp to minAge and ensure it doesn't go below minLimit
     const clamped = Math.max(value, this.minAge(), this.minLimit());
     this.maxAge.set(clamped);
+    this.emitRange();
   }
 }

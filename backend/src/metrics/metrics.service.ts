@@ -75,6 +75,15 @@ export class MetricsService {
   readonly coinFraudAttemptsTotal: Counter<string>;
   readonly coinTransactionLatency: Histogram<string>;
 
+  // Matchmaking (Recommendations) metrics
+  readonly matchmakingRecommendationsGenerated: Counter<string>;
+  readonly matchmakingRecommendationsPerRequest: Histogram<string>;
+  readonly matchmakingFallbackTierUsed: Counter<string>;
+  readonly matchmakingEmptyResultsTotal: Counter<string>;
+  readonly matchmakingRequestDuration: Histogram<string>;
+  readonly matchmakingDailyCacheMisses: Counter<string>;
+  readonly matchmakingTierSuccessRate: Gauge<string>;
+
   constructor() {
     this.register = new Registry();
 
@@ -456,6 +465,58 @@ export class MetricsService {
       registers: [this.register],
       buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
     });
+
+    // --- Matchmaking (Recommendations) Metrics ---
+
+    this.matchmakingRecommendationsGenerated = new Counter({
+      name: 'hellotalk_matchmaking_recommendations_generated_total',
+      help: 'Total number of recommendation results served to users',
+      labelNames: ['tier', 'endpoint'],
+      registers: [this.register],
+    });
+
+    this.matchmakingRecommendationsPerRequest = new Histogram({
+      name: 'hellotalk_matchmaking_recommendations_per_request',
+      help: 'Number of recommendations returned per request',
+      labelNames: ['tier'],
+      registers: [this.register],
+      buckets: [0, 1, 5, 10, 15, 20, 50],
+    });
+
+    this.matchmakingFallbackTierUsed = new Counter({
+      name: 'hellotalk_matchmaking_fallback_tier_used_total',
+      help: 'Number of times a fallback tier was used (tier > 1)',
+      labelNames: ['from_tier', 'to_tier'],
+      registers: [this.register],
+    });
+
+    this.matchmakingEmptyResultsTotal = new Counter({
+      name: 'hellotalk_matchmaking_empty_results_total',
+      help: 'Number of requests that returned zero recommendations',
+      labelNames: ['endpoint'],
+      registers: [this.register],
+    });
+
+    this.matchmakingRequestDuration = new Histogram({
+      name: 'hellotalk_matchmaking_request_duration_seconds',
+      help: 'End-to-end duration of matchmaking recommendation requests',
+      labelNames: ['endpoint', 'outcome'],
+      registers: [this.register],
+      buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30],
+    });
+
+    this.matchmakingDailyCacheMisses = new Counter({
+      name: 'hellotalk_matchmaking_daily_cache_misses_total',
+      help: 'Number of times Redis cache was unavailable or empty for daily recommendations',
+      labelNames: ['reason'],
+      registers: [this.register],
+    });
+
+    this.matchmakingTierSuccessRate = new Gauge({
+      name: 'hellotalk_matchmaking_tier_success_rate',
+      help: 'Rolling success rate of tier-1 (interest-based) matchmaking, 0-1',
+      registers: [this.register],
+    });
   }
 
   recordHttpRequest(
@@ -665,6 +726,56 @@ export class MetricsService {
 
   observeCoinTransactionLatency(operation: string, durationSeconds: number): void {
     this.coinTransactionLatency.observe({ operation }, durationSeconds);
+  }
+
+  // --- Matchmaking (Recommendations) metric helpers ---
+
+  recordMatchmakingRecommendationsGenerated(
+    tier: string,
+    endpoint: string,
+    count: number = 0,
+  ): void {
+    this.matchmakingRecommendationsGenerated.inc({ tier, endpoint }, count);
+  }
+
+  recordMatchmakingRecommendationsPerRequest(
+    tier: string,
+    count: number,
+  ): void {
+    this.matchmakingRecommendationsPerRequest.observe({ tier }, count);
+  }
+
+  recordMatchmakingFallbackTierUsed(
+    fromTier: string,
+    toTier: string,
+  ): void {
+    this.matchmakingFallbackTierUsed.inc({
+      from_tier: fromTier,
+      to_tier: toTier,
+    });
+  }
+
+  recordMatchmakingEmptyResults(endpoint: string): void {
+    this.matchmakingEmptyResultsTotal.inc({ endpoint });
+  }
+
+  recordMatchmakingRequestDuration(
+    endpoint: string,
+    outcome: 'success' | 'empty' | 'error',
+    durationSeconds: number,
+  ): void {
+    this.matchmakingRequestDuration.observe(
+      { endpoint, outcome },
+      durationSeconds,
+    );
+  }
+
+  recordMatchmakingDailyCacheMiss(reason: string): void {
+    this.matchmakingDailyCacheMisses.inc({ reason });
+  }
+
+  setMatchmakingTierSuccessRate(rate: number): void {
+    this.matchmakingTierSuccessRate.set(rate);
   }
 
   // --- Escrow Payment metric helpers ---

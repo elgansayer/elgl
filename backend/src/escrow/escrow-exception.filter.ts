@@ -22,7 +22,7 @@ export class EscrowExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const user = (request as Record<string, unknown>).user as
+    const user = (request as unknown as Record<string, unknown>).user as
       | { id: string }
       | undefined;
 

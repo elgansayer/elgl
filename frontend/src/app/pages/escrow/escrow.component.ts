@@ -1,7 +1,7 @@
 import { Component, inject, computed, signal, resource } from '@angular/core';
 import { DatePipe, Location } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { JoyrideDirective } from 'ngx-joyride';
+import { JoyrideModule } from 'ngx-joyride';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { EscrowService, EscrowTransaction } from '../../services/escrow.service';
 import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
@@ -19,7 +19,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
   imports: [
     RouterLink,
     DatePipe,
-    JoyrideDirective,
+    JoyrideModule,
     TranslatePipe,
     AppCardComponent,
     AppEmptyStateComponent,
@@ -240,14 +240,14 @@ export class EscrowComponent {
     return this.countsByStatus()[status] ?? 0;
   }
 
-  protected statusColour(status: string): 'success' | 'warning' | 'error' | 'neutral' | 'info' {
+  protected statusColour(status: string): 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
     switch (status) {
       case 'released':
         return 'success';
       case 'pending':
         return 'info';
       case 'disputed':
-        return 'error';
+        return 'danger';
       case 'refunded':
         return 'warning';
       default:
