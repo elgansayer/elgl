@@ -2,12 +2,12 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   Inject,
   forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import * as crypto from 'crypto';
 import Stripe from 'stripe';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -41,11 +41,11 @@ export interface DeveloperDiagnosticLogRow {
 
 @Injectable()
 export class MonetisationService {
+  private readonly logger = new Logger(MonetisationService.name);
+
   private readonly stripe: Stripe;
 
   constructor(
-    @InjectPinoLogger(MonetisationService.name)
-    private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
     @Inject(forwardRef(() => AppleNotificationService))
@@ -89,7 +89,7 @@ export class MonetisationService {
       throw new Error('Failed to update VIP status');
     }
 
-    this.logger.info(
+    this.logger.log(
       `VIP status updated for user ${userId}: isVip=${isVip}, tier=${vipTier}`,
     );
   }
@@ -221,7 +221,7 @@ export class MonetisationService {
   ): Promise<{ received: boolean; status: string }> {
     const event = this.verifyStripeSignature(rawBody, signature);
 
-    this.logger.info(`Received verified Stripe Webhook event: ${event.type}`);
+    this.logger.log(`Received verified Stripe Webhook event: ${event.type}`);
 
     // Helper to determine tier based on planId metadata (or fallback to interval)
     const tierForPlan = (planId?: string, interval?: string): string => {
@@ -271,7 +271,7 @@ export class MonetisationService {
   async handleAppleNotification(
     dto: AppleNotificationDto,
   ): Promise<{ received: boolean; status: string }> {
-    this.logger.info(
+    this.logger.log(
       `Processing Apple Notification: ${dto.notificationType}, ${dto.subtype}`,
     );
 
@@ -299,7 +299,7 @@ export class MonetisationService {
   async handleGoogleNotification(
     dto: GoogleNotificationDto,
   ): Promise<{ received: boolean; status: string }> {
-    this.logger.info(
+    this.logger.log(
       `Processing Google Notification: ${dto.productId}, ${dto.purchaseToken}`,
     );
 
@@ -648,7 +648,7 @@ export class MonetisationService {
       throw new Error(`Failed to deduct coins: ${updateError.message}`);
     }
 
-    this.logger.info(
+    this.logger.log(
       `Deducted ${amount} coins from user ${userId}, remaining ${newBalance}`,
     );
 
@@ -692,7 +692,7 @@ export class MonetisationService {
     if (updateError) {
       throw new Error(`Failed to add coins: ${updateError.message}`);
     }
-    this.logger.info(
+    this.logger.log(
       `Added ${amount} coins to user ${userId}, new balance ${newBalance}`,
     );
     return newBalance;
@@ -823,7 +823,7 @@ export class MonetisationService {
       cancel_at_period_end: true,
     });
 
-    this.logger.info(
+    this.logger.log(
       `Subscription ${userSubscription.id} set to cancel at period end for user ${userId}`,
     );
 
@@ -855,7 +855,7 @@ export class MonetisationService {
       cancel_at_period_end: false,
     });
 
-    this.logger.info(
+    this.logger.log(
       `Subscription ${userSubscription.id} resumed for user ${userId}`,
     );
 

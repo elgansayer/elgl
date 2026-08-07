@@ -1,12 +1,12 @@
 import {
   Injectable,
+  Logger,
   Inject,
   forwardRef,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { firstValueFrom } from 'rxjs';
 import * as jwt from 'jsonwebtoken';
 import jwksClient from 'jwks-rsa';
@@ -57,6 +57,7 @@ interface GooglePlaySubscriptionPurchase {
 
 @Injectable()
 export class GooglePlayNotificationService {
+  private readonly logger = new Logger(GooglePlayNotificationService.name);
   private readonly jwksClient = jwksClient({
     jwksUri: GOOGLE_OIDC_JWKS_URI,
     cache: true,
@@ -65,8 +66,6 @@ export class GooglePlayNotificationService {
   });
 
   constructor(
-    @InjectPinoLogger(GooglePlayNotificationService.name)
-    private readonly logger: PinoLogger,
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
     private readonly supabaseService: SupabaseService,
@@ -79,7 +78,7 @@ export class GooglePlayNotificationService {
     payload: unknown,
     authorizationHeader?: string,
   ): Promise<{ received: boolean; status: string }> {
-    this.logger.info('Received Google Play Developer Notification');
+    this.logger.log('Received Google Play Developer Notification');
 
     // Reject anything that isn't a genuine push from our Cloud Pub/Sub
     // subscription before trusting a single field of the body. Unlike the
@@ -113,7 +112,7 @@ export class GooglePlayNotificationService {
 
       // Handle test notification
       if (notificationData.testNotification) {
-        this.logger.info(
+        this.logger.log(
           'Received Google Play test notification - acknowledging',
         );
         return { received: true, status: 'processed' };
@@ -125,7 +124,7 @@ export class GooglePlayNotificationService {
           notificationData.subscriptionNotification,
         );
       } else {
-        this.logger.info('Unhandled Google Play notification type');
+        this.logger.log('Unhandled Google Play notification type');
       }
     } catch (error: unknown) {
       this.logger.error(
@@ -236,7 +235,7 @@ export class GooglePlayNotificationService {
     } else if (isExpired) {
       await this.handleSubscriptionExpired(notification);
     } else {
-      this.logger.info(`Unhandled notification type: ${notificationType}`);
+      this.logger.log(`Unhandled notification type: ${notificationType}`);
     }
   }
 
@@ -271,7 +270,7 @@ export class GooglePlayNotificationService {
 
     let userId = await this.getUserIdByPurchaseToken(purchaseToken);
     if (!userId) {
-      this.logger.info(
+      this.logger.log(
         `Purchase token ${purchaseToken} not found locally, resolving user from Google Play API`,
       );
       const extractedUserId =
@@ -290,7 +289,7 @@ export class GooglePlayNotificationService {
     }
 
     const tier = this.mapSubscriptionIdToTier(subscriptionId);
-    this.logger.info(
+    this.logger.log(
       `Activating subscription for user ${userId}, tier: ${tier}`,
     );
     await this.monetisationService.updateVipStatusFromWebhook(
@@ -320,7 +319,7 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.info(`Deactivating subscription for user ${userId}`);
+    this.logger.log(`Deactivating subscription for user ${userId}`);
     await this.monetisationService.updateVipStatusFromWebhook(
       userId,
       false,

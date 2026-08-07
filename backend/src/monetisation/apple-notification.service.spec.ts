@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { PinoLogger } from 'nestjs-pino';
 import { AppleNotificationService } from './apple-notification.service';
 import { MonetisationService } from './monetisation.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -79,15 +78,6 @@ describe('AppleNotificationService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AppleNotificationService,
-        {
-          provide: 'PinoLogger:AppleNotificationService',
-          useValue: {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-          } satisfies Partial<Record<keyof PinoLogger, jest.Mock>>,
-        },
         {
           provide: ConfigService,
           useValue: {

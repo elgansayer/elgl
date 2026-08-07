@@ -1,7 +1,6 @@
-import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Inject, Logger, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { firstValueFrom } from 'rxjs';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MonetisationService } from './monetisation.service';
@@ -52,14 +51,13 @@ const PRODUCT_TIER_MAP: Record<string, string> = {
 
 @Injectable()
 export class AppleReceiptValidatorService {
+  private readonly logger = new Logger(AppleReceiptValidatorService.name);
   private readonly productionUrl = 'https://buy.itunes.apple.com/verifyReceipt';
   private readonly sandboxUrl =
     'https://sandbox.itunes.apple.com/verifyReceipt';
   private readonly sharedSecret: string;
 
   constructor(
-    @InjectPinoLogger(AppleReceiptValidatorService.name)
-    private readonly logger: PinoLogger,
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
     private readonly supabaseService: SupabaseService,
@@ -85,7 +83,7 @@ export class AppleReceiptValidatorService {
 
       // If status is 21007, it's a sandbox receipt
       if (result.status === 21007) {
-        this.logger.info('Receipt is from sandbox environment, retrying...');
+        this.logger.log('Receipt is from sandbox environment, retrying...');
         const sandboxResult = await this.verifyWithUrl(
           this.sandboxUrl,
           receiptData,

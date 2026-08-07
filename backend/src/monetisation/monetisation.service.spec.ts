@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PinoLogger } from 'nestjs-pino';
 import {
   ForbiddenException,
   NotFoundException,
@@ -70,15 +69,6 @@ describe('MonetisationService', () => {
 
     module = await Test.createTestingModule({
       providers: [
-        {
-          provide: 'PinoLogger:MonetisationService',
-          useValue: {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-          },
-        },
         MonetisationService,
         {
           provide: ConfigService,

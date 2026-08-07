@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { UnauthorizedException } from '@nestjs/common';
-import { PinoLogger } from 'nestjs-pino';
 import { of } from 'rxjs';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
@@ -89,15 +88,6 @@ describe('GooglePlayNotificationService', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        {
-          provide: 'PinoLogger:GooglePlayNotificationService',
-          useValue: {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-          },
-        },
         GooglePlayNotificationService,
         {
           provide: ConfigService,
@@ -288,15 +278,6 @@ describe('GooglePlayNotificationService', () => {
       };
       const module: TestingModule = await Test.createTestingModule({
         providers: [
-          {
-            provide: 'PinoLogger:GooglePlayNotificationService',
-            useValue: {
-              info: jest.fn(),
-              warn: jest.fn(),
-              error: jest.fn(),
-              debug: jest.fn(),
-            },
-          },
           GooglePlayNotificationService,
           { provide: ConfigService, useValue: configService },
           { provide: HttpService, useValue: httpService },

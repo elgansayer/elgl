@@ -1,23 +1,22 @@
 import {
   Injectable,
+  Logger,
   BadRequestException,
   InternalServerErrorException,
   Inject,
   forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import Stripe from 'stripe';
 import { SubscriptionPlansService } from './subscription-plans.service';
 import { MonetisationService } from '../monetisation.service';
 
 @Injectable()
 export class StripeService {
+  private readonly logger = new Logger(StripeService.name);
   private readonly stripe: Stripe;
 
   constructor(
-    @InjectPinoLogger(StripeService.name)
-    private readonly logger: PinoLogger,
     private readonly configService: ConfigService,
     private readonly plansService: SubscriptionPlansService,
     @Inject(forwardRef(() => MonetisationService))
@@ -156,7 +155,7 @@ export class StripeService {
     const planId = metadata.planId;
     const interval = metadata.interval;
 
-    this.logger.info(
+    this.logger.log(
       `Subscription created for user ${userId}: plan ${planId}, interval ${interval}`,
     );
 
@@ -177,7 +176,7 @@ export class StripeService {
     const userId = metadata.userId;
     const planId = metadata.planId;
 
-    this.logger.info(
+    this.logger.log(
       `Subscription updated for user ${userId}: plan ${planId}, status ${subscription.status}`,
     );
 
@@ -197,7 +196,7 @@ export class StripeService {
     const metadata = subscription.metadata;
     const userId = metadata.userId;
 
-    this.logger.info(`Subscription cancelled for user ${userId}`);
+    this.logger.log(`Subscription cancelled for user ${userId}`);
     await this.monetisationService.updateVipStatusFromWebhook(
       userId,
       false,
@@ -213,7 +212,7 @@ export class StripeService {
     const metadata = subscription.metadata;
     const userId = metadata.userId;
 
-    this.logger.info(
+    this.logger.log(
       `Payment succeeded for user ${userId}, subscription ${subscriptionId}`,
     );
   }
