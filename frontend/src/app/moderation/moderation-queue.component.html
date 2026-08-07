@@ -1,5 +1,29 @@
 <div class="min-h-screen bg-surface p-6 text-on-surface">
-  <h1 class="mb-4 text-2xl font-bold text-text-primary">{{ 'moderation.title' | t }}</h1>
+  <app-no-network-banner />
+
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-bold text-text-primary">{{ 'moderation.title' | t }}</h1>
+    @if (!offlineModeration.isOnline) {
+      <span class="px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs font-semibold flex items-center gap-1" role="status">
+        <span class="inline-block w-2 h-2 rounded-full bg-amber-400" aria-hidden="true"></span>
+        {{ 'moderation.offlineMode' | t }}
+      </span>
+    }
+    @if (offlineModeration.pendingActionCount() > 0) {
+      <span class="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-semibold" role="status">
+        {{ 'moderation.pendingActions' | t: { count: offlineModeration.pendingActionCount() } }}
+      </span>
+    }
+  </div>
+
+  @if (offlineModeration.lastSyncFailed() && offlineModeration.isOnline) {
+    <div class="mb-4 rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-red-400 text-sm" role="alert">
+      {{ 'moderation.syncFailed' | t }}
+      <button class="ms-2 underline" (click)="offlineModeration.syncPendingActions()">
+        {{ 'moderation.retrySync' | t }}
+      </button>
+    </div>
+  }
 
   <div class="mb-4 flex gap-2">
     <button
@@ -100,7 +124,7 @@
   } @else {
     <ul class="space-y-4">
       @for (item of items.value(); track item.id) {
-        <li class="rounded bg-elevated p-4">
+        <li class="rounded bg-elevated p-4" [class.opacity-60]="itemOfflineActioned(item.id)">
           <div class="flex items-center justify-between">
             <span class="font-semibold text-text-primary">{{ 'moderation.reason' | t }}: {{ item.reason }}</span>
             <span class="text-sm text-muted">{{ item.created_at | date: 'medium' }}</span>
@@ -110,13 +134,15 @@
             <p class="text-text-secondary">
               {{ 'moderation.user' | t }}: {{ item.reported_user.display_name || item.reported_user.name }}
             </p>
-            <button
-              class="mt-2 rounded bg-secondary px-3 py-1 text-sm font-bold"
-              (click)="analyse(item)"
-              [disabled]="analysisLoading()"
-            >
-              {{ 'moderation.analyse' | t }}
-            </button>
+            @if (offlineModeration.isOnline) {
+              <button
+                class="mt-2 rounded bg-secondary px-3 py-1 text-sm font-bold"
+                (click)="analyse(item)"
+                [disabled]="analysisLoading()"
+              >
+                {{ 'moderation.analyse' | t }}
+              </button>
+            }
           }
 
           @if (item.type === 'moment' && item.moment_content) {
@@ -127,20 +153,26 @@
             <p class="text-text-secondary">{{ 'moderation.description' | t }}: {{ item.description }}</p>
           }
 
-          <div class="mt-4 flex gap-2">
-            <button
-              class="rounded bg-emerald-600 px-3 py-1 text-white text-sm font-bold hover:bg-emerald-700 transition-colors"
-              (click)="approve(item)"
-            >
-              {{ 'moderation.approve' | t }}
-            </button>
-            <button
-              class="rounded bg-rose-600 px-3 py-1 text-white text-sm font-bold hover:bg-rose-700 transition-colors"
-              (click)="reject(item)"
-            >
-              {{ 'moderation.reject' | t }}
-            </button>
-          </div>
+          @if (!itemOfflineActioned(item.id)) {
+            <div class="mt-4 flex gap-2">
+              <button
+                class="rounded bg-emerald-600 px-3 py-1 text-white text-sm font-bold hover:bg-emerald-700 transition-colors"
+                (click)="approve(item)"
+              >
+                {{ 'moderation.approve' | t }}
+              </button>
+              <button
+                class="rounded bg-rose-600 px-3 py-1 text-white text-sm font-bold hover:bg-rose-700 transition-colors"
+                (click)="reject(item)"
+              >
+                {{ 'moderation.reject' | t }}
+              </button>
+            </div>
+          } @else {
+            <p class="mt-4 text-sm text-amber-400">
+              {{ 'moderation.actionQueuedOffline' | t }}
+            </p>
+          }
         </li>
       }
     </ul>
