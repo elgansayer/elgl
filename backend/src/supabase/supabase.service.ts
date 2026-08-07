@@ -462,6 +462,9 @@ type StickerPackRow = {
   cost_coins: number;
   icon_url?: string | null;
   description?: string | null;
+  is_animated?: boolean | null;
+  sticker_urls?: string[] | null;
+  animation_url?: string | null;
 };
 
 type GiftTransactionRow = {
@@ -564,6 +567,8 @@ type FlashcardRow = {
   definition?: string | null;
   pronunciation_url?: string | null;
   srs_level: number;
+  easiness_factor: number;
+  repetition_count: number;
   next_review_at: string;
   created_at: string;
 };

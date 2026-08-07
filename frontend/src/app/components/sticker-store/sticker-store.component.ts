@@ -1,5 +1,8 @@
 import { Component, inject, signal, computed, resource } from '@angular/core';
+<<<<<<< HEAD
 import { RouterLink } from '@angular/router';
+=======
+>>>>>>> origin/main
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { EconomyStore, StickerPack } from '../../services/economy.store';
@@ -26,6 +29,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
             class="inline-flex items-center gap-1 text-sm text-neutral-400 hover:text-white transition-colors mb-1"
             [attr.aria-label]="'common.back' | t"
           >
+<<<<<<< HEAD
             <span class="text-lg">&#x2190;</span> {{ 'common.back' | t }}
           </a>
           <h1 class="text-2xl font-bold text-white">{{ 'stickerStore.title' | t }}</h1>
@@ -56,6 +60,32 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
           }
         </div>
       </div>
+=======
+            <span class="text-5xl drop-shadow-lg">{{ getPackIllustration(pack.id) }}</span>
+            @if (pack.owned) {
+              <div
+                class="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50"
+              >
+                <span class="rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
+                  {{ 'stickerStore.ownedBadge' | t }}
+                </span>
+              </div>
+            }
+            @if (pack.is_animated && !pack.owned) {
+              <div
+                class="absolute top-2 end-2 rounded-full bg-fuchsia-500 px-2 py-0.5 text-xs font-bold text-white shadow-lg"
+              >
+                {{ 'stickerStore.animatedBadge' | t }}
+              </div>
+            }
+          </div>
+
+          <!-- Pack details -->
+          <h3 class="text-sm font-semibold text-white mb-1">{{ pack.name }}</h3>
+          @if (pack.is_animated) {
+            <p class="text-xs text-fuchsia-400 mb-1">{{ 'stickerStore.animatedDescription' | t }}</p>
+          }
+>>>>>>> origin/main
 
       <!-- Loading -->
       @if (isLoading()) {

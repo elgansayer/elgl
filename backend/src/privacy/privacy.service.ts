@@ -66,11 +66,14 @@ export class PrivacyService {
     }
 
     const supabase = this.supabaseService.getClient();
+    const deletionDate = new Date();
+    deletionDate.setDate(deletionDate.getDate() + 30); // 30-day grace period
+
     const { error } = await supabase
       .from('users')
       .update({
+        scheduled_for_deletion_at: deletionDate.toISOString(),
         deletion_requested_at: new Date().toISOString(),
-        deletion_grace_days: 30,
         is_deletion_pending: true,
       })
       .eq('id', userId);
@@ -82,7 +85,28 @@ export class PrivacyService {
       throw new BadRequestException('Failed to initiate account deletion');
     }
 
-    this.logger.log(`Deletion pending for user ${userId}`);
+    this.logger.log(`Deletion pending for user ${userId}, scheduled for ${deletionDate.toISOString()}`);
+  }
+
+  async cancelDeletion(userId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('users')
+      .update({
+        scheduled_for_deletion_at: null,
+        deletion_requested_at: null,
+        is_deletion_pending: false,
+      })
+      .eq('id', userId);
+
+    if (error) {
+      this.logger.error(
+        `Failed to cancel deletion for user ${userId}: ${error.message}`,
+      );
+      throw new BadRequestException('Failed to cancel account deletion');
+    }
+
+    this.logger.log(`Account deletion cancelled for user ${userId}`);
   }
 
   // -----------------------------------------------------------------------

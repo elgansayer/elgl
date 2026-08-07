@@ -39,7 +39,7 @@
                 [class.shadow-lg]="currentTheme() === opt"
                 [class.bg-surface-200]="currentTheme() !== opt"
                 [class.text-text-primary]="currentTheme() !== opt"
-              >
+               [attr.aria-label]="('theme.' + opt) | t">
                 @if (opt === 'light') {
                   <span class="me-1.5">☀️</span>
                 } @else if (opt === 'dark') {
@@ -65,18 +65,9 @@
             <span class="text-sm">A</span>
             <span class="text-lg">A</span>
           </div>
-          <input
-            type="range"
-            min="80"
-            max="120"
-            step="5"
-            [value]="fontScale()"
-            (input)="onFontScaleChange($event)"
-            class="w-full h-2 bg-surface-300 rounded-lg appearance-none cursor-pointer accent-primary"
-            [attr.aria-label]="'settings.fontSize' | t"
-          />
+          <app-font-scale-slider />
           <div class="text-center mt-4">
-            <span class="text-sm font-medium text-text-primary">{{ fontScale() }}%</span>
+            <span class="text-sm font-medium text-text-primary">{{ fontScalePercentLabel() }}</span>
           </div>
         </div>
       </section>
@@ -117,6 +108,32 @@
               ></button>
             }
           </div>
+
+          @if (isVip()) {
+            <div class="pt-3 border-t border-surface-200">
+              <label class="text-xs text-text-secondary block mb-2">{{
+                'settings.customColourLabel' | t
+              }}</label>
+              <div class="flex items-center gap-3">
+                <input
+                  type="color"
+                  [value]="primaryAccentColor()"
+                  (input)="onCustomColorChange($event)"
+                  class="w-10 h-10 rounded-lg border-2 border-surface-300 cursor-pointer bg-transparent"
+                  [attr.aria-label]="'settings.customColourLabel' | t"
+                />
+                <input
+                  type="text"
+                  [value]="primaryAccentColor()"
+                  (input)="onCustomColorChange($event)"
+                  maxlength="7"
+                  placeholder="#4f46e5"
+                  class="flex-1 bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+                  [attr.aria-label]="'settings.customColourPlaceholder' | t"
+                />
+              </div>
+            </div>
+          }
         </div>
       </section>
 
@@ -131,7 +148,7 @@
             [value]="i18nService.currentLang()"
             (change)="onLanguageSelect($event)"
             class="w-full bg-surface-200 border border-surface-300 rounded-lg px-3 py-2.5 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
-          >
+           [attr.aria-label]="'Select'">
             @for (lang of i18nService.availableLanguages; track lang.code) {
               <option [value]="lang.code">
                 {{ lang.flag }} {{ lang.nativeName }}
@@ -147,7 +164,7 @@
           (click)="saveSettings()"
           [disabled]="isSaving()"
           class="w-full app-button-primary py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
-        >
+         [attr.aria-label]="'common.loading' | t">
           @if (isSaving()) {
             {{ 'common.loading' | t }}
           } @else {

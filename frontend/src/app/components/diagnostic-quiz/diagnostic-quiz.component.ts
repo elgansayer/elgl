@@ -1,244 +1,195 @@
-import { Component, computed, output, signal, inject, input } from '@angular/core';
-import { KeyValuePipe } from '@angular/common';
+import { Component, computed, output, signal, inject, resource } from '@angular/core';
+import { QuizService } from '../../services/quiz.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import { QuizService, QuizQuestion, QuizResultResponse } from '../../services/quiz.service';
-import { AppCardComponent } from '../primitives/card/card.component';
-import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
-import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
+import { showToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-diagnostic-quiz',
-  imports: [
-    KeyValuePipe,
-    TranslatePipe,
-    AppCardComponent,
-    AppButtonPrimaryComponent,
-    AppButtonSecondaryComponent,
-  ],
-  template: `<!-- Loading skeleton -->
-@if (isLoading()) {
-  <div class="w-full max-w-2xl mx-auto">
-    <div class="bg-[#1e1e2a] rounded-2xl p-6 space-y-6 animate-pulse">
-      <div class="h-3 bg-surface-200 rounded-full w-1/3"></div>
-      <div class="h-2.5 bg-surface-200 rounded-full w-full"></div>
-      <div class="space-y-3 mt-6">
-        <div class="h-14 bg-surface-200 rounded-xl w-full"></div>
-        <div class="h-14 bg-surface-200 rounded-xl w-3/4"></div>
-        <div class="h-14 bg-surface-200 rounded-xl w-5/6"></div>
+  imports: [TranslatePipe],
+  template: `
+    <!-- Loading State -->
+    @if (loading()) {
+      <div class="flex flex-col items-center justify-center p-12" role="status" aria-label="{{ 'diagnosticQuiz.loading' | t }}">
+        <div class="w-12 h-12 border-4 border-purple-500/30 border-t-purple-400 rounded-full animate-spin mb-4"></div>
+        <p class="text-purple-300/70 text-sm">{{ 'diagnosticQuiz.loading' | t }}</p>
       </div>
-    </div>
-  </div>
-}
+    }
 
-<!-- Error state -->
-@if (!isLoading() && loadError()) {
-  <div class="w-full max-w-2xl mx-auto">
-    <div class="bg-[#1e1e2a] rounded-2xl p-8 text-center border border-red-500/20">
-      <span class="text-4xl mb-4 block">&#x26A0;&#xFE0F;</span>
-      <h3 class="text-lg font-semibold text-white mb-2">{{ 'quiz.loadError.title' | t }}</h3>
-      <p class="text-sm text-text-secondary mb-6">{{ 'quiz.loadError.message' | t }}</p>
-      <app-button-primary (clicked)="loadQuestions()">
-        {{ 'common.retry' | t }}
-      </app-button-primary>
-    </div>
-  </div>
-}
-
-<!-- Quiz content -->
-@if (!isLoading() && !loadError() && !result() && currentQuestion(); as question) {
-  <div class="w-full max-w-2xl mx-auto">
-    <app-card customClass="bg-[#1e1e2a] border-surface-100 rounded-2xl">
-      <!-- Header &amp; Progress -->
-      <div class="mb-8">
-        <h2 class="text-xl font-bold text-white mb-2 text-start">
-          {{ 'quiz.title' | t }}
-        </h2>
-        <p class="text-sm text-text-secondary mb-5 text-start">
-          {{ 'quiz.subtitle' | t }}
-        </p>
-
-        <!-- Progress bar -->
-        <div class="relative w-full h-2 bg-surface-200 rounded-full overflow-hidden mb-2">
-          <div
-            class="absolute start-0 top-0 h-full rounded-full transition-all duration-500 ease-out"
-            [style.width.%]="progressPercent()"
-            style="background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);"
-          ></div>
-        </div>
-        <div class="flex justify-between text-xs text-text-secondary">
-          <span>{{ 'quiz.skill.' + question.skill | t }}</span>
-          <span>{{ currentIndex() + 1 }} / {{ questions().length }}</span>
-        </div>
+    <!-- Error State -->
+    @if (error()) {
+      <div class="text-center p-12" role="alert">
+        <span class="text-5xl block mb-4">&#x26A0;&#xFE0F;</span>
+        <h3 class="text-xl font-semibold text-purple-200 mb-2">{{ 'diagnosticQuiz.errorTitle' | t }}</h3>
+        <p class="text-purple-300/60 text-sm mb-6">{{ 'diagnosticQuiz.errorDescription' | t }}</p>
+        <button
+          type="button"
+          (click)="reloadQuestions('en')"
+          class="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors"
+        >
+          {{ 'diagnosticQuiz.retry' | t }}
+        </button>
       </div>
+    }
 
-      <!-- Question Area -->
-      <div class="mb-8 min-h-[180px]">
-        <h3 class="text-base font-medium text-white mb-6 text-start leading-relaxed">
-          {{ question.text }}
-        </h3>
+    <!-- Quiz Content -->
+    @if (!loading() && !error() && questions().length > 0) {
+      <div
+        class="w-full max-w-3xl mx-auto bg-[#1a1a2e] rounded-[2rem] border border-purple-500/20 overflow-hidden"
+        role="region"
+        aria-label="{{ 'diagnosticQuiz.title' | t }}"
+      >
+        <!-- Header & Progress -->
+        <div class="ps-6 pe-6 pt-6 pb-4">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-purple-100 text-start">
+              {{ 'diagnosticQuiz.title' | t }}
+            </h2>
+            <span class="text-sm text-purple-300/50 bg-purple-500/10 px-3 py-1 rounded-full text-end">
+              {{ 'diagnosticQuiz.questionCounter' | t: { current: currentQuestionNumber(), total: totalQuestions() } }}
+            </span>
+          </div>
+          <div class="w-full bg-[#0f0f23] rounded-full h-2 overflow-hidden" role="progressbar" [attr.aria-valuenow]="progressPercentage()" aria-valuemin="0" aria-valuemax="100">
+            <div
+              class="h-2 rounded-full transition-all duration-500 ease-out"
+              [style.width.%]="progressPercentage()"
+              style="background: linear-gradient(90deg, #a855f7, #ec4899); box-shadow: 0 0 12px rgba(168, 85, 247, 0.5);"
+            ></div>
+          </div>
+        </div>
 
-        <div class="flex flex-col gap-3">
-          @for (option of question.options; track option.id) {
+        <!-- Question Area -->
+        <div class="ps-6 pe-6 pb-6 min-h-[220px]">
+          @if (currentQuestion(); as q) {
+            <h3 class="text-lg font-medium text-purple-100 mb-6 text-start leading-relaxed">
+              {{ q.text }}
+            </h3>
+
+            <div class="flex flex-col gap-3">
+              @for (option of q.options; track option.id; let idx = $index) {
+                @let isSelected = answers()[q.id] === option.points;
+                <button
+                  type="button"
+                  (click)="selectOption(q.id, option.points)"
+                  class="w-full text-start ps-5 pe-5 pt-4 pb-4 rounded-2xl border-2 transition-all duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a2e]"
+                  [class.border-purple-400]="isSelected"
+                  [class.border-purple-500/20]="!isSelected"
+                  [class.shadow-lg]="isSelected"
+                  [class.shadow-purple-500/20]="isSelected"
+                  [attr.aria-pressed]="isSelected"
+                  [attr.aria-label]="'diagnosticQuiz.optionLabel' | t: { number: idx + 1, text: option.text }"
+                  [style.background]="isSelected ? 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(236,72,153,0.1))' : 'rgba(15,15,35,0.6)'"
+                >
+                  <span
+                    class="text-base font-medium block"
+                    [class.text-purple-100]="isSelected"
+                    [class.text-purple-300/70]="!isSelected"
+                  >
+                    <span class="inline-flex items-center justify-center w-7 h-7 rounded-full me-3 text-sm font-bold"
+                      [class.bg-purple-500]="isSelected"
+                      [class.text-white]="isSelected"
+                      [class.bg-purple-500/10]="!isSelected"
+                      [class.text-purple-300/60]="!isSelected"
+                    >{{ idx + 1 }}</span>
+                    {{ option.text }}
+                  </span>
+                </button>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Navigation Actions -->
+        <div class="flex items-center justify-between ps-6 pe-6 pt-4 pb-6 bg-[#0f0f23]/60 border-t border-purple-500/10">
+          <button
+            type="button"
+            (click)="previous()"
+            [disabled]="isFirstQuestion()"
+            class="px-6 py-3 text-sm font-medium text-purple-300/80 bg-purple-500/10 rounded-xl hover:bg-purple-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+          >
+            {{ 'diagnosticQuiz.previous' | t }}
+          </button>
+
+          @if (isLastQuestion()) {
             <button
               type="button"
-              (click)="selectOption(question.id, option.points)"
-              class="w-full text-start p-4 rounded-xl border transition-all duration-200"
-              [class.border-indigo-500]="answers()[question.id] === option.points"
-              [class.bg-indigo-500/10]="answers()[question.id] === option.points"
-              [class.border-surface-100]="answers()[question.id] !== option.points"
-              [class.hover:border-indigo-500/50]="answers()[question.id] !== option.points"
-              [class.hover:bg-surface-200]="answers()[question.id] !== option.points"
+              (click)="next()"
+              [disabled]="!canProceed() || isSubmitting()"
+              class="px-8 py-3 text-sm font-bold text-white rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a2e]"
+              style="background: linear-gradient(135deg, #a855f7, #ec4899); box-shadow: 0 4px 24px rgba(168, 85, 247, 0.3);"
+              [style.opacity]="(!canProceed() || isSubmitting()) ? '0.5' : '1'"
             >
-              <span class="text-sm text-white font-medium">
-                {{ option.text }}
-              </span>
+              @if (isSubmitting()) {
+                <span class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin me-2 align-middle"></span>
+              }
+              {{ 'diagnosticQuiz.submit' | t }}
+            </button>
+          } @else {
+            <button
+              type="button"
+              (click)="next()"
+              [disabled]="!canProceed()"
+              class="px-6 py-3 text-sm font-medium text-purple-100 bg-purple-600 rounded-xl hover:bg-purple-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              {{ 'diagnosticQuiz.next' | t }}
             </button>
           }
         </div>
       </div>
+    }
 
-      <!-- Navigation -->
-      <div class="flex items-center justify-between pt-4 border-t border-surface-100">
-        <app-button-secondary
-          [disabled]="!canGoBack()"
-          size="sm"
-          (clicked)="goBack()"
-        >
-          {{ 'quiz.nav.previous' | t }}
-        </app-button-secondary>
-
-        <app-button-primary
-          [disabled]="!canProceed()"
-          size="sm"
-          (clicked)="goNext()"
-        >
-          @if (isLastQuestion()) {
-            {{ 'quiz.nav.finish' | t }}
-          } @else {
-            {{ 'quiz.nav.next' | t }}
-          }
-        </app-button-primary>
+    <!-- Empty State (loaded but no questions) -->
+    @if (!loading() && !error() && questions().length === 0) {
+      <div class="text-center p-12" role="status">
+        <span class="text-5xl block mb-4">&#x1F4CB;</span>
+        <p class="text-purple-300/60 text-sm">{{ 'diagnosticQuiz.empty' | t }}</p>
       </div>
-    </app-card>
-  </div>
-}
-
-<!-- Submitting state -->
-@if (isSubmitting()) {
-  <div class="w-full max-w-2xl mx-auto">
-    <div class="bg-[#1e1e2a] rounded-2xl p-12 text-center">
-      <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-500/20 mb-6">
-        <span class="text-2xl animate-spin">&#x23F3;</span>
-      </div>
-      <h3 class="text-lg font-semibold text-white mb-2">{{ 'quiz.submitting' | t }}</h3>
-      <p class="text-sm text-text-secondary">{{ 'quiz.submittingMessage' | t }}</p>
-    </div>
-  </div>
-}
-
-<!-- Results screen -->
-@if (result(); as res) {
-  <div class="w-full max-w-2xl mx-auto">
-    <app-card customClass="bg-[#1e1e2a] border-surface-100 rounded-2xl">
-      <div class="text-center mb-8">
-        <!-- CEFR badge -->
-        <div class="inline-flex items-center justify-center w-24 h-24 rounded-full mb-4"
-          [class]="cefrColour() + ' border-2'">
-          <span class="text-3xl font-extrabold">{{ res.suggestedCefr }}</span>
-        </div>
-
-        <h2 class="text-2xl font-bold text-white mb-2">{{ 'quiz.result.title' | t }}</h2>
-        <p class="text-sm text-text-secondary mb-4">{{ res.description }}</p>
-
-        <!-- Score display -->
-        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-200">
-          <span class="text-sm text-text-secondary">{{ 'quiz.result.score' | t }}:</span>
-          <span class="text-lg font-bold text-indigo-400">{{ res.percentage }}%</span>
-          <span class="text-xs text-text-secondary">({{ res.totalScore }}/{{ res.maxScore }})</span>
-        </div>
-      </div>
-
-      <!-- Skill breakdown -->
-      @if (res.skillBreakdown | keyvalue; as skills) {
-        <div class="mb-8 space-y-3">
-          <h4 class="text-sm font-semibold text-text-secondary text-start mb-3">
-            {{ 'quiz.result.skillBreakdown' | t }}
-          </h4>
-          @for (entry of skills; track entry.key) {
-            <div class="flex items-center gap-3">
-              <span class="text-xs text-text-secondary w-24 text-end shrink-0">
-                {{ skillLabels[entry.key] ? (skillLabels[entry.key] | t) : entry.key }}
-              </span>
-              <div class="flex-1 h-2 bg-surface-200 rounded-full overflow-hidden">
-                <div
-                  class="h-full rounded-full transition-all duration-700 ease-out"
-                  [style.width.%]="entry.value.max > 0 ? (entry.value.score / entry.value.max * 100) : 0"
-                  style="background: linear-gradient(90deg, #6366f1, #a855f7);"
-                ></div>
-              </div>
-              <span class="text-xs text-text-secondary w-12 text-start">
-                {{ entry.value.score }}/{{ entry.value.max }}
-              </span>
-            </div>
-          }
-        </div>
-      }
-
-      <!-- Actions -->
-      <div class="flex items-center justify-center gap-4 pt-4 border-t border-surface-100">
-        <app-button-secondary size="sm" (clicked)="retake()">
-          {{ 'quiz.result.retake' | t }}
-        </app-button-secondary>
-        <app-button-primary size="sm" (clicked)="quizCompleted.emit({
-          score: res.totalScore,
-          suggestedCefr: res.suggestedCefr,
-          percentage: res.percentage,
-          skillBreakdown: res.skillBreakdown
-        })">
-          {{ 'quiz.result.continue' | t }}
-        </app-button-primary>
-      </div>
-    </app-card>
-  </div>
-}
-`,
+    }
+  `,
 })
 export class DiagnosticQuizComponent {
-  private readonly quizService = inject(QuizService);
-  private readonly i18n = inject(I18nService);
+  private quizService = inject(QuizService);
+  private i18n = inject(I18nService);
 
-  readonly targetLanguage = input('en');
-  readonly quizCompleted = output<{
-    score: number;
-    suggestedCefr: string;
-    percentage: number;
-    skillBreakdown: Record<string, { score: number; max: number }>;
-  }>();
+  quizCompleted = output<{ score: number; suggestedLevel: string; maxScore: number }>();
 
-  readonly questions = signal<QuizQuestion[]>([]);
-  readonly currentIndex = signal<number>(0);
-  readonly answers = signal<Record<string, number>>({});
-  readonly isLoading = signal<boolean>(true);
-  readonly loadError = signal<boolean>(false);
-  readonly result = signal<QuizResultResponse | null>(null);
-  readonly isSubmitting = signal<boolean>(false);
+  currentIndex = signal<number>(0);
+  answers = signal<Record<string, number>>({});
+  isSubmitting = signal<boolean>(false);
+
+  private loadingLanguage = signal<string>('en');
+
+  questionsResource = resource({
+    params: () => ({ language: this.loadingLanguage() }),
+    loader: async ({ params }) => {
+      return await this.quizService.getQuestions(params.language);
+    },
+    defaultValue: [],
+  });
+
+  readonly questions = computed(() => this.questionsResource.value());
+  readonly loading = computed(() => this.questionsResource.isLoading());
+  readonly error = computed(() => this.questionsResource.error());
 
   readonly currentQuestion = computed(() => {
     const qs = this.questions();
-    if (qs.length === 0) return null;
-    return qs[this.currentIndex()];
+    const idx = this.currentIndex();
+    return idx >= 0 && idx < qs.length ? qs[idx] : null;
   });
 
-  readonly progressPercent = computed(() => {
+  readonly progressPercentage = computed(() => {
     const qs = this.questions();
     if (qs.length === 0) return 0;
-    return Math.round(((this.currentIndex() + 1) / qs.length) * 100);
+    return (this.currentIndex() / qs.length) * 100;
   });
 
   readonly isLastQuestion = computed(() => {
-    return this.currentIndex() === this.questions().length - 1;
+    const qs = this.questions();
+    if (qs.length === 0) return false;
+    return this.currentIndex() === qs.length - 1;
   });
+
+  readonly isFirstQuestion = computed(() => this.currentIndex() === 0);
 
   readonly canProceed = computed(() => {
     const q = this.currentQuestion();
@@ -246,97 +197,64 @@ export class DiagnosticQuizComponent {
     return this.answers()[q.id] !== undefined;
   });
 
-  readonly canGoBack = computed(() => this.currentIndex() > 0);
+  readonly currentQuestionNumber = computed(() => this.currentIndex() + 1);
 
-  readonly skillLabels: Record<string, string> = {
-    reading: 'quiz.skill.reading',
-    writing: 'quiz.skill.writing',
-    speaking: 'quiz.skill.speaking',
-    listening: 'quiz.skill.listening',
-    grammar: 'quiz.skill.grammar',
-    vocabulary: 'quiz.skill.vocabulary',
-  };
+  readonly totalQuestions = computed(() => this.questions().length);
 
-  readonly cefrColour = computed(() => {
-    const level = this.result()?.suggestedCefr;
-    if (!level) return 'bg-surface-200 text-text-secondary';
-    const colours: Record<string, string> = {
-      'A1': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-      'A2': 'bg-teal-500/20 text-teal-300 border-teal-500/30',
-      'B1': 'bg-green-500/20 text-green-300 border-green-500/30',
-      'B2': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-      'C1': 'bg-orange-500/20 text-orange-300 border-orange-500/30',
-      'C2': 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-    };
-    return colours[level] ?? colours['A1'];
-  });
-
-  constructor() {
-    this.loadQuestions();
-  }
-
-  async loadQuestions(): Promise<void> {
-    this.isLoading.set(true);
-    this.loadError.set(false);
-    try {
-      const data = await this.quizService.getQuestions(this.targetLanguage());
-      this.questions.set(data);
-    } catch {
-      this.loadError.set(true);
-    } finally {
-      this.isLoading.set(false);
-    }
+  reloadQuestions(language: string): void {
+    this.loadingLanguage.set(language);
+    this.currentIndex.set(0);
+    this.answers.set({});
+    this.questionsResource.reload();
   }
 
   selectOption(questionId: string, points: number): void {
     this.answers.update((prev) => ({ ...prev, [questionId]: points }));
   }
 
-  goBack(): void {
-    if (this.canGoBack()) {
-      this.currentIndex.update((i) => i - 1);
-    }
-  }
-
-  async goNext(): Promise<void> {
+  next(): void {
+    if (!this.canProceed()) return;
     if (this.isLastQuestion()) {
-      await this.submitQuiz();
+      this.finishQuiz();
     } else {
       this.currentIndex.update((i) => i + 1);
     }
   }
 
-  async submitQuiz(): Promise<void> {
-    this.isSubmitting.set(true);
-    try {
-      const res = await this.quizService.evaluateResults(
-        this.targetLanguage(),
-        this.answers(),
-      );
-      this.result.set(res);
-      this.quizCompleted.emit({
-        score: res.totalScore,
-        suggestedCefr: res.suggestedCefr,
-        percentage: res.percentage,
-        skillBreakdown: res.skillBreakdown,
-      });
-    } catch {
-      this.result.set({
-        totalScore: 0,
-        maxScore: 0,
-        percentage: 0,
-        suggestedCefr: 'A1',
-        skillBreakdown: {},
-        description: this.i18n.translate('quiz.result.error'),
-      });
-    } finally {
-      this.isSubmitting.set(false);
+  previous(): void {
+    if (this.currentIndex() > 0) {
+      this.currentIndex.update((i) => i - 1);
     }
   }
 
-  retake(): void {
-    this.answers.set({});
-    this.currentIndex.set(0);
-    this.result.set(null);
+  private async finishQuiz(): Promise<void> {
+    this.isSubmitting.set(true);
+    const totalScore = Object.values(this.answers()).reduce((sum, pts) => sum + pts, 0);
+    const totalQuestions = this.questions().length;
+    const maxScore = totalQuestions * 3;
+    const percentage = maxScore > 0 ? totalScore / maxScore : 0;
+
+    let suggestedLevel = 'A1';
+
+    if (percentage >= 0.9) suggestedLevel = 'C2';
+    else if (percentage >= 0.8) suggestedLevel = 'C1';
+    else if (percentage >= 0.65) suggestedLevel = 'B2';
+    else if (percentage >= 0.5) suggestedLevel = 'B1';
+    else if (percentage >= 0.3) suggestedLevel = 'A2';
+
+    try {
+      await this.quizService.submitResults({
+        score: totalScore,
+        maxScore,
+        suggestedLevel,
+        answers: this.answers(),
+      });
+    } catch {
+      showToast(this.i18n.translate('diagnosticQuiz.submitError'), 'error');
+    } finally {
+      this.isSubmitting.set(false);
+    }
+
+    this.quizCompleted.emit({ score: totalScore, suggestedLevel, maxScore });
   }
 }
