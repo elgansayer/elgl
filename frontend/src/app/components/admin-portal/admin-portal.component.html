@@ -27,7 +27,6 @@
   </form>
 
   <div aria-live="polite">
-<<<<<<< HEAD
   @if (errorMessage()) {
     <app-empty-state
       icon="⚠️"
@@ -88,22 +87,6 @@
               @if (user.avatar_url) {
                 <img loading="lazy" [src]="user.avatar_url" alt="" class="w-full h-full object-cover" />
               } @else {
-=======
-    @if (errorMessage()) {
-      <p role="alert" class="text-rose-500 text-sm mb-4">{{ errorMessage() }}</p>
-    }
-
-    @if (isLoading()) {
-      <p class="text-text-secondary" aria-busy="true">{{ 'admin.loading' | t }}</p>
-    } @else if (users().length === 0) {
-      <p class="text-text-secondary">{{ 'admin.empty' | t }}</p>
-    } @else {
-      <div class="space-y-3" role="table" [attr.aria-label]="'admin.userTableAria' | t">
-        <div role="rowgroup">
-          @for (user of users(); track user.id) {
-            <app-card variant="default" padding="md">
-              <div class="flex flex-wrap items-center gap-3" role="row">
->>>>>>> origin/main
                 <div
                   class="flex-shrink-0 w-10 h-10 rounded-full bg-surface-100 overflow-hidden"
                   role="cell"

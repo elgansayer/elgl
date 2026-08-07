@@ -35,11 +35,7 @@ interface EscrowRow {
   imports: [FormsModule, DatePipe, TranslatePipe, JoyrideModule],
   templateUrl: './escrow-payments.component.html',
 })
-<<<<<<< HEAD
 export class EscrowPaymentsComponent {
-=======
-export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
->>>>>>> origin/main
   private http = inject(HttpClient);
   private auth = inject(AuthService);
   private i18n = inject(I18nService);

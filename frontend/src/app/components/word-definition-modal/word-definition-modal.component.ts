@@ -1,18 +1,8 @@
 import { showToast } from '../../services/toast.service';
-<<<<<<< HEAD
 import { Component, inject, signal, computed, input, output, effect, ErrorHandler } from '@angular/core';
 import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
-=======
-import { Component, OnInit, inject, signal, input, output, computed, viewChild, ErrorHandler } from '@angular/core';
-import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
-import { TranslatePipe } from '../../services/translate.pipe';
-import {
-  SrsErrorBoundaryComponent,
-  SrsErrorContext,
-} from '../srs-error-boundary/srs-error-boundary.component';
->>>>>>> origin/main
 
 @Component({
   selector: 'app-word-definition-modal',
@@ -116,7 +106,6 @@ export class WordDefinitionModalComponent implements OnInit {
   readonly isSaving = signal<boolean>(false);
   readonly existingCard = signal<Flashcard | null>(null);
 
-<<<<<<< HEAD
   readonly sanitisedWordToken = computed(() => this.sanitisation.sanitiseText(this.wordToken()));
 
   constructor() {
@@ -125,23 +114,6 @@ export class WordDefinitionModalComponent implements OnInit {
       const token = this.wordToken();
       const target = this.targetLanguage();
       const status = this.vocabStore.getWordStatus(token);
-=======
-  readonly errorBoundary = viewChild(SrsErrorBoundaryComponent);
-
-  readonly errorContext = computed<SrsErrorContext>(() => ({
-    component: 'word-definition-modal',
-    operation: 'lookup',
-    metadata: {
-      wordToken: this.wordToken(),
-      targetLanguage: this.targetLanguage(),
-      hasExistingCard: !!this.existingCard(),
-    },
-  }));
-
-  async ngOnInit(): Promise<void> {
-    try {
-      const status = this.vocabStore.getWordStatus(this.wordToken());
->>>>>>> origin/main
       if (status.flashcard) {
         this.existingCard.set(status.flashcard);
       }
@@ -158,7 +130,6 @@ export class WordDefinitionModalComponent implements OnInit {
   async fetchDefinition(): Promise<void> {
     this.isLoading.set(true);
     try {
-<<<<<<< HEAD
       const res = await this.vocabStore.translateWordOrSentence(wordToken, targetLang);
       // Sanitise all user-visible translation result fields
       this.translationResult.set({
@@ -179,20 +150,6 @@ export class WordDefinitionModalComponent implements OnInit {
         detected_language: 'auto',
         definition: 'Click "Save to Learning" to track this word in your SRS flashcard deck.',
         transliteration: this.sanitisation.sanitiseText(wordToken),
-=======
-      const res = await this.vocabStore.translateWordOrSentence(
-        this.wordToken(),
-        this.targetLanguage(),
-      );
-      this.translationResult.set(res);
-    } catch (err) {
-      this.translationResult.set({
-        original_text: this.wordToken(),
-        translated_text: `Translation of "${this.wordToken()}"`,
-        detected_language: 'auto',
-        definition: 'Click "Save to Learning" to track this word in your SRS flashcard deck.',
-        transliteration: this.wordToken(),
->>>>>>> origin/main
       });
       this.handleError(err, 'fetchDefinition');
     } finally {
@@ -203,18 +160,11 @@ export class WordDefinitionModalComponent implements OnInit {
   playAudio(): void {
     const url = this.translationResult()?.pronunciation_url;
     if (url) {
-<<<<<<< HEAD
       const safeUrl = this.sanitisation.sanitiseUrl(url);
       if (safeUrl) {
         const audio = new Audio(safeUrl);
         audio.play().catch((e) => this.reportError('playAudio', e));
       }
-=======
-      const audio = new Audio(url);
-      audio.play().catch((err) => {
-        this.handleError(err, 'playAudio');
-      });
->>>>>>> origin/main
     }
   }
 
