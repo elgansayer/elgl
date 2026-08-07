@@ -296,3 +296,58 @@ CREATE POLICY coin_purchases_select_admin ON public.coin_purchases
             SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.is_admin = true
         )
     );
+
+-- ── 14. moments: admins can update and delete any moment ─────────────────
+-- The moderation and admin dashboards need to be able to remove abusive
+-- moments and correct/flag moment content. Existing policies (from
+-- 009_row_level_security.sql) restrict UPDATE and DELETE to the author
+-- only. Admins need broader access for moderation purposes.
+
+DROP POLICY IF EXISTS moments_update_admin ON public.moments;
+CREATE POLICY moments_update_admin ON public.moments
+    FOR UPDATE TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.is_admin = true
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.is_admin = true
+        )
+    );
+
+DROP POLICY IF EXISTS moments_delete_admin ON public.moments;
+CREATE POLICY moments_delete_admin ON public.moments
+    FOR DELETE TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.is_admin = true
+        )
+    );
+
+-- ── 15. moment_comments: admins can delete any comment ───────────────────
+-- The moderation dashboard needs to be able to remove abusive comments.
+-- Existing policies only allow the author to delete.
+
+DROP POLICY IF EXISTS moment_comments_delete_admin ON public.moment_comments;
+CREATE POLICY moment_comments_delete_admin ON public.moment_comments
+    FOR DELETE TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.is_admin = true
+        )
+    );
+
+-- ── 16. moment_likes: admins can delete any like ────────────────────────
+-- The moderation dashboard may need to remove likes from abusive accounts
+-- or coordinated harassment campaigns.
+
+DROP POLICY IF EXISTS moment_likes_delete_admin ON public.moment_likes;
+CREATE POLICY moment_likes_delete_admin ON public.moment_likes
+    FOR DELETE TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.is_admin = true
+        )
+    );
