@@ -10,6 +10,8 @@ import {
   ModerationActionResponse,
   UserAnalysisResult,
 } from '../services/moderation.service';
+import { OfflineAdminStorageService } from '../services/offline-admin-storage.service';
+import { AdminOfflineBannerComponent } from '../components/admin-offline-banner/admin-offline-banner.component';
 import { TranslatePipe } from '../services/translate.pipe';
 <<<<<<< HEAD
 import { SanitisePipe } from '../services/sanitise.pipe';
@@ -21,6 +23,7 @@ import { AppCardComponent } from '../components/primitives/card/card.component';
 
 @Component({
   selector: 'app-moderation-queue',
+<<<<<<< HEAD
   standalone: true,
 <<<<<<< HEAD
   imports: [CommonModule, TranslatePipe, SanitisePipe],
@@ -137,18 +140,23 @@ import { AppCardComponent } from '../components/primitives/card/card.component';
     </div>
   `,
 =======
+=======
+>>>>>>> origin/main
   imports: [
     DatePipe,
     TranslatePipe,
     AppEmptyStateComponent,
     AppSkeletonLoaderComponent,
     AppCardComponent,
+    AdminOfflineBannerComponent,
   ],
   templateUrl: './moderation-queue.component.html',
 >>>>>>> origin/main
 })
 export class ModerationQueueComponent {
   private moderationService = inject(ModerationService);
+  private offlineStorage = inject(OfflineAdminStorageService);
+  readonly isOnline = this.offlineStorage.isOnline;
 
   readonly type = signal<'moment' | 'profile'>('profile');
   readonly status = signal<string | undefined>(undefined);

@@ -4,19 +4,28 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitisePipe } from '../../services/sanitise.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AdminService, AdminUserSummary, LoginHistoryEntry } from '../../services/admin.service';
+import { OfflineAdminStorageService } from '../../services/offline-admin-storage.service';
+import { AdminOfflineBannerComponent } from '../admin-offline-banner/admin-offline-banner.component';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppPillComponent } from '../primitives/pill/pill.component';
 import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-portal',
+<<<<<<< HEAD
   imports: [CommonModule, TranslatePipe, SanitisePipe, AppCardComponent, AppPillComponent],
+=======
+  imports: [CommonModule, TranslatePipe, AppCardComponent, AppPillComponent, AdminOfflineBannerComponent],
+>>>>>>> origin/main
   templateUrl: './admin-portal.component.html',
   styleUrls: ['./admin-portal.component.scss'],
 })
 export class AdminPortalComponent implements OnInit {
   private readonly adminService = inject(AdminService);
+  private readonly offlineStorage = inject(OfflineAdminStorageService);
   private readonly i18n = inject(I18nService);
+
+  readonly isOnline = this.offlineStorage.isOnline;
 
   readonly searchTerm = signal<string>('');
   readonly page = signal<number>(1);

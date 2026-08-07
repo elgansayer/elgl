@@ -1,5 +1,11 @@
+<<<<<<< HEAD
 <div class="max-w-5xl mx-auto ps-4 pe-4 pt-6 pb-6">
   <h1 class="text-2xl font-bold mb-1">{{ 'admin.title' | t }}</h1>
+=======
+<div class="max-w-5xl mx-auto ps-4 pe-4 pt-6 pb-6" role="main" aria-labelledby="admin-title">
+  <app-admin-offline-banner />
+  <h1 id="admin-title" class="text-2xl font-bold mb-1">{{ 'admin.title' | t }}</h1>
+>>>>>>> origin/main
   <p class="text-sm text-text-secondary mb-4">{{ 'admin.subtitle' | t }}</p>
 
   <form class="flex gap-2 mb-4" (submit)="$event.preventDefault(); runSearch()">
