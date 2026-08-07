@@ -21,21 +21,9 @@ export class AppSkeletonLoaderComponent {
 
   readonly hostClasses = computed(() => {
     const base = 'block animate-pulse bg-surface-100';
-    let shape = '';
-
-    switch (this.variant()) {
-      case 'circle':
-        shape = 'rounded-full';
-        break;
-      case 'text':
-        shape = 'rounded';
-        break;
-      default:
-        shape = '';
-        break;
-    }
-
+    const variant = this.variant();
+    const shape = variant === 'circle' ? 'rounded-full' : variant === 'text' ? 'rounded' : '';
     const extra = this.customClass();
-    return `${base} ${shape}${extra ? ' ' + extra : ''}`.trim();
+    return [base, shape, extra].filter(Boolean).join(' ').trim();
   });
 }
