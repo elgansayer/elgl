@@ -13,6 +13,7 @@ interface MockLogger {
 interface MockQueryBuilder {
   select: jest.Mock;
   eq: jest.Mock;
+  limit: jest.Mock;
   then?: jest.Mock;
 }
 
@@ -37,6 +38,7 @@ describe('SuggestFlashcardsService', () => {
     mockQueryBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
     };
 
     mockSupabaseClient = {

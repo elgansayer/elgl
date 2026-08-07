@@ -249,13 +249,21 @@ export class VocabularyStore {
    */
   async syncOfflineReviews(): Promise<{ synced: number; failed: number }> {
     return this.srsOffline.syncQueuedReviews(async (queued) => {
-      await firstValueFrom(
-        this.http.patch<Flashcard>(
-          `${this.flashcardsUrl}/${queued.flashcardId}/srs`,
-          { quality: queued.quality },
-          { headers: this.getHeaders() },
-        ),
-      );
+      // Sync all queued items one-by-one to avoid overwhelming the SRS endpoint
+      for (const item of queued) {
+        try {
+          await firstValueFrom(
+            this.http.patch<Flashcard>(
+              `${this.flashcardsUrl}/${item.flashcardId}/srs`,
+              { quality: item.quality },
+              { headers: this.getHeaders() },
+            ),
+          );
+        } catch {
+          // Individual sync failure shouldn't block other items
+          // srsOffline persists failures for next attempt
+        }
+      }
     });
   }
 

@@ -31,6 +31,7 @@ export class SuggestFlashcardsService {
     const uniqueWords = [...new Set(words)];
 
     // If a user_id is provided and exclude_known is not false, fetch already‑known words (SRS level = 4)
+    // Capped at 5000 to prevent unbounded payload from power users with massive vocabularies
     let knownWords: Set<string> = new Set();
     if (user_id && exclude_known !== false) {
       const supabase = this.supabaseService.getClient();
@@ -38,7 +39,8 @@ export class SuggestFlashcardsService {
         .from('flashcards')
         .select('word_token')
         .eq('user_id', user_id)
-        .eq('srs_level', 4);
+        .eq('srs_level', 4)
+        .limit(5000);
       if (data && data.length > 0) {
         knownWords = new Set(data.map((r) => r.word_token.toLowerCase()));
       }

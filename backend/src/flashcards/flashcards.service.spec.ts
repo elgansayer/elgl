@@ -36,6 +36,8 @@ interface MockQueryBuilder {
   lt: jest.Mock;
   lte: jest.Mock;
   order: jest.Mock;
+  range: jest.Mock;
+  limit: jest.Mock;
   single: jest.Mock;
   then?: jest.Mock;
 }
@@ -54,6 +56,22 @@ interface MockMetricsService {
   setSrsCardsStuck: jest.Mock;
   setSrsDecksTotal: jest.Mock;
   recordSrsDeckCreated: jest.Mock;
+}
+
+function createMockQueryBuilder(): MockQueryBuilder {
+  const builder: MockQueryBuilder = {
+    upsert: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    lt: jest.fn().mockReturnThis(),
+    lte: jest.fn().mockReturnThis(),
+    order: jest.fn().mockReturnThis(),
+    range: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    single: jest.fn(),
+  };
+  return builder;
 }
 
 function mockFlashcard(overrides: Partial<Flashcard> = {}): Flashcard {
@@ -106,16 +124,7 @@ describe('FlashcardsService', () => {
       del: jest.fn().mockResolvedValue(1),
     };
 
-    mockQueryBuilder = {
-      upsert: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      lt: jest.fn().mockReturnThis(),
-      lte: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      single: jest.fn(),
-    };
+    mockQueryBuilder = createMockQueryBuilder();
 
     mockSupabaseClient = {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
@@ -409,93 +418,185 @@ describe('FlashcardsService', () => {
   });
 
   describe('getFlashcards', () => {
+    /**
+     * Helper to make a mock query builder resolve via `then` as a thenable.
+     * All chain methods already return `this`, so `await builder` calls `then`.
+     */
+    function withThen<T>(
+      builder: MockQueryBuilder,
+      resolve: (fn: (value: T) => void) => void,
+    ): MockQueryBuilder {
+      builder.then = resolve as any;
+      return builder;
+    }
+
     it('should return cached data when Redis cache is available', async () => {
-      const cards = [{ id: 'cached-card-1' }];
-      mockRedisClient.get.mockResolvedValue(JSON.stringify(cards));
+      const cached = { cards: [{ id: 'cached-card-1' }], total: 1, page: 1, limit: 50 };
+      mockRedisClient.get.mockResolvedValue(JSON.stringify(cached));
 
       const result = await service.getFlashcards('user-1');
 
-      expect(mockRedisClient.get).toHaveBeenCalledWith('flashcards:list:user-1');
+      expect(mockRedisClient.get).toHaveBeenCalledWith('flashcards:list:user-1:p1:l50');
       // Should NOT hit the database when cache is fresh
       expect(mockSupabaseClient.from).not.toHaveBeenCalled();
-      expect(result).toEqual(cards);
+      expect(result).toEqual(cached);
     });
 
     it('should query DB and cache result when Redis is empty', async () => {
       mockRedisClient.get.mockResolvedValue(null);
       const cards = [{ id: 'card-1' }];
-      mockQueryBuilder.order.mockResolvedValue({
-        data: cards,
-        error: null,
-      });
+
+      const countBuilder = createMockQueryBuilder();
+      const dataBuilder = createMockQueryBuilder();
+      mockSupabaseClient.from
+        .mockReturnValueOnce(countBuilder)
+        .mockReturnValueOnce(dataBuilder);
+
+      // Count query resolves with { count: 1 }
+      withThen(countBuilder, (resolve) => resolve({ data: null, count: 1, error: null } as any));
+      // Data query resolves with { data: cards }
+      withThen(dataBuilder, (resolve) => resolve({ data: cards, error: null } as any));
 
       const result = await service.getFlashcards('user-1');
 
-      expect(mockRedisClient.get).toHaveBeenCalledWith('flashcards:list:user-1');
+      expect(mockRedisClient.get).toHaveBeenCalledWith('flashcards:list:user-1:p1:l50');
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('flashcards');
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
-      expect(mockQueryBuilder.order).toHaveBeenCalledWith('created_at', {
-        ascending: false,
-      });
-      // Should cache the result
+      expect(countBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
+      expect(dataBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
+      expect(dataBuilder.order).toHaveBeenCalledWith('created_at', { ascending: false });
+      // Should cache the paginated result
       expect(mockRedisClient.set).toHaveBeenCalledWith(
-        'flashcards:list:user-1',
-        JSON.stringify(cards),
+        'flashcards:list:user-1:p1:l50',
+        JSON.stringify({ cards, total: 1, page: 1, limit: 50 }),
         'EX',
         300,
       );
-      expect(result).toEqual(cards);
+      expect(result).toEqual({ cards, total: 1, page: 1, limit: 50 });
     });
 
     it('should query DB and fall back when Redis cache parse fails', async () => {
       mockRedisClient.get.mockResolvedValue('invalid-json{{{');
 
       const cards = [{ id: 'card-fallback' }];
-      mockQueryBuilder.order.mockResolvedValue({
-        data: cards,
-        error: null,
-      });
+      const countBuilder = createMockQueryBuilder();
+      const dataBuilder = createMockQueryBuilder();
+      mockSupabaseClient.from
+        .mockReturnValueOnce(countBuilder)
+        .mockReturnValueOnce(dataBuilder);
+
+      withThen(countBuilder, (resolve) => resolve({ data: null, count: 1, error: null } as any));
+      withThen(dataBuilder, (resolve) => resolve({ data: cards, error: null } as any));
 
       const result = await service.getFlashcards('user-1');
 
       expect(mockLogger.warn).toHaveBeenCalled();
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('flashcards');
-      expect(result).toEqual(cards);
+      expect(result).toEqual({ cards, total: 1, page: 1, limit: 50 });
     });
 
     it('should filter by level with level-specific cache key', async () => {
       mockRedisClient.get.mockResolvedValue(null);
       const cards = [{ id: 'card-2', srs_level: 2 }];
-      mockQueryBuilder.eq.mockReturnThis();
-      mockQueryBuilder.then = (
-        resolve: (value: { data: unknown[]; error: null }) => void,
-      ) => resolve({ data: cards, error: null });
+
+      const countBuilder = createMockQueryBuilder();
+      const dataBuilder = createMockQueryBuilder();
+      mockSupabaseClient.from
+        .mockReturnValueOnce(countBuilder)
+        .mockReturnValueOnce(dataBuilder);
+
+      withThen(countBuilder, (resolve) => resolve({ data: null, count: 1, error: null } as any));
+      withThen(dataBuilder, (resolve) => resolve({ data: cards, error: null } as any));
 
       const result = await service.getFlashcards('user-1', 2);
 
-      expect(mockRedisClient.get).toHaveBeenCalledWith('flashcards:list:user-1:level:2');
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('srs_level', 2);
+      expect(mockRedisClient.get).toHaveBeenCalledWith('flashcards:list:user-1:level:2:p1:l50');
+      expect(countBuilder.eq).toHaveBeenCalledWith('srs_level', 2);
+      expect(dataBuilder.eq).toHaveBeenCalledWith('srs_level', 2);
       // Should use the level-specific cache key for storing
       expect(mockRedisClient.set).toHaveBeenCalledWith(
-        'flashcards:list:user-1:level:2',
-        JSON.stringify(cards),
+        'flashcards:list:user-1:level:2:p1:l50',
+        JSON.stringify({ cards, total: 1, page: 1, limit: 50 }),
         'EX',
         300,
       );
-      expect(result).toEqual(cards);
+      expect(result).toEqual({ cards, total: 1, page: 1, limit: 50 });
     });
 
-    it('should return empty array when DB query errors and cache is empty', async () => {
+    it('should return empty cards with total=0 when DB errors and cache is empty', async () => {
       mockRedisClient.get.mockResolvedValue(null);
-      mockQueryBuilder.order.mockResolvedValue({
-        data: null,
-        error: { message: 'Query error' },
-      });
+
+      const countBuilder = createMockQueryBuilder();
+      const dataBuilder = createMockQueryBuilder();
+      mockSupabaseClient.from
+        .mockReturnValueOnce(countBuilder)
+        .mockReturnValueOnce(dataBuilder);
+
+      withThen(countBuilder, (resolve) => resolve({ data: null, count: 0, error: null } as any));
+      withThen(dataBuilder, (resolve) => resolve({ data: null, error: { message: 'Query error' } } as any));
 
       const result = await service.getFlashcards('user-1');
-      expect(result).toEqual([]);
-      // Should not try to cache empty results
+      expect(result).toEqual({ cards: [], total: 0, page: 1, limit: 50 });
+      // Should NOT cache error responses
       expect(mockRedisClient.set).not.toHaveBeenCalled();
+    });
+
+    it('should respect custom page and limit params', async () => {
+      mockRedisClient.get.mockResolvedValue(null);
+      const cards = [{ id: 'card-page3' }];
+
+      const countBuilder = createMockQueryBuilder();
+      const dataBuilder = createMockQueryBuilder();
+      mockSupabaseClient.from
+        .mockReturnValueOnce(countBuilder)
+        .mockReturnValueOnce(dataBuilder);
+
+      withThen(countBuilder, (resolve) => resolve({ data: null, count: 42, error: null } as any));
+      withThen(dataBuilder, (resolve) => resolve({ data: cards, error: null } as any));
+
+      const result = await service.getFlashcards('user-1', undefined, 3, 10);
+
+      expect(mockRedisClient.get).toHaveBeenCalledWith('flashcards:list:user-1:p3:l10');
+      expect(dataBuilder.range).toHaveBeenCalledWith(20, 29);
+      expect(result).toEqual({ cards, total: 42, page: 3, limit: 10 });
+    });
+
+    it('should clamp page size to MAX_FLASHCARDS_PER_PAGE', async () => {
+      mockRedisClient.get.mockResolvedValue(null);
+      const cards = [{ id: 'capped' }];
+
+      const countBuilder = createMockQueryBuilder();
+      const dataBuilder = createMockQueryBuilder();
+      mockSupabaseClient.from
+        .mockReturnValueOnce(countBuilder)
+        .mockReturnValueOnce(dataBuilder);
+
+      withThen(countBuilder, (resolve) => resolve({ data: null, count: 1, error: null } as any));
+      withThen(dataBuilder, (resolve) => resolve({ data: cards, error: null } as any));
+
+      const result = await service.getFlashcards('user-1', undefined, 1, 999);
+
+      expect(mockRedisClient.get).toHaveBeenCalledWith('flashcards:list:user-1:p1:l100');
+      // should be clamped to 100
+      expect(result.limit).toBe(100);
+    });
+
+    it('should default page to 1 when page < 1', async () => {
+      mockRedisClient.get.mockResolvedValue(null);
+      const cards: any[] = [];
+
+      const countBuilder = createMockQueryBuilder();
+      const dataBuilder = createMockQueryBuilder();
+      mockSupabaseClient.from
+        .mockReturnValueOnce(countBuilder)
+        .mockReturnValueOnce(dataBuilder);
+
+      withThen(countBuilder, (resolve) => resolve({ data: null, count: 0, error: null } as any));
+      withThen(dataBuilder, (resolve) => resolve({ data: cards, error: null } as any));
+
+      const result = await service.getFlashcards('user-1', undefined, 0, 50);
+
+      expect(mockRedisClient.get).toHaveBeenCalledWith('flashcards:list:user-1:p1:l50');
+      expect(result.page).toBe(1);
     });
   });
 
@@ -515,10 +616,10 @@ describe('FlashcardsService', () => {
     it('should query DB and cache result when Redis is empty', async () => {
       mockRedisClient.get.mockResolvedValue(null);
       const cards = [{ id: 'card-1' }];
-      mockQueryBuilder.order.mockResolvedValue({
-        data: cards,
-        error: null,
-      });
+      // Chain ends with .limit(), so we make mockQueryBuilder thenable
+      mockQueryBuilder.then = (
+        resolve: (value: { data: unknown[]; error: null }) => void,
+      ) => resolve({ data: cards, error: null });
 
       const result = await service.getDueReviews('user-1');
 
@@ -530,6 +631,7 @@ describe('FlashcardsService', () => {
         'next_review_at',
         expect.any(String),
       );
+      expect(mockQueryBuilder.limit).toHaveBeenCalledWith(200);
       // Should cache with 60s TTL
       expect(mockRedisClient.set).toHaveBeenCalledWith(
         'flashcards:due:user-1',
@@ -542,10 +644,9 @@ describe('FlashcardsService', () => {
 
     it('should return empty array when DB query errors and cache empty', async () => {
       mockRedisClient.get.mockResolvedValue(null);
-      mockQueryBuilder.order.mockResolvedValue({
-        data: null,
-        error: { message: 'Error' },
-      });
+      mockQueryBuilder.then = (
+        resolve: (value: { data: null; error: { message: string } }) => void,
+      ) => resolve({ data: null, error: { message: 'Error' } });
 
       const result = await service.getDueReviews('user-1');
       expect(result).toEqual([]);
@@ -607,10 +708,12 @@ describe('FlashcardsService', () => {
     });
 
     it('should not wrap getFlashcards with withRetry', async () => {
-      mockQueryBuilder.order.mockResolvedValue({
-        data: [],
-        error: null,
-      });
+      // The getFlashcards method makes two supabase.from() calls (count + data).
+      // Both return the same mockQueryBuilder, so we use `then` on the builder
+      // to resolve whichever chain is last invoked.
+      mockQueryBuilder.then = (
+        resolve: (value: { data: unknown[]; error: null } | { count: number; error: null }) => void,
+      ) => resolve({ data: [], error: null });
 
       await service.getFlashcards('user-1');
 
@@ -618,10 +721,9 @@ describe('FlashcardsService', () => {
     });
 
     it('should not wrap getDueReviews with withRetry', async () => {
-      mockQueryBuilder.order.mockResolvedValue({
-        data: [],
-        error: null,
-      });
+      mockQueryBuilder.then = (
+        resolve: (value: { data: unknown[]; error: null }) => void,
+      ) => resolve({ data: [], error: null });
 
       await service.getDueReviews('user-1');
 

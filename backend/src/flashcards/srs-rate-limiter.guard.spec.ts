@@ -9,13 +9,23 @@ import {
 
 describe('SrsRateLimiterGuard', () => {
   let guard: SrsRateLimiterGuard;
-  let mockRedis: { incr: jest.Mock; expire: jest.Mock };
+  let mockRedis: { multi: jest.Mock };
   let mockSupabaseService: { getRedisClient: jest.Mock };
+
+  function createMultiMock(incrResult: number) {
+    return {
+      incr: jest.fn().mockReturnThis(),
+      expire: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([
+        [null, incrResult],
+        [null, 1],
+      ]),
+    };
+  }
 
   beforeEach(async () => {
     mockRedis = {
-      incr: jest.fn(),
-      expire: jest.fn(),
+      multi: jest.fn().mockReturnValue(createMultiMock(1)),
     };
 
     mockSupabaseService = {
@@ -86,7 +96,7 @@ describe('SrsRateLimiterGuard', () => {
       const context = createContext(undefined, 'user-1');
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
-      expect(mockRedis.incr).not.toHaveBeenCalled();
+      expect(mockRedis.multi).not.toHaveBeenCalled();
     });
 
     it('should allow request when user is not authenticated', async () => {
@@ -96,11 +106,12 @@ describe('SrsRateLimiterGuard', () => {
       );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
-      expect(mockRedis.incr).not.toHaveBeenCalled();
+      expect(mockRedis.multi).not.toHaveBeenCalled();
     });
 
     it('should allow request when under rate limit', async () => {
-      mockRedis.incr.mockResolvedValue(5);
+      const multiMock = createMultiMock(5);
+      mockRedis.multi.mockReturnValue(multiMock);
       const context = createContext(
         { maxRequests: 30, windowSeconds: 60 },
         'user-1',
@@ -108,31 +119,19 @@ describe('SrsRateLimiterGuard', () => {
 
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
-      expect(mockRedis.incr).toHaveBeenCalledWith(
+      expect(mockRedis.multi).toHaveBeenCalled();
+      expect(multiMock.incr).toHaveBeenCalledWith(
         'srs:ratelimit:user-1:FlashcardsController:updateSrs',
       );
-      // TTL should NOT be set since count > 1
-      expect(mockRedis.expire).not.toHaveBeenCalled();
-    });
-
-    it('should set TTL on first request in the window', async () => {
-      mockRedis.incr.mockResolvedValue(1);
-      const context = createContext(
-        { maxRequests: 30, windowSeconds: 60 },
-        'user-1',
-      );
-
-      const result = await guard.canActivate(context);
-      expect(result).toBe(true);
-      expect(mockRedis.incr).toHaveBeenCalled();
-      expect(mockRedis.expire).toHaveBeenCalledWith(
+      expect(multiMock.expire).toHaveBeenCalledWith(
         'srs:ratelimit:user-1:FlashcardsController:updateSrs',
         60,
       );
     });
 
     it('should throw 429 HttpException when rate limit is exceeded', async () => {
-      mockRedis.incr.mockResolvedValue(31); // over maxRequests of 30
+      const multiMock = createMultiMock(31);
+      mockRedis.multi.mockReturnValue(multiMock);
       const context = createContext(
         { maxRequests: 30, windowSeconds: 60 },
         'user-1',
@@ -145,7 +144,12 @@ describe('SrsRateLimiterGuard', () => {
     });
 
     it('should allow request through when Redis is unavailable (fail-open)', async () => {
-      mockRedis.incr.mockRejectedValue(new Error('Redis connection refused'));
+      const multiMock = {
+        incr: jest.fn().mockReturnThis(),
+        expire: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockRejectedValue(new Error('Redis connection refused')),
+      };
+      mockRedis.multi.mockReturnValue(multiMock);
       const context = createContext(
         { maxRequests: 30, windowSeconds: 60 },
         'user-1',
@@ -156,7 +160,8 @@ describe('SrsRateLimiterGuard', () => {
     });
 
     it('should use correct controller and handler names in the Redis key', async () => {
-      mockRedis.incr.mockResolvedValue(1);
+      const multiMock = createMultiMock(1);
+      mockRedis.multi.mockReturnValue(multiMock);
       const context = createContext(
         { maxRequests: 10, windowSeconds: 30 },
         'user-42',
@@ -165,13 +170,14 @@ describe('SrsRateLimiterGuard', () => {
       );
 
       await guard.canActivate(context);
-      expect(mockRedis.incr).toHaveBeenCalledWith(
+      expect(multiMock.incr).toHaveBeenCalledWith(
         'srs:ratelimit:user-42:FlashcardsController:getDueReviews',
       );
     });
 
     it('should throw 429 for SRS review with strict limit', async () => {
-      mockRedis.incr.mockResolvedValue(121); // over maxRequests of 120
+      const multiMock = createMultiMock(121);
+      mockRedis.multi.mockReturnValue(multiMock);
       const context = createContext(
         { maxRequests: 120, windowSeconds: 60 },
         'user-1',
@@ -181,6 +187,23 @@ describe('SrsRateLimiterGuard', () => {
       await expect(guard.canActivate(context)).rejects.toMatchObject({
         status: 429,
       });
+    });
+
+    it('should handle null result from multi/exec gracefully', async () => {
+      const multiMock = {
+        incr: jest.fn().mockReturnThis(),
+        expire: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(null),
+      };
+      mockRedis.multi.mockReturnValue(multiMock);
+      const context = createContext(
+        { maxRequests: 30, windowSeconds: 60 },
+        'user-1',
+      );
+
+      // Should default to 0 and allow through
+      const result = await guard.canActivate(context);
+      expect(result).toBe(true);
     });
   });
 });

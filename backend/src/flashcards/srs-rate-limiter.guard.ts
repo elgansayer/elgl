@@ -76,12 +76,14 @@ export class SrsRateLimiterGuard implements CanActivate {
 
     try {
       const redis = this.supabaseService.getRedisClient();
-      const currentCount = await redis.incr(key);
-
-      // Set TTL on first request in the window
-      if (currentCount === 1) {
-        await redis.expire(key, options.windowSeconds);
-      }
+      // Use MULTI/EXEC to atomically INCR + EXPIRE, preventing orphaned keys
+      // from leaking memory if the process crashes between INCR and EXPIRE.
+      const result = await redis
+        .multi()
+        .incr(key)
+        .expire(key, options.windowSeconds)
+        .exec();
+      const currentCount = (result?.[0]?.[1] ?? 0) as number;
 
       if (currentCount > options.maxRequests) {
         this.logger.warn(

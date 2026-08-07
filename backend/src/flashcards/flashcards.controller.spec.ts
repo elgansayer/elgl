@@ -152,31 +152,42 @@ describe('FlashcardsController', () => {
   });
 
   describe('getFlashcards', () => {
-    it('should return empty array if user is not provided', async () => {
+    it('should return empty page if user is not provided', async () => {
       const result = await controller.getFlashcards(null);
-      expect(result).toEqual([]);
+      expect(result).toEqual({ cards: [], total: 0, page: 1, limit: 50 });
       expect(flashcardsService.getFlashcards).not.toHaveBeenCalled();
     });
 
     it('should call service getFlashcards with parsed integer level', async () => {
-      const cards: Flashcard[] = [mockFlashcard()];
-      (flashcardsService.getFlashcards as jest.Mock).mockResolvedValue(cards);
+      const paginated = { cards: [mockFlashcard()], total: 1, page: 1, limit: 50 };
+      (flashcardsService.getFlashcards as jest.Mock).mockResolvedValue(paginated);
 
       const result = await controller.getFlashcards(mockUser(), '3');
-      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith('user-1', 3);
-      expect(result).toEqual(cards);
+      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith('user-1', 3, undefined, undefined);
+      expect(result).toEqual(paginated);
     });
 
     it('should call service getFlashcards with undefined level when not provided', async () => {
-      const cards: Flashcard[] = [mockFlashcard()];
-      (flashcardsService.getFlashcards as jest.Mock).mockResolvedValue(cards);
+      const paginated = { cards: [mockFlashcard()], total: 1, page: 1, limit: 50 };
+      (flashcardsService.getFlashcards as jest.Mock).mockResolvedValue(paginated);
 
       const result = await controller.getFlashcards(mockUser());
       expect(flashcardsService.getFlashcards).toHaveBeenCalledWith(
         'user-1',
         undefined,
+        undefined,
+        undefined,
       );
-      expect(result).toEqual(cards);
+      expect(result).toEqual(paginated);
+    });
+
+    it('should parse page and limit query params', async () => {
+      const paginated = { cards: [mockFlashcard()], total: 5, page: 2, limit: 20 };
+      (flashcardsService.getFlashcards as jest.Mock).mockResolvedValue(paginated);
+
+      const result = await controller.getFlashcards(mockUser(), undefined, '2', '20');
+      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith('user-1', undefined, 2, 20);
+      expect(result).toEqual(paginated);
     });
   });
 

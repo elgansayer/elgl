@@ -114,7 +114,7 @@ export class FlashcardsController {
   @ApiOperation({
     summary: 'List flashcards for the authenticated user',
     description:
-      'Returns all flashcards owned by the user, ordered by creation date descending. Optionally filters by SRS level (0-4).',
+      'Returns paginated flashcards owned by the user, ordered by creation date descending. Optionally filters by SRS level (0-4). Maximum 100 per page.',
   })
   @ApiQuery({
     name: 'level',
@@ -123,15 +123,31 @@ export class FlashcardsController {
       'Optional SRS level filter. 0: New (Blue), 1-3: Learning (Yellow), 4: Known (White).',
     example: '2',
   })
-  @ApiResponse({ status: 200, description: 'Array of flashcards.' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number (1-based, default 1).',
+    example: '1',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Page size (default 50, max 100).',
+    example: '50',
+  })
+  @ApiResponse({ status: 200, description: 'Paginated list of flashcards.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async getFlashcards(
     @CurrentUser() user: User | null,
     @Query('level') level?: string,
-  ): Promise<Flashcard[]> {
-    if (!user) return [];
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<{ cards: Flashcard[]; total: number; page: number; limit: number }> {
+    if (!user) return { cards: [], total: 0, page: 1, limit: 50 };
     const lvlNum = level !== undefined ? parseInt(level, 10) : undefined;
-    return await this.flashcardsService.getFlashcards(user.id, lvlNum);
+    const pageNum = page !== undefined ? parseInt(page, 10) : undefined;
+    const limitNum = limit !== undefined ? parseInt(limit, 10) : undefined;
+    return await this.flashcardsService.getFlashcards(user.id, lvlNum, pageNum, limitNum);
   }
 
   @Get('due')

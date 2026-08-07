@@ -14,6 +14,8 @@ const FLASHCARD_LIST_CACHE_PREFIX = 'flashcards:list:';
 const FLASHCARD_LIST_CACHE_TTL = 300; // 5 minutes
 const DUE_REVIEWS_CACHE_PREFIX = 'flashcards:due:';
 const DUE_REVIEWS_CACHE_TTL = 60; // 1 minute
+const MAX_FLASHCARDS_PER_PAGE = 100;
+const MAX_DUE_REVIEWS = 200;
 
 @Injectable()
 export class FlashcardsService {
@@ -252,11 +254,19 @@ export class FlashcardsService {
     };
   }
 
-  async getFlashcards(userId: string, level?: number): Promise<Flashcard[]> {
+  async getFlashcards(
+    userId: string,
+    level?: number,
+    page?: number,
+    limit?: number,
+  ): Promise<{ cards: Flashcard[]; total: number; page: number; limit: number }> {
+    const pageNum = Math.max(1, page ?? 1);
+    const pageSize = Math.min(MAX_FLASHCARDS_PER_PAGE, Math.max(1, limit ?? 50));
+
     const cacheKey =
       level !== undefined && !isNaN(level)
-        ? `${FLASHCARD_LIST_CACHE_PREFIX}${userId}:level:${level}`
-        : `${FLASHCARD_LIST_CACHE_PREFIX}${userId}`;
+        ? `${FLASHCARD_LIST_CACHE_PREFIX}${userId}:level:${level}:p${pageNum}:l${pageSize}`
+        : `${FLASHCARD_LIST_CACHE_PREFIX}${userId}:p${pageNum}:l${pageSize}`;
 
     // Check Redis cache first
     const redis = this.getRedis();
@@ -264,8 +274,8 @@ export class FlashcardsService {
     if (cached) {
       try {
         const parsed: unknown = JSON.parse(cached);
-        if (Array.isArray(parsed)) {
-          return parsed as Flashcard[];
+        if (parsed && typeof parsed === 'object' && 'cards' in (parsed as Record<string, unknown>)) {
+          return parsed as { cards: Flashcard[]; total: number; page: number; limit: number };
         }
       } catch {
         this.logger.warn(
@@ -276,11 +286,28 @@ export class FlashcardsService {
     }
 
     const supabase = this.supabaseService.getClient();
+
+    // Build base query for counting
+    let countQuery = supabase
+      .from('flashcards')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    if (level !== undefined && !isNaN(level)) {
+      countQuery = countQuery.eq('srs_level', level);
+    }
+
+    const countResponse = await countQuery;
+    const total = countResponse.count ?? 0;
+
+    // Fetch paginated results
+    const offset = (pageNum - 1) * pageSize;
     let query = supabase
       .from('flashcards')
       .select('*')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(offset, offset + pageSize - 1);
 
     if (level !== undefined && !isNaN(level)) {
       query = query.eq('srs_level', level);
@@ -288,18 +315,21 @@ export class FlashcardsService {
 
     const response = await query;
     if (response.error || !response.data) {
-      return [];
+      return { cards: [], total, page: pageNum, limit: pageSize };
     }
+    const cards: Flashcard[] = response.data as Flashcard[];
+
+    const result = { cards, total, page: pageNum, limit: pageSize };
 
     // Cache the result in Redis
     void redis.set(
       cacheKey,
-      JSON.stringify(response.data),
+      JSON.stringify(result),
       'EX',
       FLASHCARD_LIST_CACHE_TTL,
     );
 
-    return response.data;
+    return result;
   }
 
   async getDueReviews(userId: string): Promise<Flashcard[]> {
@@ -329,7 +359,8 @@ export class FlashcardsService {
       .eq('user_id', userId)
       .lt('srs_level', 4)
       .lte('next_review_at', new Date().toISOString())
-      .order('next_review_at', { ascending: true });
+      .order('next_review_at', { ascending: true })
+      .limit(MAX_DUE_REVIEWS);
 
     if (response.error || !response.data) {
       return [];

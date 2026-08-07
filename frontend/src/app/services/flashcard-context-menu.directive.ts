@@ -1,4 +1,4 @@
-import { Directive, inject, input, ElementRef, ErrorHandler } from '@angular/core';
+import { Directive, inject, input, ElementRef, ErrorHandler, OnDestroy } from '@angular/core';
 import { FlashcardService } from './flashcard.service';
 
 @Directive({
@@ -9,7 +9,7 @@ import { FlashcardService } from './flashcard.service';
     '(touchstart)': 'onTouchStart($event)',
   },
 })
-export class FlashcardContextMenuDirective {
+export class FlashcardContextMenuDirective implements OnDestroy {
   /** Source language of the selected text (could be read from a data attribute or input). */
   readonly sourceLanguage = input<string>('en');
 
@@ -18,6 +18,16 @@ export class FlashcardContextMenuDirective {
   private errorHandler = inject(ErrorHandler);
 
   private overlay: HTMLElement | null = null;
+  private currentCloseHandler: EventListener | null = null;
+
+  ngOnDestroy(): void {
+    // Clean up any lingering overlay and document-level listeners
+    if (this.currentCloseHandler) {
+      document.removeEventListener('click', this.currentCloseHandler);
+      this.currentCloseHandler = null;
+    }
+    this.removeOverlay();
+  }
 
   onContextMenu(event: MouseEvent): void {
     event.preventDefault();
@@ -43,6 +53,12 @@ export class FlashcardContextMenuDirective {
   }
 
   private showOverlay(x: number, y: number, word: string, context: string, lang: string): void {
+    // Clean up any previous close handler
+    if (this.currentCloseHandler) {
+      document.removeEventListener('click', this.currentCloseHandler);
+      this.currentCloseHandler = null;
+    }
+
     const div = document.createElement('div');
     div.className = 'fixed bg-surface text-on-surface shadow-lg rounded-lg px-4 py-2 z-50 cursor-pointer hover:bg-surface-hover transition-colors';
     div.style.left = `${x}px`;
@@ -74,9 +90,12 @@ export class FlashcardContextMenuDirective {
       }
       if (!div.contains(target)) {
         document.removeEventListener('click', closeHandler);
+        this.currentCloseHandler = null;
         this.removeOverlay();
       }
     };
+
+    this.currentCloseHandler = closeHandler;
 
     // Delay to avoid immediate close from the context menu event itself
     setTimeout(() => {
@@ -85,6 +104,10 @@ export class FlashcardContextMenuDirective {
   }
 
   private removeOverlay(): void {
+    if (this.currentCloseHandler) {
+      document.removeEventListener('click', this.currentCloseHandler);
+      this.currentCloseHandler = null;
+    }
     if (this.overlay && this.overlay.parentNode) {
       this.overlay.parentNode.removeChild(this.overlay);
     }
