@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
@@ -60,9 +61,9 @@ interface UserRow {
 
 @Injectable()
 export class RecommendationsService {
-  private readonly logger = new Logger(RecommendationsService.name);
-
   constructor(
+    @InjectPinoLogger(RecommendationsService.name)
+    private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
     private readonly metricsService: MetricsService,
     private readonly circuitBreakerService: CircuitBreakerService,
@@ -71,7 +72,7 @@ export class RecommendationsService {
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async calculateDailyRecommendations(): Promise<void> {
-    this.logger.log('Starting daily recommendation calculations...');
+    this.logger.info('Starting daily recommendation calculations...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
@@ -99,7 +100,7 @@ export class RecommendationsService {
         throw new Error(`Failed to fetch users: ${error?.message}`);
       }
 
-      this.logger.log(`Computing recommendations for ${users.length} users...`);
+      this.logger.info(`Computing recommendations for ${users.length} users...`);
 
       for (const user of users) {
         const targetLanguages = user.target_languages as string[] | null;
@@ -150,7 +151,7 @@ export class RecommendationsService {
       }
 
       await flushPipeline();
-      this.logger.log(
+      this.logger.info(
         `Successfully calculated and cached ${totalCached} daily recommendation sets.`,
       );
     } catch (error) {
@@ -634,7 +635,7 @@ export class RecommendationsService {
 
   /** Tier 4: Ultimate fallback using in-memory mock data. */
   private recommendationsFromMock(userId: string): RecommendedUserDto[] {
-    this.logger.log(`Using mock data as ultimate fallback for user ${userId}`);
+    this.logger.info(`Using mock data as ultimate fallback for user ${userId}`);
 
     const mockUsers = MOCK_USERS as Array<{
       id: string;
@@ -706,7 +707,7 @@ export class RecommendationsService {
       // Delete the user's own recommendations cache
       const ownKey = `recommendations:daily:${userId}`;
       await redis.del(ownKey);
-      this.logger.log(
+      this.logger.info(
         `Purged own recommendations cache for user ${userId} (GDPR erasure)`,
       );
     } catch (error) {
@@ -724,7 +725,7 @@ export class RecommendationsService {
     //
     // This approach is documented in the GDPR data-retention policy
     // (see data-retention.service.ts) and auditable via debug logs.
-    this.logger.log(
+    this.logger.info(
       `GDPR erasure initiated for user ${userId}; recommendation cache TTL (${DAILY_REDIS_TTL}s) will expire stale copies`,
     );
   }

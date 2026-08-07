@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -31,9 +32,9 @@ type DiscoveryUser = UserProfile & {
 
 @Injectable()
 export class DiscoveryService {
-  private readonly logger = new Logger(DiscoveryService.name);
-
   constructor(
+    @InjectPinoLogger(DiscoveryService.name)
+    private readonly logger: PinoLogger,
     private readonly audioRoomsService: AudioRoomsService,
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
@@ -42,7 +43,7 @@ export class DiscoveryService {
   // Weekly computation of Partner of the Week (every Sunday at midnight)
   @Cron('0 0 * * 0')
   async calculatePartnerOfWeek(): Promise<void> {
-    this.logger.log('Starting Partner of the Week calculation...');
+    this.logger.info('Starting Partner of the Week calculation...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
@@ -70,7 +71,7 @@ export class DiscoveryService {
         'EX',
         604800,
       );
-      this.logger.log(`Partner of the Week set for ${partnerIds.length} users`);
+      this.logger.info(`Partner of the Week set for ${partnerIds.length} users`);
     } catch (err) {
       this.logger.error('Error calculating Partner of the Week', err);
     }
