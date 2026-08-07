@@ -1,4 +1,5 @@
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { PasswordResetService } from './password-reset.service';
 import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -7,6 +8,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 export class PasswordResetController {
   constructor(private readonly resetService: PasswordResetService) {}
 
+  @Throttle({ default: { limit: 3, ttl: 300000 } })
   @Post('request-password-reset')
   @HttpCode(HttpStatus.OK)
   async requestPasswordReset(
@@ -18,6 +20,7 @@ export class PasswordResetController {
     };
   }
 
+  @Throttle({ default: { limit: 3, ttl: 300000 } })
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   async resetPassword(
