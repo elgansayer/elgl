@@ -1,3 +1,4 @@
+import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -11,7 +12,7 @@ import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-portal',
-  imports: [CommonModule, TranslatePipe, AppCardComponent, AppPillComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+  imports: [CommonModule, DatePipe, TranslatePipe, AppCardComponent, AppPillComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   templateUrl: './admin-portal.component.html',
   styleUrls: ['./admin-portal.component.scss'],
 })
@@ -43,6 +44,10 @@ export class AdminPortalComponent {
   readonly loginHistoryLoadingId = signal<string | null>(null);
 
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize)));
+
+  loadUsers(): void {
+    this.usersResource.reload();
+  }
 
   onSearchInput(value: string): void {
     this.searchTerm.set(value);

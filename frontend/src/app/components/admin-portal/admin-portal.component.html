@@ -96,12 +96,12 @@
               }
             </div>
 
-            <div class="flex-1 min-w-[10rem]" role="cell">
-              <p class="font-semibold">{{ displayNameFor(user) }}</p>
-              <p class="text-xs text-text-secondary">
-                {{ 'admin.joined' | t: { date: (user.created_at | date) } }}
-              </p>
-            </div>
+                <div class="flex-1 min-w-[10rem]" role="cell">
+                  <p class="font-semibold">{{ displayNameFor(user) }}</p>
+                  <p class="text-xs text-text-secondary">
+                    {{ 'admin.joined' | t: { date: (user.created_at | date) } }}
+                  </p>
+                </div>
 
             <div class="flex items-center gap-2" role="cell">
                   @if (user.is_admin) {

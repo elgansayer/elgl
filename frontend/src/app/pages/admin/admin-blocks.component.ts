@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { AdminService, AdminBlockEntry } from '../../services/admin.service';
+import { OfflineAdminStorageService } from '../../services/offline-admin-storage.service';
 import { AdminOfflineBannerComponent } from '../../components/admin-offline-banner/admin-offline-banner.component';
 import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';

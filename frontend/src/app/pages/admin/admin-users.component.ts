@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
+import { OfflineAdminStorageService } from '../../services/offline-admin-storage.service';
 import { AdminOfflineBannerComponent } from '../../components/admin-offline-banner/admin-offline-banner.component';
 import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
@@ -10,7 +11,8 @@ import { OfflineAdminStorageService } from '../../services/offline-admin-storage
 
 @Component({
   selector: 'app-admin-users',
-  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AdminOfflineBannerComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+  standalone: true,
+imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AdminOfflineBannerComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   templateUrl: './admin-users.component.html',
 })
 export class AdminUsersComponent {

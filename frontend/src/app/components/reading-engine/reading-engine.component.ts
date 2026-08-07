@@ -9,7 +9,7 @@ import { NetworkStatusService } from '../../services/network-status.service';
 import { OfflineReadingService } from '../../services/offline-reading.service';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
-import { environment } from '../../environments/environment';
+import { environment } from '../../../environments/environment';
 
 interface ReadingArticle {
   id: string;
