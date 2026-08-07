@@ -25,7 +25,7 @@
           <span class="text-4xl" aria-hidden="true">🪙</span>
           <div>
             <span class="text-xs font-bold uppercase text-text-secondary">{{ 'coinEconomy.balanceLabel' | t }}</span>
-            <p class="text-3xl font-extrabold text-amber-400">{{ balance() | number }}</p>
+            <p class="text-3xl font-extrabold text-amber-400" aria-live="polite">{{ balance() | number }}</p>
           </div>
         </div>
         <div class="mt-4 flex flex-wrap gap-2">
@@ -33,6 +33,7 @@
             type="button"
             class="rounded-full bg-amber-500/20 px-4 py-2 text-sm font-semibold text-amber-400 hover:bg-amber-500/30 transition-colors"
             (click)="claimDailyReward()"
+            [attr.aria-label]="('coinEconomy.dailyCheckInAria' | t)"
           >
             {{ 'coinEconomy.dailyCheckIn' | t }}
           </button>
@@ -55,6 +56,7 @@
             <a
               routerLink="/vip"
               class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary-dark transition-colors inline-block"
+              [attr.aria-label]="('coinEconomy.buyCoinsAria' | t)"
             >
               {{ 'coinEconomy.buyCoinsBtn' | t }}
             </a>
@@ -70,6 +72,7 @@
             <a
               routerLink="/chat"
               class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary-dark transition-colors inline-block"
+              [attr.aria-label]="('coinEconomy.sendGiftAria' | t)"
             >
               {{ 'coinEconomy.sendGiftBtn' | t }}
             </a>
@@ -85,6 +88,7 @@
             <a
               routerLink="/sticker-store"
               class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary-dark transition-colors inline-block"
+              [attr.aria-label]="('coinEconomy.stickerStoreAria' | t)"
             >
               {{ 'coinEconomy.stickerStoreBtn' | t }}
             </a>
@@ -100,6 +104,7 @@
             <a
               routerLink="/shop"
               class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary-dark transition-colors inline-block"
+              [attr.aria-label]="('coinEconomy.shopAria' | t)"
             >
               {{ 'coinEconomy.shopBtn' | t }}
             </a>
@@ -115,6 +120,7 @@
             <a
               routerLink="/vip"
               class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary-dark transition-colors inline-block"
+              [attr.aria-label]="('coinEconomy.vipAria' | t)"
             >
               {{ 'coinEconomy.vipBtn' | t }}
             </a>
@@ -130,6 +136,7 @@
             <a
               routerLink="/escrow"
               class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary-dark transition-colors inline-block"
+              [attr.aria-label]="('coinEconomy.escrowPaymentsAria' | t)"
             >
               {{ 'coinEconomy.escrowPaymentsBtn' | t }}
             </a>
@@ -149,10 +156,10 @@
           @if (economyStore.catalog().length > 0) {
             <div>
               <h3 class="text-sm font-semibold text-text-secondary uppercase mb-2">{{ 'coinEconomy.popularGifts' | t }}</h3>
-              <div class="flex flex-wrap gap-3">
+              <div class="flex flex-wrap gap-3" role="list" [attr.aria-label]="'coinEconomy.popularGifts' | t">
                 @for (gift of economyStore.catalog().slice(0, 5); track gift.id) {
-                  <div class="flex items-center gap-2 rounded-full bg-surface-200 px-3 py-1.5 text-sm">
-                    <span>{{ gift.icon }}</span>
+                  <div class="flex items-center gap-2 rounded-full bg-surface-200 px-3 py-1.5 text-sm" role="listitem">
+                    <span aria-hidden="true">{{ gift.icon }}</span>
                     <span class="font-medium">{{ gift.name }}</span>
                     <span class="text-amber-400 font-semibold">{{ gift.cost_coins }}</span>
                   </div>
@@ -164,7 +171,7 @@
           @if (economyStore.stickerPacks().length > 0) {
             <div>
               <h3 class="text-sm font-semibold text-text-secondary uppercase mb-2">{{ 'coinEconomy.yourStickerPacks' | t }}</h3>
-              <div class="flex flex-wrap gap-2">
+              <div class="flex flex-wrap gap-2" role="list" [attr.aria-label]="'coinEconomy.yourStickerPacks' | t">
                 @for (pack of economyStore.stickerPacks().slice(0, 5); track pack.id) {
                   <span
                     class="rounded-full px-3 py-1 text-xs font-medium"
@@ -172,6 +179,7 @@
                     [class.text-emerald-400]="pack.owned"
                     [class.bg-surface-200]="!pack.owned"
                     [class.text-text-secondary]="!pack.owned"
+                    role="listitem"
                   >
                     {{ pack.name }} {{ pack.owned ? '✓' : pack.cost_coins + ' 🪙' }}
                   </span>
@@ -180,7 +188,7 @@
             </div>
           }
           @if (economyStore.catalog().length === 0 && economyStore.stickerPacks().length === 0) {
-            <p class="text-text-secondary text-sm">{{ 'coinEconomy.loadingData' | t }}</p>
+            <p class="text-text-secondary text-sm" role="status">{{ 'coinEconomy.loadingData' | t }}</p>
           }
         </div>
       </app-card>
