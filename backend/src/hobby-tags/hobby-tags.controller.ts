@@ -6,12 +6,12 @@ import {
   Patch,
   Body,
   Param,
+  Query,
   UseGuards,
   Req,
 } from '@nestjs/common';
 import { HobbyTagsService } from './hobby-tags.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import type { Request } from 'express';
 
 @Controller('hobby-tags')
 export class HobbyTagsController {
@@ -26,7 +26,7 @@ export class HobbyTagsController {
   @UseGuards(SupabaseAuthGuard)
   async createGlobalTag(
     @Body() body: { name: string; category: string; icon?: string },
-  ): Promise<any> {
+  ): Promise<unknown> {
     return this.hobbyTagsService.createTag(body.name, body.category, body.icon);
   }
 
@@ -35,6 +35,24 @@ export class HobbyTagsController {
   async getMyTags(@Req() req: { user?: { id: string } }): Promise<unknown> {
     const userId = req.user?.id;
     return this.hobbyTagsService.getUserTags(userId as string);
+  }
+
+  @Get('vocabulary')
+  @UseGuards(SupabaseAuthGuard)
+  async getUserVocabulary(
+    @Req() req: { user?: { id: string } },
+    @Query('language') language: string,
+  ): Promise<unknown> {
+    const userId = req.user?.id;
+    return this.hobbyTagsService.getUserVocabulary(userId as string, language || 'en');
+  }
+
+  @Get(':tagId/vocabulary')
+  async getTagVocabulary(
+    @Param('tagId') tagId: string,
+    @Query('language') language: string,
+  ): Promise<unknown> {
+    return this.hobbyTagsService.getVocabularyForTag(tagId, language || 'en');
   }
 
   @Post('my')
