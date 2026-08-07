@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 @Injectable()
 export class BlocksService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly metricsService: MetricsService,
+  ) {}
 
   async getBlockedUsers(requestUserId: string): Promise<any[]> {
     const client = this.supabaseService.getClient();
@@ -49,6 +53,8 @@ export class BlocksService {
     if (error) {
       throw new Error(`Failed to unblock user: ${error.message}`);
     }
+
+    this.metricsService.recordTsBlockRemoved();
 
     return { success: true };
   }
