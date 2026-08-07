@@ -7,7 +7,6 @@ import { CentrifugeService } from '../../services/centrifuge.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
-import { TypingService } from '../../services/typing.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 
@@ -88,13 +87,6 @@ describe('ChatRoomComponent (threaded replies)', () => {
       updateSrsLevel: vi.fn(),
     };
 
-    const mockTypingService = {
-      typingUsers: signal([]),
-      connect: vi.fn(),
-      disconnect: vi.fn(),
-      sendTyping: vi.fn(),
-    };
-
     await TestBed.configureTestingModule({
       imports: [ChatRoomComponent],
       providers: [
@@ -103,7 +95,6 @@ describe('ChatRoomComponent (threaded replies)', () => {
         { provide: AuthService, useValue: mockAuthService },
         { provide: SafetyService, useValue: mockSafetyService },
         { provide: UserService, useValue: mockUserService },
-        { provide: TypingService, useValue: mockTypingService },
         { provide: VocabularyStore, useValue: mockVocabularyStore },
         I18nService,
       ],

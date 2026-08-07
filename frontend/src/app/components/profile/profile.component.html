@@ -92,18 +92,18 @@
           <button (click)="showVisitors.set(!showVisitors())" class="app-pill">
             {{ showVisitors() ? ('profile.visitorsHide' | t) : ('profile.visitorsLink' | t) }}
           </button>
+          @if (profile()?.audio_intro_url) {
+            <button
+              (click)="playAudioIntro(profile()?.audio_intro_url)"
+              class="app-button-secondary bg-blue-500/10 text-blue-400 ps-3 pe-3 pt-2 pb-2 text-xs"
+            >
+              {{ 'profile.audioIntroBtn' | t }}
+            </button>
+          }
           <button (click)="toggleEdit()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs">
             {{ isEditing() ? ('profile.cancelBtn' | t) : ('profile.editBtn' | t) }}
           </button>
         </div>
-      </div>
-
-      <!-- Audio Intro Recorder & Playback Card -->
-      <div class="mt-3">
-        <app-audio-intro-recorder
-          [existingAudioUrl]="profile()?.audio_intro_url ?? null"
-          (recordingComplete)="onAudioIntroSaved($event)"
-        />
       </div>
 
       @if (showVisitors()) {

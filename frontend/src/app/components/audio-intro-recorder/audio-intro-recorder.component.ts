@@ -1,4 +1,4 @@
-import { Component, output, signal, inject, OnDestroy, input } from '@angular/core';
+import { Component, output, signal, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { UserService } from '../../services/user.service';
@@ -12,9 +12,6 @@ import { UserService } from '../../services/user.service';
 })
 export class AudioIntroRecorderComponent implements OnDestroy {
   private userService = inject(UserService);
-
-  // Inputs
-  existingAudioUrl = input<string | null>(null);
 
   // Outputs
   recordingComplete = output<string>();
@@ -31,12 +28,6 @@ export class AudioIntroRecorderComponent implements OnDestroy {
   private chunks: Blob[] = [];
   private timer: ReturnType<typeof setInterval> | null = null;
   private audioStream: MediaStream | null = null;
-
-  formatTime(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }
 
   async startRecording(): Promise<void> {
     try {
