@@ -37,7 +37,6 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EconomyService } from './economy.service';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import { PinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
@@ -401,6 +400,98 @@ describe('EconomyService', () => {
 
       expect(mockQueryBuilder.insert).not.toHaveBeenCalled();
       expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getPackages', () => {
+    it('should return all coin packages', () => {
+      const result = service.getPackages();
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBe(4);
+      expect(result[0].id).toBe('coins_small');
+      expect(result[0].coins).toBe(100);
+      expect(result[3].id).toBe('coins_mega');
+      expect(result[3].coins).toBe(3000);
+    });
+
+    it('should include platform_product_id for each package', () => {
+      const result = service.getPackages();
+      for (const pkg of result) {
+        expect(pkg.platform_product_id).toBeDefined();
+        expect(typeof pkg.platform_product_id.ios).toBe('string');
+        expect(typeof pkg.platform_product_id.android).toBe('string');
+        expect(typeof pkg.platform_product_id.web).toBe('string');
+      }
+    });
+  });
+
+  describe('createCheckoutSession', () => {
+    it('should throw NotFoundException when package_id is not found', async () => {
+      await expect(
+        service.createCheckoutSession('user-1', 'non_existent_package'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should create a Stripe session and a pending purchase record', async () => {
+      jest
+        .spyOn(service['stripe'].checkout.sessions, 'create')
+        .mockResolvedValue({
+          id: 'sess_checkout_1',
+          url: 'https://checkout.stripe.com/test/sess_checkout_1',
+        } as unknown as Stripe.Checkout.Session);
+
+      jest
+        .spyOn(service['configService'], 'get')
+        .mockReturnValue('http://localhost:4200');
+
+      mockQueryBuilder.insert.mockResolvedValue({
+        error: null,
+      });
+
+      const result = await service.createCheckoutSession(
+        'user-1',
+        'coins_small',
+      );
+
+      expect(result.sessionId).toBe('sess_checkout_1');
+      expect(result.sessionUrl).toBe(
+        'https://checkout.stripe.com/test/sess_checkout_1',
+      );
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('coin_purchases');
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: 'user-1',
+          package_id: 'coins_small',
+          status: 'pending',
+        }),
+      );
+    });
+
+    it('should throw if insert of pending purchase record fails', async () => {
+      jest
+        .spyOn(service['stripe'].checkout.sessions, 'create')
+        .mockResolvedValue({
+          id: 'sess_checkout_2',
+          url: 'https://checkout.stripe.com/test/sess_checkout_2',
+        } as unknown as Stripe.Checkout.Session);
+
+      mockQueryBuilder.insert.mockResolvedValue({
+        error: { message: 'DB error' },
+      });
+
+      await expect(
+        service.createCheckoutSession('user-1', 'coins_small'),
+      ).rejects.toThrow('Failed to initialize purchase session.');
+    });
+  });
+
+  describe('verifyPurchaseReceipt', () => {
+    it('should return true for valid receipts', async () => {
+      const result = await service.verifyPurchaseReceipt({
+        receipt_token: 'test_token',
+        platform: 'ios',
+      });
+      expect(result).toBe(true);
     });
   });
 
