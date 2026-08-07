@@ -1612,7 +1612,7 @@ export class I18nService {
 // Link Preview
     'linkPreview.openLink': 'Open link: {title}',
 
-    // Diagnostic Quiz
+// Diagnostic Quiz
     'diagnosticQuiz.title': 'Language Level Diagnostic',
     'diagnosticQuiz.loading': 'Loading your diagnostic quiz...',
     'diagnosticQuiz.errorTitle': 'Unable to load quiz',
@@ -1629,6 +1629,25 @@ export class I18nService {
     'diagnosticQuiz.scoreLabel': 'Score: {{score}} / {{maxScore}}',
     'diagnosticQuiz.levelLabel': 'Suggested Level: {{level}}',
     'diagnosticQuiz.resultAction': 'Continue to onboarding',
+
+    // My Stats Dashboard
+    'stats.myStats.title': 'My Stats',
+    'stats.myStats.loading': 'Loading your stats...',
+    'stats.myStats.error': 'Failed to load stats. Please try again.',
+    'stats.myStats.studyHours': 'Study Hours (This Week)',
+    'stats.myStats.activityBreakdown': 'Activity Breakdown',
+    'stats.myStats.summary': 'Summary',
+    'stats.myStats.messagesSent': 'Messages Sent',
+    'stats.myStats.correctionsMade': 'Corrections Made',
+    'stats.myStats.momentsPosted': 'Moments Posted',
+    'stats.myStats.hours': 'Hours',
+    'stats.dayAbbr.sun': 'Sun',
+    'stats.dayAbbr.mon': 'Mon',
+    'stats.dayAbbr.tue': 'Tue',
+    'stats.dayAbbr.wed': 'Wed',
+    'stats.dayAbbr.thu': 'Thu',
+    'stats.dayAbbr.fri': 'Fri',
+    'stats.dayAbbr.sat': 'Sat',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });
