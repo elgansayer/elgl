@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { ErrorHandler } from '@angular/core';
@@ -5,6 +8,9 @@ import {
   SrsErrorBoundaryComponent,
   SrsErrorContext,
 } from './srs-error-boundary.component';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = resolve(__filename, '..');
 
 describe('SrsErrorBoundaryComponent', () => {
   let fixture: ComponentFixture<SrsErrorBoundaryComponent>;
@@ -140,5 +146,48 @@ describe('SrsErrorBoundaryComponent', () => {
 
   it('should accept context defaults', () => {
     expect(component.context()).toEqual({ component: 'unknown' });
+  });
+});
+
+describe('SrsErrorBoundaryComponent - RTL logical CSS compliance', () => {
+  let templateContent: string;
+
+  beforeAll(() => {
+    const content = readFileSync(
+      resolve(__dirname, 'srs-error-boundary.component.ts'),
+      'utf-8',
+    );
+    const match = content.match(/template:\s*`([\s\S]*?)`\s*,/);
+    templateContent = match ? match[1] : content;
+  });
+
+  it('should not contain any physical direction CSS utilities', () => {
+    const violations = [
+      /\bpl-\d/, /\bpr-\d/, /\bml-\d/, /\bmr-\d/,
+      /\bleft-[0-9]/, /\bright-[0-9]/,
+      /\bborder-l\b/, /\bborder-r\b/,
+    ];
+    for (const pattern of violations) {
+      expect(templateContent).not.toMatch(pattern);
+    }
+  });
+
+  it('should use logical inline start for padding (ps-)', () => {
+    expect(templateContent).toMatch(/\bps-\d/);
+  });
+
+  it('should use logical inline end for padding (pe-)', () => {
+    expect(templateContent).toMatch(/\bpe-\d/);
+  });
+
+  it('should use i18n translate pipe for all user-facing strings', () => {
+    const keys = [
+      'srsErrorBoundary.title', 'srsErrorBoundary.description',
+      'srsErrorBoundary.retryBtn', 'srsErrorBoundary.reportBtn',
+      'srsErrorBoundary.reportedMessage',
+    ];
+    for (const key of keys) {
+      expect(templateContent).toContain("'" + key + "'");
+    }
   });
 });
