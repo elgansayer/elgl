@@ -30,6 +30,9 @@ describe('FontScaleSliderComponent', () => {
     const fontScaleService: Partial<FontScaleService> = {
       scaleFactor,
       setScale: setScaleSpy,
+      min: 0.8,
+      max: 1.2,
+      step: 0.05,
     };
 
     const i18nService: Partial<I18nService> = {
