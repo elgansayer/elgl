@@ -26,20 +26,30 @@ export interface AdminUserListResult {
   pageSize: number;
 }
 
-export interface AdminBlockedUser {
-  id: string;
-  display_name?: string;
-  avatar_url?: string;
-  native_language?: string;
-  target_languages?: string[];
-}
-
 export interface LoginHistoryEntry {
   id: string;
   user_id: string;
   ip_address?: string | null;
   user_agent?: string | null;
   created_at: string;
+}
+
+export interface AdminBlockEntry {
+  id: string;
+  blocker_id: string;
+  blocked_id: string;
+  blocker_name?: string | null;
+  blocked_name?: string | null;
+  blocker_avatar?: string | null;
+  blocked_avatar?: string | null;
+  created_at: string;
+}
+
+export interface AdminBlocksListResult {
+  blocks: AdminBlockEntry[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 const MOCK_ADMIN_USERS: AdminUserSummary[] = [
@@ -208,22 +218,29 @@ export class AdminService {
     );
   }
 
-  async listBlockedUsers(): Promise<AdminBlockedUser[]> {
+  async listAllBlocks(page = 1, pageSize = 20): Promise<AdminBlocksListResult> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('pageSize', pageSize.toString());
+
     return firstValueFrom(
       this.http
-        .get<AdminBlockedUser[]>(`${this.baseUrl}/blocks`, {
+        .get<AdminBlocksListResult>(`${this.baseUrl}/blocks`, {
           headers: this.getHeaders(),
+          params,
         })
         .pipe(
-          catchError(() => of([])),
+          catchError(() =>
+            of({ blocks: [], total: 0, page, pageSize }),
+          ),
         ),
     );
   }
 
-  async adminUnblockUser(blockedId: string): Promise<{ message: string }> {
+  async removeBlock(blockId: string): Promise<{ success: boolean }> {
     return firstValueFrom(
-      this.http.delete<{ message: string }>(
-        `${this.baseUrl}/blocks/${blockedId}`,
+      this.http.delete<{ success: boolean }>(
+        `${this.baseUrl}/blocks/${blockId}`,
         { headers: this.getHeaders() },
       ),
     );

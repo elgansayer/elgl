@@ -18,10 +18,8 @@ describe('AdminController', () => {
             listUsers: jest.fn(),
             setVipStatus: jest.fn(),
             getLoginHistory: jest.fn(),
-            banUser: jest.fn(),
-            warnUser: jest.fn(),
-            listBlockedUsers: jest.fn(),
-            adminUnblockUser: jest.fn(),
+            listAllBlocks: jest.fn(),
+            removeBlock: jest.fn(),
           },
         },
       ],
@@ -87,50 +85,36 @@ describe('AdminController', () => {
     });
   });
 
-  describe('listBlockedUsers', () => {
-    it('delegates to AdminService.listBlockedUsers', async () => {
-      const blocked = [{ id: 'blocked-1', display_name: 'Spammer' }];
-      (adminService.listBlockedUsers as jest.Mock).mockResolvedValue(blocked);
+  describe('listAllBlocks', () => {
+    it('delegates to AdminService.listAllBlocks with default page params', async () => {
+      const response = { blocks: [], total: 0, page: 1, pageSize: 20 };
+      (adminService.listAllBlocks as jest.Mock).mockResolvedValue(response);
 
-      const result = await controller.listBlockedUsers();
+      const result = await controller.listAllBlocks(undefined, undefined);
 
-      expect(adminService.listBlockedUsers).toHaveBeenCalled();
-      expect(result).toEqual(blocked);
+      expect(adminService.listAllBlocks).toHaveBeenCalledWith(1, 20);
+      expect(result).toEqual(response);
+    });
+
+    it('parses page and pageSize query params', async () => {
+      const response = { blocks: [], total: 0, page: 2, pageSize: 10 };
+      (adminService.listAllBlocks as jest.Mock).mockResolvedValue(response);
+
+      const result = await controller.listAllBlocks('2', '10');
+
+      expect(adminService.listAllBlocks).toHaveBeenCalledWith(2, 10);
+      expect(result).toEqual(response);
     });
   });
 
-  describe('adminUnblockUser', () => {
-    it('delegates to AdminService.adminUnblockUser', async () => {
-      (adminService.adminUnblockUser as jest.Mock).mockResolvedValue(undefined);
+  describe('removeBlock', () => {
+    it('delegates to AdminService.removeBlock with the block id', async () => {
+      (adminService.removeBlock as jest.Mock).mockResolvedValue({ success: true });
 
-      const result = await controller.adminUnblockUser('user-1');
+      const result = await controller.removeBlock('block-42');
 
-      expect(adminService.adminUnblockUser).toHaveBeenCalledWith('user-1');
-      expect(result).toEqual({ message: 'User unblocked' });
-    });
-  });
-
-  describe('banUser', () => {
-    it('delegates to AdminService.banUser and returns a message', async () => {
-      (adminService.banUser as jest.Mock).mockResolvedValue(undefined);
-
-      const mockReq = { user: { sub: 'admin-user' } };
-      const result = await controller.banUser('user-99', mockReq as any);
-
-      expect(adminService.banUser).toHaveBeenCalledWith('user-99', 'admin-user');
-      expect(result).toEqual({ message: 'User banned' });
-    });
-  });
-
-  describe('warnUser', () => {
-    it('delegates to AdminService.warnUser and returns a message', async () => {
-      (adminService.warnUser as jest.Mock).mockResolvedValue(undefined);
-
-      const mockReq = { user: { sub: 'admin-user' } };
-      const result = await controller.warnUser('user-99', mockReq as any);
-
-      expect(adminService.warnUser).toHaveBeenCalledWith('user-99', 'admin-user');
-      expect(result).toEqual({ message: 'User warned' });
+      expect(adminService.removeBlock).toHaveBeenCalledWith('block-42');
+      expect(result).toEqual({ success: true });
     });
   });
 });

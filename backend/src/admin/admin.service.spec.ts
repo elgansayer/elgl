@@ -169,113 +169,106 @@ describe('AdminService', () => {
     });
   });
 
-  describe('listBlockedUsers', () => {
-    it('returns empty array when blocks query errors', async () => {
-      mockQueryBuilder.select.mockReturnThis();
-      mockSupabaseClient.from.mockReturnValue({
-        select: jest.fn().mockResolvedValue({ data: null, error: { message: 'boom' } }),
-      });
-
-      const result = await service.listBlockedUsers();
-
-      expect(result).toEqual([]);
-    });
-
-    it('returns empty array when no blocks exist', async () => {
-      mockQueryBuilder.select.mockReturnThis();
-      mockSupabaseClient.from.mockReturnValue({
-        select: jest.fn().mockResolvedValue({ data: [], error: null }),
-      });
-
-      const result = await service.listBlockedUsers();
-
-      expect(result).toEqual([]);
-    });
-
-    it('returns user details for blocked users', async () => {
-      const blockRows = [{ blocked_id: 'user-a' }, { blocked_id: 'user-b' }];
-      const userRows = [
-        { id: 'user-a', display_name: 'Alice', avatar_url: null, native_language: 'en', target_languages: ['es'] },
-        { id: 'user-b', display_name: 'Bob', avatar_url: '/b.jpg', native_language: 'fr', target_languages: ['de'] },
+  describe('listAllBlocks', () => {
+    it('returns paginated blocks with blocker and blocked details', async () => {
+      const blockRows = [
+        {
+          id: 'block-1',
+          blocker_id: 'user-1',
+          blocked_id: 'user-2',
+          created_at: '2026-01-01T00:00:00Z',
+          blocker: { display_name: 'Ada', avatar_url: null },
+          blocked: { display_name: 'Bob', avatar_url: 'https://example.com/bob.png' },
+        },
       ];
-
-      const fromMock = jest.fn()
-        .mockReturnValueOnce({ data: blockRows, error: null } as any)
-        .mockReturnValueOnce({ data: userRows, error: null } as any);
-
-      mockSupabaseClient.from = jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          in: jest.fn().mockResolvedValue({ data: userRows, error: null }),
-        }),
+      mockQueryBuilder.range.mockResolvedValue({
+        data: blockRows,
+        error: null,
+        count: 1,
       });
 
-      // Re-setup to simulate the full chain
-      const mockBlocksQuery = {
-        select: jest.fn().mockResolvedValue({ data: blockRows, error: null }),
-      };
-      const mockUsersQuery = {
-        select: jest.fn().mockReturnValue({
-          in: jest.fn().mockResolvedValue({ data: userRows, error: null }),
-        }),
-      };
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockReturnValueOnce(mockBlocksQuery)
-        .mockReturnValueOnce(mockUsersQuery);
+      const result = await service.listAllBlocks(1, 20);
 
-      const result = await service.listBlockedUsers();
-
-      expect(result).toEqual([
-        { id: 'user-a', display_name: 'Alice', avatar_url: null, native_language: 'en', target_languages: ['es'] },
-        { id: 'user-b', display_name: 'Bob', avatar_url: '/b.jpg', native_language: 'fr', target_languages: ['de'] },
-      ]);
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
+      expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 19);
+      expect(result).toEqual({
+        blocks: [
+          {
+            id: 'block-1',
+            blocker_id: 'user-1',
+            blocked_id: 'user-2',
+            blocker_name: 'Ada',
+            blocked_name: 'Bob',
+            blocker_avatar: null,
+            blocked_avatar: 'https://example.com/bob.png',
+            created_at: '2026-01-01T00:00:00Z',
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+      });
     });
 
-    it('returns empty array when user details query errors', async () => {
-      const blockRows = [{ blocked_id: 'user-a' }];
-      const mockBlocksQuery = {
-        select: jest.fn().mockResolvedValue({ data: blockRows, error: null }),
-      };
-      const mockUsersQuery = {
-        select: jest.fn().mockReturnValue({
-          in: jest.fn().mockResolvedValue({ data: null, error: { message: 'fail' } }),
-        }),
-      };
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockReturnValueOnce(mockBlocksQuery)
-        .mockReturnValueOnce(mockUsersQuery);
+    it('handles null blocker/blocked relations gracefully', async () => {
+      const blockRows = [
+        {
+          id: 'block-1',
+          blocker_id: 'user-1',
+          blocked_id: 'user-2',
+          created_at: '2026-01-01T00:00:00Z',
+          blocker: null,
+          blocked: null,
+        },
+      ];
+      mockQueryBuilder.range.mockResolvedValue({
+        data: blockRows,
+        error: null,
+        count: 1,
+      });
 
-      const result = await service.listBlockedUsers();
+      const result = await service.listAllBlocks(1, 20);
 
-      expect(result).toEqual([]);
+      expect(result.blocks[0].blocker_name).toBeNull();
+      expect(result.blocks[0].blocked_name).toBeNull();
+      expect(result.blocks[0].blocker_avatar).toBeNull();
+    });
+
+    it('returns an empty result when the query errors', async () => {
+      mockQueryBuilder.range.mockResolvedValue({
+        data: null,
+        error: { message: 'boom' },
+        count: null,
+      });
+
+      const result = await service.listAllBlocks(1, 20);
+
+      expect(result).toEqual({ blocks: [], total: 0, page: 1, pageSize: 20 });
     });
   });
 
-  describe('adminUnblockUser', () => {
-    it('deletes all blocks for the given blocked user', async () => {
-      const deleteChain = {
-        eq: jest.fn().mockResolvedValue({ data: null, error: null }),
-      };
-      mockSupabaseClient.from.mockReturnValue({
-        delete: jest.fn().mockReturnValue(deleteChain),
-      });
+  describe('removeBlock', () => {
+    it('deletes the block and returns success', async () => {
+      mockQueryBuilder.delete = jest
+        .fn()
+        .mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) });
 
-      await service.adminUnblockUser('spammer-1');
+      const result = await service.removeBlock('block-1');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
-      expect(deleteChain.eq).toHaveBeenCalledWith('blocked_id', 'spammer-1');
+      expect(result).toEqual({ success: true });
     });
 
-    it('throws NotFoundException when the delete errors', async () => {
-      const deleteChain = {
-        eq: jest.fn().mockResolvedValue({ data: null, error: { message: 'db error' } }),
-      };
-      mockSupabaseClient.from.mockReturnValue({
-        delete: jest.fn().mockReturnValue(deleteChain),
-      });
+    it('throws NotFoundException when delete fails', async () => {
+      mockQueryBuilder.delete = jest
+        .fn()
+        .mockReturnValue({
+          eq: jest
+            .fn()
+            .mockResolvedValue({ error: { message: 'not found' } }),
+        });
 
-      await expect(service.adminUnblockUser('spammer-1')).rejects.toThrow(NotFoundException);
+      await expect(service.removeBlock('missing-block')).rejects.toThrow(NotFoundException);
     });
   });
 });

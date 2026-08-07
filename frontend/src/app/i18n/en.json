@@ -34,5 +34,24 @@
       "linkFailed": "Failed to link account. Please try again.",
       "unlinkFailed": "Failed to unlink account. Please try again."
     }
+  },
+  "admin": {
+    "blocks": {
+      "title": "Block Management",
+      "loading": "Loading blocks...",
+      "empty": "No blocks found.",
+      "loadError": "Failed to load blocks.",
+      "blocker": "Blocker",
+      "blocked": "Blocked",
+      "date": "Date",
+      "actions": "Actions",
+      "unblock": "Unblock",
+      "unblockAria": "Remove block",
+      "unknown": "Unknown",
+      "previous": "Previous",
+      "next": "Next",
+      "pageIndicator": "Page {page} of {totalPages}",
+      "paginationAria": "Block list pagination"
+    }
   }
 }
