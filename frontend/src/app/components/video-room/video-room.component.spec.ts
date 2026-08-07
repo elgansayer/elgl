@@ -36,7 +36,6 @@ describe('VideoRoomComponent', () => {
       currentRoom: currentRoomSignal,
       hostVideoTrack: signal(null),
       coHostVideoTrack: signal(null),
-      localVideoTrack: signal(null),
       inviteCoHost: vi.fn().mockResolvedValue(undefined),
       removeCoHost: vi.fn().mockResolvedValue(undefined),
     } as unknown as Mocked<Partial<AudioRoomsStore>>;
@@ -106,33 +105,5 @@ describe('VideoRoomComponent', () => {
     component.removeCoHost();
 
     expect(mockStore.removeCoHost).toHaveBeenCalled();
-  });
-
-  it('should fall back to localVideoTrack when current user is the host', async () => {
-    await setup(baseRoom, 'host-1');
-    const mockLocalTrack = { attach: vi.fn() } as never;
-    (mockStore.localVideoTrack as ReturnType<typeof signal<unknown>>).set(mockLocalTrack);
-
-    fixture.detectChanges();
-
-    expect(component.hostVideoTrackOrDefault()).toBe(mockLocalTrack);
-    expect(component.hasHostVideo()).toBe(true);
-  });
-
-  it('should detect isCoHost when current user matches co_host_id', async () => {
-    await setup({ ...baseRoom, co_host_id: 'speaker-2' }, 'speaker-2');
-
-    expect(component.isCoHost()).toBe(true);
-  });
-
-  it('should fall back to localVideoTrack when current user is the co-host', async () => {
-    await setup({ ...baseRoom, co_host_id: 'speaker-2' }, 'speaker-2');
-    const mockLocalTrack = { attach: vi.fn() } as never;
-    (mockStore.localVideoTrack as ReturnType<typeof signal<unknown>>).set(mockLocalTrack);
-
-    fixture.detectChanges();
-
-    expect(component.coHostVideoTrackOrDefault()).toBe(mockLocalTrack);
-    expect(component.hasCoHostVideo()).toBe(true);
   });
 });
