@@ -8,19 +8,29 @@ import { EconomyStore } from '../../services/economy.store';
   selector: 'app-tip-host-modal',
   imports: [TranslatePipe, FormsModule],
   template: `
-    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" (click)="onBackdropClick($event)">
-      <div class="bg-surface-200 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-surface-100 space-y-5 animate-fadeIn">
+    <div
+      class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+      (click)="onBackdropClick($event)"
+      (keydown.escape)="closed.emit()"
+    >
+      <div
+        class="bg-surface-200 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-surface-100 space-y-5 animate-fadeIn focus:outline-none"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-label]="'audioRoom.tipModalTitle' | t"
+      >
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">
           <div>
-            <h3 class="text-xl font-black text-text-primary">{{ 'audioRoom.tipModalTitle' | t }}</h3>
+            <h3 id="tip-modal-title" class="text-xl font-black text-text-primary">{{ 'audioRoom.tipModalTitle' | t }}</h3>
             <p class="text-xs text-text-secondary">
               {{ 'audioRoom.tipModalSubtitle' | t }}
             </p>
           </div>
           <button
             (click)="closed.emit()"
-            class="text-text-muted hover:text-text-secondary text-lg font-bold"
+            class="text-text-muted hover:text-text-secondary text-lg font-bold focus:outline-none focus:ring-2 focus:ring-primary rounded-lg px-1"
+            [attr.aria-label]="'audioRoom.tipCloseBtnAria' | t"
           >
             ✕
           </button>
@@ -28,8 +38,8 @@ import { EconomyStore } from '../../services/economy.store';
 
         <!-- Balance -->
         <div class="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/30 flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="text-2xl">💰</span>
+          <div class="flex items-center gap-2" aria-live="polite">
+            <span class="text-2xl" aria-hidden="true">💰</span>
             <div>
               <span class="text-[10px] uppercase font-black text-amber-400 block">{{
                 'audioRoom.tipBalanceLabel' | t
@@ -42,12 +52,15 @@ import { EconomyStore } from '../../services/economy.store';
         </div>
 
         <!-- Preset amounts -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+        <div class="grid grid-cols-2 gap-3" role="radiogroup" [attr.aria-label]="'audioRoom.tipPresetAria' | t">
           @for (amount of presetAmounts(); track amount) {
             <button
+              role="radio"
               (click)="selectAmount(amount)"
+              [attr.aria-checked]="selectedAmount() === amount"
+              [attr.aria-label]="'audioRoom.tipAmountAria' | t: { amount: amount }"
               [class]="
-                'p-3 sm:p-4 rounded-2xl border-2 transition-all font-extrabold text-center text-sm sm:text-base ' +
+                'p-4 rounded-2xl border-2 transition-all font-extrabold text-center focus:outline-none focus:ring-2 focus:ring-amber-400 ' +
                 (selectedAmount() === amount
                   ? 'border-amber-500 bg-amber-500/20 text-amber-500'
                   : 'border-surface-100 bg-surface-300 text-text-primary hover:border-amber-500/50')
@@ -60,18 +73,20 @@ import { EconomyStore } from '../../services/economy.store';
 
         <!-- Custom amount -->
         <div class="flex items-center gap-3">
+          <label for="tip-custom-amount" class="sr-only">{{ 'audioRoom.tipCustomLabel' | t }}</label>
           <input
+            id="tip-custom-amount"
             type="number"
             [ngModel]="customAmount()"
             (ngModelChange)="onCustomAmountChange($event)"
-            placeholder="Custom amount"
+            [placeholder]="'audioRoom.tipCustomPlaceholder' | t"
             min="1"
             class="flex-1 bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary text-sm font-bold focus:border-amber-500 focus:outline-none"
           />
           <button
             (click)="selectAmount(customAmount())"
             [disabled]="!customAmount() || customAmount() < 1"
-            class="px-4 py-3 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs text-text-secondary disabled:opacity-40"
+            class="px-4 py-3 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs text-text-secondary disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-primary"
           >
             {{ 'audioRoom.tipCustom' | t }}
           </button>
@@ -81,14 +96,15 @@ import { EconomyStore } from '../../services/economy.store';
         <div class="flex justify-end gap-3 pt-2 border-t border-surface-100">
           <button
             (click)="closed.emit()"
-            class="px-4 py-2 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs text-text-secondary"
+            class="px-4 py-2 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
           >
             {{ 'audioRoom.tipCancelBtn' | t }}
           </button>
           <button
             [disabled]="!selectedAmount() || selectedAmount()! < 1 || isSending() || selectedAmount()! > economyStore.coinsBalance()"
+            [attr.aria-disabled]="(!selectedAmount() || selectedAmount()! < 1 || isSending() || selectedAmount()! > economyStore.coinsBalance()) ? true : undefined"
             (click)="confirmSend()"
-            class="px-6 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
+            class="px-6 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all focus:outline-none focus:ring-2 focus:ring-amber-400"
           >
             {{
               isSending()
@@ -107,8 +123,8 @@ import { EconomyStore } from '../../services/economy.store';
   `],
 })
 export class TipHostModalComponent {
-  roomId = input.required<string>();
-  hostName = input.required<string>();
+  roomId = input<string>('');
+  hostName = input<string>('');
   closed = output<void>();
 
   readonly economyStore = inject(EconomyStore);

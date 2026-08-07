@@ -8,15 +8,15 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-coins-success',
   imports: [TranslatePipe],
   template: `
-    <div
+    <main
       class="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center px-4"
     >
-      <div class="text-center max-w-md w-full">
-        <div class="text-5xl sm:text-6xl mb-6">{{ status() === 'failed' ? '😕' : '🎉' }}</div>
-        <h1 class="text-2xl sm:text-3xl font-bold text-white mb-4">
+      <div class="text-center max-w-md" role="status" [attr.aria-label]="(status() === 'failed' ? 'coinsSuccess.failureTitle' : 'coinsSuccess.title') | t">
+        <div class="text-6xl mb-6" aria-hidden="true">{{ status() === 'failed' ? '😕' : '🎉' }}</div>
+        <h1 class="text-3xl font-bold text-white mb-4">
           {{ (status() === 'failed' ? 'coinsSuccess.failureTitle' : 'coinsSuccess.title') | t }}
         </h1>
-        <p class="text-slate-300 mb-8 text-sm sm:text-base">
+        <p class="text-slate-300 mb-8">
           {{
             (status() === 'pending'
               ? 'coinsSuccess.pending'
@@ -28,12 +28,12 @@ import { TranslatePipe } from '../../services/translate.pipe';
         </p>
         <button
           (click)="goToDashboard()"
-          class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-2xl transition-all duration-200 text-sm sm:text-base"
+          class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-2xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-slate-900"
         >
           {{ 'coinsSuccess.dashboardBtn' | t }}
         </button>
       </div>
-    </div>
+    </main>
   `,
 })
 export class CoinsSuccessComponent {
@@ -43,10 +43,6 @@ export class CoinsSuccessComponent {
 
   readonly status = signal<'pending' | 'confirmed' | 'failed'>('pending');
 
-  // Imperative init required: route.queryParams is an Observable<Params> that
-  // emits once per navigation. Using resource() here would require converting to
-  // a signal first, but the route snapshot is already available synchronously.
-  // This is the one-off imperative pattern permitted by AGENTS.md §5.3.
   constructor() {
     void this.init();
   }

@@ -186,8 +186,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
           </div>
           <!-- Dismiss button -->
           <button
-            class="pointer-events-auto rounded-full bg-white/20 px-5 py-2 text-sm font-bold text-white backdrop-blur-sm hover:bg-white/30 transition-colors"
+            class="pointer-events-auto rounded-full bg-white/20 px-5 py-2 text-sm font-bold text-white backdrop-blur-sm hover:bg-white/30 transition-colors focus:outline-none focus:ring-2 focus:ring-white/50"
             (click)="animationService.dismiss()"
+            [attr.aria-label]="'gift.dismissAria' | t"
           >
             ✕
           </button>
