@@ -205,69 +205,9 @@ export class DataRetentionService {
     await supabase.from('gift_transactions').delete().eq('receiver_id', userId);
 
     // Escrow transactions (payer_id and payee_id link to users; reason and
-    // metadata may contain PII under GDPR). Terminal escrows (released,
-    // refunded, cancelled) are deleted. Active escrows (held, pending)
-    // are pseudonymised to preserve financial integrity for the counterparty.
-    await supabase
-      .from('escrow_transactions')
-      .delete()
-      .eq('payer_id', userId)
-      .in('status', ['released', 'refunded', 'cancelled']);
-    await supabase
-      .from('escrow_transactions')
-      .delete()
-      .eq('payee_id', userId)
-      .in('status', ['released', 'refunded', 'cancelled']);
-
-    const anonymousId = `deleted_user_${userId.substring(0, 8)}`;
-    await supabase
-      .from('escrow_transactions')
-      .update({ payer_id: anonymousId, reason: null, metadata: {} } as never)
-      .eq('payer_id', userId)
-      .in('status', ['pending', 'held']);
-    await supabase
-      .from('escrow_transactions')
-      .update({ payee_id: anonymousId, reason: null, metadata: {} } as never)
-      .eq('payee_id', userId)
-      .in('status', ['pending', 'held']);
-
-    // Escrows table (alternative schema from migration 20260807150000)
-    // Same policy: delete terminal, pseudonymise active.
-    await supabase
-      .from('escrows')
-      .delete()
-      .eq('sender_id', userId)
-      .in('status', ['released', 'refunded', 'cancelled']);
-    await supabase
-      .from('escrows')
-      .delete()
-      .eq('receiver_id', userId)
-      .in('status', ['released', 'refunded', 'cancelled']);
-
-    await supabase
-      .from('escrows')
-      .update({
-        sender_id: anonymousId,
-        receiver_id: anonymousId,
-        description: null,
-        dispute_reason: null,
-        dispute_evidence: null,
-        admin_note: null,
-      } as never)
-      .eq('sender_id', userId)
-      .in('status', ['pending', 'disputed']);
-    await supabase
-      .from('escrows')
-      .update({
-        sender_id: anonymousId,
-        receiver_id: anonymousId,
-        description: null,
-        dispute_reason: null,
-        dispute_evidence: null,
-        admin_note: null,
-      } as never)
-      .eq('receiver_id', userId)
-      .in('status', ['pending', 'disputed']);
+    // metadata may contain PII under GDPR)
+    await supabase.from('escrow_transactions').delete().eq('payer_id', userId);
+    await supabase.from('escrow_transactions').delete().eq('payee_id', userId);
 
     // Sticker pack ownership
     await supabase.from('user_sticker_packs').delete().eq('user_id', userId);
