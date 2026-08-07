@@ -1,12 +1,23 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { TestBed } from '@angular/core/testing';
 import { DraftService } from './draft.service';
+import { AuthService } from './auth.service';
 
 describe('DraftService', () => {
   let service: DraftService;
+  let mockAuth: { currentUser: () => { id: string } | null };
 
   beforeEach(() => {
     localStorage.clear();
-    service = new DraftService();
+    mockAuth = {
+      currentUser: () => ({ id: 'test-user-1' }),
+    };
+
+    TestBed.configureTestingModule({
+      providers: [DraftService, { provide: AuthService, useValue: mockAuth }],
+    });
+
+    service = TestBed.inject(DraftService);
   });
 
   describe('chat drafts', () => {
@@ -76,6 +87,22 @@ describe('DraftService', () => {
         mediaType: 'audio',
         targetLanguage: 'ja',
       });
+    });
+  });
+
+  describe('user-scoped keys', () => {
+    it('uses user ID in storage key', () => {
+      service.saveChatDraft('room-1', 'User 1 draft');
+
+      // Switch to a different user
+      mockAuth.currentUser = () => ({ id: 'test-user-2' });
+      expect(service.loadChatDraft('room-1')).toBe('');
+    });
+
+    it('uses anon prefix when no user', () => {
+      mockAuth.currentUser = () => null;
+      service.saveChatDraft('room-1', 'anon draft');
+      expect(service.loadChatDraft('room-1')).toBe('anon draft');
     });
   });
 });
