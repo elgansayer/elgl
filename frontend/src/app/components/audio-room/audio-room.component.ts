@@ -20,6 +20,7 @@ import {
 } from '../voiceroom-create-modal/voiceroom-create-modal.component';
 import { QuickPollFormComponent } from './quick-poll-form.component';
 import { QuickPollDisplayComponent } from './quick-poll-display.component';
+import { ApproveSpeakerModalComponent } from '../approve-speaker-modal/approve-speaker-modal.component';
 
 @Component({
   selector: 'app-audio-room',
@@ -30,6 +31,7 @@ import { QuickPollDisplayComponent } from './quick-poll-display.component';
     VirtualGiftModalComponent,
     TrustSafetyModalComponent,
     VoiceroomCreateModalComponent,
+    ApproveSpeakerModalComponent,
     AudioEqualizerComponent,
     QuickPollFormComponent,
     QuickPollDisplayComponent,
@@ -48,6 +50,7 @@ export class AudioRoomComponent implements OnInit {
   readonly showSafetyModal = signal<boolean>(false);
   readonly showPollFormModal = signal<boolean>(false);
   readonly showPollResultsModal = signal<boolean>(false);
+  readonly showApproveSpeakerModal = signal<boolean>(false);
   readonly currentPollId = signal<string | null>(null);
 
   readonly audiencePlaceholderAvatars = computed(() => {
