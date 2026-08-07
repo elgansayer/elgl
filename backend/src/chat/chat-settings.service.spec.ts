@@ -38,7 +38,9 @@ describe('ChatSettingsService', () => {
       const chain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: { chat_preferences: null }, error: null }),
+        single: jest
+          .fn()
+          .mockResolvedValue({ data: { chat_preferences: null }, error: null }),
       };
       mockFrom.mockReturnValue(chain);
 
@@ -55,7 +57,9 @@ describe('ChatSettingsService', () => {
       const chain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: null, error: new Error('DB error') }),
+        single: jest
+          .fn()
+          .mockResolvedValue({ data: null, error: new Error('DB error') }),
       };
       mockFrom.mockReturnValue(chain);
 
@@ -114,9 +118,7 @@ describe('ChatSettingsService', () => {
         update: jest.fn().mockReturnThis(),
         eq: jest.fn().mockResolvedValue({ error: null }),
       };
-      mockFrom
-        .mockReturnValueOnce(getChain)
-        .mockReturnValueOnce(updateChain);
+      mockFrom.mockReturnValueOnce(getChain).mockReturnValueOnce(updateChain);
 
       const result = await service.updateSettings(userId, {
         readReceipts: true,
@@ -127,7 +129,9 @@ describe('ChatSettingsService', () => {
         readReceipts: true,
         enterToSend: false,
       });
-      expect(updateChain.update).toHaveBeenCalledWith({ chat_preferences: result });
+      expect(updateChain.update).toHaveBeenCalledWith({
+        chat_preferences: result,
+      });
       expect(updateChain.eq).toHaveBeenCalledWith('id', userId);
     });
 
@@ -150,9 +154,7 @@ describe('ChatSettingsService', () => {
         update: jest.fn().mockReturnThis(),
         eq: jest.fn().mockResolvedValue({ error: new Error('DB write error') }),
       };
-      mockFrom
-        .mockReturnValueOnce(getChain)
-        .mockReturnValueOnce(updateChain);
+      mockFrom.mockReturnValueOnce(getChain).mockReturnValueOnce(updateChain);
 
       await expect(
         service.updateSettings(userId, { autoTranslate: true }),
@@ -178,9 +180,7 @@ describe('ChatSettingsService', () => {
         update: jest.fn().mockReturnThis(),
         eq: jest.fn().mockResolvedValue({ error: null }),
       };
-      mockFrom
-        .mockReturnValueOnce(getChain)
-        .mockReturnValueOnce(updateChain);
+      mockFrom.mockReturnValueOnce(getChain).mockReturnValueOnce(updateChain);
 
       const result = await service.updateSettings(userId, {
         autoTranslate: false,
