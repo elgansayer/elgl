@@ -28,22 +28,25 @@ interface CatalogItem {
         <a routerLink="/cart" class="mb-6 block text-sm font-medium text-indigo-400 underline">{{ 'cart.title' | t }}</a>
       </span>
       @if (message()) {
-        <p class="mb-4 text-sm text-indigo-300">{{ message() }}</p>
+        <p class="mb-4 text-sm text-indigo-300" role="status" aria-live="polite">{{ message() }}</p>
       }
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4" role="list" aria-label="{{ 'shop.title' | t }}">
         @for (item of items(); track item.id) {
-          <div class="rounded-xl bg-surface p-3 shadow flex flex-col">
-            <div class="h-24 sm:h-28 w-full rounded-lg bg-neutral-700 mb-2 flex items-center justify-center text-3xl sm:text-4xl">
+          <div class="rounded-xl bg-surface p-3 shadow flex flex-col" role="listitem">
+            <div class="h-24 sm:h-28 w-full rounded-lg bg-neutral-700 mb-2 flex items-center justify-center text-3xl sm:text-4xl" aria-hidden="true">
               {{ item.imageUrl ? '' : '🎁' }}
             </div>
             <h2 class="font-semibold text-sm sm:text-base truncate">{{ item.name }}</h2>
             <p class="text-xs opacity-60 line-clamp-2">{{ item.description }}</p>
             <p class="mt-auto pt-1 font-semibold text-indigo-400 text-sm sm:text-base">
-              {{ item.price }} {{ 'common.coins' | t: { currency: 'coins' } }}
+              <span class="sr-only">{{ 'common.price' | t }}: </span>{{ item.price }} {{ 'common.coins' | t: { currency: 'coins' } }}
             </p>
             <button
+              type="button"
               class="mt-2 w-full rounded-full bg-indigo-600 py-1.5 text-xs sm:text-sm font-medium hover:bg-indigo-500 transition-colors"
-              (click)="addToCart(item.id)">
+              (click)="addToCart(item.id)"
+              [attr.aria-label]="('cart.add' | t) + ' ' + item.name + ' - ' + item.price + ' ' + ('common.coins' | t)"
+            >
               {{ 'cart.add' | t }}
             </button>
           </div>
@@ -51,6 +54,19 @@ interface CatalogItem {
       </div>
     </div>
   `,
+  styles: [`
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+  `],
 })
 export class ShopComponent {
   private http = inject(HttpClient);
