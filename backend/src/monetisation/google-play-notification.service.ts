@@ -7,11 +7,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
+import { lastValueFrom } from 'rxjs';
 import * as jwt from 'jsonwebtoken';
 import jwksClient from 'jwks-rsa';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MonetisationService } from './monetisation.service';
+import { withRetry } from '../common/retry.helper';
 import { SubscriptionPlansService } from './services/subscription-plans.service';
 
 // Google signs every Cloud Pub/Sub push request with an OIDC ID token in the
@@ -346,15 +347,25 @@ export class GooglePlayNotificationService {
 
       const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/subscriptions/${subscriptionId}/tokens/${purchaseToken}`;
 
-      const response = await firstValueFrom(
-        this.httpService.get(url, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }),
+      const retryResult = await withRetry(
+        async () => {
+          const response = await lastValueFrom(
+            this.httpService.get(url, {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }),
+          );
+          return {
+            data: response.data,
+            status: response.status,
+            headers: response.headers as Record<string, string>,
+          };
+        },
+        { initialDelayMs: 1000, maxDelayMs: 32000 },
       );
 
-      return response.data as GooglePlaySubscriptionPurchase;
+      return retryResult.data as GooglePlaySubscriptionPurchase;
     } catch (error: unknown) {
       this.logger.error(
         `Failed to get subscription purchase details: ${error instanceof Error ? error.message : 'Unknown error'}`,

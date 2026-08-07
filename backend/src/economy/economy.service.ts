@@ -8,11 +8,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
+import { lastValueFrom } from 'rxjs';
 import Stripe from 'stripe';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
+import { withRetry } from '../common/retry.helper';
 import {
   PurchaseCoinsDto,
   SendGiftDto,
@@ -702,15 +703,25 @@ export class EconomyService {
       throw new BadRequestException('Apple shared secret not configured');
     }
 
-    const response = await firstValueFrom(
-      this.httpService.post(verificationUrl, {
-        'receipt-data': receiptToken,
-        password: sharedSecret,
-        'exclude-old-transactions': true,
-      }),
+    const result = await withRetry(
+      async () => {
+        const response = await lastValueFrom(
+          this.httpService.post(verificationUrl, {
+            'receipt-data': receiptToken,
+            password: sharedSecret,
+            'exclude-old-transactions': true,
+          }),
+        );
+        return {
+          data: response.data,
+          status: response.status,
+          headers: response.headers as Record<string, string>,
+        };
+      },
+      { initialDelayMs: 1000, maxDelayMs: 32000 },
     );
 
-    const body = response.data as {
+    const body = result.data as {
       status: number;
       latest_receipt_info?: Array<{
         product_id: string;
@@ -764,15 +775,25 @@ export class EconomyService {
 
     const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/products/${productId}/tokens/${purchaseToken}`;
 
-    const response = await firstValueFrom(
-      this.httpService.get(url, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }),
+    const result = await withRetry(
+      async () => {
+        const response = await lastValueFrom(
+          this.httpService.get(url, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }),
+        );
+        return {
+          data: response.data,
+          status: response.status,
+          headers: response.headers as Record<string, string>,
+        };
+      },
+      { initialDelayMs: 1000, maxDelayMs: 32000 },
     );
 
-    const body = response.data as {
+    const body = result.data as {
       purchaseState: number;
       productId: string;
       orderId: string;
