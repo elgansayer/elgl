@@ -110,7 +110,7 @@ describe('OfflineDiscoveryCacheService', () => {
 
   describe('partner caching', () => {
     it('should cache and retrieve a single partner', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       await service.cachePartner(fakeProfile('p1') as any);
 
       const cached = await service.getCachedPartner('p1');
@@ -124,7 +124,7 @@ describe('OfflineDiscoveryCacheService', () => {
     });
 
     it('should cache multiple partners at once', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       await service.cachePartners([fakeProfile('a'), fakeProfile('b')] as any);
 
       const all = await service.getAllCachedPartners();
@@ -137,13 +137,13 @@ describe('OfflineDiscoveryCacheService', () => {
     });
 
     it('should set cachedDataAvailable after caching', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       await service.cachePartner(fakeProfile('p1') as any);
       expect(service.cachedDataAvailable()).toBe(true);
     });
 
     it('should return valid cached data for fresh partners', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       await service.cachePartner(fakeProfile('fresh') as any);
 
       const all = await service.getAllCachedPartners();
@@ -154,7 +154,7 @@ describe('OfflineDiscoveryCacheService', () => {
 
   describe('search result caching', () => {
     it('should cache and retrieve search results by filter key', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       await service.cacheSearchResults('target_language=JA&radius_metres=50000', [fakeProfile('s1'), fakeProfile('s2')] as any);
 
       const cached = await service.getCachedSearchResults('target_language=JA&radius_metres=50000');
@@ -185,7 +185,7 @@ describe('OfflineDiscoveryCacheService', () => {
 
   describe('clearAll', () => {
     it('should delete all cached data', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       await service.cachePartner(fakeProfile('p1') as any);
       await service.clearAll();
 
