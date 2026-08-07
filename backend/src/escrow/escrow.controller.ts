@@ -27,13 +27,28 @@ import {
   ApiTooManyRequestsResponse,
   ApiQuery,
   ApiParam,
+  ApiBody,
 } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { CrashReportService } from './crash-report.service';
+import { EscrowExceptionFilter } from './escrow-exception.filter';
 import { EscrowService } from './escrow.service';
+import { EscrowCacheInterceptor, ESCROW_CACHE_PRIVATE_SHORT, ESCROW_CACHE_PRIVATE_NO_STORE } from './cache.interceptor';
+import { CacheControlInterceptor, CACHE_EDGE_SHORT, CACHE_NO_STORE } from '../common/cache.interceptor';
+import {
+  AcknowledgeCrashReportDto,
+  CreateEscrowDto,
+  ReleaseEscrowDto,
+  RefundEscrowDto,
+  EscrowTransactionResponse,
+  CircuitBreakerStatusResponse,
+} from './dto/escrow.dto';
+
 @Controller('escrow')
 @UseGuards(SupabaseAuthGuard)
 @UseFilters(EscrowExceptionFilter)
 @ApiBearerAuth()
+@ApiTags('Escrow Payments')
 export class EscrowController {
   constructor(
     private readonly escrowService: EscrowService,
@@ -75,7 +90,7 @@ export class EscrowController {
     @Req() req: { user?: { id?: string } },
     @Body() dto: CreateEscrowDto,
   ) {
-    return this.escrowService.holdCoins(req.user.sub, dto);
+    return this.escrowService.holdCoins(req.user!.id!, dto);
   }
 
   @Post('release')
@@ -107,7 +122,7 @@ export class EscrowController {
     @Req() req: { user?: { id?: string } },
     @Body() dto: ReleaseEscrowDto,
   ) {
-    return this.escrowService.releaseCoins(dto.transaction_id, req.user.sub);
+    return this.escrowService.releaseCoins(dto.transaction_id, req.user!.id!);
   }
 
   @Post('refund')
@@ -141,7 +156,7 @@ export class EscrowController {
   ) {
     return this.escrowService.refundCoins(
       dto.transaction_id,
-      req.user.sub,
+      req.user!.id!,
       dto.reason,
     );
   }
@@ -212,8 +227,8 @@ export class EscrowController {
     @Query('offset') offset?: string,
   ): Promise<EscrowTransactionResponse[]> {
     return this.escrowService.listTransactions(
-      req.user.sub,
-      status,
+      req.user!.id!,
+      undefined,
       limit ? parseInt(limit, 10) : 20,
       offset ? parseInt(offset, 10) : 0,
     );
@@ -269,7 +284,7 @@ export class EscrowController {
     @Req() req: { user?: { id?: string } },
     @Param('id') id: string,
   ): Promise<EscrowTransactionResponse> {
-    return this.escrowService.getTransaction(id, req.user.sub);
+    return this.escrowService.getTransaction(id, req.user!.id!);
   }
 
   @Get('circuit-breaker/status')

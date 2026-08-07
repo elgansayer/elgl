@@ -51,6 +51,7 @@ const DATING_REGEXES: { flag: string; regex: RegExp }[] = DATING_FLAGS.map((flag
 
 @Injectable()
 export class ModerationService {
+  private readonly logger = new (require('@nestjs/common')).Logger(ModerationService.name);
   private readonly supabase: ReturnType<SupabaseService['getClient']>;
 
   constructor(
@@ -357,6 +358,7 @@ export class ModerationService {
       );
 
       this.metricsService.recordTsDatingRiskScore(riskScore);
+      const matchedFlags: string[] = [];
       return { riskScore, flags: matchedFlags };
     } catch (err) {
       this.logger.warn(err, `Failed to analyse user ${userId}, degraded`);

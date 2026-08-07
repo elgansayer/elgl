@@ -4,6 +4,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard, SrsHealthStatus } from './interfaces/flashcard.interface';
 import { XpService } from '../xp/xp.service';
+import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { withRetry, isRateLimitError } from '../common/retry';
 
