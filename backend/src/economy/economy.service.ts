@@ -32,6 +32,9 @@ export interface StickerPackRow {
   id: string;
   name: string;
   cost_coins: number;
+  is_animated?: boolean | null;
+  sticker_urls?: string[] | null;
+  animation_url?: string | null;
 }
 
 export interface UserCoinRow {
@@ -1324,14 +1327,14 @@ export class EconomyService {
 
   private getDefaultStickerPacks(): StickerPackRow[] {
     return [
-      { id: 'stk_pack_1', name: 'Happy Corgi Pack', cost_coins: 50 },
-      { id: 'stk_pack_2', name: 'Rainbow Unicorns', cost_coins: 200 },
-      { id: 'stk_pack_3', name: 'Study Buddies', cost_coins: 100 },
-      { id: 'stk_pack_4', name: 'Golden Dragons', cost_coins: 500 },
-      { id: 'stk_pack_5', name: 'Party Animals', cost_coins: 150 },
-      { id: 'stk_pack_6', name: 'Chill Vibes', cost_coins: 80 },
-      { id: 'stk_pack_7', name: 'Foodie Fun', cost_coins: 120 },
-      { id: 'stk_pack_8', name: 'Travel Stamps', cost_coins: 180 },
+      { id: 'stk_pack_1', name: 'Happy Corgi Pack', cost_coins: 50, is_animated: false, sticker_urls: ['assets/stickers/happy.png', 'assets/stickers/laugh.png', 'assets/stickers/love.png'] },
+      { id: 'stk_pack_2', name: 'Rainbow Unicorns', cost_coins: 200, is_animated: true, sticker_urls: ['assets/stickers/unicorn-gallop.webm', 'assets/stickers/unicorn-sparkle.webm'], animation_url: 'assets/animations/unicorn.json' },
+      { id: 'stk_pack_3', name: 'Study Buddies', cost_coins: 100, is_animated: false, sticker_urls: ['assets/stickers/book.png', 'assets/stickers/pencil.png', 'assets/stickers/backpack.png'] },
+      { id: 'stk_pack_4', name: 'Golden Dragons', cost_coins: 500, is_animated: true, sticker_urls: ['assets/stickers/dragon-fire.webm', 'assets/stickers/dragon-fly.webm'], animation_url: 'assets/animations/dragon.json' },
+      { id: 'stk_pack_5', name: 'Party Animals', cost_coins: 150, is_animated: true, sticker_urls: ['assets/stickers/dog-dance.webm', 'assets/stickers/cat-party.webm', 'assets/stickers/bird-dj.webm'], animation_url: 'assets/animations/party.json' },
+      { id: 'stk_pack_6', name: 'Chill Vibes', cost_coins: 80, is_animated: false, sticker_urls: ['assets/stickers/coffee.png', 'assets/stickers/sunset.png', 'assets/stickers/hammock.png'] },
+      { id: 'stk_pack_7', name: 'Foodie Fun', cost_coins: 120, is_animated: false, sticker_urls: ['assets/stickers/pizza.png', 'assets/stickers/sushi.png', 'assets/stickers/taco.png'] },
+      { id: 'stk_pack_8', name: 'Travel Stamps', cost_coins: 180, is_animated: false, sticker_urls: ['assets/stickers/passport.png', 'assets/stickers/suitcase.png', 'assets/stickers/camera.png'] },
     ];
   }
 }

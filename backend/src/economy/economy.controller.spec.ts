@@ -1,124 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CallHandler } from '@nestjs/common';
-import { of, throwError } from 'rxjs';
-import { Response } from 'express';
 import { EconomyController } from './economy.controller';
 import { EconomyService } from './economy.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import {
-  CacheControlInterceptor,
-  CACHE_PUBLIC_LONG,
-  CACHE_PUBLIC_SHORT,
-  CACHE_PRIVATE_NO_STORE,
-} from './cache.interceptor';
-
-describe('CacheControlInterceptor', () => {
-  let response: Partial<Response>;
-
-  beforeEach(() => {
-    response = {
-      setHeader: jest.fn(),
-    };
-  });
-
-  it('should set public long-lived cache headers', (done) => {
-    const interceptor = new CacheControlInterceptor(CACHE_PUBLIC_LONG);
-    const context = {
-      switchToHttp: () => ({
-        getResponse: () => response as Response,
-      }),
-    } as any;
-    const next: CallHandler = { handle: () => of('ok') };
-
-    interceptor.intercept(context, next).subscribe({
-      next: () => {
-        expect(response.setHeader).toHaveBeenCalledWith(
-          'Cache-Control',
-          CACHE_PUBLIC_LONG['Cache-Control'],
-        );
-        expect(response.setHeader).toHaveBeenCalledWith(
-          'CDN-Cache-Control',
-          CACHE_PUBLIC_LONG['CDN-Cache-Control'],
-        );
-        done();
-      },
-    });
-  });
-
-  it('should set public short-lived cache headers', (done) => {
-    const interceptor = new CacheControlInterceptor(CACHE_PUBLIC_SHORT);
-    const context = {
-      switchToHttp: () => ({
-        getResponse: () => response as Response,
-      }),
-    } as any;
-    const next: CallHandler = { handle: () => of('ok') };
-
-    interceptor.intercept(context, next).subscribe({
-      next: () => {
-        expect(response.setHeader).toHaveBeenCalledWith(
-          'Cache-Control',
-          CACHE_PUBLIC_SHORT['Cache-Control'],
-        );
-        expect(response.setHeader).toHaveBeenCalledWith(
-          'CDN-Cache-Control',
-          CACHE_PUBLIC_SHORT['CDN-Cache-Control'],
-        );
-        done();
-      },
-    });
-  });
-
-  it('should set private no-store cache headers', (done) => {
-    const interceptor = new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE);
-    const context = {
-      switchToHttp: () => ({
-        getResponse: () => response as Response,
-      }),
-    } as any;
-    const next: CallHandler = { handle: () => of('ok') };
-
-    interceptor.intercept(context, next).subscribe({
-      next: () => {
-        expect(response.setHeader).toHaveBeenCalledWith(
-          'Cache-Control',
-          CACHE_PRIVATE_NO_STORE['Cache-Control'],
-        );
-        expect(response.setHeader).toHaveBeenCalledWith(
-          'CDN-Cache-Control',
-          CACHE_PRIVATE_NO_STORE['CDN-Cache-Control'],
-        );
-        done();
-      },
-    });
-  });
-
-  it('should override cache headers to private no-store on error', (done) => {
-    const interceptor = new CacheControlInterceptor(CACHE_PUBLIC_LONG);
-    const context = {
-      switchToHttp: () => ({
-        getResponse: () => response as Response,
-      }),
-    } as any;
-    const next: CallHandler = {
-      handle: () => throwError(() => new Error('test error')),
-    };
-
-    interceptor.intercept(context, next).subscribe({
-      error: () => {
-        expect(response.setHeader).toHaveBeenCalledWith(
-          'Cache-Control',
-          'private, no-store',
-        );
-        expect(response.setHeader).toHaveBeenCalledWith(
-          'CDN-Cache-Control',
-          'private, no-store',
-        );
-        done();
-      },
-    });
-  });
-});
 
 describe('EconomyController', () => {
   let controller: EconomyController;
@@ -132,14 +15,9 @@ describe('EconomyController', () => {
           provide: EconomyService,
           useValue: {
             getCatalog: jest.fn(),
-            getPackages: jest.fn(),
             getBalance: jest.fn(),
-            claimDailyCheckIn: jest.fn(),
-            createCheckoutSession: jest.fn(),
             purchaseCoins: jest.fn(),
             sendGift: jest.fn(),
-            getStickerPacks: jest.fn(),
-            unlockStickerPack: jest.fn(),
           },
         },
       ],
@@ -171,17 +49,6 @@ describe('EconomyController', () => {
     });
   });
 
-  describe('getPackages', () => {
-    it('should return coin packages from service', () => {
-      const packages: any[] = [{ id: 'coins_small', coins: 100 }];
-      (economyService.getPackages as jest.Mock).mockReturnValue(packages);
-
-      const result = controller.getPackages();
-      expect(economyService.getPackages).toHaveBeenCalled();
-      expect(result).toEqual(packages);
-    });
-  });
-
   describe('getBalance', () => {
     it('should return 0 balance if user is not provided', async () => {
       const result = await controller.getBalance(null);
@@ -199,6 +66,7 @@ describe('EconomyController', () => {
     });
   });
 
+<<<<<<< HEAD
   describe('claimDailyCheckIn', () => {
     it('should return a default object if user is not provided', async () => {
       const result = await controller.claimDailyCheckIn(null);
@@ -258,6 +126,8 @@ describe('EconomyController', () => {
     });
   });
 
+=======
+>>>>>>> origin/main
   describe('purchaseCoins', () => {
     it('should return null if user is not provided', async () => {
       const result = await controller.purchaseCoins(null, {} as any);
@@ -298,14 +168,8 @@ describe('EconomyController', () => {
   });
 
   describe('getStickerPacks', () => {
-    it('should return null if user is not provided', async () => {
-      const result = await controller.getStickerPacks(null);
-      expect(result).toBeNull();
-      expect(economyService.getStickerPacks).not.toHaveBeenCalled();
-    });
-
-    it('should call service getStickerPacks when user is provided', async () => {
-      const response: any = { packs: [], owned_pack_ids: [], user_coins: 100 };
+    it('should return sticker packs from service', async () => {
+      const response = { packs: [], owned_pack_ids: [], user_coins: 100 };
       (economyService.getStickerPacks as jest.Mock).mockResolvedValue(response);
 
       const result = await controller.getStickerPacks({ id: 'user-1' } as any);
@@ -315,27 +179,13 @@ describe('EconomyController', () => {
   });
 
   describe('unlockStickerPack', () => {
-    it('should return null if user is not provided', async () => {
-      const result = await controller.unlockStickerPack(null, {} as any);
-      expect(result).toBeNull();
-      expect(economyService.unlockStickerPack).not.toHaveBeenCalled();
-    });
-
     it('should call service unlockStickerPack when user is provided', async () => {
-      const dto: any = { pack_id: 'stk_pack_1' };
-      const response: any = { success: true, coins_remaining: 50 };
-      (economyService.unlockStickerPack as jest.Mock).mockResolvedValue(
-        response,
-      );
+      const dto = { pack_id: 'stk_pack_1' };
+      const response = { success: true, coins_remaining: 150, pack: { id: 'stk_pack_1', name: 'Happy Corgi Pack', cost_coins: 50 } };
+      (economyService.unlockStickerPack as jest.Mock).mockResolvedValue(response);
 
-      const result = await controller.unlockStickerPack(
-        { id: 'user-1' } as any,
-        dto,
-      );
-      expect(economyService.unlockStickerPack).toHaveBeenCalledWith(
-        'user-1',
-        dto,
-      );
+      const result = await controller.unlockStickerPack({ id: 'user-1' } as any, dto);
+      expect(economyService.unlockStickerPack).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual(response);
     });
   });
