@@ -5,6 +5,7 @@
   "allowed_origins": ["*"],
   "engine": "redis",
   "redis_address": "redis://cache:6379",
+  "prometheus": true,
   "namespaces": [
     {
       "name": "chat",
