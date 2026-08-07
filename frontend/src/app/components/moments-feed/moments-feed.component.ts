@@ -227,19 +227,29 @@ export class MomentsFeedComponent {
 
   async toggleInlineTranslation(moment: MomentRecord): Promise<void> {
     if (!moment.text_content) return;
-    if (moment.translatedText) {
-      // Toggle off
-      moment.isTranslating = false;
-      moment.translatedText = undefined;
+
+    // If already showing, just hide (keep translation cached)
+    if (moment.showTranslation) {
+      moment.showTranslation = false;
       return;
     }
+
+    // If translation is already cached, show it without an API call
+    if (moment.translatedText) {
+      moment.showTranslation = true;
+      return;
+    }
+
+    // Fetch translation and cache it
     moment.isTranslating = true;
     try {
       const res = await this.vocabStore.translateWordOrSentence(moment.text_content, 'en');
       moment.translatedText = res.translated_text;
+      moment.showTranslation = true;
     } catch (e) {
       console.error('Inline translation error:', e);
       moment.translatedText = this.i18n.translate('moments.transError');
+      moment.showTranslation = true;
     } finally {
       moment.isTranslating = false;
     }
