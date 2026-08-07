@@ -26,6 +26,16 @@ export class MetricsService {
   readonly srsDecksTotal: Gauge<string>;
   readonly srsDecksCreated: Counter<string>;
 
+  // Trust & Safety metrics
+  readonly tsReportsTotal: Counter<string>;
+  readonly tsReportsPending: Gauge<string>;
+  readonly tsBlocksTotal: Counter<string>;
+  readonly tsActiveBlocks: Gauge<string>;
+  readonly tsSpamDetectionsTotal: Counter<string>;
+  readonly tsModerationActionsTotal: Counter<string>;
+  readonly tsDatingRiskScore: Histogram<string>;
+  readonly tsHighRiskUsers: Gauge<string>;
+
   constructor() {
     this.register = new Registry();
 
@@ -121,6 +131,59 @@ export class MetricsService {
       help: 'Total number of decks created',
       registers: [this.register],
     });
+
+    // --- Trust & Safety Metrics ---
+
+    this.tsReportsTotal = new Counter({
+      name: 'hellotalk_trust_safety_reports_total',
+      help: 'Total number of user reports submitted',
+      labelNames: ['reason_category', 'status'],
+      registers: [this.register],
+    });
+
+    this.tsReportsPending = new Gauge({
+      name: 'hellotalk_trust_safety_reports_pending',
+      help: 'Number of pending reports awaiting moderation review',
+      registers: [this.register],
+    });
+
+    this.tsBlocksTotal = new Counter({
+      name: 'hellotalk_trust_safety_blocks_total',
+      help: 'Total number of user blocks created',
+      registers: [this.register],
+    });
+
+    this.tsActiveBlocks = new Gauge({
+      name: 'hellotalk_trust_safety_active_blocks',
+      help: 'Total number of active block relationships',
+      registers: [this.register],
+    });
+
+    this.tsSpamDetectionsTotal = new Counter({
+      name: 'hellotalk_trust_safety_spam_detections_total',
+      help: 'Total number of spam messages detected',
+      registers: [this.register],
+    });
+
+    this.tsModerationActionsTotal = new Counter({
+      name: 'hellotalk_trust_safety_moderation_actions_total',
+      help: 'Total number of moderation actions taken',
+      labelNames: ['action', 'item_type'],
+      registers: [this.register],
+    });
+
+    this.tsDatingRiskScore = new Histogram({
+      name: 'hellotalk_trust_safety_dating_risk_score',
+      help: 'Distribution of dating-behaviour risk scores (0-100)',
+      registers: [this.register],
+      buckets: [10, 25, 50, 75, 90, 100],
+    });
+
+    this.tsHighRiskUsers = new Gauge({
+      name: 'hellotalk_trust_safety_high_risk_users',
+      help: 'Number of users with dating risk score >= 50 in the last scan window',
+      registers: [this.register],
+    });
   }
 
   recordHttpRequest(
@@ -186,6 +249,40 @@ export class MetricsService {
 
   recordSrsDeckCreated(): void {
     this.srsDecksCreated.inc();
+  }
+
+  // --- Trust & Safety metric helpers ---
+
+  recordTsReport(reasonCategory: string, status: string): void {
+    this.tsReportsTotal.inc({ reason_category: reasonCategory, status });
+  }
+
+  setTsReportsPending(count: number): void {
+    this.tsReportsPending.set(count);
+  }
+
+  recordTsBlock(): void {
+    this.tsBlocksTotal.inc();
+  }
+
+  setTsActiveBlocks(count: number): void {
+    this.tsActiveBlocks.set(count);
+  }
+
+  recordTsSpamDetection(): void {
+    this.tsSpamDetectionsTotal.inc();
+  }
+
+  recordTsModerationAction(action: string, itemType: string): void {
+    this.tsModerationActionsTotal.inc({ action, item_type: itemType });
+  }
+
+  observeTsDatingRiskScore(score: number): void {
+    this.tsDatingRiskScore.observe(score);
+  }
+
+  setTsHighRiskUsers(count: number): void {
+    this.tsHighRiskUsers.set(count);
   }
 
   getRegister(): Registry {

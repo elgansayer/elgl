@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PostgrestError } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
 import { BlockedUserResponseDto } from './dto/blocked-user.dto';
 
@@ -46,7 +47,10 @@ export const SAFETY_CATEGORIES = [
 export class SafetyService {
   private readonly logger = new Logger(SafetyService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly metricsService: MetricsService,
+  ) {}
 
   getCategories() {
     return SAFETY_CATEGORIES;
@@ -106,6 +110,8 @@ export class SafetyService {
       `Report submitted: reporter=${reporterId}, reported=${dto.reported_id}, category=${dto.reason_category}`,
     );
 
+    this.metricsService.recordTsReport(dto.reason_category, 'pending');
+
     return { id: data.id };
   }
 
@@ -152,6 +158,9 @@ export class SafetyService {
     }
 
     this.logger.log(`User ${blockerId} blocked ${dto.blocked_id}`);
+
+    this.metricsService.recordTsBlock();
+
     return { success: true, blocked_id: dto.blocked_id };
   }
 

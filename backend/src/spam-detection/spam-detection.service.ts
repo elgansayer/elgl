@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Language } from 'node-nlp';
+import { MetricsService } from '../metrics/metrics.service';
 
 interface SpamRecord {
   timestamps: number[];
@@ -26,6 +27,8 @@ export class SpamDetectionService {
   private readonly languageDetector = new Language();
 
   private readonly CJK_LANGUAGES = new Set(['ja', 'ko', 'zh', 'th']);
+
+  constructor(private readonly metricsService: MetricsService) {}
 
   isSpam(content: string): boolean {
     if (!content) return false;
@@ -61,6 +64,7 @@ export class SpamDetectionService {
     // If we already have (THRESHOLD-1) duplicates, flag as spam
     if (nearDuplicateCount >= this.THRESHOLD - 1) {
       this.addRecord(normalized, incomingTrigrams, now);
+      this.metricsService.recordTsSpamDetection();
       return true;
     }
 

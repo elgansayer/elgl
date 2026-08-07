@@ -1,0 +1,137 @@
+{
+  "version": "1.0",
+  "description": "Datadog monitors for Trust & Safety. All monitors target Prometheus-style metrics exposed by the NestJS backend via OpenMetrics and ingested by the Datadog Agent.",
+  "monitors": [
+    {
+      "name": "[T&S] Spike in user reports",
+      "type": "query alert",
+      "query": "avg(last_30m):avg:hellotalk_trust_safety_reports_total{*} by {reason_category}.as_rate() > 10",
+      "message": "{{#is_alert}}\nUser report volume has spiked above 10 reports per 30 minutes.\n\n**Current rate:** {{value}} reports/min\n**Top category:** {{reason_category.name}}\n\n**Actions:**\n1. Check if a coordinated abuse campaign is underway.\n2. Review recent reports in the moderation dashboard.\n3. Verify the reporting API endpoint health.\n4. If reports appear valid, escalate to the Trust & Safety team.\n{{/is_alert}}\n\n{{#is_warning}}\nReport rate elevated above normal.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:trust-safety", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 10,
+          "warning": 5
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[T&S] Pending reports backlog growing",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_trust_safety_reports_pending{*} > 50",
+      "message": "{{#is_alert}}\nThe number of pending reports awaiting moderation has exceeded 50. This backlog may delay response to harmful content and degrade user safety.\n\n**Current value:** {{value}}\n**Threshold:** 50\n\n**Actions:**\n1. Allocate additional moderators to the queue.\n2. Check if an automated bulk-report attack occurred.\n3. Review moderation team capacity and response SLAs.\n{{/is_alert}}\n\n{{#is_warning}}\nPending reports approaching threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:trust-safety", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 120,
+        "thresholds": {
+          "critical": 50,
+          "warning": 25
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[T&S] Spike in user blocks",
+      "type": "query alert",
+      "query": "avg(last_30m):avg:hellotalk_trust_safety_blocks_total{*}.as_rate() > 20",
+      "message": "{{#is_alert}}\nUser block rate has exceeded 20 blocks per 30 minutes. This could indicate widespread harassment or a malicious bot campaign.\n\n**Current rate:** {{value}} blocks/min\n\n**Actions:**\n1. Investigate recent blocks for coordinated patterns.\n2. Check if a specific user or group is being targeted.\n3. Review sign-up and authentication logs for suspicious accounts.\n{{/is_alert}}\n\n{{#is_warning}}\nBlock rate elevated above normal.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:trust-safety", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 20,
+          "warning": 10
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[T&S] Spike in spam detection rate",
+      "type": "query alert",
+      "query": "avg(last_15m):avg:hellotalk_trust_safety_spam_detections_total{*}.as_rate() > 15",
+      "message": "{{#is_alert}}\nSpam detection rate has exceeded 15 detections per 15 minutes. This indicates an active spam campaign targeting the platform.\n\n**Current rate:** {{value}} detections/min\n\n**Actions:**\n1. Investigate the source of the spam wave (specific IPs, accounts, or channels).\n2. Review spam-detection service logs for false-positive rates.\n3. Consider temporarily enabling stricter rate limiting.\n4. Check if new spam patterns require updated detection rules.\n{{/is_alert}}\n\n{{#is_warning}}\nSpam detection rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:trust-safety", "severity:warning"],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 15,
+          "warning": 5
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[T&S] Zero moderation activity detected",
+      "type": "query alert",
+      "query": "avg(last_1h):avg:hellotalk_trust_safety_moderation_actions_total{*}.as_count() <= 0",
+      "message": "{{#is_alert}}\nNo moderation actions have been recorded in the last hour. This may indicate the moderation pipeline is down, or reports are not being addressed.\n\n**Actions:**\n1. Check the moderation API health endpoint.\n2. Verify the Supabase connection for the reports table.\n3. Ensure moderation staff are active and the queue is visible.\n4. Check for deployment or infrastructure incidents.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:trust-safety", "severity:critical"],
+      "options": {
+        "evaluation_delay": 600,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": true,
+        "no_data_timeframe": 60,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 0
+        }
+      }
+    },
+    {
+      "name": "[T&S] High-risk dating behaviour users detected",
+      "type": "query alert",
+      "query": "avg(last_1h):avg:hellotalk_trust_safety_high_risk_users{*} > 10",
+      "message": "{{#is_alert}}\nMore than 10 users have been flagged with dating-behaviour risk scores >= 50 in the last scan window. This may indicate an increase in platform misuse for dating purposes.\n\n**Current value:** {{value}}\n**Threshold:** 10\n\n**Actions:**\n1. Review flagged users in the admin dashboard.\n2. Assess whether policy enforcement actions are needed.\n3. Check if the dating behaviour detection rules need tuning.\n4. Consider proactive user education about platform purpose.\n{{/is_alert}}\n\n{{#is_warning}}\nNumber of high-risk users approaching threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:trust-safety", "severity:warning"],
+      "options": {
+        "evaluation_delay": 600,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 360,
+        "thresholds": {
+          "critical": 10,
+          "warning": 5
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[T&S] No spam detection activity",
+      "type": "query alert",
+      "query": "avg(last_24h):avg:hellotalk_trust_safety_spam_detections_total{*}.as_count() <= 0",
+      "message": "{{#is_alert}}\nNo spam has been detected in the last 24 hours. While this could be a positive sign, it may also indicate the spam detection service is not functioning correctly (e.g., not receiving message traffic, or the detection pipeline is broken).\n\n**Actions:**\n1. Verify the spam-detection service is processing message traffic.\n2. Check for recent deployments that may have broken the integration.\n3. Review message volume to confirm normal traffic patterns.\n4. Manually test with known spam patterns.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:trust-safety", "severity:info"],
+      "options": {
+        "evaluation_delay": 3600,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": true,
+        "no_data_timeframe": 1440,
+        "renotify_interval": 1440,
+        "thresholds": {
+          "critical": 0
+        }
+      }
+    }
+  ]
+}

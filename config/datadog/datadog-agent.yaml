@@ -32,6 +32,15 @@ prometheus_scrape:
       - hellotalk_srs_cards_stuck: gauge
       - hellotalk_srs_decks_total: gauge
       - hellotalk_srs_decks_created_total: counter
+      # Trust & Safety metrics (Datadog custom metrics)
+      - hellotalk_trust_safety_reports_total: counter
+      - hellotalk_trust_safety_reports_pending: gauge
+      - hellotalk_trust_safety_blocks_total: counter
+      - hellotalk_trust_safety_active_blocks: gauge
+      - hellotalk_trust_safety_spam_detections_total: counter
+      - hellotalk_trust_safety_moderation_actions_total: counter
+      - hellotalk_trust_safety_dating_risk_score: histogram
+      - hellotalk_trust_safety_high_risk_users: gauge
       # Infrastructure metrics
       - hellotalk_http_request_duration_seconds: histogram
       - hellotalk_http_requests_total: counter

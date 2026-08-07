@@ -1,12 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SafetyService } from './safety.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { Logger } from '@nestjs/common';
 
 describe('SafetyService', () => {
   let service: SafetyService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let mockMetricsService: any;
 
   beforeEach(async () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
@@ -25,6 +27,17 @@ describe('SafetyService', () => {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
+    mockMetricsService = {
+      recordTsReport: jest.fn(),
+      setTsReportsPending: jest.fn(),
+      recordTsBlock: jest.fn(),
+      setTsActiveBlocks: jest.fn(),
+      recordTsSpamDetection: jest.fn(),
+      recordTsModerationAction: jest.fn(),
+      observeTsDatingRiskScore: jest.fn(),
+      setTsHighRiskUsers: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SafetyService,
@@ -33,6 +46,10 @@ describe('SafetyService', () => {
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
           },
+        },
+        {
+          provide: MetricsService,
+          useValue: mockMetricsService,
         },
       ],
     }).compile();

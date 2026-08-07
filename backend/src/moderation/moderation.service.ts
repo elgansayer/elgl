@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { ReportUserDto } from './dto/report-user.dto';
 import { ModerationActionDto } from './dto/moderation-action.dto';
 
@@ -25,7 +26,10 @@ export interface ModerationItem {
 export class ModerationService {
   private readonly supabase: ReturnType<SupabaseService['getClient']>;
 
-  constructor(private readonly supabaseService: SupabaseService) {
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly metricsService: MetricsService,
+  ) {
     this.supabase = this.supabaseService.getClient();
   }
 
@@ -151,6 +155,8 @@ export class ModerationService {
       throw new NotFoundException('Failed to approve item');
     }
 
+    this.metricsService.recordTsModerationAction('approved', dto.type);
+
     return { success: true };
   }
 
@@ -166,6 +172,8 @@ export class ModerationService {
     if (error) {
       throw new NotFoundException('Failed to reject item');
     }
+
+    this.metricsService.recordTsModerationAction('rejected', dto.type);
 
     return { success: true };
   }
@@ -290,6 +298,8 @@ export class ModerationService {
           (uniqueFlags.length > 10 ? 10 : 0),
       ),
     );
+
+    this.metricsService.observeTsDatingRiskScore(riskScore);
 
     return { riskScore, flags: uniqueFlags };
   }

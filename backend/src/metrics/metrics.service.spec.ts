@@ -122,4 +122,66 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_srs_decks_total');
     });
   });
+
+  describe('Trust & Safety metrics', () => {
+    it('should record reports with category and status labels', () => {
+      expect(() => service.recordTsReport('harassment', 'pending')).not.toThrow();
+    });
+
+    it('should set pending reports gauge', () => {
+      expect(() => service.setTsReportsPending(15)).not.toThrow();
+    });
+
+    it('should record block', () => {
+      expect(() => service.recordTsBlock()).not.toThrow();
+    });
+
+    it('should set active blocks gauge', () => {
+      expect(() => service.setTsActiveBlocks(120)).not.toThrow();
+    });
+
+    it('should record spam detection', () => {
+      expect(() => service.recordTsSpamDetection()).not.toThrow();
+    });
+
+    it('should record moderation action with action and item type', () => {
+      expect(() =>
+        service.recordTsModerationAction('approved', 'moment'),
+      ).not.toThrow();
+      expect(() =>
+        service.recordTsModerationAction('rejected', 'profile'),
+      ).not.toThrow();
+    });
+
+    it('should observe dating risk score in histogram', () => {
+      expect(() => service.observeTsDatingRiskScore(75)).not.toThrow();
+      expect(() => service.observeTsDatingRiskScore(25)).not.toThrow();
+      expect(() => service.observeTsDatingRiskScore(100)).not.toThrow();
+    });
+
+    it('should set high risk users gauge', () => {
+      expect(() => service.setTsHighRiskUsers(8)).not.toThrow();
+    });
+
+    it('should include Trust & Safety metrics in getMetrics output', async () => {
+      service.recordTsReport('spam', 'pending');
+      service.setTsReportsPending(5);
+      service.recordTsBlock();
+      service.setTsActiveBlocks(50);
+      service.recordTsSpamDetection();
+      service.recordTsModerationAction('approved', 'moment');
+      service.observeTsDatingRiskScore(60);
+      service.setTsHighRiskUsers(3);
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain('hellotalk_trust_safety_reports_total');
+      expect(metrics).toContain('hellotalk_trust_safety_reports_pending');
+      expect(metrics).toContain('hellotalk_trust_safety_blocks_total');
+      expect(metrics).toContain('hellotalk_trust_safety_active_blocks');
+      expect(metrics).toContain('hellotalk_trust_safety_spam_detections_total');
+      expect(metrics).toContain('hellotalk_trust_safety_moderation_actions_total');
+      expect(metrics).toContain('hellotalk_trust_safety_dating_risk_score');
+      expect(metrics).toContain('hellotalk_trust_safety_high_risk_users');
+    });
+  });
 });
