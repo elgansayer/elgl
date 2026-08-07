@@ -568,4 +568,14 @@ describe('ChatService', () => {
       globalThis.window = originalWindow;
     });
   });
+
+  describe('syncOfflineMessages', () => {
+    it('should return zero counts when no token is available', async () => {
+      getAccessTokenMock.mockReturnValue(null);
+      const result = await service.syncOfflineMessages();
+      expect(result.sent).toBe(0);
+      expect(result.failed).toBe(0);
+      getAccessTokenMock.mockReturnValue('test-token');
+    });
+  });
 });
