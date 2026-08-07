@@ -49,6 +49,33 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/unbound-method': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+  {
+    files: [
+      'src/economy/**/*.ts',
+      'src/monetisation/**/*.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+    },
+  },
+  {
+    files: [
+      'src/economy/**/*.spec.ts',
+      'src/monetisation/**/*.spec.ts',
+      'src/economy/**/*.e2e-spec.ts',
+      'src/monetisation/**/*.e2e-spec.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+  {
+    files: ['src/flashcards/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
     },
   },
 );

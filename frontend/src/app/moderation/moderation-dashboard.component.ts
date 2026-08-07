@@ -147,8 +147,15 @@ import { ModerationItem, ModerationService } from './moderation.service';
               </button>
             </div>
           </div>
+<<<<<<< HEAD
         } @empty {
           <p class="text-slate-500">{{ 'moderation.empty' | t }}</p>
+=======
+          } @empty {
+            <p class="text-slate-500">{{ 'moderation.empty' | t }}</p>
+          }
+        </div>
+>>>>>>> origin/main
         }
       }
     </div>

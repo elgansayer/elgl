@@ -1,11 +1,11 @@
 import {
   Injectable,
-  Logger,
   BadRequestException,
   Inject,
   forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import * as crypto from 'crypto';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MonetisationService } from './monetisation.service';
@@ -31,10 +31,11 @@ interface AppleTransactionInfo {
 
 @Injectable()
 export class AppleNotificationService {
-  private readonly logger = new Logger(AppleNotificationService.name);
   private readonly rootCAs: string[];
 
   constructor(
+    @InjectPinoLogger(AppleNotificationService.name)
+    private readonly logger: PinoLogger,
     private readonly configService: ConfigService,
     private readonly supabaseService: SupabaseService,
     private readonly subscriptionPlansService: SubscriptionPlansService,
@@ -50,7 +51,7 @@ export class AppleNotificationService {
   async handleNotification(
     payload: unknown,
   ): Promise<{ received: boolean; status: string }> {
-    this.logger.log(`Received Apple App Store Server Notification`);
+    this.logger.info(`Received Apple App Store Server Notification`);
 
     const payloadRecord = payload as Record<string, unknown>;
     const signedPayload = payloadRecord?.signedPayload as string | undefined;
@@ -71,7 +72,7 @@ export class AppleNotificationService {
       } else if (this.isSubscriptionExpiredEvent(notificationType, subtype)) {
         await this.handleSubscriptionExpired(notificationType, subtype, data);
       } else {
-        this.logger.log(
+        this.logger.info(
           `Unhandled notification type: ${notificationType}/${subtype}`,
         );
       }
@@ -159,7 +160,7 @@ export class AppleNotificationService {
 
     const tier = this.mapProductIdToTier(transactionInfo.productId);
 
-    this.logger.log(
+    this.logger.info(
       `Activating subscription for user ${userId}, tier: ${tier}`,
     );
     await this.monetisationService.updateVipStatusFromWebhook(
@@ -191,7 +192,7 @@ export class AppleNotificationService {
       return;
     }
 
-    this.logger.log(`Deactivating subscription for user ${userId}`);
+    this.logger.info(`Deactivating subscription for user ${userId}`);
     await this.monetisationService.updateVipStatusFromWebhook(
       userId,
       false,
