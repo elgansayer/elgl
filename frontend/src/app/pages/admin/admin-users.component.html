@@ -86,9 +86,9 @@
                   <span class="text-slate-400">{{ 'admin.users.noAvatar' | t }}</span>
                 }
               </td>
-              <td class="px-3 py-2">{{ user.display_name ?? '-' }}</td>
-              <td class="px-3 py-2">{{ user.native_languages.join(', ') }}</td>
-              <td class="px-3 py-2">{{ user.target_languages.join(', ') }}</td>
+              <td class="px-3 py-2">{{ (user.display_name ?? '-') | sanitiseHtml }}</td>
+              <td class="px-3 py-2">{{ (user.native_languages?.join(', ') ?? '') | sanitiseHtml }}</td>
+              <td class="px-3 py-2">{{ (user.target_languages?.join(', ') ?? '') | sanitiseHtml }}</td>
               <td class="px-3 py-2">
                 <span
                   [class.text-green-600]="user.is_vip"
@@ -186,8 +186,8 @@
               @for (entry of loginHistory(); track entry.id) {
                 <tr>
                   <td class="px-3 py-2">{{ entry.created_at | date: 'medium' }}</td>
-                  <td class="px-3 py-2">{{ entry.ip_address ?? '-' }}</td>
-                  <td class="px-3 py-2">{{ entry.user_agent ?? '-' }}</td>
+                  <td class="px-3 py-2">{{ (entry.ip_address ?? '-') | sanitiseHtml }}</td>
+                  <td class="px-3 py-2">{{ (entry.user_agent ?? '-') | sanitiseHtml }}</td>
                 </tr>
               }
             </tbody>

@@ -1,5 +1,6 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { TranslatePipe } from '../../../services/translate.pipe';
+import { SanitiseHtmlPipe } from '../../../pipes/sanitise-html.pipe';
 import { AdminService, AdminBlockEntry } from '../../../services/admin.service';
 import { AppCardComponent } from '../../../components/primitives/card/card.component';
 import { AppEmptyStateComponent } from '../../../components/primitives/empty-state/empty-state.component';
@@ -7,7 +8,7 @@ import { AppSkeletonLoaderComponent } from '../../../components/primitives/skele
 
 @Component({
   selector: 'app-admin-blocks',
-  imports: [TranslatePipe, AppCardComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+  imports: [TranslatePipe, SanitiseHtmlPipe, AppCardComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   templateUrl: './admin-blocks.component.html',
   styles: [],
 })
