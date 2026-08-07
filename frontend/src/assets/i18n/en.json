@@ -544,7 +544,7 @@
   "coverPhoto.uploadLabel": "Upload label",
   "culturalGuide.title": "Title",
   "currentVersion": "Current version",
-  "dailyLoginModal.body": "You received {coins} coins for logging in today.",
+  "dailyLoginModal.body": "You received {{coins}} coins for logging in today.",
   "dailyLoginModal.cta": "Awesome!",
   "dailyLoginModal.title": "Daily Reward!",
   "daily_login_modal.message": "Message",
