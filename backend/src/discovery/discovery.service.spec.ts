@@ -4,6 +4,8 @@ import { DiscoveryService } from './discovery.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
+import { CloudflareCacheService } from '../cloudflare/cache.service';
+import { DISCOVERY_CACHE_TAG_POTW } from './cache.interceptor';
 
 jest.mock('../mock-data', () => ({
   MOCK_USERS: [],
@@ -17,6 +19,7 @@ describe('DiscoveryService', () => {
   let mockRedisSet: jest.Mock;
   let mockSafetyService: any;
   let mockAudioRoomsService: any;
+  let mockCloudflareCacheService: { purgeByCacheTags: jest.Mock };
 
   function createMockQueryBuilder() {
     const builder: any = {};
@@ -73,6 +76,10 @@ describe('DiscoveryService', () => {
       getActiveHostIds: jest.fn().mockResolvedValue([]),
     };
 
+    mockCloudflareCacheService = {
+      purgeByCacheTags: jest.fn().mockResolvedValue(true),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DiscoveryService,
@@ -90,6 +97,10 @@ describe('DiscoveryService', () => {
         {
           provide: AudioRoomsService,
           useValue: mockAudioRoomsService,
+        },
+        {
+          provide: CloudflareCacheService,
+          useValue: mockCloudflareCacheService,
         },
       ],
     }).compile();
@@ -181,6 +192,34 @@ describe('DiscoveryService', () => {
       await service.calculatePartnerOfWeek();
 
       expect(mockRedisSet).not.toHaveBeenCalled();
+    });
+
+    it('should purge Cloudflare edge cache for POTW after recalculation', async () => {
+      mockQueryBuilder.gt = jest.fn().mockReturnThis();
+      mockQueryBuilder.order = jest.fn().mockReturnThis();
+      mockQueryBuilder.limit = jest.fn().mockResolvedValue({
+        data: [{ id: 'u1' }],
+        error: null,
+      });
+
+      await service.calculatePartnerOfWeek();
+
+      expect(mockCloudflareCacheService.purgeByCacheTags).toHaveBeenCalledWith([
+        DISCOVERY_CACHE_TAG_POTW,
+      ]);
+    });
+
+    it('should not purge Cloudflare cache when no users qualify', async () => {
+      mockQueryBuilder.gt = jest.fn().mockReturnThis();
+      mockQueryBuilder.order = jest.fn().mockReturnThis();
+      mockQueryBuilder.limit = jest.fn().mockResolvedValue({
+        data: [],
+        error: null,
+      });
+
+      await service.calculatePartnerOfWeek();
+
+      expect(mockCloudflareCacheService.purgeByCacheTags).not.toHaveBeenCalled();
     });
   });
 
