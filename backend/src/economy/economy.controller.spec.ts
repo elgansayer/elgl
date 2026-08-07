@@ -23,6 +23,7 @@ jest.mock('dompurify', () => ({
 }));
 
 import { Test, TestingModule } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { EconomyController } from './economy.controller';
 import { EconomyService } from './economy.service';
@@ -119,6 +120,13 @@ describe('EconomyController', () => {
       expect(economyService.getBalance).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(balance);
     });
+
+    it('should degrade gracefully to default 50 coins when service throws', async () => {
+      (economyService.getBalance as jest.Mock).mockRejectedValue(new Error('DB down'));
+
+      const result = await controller.getBalance({ id: 'user-1' } as any);
+      expect(result).toEqual({ coins_balance: 50 });
+    });
   });
 
   describe('claimDailyCheckIn', () => {
@@ -139,6 +147,13 @@ describe('EconomyController', () => {
       } as any);
       expect(economyService.claimDailyCheckIn).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(response);
+    });
+
+    it('should degrade gracefully when service throws', async () => {
+      (economyService.claimDailyCheckIn as jest.Mock).mockRejectedValue(new Error('DB down'));
+
+      const result = await controller.claimDailyCheckIn({ id: 'user-1' } as any);
+      expect(result).toEqual({ claimed: false, coins_rewarded: 0, new_balance: 50 });
     });
   });
 
