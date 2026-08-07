@@ -17,7 +17,7 @@
           type="button"
           (click)="togglePlayback()"
           class="rounded bg-purple-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-purple-500"
-        >
+         [attr.aria-label]="'audioIntro.pause' | t">
           {{ isPlaying() ? ('audioIntro.pause' | t) : ('audioIntro.play' | t) }}
         </button>
       </div>
@@ -37,7 +37,7 @@
       type="button"
       (click)="startRecording()"
       class="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-500"
-    >
+     [attr.aria-label]="'audioIntro.record' | t">
       {{ 'audioIntro.record' | t }}
     </button>
   }
@@ -47,7 +47,7 @@
       type="button"
       (click)="stopRecording()"
       class="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500 ms-2 me-2"
-    >
+     [attr.aria-label]="'audioIntro.stop' | t">
       {{ 'audioIntro.stop' | t }}
     </button>
   }

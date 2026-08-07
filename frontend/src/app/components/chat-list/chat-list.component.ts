@@ -7,6 +7,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
 import { ChatMessage, ChatRoom, ChatService } from '../../services/chat.service';
+import { UnreadCounterService } from '../../services/unread-counter.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 
 interface ChatRoomPreview {
@@ -32,6 +33,7 @@ export class ChatListComponent implements OnInit {
   private readonly chatService = inject(ChatService);
   private readonly authService = inject(AuthService);
   private readonly i18n = inject(I18nService);
+  private readonly unreadCounter = inject(UnreadCounterService);
 
   readonly isLoading = signal<boolean>(true);
   readonly labels = signal<string[]>([]);
@@ -175,6 +177,9 @@ export class ChatListComponent implements OnInit {
       });
 
       this.previews.set(previewList);
+      // Sync global chat unread counter
+      const totalChatUnread = previewList.reduce((sum, p) => sum + p.unreadCount, 0);
+      this.unreadCounter.setChatUnread(totalChatUnread);
     } catch (error) {
       console.error('Failed to load chat rooms:', error);
       this.previews.set([]);

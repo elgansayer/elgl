@@ -1,12 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
+<<<<<<< HEAD
 export interface MyStatsResponse {
   study_hours: number;
   messages_sent: number;
   corrections_made: number;
   weekly_study_hours: { day: string; hours: number }[];
   activity_breakdown: { label: string; count: number }[];
+=======
+interface StudyHoursRow {
+  day: string;
+  total_seconds: number;
+}
+
+export interface MyStatsResponse {
+  study_hours: { day: string; hours: number }[];
+  messages_sent: number;
+  corrections_count: number;
+  moments_count: number;
+>>>>>>> origin/main
 }
 
 @Injectable()
@@ -20,6 +33,7 @@ export class StatsService {
     startOfWeek.setDate(now.getDate() - now.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
 
+<<<<<<< HEAD
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     // messages sent count
@@ -28,6 +42,46 @@ export class StatsService {
       .select('id', { count: 'exact', head: true })
       .eq('sender_id', userId);
     if (msgErr) throw new Error(msgErr.message);
+=======
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    // study hours from call_logs this week – sum duration_seconds grouped by day
+    const { data: callLogs, error: callErr } = await client
+      .from('call_logs')
+      .select('duration_seconds, started_at')
+      .or(`caller_id.eq.${userId},receiver_id.eq.${userId}`)
+      .gte('started_at', startOfWeek.toISOString())
+      .not('duration_seconds', 'is', null);
+
+    if (callErr) {
+      throw new Error(callErr.message);
+    }
+
+    const dailySeconds: Record<string, number> = {};
+    for (const log of (callLogs as { duration_seconds: number; started_at: string }[]) ?? []) {
+      const dayIdx = new Date(log.started_at).getDay();
+      const day = dayNames[dayIdx];
+      dailySeconds[day] = (dailySeconds[day] ?? 0) + (log.duration_seconds ?? 0);
+    }
+
+    const study_hours = dayNames.map((day) => ({
+      day,
+      hours: Math.round(((dailySeconds[day] ?? 0) / 3600) * 10) / 10,
+    }));
+
+    // messages sent count
+    const { count: messagesCount, error: msgErr } = await client
+      .from('chat_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('sender_id', userId);
+    if (msgErr) {
+      throw new Error(msgErr.message);
+    }
+>>>>>>> origin/main
 
     // corrections made: correction_payload in chat_messages + moment_comments
     const [
@@ -49,6 +103,7 @@ export class StatsService {
     if (momentCorrErr) throw new Error(momentCorrErr.message);
     const correctionsMade = (chatCorrections ?? 0) + (momentCorrections ?? 0);
 
+<<<<<<< HEAD
     // study hours: approximate by counting distinct hours with messages this week
     const { data: weeklyMessages, error: weeklyErr } = await client
       .from('chat_messages')
@@ -68,6 +123,22 @@ export class StatsService {
       corrections_made: correctionsMade,
       weekly_study_hours: weeklyStudyHours,
       activity_breakdown: activityBreakdown,
+=======
+    // moments count
+    const { count: momentsCount, error: momentsErr } = await client
+      .from('moments')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+    if (momentsErr) {
+      throw new Error(momentsErr.message);
+    }
+
+    return {
+      study_hours,
+      messages_sent: messagesCount ?? 0,
+      corrections_count: correctionsCount ?? 0,
+      moments_count: momentsCount ?? 0,
+>>>>>>> origin/main
     };
   }
 

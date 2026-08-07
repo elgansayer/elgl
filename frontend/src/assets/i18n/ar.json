@@ -1,4 +1,8 @@
 {
+<<<<<<< HEAD
+=======
+  "a11y.skipToContent": "تخط إلى المحتوى الرئيسي",
+>>>>>>> origin/main
   "app.badgeOpenCore": "نسخة المجتمع",
   "app.navMe": "أنا",
   "app.title": "هيلوتوك",
@@ -18,6 +22,33 @@
   "audioRoom.hostFallback": "مضيف الغرفة",
   "audioRoom.hostLabel": "المضيف",
   "audioRoom.joinRoomBtn": "انضم إلى الغرفة",
+<<<<<<< HEAD
+=======
+  "audioRoom.languagePair.ar-en": "العربية ↔ الإنجليزية",
+  "audioRoom.languagePair.ar-fr": "العربية ↔ الفرنسية",
+  "audioRoom.languagePair.de-en": "الألمانية ↔ الإنجليزية",
+  "audioRoom.languagePair.en-de": "الإنجليزية ↔ الألمانية",
+  "audioRoom.languagePair.en-es": "الإنجليزية ↔ الإسبانية",
+  "audioRoom.languagePair.en-fr": "الإنجليزية ↔ الفرنسية",
+  "audioRoom.languagePair.en-hi": "الإنجليزية ↔ الهندية",
+  "audioRoom.languagePair.en-it": "الإنجليزية ↔ الإيطالية",
+  "audioRoom.languagePair.en-ja": "الإنجليزية ↔ اليابانية",
+  "audioRoom.languagePair.en-ko": "الإنجليزية ↔ الكورية",
+  "audioRoom.languagePair.en-pt": "الإنجليزية ↔ البرتغالية",
+  "audioRoom.languagePair.en-ru": "الإنجليزية ↔ الروسية",
+  "audioRoom.languagePair.en-tr": "الإنجليزية ↔ التركية",
+  "audioRoom.languagePair.en-zh": "الإنجليزية ↔ الصينية",
+  "audioRoom.languagePair.es-en": "الإسبانية ↔ الإنجليزية",
+  "audioRoom.languagePair.fr-ar": "الفرنسية ↔ العربية",
+  "audioRoom.languagePair.fr-en": "الفرنسية ↔ الإنجليزية",
+  "audioRoom.languagePair.it-en": "الإيطالية ↔ الإنجليزية",
+  "audioRoom.languagePair.ja-en": "اليابانية ↔ الإنجليزية",
+  "audioRoom.languagePair.ko-en": "الكورية ↔ الإنجليزية",
+  "audioRoom.languagePair.pt-en": "البرتغالية ↔ الإنجليزية",
+  "audioRoom.languagePair.ru-en": "الروسية ↔ الإنجليزية",
+  "audioRoom.languagePair.zh-en": "الصينية ↔ الإنجليزية",
+  "audioRoom.languagePairOptions": "en-es,en-fr,en-ja,ar-en,en-ko,en-zh,en-pt,en-ru,en-de,en-it,en-hi,en-tr,ja-en,ko-en,zh-en,fr-en,es-en,de-en,pt-en,it-en,ru-en,ar-fr,fr-ar",
+>>>>>>> origin/main
   "audioRoom.launchError": "فشل إطلاق الغرفة الصوتية.",
   "audioRoom.launchRoomBtn": "+ إطلاق غرفة مباشرة",
   "audioRoom.launchStageBtn": "إطلاق المنصة",
@@ -117,7 +148,11 @@
   "context_menu.speak": "نطق",
   "context_menu.translate": "ترجمة",
   "context_menu.transliterate": "الأحرف اللاتينية",
+<<<<<<< HEAD
   "dailyLoginModal.body": "لقد حصلت على {coins} عملة لتسجيل دخولك اليوم.",
+=======
+  "dailyLoginModal.body": "لقد حصلت على {{coins}} عملة لتسجيل دخولك اليوم.",
+>>>>>>> origin/main
   "dailyLoginModal.cta": "رائع!",
   "dailyLoginModal.title": "مكافأة يومية!",
   "developer.activeKeyLabel": "مفتاح إنتاج نشط",
@@ -339,6 +374,7 @@
   "moments.translate": "ترجمة",
   "moments.unpinBtn": "إلغاء التثبيت",
   "moments.visitorsLink": "👀 الزوار",
+<<<<<<< HEAD
   "myStats.activityBreakdown": "توزيع النشاط",
   "myStats.correctionsMade": "التصحيحات التي تم إجراؤها",
   "myStats.loading": "جار التحميل...",
@@ -346,6 +382,8 @@
   "myStats.studyHours": "ساعات الدراسة (هذا الأسبوع)",
   "myStats.title": "إحصائياتي",
   "myStats.weeklyStudyChart": "ساعات الدراسة (هذا الأسبوع)",
+=======
+>>>>>>> origin/main
   "nav.chatRoom": "💬 غرفة محادثة",
   "nav.chats": "محادثات",
   "nav.connect": "🌍 تواصل",
@@ -361,6 +399,16 @@
   "nav.profile": "👤 أنا",
   "profile.aboutMe": "عني",
   "profile.audioIntroBtn": "مقدمة صوتية",
+<<<<<<< HEAD
+=======
+  "profile.audioIntroCardTitle": "مقدمة صوتية",
+  "profile.audioIntroHint": "سجل مقدمة قصيرة مدتها 30 ثانية ليدع الشركاء يستمعون إلى صوتك.",
+  "profile.audioIntroRecord": "تسجيل المقدمة",
+  "profile.audioIntroRerecord": "إعادة التسجيل",
+  "profile.audioIntroSave": "حفظ المقدمة",
+  "profile.audioIntroSaved": "تم حفظ المقدمة الصوتية!",
+  "profile.audioIntroStop": "إيقاف التسجيل",
+>>>>>>> origin/main
   "profile.bioPlaceholder": "السيرة الذاتية وأهداف التعلم",
   "profile.cancelBtn": "إلغاء",
   "profile.chipMatching": "🌐 مطابقة التبادل",
@@ -396,6 +444,11 @@
   "profile.vipBadge": "VIP",
   "profile.visitorsBtn": "الزوار",
   "profile.vocabLink": "📚 المفردات",
+<<<<<<< HEAD
+=======
+  "restore_purchases": "استعادة المشتريات",
+  "restoring": "جارٍ الاستعادة...",
+>>>>>>> origin/main
   "roomChat.broadcastBtn": "بث التعليق",
   "roomChat.emptyChat": "لا توجد رسائل في هذه الغرفة المباشرة بعد. قل مرحباً لمتحدثي المنصة!",
   "roomChat.emptySubtitles": "لا توجد ترجمات مباشرة بعد. عندما يتحدث المتحدثون على المنصة أو يستخدمون تحويل الكلام إلى نص، تُبث التسميات التوضيحية المغلقة هنا!",

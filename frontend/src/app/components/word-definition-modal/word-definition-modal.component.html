@@ -81,7 +81,7 @@
             [disabled]="isSaving()"
             (click)="setLevel(1)"
             class="py-2.5 px-3 bg-amber-400 hover:bg-amber-500 text-amber-950 rounded-app font-bold text-sm shadow transition-all flex items-center justify-center gap-1"
-          >
+           [attr.aria-label]="'🟡 Save to learning'">
             <span>🟡 Save to learning</span>
           </button>
 
@@ -89,7 +89,7 @@
             [disabled]="isSaving()"
             (click)="setLevel(4)"
             class="py-2.5 px-3 bg-surface-100 hover:bg-surface-200 text-text-primary rounded-app font-bold text-sm shadow transition-all flex items-center justify-center gap-1"
-          >
+           [attr.aria-label]="'⚪ Mark known'">
             <span>⚪ Mark known</span>
           </button>
         </div>
@@ -99,7 +99,7 @@
             [disabled]="isSaving()"
             (click)="setLevel(0)"
             class="w-full py-2 bg-blue-500/20 hover:bg-blue-200 text-blue-400 rounded-app font-semibold text-xs transition-colors"
-          >
+           [attr.aria-label]="'Reset to new (Level 0 / Blue)'">
             Reset to new (Level 0 / Blue)
           </button>
         }

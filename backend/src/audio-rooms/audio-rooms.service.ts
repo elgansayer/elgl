@@ -1179,14 +1179,18 @@ export class AudioRoomsService implements OnModuleInit {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('audio_rooms')
-      .select('host_id')
+      .select('host_id, is_private')
       .eq('is_active', true);
     if (error || !data) {
       this.logger.warn('Could not fetch active host IDs', error);
       return [];
     }
-    const rows = data as Array<{ host_id: string }>;
-    return [...new Set(rows.map((r) => r.host_id))];
+    const rows = data as Array<{ host_id: string; is_private?: boolean }>;
+    // Only return hosts of public active rooms
+    const publicHosts = rows
+      .filter((r) => !r.is_private)
+      .map((r) => r.host_id);
+    return [...new Set(publicHosts)];
   }
 
   /**
@@ -1693,11 +1697,17 @@ export class AudioRoomsService implements OnModuleInit {
 
     const tipRow = tipResponse.data as { id: string };
 
+    const senderUser = senderResponse.data as { display_name?: string | null } | null;
+    const senderName = senderUser?.display_name || 'Someone';
+
     void this.centrifugoService.publish(`room_${room.id}`, {
       type: 'host_tip',
       tip: {
+        tip_id: tipRow.id,
         amount_coins: amount,
         sender_user_id: userId,
+        sender_name: senderName,
+        receiver_user_id: room.host_id,
       },
     });
 

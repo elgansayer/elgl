@@ -12,7 +12,7 @@
       class="text-sm text-white/60 hover:text-white cursor-pointer"
       [class.opacity-30]="unreadCount() === 0"
       (click)="markAllAsRead()"
-    >
+     [attr.aria-label]="'notifications.markAllRead' | t">
       {{ 'notifications.markAllRead' | t }}
     </button>
   </div>
