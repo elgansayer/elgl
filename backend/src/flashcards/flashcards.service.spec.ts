@@ -2,12 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { FlashcardsService } from './flashcards.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { XpService } from '../xp/xp.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 describe('FlashcardsService', () => {
   let service: FlashcardsService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
   let mockLogger: any;
+  let mockMetricsService: any;
 
   beforeEach(async () => {
     mockLogger = {
@@ -15,6 +17,18 @@ describe('FlashcardsService', () => {
       error: jest.fn(),
       warn: jest.fn(),
       debug: jest.fn(),
+    };
+
+    mockMetricsService = {
+      recordSrsFlashcardCreated: jest.fn(),
+      recordSrsReviewCompleted: jest.fn(),
+      setSrsDueCards: jest.fn(),
+      setSrsAverageEasinessFactor: jest.fn(),
+      setSrsReviewSuccessRate: jest.fn(),
+      setSrsCardsPerLevel: jest.fn(),
+      setSrsCardsStuck: jest.fn(),
+      setSrsDecksTotal: jest.fn(),
+      recordSrsDeckCreated: jest.fn(),
     };
 
     mockQueryBuilder = {
@@ -50,6 +64,10 @@ describe('FlashcardsService', () => {
           useValue: {
             awardXpForActivity: jest.fn(),
           },
+        },
+        {
+          provide: MetricsService,
+          useValue: mockMetricsService,
         },
       ],
     }).compile();
@@ -94,6 +112,7 @@ describe('FlashcardsService', () => {
         },
         { onConflict: 'user_id, word_token' },
       );
+      expect(mockMetricsService.recordSrsFlashcardCreated).toHaveBeenCalled();
       expect(result).toEqual(savedCard);
     });
 
@@ -159,6 +178,9 @@ describe('FlashcardsService', () => {
         interval_days: 1,
         next_review_at: '2026-07-23T12:00:00.000Z',
       });
+      expect(mockMetricsService.recordSrsReviewCompleted).toHaveBeenCalledWith(
+        5, 'pass', expect.any(Number),
+      );
       expect(result).toEqual(updatedCard);
     });
 

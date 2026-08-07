@@ -4,6 +4,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard } from './interfaces/flashcard.interface';
 import { XpService } from '../xp/xp.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 @Injectable()
 export class FlashcardsService {
@@ -12,6 +13,7 @@ export class FlashcardsService {
     private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
     private readonly xpService: XpService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   async createOrUpdateFlashcard(
@@ -49,6 +51,8 @@ export class FlashcardsService {
     // Award XP for creating a flashcard
     void this.xpService.awardXpForActivity(userId, 'create_flashcard');
 
+    this.metricsService.recordSrsFlashcardCreated();
+
     this.logger.info(
       { userId, wordToken: cleanToken, flashcardId: response.data.id },
       'Flashcard created/updated',
@@ -62,6 +66,7 @@ export class FlashcardsService {
     flashcardId: string,
     dto: UpdateSrsDto,
   ): Promise<Flashcard> {
+    const reviewStartTime = Date.now();
     const supabase = this.supabaseService.getClient();
 
     // Fetch current card state to run SM-2 locally
@@ -119,6 +124,11 @@ export class FlashcardsService {
 
     // Award XP for reviewing a flashcard
     void this.xpService.awardXpForActivity(userId, 'review_flashcard');
+
+    // Record SRS review metrics
+    const reviewDurationSeconds = (Date.now() - reviewStartTime) / 1000;
+    const result = dto.quality >= 3 ? 'pass' : 'fail';
+    this.metricsService.recordSrsReviewCompleted(dto.quality, result, reviewDurationSeconds);
 
     this.logger.info(
       {
