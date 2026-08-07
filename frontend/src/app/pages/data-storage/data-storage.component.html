@@ -1,18 +1,36 @@
+<<<<<<< HEAD
 <div class="app-screen bg-surface-50 min-h-dvh">
   <header class="app-header">
     <button (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
       <span class="text-xl">&larr;</span>
     </button>
     <h1 class="app-header-title">{{ 'dataStorage.title' | t }}</h1>
+=======
+<div class="app-screen bg-surface-50">
+  <header class="app-header">
+    <button (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
+      <span class="text-xl">←</span>
+    </button>
+    <h1 class="app-header-title">{{ 'dataStorage.pageTitle' | t }}</h1>
+>>>>>>> origin/main
     <div class="w-10"></div>
   </header>
 
   <main class="ps-4 pe-4 pt-4 pb-4 space-y-6 max-w-lg mx-auto">
+<<<<<<< HEAD
+=======
+    @if (errorMessage()) {
+      <div class="rounded-card border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+        {{ errorMessage() }}
+      </div>
+    }
+>>>>>>> origin/main
     @if (successMessage()) {
       <div class="rounded-card border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400">
         {{ successMessage() | t }}
       </div>
     }
+<<<<<<< HEAD
     @if (errorMessage()) {
       <div class="rounded-card border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
         {{ errorMessage() | t }}
@@ -80,11 +98,64 @@
             {{ 'common.loading' | t }}
           } @else {
             {{ 'dataStorage.deleteOldMedia' | t }}
+=======
+
+    <section class="space-y-4">
+      <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+        {{ 'dataStorage.cacheSize' | t }}
+      </h2>
+      <div class="rounded-2xl bg-surface-100 border border-surface-200 shadow-sm p-6 text-center">
+        @if (isComputingSize()) {
+          <span class="text-sm text-text-secondary">{{ 'dataStorage.calculating' | t }}</span>
+        } @else if (formattedCacheSize()) {
+          <span class="text-2xl font-bold text-text-primary">{{ formattedCacheSize() }}</span>
+        } @else {
+          <span class="text-sm text-text-secondary">{{ 'dataStorage.calculating' | t }}</span>
+        }
+      </div>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+        {{ 'settings.dataSection' | t }}
+      </h2>
+      <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm">
+        <button
+          (click)="clearCache()"
+          [disabled]="isClearingCache()"
+          class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
+          [attr.aria-label]="'dataStorage.clearCache' | t">
+          <div class="text-start">
+            <span class="block">{{ 'dataStorage.clearCache' | t }}</span>
+            <span class="text-xs text-text-secondary">{{ 'dataStorage.clearCacheDesc' | t }}</span>
+          </div>
+          @if (isClearingCache()) {
+            <span class="text-xs text-text-secondary">{{ 'common.loading' | t }}</span>
+          } @else {
+            <span class="text-xs uppercase text-primary">{{ 'common.clear' | t }}</span>
+          }
+        </button>
+
+        <button
+          (click)="deleteOldMedia()"
+          [disabled]="isDeletingOldMedia()"
+          class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
+          [attr.aria-label]="'dataStorage.deleteOldMedia' | t">
+          <div class="text-start">
+            <span class="block">{{ 'dataStorage.deleteOldMedia' | t }}</span>
+            <span class="text-xs text-text-secondary">{{ 'dataStorage.deleteOldMediaDesc' | t }}</span>
+          </div>
+          @if (isDeletingOldMedia()) {
+            <span class="text-xs text-text-secondary">{{ 'common.loading' | t }}</span>
+          } @else {
+            <span class="text-xs uppercase text-primary">{{ 'common.delete' | t }}</span>
+>>>>>>> origin/main
           }
         </button>
       </div>
     </section>
 
+<<<<<<< HEAD
     <!-- Cellular Data Auto-Download -->
     <section class="space-y-3">
       <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
@@ -143,5 +214,32 @@
         </button>
       </div>
     </section>
+=======
+    <section class="space-y-4">
+      <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+        {{ 'settings.dataAndStorageSection' | t }}
+      </h2>
+      <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm">
+        <label
+          class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-200 transition-colors"
+        >
+          <div class="text-start">
+            <span class="text-sm font-medium text-text-primary block">{{
+              'dataStorage.cellularAutoDownload' | t
+            }}</span>
+            <span class="text-xs text-text-secondary">{{
+              'dataStorage.cellularDesc' | t
+            }}</span>
+          </div>
+          <input
+            type="checkbox"
+            [checked]="cellularAutoDownload()"
+            (change)="toggleCellular()"
+            class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"
+          />
+        </label>
+      </div>
+    </section>
+>>>>>>> origin/main
   </main>
 </div>

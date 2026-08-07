@@ -3,6 +3,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EconomyService } from './economy.service';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
+import { PinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
@@ -14,6 +15,8 @@ describe('EconomyService', () => {
   let centrifugoService: CentrifugoService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let module: TestingModule;
+  let mockRedisClient: { get: jest.Mock; set: jest.Mock };
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -30,13 +33,23 @@ describe('EconomyService', () => {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
-    const module: TestingModule = await Test.createTestingModule({
+    mockRedisClient = {
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue('OK'),
+    };
+
+    module = await Test.createTestingModule({
       providers: [
         EconomyService,
+        {
+          provide: 'PinoLogger:EconomyService',
+          useValue: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
+        },
         {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
           },
         },
         {
@@ -352,6 +365,53 @@ describe('EconomyService', () => {
     });
   });
 
+  describe('claimDailyCheckIn', () => {
+    beforeEach(() => {
+      mockRedisClient.get.mockResolvedValue(null);
+      mockRedisClient.set.mockResolvedValue('OK');
+    });
+
+    it('should grant between 5 and 10 coins on first daily check-in', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-1', coins_balance: 100 },
+        error: null,
+      });
+
+      const result = await service.claimDailyCheckIn('user-1');
+
+      expect(result.claimed).toBe(true);
+      expect(result.coins_rewarded).toBeGreaterThanOrEqual(5);
+      expect(result.coins_rewarded).toBeLessThanOrEqual(10);
+      expect(result.new_balance).toBe(100 + result.coins_rewarded);
+      expect(mockRedisClient.get).toHaveBeenCalled();
+      expect(mockRedisClient.set).toHaveBeenCalledWith(
+        expect.stringContaining('daily_checkin:user-1:'),
+        '1',
+        'EX',
+        86400,
+      );
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        coins_balance: result.new_balance,
+      });
+    });
+
+    it('should not grant coins when user already claimed today', async () => {
+      mockRedisClient.get.mockResolvedValue('1');
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-1', coins_balance: 100 },
+        error: null,
+      });
+
+      const result = await service.claimDailyCheckIn('user-1');
+
+      expect(result.claimed).toBe(false);
+      expect(result.coins_rewarded).toBe(0);
+      expect(result.new_balance).toBe(100);
+      expect(mockRedisClient.set).not.toHaveBeenCalled();
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('sendGift', () => {
     it('should throw NotFoundException when gift ID not found in catalog', async () => {
       mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
@@ -531,15 +591,33 @@ describe('EconomyService', () => {
       const mockOwned = [{ pack_id: 'stk_pack_1' }];
       const mockBalance = { id: 'user-1', coins_balance: 300 };
 
-      const selectMock = jest.fn();
-      const orderMock = jest.fn().mockResolvedValue({ data: mockPacks, error: null });
-      const eqMock = jest.fn().mockReturnValue({ select: selectMock });
-      const singleMock = jest.fn().mockResolvedValue({ data: mockBalance, error: null });
+      // Query 1: from('sticker_packs').select('*').order(...)
+      // Query 2: from('user_sticker_packs').select('pack_id').eq('user_id', userId)
+      // Query 3: from('users').select('coins_balance').eq('id', userId).single()
+      const mockFrom = jest.fn();
+      mockSupabaseClient.from = mockFrom;
 
-      mockQueryBuilder.order = orderMock;
-      mockQueryBuilder.eq = eqMock;
-      selectMock.mockResolvedValue({ data: mockOwned, error: null });
-      mockQueryBuilder.single = singleMock;
+      const packsBuilder = {
+        ...mockQueryBuilder,
+        order: jest.fn().mockResolvedValue({ data: mockPacks, error: null }),
+      };
+
+      const ownedBuilder = {
+        ...mockQueryBuilder,
+        eq: jest.fn().mockResolvedValue({ data: mockOwned, error: null }),
+      };
+
+      const usersBuilder = {
+        ...mockQueryBuilder,
+        single: jest.fn().mockResolvedValue({ data: mockBalance, error: null }),
+      };
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'sticker_packs') return packsBuilder;
+        if (table === 'user_sticker_packs') return ownedBuilder;
+        if (table === 'users') return usersBuilder;
+        return mockQueryBuilder;
+      });
 
       const result = await service.getStickerPacks('user-1');
 
@@ -549,14 +627,30 @@ describe('EconomyService', () => {
     });
 
     it('should return default packs when DB returns empty', async () => {
-      const orderMock = jest.fn().mockResolvedValue({ data: [], error: null });
-      const selectMock = jest.fn().mockResolvedValue({ data: [], error: null });
-      const eqMock = jest.fn().mockReturnValue({ select: selectMock });
-      const singleMock = jest.fn().mockResolvedValue({ data: null, error: null });
+      const mockFrom = jest.fn();
+      mockSupabaseClient.from = mockFrom;
 
-      mockQueryBuilder.order = orderMock;
-      mockQueryBuilder.eq = eqMock;
-      mockQueryBuilder.single = singleMock;
+      const packsBuilder = {
+        ...mockQueryBuilder,
+        order: jest.fn().mockResolvedValue({ data: [], error: null }),
+      };
+
+      const ownedBuilder = {
+        ...mockQueryBuilder,
+        eq: jest.fn().mockResolvedValue({ data: [], error: null }),
+      };
+
+      const usersBuilder = {
+        ...mockQueryBuilder,
+        single: jest.fn().mockResolvedValue({ data: null, error: null }),
+      };
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'sticker_packs') return packsBuilder;
+        if (table === 'user_sticker_packs') return ownedBuilder;
+        if (table === 'users') return usersBuilder;
+        return mockQueryBuilder;
+      });
 
       const result = await service.getStickerPacks('user-1');
 
