@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { Public } from '../auth/public.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   AudioRoomsService,
@@ -135,6 +136,16 @@ export class AudioRoomsController {
   ): Promise<CallLogRecord[]> {
     if (!user) return [];
     return this.audioRoomsService.getCallLogs(user.id, query);
+  }
+
+  @Public()
+  @Get('preview/:id')
+  async getRoomPreview(@Param('id') id: string): Promise<{
+    room_name: string;
+    language_pair: string;
+    topic_tag: string;
+  }> {
+    return await this.audioRoomsService.getRoomPreview(id);
   }
 
   @Get('exclusive-emojis')

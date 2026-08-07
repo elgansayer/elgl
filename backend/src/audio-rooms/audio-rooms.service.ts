@@ -610,6 +610,26 @@ export class AudioRoomsService implements OnModuleInit {
     };
   }
 
+  async getRoomPreview(roomId: string): Promise<{
+    room_name: string;
+    language_pair: string;
+    topic_tag: string;
+  }> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('room_name, language_pair, topic_tag')
+      .eq('id', roomId)
+      .single();
+    if (!response.data) throw new NotFoundException('Audio room not found');
+    const row = response.data as { room_name: string; language_pair: string; topic_tag: string };
+    return {
+      room_name: row.room_name,
+      language_pair: row.language_pair,
+      topic_tag: row.topic_tag,
+    };
+  }
+
   async getStage(roomId: string): Promise<StageInfo> {
     const supabase = this.supabaseService.getClient();
     const response = await supabase

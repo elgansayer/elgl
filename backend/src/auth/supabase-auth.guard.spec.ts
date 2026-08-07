@@ -1,11 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { SupabaseAuthGuard } from './supabase-auth.guard';
 import { SupabaseService } from '../supabase/supabase.service';
 
 describe('SupabaseAuthGuard', () => {
   let guard: SupabaseAuthGuard;
   let mockAuthGetUser: jest.Mock;
+  let reflector: Reflector;
 
   beforeEach(async () => {
     mockAuthGetUser = jest.fn();
@@ -24,10 +26,17 @@ describe('SupabaseAuthGuard', () => {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
           },
         },
+        {
+          provide: Reflector,
+          useValue: {
+            getAllAndOverride: jest.fn().mockReturnValue(false),
+          },
+        },
       ],
     }).compile();
 
     guard = module.get<SupabaseAuthGuard>(SupabaseAuthGuard);
+    reflector = module.get<Reflector>(Reflector);
   });
 
   afterEach(() => {
@@ -40,6 +49,8 @@ describe('SupabaseAuthGuard', () => {
   ): ExecutionContext => {
     return {
       getType: jest.fn().mockReturnValue(type),
+      getHandler: jest.fn().mockReturnValue(jest.fn()),
+      getClass: jest.fn().mockReturnValue(jest.fn()),
       switchToHttp: jest.fn().mockReturnValue({
         getRequest: jest.fn().mockReturnValue(reqOrClient),
       }),
@@ -203,6 +214,40 @@ describe('SupabaseAuthGuard', () => {
         await expect(guard.canActivate(context)).rejects.toThrow(
           new UnauthorizedException('Unsupported execution context'),
         );
+      });
+    });
+
+    describe('@Public() decorator', () => {
+      it('should allow access without authentication when decorated with @Public()', async () => {
+        (reflector.getAllAndOverride as jest.Mock).mockReturnValue(true);
+
+        const request: any = { headers: {} };
+        const context = createMockExecutionContext('http', request);
+
+        const result = await guard.canActivate(context);
+
+        expect(result).toBe(true);
+        expect(mockAuthGetUser).not.toHaveBeenCalled();
+      });
+
+      it('should check both handler and class level metadata', async () => {
+        (reflector.getAllAndOverride as jest.Mock).mockReturnValue(false);
+
+        const request: any = {
+          headers: { authorization: 'Bearer valid.jwt.token' },
+        };
+        mockAuthGetUser.mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        });
+        const context = createMockExecutionContext('http', request);
+
+        await guard.canActivate(context);
+
+        expect(reflector.getAllAndOverride).toHaveBeenCalledWith('isPublic', [
+          context.getHandler(),
+          context.getClass(),
+        ]);
       });
     });
   });
