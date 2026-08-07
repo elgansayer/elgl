@@ -6,6 +6,8 @@
   "engine": "redis",
   "redis_address": "redis://cache:6379",
   "client_connection_rate_limit": 5,
+  "client_user_connection_limit": 5,
+  "client_channel_limit": 50,
   "client_queue_max_size": 1048576,
   "client_channel_position_check_dangerous": true,
   "namespaces": [
@@ -15,7 +17,8 @@
       "subscribe_to_publish": true,
       "presence": true,
       "history_size": 100,
-      "history_ttl": "30d"
+      "history_ttl": "30d",
+      "channel_limit": 20
     },
     {
       "name": "room",
@@ -23,13 +26,15 @@
       "subscribe_to_publish": true,
       "presence": true,
       "history_size": 50,
-      "history_ttl": "24h"
+      "history_ttl": "24h",
+      "channel_limit": 10
     },
     {
       "name": "user",
       "publish": true,
       "subscribe_to_publish": true,
-      "presence": true
+      "presence": true,
+      "channel_limit": 5
     }
   ]
 }

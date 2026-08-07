@@ -528,9 +528,15 @@ describe('ChatController', () => {
 
     it('should call chatService.updateMessageStatus when user is provided', async () => {
       const dto = { status: 'read' as const };
-      (chatService.updateMessageStatus as jest.Mock).mockResolvedValue(undefined);
+      (chatService.updateMessageStatus as jest.Mock).mockResolvedValue(
+        undefined,
+      );
 
-      const result = await controller.updateMessageStatus(mockUser(), 'msg-1', dto);
+      const result = await controller.updateMessageStatus(
+        mockUser(),
+        'msg-1',
+        dto,
+      );
       expect(chatService.updateMessageStatus).toHaveBeenCalledWith(
         'user-1',
         'msg-1',
