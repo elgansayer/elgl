@@ -1024,17 +1024,30 @@
   "moderation.analyse": "Analyse",
   "moderation.approve": "Approve",
   "moderation.approved": "Approved",
+<<<<<<< HEAD
   "moderation.behaviourWarning": "High risk behaviour detected. Consider further action.",
   "moderation.content": "Content",
   "moderation.date": "Date",
   "moderation.description": "Description",
   "moderation.empty": "No items in the queue",
   "moderation.error": "Error loading items",
+=======
+  "moderation.behaviourWarning": "Behaviour Warning",
+  "moderation.content": "Content",
+  "moderation.date": "Date",
+  "moderation.description": "Description",
+  "moderation.empty": "Empty",
+  "moderation.error": "Error",
+>>>>>>> origin/main
   "moderation.flags": "Flags",
   "moderation.loading": "Loading",
   "moderation.moment": "Moment",
   "moderation.moments": "Moments",
+<<<<<<< HEAD
   "moderation.noFlags": "No flags detected",
+=======
+  "moderation.noFlags": "No Flags",
+>>>>>>> origin/main
   "moderation.noItems": "No Items",
   "moderation.pending": "Pending",
   "moderation.profile": "Profile",
@@ -1561,12 +1574,15 @@
   "seconds": "Seconds",
   "settings.accentColor": "Primary Accent Colour",
   "settings.accentColorDesc": "Personalise your app experience.",
+<<<<<<< HEAD
   "settings.age": "Age",
   "settings.ageMaxPlaceholder": "Age Max Placeholder",
   "settings.ageMinPlaceholder": "Age Min Placeholder",
   "settings.ageRangeTo": "Age Range To",
   "settings.allowedGenders": "Allowed Genders",
   "settings.allowedNativeLanguages": "Allowed Native Languages",
+=======
+>>>>>>> origin/main
   "settings.appearanceSection": "Appearance",
   "settings.autoDownloadCellular": "Auto Download Cellular",
   "settings.autoDownloadMedia": "Auto Download Media",
@@ -1586,12 +1602,17 @@
   "settings.fontScale": "Font scale",
   "settings.fontSize": "Font Size",
 <<<<<<< HEAD
+<<<<<<< HEAD
   "settings.gdprHub": "Personal Data & GDPR",
   "settings.gdprHubDesc": "Request your data archive or manage account deletion.",
 =======
   "settings.languageChangeDescription": "Select the application interface language. This does not affect your learning languages.",
   "settings.themeDescription": "Choose between light, dark, or follow your system settings.",
   "settings.themeLabel": "Theme",
+>>>>>>> origin/main
+=======
+  "settings.gdprHub": "Personal Data & GDPR",
+  "settings.gdprHubDesc": "Request your data archive or manage account deletion.",
 >>>>>>> origin/main
   "settings.hideAge": "Hide my age",
   "settings.hideExactLocation": "Hide Exact Location",
@@ -1601,6 +1622,7 @@
   "settings.hideSearch": "Hide profile from search",
   "settings.hideVipStatus": "Hide Vip Status",
   "settings.interestsSection": "Interests Section",
+  "settings.languageChangeDescription": "Select the application interface language. This does not affect your learning languages.",
   "settings.languageSection": "Language Section",
   "settings.languageSelectLabel": "Language Select Label",
   "settings.linkBtn": "Link Btn",
@@ -1646,15 +1668,18 @@
   "settings.messageFilters.saved": "Message filter settings saved",
   "settings.messageFilters.subtitle": "These settings apply only to the first message someone sends you. Once a conversation has started, subsequent messages are unaffected.",
   "settings.messageFilters.title": "Message Filters",
+<<<<<<< HEAD
   "settings.messageFiltersDescription": "Message Filters Description",
+=======
+>>>>>>> origin/main
   "settings.messageFiltersSection": "Message Filters",
   "settings.mySubscription": "My Subscription",
   "settings.noInterests": "No Interests",
   "settings.off": "Off",
   "settings.on": "On",
   "settings.privacySection": "Privacy settings",
-  "settings.saved": "Settings saved successfully.",
   "settings.saveBtn": "Save settings",
+  "settings.saved": "Settings saved successfully.",
   "settings.soundEffects": "Sound Effects",
   "settings.soundVibrationSection": "Sound Vibration Section",
   "settings.subscriptionSection": "Subscription Section",
@@ -1662,6 +1687,8 @@
   "settings.textSizeLarge": "Text Size Large",
   "settings.textSizeMedium": "Text Size Medium",
   "settings.textSizeSmall": "Text Size Small",
+  "settings.themeDescription": "Choose between light, dark, or follow your system settings.",
+  "settings.themeLabel": "Theme",
   "settings.title": "Settings & Privacy",
   "settings.unlinkBtn": "Unlink Btn",
   "settings.vibration": "Vibration",
