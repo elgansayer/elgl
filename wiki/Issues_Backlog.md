@@ -1,19 +1,418 @@
 # GitHub Issues Backlog
 
-Total open issues: 941
+Total open issues: 1000
 
-- **#2014**: Feature Request: Universal In-App Sharing & External Deep Linking Engine
-- **#2011**: Feature Request: Hashtag & Topic Following System
-- **#2009**: Feature Request: Complete 'Classrooms' & Tutor Marketplace Integration (italki Clone)
+- **#2641**: Guardian: frontend build + test failure on main [swarm-active, ai-agent-task, priority:high]
+- **#2568**: Guardian: backend build + test failure on main [swarm-active, ai-agent-task, priority:high]
+- **#2560**: Guardian: backend test failure on main [swarm-active, ai-agent-task, priority:high]
+- **#2436**: Task: Verify RTL logical CSS properties (ps-, pe-) for Trust & Safety [swarm-active]
+- **#2433**: Task: Audit accessibility (ARIA) and screen reader support for Trust & Safety [swarm-active]
+- **#2431**: Task: Set up Datadog monitoring alerts for Trust & Safety [swarm-active]
+- **#2430**: Task: Implement Redis cache invalidation rules for Trust & Safety [swarm-active]
+- **#2426**: Task: Implement graceful degradation fallbacks for Virtual Coin Economy [swarm-active]
+- **#2425**: Task: Review Supabase Row Level Security (RLS) policies for Virtual Coin Economy [swarm-active]
+- **#2424**: Task: Enforce strict TypeScript typings (no-any) on Virtual Coin Economy [swarm-active]
+- **#2423**: Task: Standardise logging levels (Winston/Pino) for Virtual Coin Economy
+- **#2422**: Task: Implement exponential backoff retry logic (HTTP 429) for Virtual Coin Economy
+- **#2421**: Task: Audit memory leaks and payload sizes for Virtual Coin Economy
+- **#2420**: Task: Implement user onboarding tooltips (ngx-joyride) for Virtual Coin Economy
+- **#2419**: Task: Add strict DOMPurify HTML sanitisation to Virtual Coin Economy
+- **#2418**: Task: Optimise database indices (PostgreSQL) and query performance for Virtual Coin Economy
+- **#2417**: Task: Implement robust error boundary handling and crash reporting for Virtual Coin Economy
+- **#2416**: Task: Audit GDPR compliance and data scrubbing for Virtual Coin Economy
+- **#2415**: Task: Implement offline PWA fallback logic for Virtual Coin Economy
+- **#2414**: Task: Audit mobile responsive layouts (Tailwind) for Virtual Coin Economy
+- **#2413**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Virtual Coin Economy
+- **#2412**: Task: Implement automated rate limiting & API throttling for Virtual Coin Economy
+- **#2411**: Task: Verify RTL logical CSS properties (ps-, pe-) for Virtual Coin Economy
+- **#2410**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Virtual Coin Economy
+- **#2409**: Task: Conduct load testing (Artillery) for Virtual Coin Economy
+- **#2408**: Task: Audit accessibility (ARIA) and screen reader support for Virtual Coin Economy
+- **#2407**: Task: Design empty states and skeleton loaders for Virtual Coin Economy
+- **#2406**: Task: Set up Datadog monitoring alerts for Virtual Coin Economy
+- **#2405**: Task: Implement Redis cache invalidation rules for Virtual Coin Economy
+- **#2404**: Task: Write Jest unit tests (NestJS) for Virtual Coin Economy
+- **#2403**: Task: Write Cypress E2E test flows for Virtual Coin Economy
+- **#2402**: Task: Review and optimise Cloudflare edge caching for Escrow Payments
+- **#2401**: Task: Implement graceful degradation fallbacks for Escrow Payments
+- **#2400**: Task: Review Supabase Row Level Security (RLS) policies for Escrow Payments
+- **#2399**: Task: Enforce strict TypeScript typings (no-any) on Escrow Payments
+- **#2398**: Task: Standardise logging levels (Winston/Pino) for Escrow Payments
+- **#2397**: Task: Implement exponential backoff retry logic (HTTP 429) for Escrow Payments
+- **#2396**: Task: Audit memory leaks and payload sizes for Escrow Payments
+- **#2395**: Task: Implement user onboarding tooltips (ngx-joyride) for Escrow Payments
+- **#2394**: Task: Add strict DOMPurify HTML sanitisation to Escrow Payments
+- **#2393**: Task: Optimise database indices (PostgreSQL) and query performance for Escrow Payments
+- **#2392**: Task: Implement robust error boundary handling and crash reporting for Escrow Payments
+- **#2391**: Task: Audit GDPR compliance and data scrubbing for Escrow Payments
+- **#2390**: Task: Implement offline PWA fallback logic for Escrow Payments
+- **#2389**: Task: Audit mobile responsive layouts (Tailwind) for Escrow Payments
+- **#2388**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Escrow Payments
+- **#2387**: Task: Implement automated rate limiting & API throttling for Escrow Payments
+- **#2386**: Task: Verify RTL logical CSS properties (ps-, pe-) for Escrow Payments
+- **#2385**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Escrow Payments
+- **#2384**: Task: Conduct load testing (Artillery) for Escrow Payments
+- **#2383**: Task: Audit accessibility (ARIA) and screen reader support for Escrow Payments
+- **#2382**: Task: Design empty states and skeleton loaders for Escrow Payments
+- **#2381**: Task: Set up Datadog monitoring alerts for Escrow Payments
+- **#2380**: Task: Implement Redis cache invalidation rules for Escrow Payments
+- **#2379**: Task: Write Jest unit tests (NestJS) for Escrow Payments
+- **#2378**: Task: Write Cypress E2E test flows for Escrow Payments
+- **#2377**: Task: Review and optimise Cloudflare edge caching for Admin Moderation Dashboard
+- **#2376**: Task: Implement graceful degradation fallbacks for Admin Moderation Dashboard
+- **#2375**: Task: Review Supabase Row Level Security (RLS) policies for Admin Moderation Dashboard
+- **#2374**: Task: Enforce strict TypeScript typings (no-any) on Admin Moderation Dashboard
+- **#2373**: Task: Standardise logging levels (Winston/Pino) for Admin Moderation Dashboard
+- **#2372**: Task: Implement exponential backoff retry logic (HTTP 429) for Admin Moderation Dashboard
+- **#2371**: Task: Audit memory leaks and payload sizes for Admin Moderation Dashboard
+- **#2370**: Task: Implement user onboarding tooltips (ngx-joyride) for Admin Moderation Dashboard
+- **#2369**: Task: Add strict DOMPurify HTML sanitisation to Admin Moderation Dashboard
+- **#2368**: Task: Optimise database indices (PostgreSQL) and query performance for Admin Moderation Dashboard
+- **#2367**: Task: Implement robust error boundary handling and crash reporting for Admin Moderation Dashboard
+- **#2366**: Task: Audit GDPR compliance and data scrubbing for Admin Moderation Dashboard
+- **#2365**: Task: Implement offline PWA fallback logic for Admin Moderation Dashboard
+- **#2364**: Task: Audit mobile responsive layouts (Tailwind) for Admin Moderation Dashboard
+- **#2363**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Admin Moderation Dashboard
+- **#2362**: Task: Implement automated rate limiting & API throttling for Admin Moderation Dashboard
+- **#2361**: Task: Verify RTL logical CSS properties (ps-, pe-) for Admin Moderation Dashboard
+- **#2360**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Admin Moderation Dashboard
+- **#2359**: Task: Conduct load testing (Artillery) for Admin Moderation Dashboard
+- **#2358**: Task: Audit accessibility (ARIA) and screen reader support for Admin Moderation Dashboard
+- **#2357**: Task: Design empty states and skeleton loaders for Admin Moderation Dashboard
+- **#2356**: Task: Set up Datadog monitoring alerts for Admin Moderation Dashboard
+- **#2355**: Task: Implement Redis cache invalidation rules for Admin Moderation Dashboard
+- **#2354**: Task: Write Jest unit tests (NestJS) for Admin Moderation Dashboard
+- **#2353**: Task: Write Cypress E2E test flows for Admin Moderation Dashboard
+- **#2352**: Task: Review and optimise Cloudflare edge caching for Spaced Repetition (SRS)
+- **#2351**: Task: Implement graceful degradation fallbacks for Spaced Repetition (SRS)
+- **#2350**: Task: Review Supabase Row Level Security (RLS) policies for Spaced Repetition (SRS)
+- **#2349**: Task: Enforce strict TypeScript typings (no-any) on Spaced Repetition (SRS)
+- **#2348**: Task: Standardise logging levels (Winston/Pino) for Spaced Repetition (SRS)
+- **#2347**: Task: Implement exponential backoff retry logic (HTTP 429) for Spaced Repetition (SRS)
+- **#2346**: Task: Audit memory leaks and payload sizes for Spaced Repetition (SRS)
+- **#2345**: Task: Implement user onboarding tooltips (ngx-joyride) for Spaced Repetition (SRS)
+- **#2344**: Task: Add strict DOMPurify HTML sanitisation to Spaced Repetition (SRS)
+- **#2343**: Task: Optimise database indices (PostgreSQL) and query performance for Spaced Repetition (SRS)
+- **#2342**: Task: Implement robust error boundary handling and crash reporting for Spaced Repetition (SRS)
+- **#2341**: Task: Audit GDPR compliance and data scrubbing for Spaced Repetition (SRS)
+- **#2340**: Task: Implement offline PWA fallback logic for Spaced Repetition (SRS)
+- **#2338**: Task: Audit mobile responsive layouts (Tailwind) for Spaced Repetition (SRS)
+- **#2337**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Spaced Repetition (SRS)
+- **#2336**: Task: Implement automated rate limiting & API throttling for Spaced Repetition (SRS)
+- **#2335**: Task: Verify RTL logical CSS properties (ps-, pe-) for Spaced Repetition (SRS)
+- **#2334**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Spaced Repetition (SRS)
+- **#2333**: Task: Conduct load testing (Artillery) for Spaced Repetition (SRS)
+- **#2332**: Task: Audit accessibility (ARIA) and screen reader support for Spaced Repetition (SRS)
+- **#2331**: Task: Design empty states and skeleton loaders for Spaced Repetition (SRS)
+- **#2330**: Task: Set up Datadog monitoring alerts for Spaced Repetition (SRS)
+- **#2329**: Task: Implement Redis cache invalidation rules for Spaced Repetition (SRS)
+- **#2328**: Task: Write Jest unit tests (NestJS) for Spaced Repetition (SRS)
+- **#2327**: Task: Write Cypress E2E test flows for Spaced Repetition (SRS)
+- **#2326**: Task: Review and optimise Cloudflare edge caching for LingQ Reading Engine
+- **#2325**: Task: Implement graceful degradation fallbacks for LingQ Reading Engine
+- **#2324**: Task: Review Supabase Row Level Security (RLS) policies for LingQ Reading Engine
+- **#2323**: Task: Enforce strict TypeScript typings (no-any) on LingQ Reading Engine
+- **#2322**: Task: Standardise logging levels (Winston/Pino) for LingQ Reading Engine
+- **#2321**: Task: Implement exponential backoff retry logic (HTTP 429) for LingQ Reading Engine
+- **#2320**: Task: Audit memory leaks and payload sizes for LingQ Reading Engine
+- **#2319**: Task: Implement user onboarding tooltips (ngx-joyride) for LingQ Reading Engine
+- **#2318**: Task: Add strict DOMPurify HTML sanitisation to LingQ Reading Engine
+- **#2317**: Task: Optimise database indices (PostgreSQL) and query performance for LingQ Reading Engine
+- **#2316**: Task: Implement robust error boundary handling and crash reporting for LingQ Reading Engine
+- **#2315**: Task: Audit GDPR compliance and data scrubbing for LingQ Reading Engine
+- **#2314**: Task: Implement offline PWA fallback logic for LingQ Reading Engine
+- **#2313**: Task: Audit mobile responsive layouts (Tailwind) for LingQ Reading Engine
+- **#2312**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for LingQ Reading Engine
+- **#2311**: Task: Implement automated rate limiting & API throttling for LingQ Reading Engine
+- **#2310**: Task: Verify RTL logical CSS properties (ps-, pe-) for LingQ Reading Engine
+- **#2309**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for LingQ Reading Engine
+- **#2308**: Task: Conduct load testing (Artillery) for LingQ Reading Engine
+- **#2307**: Task: Audit accessibility (ARIA) and screen reader support for LingQ Reading Engine
+- **#2306**: Task: Design empty states and skeleton loaders for LingQ Reading Engine
+- **#2305**: Task: Set up Datadog monitoring alerts for LingQ Reading Engine
+- **#2304**: Task: Implement Redis cache invalidation rules for LingQ Reading Engine
+- **#2303**: Task: Write Jest unit tests (NestJS) for LingQ Reading Engine
+- **#2302**: Task: Write Cypress E2E test flows for LingQ Reading Engine
+- **#2301**: Task: Review and optimise Cloudflare edge caching for Matchmaking Algorithm
+- **#2300**: Task: Implement graceful degradation fallbacks for Matchmaking Algorithm
+- **#2299**: Task: Review Supabase Row Level Security (RLS) policies for Matchmaking Algorithm
+- **#2298**: Task: Enforce strict TypeScript typings (no-any) on Matchmaking Algorithm
+- **#2297**: Task: Standardise logging levels (Winston/Pino) for Matchmaking Algorithm
+- **#2296**: Task: Implement exponential backoff retry logic (HTTP 429) for Matchmaking Algorithm
+- **#2295**: Task: Audit memory leaks and payload sizes for Matchmaking Algorithm
+- **#2294**: Task: Implement user onboarding tooltips (ngx-joyride) for Matchmaking Algorithm
+- **#2293**: Task: Add strict DOMPurify HTML sanitisation to Matchmaking Algorithm
+- **#2292**: Task: Optimise database indices (PostgreSQL) and query performance for Matchmaking Algorithm
+- **#2291**: Task: Implement robust error boundary handling and crash reporting for Matchmaking Algorithm
+- **#2290**: Task: Audit GDPR compliance and data scrubbing for Matchmaking Algorithm
+- **#2289**: Task: Implement offline PWA fallback logic for Matchmaking Algorithm
+- **#2288**: Task: Audit mobile responsive layouts (Tailwind) for Matchmaking Algorithm
+- **#2287**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Matchmaking Algorithm
+- **#2286**: Task: Implement automated rate limiting & API throttling for Matchmaking Algorithm
+- **#2285**: Task: Verify RTL logical CSS properties (ps-, pe-) for Matchmaking Algorithm
+- **#2284**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Matchmaking Algorithm
+- **#2283**: Task: Conduct load testing (Artillery) for Matchmaking Algorithm
+- **#2282**: Task: Audit accessibility (ARIA) and screen reader support for Matchmaking Algorithm
+- **#2281**: Task: Design empty states and skeleton loaders for Matchmaking Algorithm
+- **#2280**: Task: Set up Datadog monitoring alerts for Matchmaking Algorithm
+- **#2279**: Task: Implement Redis cache invalidation rules for Matchmaking Algorithm
+- **#2278**: Task: Write Jest unit tests (NestJS) for Matchmaking Algorithm
+- **#2277**: Task: Write Cypress E2E test flows for Matchmaking Algorithm
+- **#2276**: Task: Review and optimise Cloudflare edge caching for Discovery Map
+- **#2275**: Task: Implement graceful degradation fallbacks for Discovery Map
+- **#2274**: Task: Review Supabase Row Level Security (RLS) policies for Discovery Map
+- **#2273**: Task: Enforce strict TypeScript typings (no-any) on Discovery Map
+- **#2272**: Task: Standardise logging levels (Winston/Pino) for Discovery Map
+- **#2271**: Task: Implement exponential backoff retry logic (HTTP 429) for Discovery Map
+- **#2270**: Task: Audit memory leaks and payload sizes for Discovery Map
+- **#2269**: Task: Implement user onboarding tooltips (ngx-joyride) for Discovery Map
+- **#2268**: Task: Add strict DOMPurify HTML sanitisation to Discovery Map
+- **#2267**: Task: Optimise database indices (PostgreSQL) and query performance for Discovery Map
+- **#2266**: Task: Implement robust error boundary handling and crash reporting for Discovery Map
+- **#2265**: Task: Audit GDPR compliance and data scrubbing for Discovery Map
+- **#2264**: Task: Implement offline PWA fallback logic for Discovery Map
+- **#2263**: Task: Audit mobile responsive layouts (Tailwind) for Discovery Map
+- **#2262**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Discovery Map
+- **#2261**: Task: Implement automated rate limiting & API throttling for Discovery Map
+- **#2260**: Task: Verify RTL logical CSS properties (ps-, pe-) for Discovery Map
+- **#2259**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Discovery Map
+- **#2258**: Task: Conduct load testing (Artillery) for Discovery Map
+- **#2257**: Task: Audit accessibility (ARIA) and screen reader support for Discovery Map
+- **#2256**: Task: Design empty states and skeleton loaders for Discovery Map
+- **#2255**: Task: Set up Datadog monitoring alerts for Discovery Map
+- **#2254**: Task: Implement Redis cache invalidation rules for Discovery Map
+- **#2253**: Task: Write Jest unit tests (NestJS) for Discovery Map
+- **#2252**: Task: Write Cypress E2E test flows for Discovery Map
+- **#2251**: Task: Review and optimise Cloudflare edge caching for Video Classrooms
+- **#2250**: Task: Implement graceful degradation fallbacks for Video Classrooms
+- **#2249**: Task: Review Supabase Row Level Security (RLS) policies for Video Classrooms
+- **#2248**: Task: Enforce strict TypeScript typings (no-any) on Video Classrooms
+- **#2247**: Task: Standardise logging levels (Winston/Pino) for Video Classrooms
+- **#2246**: Task: Implement exponential backoff retry logic (HTTP 429) for Video Classrooms
+- **#2245**: Task: Audit memory leaks and payload sizes for Video Classrooms
+- **#2244**: Task: Implement user onboarding tooltips (ngx-joyride) for Video Classrooms
+- **#2243**: Task: Add strict DOMPurify HTML sanitisation to Video Classrooms
+- **#2242**: Task: Optimise database indices (PostgreSQL) and query performance for Video Classrooms
+- **#2241**: Task: Implement robust error boundary handling and crash reporting for Video Classrooms
+- **#2240**: Task: Audit GDPR compliance and data scrubbing for Video Classrooms
+- **#2239**: Task: Implement offline PWA fallback logic for Video Classrooms
+- **#2238**: Task: Audit mobile responsive layouts (Tailwind) for Video Classrooms
+- **#2237**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Video Classrooms
+- **#2236**: Task: Implement automated rate limiting & API throttling for Video Classrooms
+- **#2235**: Task: Verify RTL logical CSS properties (ps-, pe-) for Video Classrooms
+- **#2234**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Video Classrooms
+- **#2233**: Task: Conduct load testing (Artillery) for Video Classrooms
+- **#2232**: Task: Audit accessibility (ARIA) and screen reader support for Video Classrooms
+- **#2231**: Task: Design empty states and skeleton loaders for Video Classrooms
+- **#2230**: Task: Set up Datadog monitoring alerts for Video Classrooms
+- **#2229**: Task: Implement Redis cache invalidation rules for Video Classrooms
+- **#2228**: Task: Write Jest unit tests (NestJS) for Video Classrooms
+- **#2227**: Task: Write Cypress E2E test flows for Video Classrooms
+- **#2226**: Task: Review and optimise Cloudflare edge caching for Live Audio Rooms
+- **#2225**: Task: Implement graceful degradation fallbacks for Live Audio Rooms
+- **#2224**: Task: Review Supabase Row Level Security (RLS) policies for Live Audio Rooms
+- **#2223**: Task: Enforce strict TypeScript typings (no-any) on Live Audio Rooms
+- **#2222**: Task: Standardise logging levels (Winston/Pino) for Live Audio Rooms
+- **#2221**: Task: Implement exponential backoff retry logic (HTTP 429) for Live Audio Rooms
+- **#2220**: Task: Audit memory leaks and payload sizes for Live Audio Rooms
+- **#2219**: Task: Implement user onboarding tooltips (ngx-joyride) for Live Audio Rooms
+- **#2218**: Task: Add strict DOMPurify HTML sanitisation to Live Audio Rooms
+- **#2217**: Task: Optimise database indices (PostgreSQL) and query performance for Live Audio Rooms
+- **#2216**: Task: Implement robust error boundary handling and crash reporting for Live Audio Rooms
+- **#2215**: Task: Audit GDPR compliance and data scrubbing for Live Audio Rooms
+- **#2214**: Task: Implement offline PWA fallback logic for Live Audio Rooms
+- **#2213**: Task: Audit mobile responsive layouts (Tailwind) for Live Audio Rooms
+- **#2212**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Live Audio Rooms
+- **#2211**: Task: Implement automated rate limiting & API throttling for Live Audio Rooms
+- **#2210**: Task: Verify RTL logical CSS properties (ps-, pe-) for Live Audio Rooms
+- **#2209**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Live Audio Rooms
+- **#2208**: Task: Conduct load testing (Artillery) for Live Audio Rooms
+- **#2207**: Task: Audit accessibility (ARIA) and screen reader support for Live Audio Rooms
+- **#2206**: Task: Design empty states and skeleton loaders for Live Audio Rooms
+- **#2205**: Task: Set up Datadog monitoring alerts for Live Audio Rooms
+- **#2204**: Task: Implement Redis cache invalidation rules for Live Audio Rooms
+- **#2203**: Task: Write Jest unit tests (NestJS) for Live Audio Rooms
+- **#2202**: Task: Write Cypress E2E test flows for Live Audio Rooms
+- **#2201**: Task: Review and optimise Cloudflare edge caching for Group Chat
+- **#2200**: Task: Implement graceful degradation fallbacks for Group Chat
+- **#2199**: Task: Review Supabase Row Level Security (RLS) policies for Group Chat
+- **#2198**: Task: Enforce strict TypeScript typings (no-any) on Group Chat
+- **#2197**: Task: Standardise logging levels (Winston/Pino) for Group Chat
+- **#2196**: Task: Implement exponential backoff retry logic (HTTP 429) for Group Chat
+- **#2195**: Task: Audit memory leaks and payload sizes for Group Chat
+- **#2194**: Task: Implement user onboarding tooltips (ngx-joyride) for Group Chat
+- **#2193**: Task: Add strict DOMPurify HTML sanitisation to Group Chat
+- **#2192**: Task: Optimise database indices (PostgreSQL) and query performance for Group Chat
+- **#2191**: Task: Implement robust error boundary handling and crash reporting for Group Chat
+- **#2190**: Task: Audit GDPR compliance and data scrubbing for Group Chat
+- **#2189**: Task: Implement offline PWA fallback logic for Group Chat
+- **#2188**: Task: Audit mobile responsive layouts (Tailwind) for Group Chat
+- **#2187**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Group Chat
+- **#2186**: Task: Implement automated rate limiting & API throttling for Group Chat
+- **#2185**: Task: Verify RTL logical CSS properties (ps-, pe-) for Group Chat
+- **#2184**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Group Chat
+- **#2183**: Task: Conduct load testing (Artillery) for Group Chat
+- **#2182**: Task: Audit accessibility (ARIA) and screen reader support for Group Chat
+- **#2181**: Task: Design empty states and skeleton loaders for Group Chat
+- **#2180**: Task: Set up Datadog monitoring alerts for Group Chat
+- **#2179**: Task: Implement Redis cache invalidation rules for Group Chat
+- **#2178**: Task: Write Jest unit tests (NestJS) for Group Chat
+- **#2177**: Task: Write Cypress E2E test flows for Group Chat
+- **#2176**: Task: Review and optimise Cloudflare edge caching for 1-on-1 Chat
+- **#2175**: Task: Implement graceful degradation fallbacks for 1-on-1 Chat
+- **#2174**: Task: Review Supabase Row Level Security (RLS) policies for 1-on-1 Chat
+- **#2173**: Task: Enforce strict TypeScript typings (no-any) on 1-on-1 Chat
+- **#2172**: Task: Standardise logging levels (Winston/Pino) for 1-on-1 Chat
+- **#2171**: Task: Implement exponential backoff retry logic (HTTP 429) for 1-on-1 Chat
+- **#2170**: Task: Audit memory leaks and payload sizes for 1-on-1 Chat
+- **#2169**: Task: Implement user onboarding tooltips (ngx-joyride) for 1-on-1 Chat
+- **#2168**: Task: Add strict DOMPurify HTML sanitisation to 1-on-1 Chat
+- **#2167**: Task: Optimise database indices (PostgreSQL) and query performance for 1-on-1 Chat
+- **#2166**: Task: Implement robust error boundary handling and crash reporting for 1-on-1 Chat
+- **#2165**: Task: Audit GDPR compliance and data scrubbing for 1-on-1 Chat
+- **#2164**: Task: Implement offline PWA fallback logic for 1-on-1 Chat
+- **#2163**: Task: Audit mobile responsive layouts (Tailwind) for 1-on-1 Chat
+- **#2162**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for 1-on-1 Chat
+- **#2161**: Task: Implement automated rate limiting & API throttling for 1-on-1 Chat
+- **#2160**: Task: Verify RTL logical CSS properties (ps-, pe-) for 1-on-1 Chat
+- **#2159**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for 1-on-1 Chat
+- **#2158**: Task: Conduct load testing (Artillery) for 1-on-1 Chat
+- **#2157**: Task: Audit accessibility (ARIA) and screen reader support for 1-on-1 Chat
+- **#2156**: Task: Design empty states and skeleton loaders for 1-on-1 Chat
+- **#2155**: Task: Set up Datadog monitoring alerts for 1-on-1 Chat
+- **#2154**: Task: Implement Redis cache invalidation rules for 1-on-1 Chat
+- **#2153**: Task: Write Jest unit tests (NestJS) for 1-on-1 Chat
+- **#2152**: Task: Write Cypress E2E test flows for 1-on-1 Chat
+- **#2151**: Task: Review and optimise Cloudflare edge caching for Moments Feed
+- **#2150**: Task: Implement graceful degradation fallbacks for Moments Feed
+- **#2149**: Task: Review Supabase Row Level Security (RLS) policies for Moments Feed
+- **#2148**: Task: Enforce strict TypeScript typings (no-any) on Moments Feed
+- **#2147**: Task: Standardise logging levels (Winston/Pino) for Moments Feed
+- **#2146**: Task: Implement exponential backoff retry logic (HTTP 429) for Moments Feed
+- **#2145**: Task: Audit memory leaks and payload sizes for Moments Feed
+- **#2144**: Task: Implement user onboarding tooltips (ngx-joyride) for Moments Feed
+- **#2143**: Task: Add strict DOMPurify HTML sanitisation to Moments Feed
+- **#2142**: Task: Optimise database indices (PostgreSQL) and query performance for Moments Feed
+- **#2141**: Task: Implement robust error boundary handling and crash reporting for Moments Feed
+- **#2140**: Task: Audit GDPR compliance and data scrubbing for Moments Feed
+- **#2139**: Task: Implement offline PWA fallback logic for Moments Feed
+- **#2138**: Task: Audit mobile responsive layouts (Tailwind) for Moments Feed
+- **#2137**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Moments Feed
+- **#2136**: Task: Implement automated rate limiting & API throttling for Moments Feed
+- **#2135**: Task: Verify RTL logical CSS properties (ps-, pe-) for Moments Feed
+- **#2134**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Moments Feed
+- **#2133**: Task: Conduct load testing (Artillery) for Moments Feed
+- **#2132**: Task: Audit accessibility (ARIA) and screen reader support for Moments Feed
+- **#2131**: Task: Design empty states and skeleton loaders for Moments Feed
+- **#2130**: Task: Set up Datadog monitoring alerts for Moments Feed
+- **#2129**: Task: Implement Redis cache invalidation rules for Moments Feed
+- **#2128**: Task: Write Jest unit tests (NestJS) for Moments Feed
+- **#2127**: Task: Write Cypress E2E test flows for Moments Feed
+- **#2126**: Task: Review and optimise Cloudflare edge caching for User Profiles
+- **#2125**: Task: Implement graceful degradation fallbacks for User Profiles
+- **#2124**: Task: Review Supabase Row Level Security (RLS) policies for User Profiles
+- **#2123**: Task: Enforce strict TypeScript typings (no-any) on User Profiles
+- **#2122**: Task: Standardise logging levels (Winston/Pino) for User Profiles
+- **#2121**: Task: Implement exponential backoff retry logic (HTTP 429) for User Profiles
+- **#2120**: Task: Audit memory leaks and payload sizes for User Profiles
+- **#2119**: Task: Implement user onboarding tooltips (ngx-joyride) for User Profiles
+- **#2118**: Task: Add strict DOMPurify HTML sanitisation to User Profiles
+- **#2117**: Task: Optimise database indices (PostgreSQL) and query performance for User Profiles
+- **#2116**: Task: Implement robust error boundary handling and crash reporting for User Profiles
+- **#2115**: Task: Audit GDPR compliance and data scrubbing for User Profiles
+- **#2114**: Task: Implement offline PWA fallback logic for User Profiles
+- **#2113**: Task: Audit mobile responsive layouts (Tailwind) for User Profiles
+- **#2112**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for User Profiles
+- **#2111**: Task: Implement automated rate limiting & API throttling for User Profiles
+- **#2110**: Task: Verify RTL logical CSS properties (ps-, pe-) for User Profiles
+- **#2109**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for User Profiles
+- **#2108**: Task: Conduct load testing (Artillery) for User Profiles
+- **#2107**: Task: Audit accessibility (ARIA) and screen reader support for User Profiles
+- **#2106**: Task: Design empty states and skeleton loaders for User Profiles
+- **#2105**: Task: Set up Datadog monitoring alerts for User Profiles
+- **#2104**: Task: Implement Redis cache invalidation rules for User Profiles
+- **#2103**: Task: Write Jest unit tests (NestJS) for User Profiles
+- **#2102**: Task: Write Cypress E2E test flows for User Profiles
+- **#2101**: Task: Conduct load testing (Artillery) for User Settings
+- **#2100**: Task: Design empty states and skeleton loaders for User Settings
+- **#2099**: Task: Set up Datadog/Prometheus monitoring alerts for User Settings
+- **#2098**: Task: Implement Redis cache invalidation rules for User Settings
+- **#2097**: Task: Write Jest unit tests (NestJS) for User Settings
+- **#2096**: Task: Audit accessibility (ARIA) and screen reader support for User Settings
+- **#2095**: Task: Write Cypress E2E test flows for User Settings
+- **#2094**: Task: Conduct load testing (Artillery) for Tutor Profiles
+- **#2093**: Task: Design empty states and skeleton loaders for Tutor Profiles
+- **#2092**: Task: Set up Datadog/Prometheus monitoring alerts for Tutor Profiles
+- **#2091**: Task: Implement Redis cache invalidation rules for Tutor Profiles
+- **#2090**: Task: Write Jest unit tests (NestJS) for Tutor Profiles
+- **#2089**: Task: Audit accessibility (ARIA) and screen reader support for Tutor Profiles
+- **#2088**: Task: Write Cypress E2E test flows for Tutor Profiles
+- **#2087**: Task: Conduct load testing (Artillery) for Discovery
+- **#2086**: Task: Design empty states and skeleton loaders for Discovery
+- **#2085**: Task: Set up Datadog/Prometheus monitoring alerts for Discovery
+- **#2084**: Task: Implement Redis cache invalidation rules for Discovery
+- **#2083**: Task: Write Jest unit tests (NestJS) for Discovery
+- **#2082**: Task: Audit accessibility (ARIA) and screen reader support for Discovery
+- **#2081**: Task: Write Cypress E2E test flows for Discovery
+- **#2080**: Task: Conduct load testing (Artillery) for LingQ Engine
+- **#2079**: Task: Design empty states and skeleton loaders for LingQ Engine
+- **#2078**: Task: Set up Datadog/Prometheus monitoring alerts for LingQ Engine
+- **#2077**: Task: Implement Redis cache invalidation rules for LingQ Engine
+- **#2076**: Task: Write Jest unit tests (NestJS) for LingQ Engine
+- **#2075**: Task: Audit accessibility (ARIA) and screen reader support for LingQ Engine
+- **#2074**: Task: Write Cypress E2E test flows for LingQ Engine
+- **#2073**: Task: Conduct load testing (Artillery) for Classrooms
+- **#2072**: Task: Design empty states and skeleton loaders for Classrooms
+- **#2071**: Task: Set up Datadog/Prometheus monitoring alerts for Classrooms
+- **#2070**: Task: Implement Redis cache invalidation rules for Classrooms
+- **#2069**: Task: Write Jest unit tests (NestJS) for Classrooms
+- **#2068**: Task: Audit accessibility (ARIA) and screen reader support for Classrooms
+- **#2067**: Task: Write Cypress E2E test flows for Classrooms
+- **#2066**: Task: Conduct load testing (Artillery) for Live Rooms
+- **#2065**: Task: Design empty states and skeleton loaders for Live Rooms
+- **#2064**: Task: Set up Datadog/Prometheus monitoring alerts for Live Rooms
+- **#2063**: Task: Implement Redis cache invalidation rules for Live Rooms
+- **#2062**: Task: Write Jest unit tests (NestJS) for Live Rooms
+- **#2061**: Task: Audit accessibility (ARIA) and screen reader support for Live Rooms
+- **#2060**: Task: Write Cypress E2E test flows for Live Rooms
+- **#2059**: Task: Conduct load testing (Artillery) for Chat
+- **#2057**: Task: Design empty states and skeleton loaders for Chat
+- **#2056**: Task: Set up Datadog/Prometheus monitoring alerts for Chat
+- **#2055**: Task: Implement Redis cache invalidation rules for Chat
+- **#2054**: Task: Write Jest unit tests (NestJS) for Chat
+- **#2053**: Task: Audit accessibility (ARIA) and screen reader support for Chat
+- **#2052**: Task: Write Cypress E2E test flows for Chat
+- **#2051**: Task: Conduct load testing (Artillery) for Moments
+- **#2050**: Task: Design empty states and skeleton loaders for Moments
+- **#2049**: Task: Set up Datadog/Prometheus monitoring alerts for Moments
+- **#2048**: Task: Implement Redis cache invalidation rules for Moments
+- **#2047**: Task: Write Jest unit tests (NestJS) for Moments
+- **#2046**: Task: Audit accessibility (ARIA) and screen reader support for Moments
+- **#2045**: Task: Write Cypress E2E test flows for Moments
+- **#2044**: Epic: Compliance: Implement COPPA age-gating and an automated DMCA takedown request flow
+- **#2043**: Epic: Media: Build HLS/DASH on-the-fly video transcoding for class replays
+- **#2042**: Epic: Data Privacy: Automated PII scrubbing before sending chat text to Azure/DeepL
+- **#2041**: Epic: i18n & RTL: Comprehensive Arabic/Hebrew UI audit using logical properties
+- **#2040**: Epic: State Management: Audit RxJS subscriptions and migrate to Angular Signals where possible to prevent memory leaks
+- **#2039**: Epic: WebRTC Edge Cases: Handle Bluetooth headset interrupts and background audio state for LiveKit
+- **#2038**: Epic: Gamification: Expand progress tracking with unlockable badges and detailed performance reports
+- **#2037**: Epic: Exchange Mechanics: Enforce 50/50 language exchange timers in 1-on-1 calls to ensure reciprocal learning
+- **#2036**: Epic: Learning: Implement partial credit scoring for minor typos during SRS flashcard reviews
+- **#2035**: Epic: Learning: Build a dedicated verb conjugation trainer and IPA alphabet module
+- **#2034**: Epic: Economy Anti-Cheat: Server-side App Store receipt validation for coin purchases (e.g., verifying a 10 UKP / 12.50 USD transaction)
+- **#2033**: Epic: Security: Implement strict LLM prompt injection protection on all AI tools
+- **#2032**: Epic: Offline Support: Implement IndexedDB PWA caching for LingQ offline reading and chat queueing
+- **#2031**: Admin Portal, Compliance & Version Control
+- **#2030**: Gamification, Retention & Habit Loops
+- **#2029**: Dedicated Groups & Scheduled Events System
+- **#2028**: Universal In-App Sharing & External Deep Linking Engine
+- **#2027**: Hashtag & Topic Following System
+- **#2026**: Complete 'Classrooms' & Tutor Marketplace Integration (italki Clone)
 - **#1925**: Investigated the claimed third recurrence (`qa-loop.sh` truncation line allegedly unstaged again). This premise was stale/false by the time it was actioned: `git diff -- qa-loop.sh` and `git diff --cached -- qa-loop.sh` were both empty, and `git blame` ...
-- **#1924**: Create Supabase SQL migration (`004_flashcards_srs.sql`) for `flashcards` table indexed by `user_id` and `word_token`.
 - **#1923**: Build click-to-translate & define pop-up modal (`WordDefinitionModalComponent`) in Angular with dictionary definitions and pronunciation audio.
-- **#1922**: Fetch multiple-choice assessment questions from backend database.
 - **#1921**: Fix QA test failure: `TS2307: Cannot find module ../../../environments/environment or its corresponding type declarations.` in `frontend/src/app/services/faq.service.ts:4` and `frontend/src/app/services/moderation.service.ts:5` (per `qa_errors.log`). Both files sit at `frontend/src/app/services/` but use a 3-level-up relative import (`../../../environments/environment`), whereas every sibling service in that same directory (e.g. `notification.service.ts`, `user.service.ts`, `chat.service.ts`) correctly uses 2 levels up (`../../environments/environment`) to reach `frontend/src/environments/environment.ts`. Fix: correct both imports to `../../environments/environment`.
-- **#1920**: Actually install and configure Cypress in the frontend directory (the previous diff was for audio-room co-hosts).
 - **#1919**: Update `frontend/src/app/app.component.html` to visually render the unread badges using `unreadCounter.totalUnread()` (Requires HTML file).
 - **#1918**: Build NestJS `FlashcardsController` endpoints (`POST /flashcards`, `PATCH /flashcards/:id/srs`) to save words and update review schedules.
-- **#1917**: Build Stage UI with circular avatar grid for Speakers and audience list for Listeners.
 - **#1916**: Admin portal: `AdminService.setVipStatus`/`banUser`/`warnUser` (frontend/src/app/services/admin.service.ts) already propagated real HTTP errors with no mock fallback (verified, not something this pass changed). The remaining gap was the missing client-side guard: `/admin` had no `canActivate`, so a non-admin who browsed there saw the fully populated mock user list before any mutation was attempted. Added `AdminService.checkAdminAccess()` (a real, no-mock-fallback call to `GET /admin/users`, which the
 - **#1915**: Analyse Moments feed screenshots in `original-hello-talk-screenshots/`.
 - **#1914**: Build Language Challenge system with coin-based entry fees and prize pools (e.g., 7-day writing streak challenge).
@@ -271,7 +670,6 @@ Total open issues: 941
 - **#1661**: Add Do Not Disturb scheduling.
 - **#1660**: Create Supabase SQL migration (`001_initial_schema.sql`) for `users` table with PostGIS geography columns, `is_vip`, `coins_balance`, `study_streak_days`, and `correction_ratio`.
 - **#1659**: Allow spending virtual coins to unlock animated sticker packs.
-- **#1658**: Build Forgot Password UI and NestJS email dispatch service.
 - **#1648**: The latest diff provided was for audio-rooms co-hosts, not VocabularyStore. Please actually write the Angular unit tests for VocabularyStore signals in frontend/src/app/services/vocabulary.store.spec.ts.
 - **#1644**: Create Supabase SQL migration (`002_trust_and_safety.sql`) for `profile_visits`, `blocks`, and `reports` tables.
 - **#1610**: use x-algorithm to power for you on the moments feed.
@@ -604,342 +1002,3 @@ Total open issues: 941
 - **#967**: Build HTML5 Canvas Doodle Tool component (`DoodlePadComponent`) in Angular allowing users to draw and transmit visual explanations.
 - **#966**: Implement custom JSON diff rendering (`VisualDiffComponent`) in Angular for language corrections (red strikethrough for original, green for fixed text).
 - **#965**: Build Angular 1-on-1 and Group Chat UI (`ChatRoomComponent`) with real-time message stream, typing indicators, and read receipts.
-- **#964**: Build NestJS endpoint `POST /chat/messages` to validate messages, persist to Supabase `chat_messages` table, and publish to Centrifugo via HTTP API (`/api/publish`).
-- **#963**: Create Supabase SQL migration (`003_chat_and_favourites.sql`) for `chat_messages` and `favourites` tables.
-- **#962**: Install `centrifuge-js` in Angular and build a resilient global `CentrifugeService` with reconnection and connection state signals.
-- **#961**: Build NestJS endpoint (`POST /chat/token`) to mint Centrifugo connection JWTs with user sub claims.
-- **#960**: Setup Centrifugo server configuration (`config.json`) and connect to Redis instance for pub/sub.
-- **#959**: Build Angular Matchmaking & Discovery UI (`DiscoveryComponent`) with distance slider, language filters, and Serious Learner toggle.
-- **#958**: Build Angular Who Viewed Me component (`VisitorLogsComponent`): blur visitor avatars and names if user is on the free tier (`is_vip === false`), showing upgrade prompt for 8 UKP / $10 USD.
-- **#957**: Build Angular Profile UI (`ProfileComponent`) with native/target language badges, audio intro player, and study streak display.
-- **#956**: Build NestJS `ProfileVisitsService` to record profile views and query visitor logs (`GET /users/:id/visitors`).
-- **#955**: Build algorithmic Serious Learner filtering in discovery (`study_streak_days > 7` and `correction_ratio >= 0.8`).
-- **#954**: Implement VIP location spoofing logic in `DiscoveryService` (override real GPS coordinates with `mock_location` when `is_vip === true`).
-- **#953**: Build NestJS `DiscoveryController` PostGIS matching algorithm: Find users within customizable radius (`ST_DWithin`).
-- **#952**: Configure Cloudflare R2 SDK (`@aws-sdk/client-s3`) in NestJS `MediaModule`. Create pre-signed URL upload endpoints for avatars and audio intros.
-- **#951**: Create NestJS `UsersController` & `UsersService` to handle profile updates (bio, native language, target languages up to 3 for VIP, privacy toggles).
-- **#950**: Verify clean linting across both projects (`npm run lint`).
-- **#949**: Create NestJS `SupabaseAuthGuard` and `CurrentUser` decorator to validate Supabase JWTs on all REST and WebSocket endpoints.
-- **#948**: Implement Supabase JWT email/password and OAuth authentication service in Angular (`AuthService`).
-- **#947**: Create Supabase SQL migration (`002_trust_and_safety.sql`) for `profile_visits`, `blocks`, and `reports` tables.
-- **#946**: Create Supabase SQL migration (`001_initial_schema.sql`) for `users` table with PostGIS geography columns, `is_vip`, `coins_balance`, `study_streak_days`, and `correction_ratio`.
-- **#945**: Create comprehensive `.env.example` and setup NestJS `@nestjs/config` environment schema validation (`Joi`/`Zod`) to fail-fast on missing keys or malformed URLs.
-- **#944**: Create Docker Compose orchestration configuration (`docker-compose.yml` & `docker-compose.dev.yml`) orchestrating `api` (NestJS), `web` (Angular), `cache` (Redis 7), `websocket` (Centrifugo v5), and `sfu` (LiveKit v2).
-- **#943**: Install and configure Tailwind CSS in the Angular project (`tailwind.config.js` & `styles.scss`) using strictly logical properties (`ps-`, `pe-`, `ms-`, `me-`).
-- **#942**: Initialise Angular frontend (`ng new frontend --style=scss --routing=true --ssr=false`).
-- **#941**: Initialise NestJS backend (`nest new backend --package-manager npm`).
-- **#938**: Fix QA test failure: `Error: Process from config.webServer was not able to start. Exit code: 143`. Root cause: `e2e/playwright.config.ts` `webServer` runs `cd ../frontend && npm run start` (Angular dev server), which never reaches a successful compile because the frontend currently has real TypeScript build errors, so `ng serve` keeps failing/restarting until
-- **#937**: Fix QA test failure: `ReferenceError: describe is not defined`.
-- **#934**: Fix QA test failure: `Error: Timed out waiting 300000ms from config.webServer.` (from `e2e/playwright.config.ts`, whose `webServer.command` runs `cd ../frontend && npm run start`). Root cause per `qa_errors.log`: the Angular dev server never reaches a successful compile because of a real TypeScript build error, `TS4111: Property status comes from an index signature, so it must be accessed with [status]` at `frontend/src/app/services/moderation.service.ts:41` (`params.status = status;`, where `params` is typed `Record<string, string>`). Because `ng serve` keeps failing/restarting,
-- **#918**: Admin portal: `AdminService.setVipStatus`/`listUsers`/`getLoginHistory` (frontend/src/app/services/admin.service.ts) silently `catchError` into mock data on any HTTP failure, including a real 403 from the backend `AdminGuard`. Because the `/admin` route has no client-side guard, a non-admin who browses to it sees a fully populated fake user list, and clicking Grant/Revoke VIP appears to succeed even though no backend mutation happened. Surface real errors for admin actions instead of faking success (the mock fallback is fine for read-only browsing/demo mode, but not for a PATCH that changes VIP status).
-- **#896**: Fix QA test failure: `TS2307: Cannot find module ../../../environments/environment or its corresponding type declarations.` in `frontend/src/app/services/faq.service.ts:4` and `frontend/src/app/services/moderation.service.ts:5` (per `qa_errors.log`). Both files sit at `frontend/src/app/services/` but use a 3-level-up relative import (`../../../environments/environment`), whereas every sibling service in that same directory (e.g. `notification.service.ts`, `user.service.ts`, `chat.service.ts`) correctly uses 2 levels up (`../../environments/environment`) to reach `frontend/src/environments/environment.ts`. Fix: correct both imports to `../../environments/environment`.
-- **#895**: build a new agent workflow to check for security issues and vulnerability  [enhancement]
-- **#878**: Implement Dynamic Font Size slider adjusting base `rem` CSS rules. (Added `FontScaleService` (`frontend/src/app/services/font-scale.service.ts`), which persists a 80-150% scale to `localStorage` and sets `document.documentElement.style.fontSize` so every Tailwind `rem` utility across the app scales together. Wired a slider into `SettingsComponent` under a new Accessibility section, and injected the service in `AppComponent` so the persisted scale applies on boot. Verified: `npm run lint` and `npx tsc --noEmit -p tsconfig.app.json` are clean, and `ng test --no-watch` passes 115/119 (28/28 spec files, 4 pre-existing skips) including the new `font-scale.service.spec.ts`. Follow-up review found `font-scale.service.ts` and `font-scale.service.spec.ts` were left untracked by git (`??`), so they were invisible to `git diff HEAD` and would have been silently dropped from the next commit even though `SettingsComponent`/`AppComponent` already depend on them; `git add`ed both to fix.)
-- **#875**: Fix QA test failure: `ReferenceError: describe is not defined` (recurred again during latest QA run). Root cause of the *recurrence* was not the original bug reappearing: `qa-loop.sh` already correctly runs `(cd e2e && npx playwright test)`, verified clean (`npx playwright test --list` finds 100 tests across 14 files, no describe/vitest errors). The real bug was in
-- **#872**: Identify and fix the specific test file causing ReferenceError: describe is not defined (need the failing test file path added to the chat).
-- **#871**: Fix QA test failure: `ReferenceError: describe is not defined` in test suites.
-- **#868**: Implement a calendar view for users to track all their upcoming
-- **#860**: Fix QA test failure: `ReferenceError: describe is not defined`. (Root cause was not a Jest/Jasmine config or test globals issue: `qa-loop.sh` was running `npx playwright test` from `frontend/`, which has no `playwright.config.ts`, so Playwright fell back to its default glob and picked up the Angular Vitest unit `*.spec.ts` files under `frontend/src`. Those files use bare `describe`/`it` (Vitest globals) or `import { vi } from vitest`, neither of which exist under the Playwright test runner, hence the `ReferenceError` and the Vitest cannot be imported... using require() errors. Fixed by pointing `qa-loop.sh` at the real Playwright suite in `e2e/` (its own `playwright.config.ts` + `tests/`); `ux-loop.sh` already targeted `e2e/` correctly. Verified no other script/CI invocation runs Playwright against `frontend/`.)
-- **#857**: Integrate events with the Language Parties system, allowing scheduled audio rooms to automatically spin up at the designated time.
-- **#856**: Build automated push notification reminders (e.g., Your Spanish Learning Event starts in 15 minutes).
-- **#855**: Implement RSVP functionality allowing users to mark Attending or Interested.
-- **#853**: Implement Create Event modal requiring fields: Title (What), Date & Time (When), Platform/Location (Where - e.g., Audio Room, Zoom, In-person), and Description.
-- **#852**: Build a centralized Events discovery feed for users to find upcoming scheduled activities.
-- **#850**: Build Private Parties feature (VIP/Pro tier) allowing invite-only audio rooms for specific friends or study partners.
-- **#848**: Build Language Parties live audio rooms dedicated to spoken practice in a group setting.
-- **#846**: Build a Groups Discovery tab within the chat interface for users to browse and join active group chats by topic.
-- **#845**: Implement real-time text correction tools specifically designed to work within Group Chats (allowing members to correct each
-- **#844**: Build Group Chats feature allowing 2 to 19 partners to collaborate in a single thread based on specific interests (e.g., Beginner French Grammar).
-- **#842**: Design and implement a Pro subscription tier mimicking Tandem Pro (unlimited translations, advanced visitor logs, nearby members visibility, ad-free).
-- **#841**: Implement in-app translations and language corrections with an interface mirroring
-- **#838**: Build a Serious Learner mode toggle that hides social feeds and prioritizes 1-on-1 matching based on strict language goals.
-- **#836**: Build Recommended for You carousel based on mutual interests and activity levels.
-- **#835**: Build Recommended for You carousel based on mutual interests and activity levels.
-- **#832**: Add quick-action Send Message and Follow buttons on list items.
-- **#831**: Add quick-action Send Message and Follow buttons on list items.
-- **#822**: Build GPS-based Nearby search rendering distance in miles or kilometres.
-- **#821**: Build GPS-based Nearby search rendering distance in miles or kilometres.
-- **#820**: Implement Has Audio Intro required filter.
-- **#819**: Implement Has Audio Intro required filter.
-- **#813**: Add Serious Learner toggle to filter for active study streaks.
-- **#812**: Add Serious Learner toggle to filter for active study streaks.
-- **#807**: Build Terms of Service and Privacy Policy document viewers.
-- **#801**: Add Restore Purchases workflow.
-- **#800**: Add Restore Purchases workflow.
-- **#785**: Add Do Not Disturb scheduling.
-- **#784**: Add Do Not Disturb scheduling.
-- **#777**: Add Hide Online Status and Hide VIP Status toggles.
-- **#776**: Add Hide Online Status and Hide VIP Status toggles.
-- **#773**: Implement Who can message me filters (Age, Gender, Native Language).
-- **#772**: Implement Who can message me filters (Age, Gender, Native Language).
-- **#759**: Implement Who Viewed Me visitor logs.
-- **#758**: Implement Who Viewed Me visitor logs.
-- **#757**: Build direct Send Message and Follow action buttons on external profiles.
-- **#756**: Build direct Send Message and Follow action buttons on external profiles.
-- **#742**: Build Profile Cover Photo upload and positioning.
-- **#741**: Build Profile Cover Photo upload and positioning.
-- **#714**: Build Language Challenge system with coin-based entry fees and prize pools (e.g., 7-day writing streak challenge).
-- **#713**: Build Language Challenge system with coin-based entry fees and prize pools (e.g., 7-day writing streak challenge).
-- **#712**: Allow spending virtual coins to unlock premium one-off AI services (e.g., Conversation Analysis Report).
-- **#711**: Allow spending virtual coins to unlock premium one-off AI services (e.g., Conversation Analysis Report).
-- **#710**: Allow spending virtual coins to unlock premium one-off AI services (e.g., Conversation Analysis Report).
-- **#709**: Build Suggest Flashcards feature to auto-detect and suggest new vocabulary from a
-- **#708**: Build Suggest Flashcards feature to auto-detect and suggest new vocabulary from a
-- **#707**: Build Suggest Flashcards feature to auto-detect and suggest new vocabulary from a
-- **#703**: Add a Mute Word client-side filter for the Moments feed to hide posts with specific keywords.
-- **#702**: Add a Mute Word client-side filter for the Moments feed to hide posts with specific keywords.
-- **#701**: Add a Mute Word client-side filter for the Moments feed to hide posts with specific keywords.
-- **#700**: Implement Request Correction from Group feature/message type for group chats.
-- **#699**: Implement Request Correction from Group feature/message type for group chats.
-- **#698**: Implement Request Correction from Group feature/message type for group chats.
-- **#694**: Implement Translate Bio button on user profile cards and pages.
-- **#693**: Implement Translate Bio button on user profile cards and pages.
-- **#692**: Build Audio Intros feed in Discovery to browse users by listening to their spoken introductions.
-- **#691**: Build Audio Intros feed in Discovery to browse users by listening to their spoken introductions.
-- **#690**: Build Audio Intros feed in Discovery to browse users by listening to their spoken introductions.
-- **#689**: Add a Soundboard feature for hosts to play pre-recorded audio clips (e.g., applause, jingles).
-- **#688**: Add a Soundboard feature for hosts to play pre-recorded audio clips (e.g., applause, jingles).
-- **#687**: Add a Soundboard feature for hosts to play pre-recorded audio clips (e.g., applause, jingles).
-- **#686**: Build a Quick Poll feature for Voiceroom hosts to create multiple-choice questions for the audience.
-- **#685**: Build a Quick Poll feature for Voiceroom hosts to create multiple-choice questions for the audience.
-- **#684**: Build a Quick Poll feature for Voiceroom hosts to create multiple-choice questions for the audience.
-- **#680**: Add AI-generated Session Summary to the archived audio room recording, listing key topics and vocabulary discussed.
-- **#679**: Add AI-generated Session Summary to the archived audio room recording, listing key topics and vocabulary discussed.
-- **#678**: Add AI-generated Session Summary to the archived audio room recording, listing key topics and vocabulary discussed.
-- **#674**: Build shared Voiceroom Notes panel where hosts/speakers can post key vocabulary or discussion topics.
-- **#673**: Build shared Voiceroom Notes panel where hosts/speakers can post key vocabulary or discussion topics.
-- **#672**: Build shared Voiceroom Notes panel where hosts/speakers can post key vocabulary or discussion topics.
-- **#671**: Add haptic feedback for grading flashcards (e.g., success buzz for Known, gentle pulse for Learning).
-- **#670**: Implement Partner of the Week algorithm to highlight highly-rated language partners in the Discovery feed.
-- **#669**: Implement Partner of the Week algorithm to highlight highly-rated language partners in the Discovery feed.
-- **#668**: Implement Partner of the Week algorithm to highlight highly-rated language partners in the Discovery feed.
-- **#664**: Implement AI-powered Conversation Starter suggestions in new chat windows based on
-- **#663**: Implement AI-powered Conversation Starter suggestions in new chat windows based on
-- **#662**: Implement AI-powered Conversation Starter suggestions in new chat windows based on
-- **#661**: Build Simplify this text AI feature in the message context menu for learners to understand complex sentences.
-- **#660**: Build Simplify this text AI feature in the message context menu for learners to understand complex sentences.
-- **#659**: Build Simplify this text AI feature in the message context menu for learners to understand complex sentences.
-- **#655**: Implement a user-level Corrector Score based on ratings to display on profiles.
-- **#654**: Implement a user-level Corrector Score based on ratings to display on profiles.
-- **#653**: Build Correction Quality rating system (up/down votes) for community corrections on Moments.
-- **#652**: Build Correction Quality rating system (up/down votes) for community corrections on Moments.
-- **#651**: Build Correction Quality rating system (up/down votes) for community corrections on Moments.
-- **#650**: Implement Create Flashcard context menu option for any text selection within chat messages and moment posts.
-- **#649**: Implement Create Flashcard context menu option for any text selection within chat messages and moment posts.
-- **#648**: Implement Create Flashcard context menu option for any text selection within chat messages and moment posts.
-- **#628**: Implement Word of the Day feature on the
-- **#627**: Implement Word of the Day feature on the
-- **#626**: Implement Word of the Day feature on the
-- **#619**: Build Lessons module in Angular.
-- **#618**: Build Lessons module in Angular.
-- **#617**: Build Lessons module in Angular.
-- **#616**: Build Daily/Weekly Quests feature with coin rewards (e.g., Correct 3 moments today).
-- **#615**: Build Daily/Weekly Quests feature with coin rewards (e.g., Correct 3 moments today).
-- **#614**: Build Daily/Weekly Quests feature with coin rewards (e.g., Correct 3 moments today).
-- **#607**: Build Achievements service in NestJS to award badges for milestones (e.g., 100 messages sent, 7-day streak).
-- **#606**: Build Achievements service in NestJS to award badges for milestones (e.g., 100 messages sent, 7-day streak).
-- **#605**: Build Achievements service in NestJS to award badges for milestones (e.g., 100 messages sent, 7-day streak).
-- **#601**: Build Role-play scenarios for AI chat (e.g., ordering coffee, job interview).
-- **#600**: Build Role-play scenarios for AI chat (e.g., ordering coffee, job interview).
-- **#599**: Build Role-play scenarios for AI chat (e.g., ordering coffee, job interview).
-- **#596**: Add Explain this context menu option on corrected text to get AI-generated grammar breakdown.
-- **#595**: Add Explain this context menu option on corrected text to get AI-generated grammar breakdown.
-- **#594**: Add Explain this context menu option on corrected text to get AI-generated grammar breakdown.
-- **#587**: Add Learning Goals free-text field to user profile to state user motivations.
-- **#586**: Add Learning Goals free-text field to user profile to state user motivations.
-- **#585**: Add Learning Goals free-text field to user profile to state user motivations.
-- **#584**: Add Interests filter to Discovery search to match users with shared hobbies.
-- **#583**: Add Interests filter to Discovery search to match users with shared hobbies.
-- **#582**: Add Interests filter to Discovery search to match users with shared hobbies.
-- **#575**: Add `proficiency_level` (`a1` to `c2`) to `users` table schema and profile UI.
-- **#574**: Add `proficiency_level` (`a1` to `c2`) to `users` table schema and profile UI.
-- **#573**: Add `proficiency_level` (`a1` to `c2`) to `users` table schema and profile UI.
-- **#572**: Build Personal Data Collection GDPR hub with Request My Data Archive button and automated Delete Account workflow.
-- **#571**: Build Personal Data Collection GDPR hub with Request My Data Archive button and automated Delete Account workflow.
-- **#570**: Build Personal Data Collection GDPR hub with Request My Data Archive button and automated Delete Account workflow.
-- **#569**: Build Legal & Privacy Notices viewer for Terms of Service and Privacy Policy.
-- **#568**: Build Legal & Privacy Notices viewer for Terms of Service and Privacy Policy.
-- **#567**: Build Legal & Privacy Notices viewer for Terms of Service and Privacy Policy.
-- **#566**: Build Help & About page displaying App Version, build number, and open-source licences.
-- **#565**: Build Help & About page displaying App Version, build number, and open-source licences.
-- **#564**: Build Data & Storage page (Clear Local Cache, toggle cellular data auto-downloads).
-- **#563**: Build Data & Storage page (Clear Local Cache, toggle cellular data auto-downloads).
-- **#562**: Build Data & Storage page (Clear Local Cache, toggle cellular data auto-downloads).
-- **#561**: Build Chat Settings page (Toggle Auto-Translate, Read Receipts, Enter-to-Send).
-- **#560**: Build Chat Settings page (Toggle Auto-Translate, Read Receipts, Enter-to-Send).
-- **#559**: Build Chat Settings page (Toggle Auto-Translate, Read Receipts, Enter-to-Send).
-- **#558**: Build Notification Settings toggles for Push Alerts and Badges across Direct Messages, Groups, Likes, and Voicerooms.
-- **#557**: Build Notification Settings toggles for Push Alerts and Badges across Direct Messages, Groups, Likes, and Voicerooms.
-- **#556**: Build Notification Settings toggles for Push Alerts and Badges across Direct Messages, Groups, Likes, and Voicerooms.
-- **#555**: Build unified Notifications Area (Inbox) for system alerts, likes, comments, and followers.
-- **#554**: Build unified Notifications Area (Inbox) for system alerts, likes, comments, and followers.
-- **#553**: Build unified Notifications Area (Inbox) for system alerts, likes, comments, and followers.
-- **#552**: Build Block Management page to manage and unblock users.
-- **#551**: Build Block Management page to manage and unblock users.
-- **#550**: Build Block Management page to manage and unblock users.
-- **#549**: Build User Filter Settings to restrict initial message senders by age or native language.
-- **#548**: Build User Filter Settings to restrict initial message senders by age or native language.
-- **#547**: Build User Filter Settings to restrict initial message senders by age or native language.
-- **#546**: Implement Who can see my profile toggle (Everyone, VIPs only, Hidden).
-- **#545**: Implement Who can see my profile toggle (Everyone, VIPs only, Hidden).
-- **#544**: Implement Who can see my profile toggle (Everyone, VIPs only, Hidden).
-- **#543**: Build Privacy Settings hub.
-- **#542**: Build Privacy Settings hub.
-- **#541**: Build Privacy Settings hub.
-- **#540**: Build Language Settings menu to switch UI language independently of study target.
-- **#539**: Build Language Settings menu to switch UI language independently of study target.
-- **#538**: Build Language Settings menu to switch UI language independently of study target.
-- **#533**: Build Appearance Settings menu.
-- **#531**: Build Appearance Settings menu.
-- **#530**: Build Appearance Settings menu.
-- **#526**: Build Linked Accounts settings page to manage connected social accounts.
-- **#525**: Build Linked Accounts settings page to manage connected social accounts.
-- **#524**: Build Linked Accounts settings page to manage connected social accounts.
-- **#521**: AUTONOMOUS DIRECTIVE: Execute complete codebase audit. Verify zero hardcoded strings exist, confirm visual match against `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`, run test suites, and append any remaining visual bugs as new tasks below. Leave this box unchecked to loop continuously.
-- **#520**: AUTONOMOUS DIRECTIVE: Execute complete codebase audit. Verify zero hardcoded strings exist, confirm visual match against `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`, run test suites, and append any remaining visual bugs as new tasks below. Leave this box unchecked to loop continuously.
-- **#519**: AUTONOMOUS DIRECTIVE: Execute complete codebase audit. Verify zero hardcoded strings exist, confirm visual match against `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`, run test suites, and append any remaining visual bugs as new tasks below. Leave this box unchecked to loop continuously.
-- **#518**: Build Forgot Password UI and NestJS email dispatch service.
-- **#517**: Build Forgot Password UI and NestJS email dispatch service.
-- **#516**: Build Forgot Password UI and NestJS email dispatch service.
-- **#515**: Render custom system event bubbles in chat (e.g., Profile updated, Missed call).
-- **#513**: Build NestJS OpenGraph scraper rendering rich link preview cards in chat.
-- **#512**: Build NestJS OpenGraph scraper rendering rich link preview cards in chat.
-- **#510**: Persist unsent chat messages and Moment drafts to `localStorage`.
-- **#509**: Persist unsent chat messages and Moment drafts to `localStorage`.
-- **#508**: Persist unsent chat messages and Moment drafts to `localStorage`.
-- **#507**: Implement strict HTML sanitisation using `DOMPurify` on all user-submitted text.
-- **#506**: Implement strict HTML sanitisation using `DOMPurify` on all user-submitted text.
-- **#504**: Design custom vector illustrations for No Messages, No Moments Found, and No Users Nearby.
-- **#503**: Design custom vector illustrations for No Messages, No Moments Found, and No Users Nearby.
-- **#501**: Implement custom Angular `ErrorHandler` logging client crashes to backend analytics.
-- **#500**: Implement custom Angular `ErrorHandler` logging client crashes to backend analytics.
-- **#498**: Configure Prometheus and Grafana Docker containers for NestJS and Centrifugo metrics.
-- **#497**: Configure Prometheus and Grafana Docker containers for NestJS and Centrifugo metrics.
-- **#495**: Create `.github/workflows/deploy.yml` for automated testing and Docker image builds.
-- **#490**: Build blocking update modal in Angular if current app version is deprecated.
-- **#489**: Build blocking update modal in Angular if current app version is deprecated.
-- **#487**: Build NestJS endpoint returning minimum supported app version.
-- **#486**: Build NestJS endpoint returning minimum supported app version.
-- **#481**: Implement 1-click ban and warning buttons.
-- **#480**: Implement 1-click ban and warning buttons.
-- **#479**: Implement 1-click ban and warning buttons.
-- **#472**: Write Angular unit tests for `VocabularyStore` signals.
-- **#470**: Write Angular unit tests for `VocabularyStore` signals.
-- **#468**: Write NestJS unit tests for `DiscoveryService` PostGIS queries.
-- **#467**: Write NestJS unit tests for `DiscoveryService` PostGIS queries.
-- **#465**: Write E2E test flows for Authentication, Chat Messaging, and Moment Creation.
-- **#464**: Write E2E test flows for Authentication, Chat Messaging, and Moment Creation.
-- **#462**: Setup Cypress inside `frontend/`.
-- **#461**: Setup Cypress inside `frontend/`.
-- **#459**: Implement global unread counter service updating app badge and navigation tabs.
-- **#458**: Implement global unread counter service updating app badge and navigation tabs.
-- **#456**: Build NestJS background job calculating top 10 recommended language partners daily.
-- **#455**: Build NestJS background job calculating top 10 recommended language partners daily.
-- **#453**: Build swipeable full-screen lightbox for Moments with multiple images.
-- **#452**: Build swipeable full-screen lightbox for Moments with multiple images.
-- **#450**: Add settings toggle to auto-play sequential voice notes in chat.
-- **#449**: Add settings toggle to auto-play sequential voice notes in chat.
-- **#447**: Cache translated text client-side to allow toggling between original and translation without extra API calls.
-- **#446**: Cache translated text client-side to allow toggling between original and translation without extra API calls.
-- **#444**: Build daily login modal granting 5 to 10 free virtual coins upon first daily login.
-- **#443**: Build daily login modal granting 5 to 10 free virtual coins upon first daily login.
-- **#441**: Fetch multiple-choice assessment questions from backend database.
-- **#440**: Fetch multiple-choice assessment questions from backend database.
-- **#438**: Build dynamic diagnostic quiz component for new sign-ups.
-- **#437**: Build dynamic diagnostic quiz component for new sign-ups.
-- **#435**: Implement `@mention` notifications when tagged in a comment.
-- **#434**: Implement `@mention` notifications when tagged in a comment.
-- **#432**: Build Liked By modal listing all users who liked a Moment.
-- **#431**: Build Liked By modal listing all users who liked a Moment.
-- **#429**: Implement Invite Co-Host split-screen video layout.
-- **#424**: Implement full-screen SVG gift animations when viewers tip the host.
-- **#423**: Implement full-screen SVG gift animations when viewers tip the host.
-- **#421**: Build scrolling live chat comment overlay over host video stream.
-- **#420**: Build scrolling live chat comment overlay over host video stream.
-- **#418**: Configure STUN/TURN server credentials in LiveKit for strict corporate NAT networks.
-- **#417**: Configure STUN/TURN server credentials in LiveKit for strict corporate NAT networks.
-- **#415**: Implement WebSocket connection rate limiting in Centrifugo.
-- **#414**: Implement WebSocket connection rate limiting in Centrifugo.
-- **#412**: Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints.
-- **#411**: Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints.
-- **#410**: Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints.
-- **#409**: Audit Web Vitals and optimize images using `loading=lazy`.
-- **#408**: Audit Web Vitals and optimize images using `loading=lazy`.
-- **#406**: Allow VIP users to select custom primary accent colours.
-- **#405**: Implement Angular Lazy Loading for non-critical feature modules.
-- **#402**: Allow VIP users to select custom primary accent colours.
-- **#400**: Render visual charts using Chart.js inside Angular.
-- **#397**: Render visual charts using Chart.js inside Angular.
-- **#395**: Build My Stats dashboard tracking study hours, messages sent, and corrections made.
-- **#394**: Build My Stats dashboard tracking study hours, messages sent, and corrections made.
-- **#389**: Allow spending virtual coins to unlock animated sticker packs.
-- **#388**: Allow spending virtual coins to unlock animated sticker packs.
-- **#386**: Build Sticker Store UI.
-- **#385**: Build Sticker Store UI.
-- **#383**: Build Account Deletion workflow with 30-day grace period.
-- **#382**: Build Account Deletion workflow with 30-day grace period.
-- **#380**: Implement Download My Data button triggering a NestJS JSON export worker.
-- **#379**: Implement Download My Data button triggering a NestJS JSON export worker.
-- **#377**: Build dynamic Terms of Service and Privacy Policy document viewer.
-- **#376**: Build dynamic Terms of Service and Privacy Policy document viewer.
-- **#374**: Implement audio compression converting voice notes to lightweight `.m4a`/`.ogg`.
-- **#373**: Implement audio compression converting voice notes to lightweight `.m4a`/`.ogg`.
-- **#371**: Configure Angular Universal (SSR) for public Voiceroom preview pages.
-- **#370**: Implement client-side image compression (max 1080p) before R2 upload.
-- **#368**: Configure Angular Universal (SSR) for public Voiceroom preview pages.
-- **#366**: Configure Angular Router to handle deep links (`hellotalk://profile/:id`).
-- **#365**: Configure Angular Router to handle deep links (`hellotalk://profile/:id`).
-- **#363**: Ensure full keyboard tab-navigation support for desktop viewports.
-- **#362**: Ensure full keyboard tab-navigation support for desktop viewports.
-- **#360**: Implement Dynamic Font Size slider adjusting base `rem` CSS rules.
-- **#359**: Implement Dynamic Font Size slider adjusting base `rem` CSS rules.
-- **#358**: Implement Dynamic Font Size slider adjusting base `rem` CSS rules.
-- **#357**: Audit and add `aria-label` attributes to all icon buttons and interactive tags.
-- **#356**: Audit and add `aria-label` attributes to all icon buttons and interactive tags.
-- **#355**: Audit and add `aria-label` attributes to all icon buttons and interactive tags.
-- **#354**: Build global No Network Connection banner component.
-- **#353**: Build global No Network Connection banner component.
-- **#351**: Implement IndexedDB message queuing for offline chat composition.
-- **#350**: Implement IndexedDB message queuing for offline chat composition.
-- **#348**: Configure Angular Service Worker (`@angular/pwa`) for asset caching.
-- **#347**: Configure Angular Service Worker (`@angular/pwa`) for asset caching.
-- **#345**: Build group participant drawer.
-- **#344**: Build group participant drawer.
-- **#338**: Build Create Group UI supporting up to 50 users.
-- **#336**: Build animated audio equalizer visualizer for active stage speakers.
-- **#334**: Implement Host Moderation controls (Mute speaker, kick off stage).
-- **#333**: Implement Host Moderation controls (Mute speaker, kick off stage).
-- **#331**: Build Voiceroom Creation modal (Title, Language Pair, Topic).
-- **#330**: Build Voiceroom Creation modal (Title, Language Pair, Topic).
-- **#328**: Add Voice Room Active filter to find users currently hosting streams.
-- **#327**: Add Voice Room Active filter to find users currently hosting streams.
-- **#326**: Add Voice Room Active filter to find users currently hosting streams.
-- **#292**: Build interactive Flashcard Review UI (Flip animations and grading buttons).
-- **#291**: Build interactive Flashcard Review UI (Flip animations and grading buttons).
-- **#289**: Implement SRS review scheduling algorithm in NestJS.
-- **#288**: Implement SRS review scheduling algorithm in NestJS.
-- **#286**: Build Flashcard Deck UI to organize saved vocabulary.
-- **#285**: Build Flashcard Deck UI to organize saved vocabulary.
-- **#282**: Build Top Corrector community leaderboard.
-- **#281**: Build Top Corrector community leaderboard.
-- **#275**: Build Restore Purchases button for app store compliance.
-- **#274**: Build Restore Purchases button for app store compliance.
-- **#273**: Build Restore Purchases button for app store compliance.
-- **#262**: Build Incoming Call modal with ringtone audio and accept/reject controls.
-- **#261**: Build Incoming Call modal with ringtone audio and accept/reject controls.
-- **#259**: Add long-press context menu on mobile to copy, favourite, or report messages.
-- **#258**: Add long-press context menu on mobile to copy, favourite, or report messages.
-- **#256**: Build Read Receipts (Sent vs Delivered vs Read checkmarks).
-- **#255**: Build Read Receipts (Sent vs Delivered vs Read checkmarks).
-- **#253**: Implement WebSockets typing indicators (User is typing...).
-- **#251**: Build Profile Cover Photo uploader with client-side cropping.
-- **#250**: Build Profile Cover Photo uploader with client-side cropping.
-- **#248**: Implement dynamic Hobbies & Interests tags mapped to target vocabulary.
-- **#247**: Implement dynamic Hobbies & Interests tags mapped to target vocabulary.
-- **#245**: Build 30-second Audio Introduction recorder and playback card on profile.
-- **#244**: Build 30-second Audio Introduction recorder and playback card on profile.
-- **#242**: Build real-time text chat overlay inside live rooms.
-- **#241**: Build real-time text chat overlay inside live rooms.
-- **#239**: Implement Raise Hand button and Approve Speaker modal for Hosts.
-- **#238**: Implement Raise Hand button and Approve Speaker modal for Hosts.
-- **#232**: Categorise active Voicerooms by target language pair.

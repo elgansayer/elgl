@@ -11,7 +11,7 @@ export class AppleNotificationController {
 
   @Post()
   @HttpCode(200)
-  async handleNotification(@Body() payload: any) {
+  async handleNotification(@Body() payload: unknown) {
     this.logger.log('Received Apple App Store Server Notification v2');
     return await this.appleNotificationService.handleNotification(payload);
   }
