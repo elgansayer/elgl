@@ -645,4 +645,16 @@ export const routes: Routes = [
       ),
     title: 'Change Password - HelloTalk',
   },
+  {
+    path: 'escrow',
+    loadComponent: () =>
+      import('./pages/escrow/escrow.component').then((m) => m.EscrowComponent),
+    title: 'Escrow Payments - HelloTalk',
+  },
+  {
+    path: 'escrow/:id',
+    loadComponent: () =>
+      import('./pages/escrow/escrow-detail.component').then((m) => m.EscrowDetailComponent),
+    title: 'Escrow Detail - HelloTalk',
+  },
 ];

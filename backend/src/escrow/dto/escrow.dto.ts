@@ -53,6 +53,11 @@ export class DisputeEscrowDto {
   evidence?: string;
 }
 
+export class CancelEscrowDto {
+  @IsUUID()
+  escrow_id!: string;
+}
+
 export class ResolveDisputeDto {
   @IsUUID()
   escrow_id!: string;
@@ -64,4 +69,21 @@ export class ResolveDisputeDto {
   @IsOptional()
   @IsString()
   admin_note?: string;
+}
+
+export interface EscrowHistoryQuery {
+  status?: string;
+  limit?: number;
+  offset?: number;
+  sortBy?: string;
+  order?: 'asc' | 'desc';
+}
+
+export interface EscrowSummary {
+  total_outgoing: number;
+  total_incoming: number;
+  pending_outgoing: number;
+  pending_incoming: number;
+  disputed_count: number;
+  total_transactions: number;
 }

@@ -9,8 +9,11 @@ import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import {
+  CancelEscrowDto,
   CreateEscrowDto,
   DisputeEscrowDto,
+  EscrowHistoryQuery,
+  EscrowSummary,
   RefundEscrowDto,
   ReleaseEscrowDto,
   ResolveDisputeDto,
@@ -455,6 +458,233 @@ export class EscrowService {
     }
 
     return data;
+  }
+
+  async cancelEscrow(
+    callerId: string,
+    dto: CancelEscrowDto,
+  ): Promise<EscrowRow> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: escrowData, error } = await supabase
+      .from('escrows')
+      .select('*')
+      .eq('id', dto.escrow_id)
+      .single();
+
+    if (error || !escrowData || !isEscrowRow(escrowData)) {
+      throw new NotFoundException(`Escrow '${dto.escrow_id}' not found.`);
+    }
+
+    if (escrowData.status !== 'pending') {
+      throw new BadRequestException(
+        `Cannot cancel a ${escrowData.status} escrow.`,
+      );
+    }
+
+    if (escrowData.sender_id !== callerId) {
+      throw new ForbiddenException('Only the sender can cancel the escrow.');
+    }
+
+    // Refund sender coins
+    const { data: senderData } = await supabase
+      .from('users')
+      .select('coins_balance')
+      .eq('id', escrowData.sender_id)
+      .single();
+
+    const senderBalance = senderData?.coins_balance ?? 0;
+    const newSenderBalance = senderBalance + escrowData.amount;
+
+    await supabase
+      .from('users')
+      .update({ coins_balance: newSenderBalance })
+      .eq('id', escrowData.sender_id);
+
+    const { data: updated, error: updateError } = await supabase
+      .from('escrows')
+      .update({ status: 'cancelled' })
+      .eq('id', dto.escrow_id)
+      .select('*')
+      .single();
+
+    if (updateError || !updated || !isEscrowRow(updated)) {
+      throw new InternalServerErrorException(
+        'Failed to cancel escrow.',
+      );
+    }
+
+    this.logger.info(`Escrow ${dto.escrow_id} cancelled by sender.`);
+    return updated;
+  }
+
+  async getEscrowHistory(
+    userId: string,
+    query: EscrowHistoryQuery,
+  ): Promise<EscrowRow[] | { data: EscrowRow[]; total: number; limit: number; offset: number }> {
+    const supabase = this.supabaseService.getClient();
+    const validStatuses = ['pending', 'released', 'refunded', 'disputed', 'cancelled'];
+
+    if (query.status && !validStatuses.includes(query.status)) {
+      throw new BadRequestException(`Invalid status filter: ${query.status}`);
+    }
+
+    let dbQuery = supabase
+      .from('escrows')
+      .select('*', { count: 'exact' })
+      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+      .order(query.sortBy === 'created_at' ? 'created_at' : 'created_at', {
+        ascending: query.order === 'asc',
+      });
+
+    if (query.status) {
+      dbQuery = dbQuery.eq('status', query.status);
+    }
+
+    const limit = query.limit ?? 20;
+    const offset = query.offset ?? 0;
+
+    dbQuery = dbQuery.range(offset, offset + limit - 1);
+
+    const { data, error, count } = await dbQuery;
+
+    if (error) {
+      throw new InternalServerErrorException('Failed to retrieve escrow history.');
+    }
+
+    const escrows = (data ?? []).filter(
+      (item: unknown): item is EscrowRow =>
+        typeof item === 'object' &&
+        item !== null &&
+        'id' in item &&
+        'sender_id' in item &&
+        'receiver_id' in item &&
+        'amount' in item &&
+        'status' in item,
+    );
+
+    if (query.limit !== undefined || query.offset !== undefined) {
+      return {
+        data: escrows,
+        total: count ?? escrows.length,
+        limit,
+        offset,
+      };
+    }
+
+    return escrows;
+  }
+
+  async listOutgoingEscrows(userId: string, status?: string): Promise<EscrowRow[]> {
+    const supabase = this.supabaseService.getClient();
+    const validStatuses = ['pending', 'released', 'refunded', 'disputed', 'cancelled'];
+
+    if (status && !validStatuses.includes(status)) {
+      throw new BadRequestException(`Invalid status filter: ${status}`);
+    }
+
+    let query = supabase
+      .from('escrows')
+      .select('*')
+      .eq('sender_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new InternalServerErrorException('Failed to retrieve outgoing escrows.');
+    }
+
+    return (data ?? []).filter(
+      (item: unknown): item is EscrowRow =>
+        typeof item === 'object' &&
+        item !== null &&
+        'id' in item &&
+        'sender_id' in item &&
+        'receiver_id' in item &&
+        'amount' in item &&
+        'status' in item,
+    );
+  }
+
+  async listIncomingEscrows(userId: string, status?: string): Promise<EscrowRow[]> {
+    const supabase = this.supabaseService.getClient();
+    const validStatuses = ['pending', 'released', 'refunded', 'disputed', 'cancelled'];
+
+    if (status && !validStatuses.includes(status)) {
+      throw new BadRequestException(`Invalid status filter: ${status}`);
+    }
+
+    let query = supabase
+      .from('escrows')
+      .select('*')
+      .eq('receiver_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new InternalServerErrorException('Failed to retrieve incoming escrows.');
+    }
+
+    return (data ?? []).filter(
+      (item: unknown): item is EscrowRow =>
+        typeof item === 'object' &&
+        item !== null &&
+        'id' in item &&
+        'sender_id' in item &&
+        'receiver_id' in item &&
+        'amount' in item &&
+        'status' in item,
+    );
+  }
+
+  async getEscrowSummary(userId: string): Promise<EscrowSummary> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data, error } = await supabase
+      .from('escrows')
+      .select('sender_id, receiver_id, amount, status')
+      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
+
+    if (error) {
+      throw new InternalServerErrorException('Failed to retrieve escrow summary.');
+    }
+
+    const escrows = data ?? [];
+    let totalOutgoing = 0;
+    let totalIncoming = 0;
+    let pendingOutgoing = 0;
+    let pendingIncoming = 0;
+    let disputedCount = 0;
+
+    for (const e of escrows) {
+      if (e.sender_id === userId) {
+        totalOutgoing += e.amount;
+        if (e.status === 'pending') pendingOutgoing += e.amount;
+      } else {
+        totalIncoming += e.amount;
+        if (e.status === 'pending') pendingIncoming += e.amount;
+      }
+      if (e.status === 'disputed') disputedCount++;
+    }
+
+    return {
+      total_outgoing: totalOutgoing,
+      total_incoming: totalIncoming,
+      pending_outgoing: pendingOutgoing,
+      pending_incoming: pendingIncoming,
+      disputed_count: disputedCount,
+      total_transactions: escrows.length,
+    };
   }
 
   async listUserEscrows(userId: string, status?: string): Promise<EscrowRow[]> {
