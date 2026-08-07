@@ -28,43 +28,39 @@ import {
   CacheControlInterceptor,
   CACHE_PUBLIC_LONG,
   CACHE_PUBLIC_SHORT,
-  CACHE_PRIVATE_NO_STORE,
+  CACHE_NO_STORE,
 } from './cache.interceptor';
 import { EconomyExceptionFilter } from './economy-exception.filter';
+import {
+  EconomyRateLimiterGuard,
+  EconomyRateLimit,
+} from './economy-rate-limiter.guard';
 
-/**
- * Virtual Coin Economy Controller
- *
- * Manages the in-app virtual coin economy including:
- * - Gift catalogue browsing
- * - Coin package purchasing via Stripe / Apple / Google Play
- * - Daily check-in coin rewards
- * - Virtual gift sending with real-time Centrifugo broadcasts
- * - Sticker pack storefront and unlocking
- *
- * All endpoints require Supabase JWT authentication.
- * User-specific balance and mutation endpoints are never cached.
- * Public catalogue endpoints use aggressive CDN caching.
- */
 @ApiTags('Virtual Coin Economy')
 @Controller('economy')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseAuthGuard, EconomyRateLimiterGuard)
 @UseFilters(EconomyExceptionFilter)
 @ApiBearerAuth()
 export class EconomyController {
   constructor(private readonly economyService: EconomyService) {}
 
+  /**
+   * Virtual gift catalog: public, long-lived CDN cache.
+   * Gifts rarely change so browsers may keep this for 1 hour and
+   * Cloudflare edge nodes for 24 hours with stale-while-revalidate.
+   */
   @Get('catalog')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_LONG))
   @ApiOperation({
-    summary: 'Get the virtual gift catalogue',
+    summary: 'Get virtual gift catalog',
     description:
-      'Returns the full catalogue of virtual gifts available in the app. Gifts are sorted by coin cost in ascending order. The response is cached aggressively (1 hour in browser, 24 hours at the CDN edge with stale-while-revalidate) because the gift catalogue changes infrequently with app updates.',
+      'Returns all available virtual gifts ordered by coin cost (ascending). ' +
+      'Gifts rarely change, so responses are cached aggressively (1 hour browser, 24 hours CDN with stale-while-revalidate).',
   })
   @ApiResponse({
     status: 200,
-    description: 'Array of virtual gift objects.',
+    description: 'Array of virtual gifts with id, name, icon (emoji), coin cost, and animation metadata.',
     schema: {
       type: 'array',
       items: {
@@ -72,14 +68,10 @@ export class EconomyController {
         properties: {
           id: { type: 'string', example: 'gift_rose' },
           name: { type: 'string', example: 'Rose' },
-          icon: { type: 'string', example: '\ud83c\udf39' },
+          icon: { type: 'string', example: '\u{1F339}' },
           cost_coins: { type: 'number', example: 10 },
           animation_type: { type: 'string', example: 'float' },
-          animation_url: {
-            type: 'string',
-            nullable: true,
-            example: 'https://r2.example.com/rose.json',
-          },
+          animation_url: { type: 'string', nullable: true, example: 'https://r2.example.com/rose.json' },
         },
       },
     },
@@ -88,17 +80,23 @@ export class EconomyController {
     return this.economyService.getCatalog();
   }
 
+  /**
+   * Coin packages: public, long-lived CDN cache.
+   * Package definitions (name / coin-amount / price) change only
+   * with app updates, so aggressive caching is safe.
+   */
   @Get('packages')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_LONG))
   @ApiOperation({
-    summary: 'Get available coin packages for purchase',
+    summary: 'Get available coin packages',
     description:
-      'Returns the list of coin packages that users can purchase with real currency. Package definitions (name, coin amount, price) only change with app updates, so aggressive caching is safe. Prices are returned in the minor currency unit (e.g. cents/pence). Each package includes platform-specific product IDs for Apple App Store, Google Play, and Stripe.',
+      'Returns all available coin packages for purchase across all platforms (iOS, Android, Web). ' +
+      'Package definitions change only with app updates, so aggressive caching is applied.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Array of coin package objects.',
+    description: 'Array of coin packages with id, name, coin amount, and platform-specific pricing (price_ukp, price_usd) and product IDs.',
     schema: {
       type: 'array',
       items: {
@@ -113,21 +111,9 @@ export class EconomyController {
           platform_product_id: {
             type: 'object',
             properties: {
-              ios: {
-                type: 'string',
-                nullable: true,
-                example: 'com.linguaexchange.coins.small',
-              },
-              android: {
-                type: 'string',
-                nullable: true,
-                example: 'com.linguaexchange.coins.small',
-              },
-              web: {
-                type: 'string',
-                nullable: true,
-                example: 'price_small_coins',
-              },
+              ios: { type: 'string', nullable: true, example: 'com.linguaexchange.coins.small' },
+              android: { type: 'string', nullable: true, example: 'com.linguaexchange.coins.small' },
+              web: { type: 'string', nullable: true, example: 'price_small_coins' },
             },
           },
         },
@@ -138,13 +124,19 @@ export class EconomyController {
     return this.economyService.getPackages();
   }
 
+  /**
+   * User coin balance: strictly private, never cached.
+   * Per-user rate limit prevents balance-enumeration attacks.
+   */
   @Get('balance')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @EconomyRateLimit({ maxRequests: 20, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
-    summary: 'Get the current user coin balance',
+    summary: 'Get user coin balance',
     description:
-      'Returns the authenticated user current coin balance. This endpoint is strictly private and never cached. New users receive a default starting balance of 50 coins. Unauthenticated requests return a zero balance.',
+      'Returns the current coin balance for the authenticated user. ' +
+      'This is strictly private data and is never cached. Returns zero for unauthenticated requests.',
   })
   @ApiResponse({
     status: 200,
@@ -152,7 +144,7 @@ export class EconomyController {
     schema: {
       type: 'object',
       properties: {
-        coins_balance: { type: 'number', example: 150 },
+        coins_balance: { type: 'number', example: 250 },
       },
     },
   })
@@ -162,13 +154,21 @@ export class EconomyController {
     return await this.economyService.getBalance(user.id);
   }
 
+  /**
+   * Daily check-in: mutation endpoint, never cached.
+   * Redis deduplication already prevents double-claiming per day, but the
+   * per-user rate limit prevents rapid-fire Redis hammering.
+   */
   @Post('daily-check-in')
   @Throttle({ default: { limit: 3, ttl: 60000 } })
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @EconomyRateLimit({ maxRequests: 3, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
-    summary: 'Claim the daily check-in coin reward',
+    summary: 'Claim daily check-in reward',
     description:
-      'Claims the daily coin reward for the authenticated user. The reward scales with the consecutive check-in streak: day 1 = 5 coins, day 2 = 6 coins, through day 7 = 11 coins. The streak resets after a missed day. A user can only claim once per calendar day (UTC). Consecutive claims within the same UTC day return `claimed: false`.',
+      'Claims a random daily reward of 5-10 coins for the authenticated user. ' +
+      'Each user can only claim once per calendar day (Redis-based rate limiting). ' +
+      'Returns whether the claim succeeded, the reward amount, and the new balance.',
   })
   @ApiResponse({
     status: 201,
@@ -177,8 +177,8 @@ export class EconomyController {
       type: 'object',
       properties: {
         claimed: { type: 'boolean', example: true },
-        coins_rewarded: { type: 'number', example: 8 },
-        new_balance: { type: 'number', example: 158 },
+        coins_rewarded: { type: 'number', example: 7 },
+        new_balance: { type: 'number', example: 257 },
       },
     },
   })
@@ -188,30 +188,36 @@ export class EconomyController {
     return await this.economyService.claimDailyCheckIn(user.id);
   }
 
+  /**
+   * Stripe checkout session creation: mutation, never cached.
+   * Tightly rate-limited because each call creates a real Stripe session.
+   */
   @Post('create-checkout-session')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @EconomyRateLimit({ maxRequests: 5, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
-    summary: 'Create a Stripe checkout session for a coin package',
+    summary: 'Create a Stripe Checkout session for coin purchase',
     description:
-      'Creates a Stripe Checkout session for the specified coin package. Returns a session URL that the client should redirect the user to for payment. The coin balance is NEVER credited here: the client must call `POST /economy/purchase-coins` with the completed checkout session ID as the receipt token, which re-verifies payment status with the Stripe API before granting coins. This ensures a client can never grant itself coins by lying about payment success.',
+      'Creates a Stripe Checkout session for the specified coin package. ' +
+      'Returns a session URL for client-side redirect to Stripe. ' +
+      'The coin balance is NOT credited here -- the client must call purchase-coins ' +
+      'with the session ID after payment completion.',
   })
   @ApiResponse({
     status: 201,
-    description: 'Checkout session created successfully.',
+    description: 'Stripe Checkout session created.',
     schema: {
       type: 'object',
       properties: {
-        sessionUrl: {
-          type: 'string',
-          example: 'https://checkout.stripe.com/c/pay/cs_test_xxx',
-        },
-        sessionId: { type: 'string', example: 'cs_test_xxx' },
+        sessionUrl: { type: 'string', example: 'https://checkout.stripe.com/pay/cs_test_abc123' },
+        sessionId: { type: 'string', example: 'cs_test_abc123' },
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Invalid or unknown package ID.' })
+  @ApiResponse({ status: 400, description: 'Package not available for web purchase.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 404, description: 'Coin package not found.' })
   async createCheckoutSession(
     @CurrentUser() user: User | null,
     @Body() dto: CreateCoinCheckoutSessionDto,
@@ -223,37 +229,36 @@ export class EconomyController {
     );
   }
 
+  /**
+   * Coin purchase: mutation, never cached.
+   * Tightly rate-limited because this interacts with external payment
+   * verification APIs (Stripe / Apple / Google).
+   */
   @Post('purchase-coins')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @EconomyRateLimit({ maxRequests: 5, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
-    summary: 'Verify a purchase receipt and credit coins to user balance',
+    summary: 'Complete a coin purchase',
     description:
-      'Verifies a purchase receipt (Apple App Store IAP, Google Play Billing, or Stripe Checkout) and credits the corresponding coin amount to the authenticated user balance. The receipt is verified server-side with the respective platform API using cryptographic signature checks. The coin amount is derived from the product ID on the server to prevent client-side tampering. Duplicate transaction IDs are rejected with HTTP 409 to prevent double-crediting. The `platform` field defaults to `web` when omitted.',
+      'Verifies a purchase receipt (Apple/Google/Stripe), derives the coin amount server-side ' +
+      'from COIN_PACKAGES, checks for duplicate transaction IDs, and credits coins to the user. ' +
+      'For web (Stripe), a pending purchase record must have been created first via create-checkout-session.',
   })
   @ApiResponse({
     status: 201,
-    description: 'Coins credited successfully.',
+    description: 'Coins purchased successfully.',
     schema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean', example: true },
-        coins_added: { type: 'number', example: 100 },
-        new_balance: { type: 'number', example: 250 },
-        transaction_id: { type: 'string', example: 'txn_abc123' },
+        coins: { type: 'number', example: 100 },
+        new_balance: { type: 'number', example: 350 },
       },
     },
   })
-  @ApiResponse({
-    status: 400,
-    description:
-      'Invalid receipt token, unsupported platform, or unknown product ID.',
-  })
+  @ApiResponse({ status: 400, description: 'Invalid receipt or receipt verification failed.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({
-    status: 409,
-    description: 'Duplicate transaction. Coins already credited for this receipt.',
-  })
+  @ApiResponse({ status: 409, description: 'Duplicate transaction.' })
   async purchaseCoins(
     @CurrentUser() user: User | null,
     @Body() dto: PurchaseCoinsDto,
@@ -262,13 +267,20 @@ export class EconomyController {
     return await this.economyService.purchaseCoins(user.id, dto);
   }
 
+  /**
+   * Gift sending: mutation with Centrifugo broadcast, never cached.
+   * Per-user rate limit prevents gift-spam and coin-drain enumeration.
+   */
   @Post('send-gift')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @EconomyRateLimit({ maxRequests: 10, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Send a virtual gift to another user',
     description:
-      'Sends a virtual gift from the authenticated user to another user. The sender must have sufficient coin balance to cover the gift cost, which is deducted immediately. A real-time gift notification is broadcast to the recipient via Centrifugo WebSocket so their UI updates instantly. An optional `room_id` can associate the gift with a specific chat room context.',
+      'Deducts coins from the sender, credits the receiver, records the transaction, ' +
+      'and broadcasts a real-time gift event via Centrifugo to the receiver and optionally ' +
+      'to an audio room channel. The sender must have sufficient coin balance.',
   })
   @ApiResponse({
     status: 201,
@@ -276,70 +288,65 @@ export class EconomyController {
     schema: {
       type: 'object',
       properties: {
-        id: { type: 'string', example: 'gift_txn_uuid' },
-        sender_id: { type: 'string', example: 'user_uuid_sender' },
-        receiver_id: { type: 'string', example: 'user_uuid_receiver' },
-        gift_id: { type: 'string', example: 'gift_rose' },
-        gift_name: { type: 'string', example: 'Rose' },
-        cost_coins: { type: 'number', example: 10 },
-        new_balance: { type: 'number', example: 140 },
-        room_id: {
-          type: 'string',
-          nullable: true,
-          example: 'room_uuid',
+        success: { type: 'boolean', example: true },
+        coins_remaining: { type: 'number', example: 230 },
+        gift: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: 'gift_rose' },
+            name: { type: 'string', example: 'Rose' },
+            icon: { type: 'string', example: '\u{1F339}' },
+            cost_coins: { type: 'number', example: 10 },
+            animation_type: { type: 'string', example: 'float' },
+          },
         },
       },
     },
   })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid receiver ID, gift ID, or malformed request body.',
-  })
+  @ApiResponse({ status: 400, description: 'Insufficient balance or cannot send to self.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({
-    status: 402,
-    description:
-      'Insufficient coin balance. The sender does not have enough coins to cover the gift cost.',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Recipient user or gift not found.',
-  })
+  @ApiResponse({ status: 404, description: 'Gift not found in catalog or receiver not found.' })
   async sendGift(@CurrentUser() user: User | null, @Body() dto: SendGiftDto) {
     if (!user) return null;
     return await this.economyService.sendGift(user.id, dto);
   }
 
+  /**
+   * Sticker pack storefront: contains user-specific ownership data,
+   * so use a short public cache to relieve DB pressure while staying
+   * fresh enough that recently unlocked packs appear promptly.
+   */
   @Get('sticker-packs')
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
   @ApiOperation({
-    summary: 'Get sticker pack storefront with user ownership status',
+    summary: 'Get sticker pack storefront',
     description:
-      'Returns all available sticker packs with the authenticated user ownership and unlock status. The response is cached with a short TTL (public, max-age=60s) to relieve database pressure while ensuring recently unlocked packs appear promptly. Each pack entry includes whether the user currently owns it; owned packs include the full sticker URL list. Unauthenticated requests receive an empty response.',
+      'Returns all available sticker packs with user-specific ownership data. ' +
+      'Responses are cached for 5 minutes (browser) / 30 minutes (CDN) to relieve DB pressure ' +
+      'while keeping recently unlocked packs visible.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Sticker pack storefront with user-specific ownership data.',
+    description: 'Sticker packs with ownership data.',
     schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', example: 'sticker_pack_animated' },
-          name: { type: 'string', example: 'Animated Expressions' },
-          cost_coins: { type: 'number', example: 50 },
-          is_animated: { type: 'boolean', example: true },
-          sticker_urls: {
-            type: 'array',
-            nullable: true,
-            items: { type: 'string' },
-            example: [
-              'https://r2.example.com/stickers/pack1/sticker1.webp',
-            ],
+      type: 'object',
+      properties: {
+        packs: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: 'stk_pack_1' },
+              name: { type: 'string', example: 'Happy Corgi Pack' },
+              cost_coins: { type: 'number', example: 50 },
+              is_animated: { type: 'boolean', example: false },
+              sticker_urls: { type: 'array', items: { type: 'string' }, example: ['assets/stickers/happy.png'] },
+            },
           },
-          owned: { type: 'boolean', example: false },
         },
+        owned_pack_ids: { type: 'array', items: { type: 'string' }, example: ['stk_pack_1'] },
+        user_coins: { type: 'number', example: 250 },
       },
     },
   })
@@ -349,38 +356,44 @@ export class EconomyController {
     return await this.economyService.getStickerPacks(user.id);
   }
 
+  /**
+   * Sticker pack unlock: mutation, never cached.
+   * Per-user rate limit deters brute-force pack-unlock attempts.
+   */
   @Post('unlock-sticker-pack')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @EconomyRateLimit({ maxRequests: 10, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
-    summary: 'Unlock a sticker pack using coins',
+    summary: 'Unlock a sticker pack with coins',
     description:
-      'Unlocks a sticker pack for the authenticated user by deducting the pack coin cost from their balance. The user must have sufficient coins and must not already own the pack (HTTP 409 if already owned). Once unlocked, all stickers in the pack become available for use in chat messages. The sticker pack data is also returned in the `GET /economy/sticker-packs` response going forward.',
+      'Deducts the sticker pack cost from the user coin balance and records ownership. ' +
+      'The user must have sufficient coins to cover the pack cost.',
   })
   @ApiResponse({
     status: 201,
-    description: 'Sticker pack unlocked successfully.',
+    description: 'Sticker pack unlocked.',
     schema: {
       type: 'object',
       properties: {
         success: { type: 'boolean', example: true },
-        pack_id: { type: 'string', example: 'sticker_pack_animated' },
-        pack_name: { type: 'string', example: 'Animated Expressions' },
-        cost_coins: { type: 'number', example: 50 },
-        new_balance: { type: 'number', example: 100 },
+        coins_remaining: { type: 'number', example: 200 },
+        pack: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: 'stk_pack_1' },
+            name: { type: 'string', example: 'Happy Corgi Pack' },
+            cost_coins: { type: 'number', example: 50 },
+            is_animated: { type: 'boolean', example: false },
+            sticker_urls: { type: 'array', items: { type: 'string' }, example: ['assets/stickers/happy.png'] },
+          },
+        },
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Invalid or unknown pack ID.' })
+  @ApiResponse({ status: 400, description: 'Insufficient balance.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({
-    status: 402,
-    description: 'Insufficient coin balance to unlock this pack.',
-  })
-  @ApiResponse({
-    status: 409,
-    description: 'Sticker pack already owned by this user.',
-  })
+  @ApiResponse({ status: 404, description: 'Sticker pack not found.' })
   async unlockStickerPack(
     @CurrentUser() user: User | null,
     @Body() dto: UnlockStickerPackDto,

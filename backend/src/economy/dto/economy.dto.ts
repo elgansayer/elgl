@@ -9,8 +9,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class PurchaseCoinsDto {
   @ApiProperty({
-    description:
-      'The receipt token from the purchase. For iOS this is the base64-encoded App Store receipt. For Android this is the Google Play purchase token. For web/Stripe this is the Stripe checkout session ID (e.g. cs_test_xxx).',
+    description: 'Receipt token from the platform (Stripe session ID, Apple receipt data, Google Play purchase token)',
     example: 'cs_test_a1b2c3d4e5f6',
   })
   @IsString()
@@ -18,11 +17,9 @@ export class PurchaseCoinsDto {
   receipt_token!: string;
 
   @ApiPropertyOptional({
-    description:
-      'The platform where the purchase was made. Defaults to `web` when omitted.',
+    description: 'Platform the purchase was made on. Auto-detected if omitted.',
     enum: ['ios', 'android', 'web'],
     example: 'web',
-    default: 'web',
   })
   @IsOptional()
   @IsString()
@@ -30,10 +27,56 @@ export class PurchaseCoinsDto {
   platform?: 'ios' | 'android' | 'web';
 }
 
+export class VerifyReceiptDto {
+  @ApiProperty({
+    description: 'Receipt token from the platform (Stripe session ID, Apple receipt data, Google Play purchase token)',
+    example: 'cs_test_a1b2c3d4e5f6',
+  })
+  @IsString()
+  @IsNotEmpty()
+  receipt_token!: string;
+
+  @ApiProperty({
+    description: 'Platform the receipt is from',
+    enum: ['ios', 'android', 'web'],
+    example: 'web',
+  })
+  @IsString()
+  @IsNotEmpty()
+  platform!: 'ios' | 'android' | 'web';
+}
+
+export class VerifiedPurchaseDto {
+  @ApiProperty({
+    description: 'Platform-specific transaction identifier',
+    example: 'cs_test_a1b2c3d4e5f6',
+  })
+  @IsString()
+  @IsNotEmpty()
+  transaction_id!: string;
+
+  @ApiProperty({
+    description: 'Product ID from the platform (must match a COIN_PACKAGES platform_product_id entry)',
+    example: 'coins_small_web',
+  })
+  @IsString()
+  @IsNotEmpty()
+  product_id!: string;
+
+  @ApiProperty({
+    description: 'Platform the purchase was made on',
+    enum: ['ios', 'android', 'web'],
+    example: 'web',
+  })
+  @IsString()
+  @IsIn(['ios', 'android', 'web'])
+  platform!: 'ios' | 'android' | 'web';
+}
+
 export class CreateCoinCheckoutSessionDto {
   @ApiProperty({
-    description:
-      'The ID of the coin package to purchase. Valid values come from the `GET /economy/packages` endpoint.',
+    description: 'ID of the coin package to purchase',
+    enum: ['coins_small', 'coins_medium', 'coins_large', 'coins_mega'],
     example: 'coins_small',
   })
   @IsString()
@@ -43,9 +86,8 @@ export class CreateCoinCheckoutSessionDto {
 
 export class UnlockStickerPackDto {
   @ApiProperty({
-    description:
-      'The ID of the sticker pack to unlock. Valid pack IDs are returned by `GET /economy/sticker-packs`.',
-    example: 'sticker_pack_animated',
+    description: 'ID of the sticker pack to unlock',
+    example: 'stk_pack_1',
   })
   @IsString()
   @IsNotEmpty()
@@ -54,27 +96,25 @@ export class UnlockStickerPackDto {
 
 export class SendGiftDto {
   @ApiProperty({
-    description: 'UUID of the user who will receive the virtual gift.',
+    description: 'UUID of the user receiving the gift',
+    example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
     format: 'uuid',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef0123456789',
   })
   @IsUUID()
   receiver_id!: string;
 
   @ApiProperty({
-    description:
-      'UUID of the virtual gift to send. Gift IDs are listed in `GET /economy/catalog`.',
+    description: 'UUID of the gift from the catalog',
+    example: 'gift_rose',
     format: 'uuid',
-    example: 'f9g8h7j6-k5l4-m3n2-p1q0-rst0987654321',
   })
   @IsUUID()
   gift_id!: string;
 
   @ApiPropertyOptional({
-    description:
-      'Optional UUID of the chat room to associate this gift with. When provided, the gift notification includes room context for the recipient.',
+    description: 'UUID of the audio room where the gift is being sent (for room-level gift broadcasts)',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef0123456789',
     format: 'uuid',
-    example: 'room_uuid_abc123',
   })
   @IsOptional()
   @IsUUID()
