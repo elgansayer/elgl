@@ -81,48 +81,67 @@ export class ModerationService {
       return items.filter((item) => item.reported_user != null);
     }
 
-    // For moment reports, fetch the attached moment content
+    // For moment reports, batch-fetch the attached moment content
     const momentItems = items.filter((item) => item.reportedMomentId != null);
+    if (momentItems.length === 0) {
+      return [];
+    }
 
-    const hydrated: ModerationItem[] = [];
-    for (const item of momentItems) {
-      const moment = await this.getMomentContent(
-        item.reportedMomentId as string,
-      );
-      if (moment) {
-        hydrated.push({
+    const momentIds = momentItems.map(
+      (item) => item.reportedMomentId as string,
+    );
+    const momentMap = await this.batchGetMomentContent(momentIds);
+
+    return momentItems
+      .map((item) => {
+        const moment = momentMap.get(item.reportedMomentId as string);
+        if (!moment) {
+          return null;
+        }
+        return {
           ...item,
           moment_content: moment.content_text,
           momentAuthorName: moment.authorName,
-        });
-      }
-    }
-
-    return hydrated;
+        };
+      })
+      .filter((item): item is ModerationItem => item !== null);
   }
 
-  private async getMomentContent(
-    momentId: string,
-  ): Promise<{ content_text: string; authorName: string | null } | null> {
-    const { data, error } = await this.supabase
-      .from('moments')
-      .select('content_text, author_id, author:author_id ( display_name )')
-      .eq('id', momentId)
-      .maybeSingle();
+  private async batchGetMomentContent(
+    momentIds: string[],
+  ): Promise<Map<string, { content_text: string; authorName: string | null }>> {
+    const result = new Map<
+      string,
+      { content_text: string; authorName: string | null }
+    >();
 
-    if (error || !data) {
-      return null;
+    if (momentIds.length === 0) {
+      return result;
     }
 
-    const row = data as {
+    const { data, error } = await this.supabase
+      .from('moments')
+      .select('id, content_text, author_id, author:author_id ( display_name )')
+      .in('id', momentIds);
+
+    if (error) {
+      return result;
+    }
+
+    const rows = (data ?? []) as {
+      id: string;
       content_text: string;
       author: { display_name?: string } | null;
-    };
+    }[];
 
-    return {
-      content_text: row.content_text ?? '',
-      authorName: row.author?.display_name ?? null,
-    };
+    for (const row of rows) {
+      result.set(row.id, {
+        content_text: row.content_text ?? '',
+        authorName: row.author?.display_name ?? null,
+      });
+    }
+
+    return result;
   }
 
   async reportUser(reporterId: string, dto: ReportUserDto) {
