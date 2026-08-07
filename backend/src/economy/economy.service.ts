@@ -23,6 +23,7 @@ import {
   SendGiftDto,
   UnlockStickerPackDto,
 } from './dto/economy.dto';
+import { sanitiseEconomyData } from './sanitise-economy.helper';
 
 export interface VirtualGiftRow {
   id: string;
@@ -245,7 +246,7 @@ export class EconomyService {
       .order('cost_coins', { ascending: true });
     const rows = response.data;
     if (!Array.isArray(rows)) {
-      return this.getDefaultGiftCatalog();
+      return sanitiseEconomyData(this.getDefaultGiftCatalog());
     }
     const gifts = rows.filter(
       (item: unknown): item is VirtualGiftRow =>
@@ -258,9 +259,9 @@ export class EconomyService {
         'animation_type' in item,
     );
     if (gifts.length === 0) {
-      return this.getDefaultGiftCatalog();
+      return sanitiseEconomyData(this.getDefaultGiftCatalog());
     }
-    return gifts;
+    return sanitiseEconomyData(gifts);
   }
 
   private getDefaultGiftCatalog(): VirtualGiftRow[] {
@@ -1013,7 +1014,7 @@ export class EconomyService {
 
     // Trim payload to only essential fields for real-time broadcast.
     // animation_url can be hundreds of bytes; send it only when populated.
-    const giftEvent: GiftEventPayload = {
+    const giftEvent: GiftEventPayload = sanitiseEconomyData<GiftEventPayload>({
       type: 'virtual_gift',
       gift_id: gift.id,
       gift_name: gift.name,
@@ -1024,7 +1025,7 @@ export class EconomyService {
       sender_name: senderProfile?.display_name ?? null,
       receiver_name: receiverProfile?.display_name ?? null,
       room_id: dto.room_id,
-    };
+    });
 
     // Broadcast the animated gift to the recipient's user channel
     // and, when applicable, the room channel for the live feed.
@@ -1033,11 +1034,11 @@ export class EconomyService {
       void this.centrifugoService.publish(`room_${dto.room_id}`, giftEvent);
     }
 
-    return {
+    return sanitiseEconomyData({
       success: true,
       coins_remaining: newSenderBalance,
       gift,
-    };
+    });
   }
 
   async unlockStickerPack(
@@ -1100,11 +1101,11 @@ export class EconomyService {
       );
     }
 
-    return {
+    return sanitiseEconomyData({
       success: true,
       coins_remaining: newBalance,
       pack,
-    };
+    });
   }
 
   async getStickerPacks(userId: string): Promise<{
@@ -1136,18 +1137,18 @@ export class EconomyService {
     );
 
     if (packs.length === 0) {
-      return {
+      return sanitiseEconomyData({
         packs: this.getDefaultStickerPacks(),
         owned_pack_ids: ownedResponse.data?.map((r) => r.pack_id) ?? [],
         user_coins: balanceResponse.data?.coins_balance ?? 0,
-      };
+      });
     }
 
-    return {
+    return sanitiseEconomyData({
       packs,
       owned_pack_ids: ownedResponse.data?.map((r) => r.pack_id) ?? [],
       user_coins: balanceResponse.data?.coins_balance ?? 0,
-    };
+    });
   }
 
   private getDefaultStickerPacks(): StickerPackRow[] {
