@@ -5,7 +5,9 @@ import {
   Post,
   UseGuards,
   UseInterceptors,
+  UseFilters,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -20,11 +22,17 @@ import {
   CacheControlInterceptor,
   CACHE_PUBLIC_LONG,
   CACHE_PUBLIC_SHORT,
-  CACHE_PRIVATE_NO_STORE,
+  CACHE_NO_STORE,
 } from './cache.interceptor';
+import { EconomyExceptionFilter } from './economy-exception.filter';
+import {
+  EconomyRateLimiterGuard,
+  EconomyRateLimit,
+} from './economy-rate-limiter.guard';
 
 @Controller('economy')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseAuthGuard, EconomyRateLimiterGuard)
+@UseFilters(EconomyExceptionFilter)
 export class EconomyController {
   constructor(private readonly economyService: EconomyService) {}
 
@@ -34,6 +42,7 @@ export class EconomyController {
    * Cloudflare edge nodes for 24 hours with stale-while-revalidate.
    */
   @Get('catalog')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_LONG))
   async getCatalog() {
     return this.economyService.getCatalog();
@@ -45,6 +54,7 @@ export class EconomyController {
    * with app updates, so aggressive caching is safe.
    */
   @Get('packages')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_LONG))
   getPackages() {
     return this.economyService.getPackages();
@@ -52,9 +62,12 @@ export class EconomyController {
 
   /**
    * User coin balance: strictly private, never cached.
+   * Per-user rate limit prevents balance-enumeration attacks.
    */
   @Get('balance')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @EconomyRateLimit({ maxRequests: 20, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async getBalance(@CurrentUser() user: User | null) {
     if (!user) return { coins_balance: 0 };
     return await this.economyService.getBalance(user.id);
@@ -62,9 +75,13 @@ export class EconomyController {
 
   /**
    * Daily check-in: mutation endpoint, never cached.
+   * Redis deduplication already prevents double-claiming per day, but the
+   * per-user rate limit prevents rapid-fire Redis hammering.
    */
   @Post('daily-check-in')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @EconomyRateLimit({ maxRequests: 3, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async claimDailyCheckIn(@CurrentUser() user: User | null) {
     if (!user) return null;
     return await this.economyService.claimDailyCheckIn(user.id);
@@ -72,9 +89,12 @@ export class EconomyController {
 
   /**
    * Stripe checkout session creation: mutation, never cached.
+   * Tightly rate-limited because each call creates a real Stripe session.
    */
   @Post('create-checkout-session')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @EconomyRateLimit({ maxRequests: 5, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async createCheckoutSession(
     @CurrentUser() user: User | null,
     @Body() dto: CreateCoinCheckoutSessionDto,
@@ -88,9 +108,13 @@ export class EconomyController {
 
   /**
    * Coin purchase: mutation, never cached.
+   * Tightly rate-limited because this interacts with external payment
+   * verification APIs (Stripe / Apple / Google).
    */
   @Post('purchase-coins')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @EconomyRateLimit({ maxRequests: 5, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async purchaseCoins(
     @CurrentUser() user: User | null,
     @Body() dto: PurchaseCoinsDto,
@@ -101,9 +125,12 @@ export class EconomyController {
 
   /**
    * Gift sending: mutation with Centrifugo broadcast, never cached.
+   * Per-user rate limit prevents gift-spam and coin-drain enumeration.
    */
   @Post('send-gift')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @EconomyRateLimit({ maxRequests: 10, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async sendGift(@CurrentUser() user: User | null, @Body() dto: SendGiftDto) {
     if (!user) return null;
     return await this.economyService.sendGift(user.id, dto);
@@ -115,6 +142,7 @@ export class EconomyController {
    * fresh enough that recently unlocked packs appear promptly.
    */
   @Get('sticker-packs')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
   async getStickerPacks(@CurrentUser() user: User | null) {
     if (!user) return null;
@@ -123,9 +151,12 @@ export class EconomyController {
 
   /**
    * Sticker pack unlock: mutation, never cached.
+   * Per-user rate limit deters brute-force pack-unlock attempts.
    */
   @Post('unlock-sticker-pack')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @EconomyRateLimit({ maxRequests: 10, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async unlockStickerPack(
     @CurrentUser() user: User | null,
     @Body() dto: UnlockStickerPackDto,

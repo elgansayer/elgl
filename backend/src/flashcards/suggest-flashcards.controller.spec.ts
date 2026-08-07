@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SuggestFlashcardsController } from './suggest-flashcards.controller';
 import { SuggestFlashcardsService } from './suggest-flashcards.service';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { SrsRateLimiterGuard } from './srs-rate-limiter.guard';
 
 describe('SuggestFlashcardsController', () => {
   let controller: SuggestFlashcardsController;
@@ -20,6 +21,8 @@ describe('SuggestFlashcardsController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .overrideGuard(SrsRateLimiterGuard)
       .useValue({ canActivate: jest.fn().mockReturnValue(true) })
       .compile();
 
