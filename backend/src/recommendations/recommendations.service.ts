@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MatchmakingErrorBoundaryService } from '../matchmaking/matchmaking-error-boundary.service';
 import { MOCK_USERS } from '../mock-data';
 
 export interface RecommendedUserDto {
@@ -25,6 +26,8 @@ const DAILY_REDIS_TTL = 86400; // 24 hours
 const DAILY_LIMIT = 10;
 const FALLBACK_LIMIT = 20;
 
+const SERVICE_NAME = 'recommendations';
+
 interface UserRow {
   id: string;
   display_name?: string | null;
@@ -42,7 +45,10 @@ interface UserRow {
 export class RecommendationsService {
   private readonly logger = new Logger(RecommendationsService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly errorBoundary: MatchmakingErrorBoundaryService,
+  ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async calculateDailyRecommendations(): Promise<void> {
@@ -109,6 +115,11 @@ export class RecommendationsService {
       );
     } catch (error) {
       this.logger.error('Error calculating daily recommendations', error);
+      await this.errorBoundary.captureError(error, {
+        operation: 'calculateDailyRecommendations',
+        service_name: SERVICE_NAME,
+        params: {},
+      });
     }
   }
 
@@ -129,6 +140,12 @@ export class RecommendationsService {
         `Redis unavailable for daily recommendations (user ${userId}), falling back to live computation`,
         error,
       );
+      await this.errorBoundary.captureError(error, {
+        operation: 'getDailyRecommendations_redis',
+        service_name: SERVICE_NAME,
+        user_id: userId,
+        tier: 'cache',
+      });
       // Fall through to live computation
     }
 
@@ -140,6 +157,12 @@ export class RecommendationsService {
         `Live language-exchange fallback failed for user ${userId}`,
         error,
       );
+      await this.errorBoundary.captureError(error, {
+        operation: 'getDailyRecommendations_languageExchange',
+        service_name: SERVICE_NAME,
+        user_id: userId,
+        tier: 'language_exchange',
+      });
     }
 
     return [];
@@ -157,6 +180,12 @@ export class RecommendationsService {
         `Interest-based recommendations failed for user ${userId}, falling back to language exchange`,
         error,
       );
+      await this.errorBoundary.captureError(error, {
+        operation: 'getRecommendations_tier1_interest',
+        service_name: SERVICE_NAME,
+        user_id: userId,
+        tier: 'interest',
+      });
     }
 
     // Tier 2: language exchange matchmaking
@@ -170,6 +199,12 @@ export class RecommendationsService {
         `Language exchange fallback failed for user ${userId}`,
         error,
       );
+      await this.errorBoundary.captureError(error, {
+        operation: 'getRecommendations_tier2_languageExchange',
+        service_name: SERVICE_NAME,
+        user_id: userId,
+        tier: 'language_exchange',
+      });
     }
 
     // Tier 3: most active users
@@ -181,6 +216,12 @@ export class RecommendationsService {
         `Active users fallback failed for user ${userId}`,
         error,
       );
+      await this.errorBoundary.captureError(error, {
+        operation: 'getRecommendations_tier3_activeUsers',
+        service_name: SERVICE_NAME,
+        user_id: userId,
+        tier: 'active_users',
+      });
     }
 
     // Tier 4: mock data as ultimate fallback
@@ -206,6 +247,12 @@ export class RecommendationsService {
         `Tier 1 (interest) unavailable for user ${userId}, degrading`,
         error,
       );
+      await this.errorBoundary.captureError(error, {
+        operation: 'getRecommendationsWithFallback_tier1_interest',
+        service_name: SERVICE_NAME,
+        user_id: userId,
+        tier: 'interest',
+      });
     }
 
     // Tier 2: Language exchange
@@ -224,6 +271,12 @@ export class RecommendationsService {
         `Tier 2 (language exchange) unavailable for user ${userId}, degrading`,
         error,
       );
+      await this.errorBoundary.captureError(error, {
+        operation: 'getRecommendationsWithFallback_tier2_languageExchange',
+        service_name: SERVICE_NAME,
+        user_id: userId,
+        tier: 'language_exchange',
+      });
     }
 
     // Tier 3: Most active users
@@ -240,6 +293,12 @@ export class RecommendationsService {
         `Tier 3 (active users) unavailable for user ${userId}, degrading to mock data`,
         error,
       );
+      await this.errorBoundary.captureError(error, {
+        operation: 'getRecommendationsWithFallback_tier3_activeUsers',
+        service_name: SERVICE_NAME,
+        user_id: userId,
+        tier: 'active_users',
+      });
     }
 
     // Tier 4: Mock data (always available)

@@ -4,6 +4,7 @@ import {
   RecommendedUserDto,
 } from './recommendations.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MatchmakingErrorBoundaryService } from '../matchmaking/matchmaking-error-boundary.service';
 
 type QueryChainMock = {
   select: jest.Mock;
@@ -61,6 +62,7 @@ describe('RecommendationsService', () => {
   let service: RecommendationsService;
   let mockRedis: { get: jest.Mock; set: jest.Mock };
   let mockFrom: jest.Mock;
+  let mockErrorBoundary: { captureError: jest.Mock; reportCrash: jest.Mock };
 
   beforeEach(async () => {
     mockRedis = {
@@ -69,6 +71,11 @@ describe('RecommendationsService', () => {
     };
 
     mockFrom = jest.fn();
+
+    mockErrorBoundary = {
+      captureError: jest.fn().mockResolvedValue(undefined),
+      reportCrash: jest.fn().mockResolvedValue(null),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -81,6 +88,10 @@ describe('RecommendationsService', () => {
             }),
             getRedisClient: jest.fn().mockReturnValue(mockRedis),
           },
+        },
+        {
+          provide: MatchmakingErrorBoundaryService,
+          useValue: mockErrorBoundary,
         },
       ],
     }).compile();
