@@ -300,6 +300,18 @@ describe('SearchQueryDto', () => {
       expect(errors).toHaveLength(0);
     });
 
+    it('should accept only available_time_start', async () => {
+      const dto = makeDto({ available_time_start: '08:30' });
+      const errors = await validate(dto);
+      expect(errors).toHaveLength(0);
+    });
+
+    it('should accept only available_time_end', async () => {
+      const dto = makeDto({ available_time_end: '22:00' });
+      const errors = await validate(dto);
+      expect(errors).toHaveLength(0);
+    });
+
     it('should reject invalid time format for available_time_start', async () => {
       const dto = makeDto({ available_time_start: '9:00' });
       const errors = await validate(dto);

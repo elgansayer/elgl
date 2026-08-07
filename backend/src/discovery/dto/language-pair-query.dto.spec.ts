@@ -183,5 +183,12 @@ describe('LanguagePairQueryDto', () => {
       expect(errors).toHaveLength(0);
       expect(dto.voice_room_active).toBe(true);
     });
+
+    it('should transform non-"true" string to boolean false', async () => {
+      const dto = makeDto({ voice_room_active: 'false' });
+      const errors = await validate(dto);
+      expect(errors).toHaveLength(0);
+      expect(dto.voice_room_active).toBe(false);
+    });
   });
 });
