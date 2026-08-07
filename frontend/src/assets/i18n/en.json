@@ -2168,5 +2168,8 @@
   "wordModal.saveLearningBtn": "🟡 Save to learning",
   "wordModal.srsStatus": "Spaced repetition status: {{status}}",
   "wordModal.title": "Dictionary Definition",
-  "wordModal.translationLabel": "Translation"
+  "wordModal.translationLabel": "Translation",
+  "settings.saveSuccess": "Settings saved successfully",
+  "settings.saveError": "Failed to save settings",
+  "settings.loadProfileError": "Failed to load profile"
 }
