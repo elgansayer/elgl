@@ -181,6 +181,14 @@ export const routes: Routes = [
     title: 'Notification Customisation - HelloTalk',
   },
   {
+    path: 'settings/privacy',
+    loadComponent: () =>
+      import('./pages/settings/privacy-settings/privacy-settings.component').then(
+        (m) => m.PrivacySettingsComponent,
+      ),
+    title: 'Privacy Settings - HelloTalk',
+  },
+  {
     path: 'settings/appearance',
     loadComponent: () =>
       import('./pages/settings/appearance-settings/appearance-settings.component').then(
