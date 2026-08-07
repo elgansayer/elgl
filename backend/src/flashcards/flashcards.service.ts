@@ -7,6 +7,7 @@ import { Flashcard } from './interfaces/flashcard.interface';
 import { XpService } from '../xp/xp.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { withRetry } from '../common/retry';
+import { sanitiseFlashcardData } from './sanitise-flashcard.helper';
 
 const CACHE_TTL_FLASHCARDS = 300;
 const CACHE_TTL_DUE_REVIEWS = 120;
@@ -116,7 +117,7 @@ export class FlashcardsService {
       'Flashcard created/updated',
     );
 
-    return response.data;
+    return sanitiseFlashcardData(response.data);
   }
 
   async updateSrsLevel(
@@ -213,7 +214,7 @@ export class FlashcardsService {
       'SRS review completed',
     );
 
-    return response.data;
+    return sanitiseFlashcardData(response.data);
   }
 
   /**
@@ -332,8 +333,12 @@ export class FlashcardsService {
         'Failed to cache SRS flashcards; proceeding without caching',
       );
     }
+<<<<<<< HEAD
 
     return result;
+=======
+    return sanitiseFlashcardData(response.data);
+>>>>>>> origin/main
   }
 
   async getDueReviews(userId: string): Promise<Flashcard[]> {
@@ -376,7 +381,11 @@ export class FlashcardsService {
         'Failed to cache SRS due reviews; proceeding without caching',
       );
     }
+<<<<<<< HEAD
 
     return result;
+=======
+    return sanitiseFlashcardData(response.data);
+>>>>>>> origin/main
   }
 }
