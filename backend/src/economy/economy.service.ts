@@ -996,8 +996,8 @@ export class EconomyService {
       animation_url: gift.animation_url?.slice(0, 512) ?? '',
       animation_type: gift.animation_type,
       coin_value: gift.cost_coins,
-      sender_name: (senderProfile?.display_name ?? null),
-      receiver_name: (receiverProfile?.display_name ?? null),
+      sender_name: senderProfile?.display_name ?? null,
+      receiver_name: receiverProfile?.display_name ?? null,
       room_id: dto.room_id,
     };
 
@@ -1082,70 +1082,140 @@ export class EconomyService {
     };
   }
 
-  async getStickerPacks(
-    userId: string,
-  ): Promise<{
+  async getStickerPacks(userId: string): Promise<{
     packs: StickerPackRow[];
     owned_pack_ids: string[];
     user_coins: number;
   }> {
     const supabase = this.supabaseService.getClient();
 
-    const [packsResponse, ownedResponse, balanceResponse] =
-      await Promise.all([
-        supabase
-          .from('sticker_packs')
-          .select('*')
-          .order('cost_coins', { ascending: true }),
-        supabase
-          .from('user_sticker_packs')
-          .select('pack_id')
-          .eq('user_id', userId),
-        supabase
-          .from('users')
-          .select('coins_balance')
-          .eq('id', userId)
-          .single(),
-      ]);
+    const [packsResponse, ownedResponse, balanceResponse] = await Promise.all([
+      supabase
+        .from('sticker_packs')
+        .select('*')
+        .order('cost_coins', { ascending: true }),
+      supabase
+        .from('user_sticker_packs')
+        .select('pack_id')
+        .eq('user_id', userId),
+      supabase.from('users').select('coins_balance').eq('id', userId).single(),
+    ]);
 
-    const packs: StickerPackRow[] = (packsResponse.data ?? [])
-      .filter(
-        (item: unknown): item is StickerPackRow =>
-          typeof item === 'object' &&
-          item !== null &&
-          'id' in item &&
-          'name' in item &&
-          'cost_coins' in item,
-      );
+    const packs: StickerPackRow[] = (packsResponse.data ?? []).filter(
+      (item: unknown): item is StickerPackRow =>
+        typeof item === 'object' &&
+        item !== null &&
+        'id' in item &&
+        'name' in item &&
+        'cost_coins' in item,
+    );
 
     if (packs.length === 0) {
       return {
         packs: this.getDefaultStickerPacks(),
-        owned_pack_ids:
-          ownedResponse.data?.map((r) => r.pack_id) ?? [],
-        user_coins:
-          balanceResponse.data?.coins_balance ?? 0,
+        owned_pack_ids: ownedResponse.data?.map((r) => r.pack_id) ?? [],
+        user_coins: balanceResponse.data?.coins_balance ?? 0,
       };
     }
 
     return {
       packs,
-      owned_pack_ids:
-        ownedResponse.data?.map((r) => r.pack_id) ?? [],
+      owned_pack_ids: ownedResponse.data?.map((r) => r.pack_id) ?? [],
       user_coins: balanceResponse.data?.coins_balance ?? 0,
     };
   }
 
   private getDefaultStickerPacks(): StickerPackRow[] {
     return [
-      { id: 'stk_pack_1', name: 'Happy Corgi Pack', cost_coins: 50, is_animated: false, sticker_urls: ['assets/stickers/happy.png', 'assets/stickers/laugh.png', 'assets/stickers/love.png'] },
-      { id: 'stk_pack_2', name: 'Rainbow Unicorns', cost_coins: 200, is_animated: true, sticker_urls: ['assets/stickers/unicorn-gallop.webm', 'assets/stickers/unicorn-sparkle.webm'], animation_url: 'assets/animations/unicorn.json' },
-      { id: 'stk_pack_3', name: 'Study Buddies', cost_coins: 100, is_animated: false, sticker_urls: ['assets/stickers/book.png', 'assets/stickers/pencil.png', 'assets/stickers/backpack.png'] },
-      { id: 'stk_pack_4', name: 'Golden Dragons', cost_coins: 500, is_animated: true, sticker_urls: ['assets/stickers/dragon-fire.webm', 'assets/stickers/dragon-fly.webm'], animation_url: 'assets/animations/dragon.json' },
-      { id: 'stk_pack_5', name: 'Party Animals', cost_coins: 150, is_animated: true, sticker_urls: ['assets/stickers/dog-dance.webm', 'assets/stickers/cat-party.webm', 'assets/stickers/bird-dj.webm'], animation_url: 'assets/animations/party.json' },
-      { id: 'stk_pack_6', name: 'Chill Vibes', cost_coins: 80, is_animated: false, sticker_urls: ['assets/stickers/coffee.png', 'assets/stickers/sunset.png', 'assets/stickers/hammock.png'] },
-      { id: 'stk_pack_7', name: 'Foodie Fun', cost_coins: 120, is_animated: false, sticker_urls: ['assets/stickers/pizza.png', 'assets/stickers/sushi.png', 'assets/stickers/taco.png'] },
-      { id: 'stk_pack_8', name: 'Travel Stamps', cost_coins: 180, is_animated: false, sticker_urls: ['assets/stickers/passport.png', 'assets/stickers/suitcase.png', 'assets/stickers/camera.png'] },
+      {
+        id: 'stk_pack_1',
+        name: 'Happy Corgi Pack',
+        cost_coins: 50,
+        is_animated: false,
+        sticker_urls: [
+          'assets/stickers/happy.png',
+          'assets/stickers/laugh.png',
+          'assets/stickers/love.png',
+        ],
+      },
+      {
+        id: 'stk_pack_2',
+        name: 'Rainbow Unicorns',
+        cost_coins: 200,
+        is_animated: true,
+        sticker_urls: [
+          'assets/stickers/unicorn-gallop.webm',
+          'assets/stickers/unicorn-sparkle.webm',
+        ],
+        animation_url: 'assets/animations/unicorn.json',
+      },
+      {
+        id: 'stk_pack_3',
+        name: 'Study Buddies',
+        cost_coins: 100,
+        is_animated: false,
+        sticker_urls: [
+          'assets/stickers/book.png',
+          'assets/stickers/pencil.png',
+          'assets/stickers/backpack.png',
+        ],
+      },
+      {
+        id: 'stk_pack_4',
+        name: 'Golden Dragons',
+        cost_coins: 500,
+        is_animated: true,
+        sticker_urls: [
+          'assets/stickers/dragon-fire.webm',
+          'assets/stickers/dragon-fly.webm',
+        ],
+        animation_url: 'assets/animations/dragon.json',
+      },
+      {
+        id: 'stk_pack_5',
+        name: 'Party Animals',
+        cost_coins: 150,
+        is_animated: true,
+        sticker_urls: [
+          'assets/stickers/dog-dance.webm',
+          'assets/stickers/cat-party.webm',
+          'assets/stickers/bird-dj.webm',
+        ],
+        animation_url: 'assets/animations/party.json',
+      },
+      {
+        id: 'stk_pack_6',
+        name: 'Chill Vibes',
+        cost_coins: 80,
+        is_animated: false,
+        sticker_urls: [
+          'assets/stickers/coffee.png',
+          'assets/stickers/sunset.png',
+          'assets/stickers/hammock.png',
+        ],
+      },
+      {
+        id: 'stk_pack_7',
+        name: 'Foodie Fun',
+        cost_coins: 120,
+        is_animated: false,
+        sticker_urls: [
+          'assets/stickers/pizza.png',
+          'assets/stickers/sushi.png',
+          'assets/stickers/taco.png',
+        ],
+      },
+      {
+        id: 'stk_pack_8',
+        name: 'Travel Stamps',
+        cost_coins: 180,
+        is_animated: false,
+        sticker_urls: [
+          'assets/stickers/passport.png',
+          'assets/stickers/suitcase.png',
+          'assets/stickers/camera.png',
+        ],
+      },
     ];
   }
 }

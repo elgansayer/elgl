@@ -138,7 +138,6 @@ export class StripeService {
     }
   }
 
-
   private getTierForPlan(planId?: string, interval?: string): string {
     if (!planId) {
       return interval === 'year' ? 'developer' : 'consumer';
@@ -161,7 +160,8 @@ export class StripeService {
     );
 
     const tier = this.getTierForPlan(planId, interval);
-    const isActive = subscription.status === 'active' || subscription.status === 'trialing';
+    const isActive =
+      subscription.status === 'active' || subscription.status === 'trialing';
 
     await this.monetisationService.updateVipStatusFromWebhook(
       userId,
@@ -181,7 +181,8 @@ export class StripeService {
     );
 
     const tier = this.getTierForPlan(planId, metadata.interval);
-    const isActive = subscription.status === 'active' || subscription.status === 'trialing';
+    const isActive =
+      subscription.status === 'active' || subscription.status === 'trialing';
 
     await this.monetisationService.updateVipStatusFromWebhook(
       userId,
@@ -196,7 +197,11 @@ export class StripeService {
     const userId = metadata.userId;
 
     this.logger.log(`Subscription cancelled for user ${userId}`);
-    await this.monetisationService.updateVipStatusFromWebhook(userId, false, null);
+    await this.monetisationService.updateVipStatusFromWebhook(
+      userId,
+      false,
+      null,
+    );
   }
 
   async handleInvoicePaymentSucceeded(event: Stripe.Event): Promise<void> {

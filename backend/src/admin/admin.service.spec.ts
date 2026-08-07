@@ -178,7 +178,10 @@ describe('AdminService', () => {
           blocked_id: 'user-2',
           created_at: '2026-01-01T00:00:00Z',
           blocker: { display_name: 'Ada', avatar_url: null },
-          blocked: { display_name: 'Bob', avatar_url: 'https://example.com/bob.png' },
+          blocked: {
+            display_name: 'Bob',
+            avatar_url: 'https://example.com/bob.png',
+          },
         },
       ];
       mockQueryBuilder.range.mockResolvedValue({
@@ -260,15 +263,13 @@ describe('AdminService', () => {
     });
 
     it('throws NotFoundException when delete fails', async () => {
-      mockQueryBuilder.delete = jest
-        .fn()
-        .mockReturnValue({
-          eq: jest
-            .fn()
-            .mockResolvedValue({ error: { message: 'not found' } }),
-        });
+      mockQueryBuilder.delete = jest.fn().mockReturnValue({
+        eq: jest.fn().mockResolvedValue({ error: { message: 'not found' } }),
+      });
 
-      await expect(service.removeBlock('missing-block')).rejects.toThrow(NotFoundException);
+      await expect(service.removeBlock('missing-block')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

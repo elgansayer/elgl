@@ -29,7 +29,7 @@ export async function up(client: SupabaseClient): Promise<void> {
 
       CREATE INDEX IF NOT EXISTS idx_deck_flashcards_deck_id ON deck_flashcards(deck_id);
       CREATE INDEX IF NOT EXISTS idx_deck_flashcards_flashcard_id ON deck_flashcards(flashcard_id);
-    `
+    `,
   });
 }
 
@@ -38,6 +38,6 @@ export async function down(client: SupabaseClient): Promise<void> {
     sql: `
       DROP TABLE IF EXISTS deck_flashcards;
       DROP TABLE IF EXISTS decks;
-    `
+    `,
   });
 }
