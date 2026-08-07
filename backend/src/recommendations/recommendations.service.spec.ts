@@ -4,6 +4,7 @@ import {
   RecommendedUserDto,
 } from './recommendations.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { getLoggerToken } from 'nestjs-pino';
 
 type QueryChainMock = {
   select: jest.Mock;
@@ -80,6 +81,15 @@ describe('RecommendationsService', () => {
               from: mockFrom,
             }),
             getRedisClient: jest.fn().mockReturnValue(mockRedis),
+          },
+        },
+        {
+          provide: getLoggerToken(RecommendationsService.name),
+          useValue: {
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
           },
         },
       ],

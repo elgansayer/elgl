@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MOCK_USERS } from '../mock-data';
 
@@ -40,13 +41,15 @@ interface UserRow {
 
 @Injectable()
 export class RecommendationsService {
-  private readonly logger = new Logger(RecommendationsService.name);
-
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    @InjectPinoLogger(RecommendationsService.name)
+    private readonly logger: PinoLogger,
+    private readonly supabaseService: SupabaseService,
+  ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async calculateDailyRecommendations(): Promise<void> {
-    this.logger.log('Starting daily recommendation calculations...');
+    this.logger.info('Starting daily recommendation calculations...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
@@ -104,7 +107,7 @@ export class RecommendationsService {
         }
       }
 
-      this.logger.log(
+      this.logger.info(
         'Successfully calculated and cached daily recommendations.',
       );
     } catch (error) {
@@ -443,7 +446,7 @@ export class RecommendationsService {
   private recommendationsFromMock(
     userId: string,
   ): RecommendedUserDto[] {
-    this.logger.log(
+    this.logger.info(
       `Using mock data as ultimate fallback for user ${userId}`,
     );
 
