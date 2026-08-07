@@ -31,7 +31,7 @@
           <div class="p-4">
             <p class="text-xs text-text-secondary mb-3">{{ 'privacy.profileVisibilityDesc' | t }}</p>
             <div class="flex gap-2" role="radiogroup">
-              @for (option of [{value: 'everyone', key: 'privacy.everyone'}, {value: 'vips_only', key: 'privacy.vipsOnly'}, {value: 'hidden', key: 'privacy.hidden'}]; track option.value) {
+              @for (option of visibilityOptions; track option.value) {
                 <button
                   type="button"
                   class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"

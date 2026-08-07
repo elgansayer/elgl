@@ -11,8 +11,8 @@ import { Directive } from '@angular/core';
   host: {
     '[attr.role]': '"button"',
     '[attr.tabindex]': '"0"',
-    '(keydown.enter)': 'onEnter($event)',
-    '(keydown.space)': 'onSpace($event)',
+    '(keydown.enter)': 'onEnter($any($event))',
+    '(keydown.space)': 'onSpace($any($event))',
   },
 })
 export class A11yClickableDirective {

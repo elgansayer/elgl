@@ -1,11 +1,12 @@
 import { Injectable } from '@angular/core';
 import DOMPurify from 'dompurify';
+import type { DOMPurify as IDOMPurify } from 'dompurify';
 
 @Injectable({
   providedIn: 'root',
 })
 export class HtmlSanitisationService {
-  private readonly purify: DOMPurify.DOMPurifyI;
+  private readonly purify: IDOMPurify;
 
   constructor() {
     this.purify = DOMPurify();
