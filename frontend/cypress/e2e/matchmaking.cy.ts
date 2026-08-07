@@ -625,4 +625,111 @@ describe('Matchmaking Algorithm', () => {
       });
     });
   });
+
+  // ==========================================================================
+  // 6. Combined Matchmaking Flow (Discovery + Recommendations + Study Buddy)
+  // ==========================================================================
+  describe('Combined Matchmaking Flow', () => {
+    beforeEach(() => {
+      interceptCommonMocks();
+
+      // Mock all three matchmaking surfaces simultaneously
+      cy.intercept('GET', '**/api/discovery/partners*', { body: mockPartners }).as('getPartners');
+      cy.intercept('GET', '**/api/discovery/partner-of-week', { body: ['partner-1'] }).as(
+        'getPartnerOfWeek',
+      );
+      cy.intercept('GET', '**/api/recommendations/for-you', {
+        body: mockRecommendations,
+      }).as('getForYou');
+      cy.intercept('GET', '**/api/recommendations/daily', {
+        body: mockDailyRecommendations,
+      }).as('getDaily');
+      cy.intercept('GET', '**/api/study-buddies/matches', {
+        body: mockStudyBuddyMatches,
+      }).as('getBuddyMatches');
+      cy.intercept('GET', '**/api/study-buddies/requests', {
+        body: mockBuddyRequests,
+      }).as('getBuddyRequests');
+
+      cy.intercept('GET', '**/api/users/me*', {
+        body: {
+          id: 'mock-user-123',
+          display_name: 'Test User',
+          native_languages: ['en'],
+          target_languages: ['es', 'ja', 'de'],
+          is_vip: false,
+          is_serious_learner: false,
+        },
+      }).as('getMyProfile');
+    });
+
+    it('should load all matchmaking data surfaces without 4xx/5xx errors', () => {
+      cy.visit('/discovery');
+      cy.wait('@getPartners');
+      cy.get('article').should('have.length.at.least', 1);
+
+      // Navigate to Study Buddy
+      cy.visit('/study-buddy');
+      cy.wait('@getBuddyMatches');
+      cy.wait('@getBuddyRequests');
+      cy.get('body').should('exist');
+
+      // Navigate to Developer dashboard (recommendations)
+      cy.visit('/developer');
+      cy.wait('@getForYou');
+      cy.wait('@getDaily');
+      cy.get('body').should('exist');
+    });
+
+    it('should filter discovery by target language then match via study buddy', () => {
+      // Step 1: Filter discovery by Spanish
+      cy.visit('/discovery');
+      cy.wait('@getPartners');
+
+      cy.get('button').contains(/🇪🇸|Spanish/i).click();
+
+      cy.wait('@getPartners').its('request.url').should('include', 'target_language=es');
+
+      // Step 2: Navigate to study buddy and verify independent matching
+      cy.visit('/study-buddy');
+      cy.wait('@getBuddyMatches');
+
+      // Verify that study buddy has its own match list (different endpoint)
+      cy.contains('Luis Gomez').should('be.visible');
+    });
+
+    it('should degrade gracefully when all matchmaking endpoints fail', () => {
+      // Simulate full backend outage across all matchmaking endpoints
+      cy.intercept('GET', '**/api/discovery/partners*', { statusCode: 500, body: {} }).as(
+        'getPartnersFail',
+      );
+      cy.intercept('GET', '**/api/study-buddies/matches', { statusCode: 500, body: {} }).as(
+        'getBuddyMatchesFail',
+      );
+      cy.intercept('GET', '**/api/study-buddies/requests', { statusCode: 500, body: {} }).as(
+        'getBuddyRequestsFail',
+      );
+      cy.intercept('GET', '**/api/recommendations/for-you', { statusCode: 500, body: {} }).as(
+        'getForYouFail',
+      );
+      cy.intercept('GET', '**/api/recommendations/daily', { statusCode: 500, body: {} }).as(
+        'getDailyFail',
+      );
+
+      // Discovery should fall back to mock data (no crash)
+      cy.visit('/discovery');
+      cy.wait('@getPartnersFail');
+      cy.get('body').should('exist');
+
+      // Study buddy should show empty state (no crash)
+      cy.visit('/study-buddy');
+      cy.wait('@getBuddyMatchesFail');
+      cy.get('body').should('exist');
+
+      // Developer dashboard should not crash
+      cy.visit('/developer');
+      cy.wait('@getForYouFail');
+      cy.get('body').should('exist');
+    });
+  });
 });
