@@ -36,6 +36,8 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:escrow-pay
 | `test:srs-flashcards:report` | (output + HTML) | Runs the SRS Flashcards test and generates an HTML report |
 | `test:escrow-payments` | `escrow-payments.load.yml` | Load tests the Escrow Payments endpoints |
 | `test:escrow-payments:report` | (output + HTML) | Runs the Escrow Payments test and generates an HTML report |
+| `test:lingq-reading` | `lingq-reading-engine.load.yml` | Load tests the LingQ Reading Engine: Curated Content, NLP, and SRS Flashcards endpoints |
+| `test:lingq-reading:report` | (output + HTML) | Runs the LingQ Reading Engine test and generates an HTML report |
 
 ## Configuration
 
@@ -117,3 +119,31 @@ Both test scripts include the following phases:
 - `POST /economy/send-gift` - Send virtual gift to another user
 - `GET /economy/sticker-packs` - Sticker pack storefront
 - `POST /economy/unlock-sticker-pack` - Unlock a sticker pack
+
+### LingQ Reading Engine
+
+#### Curated Content (`/curated-content`)
+- `GET /curated-content/articles` - List articles (optional `language` and `cefr_level` query params)
+- `GET /curated-content/articles/:id` - Get article by ID
+- `POST /curated-content/articles` - Create a new reading article
+- `GET /curated-content/dialogues` - List dialogues (optional `language` and `cefr_level` query params)
+- `GET /curated-content/dialogues/:id` - Get dialogue by ID
+- `POST /curated-content/dialogues` - Create a new dialogue
+
+#### NLP (`/nlp`)
+- `POST /nlp/detect-language` - Detect language of input text
+- `POST /nlp/translate` - Translate text (DeepL integration)
+- `POST /nlp/translate-ui` - Translate UI keys for i18n
+- `POST /nlp/grammar-check` - Grammar check via Azure Translator
+- `POST /nlp/explain-grammar` - Detailed grammar explanation
+- `POST /nlp/pronunciation-score` - Score pronunciation via Azure Speech
+- `POST /nlp/simplify` - Simplify complex text for learners
+- `POST /nlp/translate-and-correct` - Combined translate + correct
+- `POST /nlp/transcribe-audio` - Audio transcription
+
+#### SRS Flashcards (`/flashcards`)
+- `POST /flashcards` - Create or update a flashcard
+- `PATCH /flashcards/:id/srs` - Review a flashcard (SM-2 algorithm)
+- `GET /flashcards` - List flashcards (optional `level` query param)
+- `GET /flashcards/due` - Get flashcards due for review
+- `GET /flashcards/suggest` - Suggest new vocabulary from text
