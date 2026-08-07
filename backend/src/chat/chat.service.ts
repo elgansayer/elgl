@@ -28,6 +28,7 @@ import {
 } from '../notifications/events/notification.events';
 import { SystemMessageService } from './services/system-message.service';
 import { XpService } from '../xp/xp.service';
+import { UsersService } from '../users/users.service';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
 import { ShareContactDto } from './dto/share-contact.dto';
 import { randomUUID } from 'crypto';
@@ -65,6 +66,7 @@ export class ChatService {
     private readonly chatLlmService: ChatLlmService,
     private readonly systemMessageService: SystemMessageService,
     private readonly xpService: XpService,
+    private readonly usersService: UsersService,
   ) {}
 
   async generateConnectionToken(userId: string): Promise<string> {
@@ -259,6 +261,11 @@ export class ChatService {
           'Your message appears to be a duplicate or spam content.',
         );
       }
+    }
+
+    // Enforce receiver's message filters for initial messages
+    if (receiverId) {
+      await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
     }
 
     const insertResponse = await supabase
@@ -689,6 +696,83 @@ export class ChatService {
     }
 
     return room;
+  }
+
+  private async enforceMessageFilters(
+    senderId: string,
+    receiverId: string,
+    roomId: string,
+  ): Promise<void> {
+    // Only apply to the first message from this sender in this room
+    const supabase = this.supabaseService.getClient();
+    const { data: existingMessages } = await supabase
+      .from('chat_messages')
+      .select('id')
+      .eq('room_id', roomId)
+      .eq('sender_id', senderId)
+      .limit(1);
+
+    if (existingMessages && existingMessages.length > 0) {
+      return; // Not the first message; skip filter enforcement
+    }
+
+    // Load receiver's message filters
+    const filters = await this.usersService.getMessageFilters(receiverId);
+    if (!filters || Object.keys(filters).length === 0) {
+      return; // No filters configured
+    }
+
+    // Load sender's profile for validation
+    const senderProfile = await this.usersService.getProfile(senderId);
+    if (!senderProfile) {
+      return; // Can't validate without profile
+    }
+
+    // Check age filter
+    if (filters.age_min !== undefined || filters.age_max !== undefined) {
+      const senderAge = senderProfile.age;
+      if (senderAge !== undefined && senderAge !== null) {
+        if (filters.age_min !== undefined && senderAge < filters.age_min) {
+          throw new ForbiddenException(
+            'Your age does not meet the recipient\'s minimum age requirement.',
+          );
+        }
+        if (filters.age_max !== undefined && senderAge > filters.age_max) {
+          throw new ForbiddenException(
+            'Your age exceeds the recipient\'s maximum age requirement.',
+          );
+        }
+      }
+    }
+
+    // Check native language filter
+    if (
+      filters.allowed_native_languages &&
+      filters.allowed_native_languages.length > 0
+    ) {
+      const senderLanguages = senderProfile.native_languages ?? [];
+      const hasAllowedLanguage = senderLanguages.some((lang) =>
+        filters.allowed_native_languages!.includes(lang),
+      );
+      if (!hasAllowedLanguage) {
+        throw new ForbiddenException(
+          'Your native language is not allowed by the recipient\'s message filters.',
+        );
+      }
+    }
+
+    // Check gender filter
+    if (
+      filters.allowed_genders &&
+      filters.allowed_genders.length > 0
+    ) {
+      const senderGender = senderProfile.gender;
+      if (!senderGender || !filters.allowed_genders.includes(senderGender)) {
+        throw new ForbiddenException(
+          'Your gender is not allowed by the recipient\'s message filters.',
+        );
+      }
+    }
   }
 
   private async verifyAdmin(userId: string, roomId: string): Promise<void> {

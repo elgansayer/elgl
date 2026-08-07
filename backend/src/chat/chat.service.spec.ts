@@ -17,6 +17,7 @@ import { SystemMessageService } from './services/system-message.service';
 import { SpamDetectionService } from '../spam-detection/spam-detection.service';
 import { ChatLlmService } from './chat-llm.service';
 import { XpService } from '../xp/xp.service';
+import { UsersService } from '../users/users.service';
 
 jest.mock('./centrifugo.service', () => ({
   CentrifugoService: jest.fn(),
@@ -109,6 +110,13 @@ describe('ChatService', () => {
           provide: XpService,
           useValue: {
             awardXpForActivity: jest.fn(),
+          },
+        },
+        {
+          provide: UsersService,
+          useValue: {
+            getMessageFilters: jest.fn().mockResolvedValue({}),
+            getProfile: jest.fn().mockResolvedValue(null),
           },
         },
       ],

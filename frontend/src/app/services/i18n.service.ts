@@ -1634,6 +1634,19 @@ export class I18nService {
     'settings.languageSelectLabel': 'Interface language',
     'settings.languageChangeDescription':
       'Choose the language used throughout HelloTalk. This will update the UI text immediately.',
+    'settings.messageFiltersSection': 'Message Filters',
+    'settings.messageFiltersDescription':
+      'Restrict who can send you an initial message based on their profile. These filters only apply to first-time messages.',
+    'settings.age': 'Age',
+    'settings.ageMinPlaceholder': 'Min',
+    'settings.ageMaxPlaceholder': 'Max',
+    'settings.ageRangeTo': 'to',
+    'settings.allowedGenders': 'Allowed Genders',
+    'settings.allowedNativeLanguages': 'Allowed Native Languages',
+    'gender.male': 'Male',
+    'gender.female': 'Female',
+    'gender.non_binary': 'Non-binary',
+    'gender.other': 'Other',
     // Pill colour CSS class tokens (kept i18n so themes can override without recompiling templates)
     'pill.colour_primary': 'bg-indigo-500 text-white hover:bg-indigo-600',
     'pill.colour_success': 'bg-emerald-500 text-white hover:bg-emerald-600',

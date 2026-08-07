@@ -7,6 +7,7 @@ import { CacheService } from '../../services/cache.service';
 import { Router, RouterModule } from '@angular/router';
 import { ChatSettingsService } from '../../services/chat-settings.service';
 import { LinkedAccountsService, LinkedAccount } from '../../services/linked-accounts.service';
+import { I18nService } from '../../services/i18n.service';
 
 @Component({
   selector: 'app-settings',
@@ -21,6 +22,7 @@ export class SettingsComponent implements OnInit {
   private router = inject(Router);
   private chatSettingsService = inject(ChatSettingsService);
   private linkedAccountsService = inject(LinkedAccountsService);
+  private i18nService = inject(I18nService);
 
   readonly isLoading = signal(true);
   readonly isDownloading = signal(false);
@@ -44,6 +46,16 @@ export class SettingsComponent implements OnInit {
   protected chatEnterToSend = signal(false);
   protected chatTextSize = signal<'small' | 'medium' | 'large'>('medium');
 
+  /** Message filter fields */
+  readonly filterAgeMin = signal<number | undefined>(undefined);
+  readonly filterAgeMax = signal<number | undefined>(undefined);
+  readonly filterAllowedLanguages = signal<string[]>([]);
+  readonly filterAllowedGenders = signal<string[]>([]);
+  readonly availableLanguages = computed(() => this.i18nService.availableLanguages);
+
+  /** Providers we support linking */
+  readonly supportedProviders: readonly string[] = ['google', 'facebook', 'twitter', 'apple'];
+  readonly genderOptions: readonly string[] = ['male', 'female', 'non_binary', 'other'];
   async ngOnInit(): Promise<void> {
     try {
       const profile = await this.userService.getMyProfile();
@@ -79,6 +91,19 @@ export class SettingsComponent implements OnInit {
     } catch {
       // keep service defaults
     }
+
+    // Load message filters
+    try {
+      const filters = await this.userService.getMessageFilters();
+      if (filters) {
+        this.filterAgeMin.set(filters.age_min);
+        this.filterAgeMax.set(filters.age_max);
+        this.filterAllowedGenders.set(filters.allowed_genders ?? []);
+        this.filterAllowedLanguages.set(filters.allowed_native_languages ?? []);
+      }
+    } catch {
+      // keep defaults (empty filters)
+    }
   }
 
   goBack(): void {
@@ -97,6 +122,20 @@ export class SettingsComponent implements OnInit {
 
   removeInterest(index: number): void {
     this.interests.update((arr) => arr.filter((_, i) => i !== index));
+  }
+
+  toggleGenderFilter(gender: string): void {
+    this.filterAllowedGenders.update((arr) =>
+      arr.includes(gender) ? arr.filter((g) => g !== gender) : [...arr, gender],
+    );
+  }
+
+  toggleLanguageFilter(languageCode: string): void {
+    this.filterAllowedLanguages.update((arr) =>
+      arr.includes(languageCode)
+        ? arr.filter((l) => l !== languageCode)
+        : [...arr, languageCode],
+    );
   }
 
   toggleSoundEffects(): void {
@@ -135,6 +174,13 @@ export class SettingsComponent implements OnInit {
 
       await this.chatSettingsService.updateSetting('enterToSend', this.chatEnterToSend());
       await this.chatSettingsService.updateSetting('textSize', this.chatTextSize());
+
+      await this.userService.setMessageFilters({
+        age_min: this.filterAgeMin(),
+        age_max: this.filterAgeMax(),
+        allowed_genders: this.filterAllowedGenders().length > 0 ? this.filterAllowedGenders() : undefined,
+        allowed_native_languages: this.filterAllowedLanguages().length > 0 ? this.filterAllowedLanguages() : undefined,
+      });
 
       this.successMessage.set('Settings saved successfully');
     } catch {
