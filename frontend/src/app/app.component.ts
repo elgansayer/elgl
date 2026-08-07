@@ -250,6 +250,28 @@ export class AppComponent implements OnInit {
         ) {
           this.unreadCounter.incrementNotificationUnread();
         }
+
+        // Handle unified notification events from the backend
+        if (data['event'] === 'notification') {
+          const notif = isRecord(data['notification']) ? data['notification'] : null;
+          if (notif) {
+            const notifType =
+              typeof notif['type'] === 'string' ? notif['type'] : null;
+            if (
+              notifType === 'follow' ||
+              notifType === 'like_profile' ||
+              notifType === 'like_moment' ||
+              notifType === 'comment_moment' ||
+              notifType === 'reply_comment' ||
+              notifType === 'profile_visit' ||
+              notifType === 'mention_comment' ||
+              notifType === 'mention_chat' ||
+              notifType === 'system'
+            ) {
+              this.unreadCounter.incrementNotificationUnread();
+            }
+          }
+        }
       });
 
       // Request notification permission after user is authenticated

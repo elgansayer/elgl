@@ -1,10 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 
 type FirebaseAdmin = any;
+
+interface CentrifugoServiceLike {
+  publish(channel: string, data: Record<string, unknown>): Promise<boolean>;
+}
 
 export interface LegacyPreferenceChannel {
   push: boolean;
@@ -31,6 +35,8 @@ export class NotificationsService {
   constructor(
     private readonly configService: ConfigService,
     private readonly supabaseService: SupabaseService,
+    @Optional()
+    private readonly centrifugoService?: CentrifugoServiceLike,
   ) {}
 
   async getPreferences(userId: string): Promise<LegacyNotificationPreferences> {
@@ -258,19 +264,51 @@ export class NotificationsService {
       | 'system',
     entityId?: string,
     message?: string,
-  ): Promise<void> {
+  ): Promise<{ id: string } | void> {
     if (recipientId === actorId) return;
 
     try {
       const supabase = this.supabaseService.getClient();
-      await supabase.from('notifications').insert({
-        recipient_id: recipientId,
-        actor_id: actorId,
-        type,
-        entity_id: entityId,
-        message,
-        is_read: false,
-      });
+      const { data: inserted, error } = await supabase
+        .from('notifications')
+        .insert({
+          recipient_id: recipientId,
+          actor_id: actorId,
+          type,
+          entity_id: entityId,
+          message,
+          is_read: false,
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error(`Failed to insert notification: ${error.message}`);
+        return;
+      }
+
+      const notifId = (inserted as { id: string } | null)?.id;
+
+      // Broadcast via Centrifugo for real-time delivery
+      if (this.centrifugoService) {
+        void this.centrifugoService
+          .publish(`user_${recipientId}`, {
+            event: 'notification',
+            notification: {
+              id: notifId,
+              recipient_id: recipientId,
+              actor_id: actorId,
+              type,
+              entity_id: entityId,
+              message,
+              is_read: false,
+              created_at: new Date().toISOString(),
+            },
+          })
+          .catch((err) =>
+            console.warn('Failed to broadcast notification:', err),
+          );
+      }
 
       // Dispatch push alert as well
       const titleMap: Record<string, string> = {
@@ -325,8 +363,59 @@ export class NotificationsService {
         data: { actorId, entityId: entityId || '' },
         category: pushCategory,
       });
+
+      return notifId ? { id: notifId } : undefined;
     } catch (err) {
       console.error(`Failed to create notification for ${recipientId}:`, err);
+    }
+  }
+
+  async createSystemAlert(
+    recipientId: string,
+    message: string,
+    title?: string,
+  ): Promise<void> {
+    try {
+      const supabase = this.supabaseService.getClient();
+      const adminActorId =
+        this.configService.get<string>('SYSTEM_ACTOR_ID') ??
+        '00000000-0000-0000-0000-000000000001';
+      await supabase.from('notifications').insert({
+        recipient_id: recipientId,
+        actor_id: adminActorId,
+        type: 'system',
+        entity_id: undefined,
+        message,
+        is_read: false,
+      });
+
+      if (this.centrifugoService) {
+        void this.centrifugoService
+          .publish(`user_${recipientId}`, {
+            event: 'notification',
+            notification: {
+              id: undefined,
+              recipient_id: recipientId,
+              actor_id: adminActorId,
+              type: 'system',
+              message,
+              is_read: false,
+              created_at: new Date().toISOString(),
+            },
+          })
+          .catch((err) =>
+            console.warn('Failed to broadcast system alert:', err),
+          );
+      }
+
+      await this.sendPushNotification(recipientId, {
+        type: 'system',
+        title: title ?? 'System Alert',
+        body: message,
+        data: {},
+      });
+    } catch (err) {
+      console.error(`Failed to create system alert for ${recipientId}:`, err);
     }
   }
 

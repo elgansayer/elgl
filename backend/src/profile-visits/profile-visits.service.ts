@@ -75,7 +75,7 @@ export class ProfileVisitsService {
 
     // Emit push notification event
     this.eventEmitter.emit(
-      'profile.view',
+      'profile.visit',
       new ProfileViewEvent(visitorId, viewedId),
     );
 

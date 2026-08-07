@@ -4,6 +4,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { NotificationsService } from '../notifications/notifications.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { SafetyService } from '../safety/safety.service';
@@ -105,6 +106,7 @@ export class MomentsService {
     private readonly eventEmitter: EventEmitter2,
     private readonly safetyService: SafetyService,
     private readonly r2Service: R2Service,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private inferMediaType(dto: CreateStoryDto): string {
@@ -853,6 +855,22 @@ export class MomentsService {
         .from('moments')
         .update({ likes_count: newCount })
         .eq('id', momentId);
+
+      // Notify the moment author about the like
+      if (momentData) {
+        void this.notificationsService.createNotification(
+          momentData.user_id,
+          userId,
+          'like_moment',
+          momentId,
+        );
+        this.eventEmitter.emit('moment.like', {
+          actorId: userId,
+          ownerId: momentData.user_id,
+          entityId: momentId,
+        });
+      }
+
       return { likes_count: newCount, is_liked: true };
     }
   }

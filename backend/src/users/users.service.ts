@@ -18,6 +18,7 @@ import {
 import { Optional } from '@nestjs/common';
 import { CorrectorScoreService } from '../corrector-score/corrector-score.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { XpService } from '../xp/xp.service';
 import { PREDEFINED_HOBBIES, PREDEFINED_INTERESTS } from './constants';
 import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
@@ -30,6 +31,7 @@ export class UsersService {
     private readonly supabaseService: SupabaseService,
     private readonly xpService: XpService,
     private readonly dataExportWorker: DataExportWorker,
+    private readonly eventEmitter: EventEmitter2,
     @Optional() private readonly notificationsService?: NotificationsService,
     @Optional() private readonly correctorScoreService?: CorrectorScoreService,
   ) {}
@@ -244,12 +246,18 @@ export class UsersService {
       Logger.warn(
         `Failed to follow user ${targetUserId} by ${followerId}: ${error.message}`,
       );
-    } else if (this.notificationsService) {
-      void this.notificationsService.createNotification(
-        targetUserId,
+    } else {
+      if (this.notificationsService) {
+        void this.notificationsService.createNotification(
+          targetUserId,
+          followerId,
+          'follow',
+        );
+      }
+      this.eventEmitter.emit('user.follow', {
         followerId,
-        'follow',
-      );
+        followedUserId: targetUserId,
+      });
     }
   }
 
@@ -284,12 +292,18 @@ export class UsersService {
       Logger.warn(
         `Failed to like profile ${targetUserId} by ${likerId}: ${error.message}`,
       );
-    } else if (this.notificationsService) {
-      void this.notificationsService.createNotification(
-        targetUserId,
-        likerId,
-        'like_profile',
-      );
+    } else {
+      if (this.notificationsService) {
+        void this.notificationsService.createNotification(
+          targetUserId,
+          likerId,
+          'like_profile',
+        );
+      }
+      this.eventEmitter.emit('profile.like', {
+        actorId: likerId,
+        ownerId: targetUserId,
+      });
     }
   }
 

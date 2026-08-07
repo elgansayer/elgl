@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationsService } from '../notifications.service';
 import { NotificationPreferencesService } from '../notification-preferences.service';
@@ -6,6 +6,8 @@ import { ChatMessageEvent } from '../events/notification.events';
 
 @Injectable()
 export class ChatNotificationListener {
+  private readonly logger = new Logger(ChatNotificationListener.name);
+
   constructor(
     private readonly notificationsService: NotificationsService,
     private readonly notificationPreferencesService: NotificationPreferencesService,
@@ -26,7 +28,7 @@ export class ChatNotificationListener {
         return;
       }
     } catch (err) {
-      console.error(
+      this.logger.error(
         `Failed to check notification preferences for user ${recipientId}:`,
         err,
       );
