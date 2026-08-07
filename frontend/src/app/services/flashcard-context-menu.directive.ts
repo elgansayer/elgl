@@ -1,4 +1,4 @@
-import { Directive, inject, input, ElementRef } from '@angular/core';
+import { Directive, inject, input, ElementRef, ErrorHandler } from '@angular/core';
 import { FlashcardService } from './flashcard.service';
 
 @Directive({
@@ -15,6 +15,7 @@ export class FlashcardContextMenuDirective {
 
   private flashcardService = inject(FlashcardService);
   private elRef = inject<ElementRef<HTMLElement>>(ElementRef);
+  private errorHandler = inject(ErrorHandler);
 
   private overlay: HTMLElement | null = null;
 
@@ -57,8 +58,11 @@ export class FlashcardContextMenuDirective {
         });
         // Notify user with a toast if implemented
       } catch (err) {
-        console.error('Failed to create flashcard', err);
-        // Show error toast
+        const flashcardError = new Error(
+          `[SRS:FlashcardContextMenu] createFlashcard failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
+        flashcardError.name = 'SrsFlashcardContextMenuError';
+        this.errorHandler.handleError(flashcardError);
       }
       this.removeOverlay();
     });
