@@ -18,7 +18,7 @@
       (mouseup)="onImageMouseUp($event)"
       (mouseleave)="onImageMouseUp($event)"
     >
-      <img
+      <img loading="lazy"
         [src]="previewUrl()"
         class="w-full h-auto rounded cursor-crosshair"
         alt="{{ 'avatar.preview' | t }}"
