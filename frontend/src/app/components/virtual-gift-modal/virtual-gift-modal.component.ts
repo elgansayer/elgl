@@ -7,13 +7,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-virtual-gift-modal',
   imports: [TranslatePipe],
   template: `
-    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" role="dialog" aria-modal="true" [attr.aria-label]="'giftModal.title' | t">
       <div
         class="bg-surface-200 rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-surface-100 space-y-5 animate-fadeIn"
       >
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">
           <div>
             <h3 class="text-xl font-black text-text-primary flex items-center gap-2">
+              <span aria-hidden="true">🎁</span>
               <span>{{ 'giftModal.title' | t }}</span>
             </h3>
             <p class="text-xs text-text-secondary">
@@ -23,16 +24,17 @@ import { TranslatePipe } from '../../services/translate.pipe';
           <button
             (click)="closed.emit()"
             class="text-text-muted hover:text-text-secondary text-lg font-bold"
+            [attr.aria-label]="'giftModal.closeBtn' | t"
           >
             ✕
           </button>
         </div>
 
         <div
-          class="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/30 flex items-center justify-between"
+          class="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/30 flex items-center justify-between" role="status" aria-live="polite"
         >
           <div class="flex items-center gap-2">
-            <span class="text-2xl">💰</span>
+            <span class="text-2xl" aria-hidden="true">💰</span>
             <div>
               <span class="text-[10px] uppercase font-black text-amber-400 block">{{
                 'giftModal.balanceLabel' | t
@@ -46,6 +48,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           <button
             (click)="toggleCoinPackages()"
             class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow"
+          [attr.aria-label]="(showCoinPackages() ? 'giftModal.backToGiftsBtn' : 'giftModal.buyCoinsBtn') | t"
           >
             {{ (showCoinPackages() ? 'giftModal.backToGiftsBtn' : 'giftModal.buyCoinsBtn') | t }}
           </button>
@@ -62,7 +65,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   class="p-3.5 rounded-2xl border border-surface-100 bg-surface-300 flex items-center justify-between"
                 >
                   <div class="flex items-center gap-3">
-                    <span class="text-2xl">🪙</span>
+                    <span class="text-2xl" aria-hidden="true">🪙</span>
                     <div>
                       <span class="font-black text-sm text-text-primary">{{
                         'giftModal.package.' + pkg.id + '.title'
@@ -90,12 +93,15 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <span class="text-xs font-bold text-text-primary block">{{
               'giftModal.selectPrompt' | t: { name: receiverName() }
             }}</span>
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" role="radiogroup" [attr.aria-label]="'giftModal.giftOptions' | t">
               @for (gift of economyStore.catalog(); track gift.id) {
                 <button
                   type="button"
+                  role="radio"
+                  [attr.aria-checked]="selectedGift()?.id === gift.id"
                   (click)="selectGift(gift)"
                   [disabled]="gift.cost_coins > effectiveBalance()"
+                  [attr.aria-label]="'giftModal.giftAria' | t: { name: gift.name, cost: gift.cost_coins }"
                   [class]="
                     'w-full p-3 rounded-2xl border-2 transition-all flex flex-col items-center text-center space-y-1.5 ' +
                     (selectedGift()?.id === gift.id
@@ -105,7 +111,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
                         : 'border-surface-100 hover:border-primary/50 bg-surface-300 cursor-pointer')
                   "
                 >
-                  <span class="text-3xl block">{{ gift.icon }}</span>
+                  <span class="text-3xl block" aria-hidden="true">{{ gift.icon }}</span>
                   <span class="font-bold text-xs text-text-primary block truncate w-full">{{
                     gift.name
                   }}</span>

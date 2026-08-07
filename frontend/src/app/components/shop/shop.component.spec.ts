@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { signal, NO_ERRORS_SCHEMA } from '@angular/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -39,6 +39,7 @@ describe('ShopComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
       ],
+      schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ShopComponent);

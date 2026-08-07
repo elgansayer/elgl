@@ -18,29 +18,29 @@ interface CartItem {
   selector: 'app-cart',
   imports: [JoyrideDirective, TranslatePipe],
   template: `
-    <div class="max-w-2xl mx-auto p-4">
+    <main class="max-w-2xl mx-auto p-4" aria-labelledby="cart-title">
       <span joyrideStep="economyTour@cartLink" [text]="'tour.cartLinkDesc' | t" stepPosition="bottom">
-        <h1 class="text-xl font-bold mb-4">{{ 'cart.title' | t }}</h1>
+        <h1 id="cart-title" class="text-xl font-bold mb-4">{{ 'cart.title' | t }}</h1>
       </span>
       @if (message()) {
-        <p class="mb-4 text-sm text-indigo-300">{{ message() }}</p>
+        <p class="mb-4 text-sm text-indigo-300" role="status" aria-live="polite">{{ message() }}</p>
       }
       @if (items().length === 0) {
         <p class="text-sm opacity-60">{{ 'cart.empty' | t }}</p>
       } @else {
-        <ul class="space-y-3">
+        <ul class="space-y-3" role="list">
           @for (item of items(); track item.itemId) {
-            <li class="flex items-center justify-between rounded-xl bg-surface p-3">
+            <li class="flex items-center justify-between rounded-xl bg-surface p-3" role="listitem">
               <div>
                 <span class="font-medium">{{ item.name }}</span>
-                <span class="ms-2 text-xs opacity-50">x{{ item.quantity }}</span>
+                <span class="ms-2 text-xs opacity-50" [attr.aria-label]="'cart.quantity' | t: { qty: item.quantity }">x{{ item.quantity }}</span>
               </div>
               <div class="flex items-center gap-2">
-                <span class="text-sm font-semibold">{{ item.unitPrice * item.quantity }} {{ 'common.coins' | t }}</span>
+                <span class="text-sm font-semibold" [attr.aria-label]="'cart.itemTotal' | t: { total: item.unitPrice * item.quantity }">{{ item.unitPrice * item.quantity }} {{ 'common.coins' | t }}</span>
                 <button
                   class="rounded-full bg-rose-500 px-3 py-1 text-xs font-medium text-white hover:bg-rose-600"
                   (click)="removeItem(item.itemId)"
-                  aria-label="{{ 'cart.removeItem' | t }}"
+                  [attr.aria-label]="'cart.removeItem' | t: { name: item.name }"
                 >
                   {{ 'cart.remove' | t }}
                 </button>
@@ -48,17 +48,18 @@ interface CartItem {
             </li>
           }
         </ul>
-        <div class="mt-4 flex items-center justify-between rounded-xl bg-surface p-3">
+        <div class="mt-4 flex items-center justify-between rounded-xl bg-surface p-3" role="status">
           <span class="font-semibold">{{ 'cart.total' | t }}</span>
-          <span class="font-bold text-indigo-400">{{ totalCoins() }} {{ 'common.coins' | t }}</span>
+          <span class="font-bold text-indigo-400" [attr.aria-label]="'cart.totalCoins' | t: { coins: totalCoins() }">{{ totalCoins() }} {{ 'common.coins' | t }}</span>
         </div>
         <button
           class="mt-4 w-full rounded-full bg-indigo-600 py-2 font-semibold hover:bg-indigo-500"
-          (click)="checkout()">
+          (click)="checkout()"
+          [attr.aria-label]="'cart.checkoutAria' | t">
           {{ 'cart.checkout' | t }}
         </button>
       }
-    </div>
+    </main>
   `,
 })
 export class CartComponent {

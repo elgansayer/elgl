@@ -7,7 +7,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
   selector: 'app-gift-picker',
   imports: [TranslatePipe],
   template: `
-    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" role="dialog" aria-modal="true" [attr.aria-label]="'giftModal.title' | t">
       <div
         class="bg-surface-200 rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-surface-100 space-y-5 animate-fadeIn"
       >
@@ -15,7 +15,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">
           <div>
             <h3 class="text-xl font-black text-text-primary flex items-center gap-2">
-              <span>🎁</span>
+              <span aria-hidden="true">🎁</span>
               <span>{{ 'giftModal.title' | t }}</span>
             </h3>
             <p class="text-xs text-text-secondary">
@@ -25,6 +25,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
           <button
             (click)="closed.emit()"
             class="text-text-muted hover:text-text-secondary text-lg font-bold"
+            [attr.aria-label]="'giftModal.closeBtn' | t"
           >
             ✕
           </button>
@@ -34,8 +35,8 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
         <div
           class="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/30 flex items-center justify-between"
         >
-          <div class="flex items-center gap-2">
-            <span class="text-2xl">💰</span>
+          <div class="flex items-center gap-2" role="status">
+            <span class="text-2xl" aria-hidden="true">💰</span>
             <div>
               <span class="text-[10px] uppercase font-black text-amber-400 block">{{
                 'giftModal.balanceLabel' | t
@@ -49,6 +50,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
           <button
             (click)="toggleCoinPackages()"
             class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow"
+          [attr.aria-label]="(showCoinPackages() ? 'giftModal.backToGiftsBtn' : 'giftModal.buyCoinsBtn') | t"
           >
             {{ (showCoinPackages() ? 'giftModal.backToGiftsBtn' : 'giftModal.buyCoinsBtn') | t }}
           </button>
@@ -65,7 +67,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                   class="p-3.5 rounded-2xl border border-surface-100 bg-surface-300 flex items-center justify-between"
                 >
                   <div class="flex items-center gap-3">
-                    <span class="text-2xl">🪙</span>
+                    <span class="text-2xl" aria-hidden="true">🪙</span>
                     <div>
                       <span class="font-black text-sm text-text-primary">{{
                         'giftModal.package.' + pkg.id + '.title'
@@ -107,6 +109,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                 <button
                   (click)="selectedGift.set(null); deductedAmount.set(0)"
                   class="text-text-muted hover:text-text-secondary text-sm"
+                [attr.aria-label]="'giftModal.deselectGift' | t: { name: selectedGift().name }"
                 >
                   ✕
                 </button>
@@ -126,7 +129,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                         : 'border-surface-100 hover:border-primary/50 bg-surface-300 cursor-pointer')
                     "
                   >
-                    <span class="text-2xl block">{{ gift.icon }}</span>
+                    <span class="text-2xl block" aria-hidden="true">{{ gift.icon }}</span>
                     <span class="font-bold text-[10px] text-text-primary block truncate w-full">{{
                       gift.name
                     }}</span>

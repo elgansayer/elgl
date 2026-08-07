@@ -8,11 +8,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-coins-success',
   imports: [TranslatePipe],
   template: `
-    <div
+    <main
       class="min-h-screen bg-[#121212] flex items-center justify-center px-4"
     >
-      <div class="text-center max-w-md w-full">
-        <div class="text-5xl sm:text-6xl mb-6">{{ status() === 'failed' ? '😕' : '🎉' }}</div>
+      <div class="text-center max-w-md w-full" role="status" aria-live="polite">
+        <div class="text-5xl sm:text-6xl mb-6" aria-hidden="true">{{ status() === 'failed' ? '😕' : '🎉' }}</div>
         <h1 class="text-2xl sm:text-3xl font-bold text-white mb-4">
           {{ (status() === 'failed' ? 'coinsSuccess.failureTitle' : 'coinsSuccess.title') | t }}
         </h1>
@@ -29,11 +29,12 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <button
           (click)="goToDashboard()"
           class="bg-primary hover:bg-primary-dark text-white font-bold py-3 px-8 rounded-2xl transition-all duration-200 text-sm sm:text-base"
+          [attr.aria-label]="'coinsSuccess.dashboardBtn' | t"
         >
           {{ 'coinsSuccess.dashboardBtn' | t }}
         </button>
       </div>
-    </div>
+    </main>
   `,
 })
 export class CoinsSuccessComponent {

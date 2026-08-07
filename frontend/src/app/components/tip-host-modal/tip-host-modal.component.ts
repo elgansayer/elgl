@@ -8,7 +8,7 @@ import { EconomyStore } from '../../services/economy.store';
   selector: 'app-tip-host-modal',
   imports: [TranslatePipe, FormsModule],
   template: `
-    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" (click)="onBackdropClick($event)">
+    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" role="dialog" aria-modal="true" [attr.aria-label]="'audioRoom.tipModalTitle' | t" (click)="onBackdropClick($event)">
       <div class="bg-surface-200 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-surface-100 space-y-5 animate-fadeIn">
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">
@@ -21,15 +21,16 @@ import { EconomyStore } from '../../services/economy.store';
           <button
             (click)="closed.emit()"
             class="text-text-muted hover:text-text-secondary text-lg font-bold"
+            [attr.aria-label]="'audioRoom.tipCloseBtn' | t"
           >
             ✕
           </button>
         </div>
 
         <!-- Balance -->
-        <div class="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/30 flex items-center justify-between">
+        <div class="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/30 flex items-center justify-between" role="status" aria-live="polite">
           <div class="flex items-center gap-2">
-            <span class="text-2xl">💰</span>
+            <span class="text-2xl" aria-hidden="true">💰</span>
             <div>
               <span class="text-[10px] uppercase font-black text-amber-400 block">{{
                 'audioRoom.tipBalanceLabel' | t
@@ -42,10 +43,13 @@ import { EconomyStore } from '../../services/economy.store';
         </div>
 
         <!-- Preset amounts -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3" role="radiogroup" [attr.aria-label]="'audioRoom.tipPresetLabel' | t">
           @for (amount of presetAmounts(); track amount) {
             <button
+              role="radio"
+              [attr.aria-checked]="selectedAmount() === amount"
               (click)="selectAmount(amount)"
+              [attr.aria-label]="'audioRoom.tipPresetAria' | t: { amount: amount }"
               [class]="
                 'p-3 sm:p-4 rounded-2xl border-2 transition-all font-extrabold text-center text-sm sm:text-base ' +
                 (selectedAmount() === amount
@@ -60,7 +64,9 @@ import { EconomyStore } from '../../services/economy.store';
 
         <!-- Custom amount -->
         <div class="flex items-center gap-3">
+          <label for="tip-custom-amount" class="sr-only">{{'audioRoom.tipCustomLabel' | t}}</label>
           <input
+            id="tip-custom-amount"
             type="number"
             [ngModel]="customAmount()"
             (ngModelChange)="onCustomAmountChange($event)"
@@ -89,6 +95,7 @@ import { EconomyStore } from '../../services/economy.store';
             [disabled]="!selectedAmount() || selectedAmount()! < 1 || isSending() || selectedAmount()! > economyStore.coinsBalance()"
             (click)="confirmSend()"
             class="px-6 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
+            [attr.aria-label]="'audioRoom.tipSendAria' | t: { amount: selectedAmount() ?? 0 }"
           >
             {{
               isSending()
