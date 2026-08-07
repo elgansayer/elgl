@@ -64,7 +64,13 @@ import { environment } from '../../../environments/environment';
                 }
               </p>
               @if (message().link_preview; as lp) {
-                <app-link-preview-card [preview]="lp" />
+                <app-link-preview-card
+                  [url]="lp.url"
+                  [title]="lp.title"
+                  [description]="lp.description"
+                  [image]="lp.image"
+                  [siteName]="lp.siteName"
+                ></app-link-preview-card>
               }
               <button
                 (click)="simplifyText()"

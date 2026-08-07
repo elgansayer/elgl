@@ -55,6 +55,8 @@ export interface ChatMessage {
     display_name?: string;
     avatar_url?: string | null;
   };
+  /** OpenGraph link preview scraped from URLs in the message */
+  link_preview?: LinkPreview | null;
   /** ID of the parent message this replies to (threaded replies) */
   reply_to_id?: string;
   /** Preview of the parent message for inline display */
