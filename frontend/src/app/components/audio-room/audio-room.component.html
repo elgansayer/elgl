@@ -121,7 +121,7 @@
                   <!-- Circular avatar -->
                   <div class="relative mx-auto inline-block">
                     @if (participant.avatar_url) {
-                      <img
+                      <img loading="lazy"
                         [src]="participant.avatar_url"
                         [alt]="participant.display_name"
                         class="mx-auto h-14 w-14 rounded-full object-cover border-2"
@@ -280,7 +280,8 @@
           </section>
         </div>
 
-        <div>
+        <div class="flex flex-col gap-4">
+          <app-voiceroom-notes [roomId]="room.id"></app-voiceroom-notes>
           <app-room-chat></app-room-chat>
         </div>
       </div>
