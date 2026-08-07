@@ -3,10 +3,6 @@ import { VideoCallsController } from './video-calls.controller';
 import { VideoCallsService } from './video-calls.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
-jest.mock('./sanitise-video-calls.helper', () => ({
-  sanitiseVideoCallsData: jest.fn((value: unknown) => value),
-}));
-
 describe('VideoCallsController', () => {
   let controller: VideoCallsController;
   let videoCallsService: VideoCallsService;
@@ -72,9 +68,7 @@ describe('VideoCallsController', () => {
   describe('acceptCall', () => {
     it('should join a room and return the sanitised response', async () => {
       const mockResponse = { token: 'livekit-join-token', roomName: 'room-1' };
-      (videoCallsService.joinRoom as jest.Mock).mockResolvedValue(
-        mockResponse,
-      );
+      (videoCallsService.joinRoom as jest.Mock).mockResolvedValue(mockResponse);
 
       const req = { user: mockUser } as any;
       const result = await controller.acceptCall(req, 'room-1');
