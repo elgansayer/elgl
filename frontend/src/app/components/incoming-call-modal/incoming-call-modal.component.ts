@@ -1,4 +1,7 @@
 import { Component, input, output, effect, OnDestroy, viewChild, ElementRef } from '@angular/core';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 export interface IncomingCallData {
   callerId: string;
@@ -24,15 +27,20 @@ function getAudioContextClass(): typeof AudioContext | undefined {
 
 @Component({
   selector: 'app-incoming-call-modal',
-  imports: [],
+  imports: [AppButtonPrimaryComponent, AppButtonSecondaryComponent, TranslatePipe],
   template: `
     @if (callData(); as data) {
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-label]="'voip.incomingCallTitle' | t"
+      >
         <div
           class="bg-surface-800 border border-slate-700 rounded-3xl p-8 w-full max-w-sm mx-4 shadow-2xl animate-in zoom-in-95 duration-200"
         >
           <!-- Caller Info -->
-          <div class="flex flex-col items-center space-y-4 mb-8">
+          <div class="flex flex-col items-center mb-8 gap-4">
             <div class="relative">
               @if (data.callerAvatarUrl) {
                 <img
@@ -56,25 +64,48 @@ function getAudioContextClass(): typeof AudioContext | undefined {
             <div class="text-center">
               <h2 class="text-2xl font-bold text-white">{{ data.callerName }}</h2>
               <p class="text-text-muted mt-1">
-                {{ data.isVideoCall ? 'Incoming video call...' : 'Incoming voice call...' }}
+                @if (data.isVideoCall) {
+                  {{ 'voip.incomingVideoCall' | t }}
+                } @else {
+                  {{ 'voip.incomingVoiceCall' | t }}
+                }
               </p>
             </div>
           </div>
 
           <!-- Action Buttons -->
           <div class="flex justify-center gap-6">
-            <!-- Decline Button -->
-            <button
-              (click)="onDecline()"
-              class="flex flex-col items-center gap-2 group"
-              aria-label="Decline call"
+            <app-button-secondary
+              size="lg"
+              customClass="!rounded-full !w-16 !h-16 !p-0 !bg-red-500/20 !border-red-500/30 hover:!bg-red-500/40"
+              [attr.aria-label]="'voip.decline' | t"
+              (clicked)="onDecline()"
             >
-              <div
-                class="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center group-hover:bg-red-500/40 transition-colors duration-150"
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-8 h-8 text-red-500"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
               >
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </app-button-secondary>
+
+            <app-button-primary
+              size="lg"
+              customClass="!rounded-full !w-16 !h-16 !p-0 !bg-green-500 hover:!bg-green-600 animate-pulse"
+              [attr.aria-label]="'voip.accept' | t"
+              (clicked)="onAccept()"
+            >
+              @if (data.isVideoCall) {
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  class="w-8 h-8 text-red-500"
+                  class="w-8 h-8 text-white"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -82,55 +113,39 @@ function getAudioContextClass(): typeof AudioContext | undefined {
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 >
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                  <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
                 </svg>
-              </div>
-              <span class="text-sm text-text-muted group-hover:text-slate-300">Decline</span>
-            </button>
+              } @else {
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-8 h-8 text-white"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+                  ></path>
+                </svg>
+              }
+            </app-button-primary>
+          </div>
 
-            <!-- Accept Button -->
-            <button
-              (click)="onAccept()"
-              class="flex flex-col items-center gap-2 group"
-              aria-label="Accept call"
-            >
-              <div
-                class="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center group-hover:bg-green-500/40 transition-colors duration-150 animate-pulse"
-              >
-                @if (data.isVideoCall) {
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="w-8 h-8 text-green-500"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                  </svg>
-                } @else {
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="w-8 h-8 text-green-500"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path
-                      d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
-                    ></path>
-                  </svg>
-                }
-              </div>
-              <span class="text-sm text-green-400 group-hover:text-green-300">Accept</span>
-            </button>
+          <!-- Decline / Accept Labels -->
+          <div class="flex justify-center gap-6 mt-2">
+            <span class="text-xs text-text-muted w-16 text-center">{{ 'voip.decline' | t }}</span>
+            <span class="text-xs text-green-400 w-16 text-center">{{ 'voip.accept' | t }}</span>
+          </div>
+
+          <!-- Ringing indicator -->
+          <div class="text-center mt-4">
+            <span class="text-xs text-text-muted animate-pulse">
+              {{ 'voip.ringing' | t }}
+            </span>
           </div>
         </div>
       </div>
@@ -160,19 +175,11 @@ function getAudioContextClass(): typeof AudioContext | undefined {
   ],
 })
 export class IncomingCallModalComponent implements OnDestroy {
-  /** Input: The incoming call invitation data */
   callData = input<IncomingCallData | null>(null);
-
-  /** Input: URL to a ringtone audio file (optional, defaults to a built-in beep) */
   ringtoneUrl = input<string>('/assets/audio/ringtone.mp3');
-
-  /** Emits when user accepts the call */
   acceptCall = output<IncomingCallData>();
-
-  /** Emits when user declines the call */
   declineCall = output<IncomingCallData>();
 
-  /** Reference to the audio element in the template */
   private ringtoneAudioRef = viewChild<ElementRef<HTMLAudioElement>>('ringtoneAudio');
 
   private audioContext: AudioContext | null = null;
@@ -180,7 +187,6 @@ export class IncomingCallModalComponent implements OnDestroy {
   private gainNode: GainNode | null = null;
 
   constructor() {
-    // Auto-play ringtone when callData appears
     effect(() => {
       const data = this.callData();
       if (data) {
@@ -198,17 +204,14 @@ export class IncomingCallModalComponent implements OnDestroy {
       return;
     }
 
-    // Try to play the audio file via the template audio element
     const audioEl = this.ringtoneAudioRef()?.nativeElement;
     if (audioEl) {
       audioEl.loop = true;
       audioEl.volume = 0.5;
       audioEl.play().catch(() => {
-        // Autoplay may be blocked; fallback to beep
         this.playFallbackBeep();
       });
     } else {
-      // Fallback if template element not available
       this.playFallbackBeep();
     }
   }
@@ -225,7 +228,7 @@ export class IncomingCallModalComponent implements OnDestroy {
       this.oscillator.connect(this.gainNode);
       this.gainNode.connect(this.audioContext.destination);
 
-      this.oscillator.frequency.value = 440; // A4 note
+      this.oscillator.frequency.value = 440;
       this.oscillator.type = 'sine';
       this.gainNode.gain.value = 0.3;
 
@@ -236,14 +239,12 @@ export class IncomingCallModalComponent implements OnDestroy {
   }
 
   private stopRingtone(): void {
-    // Stop HTML audio element
     const audioEl = this.ringtoneAudioRef()?.nativeElement;
     if (audioEl) {
       audioEl.pause();
       audioEl.currentTime = 0;
     }
 
-    // Stop fallback beep
     if (this.oscillator) {
       try {
         this.oscillator.stop();
