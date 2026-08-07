@@ -2,7 +2,7 @@ import { Component, inject, signal, computed, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { RouterLink } from '@angular/router';
-import { JoyrideDirective } from 'ngx-joyride';
+import { JoyrideModule } from 'ngx-joyride';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
@@ -19,7 +19,7 @@ interface CatalogItem {
 @Component({
   selector: 'app-shop',
   standalone: true,
-  imports: [JoyrideDirective, TranslatePipe, RouterLink],
+  imports: [JoyrideModule, TranslatePipe, RouterLink],
   template: `
     <div class="max-w-6xl mx-auto p-4">
       <h1 class="text-xl font-bold mb-4">{{ 'shop.title' | t }}</h1>

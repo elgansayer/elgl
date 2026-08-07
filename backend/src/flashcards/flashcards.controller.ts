@@ -80,7 +80,6 @@ export class FlashcardsController {
     @Res({ passthrough: true }) res?: Response,
   ): Promise<Flashcard | null> {
     if (!user) return null;
-<<<<<<< HEAD
     const result = await this.flashcardsService.createOrUpdateFlashcard(
       user.id,
       dto,
@@ -88,11 +87,6 @@ export class FlashcardsController {
     if (result.degraded && res) {
       res.header('X-SRS-Degraded', 'true');
     }
-=======
-    const result = await this.flashcardsService.createOrUpdateFlashcard(user.id, dto);
-    // Invalidate Cloudflare edge cache for this user's flashcard lists and due reviews
-    void this.flashcardsService.purgeSrsCache(user.id);
->>>>>>> origin/main
     return result;
   }
 
@@ -134,7 +128,6 @@ export class FlashcardsController {
     @Res({ passthrough: true }) res?: Response,
   ): Promise<Flashcard | null> {
     if (!user) return null;
-<<<<<<< HEAD
     const result = await this.flashcardsService.updateSrsLevel(
       user.id,
       id,
@@ -143,11 +136,6 @@ export class FlashcardsController {
     if (result.degraded && res) {
       res.header('X-SRS-Degraded', 'true');
     }
-=======
-    const result = await this.flashcardsService.updateSrsLevel(user.id, id, dto);
-    // Invalidate Cloudflare edge cache for this user's flashcard lists and due reviews
-    void this.flashcardsService.purgeSrsCache(user.id);
->>>>>>> origin/main
     return result;
   }
 

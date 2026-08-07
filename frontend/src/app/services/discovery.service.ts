@@ -7,6 +7,7 @@ import { AuthService } from './auth.service';
 import { SafetyService } from './safety.service';
 import { UserProfile, UserService } from './user.service';
 import { ChatService, ChatMessage } from './chat.service';
+import { OfflineDiscoveryCacheService } from './offline-discovery-cache.service';
 
 export interface SearchFilterParams {
   latitude?: number;
@@ -44,6 +45,7 @@ export class DiscoveryService {
   private safetyService = inject(SafetyService);
   private chatService = inject(ChatService);
   private userService = inject(UserService);
+  private offlineCache = inject(OfflineDiscoveryCacheService);
   private baseUrl = `${environment.apiUrl}/discovery`;
 
   private getHeaders() {
@@ -72,6 +74,9 @@ export class DiscoveryService {
   }
 
   async findPartners(filters: SearchFilterParams & { serious_learner_mode?: boolean }): Promise<UserProfile[]> {
+    const filtersKey = this.offlineCache.buildFiltersKey(filters);
+    const isOnline = this.offlineCache.isOnline();
+
     let params = new HttpParams();
     if (filters.latitude !== undefined)
       params = params.set('latitude', filters.latitude.toString());
@@ -132,12 +137,39 @@ export class DiscoveryService {
     if (filters.voice_room_active !== undefined)
       params = params.set('voice_room_active', filters.voice_room_active.toString());
 
+    // Offline-first: attempt cached results before making network request
+    if (!isOnline) {
+      const cached = await this.offlineCache.getCachedSearchResults(filtersKey);
+      if (cached && cached.length > 0) {
+        return this.enrichPartners(cached, filters);
+      }
+      // Fall back to all cached partners when no specific search results cached
+      const allCached = await this.offlineCache.getAllCachedPartners();
+      if (allCached.length > 0) {
+        return this.enrichPartners(allCached, filters);
+      }
+      return MOCK_PARTNERS;
+    }
+
     const users = await firstValueFrom(
       this.http
         .get<UserProfile[]>(`${this.baseUrl}/partners`, { headers: this.getHeaders(), params })
         .pipe(catchError(() => of<UserProfile[]>(MOCK_PARTNERS))),
     );
 
+    // Cache the fresh results for offline use
+    if (users !== MOCK_PARTNERS) {
+      void this.offlineCache.cacheSearchResults(filtersKey, users);
+      void this.offlineCache.cachePartners(users);
+    }
+
+    return this.enrichPartners(users, filters);
+  }
+
+  private async enrichPartners(
+    users: UserProfile[],
+    filters: SearchFilterParams & { serious_learner_mode?: boolean },
+  ): Promise<UserProfile[]> {
     // Filter out blocked users client-side
     const currentUser = this.authService.currentUser();
     let filtered = users;
@@ -166,7 +198,6 @@ export class DiscoveryService {
       enriched = enriched.filter((user) => hasSeriousLearner(user) && user.is_serious_learner);
     }
 
-    // Return enriched array, but keep the same UserProfile type (extra property is allowed in structural typing)
     return enriched;
   }
 
