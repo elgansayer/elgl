@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -18,6 +19,11 @@ import {
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import {
+  CacheControlInterceptor,
+  CACHE_PRIVATE_MEDIUM,
+  CACHE_PRIVATE_NO_STORE,
+} from '../common/cache.interceptor';
 import { DecksService } from './decks.service';
 import {
   AddFlashcardToDeckDto,
@@ -34,6 +40,7 @@ export class DecksController {
   constructor(private readonly decksService: DecksService) {}
 
   @Post()
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @ApiOperation({
     summary: 'Create a new flashcard deck',
     description:
@@ -50,6 +57,7 @@ export class DecksController {
   }
 
   @Get()
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM))
   @ApiOperation({
     summary: 'List all decks for the authenticated user',
     description:
@@ -63,6 +71,7 @@ export class DecksController {
   }
 
   @Get(':id')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM))
   @ApiOperation({
     summary: 'Get a single deck by ID',
     description: 'Returns the full deck object for the given ID.',
@@ -87,6 +96,7 @@ export class DecksController {
   }
 
   @Patch(':id')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @ApiOperation({
     summary: 'Update a deck',
     description:
@@ -110,6 +120,7 @@ export class DecksController {
   }
 
   @Delete(':id')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @ApiOperation({
     summary: 'Delete a deck',
     description:
@@ -132,6 +143,7 @@ export class DecksController {
   }
 
   @Post(':id/flashcards')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @ApiOperation({
     summary: 'Add a flashcard to a deck',
     description: 'Associates an existing flashcard with the specified deck.',
@@ -158,6 +170,7 @@ export class DecksController {
   }
 
   @Delete(':id/flashcards/:flashcardId')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @ApiOperation({
     summary: 'Remove a flashcard from a deck',
     description:
@@ -190,6 +203,7 @@ export class DecksController {
   }
 
   @Get(':id/flashcards')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM))
   @ApiOperation({
     summary: 'List flashcards in a deck',
     description:

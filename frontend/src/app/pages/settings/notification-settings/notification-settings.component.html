@@ -8,13 +8,13 @@
 
   @if (loadError()) {
     <div class="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400 mb-6">
-      {{ loadError() | t }}
+      {{ loadError() ?? '' }}
     </div>
   }
 
   @if (error()) {
     <div class="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400 mb-6">
-      {{ error() | t }}
+      {{ error() ?? '' }}
     </div>
   }
 

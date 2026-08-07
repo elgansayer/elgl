@@ -1,41 +1,36 @@
-export type EscrowStatus =
-  'pending' | 'released' | 'refunded' | 'disputed' | 'cancelled';
-
-export type EscrowServiceType =
-  'lesson' | 'language_exchange' | 'proofreading' | 'translation' | 'other';
-
-export interface EscrowRow {
+export interface EscrowTransaction {
   id: string;
-  sender_id: string;
-  receiver_id: string;
-  amount: number;
+  payer_id: string;
+  payee_id: string;
+  amount_coins: number;
   status: EscrowStatus;
-  description: string;
-  service_type: EscrowServiceType;
-  dispute_reason?: string | null;
-  dispute_evidence?: string | null;
-  admin_note?: string | null;
+  description: string | null;
+  reference_id: string | null;
   created_at: string;
   updated_at: string;
+  released_at: string | null;
+  refunded_at: string | null;
 }
 
-export interface EscrowCreateResult {
+export type EscrowStatus = 'held' | 'released' | 'refunded' | 'disputed';
+
+export interface CreateEscrowResult {
   id: string;
   status: EscrowStatus;
-  amount_held: number;
-  coins_remaining: number;
+  amount_coins: number;
+  payer_balance: number;
 }
 
-export interface EscrowReleaseResult {
+export interface ReleaseEscrowResult {
   id: string;
-  status: 'released';
-  amount_released: number;
-  receiver_new_balance: number;
+  status: EscrowStatus;
+  amount_coins: number;
+  payee_balance: number;
 }
 
-export interface EscrowRefundResult {
+export interface RefundEscrowResult {
   id: string;
-  status: 'refunded';
-  amount_refunded: number;
-  sender_new_balance: number;
+  status: EscrowStatus;
+  amount_coins: number;
+  payer_balance: number;
 }

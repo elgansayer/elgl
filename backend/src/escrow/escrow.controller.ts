@@ -2,85 +2,121 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
-import { User } from '@supabase/supabase-js';
-import { CurrentUser } from '../auth/current-user.decorator';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import {
-  CreateEscrowDto,
-  DisputeEscrowDto,
-  RefundEscrowDto,
-  ReleaseEscrowDto,
-  ResolveDisputeDto,
-} from './dto/escrow.dto';
 import { EscrowService } from './escrow.service';
+import {
+  CreateEscrowHoldDto,
+  ReleaseEscrowDto,
+  RefundEscrowDto,
+  CancelEscrowDto,
+  EscrowTransactionResponse,
+  CircuitBreakerStatusResponse,
+} from './dto/escrow.dto';
+import { EscrowStatus } from './interfaces/escrow-transaction.interface';
 
+interface AuthenticatedRequest {
+  user: { sub: string };
+}
+
+@ApiTags('Escrow')
 @Controller('escrow')
 @UseGuards(SupabaseAuthGuard)
+@ApiBearerAuth()
 export class EscrowController {
   constructor(private readonly escrowService: EscrowService) {}
 
-  @Post('create')
-  async createEscrow(
-    @CurrentUser() user: User | null,
-    @Body() dto: CreateEscrowDto,
+  @Post('hold')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Hold coins in escrow for a transaction' })
+  async holdCoins(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: CreateEscrowHoldDto,
   ) {
-    if (!user) return null;
-    return this.escrowService.createEscrow(user.id, dto);
+    return this.escrowService.holdCoins(req.user.sub, dto);
   }
 
   @Post('release')
-  async releaseEscrow(
-    @CurrentUser() user: User | null,
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Release held escrow coins to the payee' })
+  async releaseCoins(
+    @Req() req: AuthenticatedRequest,
     @Body() dto: ReleaseEscrowDto,
   ) {
-    if (!user) return null;
-    return this.escrowService.releaseEscrow(user.id, dto);
+    return this.escrowService.releaseCoins(dto.transaction_id, req.user.sub);
   }
 
   @Post('refund')
-  async refundEscrow(
-    @CurrentUser() user: User | null,
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Refund escrow coins back to the payer' })
+  async refundCoins(
+    @Req() req: AuthenticatedRequest,
     @Body() dto: RefundEscrowDto,
   ) {
-    if (!user) return null;
-    return this.escrowService.refundEscrow(user.id, dto);
+    return this.escrowService.refundCoins(
+      dto.transaction_id,
+      req.user.sub,
+      dto.reason,
+    );
   }
 
-  @Post('dispute')
-  async disputeEscrow(
-    @CurrentUser() user: User | null,
-    @Body() dto: DisputeEscrowDto,
+  @Post('cancel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cancel an escrow transaction' })
+  async cancelEscrow(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: CancelEscrowDto,
   ) {
-    if (!user) return null;
-    return this.escrowService.disputeEscrow(user.id, dto);
+    return this.escrowService.cancelEscrow(dto.transaction_id, req.user.sub);
   }
 
-  @Post('resolve-dispute')
-  async resolveDispute(
-    @CurrentUser() user: User | null,
-    @Body() dto: ResolveDisputeDto,
-  ) {
-    if (!user) return null;
-    return this.escrowService.resolveDispute(user.id, dto);
+  @Get('transactions')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List escrow transactions for the current user' })
+  async listTransactions(
+    @Req() req: AuthenticatedRequest,
+    @Query('status') status?: EscrowStatus,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ): Promise<EscrowTransactionResponse[]> {
+    return this.escrowService.listTransactions(
+      req.user.sub,
+      status,
+      limit ? parseInt(limit, 10) : 20,
+      offset ? parseInt(offset, 10) : 0,
+    );
   }
 
-  @Get(':id')
-  async getEscrow(@CurrentUser() user: User | null, @Param('id') id: string) {
-    if (!user) return null;
-    return this.escrowService.getEscrow(id);
+  @Get('transactions/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get an escrow transaction by ID' })
+  async getTransaction(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ): Promise<EscrowTransactionResponse> {
+    return this.escrowService.getTransaction(id, req.user.sub);
   }
 
-  @Get()
-  async listEscrows(
-    @CurrentUser() user: User | null,
-    @Query('status') status?: string,
-  ) {
-    if (!user) return null;
-    return this.escrowService.listUserEscrows(user.id, status);
+  @Get('circuit-breaker/status')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get circuit breaker status for escrow service' })
+  getCircuitBreakerStatus(): CircuitBreakerStatusResponse {
+    return this.escrowService.getCircuitBreakerStatus();
+  }
+
+  @Post('circuit-breaker/reset')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset circuit breaker for escrow service (admin)' })
+  resetCircuitBreaker(): { reset: boolean } {
+    this.escrowService.resetCircuitBreaker();
+    return { reset: true };
   }
 }
