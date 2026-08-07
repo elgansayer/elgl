@@ -98,8 +98,12 @@ export class ModerationController {
   async getItems(
     @Query('type') type: 'moment' | 'profile',
     @Query('status') status?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ): Promise<ModerationItem[]> {
-    return this.moderationService.getItems(type, status);
+    const parsedPage = page ? parseInt(page, 10) : undefined;
+    const parsedPageSize = pageSize ? parseInt(pageSize, 10) : undefined;
+    return this.moderationService.getItems(type, status, parsedPage, parsedPageSize);
   }
 
   @Post('report')

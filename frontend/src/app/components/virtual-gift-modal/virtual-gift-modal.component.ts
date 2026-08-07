@@ -1,4 +1,4 @@
-import { Component, input, output, inject, signal } from '@angular/core';
+import { Component, input, output, inject, signal, computed } from '@angular/core';
 
 import { EconomyStore, VirtualGift } from '../../services/economy.store';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -7,9 +7,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-virtual-gift-modal',
   imports: [TranslatePipe],
   template: `
-    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-2 sm:p-4">
       <div
-        class="bg-surface-200 rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-surface-100 space-y-5 animate-fadeIn"
+        class="bg-surface-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-lg w-full shadow-2xl border border-surface-100 space-y-4 sm:space-y-5 animate-fadeIn max-h-[90vh] overflow-y-auto"
       >
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">
           <div>
@@ -56,7 +56,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <span class="text-xs font-bold text-text-primary block">{{
               'giftModal.bundlePrompt' | t
             }}</span>
-            <div class="grid grid-cols-1 gap-2.5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               @for (pkg of economyStore.coinPackages(); track pkg.id) {
                 <div
                   class="p-3.5 rounded-2xl border border-surface-100 bg-surface-300 flex items-center justify-between"
@@ -126,20 +126,26 @@ import { TranslatePipe } from '../../services/translate.pipe';
             {{ 'giftModal.cancelBtn' | t }}
           </button>
           @if (!showCoinPackages()) {
-            <button
-              [disabled]="!selectedGift() || isSending()"
-              (click)="confirmSend()"
-              class="px-6 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
-            >
-              {{
-                isSending()
-                  ? ('giftModal.sendingBtn' | t)
-                  : selectedGift()
-                    ? ('giftModal.sendBtnText'
-                      | t: { icon: selectedGift().icon, cost: selectedGift().cost_coins })
-                    : ('giftModal.selectGift' | t)
-              }}
-            </button>
+            @if (selectedGift(); as gift) {
+              <button
+                [disabled]="isSending()"
+                (click)="confirmSend()"
+                class="px-6 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
+              >
+                {{
+                  isSending()
+                    ? ('giftModal.sendingBtn' | t)
+                    : ('giftModal.sendBtnText' | t: { icon: gift.icon, cost: gift.cost_coins })
+                }}
+              </button>
+            } @else {
+              <button
+                disabled
+                class="px-6 py-2 bg-primary opacity-50 text-white rounded-xl font-extrabold text-xs shadow"
+              >
+                {{ 'giftModal.selectGift' | t }}
+              </button>
+            }
           }
         </div>
       </div>
@@ -153,12 +159,15 @@ export class VirtualGiftModalComponent {
   closed = output<void>();
 
   readonly economyStore = inject(EconomyStore);
+
   readonly selectedGift = signal<VirtualGift | null>(null);
   readonly showCoinPackages = signal(false);
   readonly isSending = signal(false);
   readonly deductedAmount = signal(0);
 
-  readonly effectiveBalance = () => this.economyStore.coinsBalance() - this.deductedAmount();
+  readonly effectiveBalance = computed(
+    (): number => this.economyStore.coinsBalance() - this.deductedAmount(),
+  );
 
   private ensureDataLoaded(): void {
     if (this.economyStore.catalog().length === 0) {
