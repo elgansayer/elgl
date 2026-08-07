@@ -140,13 +140,8 @@ export class AppComponent implements OnInit {
       );
     });
 
-    // Apply font scale to the root rem unit
-    effect(() => {
-      const scale = this.fontScaleService.scaleFactor();
-      if (this.document && this.document.documentElement) {
-        this.document.documentElement.style.fontSize = `${(scale * 16).toFixed(2)}px`;
-      }
-    });
+    // Font scale is applied globally by FontScaleService via effect()
+    // which sets document.documentElement.style.fontSize, adjusting base rem CSS rules.
 
     // Redirect to the lock screen when the app is locked
     effect(() => {

@@ -1446,6 +1446,12 @@ export class I18nService {
     'settings.on': 'On',
     'settings.off': 'Off',
     'settings.fontScale': 'Text size',
+    'settings.fontSize': 'Font Size',
+    'settings.appearanceSection': 'Appearance',
+    'settings.accentColor': 'Accent Colour',
+    'settings.accentColorDesc': 'Choose a custom accent colour for the app',
+    'settings.vipRequired': 'VIP',
+    'settings.saveBtn': 'Save Settings',
     'settings.languageSection': 'Language',
     'settings.languageSelectLabel': 'Interface language',
     'settings.languageChangeDescription':
