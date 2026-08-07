@@ -2,6 +2,7 @@ import { Component, inject, signal, computed, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { RouterLink } from '@angular/router';
+import { JoyrideDirective } from 'ngx-joyride';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
@@ -20,12 +21,18 @@ interface CatalogItem {
 @Component({
   selector: 'app-shop',
   standalone: true,
+<<<<<<< HEAD
   imports: [TranslatePipe, RouterLink, AppSkeletonLoaderComponent, AppEmptyStateComponent],
+=======
+  imports: [JoyrideDirective, TranslatePipe, RouterLink],
+>>>>>>> origin/main
   template: `
     <div class="p-4">
       <h1 class="text-xl font-bold mb-4">{{ 'shop.title' | t }}</h1>
       <p class="mb-6 text-sm opacity-70">{{ 'shop.subtitle' | t }}</p>
-      <a routerLink="/cart" class="mb-6 block text-sm font-medium text-indigo-400 underline">{{ 'cart.title' | t }}</a>
+      <span joyrideStep="economyTour@shopLink" [text]="'tour.shopLinkDesc' | t" stepPosition="bottom">
+        <a routerLink="/cart" class="mb-6 block text-sm font-medium text-indigo-400 underline">{{ 'cart.title' | t }}</a>
+      </span>
       @if (message()) {
         <p class="mb-4 text-sm text-indigo-300">{{ message() }}</p>
       }
