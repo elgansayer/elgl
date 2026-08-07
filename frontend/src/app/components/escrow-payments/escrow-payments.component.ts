@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, AfterViewInit, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, resource, afterNextRender, effect } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { FormsModule } from '@angular/forms';
@@ -35,12 +35,15 @@ interface EscrowRow {
   imports: [FormsModule, DatePipe, TranslatePipe, JoyrideModule],
   templateUrl: './escrow-payments.component.html',
 })
-export class EscrowPaymentsComponent implements AfterViewInit, OnInit {
+export class EscrowPaymentsComponent {
   private http = inject(HttpClient);
   private auth = inject(AuthService);
   private i18n = inject(I18nService);
   private readonly joyrideService = inject(JoyrideService);
   private readonly onboardingService = inject(EscrowOnboardingService);
+
+  /** Signal to trigger transaction list resource reload after mutations. */
+  private readonly refreshTrigger = signal(0);
 
   readonly transactions = signal<EscrowRow[]>([]);
   readonly loading = signal(false);
@@ -85,24 +88,39 @@ export class EscrowPaymentsComponent implements AfterViewInit, OnInit {
     this.transactions().filter((tx) => tx.status === 'pending').length,
   );
 
-  async loadTransactions(status?: string): Promise<void> {
-    this.loading.set(true);
-    this.error.set(null);
-    const token = this.auth.getAccessToken();
-    try {
-      const params = status ? `?status=${status}` : '';
+  /** Resource-based data loading: auto-fetches transactions and reloads on mutations. */
+  private readonly transactionsResource = resource({
+    request: () => this.refreshTrigger(),
+    loader: async ({ request: _ }) => {
+      const token = this.auth.getAccessToken();
       const result = await firstValueFrom(
         this.http.get<EscrowRow[]>(
-          `${environment.apiUrl}/escrow${params}`,
+          `${environment.apiUrl}/escrow`,
           { headers: { Authorization: `Bearer ${token ?? ''}` } },
         ),
       );
-      this.transactions.set(result ?? []);
-    } catch {
-      this.error.set(this.i18n.translate('escrow.loadError'));
-    } finally {
-      this.loading.set(false);
-    }
+      return result ?? [];
+    },
+  });
+
+  /** Sync resource data into the transactions signal and start onboarding tour. */
+  constructor() {
+    effect(() => {
+      const data = this.transactionsResource.value();
+      if (data !== undefined) {
+        this.transactions.set(data);
+      }
+    });
+
+    // Third-party lib (Joyride) requires DOM-ready state; afterNextRender is the
+    // mandated replacement for ngAfterViewInit per Section 5.3.
+    afterNextRender(() => {
+      this.maybeStartTour();
+    });
+  }
+
+  refreshTransactions(): void {
+    this.refreshTrigger.update((v) => v + 1);
   }
 
   async createPayment(): Promise<void> {
@@ -128,7 +146,7 @@ export class EscrowPaymentsComponent implements AfterViewInit, OnInit {
       this.successMessage.set(this.i18n.translate('escrow.createSuccess'));
       this.showCreateForm.set(false);
       this.createForm.set({ partner_id: '', amount: 0, description: '', service_type: 'other' });
-      await this.loadTransactions();
+      this.refreshTransactions();
     } catch {
       this.error.set(this.i18n.translate('escrow.createError'));
     } finally {
@@ -149,7 +167,7 @@ export class EscrowPaymentsComponent implements AfterViewInit, OnInit {
         ),
       );
       this.successMessage.set(this.i18n.translate('escrow.releaseSuccess'));
-      await this.loadTransactions();
+      this.refreshTransactions();
     } catch {
       this.error.set(this.i18n.translate('escrow.releaseError'));
     } finally {
@@ -171,7 +189,7 @@ export class EscrowPaymentsComponent implements AfterViewInit, OnInit {
       );
       this.successMessage.set(this.i18n.translate('escrow.refundSuccess'));
       this.refundReason.set('');
-      await this.loadTransactions();
+      this.refreshTransactions();
     } catch {
       this.error.set(this.i18n.translate('escrow.refundError'));
     } finally {
@@ -202,7 +220,7 @@ export class EscrowPaymentsComponent implements AfterViewInit, OnInit {
       this.showDisputeForm.set(null);
       this.disputeReason.set('');
       this.disputeEvidence.set('');
-      await this.loadTransactions();
+      this.refreshTransactions();
     } catch {
       this.error.set(this.i18n.translate('escrow.disputeError'));
     } finally {
@@ -244,14 +262,7 @@ export class EscrowPaymentsComponent implements AfterViewInit, OnInit {
     this.successMessage.set(null);
   }
 
-  ngOnInit(): void {
-    this.loadTransactions();
-  }
-
-  ngAfterViewInit(): void {
-    this.maybeStartTour();
-  }
-
+  /** Start onboarding tour using firstValueFrom to avoid unmanaged subscription. */
   private maybeStartTour(): void {
     if (this.onboardingService.isCompleted()) {
       return;
@@ -261,25 +272,23 @@ export class EscrowPaymentsComponent implements AfterViewInit, OnInit {
     }
     this.onboardingService.isTourInProgress.set(true);
 
-    setTimeout(() => {
-      const options: JoyrideOptions = {
-        steps: this.onboardingService.stepNames,
-        startWith: 'escrowStepTitle',
-        waitingTime: 100,
-        stepDefaultPosition: 'bottom',
-        themeColor: '#6366f1',
-        showCounter: true,
-        showPrevButton: true,
-      };
+    const options: JoyrideOptions = {
+      steps: this.onboardingService.stepNames,
+      startWith: 'escrowStepTitle',
+      waitingTime: 100,
+      stepDefaultPosition: 'bottom',
+      themeColor: '#6366f1',
+      showCounter: true,
+      showPrevButton: true,
+    };
 
-      this.joyrideService.startTour(options).subscribe({
-        error: () => {
-          this.onboardingService.isTourInProgress.set(false);
-        },
-        complete: () => {
-          this.onboardingService.markComplete();
-        },
+    // JoyrideService.startTour returns an Observable; convert to Promise for clean teardown.
+    firstValueFrom(this.joyrideService.startTour(options))
+      .then(() => {
+        this.onboardingService.markComplete();
+      })
+      .catch(() => {
+        this.onboardingService.isTourInProgress.set(false);
       });
-    }, 500);
   }
 }
