@@ -4,7 +4,10 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyCacheInvalidationService } from '../safety/safety-cache-invalidation.service';
 import { ArchiveRequestDto } from './dto/archive-request.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
-import { scrubCoinPurchasesForArchive } from '../economy/sanitise-economy.helper';
+import {
+  scrubCoinPurchasesForArchive,
+  scrubEscrowTransactionsForArchive,
+} from '../economy/sanitise-economy.helper';
 
 @Injectable()
 export class PrivacyService {
@@ -256,28 +259,23 @@ export class PrivacyService {
       .eq('user_id', userId)
       .order('unlocked_at', { ascending: false });
 
-    // 11) LingQ Reading Engine: reading progress (user personal stats)
-    let userReadingProgress: unknown = null;
-    const { data: progressData, error: progressError } = await supabase
-      .from('reading_progress')
+    // 10) Escrow transactions (GDPR right of access: user's payment escrow history)
+    const { data: userEscrowPayer } = await supabase
+      .from('escrow_transactions')
       .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    if (progressError && progressError.code !== 'PGRST116') {
-      this.logger.warn(
-        `Failed to fetch reading progress for archive: ${progressError.message}`,
-      );
-    } else if (!progressError) {
-      userReadingProgress = progressData;
-    }
-
-    // 12) Reading resources authored by the user (content they created)
-    const { data: userReadingResources } = await supabase
-      .from('reading_resources')
-      .select('*')
-      .eq('created_by', userId)
+      .eq('payer_id', userId)
       .order('created_at', { ascending: false });
+
+    const { data: userEscrowPayee } = await supabase
+      .from('escrow_transactions')
+      .select('*')
+      .eq('payee_id', userId)
+      .order('created_at', { ascending: false });
+
+    const escrowTransactions = [
+      ...(userEscrowPayer ?? []),
+      ...(userEscrowPayee ?? []),
+    ];
 
     return {
       export_generated_at: new Date().toISOString(),
@@ -293,8 +291,10 @@ export class PrivacyService {
       escrow_transactions: escrowTransactions ?? [],
       gift_transactions: giftTransactions ?? [],
       user_sticker_packs: userStickerPacks ?? [],
-      reading_progress: userReadingProgress,
-      reading_resources: userReadingResources ?? [],
+      escrow_transactions: scrubEscrowTransactionsForArchive(
+        escrowTransactions,
+        userId,
+      ),
     };
   }
 }
