@@ -10,6 +10,7 @@ import {
   Req,
   UseFilters,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 <<<<<<< HEAD
 import { Throttle } from '@nestjs/throttler';
@@ -63,6 +64,13 @@ import {
   CircuitBreakerStatusResponse,
 } from './dto/escrow.dto';
 import { EscrowStatus } from './interfaces/escrow-transaction.interface';
+import {
+  CacheControlInterceptor,
+  CACHE_EDGE_SHORT,
+  CACHE_EDGE_MEDIUM,
+  CACHE_NO_STORE,
+  CACHE_TAG_ESCROW,
+} from '../common/cache.interceptor';
 
 <<<<<<< HEAD
 @ApiTags('Escrow Payments')
@@ -122,6 +130,7 @@ export class EscrowController {
 =======
   @Post('hold')
   @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Hold coins in escrow for a transaction',
     description:
@@ -181,6 +190,7 @@ export class EscrowController {
     @Req() req: { user?: { id?: string } },
 =======
   @HttpCode(HttpStatus.OK)
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Release held escrow coins to the payee',
     description:
@@ -241,6 +251,7 @@ export class EscrowController {
     @Req() req: { user?: { id?: string } },
 =======
   @HttpCode(HttpStatus.OK)
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Refund escrow coins back to the payer',
     description:
@@ -297,6 +308,7 @@ export class EscrowController {
 =======
   @Post('cancel')
   @HttpCode(HttpStatus.OK)
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Cancel an escrow transaction',
     description:
@@ -326,6 +338,7 @@ export class EscrowController {
 
   @Post('dispute')
   @HttpCode(HttpStatus.OK)
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'File a dispute against an escrow transaction',
     description:
@@ -358,6 +371,7 @@ export class EscrowController {
   }
 
   @Get('transactions')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_MEDIUM, [CACHE_TAG_ESCROW]))
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'List escrow transactions for the current user',
@@ -521,6 +535,7 @@ export class EscrowController {
     @Req() req: { user?: { id?: string } },
 =======
   @Get('transactions/:id')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_MEDIUM, [CACHE_TAG_ESCROW]))
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get an escrow transaction by ID',
@@ -567,6 +582,7 @@ export class EscrowController {
   }
 
   @Get('circuit-breaker/status')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_SHORT))
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get circuit breaker status for escrow service',
@@ -593,6 +609,7 @@ export class EscrowController {
 
   @Post('circuit-breaker/reset')
   @HttpCode(HttpStatus.OK)
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Reset circuit breaker for escrow service (admin)',
     description:
@@ -614,6 +631,7 @@ export class EscrowController {
   }
 
   @Get('crash-reports')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_SHORT))
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'List unresolved crash reports for escrow service (admin)',
@@ -628,6 +646,7 @@ export class EscrowController {
 
   @Post('crash-reports/acknowledge')
   @HttpCode(HttpStatus.OK)
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Acknowledge a crash report (admin)',
     description:
@@ -652,6 +671,7 @@ export class EscrowController {
 
   @Post('crash-reports/resolve')
   @HttpCode(HttpStatus.OK)
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Resolve a crash report (admin)',
     description:

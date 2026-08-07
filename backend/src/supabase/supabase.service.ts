@@ -2028,6 +2028,46 @@ export interface Database {
         }>;
         Relationships: [];
       };
+      escrow_crash_reports: {
+        Row: {
+          id: string;
+          operation: string;
+          escrow_id: string | null;
+          user_id: string | null;
+          error_type: string;
+          error_message: string;
+          stack_trace: string | null;
+          context: Record<string, unknown> | null;
+          created_at: string;
+          acknowledged: boolean;
+          resolved_at: string | null;
+        };
+        Insert: Partial<{
+          id?: string;
+          operation: string;
+          escrow_id?: string | null;
+          user_id?: string | null;
+          error_type: string;
+          error_message: string;
+          stack_trace?: string | null;
+          context?: Record<string, unknown> | null;
+          created_at?: string;
+          acknowledged?: boolean;
+          resolved_at?: string | null;
+        }>;
+        Update: Partial<{
+          operation?: string;
+          escrow_id?: string | null;
+          user_id?: string | null;
+          error_type?: string;
+          error_message?: string;
+          stack_trace?: string | null;
+          context?: Record<string, unknown> | null;
+          acknowledged?: boolean;
+          resolved_at?: string | null;
+        }>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
