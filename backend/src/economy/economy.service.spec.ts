@@ -3,6 +3,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EconomyService } from './economy.service';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
+import { PinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
@@ -40,6 +41,10 @@ describe('EconomyService', () => {
     module = await Test.createTestingModule({
       providers: [
         EconomyService,
+        {
+          provide: 'PinoLogger:EconomyService',
+          useValue: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
+        },
         {
           provide: SupabaseService,
           useValue: {
