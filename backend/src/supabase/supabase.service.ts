@@ -1,4 +1,4 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import Redis from 'ioredis';
@@ -2115,6 +2115,7 @@ export interface Database {
 @Injectable()
 export class SupabaseService implements OnModuleDestroy {
   private readonly client: SupabaseClient<Database>;
+  private readonly logger = new Logger(SupabaseService.name);
   private readonly redisClient: Redis;
 
   constructor(private readonly configService: ConfigService) {
@@ -2136,7 +2137,7 @@ export class SupabaseService implements OnModuleDestroy {
       lazyConnect: true,
     });
     this.redisClient.on('error', (err) => {
-      console.error('Redis connection error in SupabaseService:', err.message);
+      this.logger.error(`Redis connection error in SupabaseService: ${err.message}`);
     });
   }
 

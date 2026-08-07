@@ -24,10 +24,40 @@ import { TranscribeAudioDto } from './dto/transcribe-audio.dto';
 export class NlpService {
   private nlpLanguage = new Language();
 
+  /** Default timeout for external API calls (10 seconds). */
+  private static readonly EXTERNAL_API_TIMEOUT_MS = 10_000;
+
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
   ) {}
+
+  /** Creates an AbortSignal that fires after the given timeout in milliseconds. */
+  private static createTimeoutSignal(ms: number): AbortSignal {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(new DOMException('Request timed out', 'TimeoutError')), ms);
+    return controller.signal;
+  }
+
+  /** fetch wrapper that enforces a configurable timeout. */
+  private static async fetchWithTimeout(
+    url: string,
+    init: RequestInit,
+    timeoutMs = NlpService.EXTERNAL_API_TIMEOUT_MS,
+  ): Promise<Response> {
+    const signal = NlpService.createTimeoutSignal(timeoutMs);
+    // If the caller already supplied a signal, race the two
+    const combinedSignal = init.signal
+      ? (() => {
+          const c = new AbortController();
+          init.signal!.addEventListener('abort', () => c.abort());
+          signal.addEventListener('abort', () => c.abort());
+          return c.signal;
+        })()
+      : signal;
+
+    return fetch(url, { ...init, signal: combinedSignal });
+  }
 
   detectLanguage(text: string): { language: string; confidence: number } {
     const guesses = this.nlpLanguage.guess(text, undefined, 3);
@@ -78,7 +108,7 @@ export class NlpService {
     // Try DeepL first, fall back to local NLP.js-based transliteration
     if (deepLKey) {
       try {
-        const res = await fetch('https://api-free.deepl.com/v2/translate', {
+        const res = await NlpService.fetchWithTimeout('https://api-free.deepl.com/v2/translate', {
           method: 'POST',
           headers: {
             Authorization: `DeepL-Auth-Key ${deepLKey}`,
@@ -105,7 +135,7 @@ export class NlpService {
             // Generate transliteration via reverse look-up from DeepL
             let transliteration = translatedText;
             try {
-              const translitRes = await fetch(
+              const translitRes = await NlpService.fetchWithTimeout(
                 'https://api-free.deepl.com/v2/translate',
                 {
                   method: 'POST',
@@ -174,7 +204,7 @@ export class NlpService {
       try {
         // Use Azure AI Translator's grammar checking via the "breakSentence" and "translate" endpoints
         // First, detect the language
-        const detectRes = await fetch(
+        const detectRes = await NlpService.fetchWithTimeout(
           'https://api.cognitive.microsofttranslator.com/detect?api-version=3.0',
           {
             method: 'POST',
@@ -193,7 +223,7 @@ export class NlpService {
           const detectedLang = detectData?.[0]?.language || 'en';
 
           // Use Azure's dictionary lookup for grammar correction (works best for common languages)
-          const dictRes = await fetch(
+          const dictRes = await NlpService.fetchWithTimeout(
             `https://api.cognitive.microsofttranslator.com/dictionary/lookup?api-version=3.0&from=${detectedLang}&to=en`,
             {
               method: 'POST',
@@ -215,7 +245,7 @@ export class NlpService {
             // Generate explanation using Azure's translation
             let explanation = '';
             try {
-              const explainRes = await fetch(
+              const explainRes = await NlpService.fetchWithTimeout(
                 `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=${detectedLang}&to=en&textType=html`,
                 {
                   method: 'POST',
@@ -275,7 +305,7 @@ export class NlpService {
     }
 
     const prompt = `Explain the grammar difference between the original sentence and the corrected sentence. Original: "${dto.original}" Corrected: "${dto.corrected}". Provide a brief explanation in English.`;
-    const res = await fetch('https://api-free.deepl.com/v2/translate', {
+    const res = await NlpService.fetchWithTimeout('https://api-free.deepl.com/v2/translate', {
       method: 'POST',
       headers: {
         Authorization: `DeepL-Auth-Key ${deepLKey}`,
@@ -321,12 +351,12 @@ export class NlpService {
       try {
         // Azure Speech Services Pronunciation Assessment API
         // We need to download the audio from the URL and send it to Azure
-        const audioResponse = await fetch(dto.audio_url);
+        const audioResponse = await NlpService.fetchWithTimeout(dto.audio_url);
         if (audioResponse.ok) {
           const audioBuffer = await audioResponse.arrayBuffer();
 
           // Azure Speech Services REST API for pronunciation assessment
-          const assessmentRes = await fetch(
+          const assessmentRes = await NlpService.fetchWithTimeout(
             `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US&format=detailed&profanity=raw`,
             {
               method: 'POST',
@@ -426,7 +456,7 @@ export class NlpService {
     }
 
     // Download the audio file from the provided URL
-    const audioResponse = await fetch(dto.audio_url);
+    const audioResponse = await NlpService.fetchWithTimeout(dto.audio_url);
     if (!audioResponse.ok) {
       throw new BadRequestException('Failed to fetch audio file from URL');
     }
@@ -436,7 +466,7 @@ export class NlpService {
     const lang = dto.language || 'en-US';
 
     // Azure Speech Services REST API for speech-to-text
-    const sttRes = await fetch(
+    const sttRes = await NlpService.fetchWithTimeout(
       `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${lang}&format=detailed&profanity=raw`,
       {
         method: 'POST',
@@ -490,7 +520,7 @@ export class NlpService {
 
     const detected = this.detectLanguage(text).language;
 
-    const res = await fetch('https://api-free.deepl.com/v2/translate', {
+    const res = await NlpService.fetchWithTimeout('https://api-free.deepl.com/v2/translate', {
       method: 'POST',
       headers: {
         Authorization: `DeepL-Auth-Key ${deepLKey}`,
@@ -558,7 +588,7 @@ export class NlpService {
     const keys = Object.keys(dto.dictionary);
     const values = keys.map((key) => dto.dictionary[key]);
 
-    const res = await fetch('https://api-free.deepl.com/v2/translate', {
+    const res = await NlpService.fetchWithTimeout('https://api-free.deepl.com/v2/translate', {
       method: 'POST',
       headers: {
         Authorization: `DeepL-Auth-Key ${deepLKey}`,
@@ -668,7 +698,7 @@ export class NlpService {
     }
 
     // Translate the original text via DeepL
-    const res = await fetch('https://api-free.deepl.com/v2/translate', {
+    const res = await NlpService.fetchWithTimeout('https://api-free.deepl.com/v2/translate', {
       method: 'POST',
       headers: {
         Authorization: `DeepL-Auth-Key ${deepLKey}`,
@@ -701,7 +731,7 @@ export class NlpService {
     // Obtain grammar‑style correction via Azure (mirrors the way
     // grammarCheck works but does not count a second API call)
     if (azureKey) {
-      const detectRes = await fetch(
+      const detectRes = await NlpService.fetchWithTimeout(
         'https://api.cognitive.microsofttranslator.com/detect?api-version=3.0',
         {
           method: 'POST',
@@ -717,7 +747,7 @@ export class NlpService {
       }>;
       const detectedLang = detectData?.[0]?.language || 'en';
 
-      const dictRes = await fetch(
+      const dictRes = await NlpService.fetchWithTimeout(
         `https://api.cognitive.microsofttranslator.com/dictionary/lookup?api-version=3.0&from=${detectedLang}&to=en`,
         {
           method: 'POST',
@@ -733,7 +763,7 @@ export class NlpService {
       }>;
       correctedText = dictData?.[0]?.displayTarget || cleanWord;
 
-      const explainRes = await fetch(
+      const explainRes = await NlpService.fetchWithTimeout(
         `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=${detectedLang}&to=en&textType=html`,
         {
           method: 'POST',
@@ -814,7 +844,7 @@ export class NlpService {
       };
     }
 
-    const audioResponse = await fetch(dto.audio_url);
+    const audioResponse = await NlpService.fetchWithTimeout(dto.audio_url);
     if (!audioResponse.ok) {
       throw new BadRequestException('Failed to fetch audio file from URL');
     }
@@ -823,7 +853,7 @@ export class NlpService {
 
     const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US&format=detailed`;
 
-    const res = await fetch(url, {
+    const res = await NlpService.fetchWithTimeout(url, {
       method: 'POST',
       headers: {
         'Ocp-Apim-Subscription-Key': azureKey,
