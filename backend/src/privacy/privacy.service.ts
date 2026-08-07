@@ -183,7 +183,7 @@ export class PrivacyService {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
-    // 7) Coin purchases (GDPR: receipt tokens + transaction IDs scrubbed)
+// 7) Coin purchases (GDPR: receipt tokens + transaction IDs scrubbed)
     const { data: coinPurchases } = await supabase
       .from('coin_purchases')
       .select('*')
@@ -214,7 +214,7 @@ export class PrivacyService {
       })),
     ];
 
-    // 9) Sticker pack ownership
+    // 10) Sticker pack ownership
     const { data: userStickerPacks } = await supabase
       .from('user_sticker_packs')
       .select('*')

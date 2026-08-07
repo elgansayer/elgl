@@ -42,10 +42,34 @@ prometheus_scrape:
       - hellotalk_ts_dating_risk_score: histogram
       - hellotalk_ts_reports_by_category_total: counter
       - hellotalk_ts_moderation_queue_latency_seconds: histogram
+      # LingQ Reading Engine metrics (Datadog custom metrics)
+      - hellotalk_reading_engine_sessions_total: counter
+      - hellotalk_reading_engine_words_parsed_total: counter
+      - hellotalk_reading_engine_tokenisation_duration_seconds: histogram
+      - hellotalk_reading_engine_ai_requests_total: counter
+      - hellotalk_reading_engine_ai_request_duration_seconds: histogram
+      - hellotalk_reading_engine_ai_errors_total: counter
+      - hellotalk_reading_engine_flashcard_saves_total: counter
+      - hellotalk_reading_engine_session_duration_seconds: histogram
+      - hellotalk_reading_engine_words_looked_up_total: counter
+      - hellotalk_reading_engine_daily_active_readers: gauge
       # Infrastructure metrics
       - hellotalk_http_request_duration_seconds: histogram
       - hellotalk_http_requests_total: counter
       - hellotalk_active_connections: gauge
+      # Coin economy metrics (Datadog custom metrics)
+      - hellotalk_coin_purchases_total: counter
+      - hellotalk_coin_purchase_value_total: counter
+      - hellotalk_coin_balance_total: gauge
+      - hellotalk_coin_high_balance_users: gauge
+      - hellotalk_coin_daily_claims_total: counter
+      - hellotalk_coin_gifts_total: counter
+      - hellotalk_coin_gift_value_total: counter
+      - hellotalk_coin_sticker_purchases_total: counter
+      - hellotalk_coin_sticker_revenue_total: counter
+      - hellotalk_coin_purchase_errors_total: counter
+      - hellotalk_coin_fraud_attempts_total: counter
+      - hellotalk_coin_transaction_latency_seconds: histogram
       # Node.js default metrics (prefixed with hellotalk_)
       - hellotalk_nodejs_heap_size_total_bytes: gauge
       - hellotalk_nodejs_heap_size_used_bytes: gauge

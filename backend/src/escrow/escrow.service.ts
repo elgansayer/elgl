@@ -690,8 +690,16 @@ export class EscrowService {
 
     const { data, error } = await this.withRetry(() => query);
 
+<<<<<<< HEAD
     if (error) {
       throw new InternalServerErrorException('Failed to retrieve escrows.');
+=======
+    if (error || !data) {
+      this.logger.error(
+        `Failed to list escrow transactions for ${userId}: ${error?.message ?? 'no data returned'}`,
+      );
+      return [];
+>>>>>>> origin/main
     }
 
     const escrows = (data ?? []).filter(
