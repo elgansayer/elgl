@@ -1504,6 +1504,9 @@ export class I18nService {
     'home.dailyTip.title': 'Daily learning tip',
     'home.dailyTip.loading': 'Fetching your tip...',
     'home.dailyTip.fallback': 'Keep practising every day!',
+
+    // Link Preview
+    'linkPreview.openLink': 'Open link: {title}',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });

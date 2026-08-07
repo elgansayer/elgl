@@ -14,6 +14,14 @@ export interface CorrectionPayload {
   explanation?: string;
 }
 
+export interface LinkPreview {
+  url: string;
+  title: string;
+  description: string;
+  image: string;
+  siteName: string;
+}
+
 export interface ChatMessage {
   id: string;
   room_id: string;
@@ -71,6 +79,9 @@ export interface ChatMessage {
 
   /** True when the message has been soft‑deleted for all users */
   is_deleted?: boolean;
+
+  /** OpenGraph link preview for URLs embedded in the message text */
+  link_preview?: LinkPreview | null;
 }
 
 export interface FavouriteRecord {

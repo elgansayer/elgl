@@ -23,6 +23,7 @@ import { SafetyService } from '../../services/safety.service';
 import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.component';
+import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 
 @Component({
   selector: 'app-chat-room',
@@ -41,6 +42,7 @@ import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.
     ChatSystemBubbleComponent,
     CulturalTipComponent,
     ReplyPreviewComponent,
+    LinkPreviewCardComponent,
   ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss'],

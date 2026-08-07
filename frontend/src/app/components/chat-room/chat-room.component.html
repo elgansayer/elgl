@@ -215,6 +215,9 @@
                     {{ translations()[msg.id] }}
                   </p>
                 }
+                @if (msg.link_preview; as lp) {
+                  <app-link-preview-card [preview]="lp" />
+                }
               }
               @if (msg.message_type === 'correction' && msg.correction_payload) {
                 <app-visual-diff
