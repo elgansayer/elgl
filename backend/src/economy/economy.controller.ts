@@ -111,11 +111,10 @@ export class EconomyController {
 
   /**
    * Sticker pack storefront: contains user-specific ownership data,
-   * so use a short public cache to relieve DB pressure while staying
-   * fresh enough that recently unlocked packs appear promptly.
+   * so it must never be stored in a shared cache.
    */
   @Get('sticker-packs')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async getStickerPacks(@CurrentUser() user: User | null) {
     if (!user) return null;
     return await this.economyService.getStickerPacks(user.id);
