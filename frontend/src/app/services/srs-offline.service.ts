@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import type { Flashcard } from './vocabulary.store';
 
 interface QueuedReviewPayload {
   flashcardId: string;
@@ -64,7 +65,7 @@ export class SrsOfflineService {
   }
 
   /** Cache flashcards locally for offline access */
-  async cacheFlashcards(list: unknown[]): Promise<void> {
+  async cacheFlashcards(list: Flashcard[]): Promise<void> {
     if (!this.isAvailable()) return;
     const db = await this.ensureDB();
     await this.clearStore(db, 'flashcards');
@@ -75,14 +76,14 @@ export class SrsOfflineService {
   }
 
   /** Retrieve cached flashcards when offline */
-  async getCachedFlashcards(): Promise<unknown[]> {
+  async getCachedFlashcards(): Promise<Flashcard[]> {
     if (!this.isAvailable()) return [];
     const db = await this.ensureDB();
     return this.getAllFromStore(db, 'flashcards');
   }
 
   /** Cache due reviews for offline access */
-  async cacheDueReviews(list: unknown[]): Promise<void> {
+  async cacheDueReviews(list: Flashcard[]): Promise<void> {
     if (!this.isAvailable()) return;
     const db = await this.ensureDB();
     await this.clearStore(db, 'due_reviews');
@@ -93,7 +94,7 @@ export class SrsOfflineService {
   }
 
   /** Retrieve cached due reviews when offline */
-  async getCachedDueReviews(): Promise<unknown[]> {
+  async getCachedDueReviews(): Promise<Flashcard[]> {
     if (!this.isAvailable()) return [];
     const db = await this.ensureDB();
     return this.getAllFromStore(db, 'due_reviews');
