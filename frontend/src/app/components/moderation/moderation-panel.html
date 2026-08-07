@@ -1,7 +1,7 @@
 <div class="p-4" role="main" aria-labelledby="moderation-panel-title">
   <h2 id="moderation-panel-title" class="text-xl font-bold mb-4 text-text-primary">{{ 'moderation.title' | t }}</h2>
 
-  <div class="mb-4 flex gap-2" role="tablist" [attr.aria-label]="'moderation.filterAria' | t">
+  <div class="mb-4 flex flex-wrap gap-2" role="tablist" [attr.aria-label]="'moderation.filterAria' | t">
     <button
       class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
       role="tab"
@@ -65,27 +65,27 @@
     <div role="tabpanel" [attr.aria-label]="'moderation.itemsListAria' | t">
     @for (item of items(); track item.id) {
       <div class="border border-slate-700 rounded-lg p-3 mb-3 bg-surface" [attr.aria-label]="'moderation.reportItemAria' | t: { id: item.id }">
-        <div class="flex justify-between items-start">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
           <div>
             <p class="text-sm text-text-primary"><span class="sr-only">{{ 'moderation.reported_user' | t }}: </span>{{ item.reported_user?.name }}</p>
             <p class="text-xs text-text-secondary"><span class="sr-only">{{ 'moderation.reason' | t }}: </span>{{ item.reason }}</p>
             <p class="text-xs text-text-secondary"><span class="sr-only">{{ 'moderation.date' | t }}: </span>{{ item.created_at | date: 'short' }}</p>
           </div>
-          <div class="flex gap-2">
+          <div class="flex flex-wrap gap-2">
             <button
-              class="bg-green-600 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:bg-green-700 transition-colors"
+              class="bg-green-600 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:bg-green-700 transition-colors whitespace-nowrap"
               (click)="approve(item)"
               [attr.aria-label]="'moderation.approveAria' | t: { id: item.id }">
               {{ 'moderation.approve' | t }}
             </button>
             <button
-              class="bg-red-600 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:bg-red-700 transition-colors"
+              class="bg-red-600 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:bg-red-700 transition-colors whitespace-nowrap"
               (click)="reject(item)"
               [attr.aria-label]="'moderation.rejectAria' | t: { id: item.id }">
               {{ 'moderation.reject' | t }}
             </button>
             <button
-              class="bg-yellow-600 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:bg-yellow-700 transition-colors disabled:opacity-50"
+              class="bg-yellow-600 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:bg-yellow-700 transition-colors disabled:opacity-50 whitespace-nowrap"
               (click)="analyseUserProfile(item.reported_user?.id ?? '')"
               [disabled]="analysing()"
               [attr.aria-label]="'moderation.analyseAria' | t: { user: item.reported_user?.name ?? '' }">
