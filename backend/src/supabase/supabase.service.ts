@@ -2080,10 +2080,15 @@ export interface Database {
           search_lat: number;
           search_lon: number;
           radius_m: number;
-          exclude_user_id: string;
-          filter_native: string[] | null;
+          exclude_user_id: string | null;
+          filter_native_arr: string[] | null;
           filter_target: string | null;
           serious_only: boolean;
+          filter_level: string | null;
+          filter_gender: string | null;
+          filter_age_min: number | null;
+          filter_age_max: number | null;
+          filter_audio_intro: boolean;
         };
         Returns: unknown[];
       };

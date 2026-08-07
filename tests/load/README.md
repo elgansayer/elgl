@@ -31,6 +31,8 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:escrow-pay
 | `test:trust-safety` | `trust-and-safety.load.yml` | Load tests all Safety, Moderation, and Blocks endpoints |
 | `test:spam-detection` | `spam-detection.load.yml` | Load tests the SpamDetectionService `/spam-detection/check` endpoint |
 | `test:economy` | `economy.load.yml` | Load tests the Virtual Coin Economy: gift catalog, coin packages, balance, daily check-in, checkout, purchase, gift sending, sticker packs |
+| `test:matchmaking` | `matchmaking.load.yml` | Load tests the Discovery/Matchmaking Algorithm: partner search, language pair matching, location search, partner of the week, audio intros, recent native speakers, spotlight |
+| `test:matchmaking:report` | (output + HTML) | Runs the Matchmaking test and generates an HTML report |
 | `test:trust-safety:report` | (output + HTML) | Runs the Trust & Safety test and generates an HTML report |
 | `test:srs-flashcards` | `srs-flashcards.load.yml` | SRS flashcard creation, review (SM-2), and retrieval load testing |
 | `test:srs-flashcards:report` | (output + HTML) | Runs the SRS Flashcards test and generates an HTML report |
@@ -110,6 +112,15 @@ Both test scripts include the following phases:
 - `POST /escrow/transactions/:id/dispute` - File a dispute for an escrow transaction
 - `POST /escrow/transactions/:id/cancel` - Cancel a pending escrow transaction
 - `GET /escrow/summary` - Get escrow summary statistics
+
+### Discovery / Matchmaking Module (`/discovery`)
+- `GET /discovery/partners` - Partner search with filters (language, level, distance, age, interests, serious learners, availability, learning goals, voice room, audio intro)
+- `GET /discovery/partner-of-week` - Weekly partner of the week list
+- `GET /discovery/audio-intros` - Audio intro discovery
+- `GET /discovery/recent-native-speakers` - Recently joined native speakers
+- `GET /discovery/spotlight` - Spotlight users
+- `GET /discovery/language-pair` - Language pair matching
+- `GET /discovery/search-by-location` - Location-based search by country/city
 
 ### Economy Module (`/economy`)
 - `GET /economy/catalog` - Virtual gift catalog
