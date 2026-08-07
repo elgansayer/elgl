@@ -520,9 +520,16 @@ export class MonetisationService {
       let purchaseToken: string;
       let productId: string | undefined;
       try {
-        const parsed = JSON.parse(receiptData);
-        purchaseToken = parsed.purchaseToken;
-        productId = parsed.productId;
+        const parsed: Record<string, unknown> = JSON.parse(receiptData);
+        if (
+          typeof parsed.purchaseToken === 'string' &&
+          typeof parsed.productId === 'string'
+        ) {
+          purchaseToken = parsed.purchaseToken;
+          productId = parsed.productId;
+        } else {
+          throw new Error('Invalid receipt data format');
+        }
       } catch {
         // fallback: treat receiptData as raw purchase token
         purchaseToken = receiptData;

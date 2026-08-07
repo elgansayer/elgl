@@ -1,12 +1,14 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabCard, VOCABULARY_MOCK_DECK } from './vocab-mock-data';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
 type ReviewGrade = 'again' | 'good' | 'known';
 
 @Component({
   selector: 'app-vocabulary-dashboard',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   template: `
     <div class="mx-auto w-full max-w-md ps-6 pe-6 sm:max-w-lg">
       <h2 class="text-2xl font-bold text-slate-100">{{ 'vocabulary.title' | t }}</h2>
@@ -21,9 +23,16 @@ type ReviewGrade = 'again' | 'good' | 'known';
         }}</button>
       </div>
 
-      @if (isComplete()) {
+      @if (cardCount() === 0) {
+        <app-empty-state
+          [icon]="'📚'"
+          [title]="'vocabulary.noDue' | t"
+          [description]="'vocabulary.noSaved' | t"
+          [customClass]="'mt-12'"
+        />
+      } @else if (isComplete()) {
         <div class="mt-12 rounded-2xl border border-slate-700 bg-surface-800 p-8 text-center">
-          <p class="text-lg font-medium text-slate-100">📚 {{ 'vocabulary.noDue' | t }}</p>
+          <p class="text-lg font-medium text-slate-100">🎉 {{ 'vocabulary.noDue' | t }}</p>
           <button type="button" (click)="restart()" class="mt-4 btn-secondary">{{
             'vocabulary.restart' | t
           }}</button>

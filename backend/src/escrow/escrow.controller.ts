@@ -1,116 +1,122 @@
 import {
-  Controller,
-  Post,
-  Get,
   Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
   Param,
+  Post,
   Query,
-  UseGuards,
   Req,
-  UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { EscrowService } from './escrow.service';
-import { CreateEscrowDto, ReleaseEscrowDto, RefundEscrowDto } from './dto/escrow.dto';
+import {
+  CreateEscrowHoldDto,
+  ReleaseEscrowDto,
+  RefundEscrowDto,
+  CancelEscrowDto,
+  EscrowTransactionResponse,
+  CircuitBreakerStatusResponse,
+} from './dto/escrow.dto';
+import { EscrowStatus } from './interfaces/escrow-transaction.interface';
 
+interface AuthenticatedRequest {
+  user: { sub: string };
+}
+
+@ApiTags('Escrow')
 @Controller('escrow')
 @UseGuards(SupabaseAuthGuard)
+@ApiBearerAuth()
 export class EscrowController {
   constructor(private readonly escrowService: EscrowService) {}
 
-  /**
-   * POST /escrow/create
-   * Create a new escrow transaction, holding coins from the payer.
-   * Rate limited to 5 requests per minute.
-   */
-  @Post('create')
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
-  async create(
-    @Req() req: { user?: { id?: string } },
-    @Body() dto: CreateEscrowDto,
+  @Post('hold')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Hold coins in escrow for a transaction' })
+  async holdCoins(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: CreateEscrowHoldDto,
   ) {
-    const userId = req.user?.id;
-    if (!userId) {
-      throw new UnauthorizedException();
-    }
-    return this.escrowService.createEscrow(userId, dto);
+    return this.escrowService.holdCoins(req.user.sub, dto);
   }
 
-  /**
-   * POST /escrow/release
-   * Release escrowed coins to the payee.
-   * Rate limited to 5 requests per minute.
-   */
   @Post('release')
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
-  async release(
-    @Req() req: { user?: { id?: string } },
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Release held escrow coins to the payee' })
+  async releaseCoins(
+    @Req() req: AuthenticatedRequest,
     @Body() dto: ReleaseEscrowDto,
   ) {
-    const userId = req.user?.id;
-    if (!userId) {
-      throw new UnauthorizedException();
-    }
-    return this.escrowService.releaseEscrow(userId, dto.escrow_id);
+    return this.escrowService.releaseCoins(dto.transaction_id, req.user.sub);
   }
 
-  /**
-   * POST /escrow/refund
-   * Refund escrowed coins back to the payer.
-   * Rate limited to 5 requests per minute.
-   */
   @Post('refund')
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
-  async refund(
-    @Req() req: { user?: { id?: string } },
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Refund escrow coins back to the payer' })
+  async refundCoins(
+    @Req() req: AuthenticatedRequest,
     @Body() dto: RefundEscrowDto,
   ) {
-    const userId = req.user?.id;
-    if (!userId) {
-      throw new UnauthorizedException();
-    }
-    return this.escrowService.refundEscrow(userId, dto.escrow_id);
+    return this.escrowService.refundCoins(
+      dto.transaction_id,
+      req.user.sub,
+      dto.reason,
+    );
   }
 
-  /**
-   * GET /escrow/list
-   * List escrow transactions for the authenticated user.
-   * Rate limited to 20 requests per minute.
-   */
-  @Get('list')
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
-  async list(
-    @Req() req: { user?: { id?: string } },
+  @Post('cancel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cancel an escrow transaction' })
+  async cancelEscrow(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: CancelEscrowDto,
+  ) {
+    return this.escrowService.cancelEscrow(dto.transaction_id, req.user.sub);
+  }
+
+  @Get('transactions')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List escrow transactions for the current user' })
+  async listTransactions(
+    @Req() req: AuthenticatedRequest,
+    @Query('status') status?: EscrowStatus,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
-  ) {
-    const userId = req.user?.id;
-    if (!userId) {
-      throw new UnauthorizedException();
-    }
-    return this.escrowService.listEscrows(
-      userId,
+  ): Promise<EscrowTransactionResponse[]> {
+    return this.escrowService.listTransactions(
+      req.user.sub,
+      status,
       limit ? parseInt(limit, 10) : 20,
       offset ? parseInt(offset, 10) : 0,
     );
   }
 
-  /**
-   * GET /escrow/:id
-   * Get a single escrow transaction by ID.
-   * Rate limited to 30 requests per minute.
-   */
-  @Get(':id')
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
-  async getById(
-    @Req() req: { user?: { id?: string } },
+  @Get('transactions/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get an escrow transaction by ID' })
+  async getTransaction(
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
-  ) {
-    const userId = req.user?.id;
-    if (!userId) {
-      throw new UnauthorizedException();
-    }
-    return this.escrowService.getEscrow(userId, id);
+  ): Promise<EscrowTransactionResponse> {
+    return this.escrowService.getTransaction(id, req.user.sub);
+  }
+
+  @Get('circuit-breaker/status')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get circuit breaker status for escrow service' })
+  getCircuitBreakerStatus(): CircuitBreakerStatusResponse {
+    return this.escrowService.getCircuitBreakerStatus();
+  }
+
+  @Post('circuit-breaker/reset')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset circuit breaker for escrow service (admin)' })
+  resetCircuitBreaker(): { reset: boolean } {
+    this.escrowService.resetCircuitBreaker();
+    return { reset: true };
   }
 }

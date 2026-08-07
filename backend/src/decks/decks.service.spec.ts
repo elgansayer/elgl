@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DecksService } from './decks.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { PinoLogger } from 'nestjs-pino';
+import { InjectPinoLogger } from 'nestjs-pino';
 
 describe('DecksService', () => {
   let service: DecksService;
@@ -54,6 +56,15 @@ describe('DecksService', () => {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+          },
+        },
+        {
+          provide: `PinoLogger:${DecksService.name}`,
+          useValue: {
+            error: jest.fn(),
+            warn: jest.fn(),
+            info: jest.fn(),
+            debug: jest.fn(),
           },
         },
       ],

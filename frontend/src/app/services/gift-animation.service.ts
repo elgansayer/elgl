@@ -1,6 +1,4 @@
-import { Injectable, signal, inject, DestroyRef, computed } from '@angular/core';
-import { interval } from 'rxjs';
-import { take } from 'rxjs';
+import { Injectable, signal, inject, computed } from '@angular/core';
 
 export type GiftAnimationType = 'float' | 'confetti' | 'premium' | 'sparkle' | 'hearts';
 
@@ -70,8 +68,8 @@ function generateParticles(count: number): SvgParticle[] {
 
 @Injectable({ providedIn: 'root' })
 export class GiftAnimationService {
-  private destroyRef = inject(DestroyRef);
-  private autoHideSub: { unsubscribe: () => void } | null = null;
+  private autoHideTimer: ReturnType<typeof setTimeout> | null = null;
+  private fadeoutTimer: ReturnType<typeof setTimeout> | null = null;
   private animationFrameId: ReturnType<typeof requestAnimationFrame> | null = null;
   private startTime = 0;
 
@@ -101,35 +99,24 @@ export class GiftAnimationService {
     this.animationFrameId = requestAnimationFrame(this.tick);
 
     // Hide after 5 seconds, then clear the overlay after a short fade-out.
-    const hideSub = interval(5000)
-      .pipe(take(1))
-      .subscribe(() => {
-        this.isVisible.set(false);
-        const cleanupSub = interval(600)
-          .pipe(take(1))
-          .subscribe(() => {
-            this.currentAnimation.set(null);
-            this.cancelParticles();
-            this.isPlaying = false;
-          });
-        this.autoHideSub = cleanupSub;
-      });
-    this.autoHideSub = hideSub;
-
-    this.destroyRef.onDestroy(() => this.cleanup());
+    this.autoHideTimer = setTimeout(() => {
+      this.isVisible.set(false);
+      this.fadeoutTimer = setTimeout(() => {
+        this.currentAnimation.set(null);
+        this.cancelParticles();
+        this.isPlaying = false;
+      }, 600);
+    }, 5000);
   }
 
   dismiss(): void {
     this.cleanup();
     this.isVisible.set(false);
-    const cleanupSub = interval(600)
-      .pipe(take(1))
-      .subscribe(() => {
-        this.currentAnimation.set(null);
-        this.cancelParticles();
-        this.isPlaying = false;
-      });
-    this.autoHideSub = cleanupSub;
+    this.fadeoutTimer = setTimeout(() => {
+      this.currentAnimation.set(null);
+      this.cancelParticles();
+      this.isPlaying = false;
+    }, 600);
   }
 
   private tick = (): void => {
@@ -180,10 +167,14 @@ export class GiftAnimationService {
   }
 
   private cleanup(): void {
-    // Stop timers & subscriptions.
-    if (this.autoHideSub !== null) {
-      this.autoHideSub.unsubscribe();
-      this.autoHideSub = null;
+    // Stop timers.
+    if (this.autoHideTimer !== null) {
+      clearTimeout(this.autoHideTimer);
+      this.autoHideTimer = null;
+    }
+    if (this.fadeoutTimer !== null) {
+      clearTimeout(this.fadeoutTimer);
+      this.fadeoutTimer = null;
     }
     this.cancelParticles();
     this.isPlaying = false;
