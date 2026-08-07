@@ -371,6 +371,14 @@ export class AudioRoomsStore {
         this.captions.update((list) => [...list.slice(-49), p.caption!]);
       } else if (p.type === 'chat_message' && p.message) {
         this.roomMessages.update((list) => [...list.slice(-99), p.message!]);
+      } else if (p.type === 'hand_dismissed' && p.target_user_id) {
+        this.currentRoom.update((r) => {
+          if (!r) return r;
+          return {
+            ...r,
+            raised_hands: r.raised_hands.filter((id) => id !== p.target_user_id),
+          };
+        });
       } else if (p.type === 'room_ended') {
         showToast(this.i18n.translate('audioRoom.roomEndedToast'));
         this.leaveRoom();
