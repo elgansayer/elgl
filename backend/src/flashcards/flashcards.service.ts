@@ -4,11 +4,8 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard } from './interfaces/flashcard.interface';
 import { XpService } from '../xp/xp.service';
-<<<<<<< HEAD
 import { MetricsService } from '../metrics/metrics.service';
-=======
 import { withRetry } from '../common/retry';
->>>>>>> origin/main
 
 @Injectable()
 export class FlashcardsService {
