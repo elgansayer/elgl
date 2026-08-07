@@ -37,6 +37,7 @@ describe('SuggestFlashcardsService', () => {
     mockQueryBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
     };
 
     mockSupabaseClient = {

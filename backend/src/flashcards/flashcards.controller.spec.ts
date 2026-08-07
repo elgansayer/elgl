@@ -26,7 +26,12 @@ import { FlashcardsService } from './flashcards.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SrsRateLimiterGuard } from './srs-rate-limiter.guard';
 import { Flashcard } from './interfaces/flashcard.interface';
-import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
+import {
+  CreateFlashcardDto,
+  UpdateSrsDto,
+  QueryFlashcardsDto,
+  QueryDueReviewsDto,
+} from './dto/flashcard.dto';
 import { User } from '@supabase/supabase-js';
 
 function mockUser(overrides: Partial<User> = {}): User {
@@ -151,17 +156,23 @@ describe('FlashcardsController', () => {
 
   describe('getFlashcards', () => {
     it('should return empty array if user is not provided', async () => {
-      const result = await controller.getFlashcards(null);
+      const result = await controller.getFlashcards(null, {});
       expect(result).toEqual([]);
       expect(flashcardsService.getFlashcards).not.toHaveBeenCalled();
     });
 
-    it('should call service getFlashcards with parsed integer level', async () => {
+    it('should call service getFlashcards with pagination defaults and level', async () => {
       const cards: Flashcard[] = [mockFlashcard()];
       (flashcardsService.getFlashcards as jest.Mock).mockResolvedValue(cards);
 
-      const result = await controller.getFlashcards(mockUser(), '3');
-      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith('user-1', 3);
+      const query: QueryFlashcardsDto = { level: 3, limit: 50, offset: 0 };
+      const result = await controller.getFlashcards(mockUser(), query);
+      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith(
+        'user-1',
+        3,
+        50,
+        0,
+      );
       expect(result).toEqual(cards);
     });
 
@@ -169,10 +180,13 @@ describe('FlashcardsController', () => {
       const cards: Flashcard[] = [mockFlashcard()];
       (flashcardsService.getFlashcards as jest.Mock).mockResolvedValue(cards);
 
-      const result = await controller.getFlashcards(mockUser());
+      const query: QueryFlashcardsDto = { limit: 50, offset: 0 };
+      const result = await controller.getFlashcards(mockUser(), query);
       expect(flashcardsService.getFlashcards).toHaveBeenCalledWith(
         'user-1',
         undefined,
+        50,
+        0,
       );
       expect(result).toEqual(cards);
     });
@@ -180,17 +194,22 @@ describe('FlashcardsController', () => {
 
   describe('getDueReviews', () => {
     it('should return empty array if user is not provided', async () => {
-      const result = await controller.getDueReviews(null);
+      const result = await controller.getDueReviews(null, {});
       expect(result).toEqual([]);
       expect(flashcardsService.getDueReviews).not.toHaveBeenCalled();
     });
 
-    it('should call service getDueReviews when user is provided', async () => {
+    it('should call service getDueReviews with pagination defaults', async () => {
       const cards: Flashcard[] = [mockFlashcard({ id: 'card-due' })];
       (flashcardsService.getDueReviews as jest.Mock).mockResolvedValue(cards);
 
-      const result = await controller.getDueReviews(mockUser());
-      expect(flashcardsService.getDueReviews).toHaveBeenCalledWith('user-1');
+      const query: QueryDueReviewsDto = { limit: 20, offset: 0 };
+      const result = await controller.getDueReviews(mockUser(), query);
+      expect(flashcardsService.getDueReviews).toHaveBeenCalledWith(
+        'user-1',
+        20,
+        0,
+      );
       expect(result).toEqual(cards);
     });
   });

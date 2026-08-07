@@ -26,7 +26,12 @@ import {
   CACHE_EDGE_MEDIUM,
   CACHE_NO_STORE,
 } from '../common/cache.interceptor';
-import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
+import {
+  CreateFlashcardDto,
+  UpdateSrsDto,
+  QueryFlashcardsDto,
+  QueryDueReviewsDto,
+} from './dto/flashcard.dto';
 import { Flashcard } from './interfaces/flashcard.interface';
 import { FlashcardsService } from './flashcards.service';
 import { SrsRateLimit, SrsRateLimiterGuard } from './srs-rate-limiter.guard';
@@ -103,7 +108,19 @@ export class FlashcardsController {
   @ApiOperation({
     summary: 'List flashcards for the authenticated user',
     description:
-      'Returns all flashcards owned by the user, ordered by creation date descending. Optionally filters by SRS level (0-4).',
+      'Returns paginated flashcards owned by the user, ordered by creation date descending. Hard cap of 200 per page. Optionally filters by SRS level (0-4).',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Max flashcards per page (1-200, default 50)',
+    example: 50,
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    description: 'Number of flashcards to skip (default 0)',
+    example: 0,
   })
   @ApiQuery({
     name: 'level',
@@ -116,11 +133,15 @@ export class FlashcardsController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async getFlashcards(
     @CurrentUser() user: User | null,
-    @Query('level') level?: string,
+    @Query() query: QueryFlashcardsDto,
   ): Promise<Flashcard[]> {
     if (!user) return [];
-    const lvlNum = level !== undefined ? parseInt(level, 10) : undefined;
-    return await this.flashcardsService.getFlashcards(user.id, lvlNum);
+    return await this.flashcardsService.getFlashcards(
+      user.id,
+      query.level,
+      query.limit,
+      query.offset,
+    );
   }
 
   @Get('due')
@@ -130,15 +151,34 @@ export class FlashcardsController {
   @ApiOperation({
     summary: 'Get flashcards due for review',
     description:
-      'Returns flashcards with srs_level < 4 whose next_review_at <= now. Ordered by next_review_at ascending (most overdue first).',
+      'Returns paginated flashcards with srs_level < 4 whose next_review_at <= now. Ordered by next_review_at ascending. Hard cap of 100 per page.',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Max dues per page (1-100, default 20)',
+    example: 20,
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    description: 'Number of due reviews to skip (default 0)',
+    example: 0,
   })
   @ApiResponse({
     status: 200,
     description: 'Array of flashcards due for review.',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  async getDueReviews(@CurrentUser() user: User | null): Promise<Flashcard[]> {
+  async getDueReviews(
+    @CurrentUser() user: User | null,
+    @Query() query: QueryDueReviewsDto,
+  ): Promise<Flashcard[]> {
     if (!user) return [];
-    return await this.flashcardsService.getDueReviews(user.id);
+    return await this.flashcardsService.getDueReviews(
+      user.id,
+      query.limit,
+      query.offset,
+    );
   }
 }

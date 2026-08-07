@@ -220,12 +220,20 @@ export class FlashcardsService {
     };
   }
 
-  async getFlashcards(userId: string, level?: number): Promise<Flashcard[]> {
+  async getFlashcards(
+    userId: string,
+    level?: number,
+    limit = 50,
+    offset = 0,
+  ): Promise<Flashcard[]> {
+    const safeLimit = Math.min(Math.max(1, limit), 200);
+    const safeOffset = Math.max(0, offset);
     const supabase = this.supabaseService.getClient();
     let query = supabase
       .from('flashcards')
       .select('*')
       .eq('user_id', userId)
+      .range(safeOffset, safeOffset + safeLimit - 1)
       .order('created_at', { ascending: false });
 
     if (level !== undefined && !isNaN(level)) {
@@ -239,7 +247,13 @@ export class FlashcardsService {
     return response.data;
   }
 
-  async getDueReviews(userId: string): Promise<Flashcard[]> {
+  async getDueReviews(
+    userId: string,
+    limit = 20,
+    offset = 0,
+  ): Promise<Flashcard[]> {
+    const safeLimit = Math.min(Math.max(1, limit), 100);
+    const safeOffset = Math.max(0, offset);
     const supabase = this.supabaseService.getClient();
     const response = await supabase
       .from('flashcards')
@@ -247,6 +261,7 @@ export class FlashcardsService {
       .eq('user_id', userId)
       .lt('srs_level', 4)
       .lte('next_review_at', new Date().toISOString())
+      .range(safeOffset, safeOffset + safeLimit - 1)
       .order('next_review_at', { ascending: true });
 
     if (response.error || !response.data) {

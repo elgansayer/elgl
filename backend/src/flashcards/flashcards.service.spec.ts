@@ -38,6 +38,7 @@ describe('FlashcardsService', () => {
       eq: jest.fn().mockReturnThis(),
       lt: jest.fn().mockReturnThis(),
       lte: jest.fn().mockReturnThis(),
+      range: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       single: jest.fn(),
     };

@@ -132,12 +132,10 @@ export class AudioSyncReaderComponent implements OnDestroy {
     };
 
     this.audioElement.onerror = () => {
-      console.error('Audio playback error during timeupdate synchronization.');
       this.stopPlayback();
     };
 
-    this.audioElement.play().catch((err) => {
-      console.error('Failed to start HTML5 audio:', err);
+    this.audioElement.play().catch(() => {
       this.stopPlayback();
     });
   }
@@ -190,6 +188,11 @@ export class AudioSyncReaderComponent implements OnDestroy {
 
     if (this.audioElement) {
       this.audioElement.pause();
+      this.audioElement.ontimeupdate = null;
+      this.audioElement.onended = null;
+      this.audioElement.onerror = null;
+      this.audioElement.src = '';
+      this.audioElement.load();
       this.audioElement = null;
     }
 
