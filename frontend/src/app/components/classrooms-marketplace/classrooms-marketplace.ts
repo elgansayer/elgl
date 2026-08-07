@@ -2,11 +2,13 @@ import { Component, inject, signal, computed, OnInit, DestroyRef } from '@angula
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
 import { VideoClassroomErrorHandlerService } from '../../services/video-classroom-error-handler.service';
+import { VideoClassroomOnboardingService } from '../../services/video-classroom-onboarding.service';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { JoyrideModule } from 'ngx-joyride';
 import { firstValueFrom, interval } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
@@ -14,7 +16,7 @@ import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-classrooms-marketplace',
-  imports: [SanitiseHtmlPipe, TranslatePipe, VideoClassroomErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
+  imports: [SanitiseHtmlPipe, TranslatePipe, VideoClassroomErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent, JoyrideModule],
   templateUrl: './classrooms-marketplace.html',
   styles: [''],
 })
@@ -24,6 +26,7 @@ export class ClassroomsMarketplace implements OnInit {
   private http = inject(HttpClient);
   private errorHandler = inject(VideoClassroomErrorHandlerService);
   private destroyRef = inject(DestroyRef);
+  private onboardingService = inject(VideoClassroomOnboardingService);
   private baseUrl = `${environment.apiUrl}/audio-rooms`;
 
   readonly rooms = signal<AudioRoomRecord[]>([]);
@@ -125,5 +128,10 @@ export class ClassroomsMarketplace implements OnInit {
   getHeaders(): Record<string, string> {
     const token = this.authService.getAccessToken();
     return { Authorization: `Bearer ${token ?? ''}` };
+  }
+
+  /** Start the video classroom onboarding tour using ngx-joyride. */
+  startOnboardingTour(): void {
+    this.onboardingService.startMarketplaceTour();
   }
 }

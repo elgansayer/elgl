@@ -3,6 +3,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal, NO_ERRORS_SCHEMA } from '@angular/core';
 import { vi, Mocked } from 'vitest';
+import { JoyrideModule, JoyrideService } from 'ngx-joyride';
+import { of } from 'rxjs';
 import { VideoRoomComponent } from './video-room.component';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
@@ -46,12 +48,20 @@ describe('VideoRoomComponent', () => {
     } as unknown as Mocked<Partial<AuthService>>;
 
     await TestBed.configureTestingModule({
-      imports: [VideoRoomComponent],
+      imports: [VideoRoomComponent, JoyrideModule.forRoot()],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: AudioRoomsStore, useValue: mockStore },
         { provide: AuthService, useValue: mockAuthService },
+        {
+          provide: JoyrideService,
+          useValue: {
+            startTour: vi.fn().mockReturnValue(of(undefined)),
+            closeTour: vi.fn(),
+            isTourInProgress: vi.fn().mockReturnValue(false),
+          },
+        },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
@@ -72,16 +82,23 @@ describe('VideoRoomComponent', () => {
     expect(component.isHost()).toBe(true);
     expect(component.eligibleSpeakers()).toEqual(['speaker-2']);
 
-    const button = (fixture.nativeElement as HTMLElement).querySelector('button');
-    expect(button?.textContent).toContain('Invite co-host');
+    const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll('button');
+    const inviteBtn = Array.from(buttons).find(
+      (b) => b.textContent?.includes('Invite co-host'),
+    );
+    expect(inviteBtn).toBeTruthy();
   });
 
   it('should not show the invite co-host button to a non-host', async () => {
     await setup(baseRoom, 'speaker-2');
     expect(component.isHost()).toBe(false);
 
-    const button = (fixture.nativeElement as HTMLElement).querySelector('button');
-    expect(button).toBeNull();
+    const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll('button');
+    // Only the onboarding help "?" button should be visible
+    const inviteCoHostBtn = Array.from(buttons).find(
+      (b) => b.textContent?.includes('Invite co-host'),
+    );
+    expect(inviteCoHostBtn).toBeUndefined();
   });
 
   it('should invite the selected speaker as co-host and hide the picker', async () => {

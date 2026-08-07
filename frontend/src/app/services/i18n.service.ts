@@ -622,6 +622,21 @@ export class I18nService {
     'classroomsMarketplace.emptyTitle': 'No Video Classrooms Available',
     'classroomsMarketplace.emptyDescription': 'No live video classrooms match your filters. Start one or check back later!',
 
+    // Video Classroom Onboarding Tour (ngx-joyride)
+    'videoClassroomTour.helpBtn': 'Show guided tour',
+    'videoClassroomTour.stepMarketplaceTitle': 'Video Classrooms',
+    'videoClassroomTour.stepMarketplaceText': 'Browse live video language-learning sessions hosted by community members. Join a room to practise speaking with native speakers.',
+    'videoClassroomTour.stepFiltersTitle': 'Filter by Language',
+    'videoClassroomTour.stepFiltersText': 'Use these language filters to find classrooms focused on the language pair you want to practise.',
+    'videoClassroomTour.stepRoomCardTitle': 'Join a Classroom',
+    'videoClassroomTour.stepRoomCardText': 'Each card shows a live classroom. Tap "Join Classroom" to enter and start participating in the video session.',
+    'videoClassroomTour.stepHostVideoTitle': 'Host Video',
+    'videoClassroomTour.stepHostVideoText': 'The host video stream is displayed here. You can watch the host and interact via the live chat overlay.',
+    'videoClassroomTour.stepCoHostTitle': 'Split Screen',
+    'videoClassroomTour.stepCoHostText': 'When a co-host is invited, they appear in a split-screen view alongside the host for collaborative teaching.',
+    'videoClassroomTour.stepInviteCoHostTitle': 'Invite Co-Host',
+    'videoClassroomTour.stepInviteCoHostText': 'As the host, you can invite an approved speaker to become your co-host and share the screen.',
+
     // Video Classroom Error Boundary
     'videoClassroomErrorBoundary.title': 'Video Classroom Error',
     'videoClassroomErrorBoundary.description': 'An unexpected error occurred while loading this video classroom. Your connection has been preserved.',
