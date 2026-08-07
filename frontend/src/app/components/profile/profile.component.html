@@ -187,22 +187,28 @@
         </div>
       </div>
 
-      @if (profile()?.proficiency_level) {
+      @if (nationality) {
         <div
           class="mt-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-2 pb-2 text-center text-sm text-text-primary"
         >
           {{ 'profile.nationality' | t }}: {{ nationality }}
         </div>
+      }
+      @if (region) {
         <div
           class="mt-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-2 pb-2 text-center text-sm text-text-primary"
         >
           {{ 'profile.region' | t }}: {{ region }}
         </div>
+      }
+      @if (age) {
         <div
           class="mt-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-2 pb-2 text-center text-sm text-text-primary"
         >
-          {{ 'profile.age' | t }}: {{ age || ('common.unknown' | t) }}
+          {{ 'profile.age' | t }}: {{ age }}
         </div>
+      }
+      @if (gender) {
         <div
           class="mt-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-2 pb-2 text-center text-sm text-text-primary"
         >
@@ -214,6 +220,8 @@
               : ('profile.gender.other' | t)
           }}
         </div>
+      }
+      @if (profile()?.proficiency_level) {
         <div
           class="mt-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-2 pb-2 text-center text-sm text-text-primary"
         >

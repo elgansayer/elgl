@@ -1,5 +1,5 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
-import { CommonModule, Location } from '@angular/common';
+import { Component, inject, signal, computed, resource } from '@angular/core';
+import { Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -11,21 +11,30 @@ export type NotificationTab = 'all' | 'likes' | 'comments' | 'follows' | 'system
 
 @Component({
   selector: 'app-notifications-inbox',
-  imports: [CommonModule, TranslatePipe, ScrollablePillsComponent],
+  imports: [TranslatePipe, ScrollablePillsComponent],
   templateUrl: './notifications-inbox.component.html',
   styleUrls: ['./notifications-inbox.component.scss'],
 })
-export class NotificationsInboxComponent implements OnInit {
+export class NotificationsInboxComponent {
   private notificationService = inject(NotificationService);
   private unreadCounter = inject(UnreadCounterService);
   private location = inject(Location);
   private router = inject(Router);
   private readonly i18n = inject(I18nService);
 
-  readonly notifications = signal<InAppNotification[]>([]);
-  readonly isLoading = signal<boolean>(true);
   readonly selectedTab = signal<NotificationTab>('all');
   readonly unreadCount = signal<number>(0);
+
+  readonly notificationsResource = resource({
+    request: () => this.selectedTab(),
+    loader: ({ request: tab }) => this.loadNotifications(tab),
+  });
+
+  readonly notifications = computed(
+    () => this.notificationsResource.value() ?? [],
+  );
+
+  readonly isLoading = this.notificationsResource.isLoading;
 
   readonly filterPills = computed(() => {
     this.i18n.translations();
@@ -38,16 +47,25 @@ export class NotificationsInboxComponent implements OnInit {
     ];
   });
 
-  async ngOnInit(): Promise<void> {
-    await this.loadNotifications();
+  private async loadNotifications(
+    tab: NotificationTab,
+  ): Promise<InAppNotification[]> {
+    const [list, unread] = await Promise.all([
+      this.notificationService.getNotifications(tab),
+      this.notificationService.getUnreadCount(),
+    ]);
+    this.unreadCount.set(unread);
+    this.unreadCounter.setNotificationUnread(unread);
+    return list;
   }
 
   goBack(): void {
     this.location.back();
   }
 
-  async setTab(tab: NotificationTab): Promise<void> {
+  setTab(tab: NotificationTab): void {
     this.selectedTab.set(tab);
+<<<<<<< HEAD
     await this.loadNotifications();
   }
 
@@ -70,6 +88,8 @@ export class NotificationsInboxComponent implements OnInit {
     } finally {
       this.isLoading.set(false);
     }
+=======
+>>>>>>> origin/main
   }
 
   async markAllAsRead(): Promise<void> {
@@ -79,8 +99,11 @@ export class NotificationsInboxComponent implements OnInit {
     this.unreadCounter.set('profile', 0);
 =======
     this.unreadCounter.setNotificationUnread(0);
+<<<<<<< HEAD
 >>>>>>> origin/main
     this.notifications.update((list) => list.map((item) => ({ ...item, is_read: true })));
+=======
+>>>>>>> origin/main
   }
 
   async onNotificationClick(notif: InAppNotification): Promise<void> {
