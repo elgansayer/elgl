@@ -7,6 +7,7 @@ import {
   Post,
   Query,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
@@ -20,6 +21,11 @@ import {
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import {
+  CacheControlInterceptor,
+  CACHE_PRIVATE_MEDIUM,
+  CACHE_PRIVATE_NO_STORE,
+} from '../common/cache.interceptor';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard } from './interfaces/flashcard.interface';
 import { FlashcardsService } from './flashcards.service';
@@ -35,6 +41,7 @@ export class FlashcardsController {
   @Post()
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @SrsRateLimit({ maxRequests: 30, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @ApiOperation({
     summary: 'Create or update a flashcard',
     description:
@@ -59,6 +66,7 @@ export class FlashcardsController {
   @Patch(':id/srs')
   @Throttle({ default: { limit: 120, ttl: 60000 } })
   @SrsRateLimit({ maxRequests: 120, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @ApiOperation({
     summary: 'Submit an SRS review for a flashcard',
     description:
@@ -91,6 +99,7 @@ export class FlashcardsController {
   @Get()
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @SrsRateLimit({ maxRequests: 30, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM))
   @ApiOperation({
     summary: 'List flashcards for the authenticated user',
     description:
@@ -117,6 +126,7 @@ export class FlashcardsController {
   @Get('due')
   @Throttle({ default: { limit: 60, ttl: 60000 } })
   @SrsRateLimit({ maxRequests: 60, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @ApiOperation({
     summary: 'Get flashcards due for review',
     description:
