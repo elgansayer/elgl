@@ -34,24 +34,6 @@ export interface LoginHistoryEntry {
   created_at: string;
 }
 
-export interface AdminBlockEntry {
-  id: string;
-  blocker_id: string;
-  blocked_id: string;
-  blocker_name?: string | null;
-  blocked_name?: string | null;
-  blocker_avatar?: string | null;
-  blocked_avatar?: string | null;
-  created_at: string;
-}
-
-export interface AdminBlocksListResult {
-  blocks: AdminBlockEntry[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
-
 const MOCK_ADMIN_USERS: AdminUserSummary[] = [
   {
     id: 'partner-1',
@@ -97,19 +79,18 @@ const MOCK_ADMIN_USERS: AdminUserSummary[] = [
   },
 ];
 
-// GDPR-compliant mock data: IP addresses are scrubbed (last octet zeroed)
 const MOCK_LOGIN_HISTORY: LoginHistoryEntry[] = [
   {
     id: 'login-1',
     user_id: 'partner-1',
-    ip_address: '203.0.113.0',
+    ip_address: '203.0.113.5',
     user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
     created_at: new Date(Date.now() - 3600000).toISOString(),
   },
   {
     id: 'login-2',
     user_id: 'partner-1',
-    ip_address: '203.0.113.0',
+    ip_address: '203.0.113.5',
     user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
     created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
   },
@@ -214,34 +195,6 @@ export class AdminService {
       this.http.post<{ message: string }>(
         `${this.baseUrl}/users/${userId}/warn`,
         {},
-        { headers: this.getHeaders() },
-      ),
-    );
-  }
-
-  async listAllBlocks(page = 1, pageSize = 20): Promise<AdminBlocksListResult> {
-    const params = new HttpParams()
-      .set('page', page.toString())
-      .set('pageSize', pageSize.toString());
-
-    return firstValueFrom(
-      this.http
-        .get<AdminBlocksListResult>(`${this.baseUrl}/blocks`, {
-          headers: this.getHeaders(),
-          params,
-        })
-        .pipe(
-          catchError(() =>
-            of({ blocks: [], total: 0, page, pageSize }),
-          ),
-        ),
-    );
-  }
-
-  async removeBlock(blockId: string): Promise<{ success: boolean }> {
-    return firstValueFrom(
-      this.http.delete<{ success: boolean }>(
-        `${this.baseUrl}/blocks/${blockId}`,
         { headers: this.getHeaders() },
       ),
     );

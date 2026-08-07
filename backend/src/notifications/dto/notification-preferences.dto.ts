@@ -18,10 +18,6 @@ export class CategoryPreferenceDto {
   @IsBoolean()
   @IsOptional()
   in_app?: boolean;
-
-  @IsBoolean()
-  @IsOptional()
-  badges?: boolean;
 }
 
 export class NotificationPreferencesDto {

@@ -39,7 +39,6 @@ import { AppLanguageSelectorComponent } from './components/app-language-selector
 import { AppLockService } from './services/app-lock.service';
 import { GiftAnimationOverlayComponent } from './components/gift-animation-overlay/gift-animation-overlay.component';
 import { NoNetworkBannerComponent } from './components/primitives/no-network-banner/no-network-banner.component';
-import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-sidebar.component';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
@@ -63,7 +62,6 @@ function isRecord(v: unknown): v is Record<string, unknown> {
     GiftAnimationOverlayComponent,
     ForcedUpdateModalComponent,
     NoNetworkBannerComponent,
-    DesktopSidebarComponent,
   ],
   templateUrl: './app.component.html',
   host: {
@@ -164,7 +162,7 @@ export class AppComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     // Font scale and base rem sizing are handled globally by FontScaleService.
     // Block the app immediately if the installed version is deprecated.
-    await this.versionCheckService.checkVersion();
+    this.versionCheckService.checkVersion();
 
     // Subscribe to personal user notification channel for direct virtual gifts
     const user = this.authService.currentUser();
@@ -232,23 +230,6 @@ export class AppComponent implements OnInit {
             roomName,
             isVideoCall,
           });
-        }
-
-        // Update unread counters for real-time chat messages
-        if (eventType === 'new_message') {
-          this.unreadCounter.incrementChatUnread();
-        }
-
-        // Update unread counters for real-time notifications
-        if (
-          eventType === 'follow' ||
-          eventType === 'like_profile' ||
-          eventType === 'like_moment' ||
-          eventType === 'comment_moment' ||
-          eventType === 'profile_visit' ||
-          eventType === 'system'
-        ) {
-          this.unreadCounter.incrementNotificationUnread();
         }
       });
 

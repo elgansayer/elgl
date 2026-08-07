@@ -6,7 +6,6 @@ import { environment } from '../../environments/environment';
 export interface Scenario {
   id: string;
   name: string;
-  icon: string;
 }
 
 @Injectable({
@@ -25,15 +24,13 @@ export class AiConversationService {
   async sendMessage(
     text: string,
     scenarioId?: string,
-    conversationHistory?: { role: 'user' | 'assistant'; content: string }[],
-  ): Promise<{ reply: string }> {
+  ): Promise<{ reply: string; scenarioId?: string }> {
     return firstValueFrom(
-      this.http.post<{ reply: string }>(
+      this.http.post<{ reply: string; scenarioId?: string }>(
         `${this.baseUrl}/message`,
         {
           message: text,
           scenarioId: scenarioId ?? null,
-          conversationHistory: conversationHistory ?? [],
         },
       ),
     );

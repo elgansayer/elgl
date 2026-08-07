@@ -6,12 +6,11 @@ import { Theme, ThemeService } from '../../../services/theme.service';
 import { UserService, UserProfile } from '../../../services/user.service';
 import { I18nService } from '../../../services/i18n.service';
 import { FormsModule } from '@angular/forms';
-import { FontScaleSliderComponent } from '../../../components/font-scale-slider/font-scale-slider.component';
 
 @Component({
   selector: 'app-appearance-settings',
   standalone: true,
-  imports: [TranslatePipe, FormsModule, FontScaleSliderComponent],
+  imports: [TranslatePipe, FormsModule],
   templateUrl: './appearance-settings.component.html',
 })
 export class AppearanceSettingsComponent {
@@ -25,8 +24,7 @@ export class AppearanceSettingsComponent {
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
 
-  readonly fontScalePercent = computed(() => Math.round(this.fontScaleService.scaleFactor() * 100));
-  readonly fontScalePercentLabel = computed(() => `${this.fontScalePercent()}%`);
+  readonly fontScale = computed(() => Math.round(this.fontScaleService.scaleFactor() * 100));
   readonly currentTheme = this.themeService.currentTheme;
 
   readonly themeOptions: Theme[] = ['light', 'dark', 'system'];
@@ -65,16 +63,17 @@ export class AppearanceSettingsComponent {
     this.themeService.setTheme(theme);
   }
 
+  onFontScaleChange(event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    const percent = Number(target.value);
+    if (Number.isNaN(percent)) return;
+    this.fontScaleService.setScale(percent / 100);
+  }
+
   setAccentColor(color: string): void {
     if (!this.isVip()) return;
     this.primaryAccentColor.set(color);
-  }
-
-  onCustomColorChange(event: Event): void {
-    if (!this.isVip()) return;
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement)) return;
-    this.primaryAccentColor.set(target.value);
   }
 
   async saveSettings(): Promise<void> {

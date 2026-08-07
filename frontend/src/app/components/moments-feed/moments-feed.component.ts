@@ -20,9 +20,6 @@ import {
   LanguagePickerComponent,
   getLanguageFlag,
 } from '../primitives/language-picker/language-picker.component';
-import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.component';
-import { DraftService } from '../../services/draft.service';
-import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-moments-feed',
@@ -39,8 +36,6 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
     CorrectionModalComponent,
     LanguagePickerComponent,
     TextToSpeechComponent,
-    LikedByModalComponent,
-    AppEmptyStateComponent,
   ],
   templateUrl: './moments-feed.component.html',
   styleUrls: ['./moments-feed.component.scss'],
@@ -54,7 +49,6 @@ export class MomentsFeedComponent {
   readonly authService = inject(AuthService);
   private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
-  private readonly draftService = inject(DraftService);
 
   private readonly destroyRef = inject(DestroyRef);
   readonly pageSize = 15;
@@ -63,11 +57,7 @@ export class MomentsFeedComponent {
   constructor() {
     afterNextRender(() => {
       window.addEventListener('scroll', this.handleWindowScroll);
-      this.destroyRef.onDestroy(() => {
-        window.removeEventListener('scroll', this.handleWindowScroll);
-        this.saveMomentDraft();
-      });
-      this.restoreMomentDraft();
+      this.destroyRef.onDestroy(() => window.removeEventListener('scroll', this.handleWindowScroll));
     });
   }
 
@@ -80,9 +70,6 @@ export class MomentsFeedComponent {
   readonly activeCorrectionMomentId = signal<string | null>(null);
   readonly activeCorrectionOriginalText = signal<string>('');
   readonly activeLikedByMomentId = signal<string | null>(null);
-  // Translation cache and visibility toggle (issue #447)
-  readonly translationCache = signal<Record<string, string>>({});
-  readonly showTranslationMap = signal<Record<string, boolean>>({});
 
   readonly filterPills = computed(() => {
     this.i18n.translations();
@@ -225,7 +212,6 @@ export class MomentsFeedComponent {
       this.newMediaUrls.set([]);
       this.newMediaType.set('none');
       this.newVoiceDurationSec = null;
-      this.draftService.clearMomentDraft();
     } catch (e) {
       console.error('Error submitting moment:', e);
       showToast(this.i18n.translate('moments.publishError'));
@@ -241,32 +227,21 @@ export class MomentsFeedComponent {
 
   async toggleInlineTranslation(moment: MomentRecord): Promise<void> {
     if (!moment.text_content) return;
-
-    const cacheKey = moment.id;
-    const currentlyShowing = this.showTranslationMap()[cacheKey];
-
-    // Toggle off: hide the translation but keep it cached
-    if (currentlyShowing) {
-      this.showTranslationMap.update((prev) => ({ ...prev, [cacheKey]: false }));
+    if (moment.translatedText) {
+      // Toggle off
+      moment.isTranslating = false;
+      moment.translatedText = undefined;
       return;
     }
-
-    // Show cached translation if available (issue #447)
-    if (this.translationCache()[cacheKey]) {
-      this.showTranslationMap.update((prev) => ({ ...prev, [cacheKey]: true }));
-      return;
-    }
-
-    // Fetch from API and cache the result
     moment.isTranslating = true;
     try {
       const res = await this.vocabStore.translateWordOrSentence(moment.text_content, 'en');
-      this.translationCache.update((prev) => ({ ...prev, [cacheKey]: res.translated_text }));
-      this.showTranslationMap.update((prev) => ({ ...prev, [cacheKey]: true }));
+      moment.translatedText = res.translated_text;
     } catch (e) {
       console.error('Inline translation error:', e);
-      this.translationCache.update((prev) => ({ ...prev, [cacheKey]: this.i18n.translate('moments.transError') }));
-      this.showTranslationMap.update((prev) => ({ ...prev, [cacheKey]: true }));
+      moment.translatedText = this.i18n.translate('moments.transError');
+    } finally {
+      moment.isTranslating = false;
     }
   }
 
@@ -445,26 +420,4 @@ export class MomentsFeedComponent {
       }
     }
   };
-
-  private saveMomentDraft(): void {
-    this.draftService.saveMomentDraft({
-      text: this.newText(),
-      mediaUrls: this.newMediaUrls().length > 0 ? this.newMediaUrls() : undefined,
-      mediaType: this.newMediaType(),
-      targetLanguage: this.newTargetLanguage(),
-      voiceDurationSec: this.newVoiceDurationSec,
-    });
-  }
-
-  private restoreMomentDraft(): void {
-    const draft = this.draftService.loadMomentDraft();
-    if (!draft) return;
-    if (draft.text) this.newText.set(draft.text);
-    if (draft.mediaUrls && draft.mediaUrls.length > 0) {
-      this.newMediaUrls.set(draft.mediaUrls);
-      this.newMediaType.set(draft.mediaType ?? 'images');
-    }
-    if (draft.targetLanguage) this.newTargetLanguage.set(draft.targetLanguage);
-    if (draft.voiceDurationSec !== undefined) this.newVoiceDurationSec = draft.voiceDurationSec;
-  }
 }

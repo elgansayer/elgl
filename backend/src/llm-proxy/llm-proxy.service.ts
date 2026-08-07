@@ -1,23 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
-
 @Injectable()
 export class LlmProxyService {
   constructor(private readonly configService: ConfigService) {}
 
   async proxyMessage(text: string): Promise<{ response: string }> {
-    const response = await this.chatCompletion([
-      { role: 'user', content: text },
-    ]);
-    return { response };
-  }
-
-  async chatCompletion(messages: ChatMessage[]): Promise<string> {
     const apiKey = this.configService.get<string>('LLM_API_KEY');
     const apiUrl = this.configService.get<string>(
       'LLM_API_URL',
@@ -27,7 +15,7 @@ export class LlmProxyService {
 
     const payload = {
       model,
-      messages,
+      messages: [{ role: 'user', content: text }],
       max_tokens: 500,
     };
 
@@ -44,6 +32,7 @@ export class LlmProxyService {
       body: JSON.stringify(payload),
     });
     const data = await response.json();
-    return data?.choices?.[0]?.message?.content ?? '';
+    const replyText = data?.choices?.[0]?.message?.content ?? '';
+    return { response: replyText };
   }
 }

@@ -42,7 +42,7 @@
           <span class="opacity-70">"{{ originalText() }}"</span>
           <span
             class="absolute top-2 end-2 text-[10px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full font-bold"
-            >{{ 'correction.ghostTextLabel' | t }}</span
+            >Ghost Text</span
           >
         </div>
       </div>
@@ -56,9 +56,9 @@
           [ngModel]="correctedText()"
           (ngModelChange)="correctedText.set($event)"
           rows="3"
-          [placeholder]="'correction.editPlaceholder' | t"
+          placeholder="Edit sentence to correct grammar, spelling, or natural phrasing..."
           class="w-full bg-surface-300 border border-neon-blue/40 rounded-2xl p-3 text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-neon-blue resize-none"
-         [attr.aria-label]="'correction.editPlaceholder' | t">
+         [attr.aria-label]="'Edit sentence to correct grammar, spelling, or natural phrasing...'">
         </textarea>
       </div>
 
@@ -82,9 +82,9 @@
           type="text"
           [ngModel]="explanation()"
           (ngModelChange)="explanation.set($event)"
-          [placeholder]="'correction.explainPlaceholder' | t"
+          placeholder="Explain grammar rule, nuance, or native alternative..."
           class="w-full bg-surface-300 border border-surface-100 rounded-2xl px-4 py-2.5 text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-1 focus:ring-surface-100"
-         [attr.aria-label]="'correction.explainPlaceholder' | t"/>
+         [attr.aria-label]="'Explain grammar rule, nuance, or native alternative...'"/>
       </div>
     </div>
 

@@ -40,7 +40,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
                   [src]="data.callerAvatarUrl"
                   [alt]="'voip.callerAvatar' | t: { name: data.callerName }"
                   class="w-24 h-24 rounded-full object-cover ring-4 ring-purple-500/50"
-                 loading="lazy" />
+                />
               } @else {
                 <div
                   class="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center ring-4 ring-purple-500/50"

@@ -1,27 +1,6 @@
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation(() => ({
-    window: {
-      document: { createElement: jest.fn(), createDocumentFragment: jest.fn() },
-      Node: { ELEMENT_NODE: 1, TEXT_NODE: 3, DOCUMENT_FRAGMENT_NODE: 11 },
-      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
-    },
-  })),
-}));
-
-jest.mock('dompurify', () => ({
-  __esModule: true,
-  default: jest.fn(() => ({
-    sanitize: (dirty: string): string => {
-      if (typeof dirty !== 'string') return dirty;
-      return dirty.replace(/<[^>]*>/g, '');
-    },
-    setConfig: jest.fn(),
-  })),
-}));
-
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import { PinoLogger } from 'nestjs-pino';
 import { AppleNotificationService } from './apple-notification.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EconomyService } from './economy.service';
@@ -62,7 +41,6 @@ describe('AppleNotificationService', () => {
   let service: AppleNotificationService;
   let supabaseClient: MockClient;
   let builder: MockBuilder;
-  let pinoLoggerMock: Record<'info' | 'error' | 'warn' | 'debug', jest.Mock>;
 
   const configServiceMock = { get: jest.fn() } as unknown as ConfigService;
   const httpServiceMock = {} as unknown as HttpService;
@@ -81,15 +59,7 @@ describe('AppleNotificationService', () => {
     );
     (configServiceMock.get as jest.Mock).mockReturnValue('test');
 
-    pinoLoggerMock = {
-      info: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-    };
-
     service = new AppleNotificationService(
-      pinoLoggerMock as unknown as PinoLogger,
       configServiceMock,
       httpServiceMock,
       supabaseServiceMock,
@@ -112,9 +82,14 @@ describe('AppleNotificationService', () => {
   });
 
   it('should log a warning when the JWS payload is malformed', () => {
+    const warnSpy = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+
     service.handleNotification('not-a-valid-jws');
 
-    expect(pinoLoggerMock.warn).toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 
   it('should handle a SUBSCRIBED notification and upsert the subscription', () => {

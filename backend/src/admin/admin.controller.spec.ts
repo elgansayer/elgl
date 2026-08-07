@@ -18,10 +18,6 @@ describe('AdminController', () => {
             listUsers: jest.fn(),
             setVipStatus: jest.fn(),
             getLoginHistory: jest.fn(),
-            banUser: jest.fn(),
-            warnUser: jest.fn(),
-            listAllBlocks: jest.fn(),
-            removeBlock: jest.fn(),
           },
         },
       ],
@@ -84,73 +80,6 @@ describe('AdminController', () => {
 
       expect(adminService.getLoginHistory).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(history);
-    });
-  });
-
-  describe('banUser', () => {
-    it('delegates to AdminService.banUser with the user id and admin id', async () => {
-      (adminService.banUser as jest.Mock).mockResolvedValue(undefined);
-
-      const result = await controller.banUser('target-user', {
-        user: { sub: 'admin-1' },
-      } as any);
-
-      expect(adminService.banUser).toHaveBeenCalledWith(
-        'target-user',
-        'admin-1',
-      );
-      expect(result).toEqual({ message: 'User banned' });
-    });
-  });
-
-  describe('warnUser', () => {
-    it('delegates to AdminService.warnUser with the user id and admin id', async () => {
-      (adminService.warnUser as jest.Mock).mockResolvedValue(undefined);
-
-      const result = await controller.warnUser('target-user', {
-        user: { sub: 'admin-1' },
-      } as any);
-
-      expect(adminService.warnUser).toHaveBeenCalledWith(
-        'target-user',
-        'admin-1',
-      );
-      expect(result).toEqual({ message: 'User warned' });
-    });
-  });
-
-  describe('listAllBlocks', () => {
-    it('delegates to AdminService.listAllBlocks with default page params', async () => {
-      const response = { blocks: [], total: 0, page: 1, pageSize: 20 };
-      (adminService.listAllBlocks as jest.Mock).mockResolvedValue(response);
-
-      const result = await controller.listAllBlocks(undefined, undefined);
-
-      expect(adminService.listAllBlocks).toHaveBeenCalledWith(1, 20);
-      expect(result).toEqual(response);
-    });
-
-    it('parses page and pageSize query params', async () => {
-      const response = { blocks: [], total: 0, page: 2, pageSize: 10 };
-      (adminService.listAllBlocks as jest.Mock).mockResolvedValue(response);
-
-      const result = await controller.listAllBlocks('2', '10');
-
-      expect(adminService.listAllBlocks).toHaveBeenCalledWith(2, 10);
-      expect(result).toEqual(response);
-    });
-  });
-
-  describe('removeBlock', () => {
-    it('delegates to AdminService.removeBlock with the block id', async () => {
-      (adminService.removeBlock as jest.Mock).mockResolvedValue({
-        success: true,
-      });
-
-      const result = await controller.removeBlock('block-42');
-
-      expect(adminService.removeBlock).toHaveBeenCalledWith('block-42');
-      expect(result).toEqual({ success: true });
     });
   });
 });

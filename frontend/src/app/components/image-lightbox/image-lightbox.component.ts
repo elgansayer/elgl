@@ -76,7 +76,7 @@ import { CommonModule } from '@angular/common';
           [src]="images()[currentIndex]"
           alt="Fullscreen moment media"
           class="max-w-full max-h-full object-contain select-none transition-transform duration-300"
-         loading="lazy" />
+        />
       </div>
 
       <!-- Next Button -->

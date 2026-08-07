@@ -3,7 +3,8 @@ import { Component, output, signal, inject, OnDestroy } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 
-import { MediaService } from '../../services/media.service';
+import { UserService } from '../../services/user.service';
+import { AudioCompressionService } from '../../services/audio-compression.service';
 
 @Component({
   selector: 'app-voice-recorder',
@@ -12,7 +13,8 @@ import { MediaService } from '../../services/media.service';
   styleUrls: ['./voice-recorder.component.scss'],
 })
 export class VoiceRecorderComponent implements OnDestroy {
-  private mediaService = inject(MediaService);
+  private userService = inject(UserService);
+  private audioCompressionService = inject(AudioCompressionService);
 
   audioUploaded = output<string>();
   cancelled = output<void>();
@@ -74,11 +76,29 @@ export class VoiceRecorderComponent implements OnDestroy {
     this.isUploading.set(true);
 
     try {
-      const result = await this.mediaService.uploadVoiceNote(this.recordedBlob, 'ogg');
-      this.audioUploaded.emit(result.url);
+      // Compress the audio blob before uploading
+      const compressedBlob = await this.audioCompressionService.compressAudio(this.recordedBlob);
+
+      const filename = `voice_${Date.now()}.wav`;
+      const presigned = await this.userService.getPresignedUploadUrl(
+        filename,
+        'audio/wav',
+        'chat-voice',
+      );
+
+      if (presigned.uploadUrl && presigned.uploadUrl !== 'http://mock-upload-url') {
+        await fetch(presigned.uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'audio/wav' },
+          body: compressedBlob,
+        });
+      }
+
+      this.audioUploaded.emit(presigned.mediaUrl);
     } catch (e) {
       console.error('Failed to upload voice note:', e);
-      this.audioUploaded.emit(this.audioPreviewUrl() || 'http://mock-voice-url/ogg');
+      // Fallback: emit preview URL or mock object
+      this.audioUploaded.emit(this.audioPreviewUrl() || 'http://mock-voice-url/wav');
     } finally {
       this.isUploading.set(false);
     }

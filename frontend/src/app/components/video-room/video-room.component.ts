@@ -1,13 +1,12 @@
 import { Component, inject, signal, computed, effect, viewChild, ElementRef } from '@angular/core';
 import { VideoTrack } from 'livekit-client';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 import { AudioRoomsStore } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-video-room',
-  imports: [TranslatePipe, LiveChatOverlayComponent],
+  imports: [TranslatePipe],
   template: `
     @if (store.currentRoom(); as room) {
       <div class="flex flex-col h-full w-full bg-slate-900 p-4 rounded-2xl">
@@ -48,7 +47,7 @@ import { AuthService } from '../../services/auth.service';
           <div
             class="relative bg-black rounded-xl overflow-hidden border-2 border-slate-700 flex items-center justify-center shadow-lg"
           >
-            @if (!hasHostVideo()) {
+            @if (!hostVideoTrack()) {
               <p class="text-slate-500 text-sm px-4 text-center">
                 {{ 'videoRoom.waitingForHost' | t }}
               </p>
@@ -59,9 +58,6 @@ import { AuthService } from '../../services/auth.service';
             >
               {{ 'videoRoom.hostBadge' | t }}
             </div>
-
-            <!-- Scrolling live chat overlay over host video stream -->
-            <app-live-chat-overlay [roomId]="room.id"></app-live-chat-overlay>
           </div>
 
           <!-- Co-Host Video Tile (Split Screen) -->
@@ -69,7 +65,7 @@ import { AuthService } from '../../services/auth.service';
             <div
               class="relative bg-black rounded-xl overflow-hidden border-2 border-blue-500 flex items-center justify-center shadow-lg animate-fade-in"
             >
-              @if (!hasCoHostVideo()) {
+              @if (!coHostVideoTrack()) {
                 <p class="text-slate-500 text-sm px-4 text-center">
                   {{ 'videoRoom.waitingForCoHost' | t }}
                 </p>
@@ -143,10 +139,6 @@ export class VideoRoomComponent {
   );
   readonly hasCoHost = computed(() => !!this.store.currentRoom()?.co_host_id);
 
-  readonly isCoHost = computed(
-    () => this.authService.currentUser()?.id === this.store.currentRoom()?.co_host_id,
-  );
-
   readonly eligibleSpeakers = computed(() => {
     const room = this.store.currentRoom();
     if (!room) return [];
@@ -158,43 +150,15 @@ export class VideoRoomComponent {
     return this.hasCoHost() ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 max-w-4xl mx-auto w-full';
   });
 
-  /**
-   * Host video track that falls back to the local camera track when the current
-   * user IS the host (so they can see their own video in the split-screen layout).
-   */
-  readonly hostVideoTrackOrDefault = computed<VideoTrack | null>(() => {
-    if (this.isHost()) {
-      const localTrack = this.store.localVideoTrack();
-      if (localTrack) return localTrack;
-    }
-    return this.store.hostVideoTrack();
-  });
-
-  readonly hasHostVideo = computed(() => !!this.hostVideoTrackOrDefault());
-
-  /**
-   * Co-host video track that falls back to the local camera track when the current
-   * user IS the co-host (so they can see their own video in the split-screen layout).
-   */
-  readonly coHostVideoTrackOrDefault = computed<VideoTrack | null>(() => {
-    if (this.isCoHost()) {
-      const localTrack = this.store.localVideoTrack();
-      if (localTrack) return localTrack;
-    }
-    return this.store.coHostVideoTrack();
-  });
-
-  readonly hasCoHostVideo = computed(() => !!this.coHostVideoTrackOrDefault());
-
   constructor() {
     effect(() => {
-      const track = this.hostVideoTrackOrDefault();
+      const track = this.hostVideoTrack();
       const videoEl = this.hostVideoRef()?.nativeElement;
       this.attach(track, videoEl);
     });
 
     effect(() => {
-      const track = this.coHostVideoTrackOrDefault();
+      const track = this.coHostVideoTrack();
       const videoEl = this.coHostVideoRef()?.nativeElement;
       this.attach(track, videoEl);
     });

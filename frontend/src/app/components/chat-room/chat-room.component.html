@@ -29,8 +29,8 @@
         <button
           (click)="showAdminPanel.set(!showAdminPanel())"
           class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
-         [attr.aria-label]="'chatRoom.adminBtn' | t">
-          {{ 'chatRoom.adminBtn' | t }}
+         [attr.aria-label]="'Admin'">
+          Admin
         </button>
       }
       <button
@@ -70,41 +70,41 @@
     <div
       class="mt-2 rounded-card border border-primary/30 bg-primary/10 ps-3 pe-3 pt-3 pb-3 space-y-2"
     >
-      <h3 class="text-sm font-bold text-text-primary">{{ 'chatRoom.adminPanelTitle' | t }}</h3>
+      <h3 class="text-sm font-bold text-text-primary">Group Admin Settings</h3>
       <div class="flex gap-2">
         <input
           type="text"
           [(ngModel)]="newGroupName"
-          [placeholder]="'chatRoom.newGroupPlaceholder' | t"
+          placeholder="New Group Name"
           class="app-input flex-1 pt-2 pb-2 text-xs"
-         [attr.aria-label]="'chatRoom.newGroupPlaceholder' | t"/>
-        <button (click)="renameGroup()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'chatRoom.renameBtn' | t">
-          {{ 'chatRoom.renameBtn' | t }}
+         [attr.aria-label]="'New Group Name'"/>
+        <button (click)="renameGroup()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'Rename'">
+          Rename
         </button>
       </div>
       <div class="flex gap-2">
         <input
           type="text"
           [(ngModel)]="newMemberId"
-          [placeholder]="'chatRoom.userIdAddPlaceholder' | t"
+          placeholder="User ID to Add"
           class="app-input flex-1 pt-2 pb-2 text-xs"
-         [attr.aria-label]="'chatRoom.userIdAddPlaceholder' | t"/>
-        <button (click)="addMember()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'chatRoom.addMemberBtn' | t">
-          {{ 'chatRoom.addMemberBtn' | t }}
+         [attr.aria-label]="'User ID to Add'"/>
+        <button (click)="addMember()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'Add Member'">
+          Add Member
         </button>
       </div>
       <div class="flex gap-2">
         <input
           type="text"
           [(ngModel)]="memberToRemoveId"
-          [placeholder]="'chatRoom.userIdRemovePlaceholder' | t"
+          placeholder="User ID to Remove"
           class="app-input flex-1 pt-2 pb-2 text-xs"
-         [attr.aria-label]="'chatRoom.userIdRemovePlaceholder' | t"/>
+         [attr.aria-label]="'User ID to Remove'"/>
         <button
           (click)="removeMember()"
           class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs text-red-500"
-         [attr.aria-label]="'chatRoom.removeMemberBtn' | t">
-          {{ 'chatRoom.removeMemberBtn' | t }}
+         [attr.aria-label]="'Remove Member'">
+          Remove Member
         </button>
       </div>
     </div>
@@ -233,27 +233,21 @@
                 ></app-visual-diff>
               }
               @if (msg.message_type === 'doodle' && msg.media_url) {
-                <img loading="lazy"
+                <img
                   [src]="msg.media_url ?? ''"
                   alt="doodle"
                   class="max-h-52 rounded-xl border border-surface-100"
                 />
               }
               @if (msg.message_type === 'sticker' && msg.media_url) {
-                <img loading="lazy"
+                <img
                   [src]="msg.media_url ?? ''"
                   alt="sticker"
                   class="max-h-32 w-auto object-contain drop-shadow-md"
                 />
               }
               @if (msg.message_type === 'voice' && msg.media_url) {
-                <audio
-                  [attr.id]="'audio-' + msg.id"
-                  [src]="msg.media_url ?? ''"
-                  controls
-                  class="w-full min-w-52"
-                  (ended)="playNextVoiceNote(msg.id)"
-                ></audio>
+                <audio [src]="msg.media_url ?? ''" controls class="w-full min-w-52"></audio>
                 <div class="mt-2 flex items-center gap-2">
                   <button
                     (click)="onTranscribeVoice(msg)"

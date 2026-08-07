@@ -28,8 +28,6 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:spam-detec
 | `test:trust-safety` | `trust-and-safety.load.yml` | Load tests all Safety, Moderation, and Blocks endpoints |
 | `test:spam-detection` | `spam-detection.load.yml` | Load tests the SpamDetectionService `/spam-detection/check` endpoint |
 | `test:trust-safety:report` | (output + HTML) | Runs the Trust & Safety test and generates an HTML report |
-| `test:srs-flashcards` | `srs-flashcards.load.yml` | SRS flashcard creation, review (SM-2), and retrieval load testing |
-| `test:srs-flashcards:report` | (output + HTML) | Runs the SRS Flashcards test and generates an HTML report |
 
 ## Configuration
 
@@ -82,10 +80,3 @@ Both test scripts include the following phases:
 
 ### Spam Detection (`/spam-detection`)
 - `POST /spam-detection/check` - Content spam check
-
-### SRS Flashcards (`/flashcards`)
-- `POST /flashcards` - Create or update a flashcard
-- `PATCH /flashcards/:id/srs` - Review a flashcard with SM-2 spaced repetition scoring
-- `GET /flashcards` - List all flashcards for the authenticated user
-- `GET /flashcards?level=<n>` - List flashcards filtered by SRS level (0-4)
-- `GET /flashcards/due` - Get flashcards currently due for review

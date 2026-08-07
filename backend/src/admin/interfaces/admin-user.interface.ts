@@ -27,21 +27,3 @@ export interface LoginHistoryEntry {
   user_agent?: string | null;
   created_at: string;
 }
-
-export interface AdminBlockEntry {
-  id: string;
-  blocker_id: string;
-  blocked_id: string;
-  blocker_name?: string | null;
-  blocked_name?: string | null;
-  blocker_avatar?: string | null;
-  blocked_avatar?: string | null;
-  created_at: string;
-}
-
-export interface AdminBlocksListResult {
-  blocks: AdminBlockEntry[];
-  total: number;
-  page: number;
-  pageSize: number;
-}

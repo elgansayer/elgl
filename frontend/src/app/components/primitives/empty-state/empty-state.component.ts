@@ -5,13 +5,7 @@ import { Component, ChangeDetectionStrategy, input, output, computed } from '@an
   selector: 'app-empty-state',
   template: `
     <div [class]="containerClasses()">
-      @if (illustration()) {
-        <div class="mb-4" aria-hidden="true">
-          <img [src]="illustration()" alt="" class="w-48 h-auto mx-auto" />
-        </div>
-      } @else {
-        <div class="text-4xl mb-3" aria-hidden="true">{{ icon() }}</div>
-      }
+      <div class="text-4xl mb-3" aria-hidden="true">{{ icon() }}</div>
       @if (title()) {
         <h3 class="font-bold text-base text-text-primary mb-1">{{ title() }}</h3>
       }
@@ -37,7 +31,6 @@ import { Component, ChangeDetectionStrategy, input, output, computed } from '@an
   },
 })
 export class AppEmptyStateComponent {
-  readonly illustration = input<string>('');
   readonly icon = input<string>('📭');
   readonly title = input<string>('');
   readonly description = input<string>('');

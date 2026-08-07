@@ -192,16 +192,14 @@
   <!-- Content States -->
   <main class="p-0">
     @if (isLoading()) {
-      <app-empty-state
-        [title]="'discovery.searching' | t"
-        [customClass]="'py-16'">
-      </app-empty-state>
+      <div class="p-8 text-center text-text-secondary font-bold">
+        {{ 'discovery.searching' | t }}
+      </div>
     } @else if (partners().length === 0) {
-      <app-empty-state
-        [illustration]="'/assets/illustrations/no-users-nearby.svg'"
-        [title]="'discovery.noUsersNearby' | t"
-        [description]="'discovery.noUsersHint' | t">
-      </app-empty-state>
+      <div class="p-8 text-center">
+        <p class="font-bold text-text-primary text-lg">{{ 'discovery.noMatches' | t }}</p>
+        <p class="mt-2 text-text-secondary text-sm">{{ 'discovery.tryBroadening' | t }}</p>
+      </div>
     } @else {
       <!-- User List -->
       <div class="divide-y divide-surface-200">
@@ -213,7 +211,7 @@
             <div class="flex items-center gap-3 min-w-0">
               <!-- Avatar -->
               <div class="relative shrink-0" [routerLink]="['/profile/user', partner.id]">
-                <img loading="lazy"
+                <img
                   [src]="partner.avatar_url || 'https://i.pravatar.cc/150?u=' + partner.id"
                   alt="avatar"
                   class="h-14 w-14 rounded-full object-cover"

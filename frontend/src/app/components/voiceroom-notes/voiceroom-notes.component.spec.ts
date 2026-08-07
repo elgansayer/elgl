@@ -5,7 +5,6 @@ import { Component, Pipe, PipeTransform, signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { VoiceroomNotesComponent } from './voiceroom-notes.component';
 import { I18nService } from '../../services/i18n.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
 
 @Pipe({
   name: 't',
@@ -22,12 +21,6 @@ class MockI18nService {
   translate(key: string, _params?: Record<string, unknown>): string {
     return key;
   }
-}
-
-class MockCentrifugoService {
-  subscribeLiveRoom = jest.fn();
-  unsubscribeLiveRoom = jest.fn();
-  publish = jest.fn();
 }
 
 @Component({
@@ -48,7 +41,6 @@ describe('VoiceroomNotesComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: I18nService, useClass: MockI18nService },
-        { provide: CentrifugoService, useClass: MockCentrifugoService },
       ],
     });
 

@@ -16,6 +16,7 @@ describe('MediaController', () => {
           useValue: {
             generateCoverPresignedUrl: jest.fn(),
             confirmCoverUpload: jest.fn(),
+            uploadAndCompressVoiceNote: jest.fn(),
           },
         },
       ],
@@ -83,6 +84,72 @@ describe('MediaController', () => {
       expect(mediaService.confirmCoverUpload).toHaveBeenCalledWith(
         'user-1',
         'covers/user-1/test.jpg',
+      );
+      expect(result).toEqual(expectedResponse);
+    });
+  });
+
+  describe('uploadVoiceNote', () => {
+    it('should throw BadRequestException when no file is uploaded', async () => {
+      await expect(
+        controller.uploadVoiceNote(
+          { user: { id: 'user-1' } },
+          undefined as unknown as Express.Multer.File,
+          {},
+        ),
+      ).rejects.toThrow('No audio file uploaded');
+    });
+
+    it('should compress to OGG by default when no format is specified', async () => {
+      const file = {
+        originalname: 'recording.webm',
+        buffer: Buffer.from('fake-audio'),
+        mimetype: 'audio/webm',
+        size: 1024,
+      } as Express.Multer.File;
+
+      const expectedResponse = { url: 'https://media.test/voice-notes/user-1/test.ogg' };
+      (mediaService.uploadAndCompressVoiceNote as jest.Mock).mockResolvedValue(
+        expectedResponse,
+      );
+
+      const result = await controller.uploadVoiceNote(
+        { user: { id: 'user-1' } },
+        file,
+        {},
+      );
+
+      expect(mediaService.uploadAndCompressVoiceNote).toHaveBeenCalledWith(
+        'user-1',
+        file,
+        'ogg',
+      );
+      expect(result).toEqual(expectedResponse);
+    });
+
+    it('should compress to M4A when format is specified', async () => {
+      const file = {
+        originalname: 'recording.webm',
+        buffer: Buffer.from('fake-audio'),
+        mimetype: 'audio/webm',
+        size: 1024,
+      } as Express.Multer.File;
+
+      const expectedResponse = { url: 'https://media.test/voice-notes/user-1/test.m4a' };
+      (mediaService.uploadAndCompressVoiceNote as jest.Mock).mockResolvedValue(
+        expectedResponse,
+      );
+
+      const result = await controller.uploadVoiceNote(
+        { user: { id: 'user-1' } },
+        file,
+        { format: 'm4a' },
+      );
+
+      expect(mediaService.uploadAndCompressVoiceNote).toHaveBeenCalledWith(
+        'user-1',
+        file,
+        'm4a',
       );
       expect(result).toEqual(expectedResponse);
     });

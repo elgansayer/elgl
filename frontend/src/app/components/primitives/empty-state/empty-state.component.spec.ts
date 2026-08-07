@@ -5,7 +5,6 @@ import { AppEmptyStateComponent } from './empty-state.component';
 @Component({
   template: `
     <app-empty-state
-      [illustration]="illustration()"
       [icon]="icon()"
       [title]="title()"
       [description]="description()"
@@ -19,7 +18,6 @@ import { AppEmptyStateComponent } from './empty-state.component';
   imports: [AppEmptyStateComponent],
 })
 class TestHostComponent {
-  illustration = signal('');
   icon = signal('🔍');
   title = signal('No Results Found');
   description = signal('Try adjusting your search criteria.');
@@ -88,30 +86,5 @@ describe('AppEmptyStateComponent', () => {
 
     const container = emptyStateElement.querySelector('div');
     expect(container?.classList.contains('custom-empty')).toBe(true);
-  });
-
-  it('should render illustration img when provided, hiding icon', () => {
-    host.illustration.set('/assets/illustrations/test.svg');
-    fixture.detectChanges();
-
-    const img = emptyStateElement.querySelector('img');
-    expect(img).toBeTruthy();
-    expect(img?.getAttribute('src')).toBe('/assets/illustrations/test.svg');
-
-    const iconDiv = emptyStateElement.querySelector('.text-4xl');
-    expect(iconDiv).toBeNull();
-  });
-
-  it('should show icon when illustration is empty', () => {
-    host.illustration.set('');
-    host.icon.set('📭');
-    fixture.detectChanges();
-
-    const img = emptyStateElement.querySelector('img');
-    expect(img).toBeNull();
-
-    const iconDiv = emptyStateElement.querySelector('.text-4xl');
-    expect(iconDiv).toBeTruthy();
-    expect(iconDiv?.textContent?.trim()).toBe('📭');
   });
 });

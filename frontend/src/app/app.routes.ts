@@ -1,5 +1,8 @@
 import { Routes } from '@angular/router';
+import { DiscoveryComponent } from './components/discovery/discovery.component';
 import { adminGuard } from './guards/admin.guard';
+import { MilestoneComponent } from './components/milestone/milestone.component';
+import { StudyBuddyComponent } from './components/study-buddy/study-buddy.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -23,12 +26,7 @@ export const routes: Routes = [
       ),
     title: 'Business Profile - HelloTalk',
   },
-  {
-    path: 'discovery',
-    loadComponent: () =>
-      import('./components/discovery/discovery.component').then((m) => m.DiscoveryComponent),
-    title: 'Discovery - HelloTalk',
-  },
+  { path: 'discovery', component: DiscoveryComponent },
   {
     path: 'proficiency',
     loadComponent: () =>
@@ -191,28 +189,12 @@ export const routes: Routes = [
     title: 'Notification Customisation - HelloTalk',
   },
   {
-    path: 'settings/message-filters',
-    loadComponent: () =>
-      import(
-        './pages/settings/message-filter-settings/message-filter-settings.component'
-      ).then((m) => m.MessageFilterSettingsComponent),
-    title: 'Message Filters - HelloTalk',
-  },
-  {
     path: 'settings/appearance',
     loadComponent: () =>
       import('./pages/settings/appearance-settings/appearance-settings.component').then(
         (m) => m.AppearanceSettingsComponent,
       ),
     title: 'Appearance - HelloTalk',
-  },
-  {
-    path: 'settings/privacy',
-    loadComponent: () =>
-      import('./pages/settings/privacy-settings/privacy-settings.component').then(
-        (m) => m.PrivacySettingsComponent,
-      ),
-    title: 'Privacy Settings - HelloTalk',
   },
   {
     path: 'settings/backup-restore',
@@ -388,14 +370,6 @@ export const routes: Routes = [
     title: 'Block Management - HelloTalk',
   },
   {
-    path: 'message-filters',
-    loadComponent: () =>
-      import('./pages/message-filter-settings/message-filter-settings.component').then(
-        (m) => m.MessageFilterSettingsComponent,
-      ),
-    title: 'Message Filter Settings - HelloTalk',
-  },
-  {
     path: 'chat-settings',
     loadComponent: () =>
       import('./pages/chat-settings/chat-settings.component').then(
@@ -519,15 +493,6 @@ export const routes: Routes = [
     title: 'Moderation - HelloTalk',
   },
   {
-    path: 'admin/blocks',
-    loadComponent: () =>
-      import('./pages/admin/blocks/admin-blocks.component').then(
-        (m) => m.AdminBlocksComponent,
-      ),
-    canActivate: [adminGuard],
-    title: 'Block Management - HelloTalk',
-  },
-  {
     path: 'admin/users',
     loadComponent: () =>
       import('./pages/admin/admin-users.component').then((m) => m.AdminUsersComponent),
@@ -535,22 +500,13 @@ export const routes: Routes = [
     title: 'Admin Users - HelloTalk',
   },
   {
-    path: 'admin/blocks',
-    loadComponent: () =>
-      import('./pages/admin/admin-blocks.component').then((m) => m.AdminBlocksComponent),
-    canActivate: [adminGuard],
-    title: 'Block Management - HelloTalk',
-  },
-  {
     path: 'milestones',
-    loadComponent: () =>
-      import('./components/milestone/milestone.component').then((m) => m.MilestoneComponent),
+    component: MilestoneComponent,
     title: 'Milestones - HelloTalk',
   },
   {
     path: 'study-buddy',
-    loadComponent: () =>
-      import('./components/study-buddy/study-buddy.component').then((m) => m.StudyBuddyComponent),
+    component: StudyBuddyComponent,
     title: 'Study Buddy Matching - HelloTalk',
   },
   {

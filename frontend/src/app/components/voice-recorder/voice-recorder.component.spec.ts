@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Pipe, PipeTransform } from '@angular/core';
 import { VoiceRecorderComponent } from './voice-recorder.component';
-import { MediaService } from '../../services/media.service';
+import { UserService } from '../../services/user.service';
+import { AudioCompressionService } from '../../services/audio-compression.service';
 
 @Pipe({ name: 't' })
 class MockTranslatePipe implements PipeTransform {
@@ -10,8 +11,14 @@ class MockTranslatePipe implements PipeTransform {
   }
 }
 
-class MockMediaService {
-  uploadVoiceNote = vi.fn().mockResolvedValue({ url: 'https://media.url/voice.ogg' });
+class MockUserService {
+  getPresignedUploadUrl = vi
+    .fn()
+    .mockResolvedValue({ uploadUrl: 'http://mock-upload-url', mediaUrl: 'media-url' });
+}
+
+class MockAudioCompressionService {
+  compressAudio = vi.fn().mockImplementation((blob: Blob) => Promise.resolve(blob));
 }
 
 class MockedMediaRecorder {
@@ -34,7 +41,6 @@ describe('VoiceRecorderComponent', () => {
   let component: VoiceRecorderComponent;
   let fixture: ComponentFixture<VoiceRecorderComponent>;
   let stopTrack: ReturnType<typeof vi.fn>;
-  let mediaService: MockMediaService;
 
   beforeEach(async () => {
     stopTrack = vi.fn();
@@ -58,7 +64,8 @@ describe('VoiceRecorderComponent', () => {
     await TestBed.configureTestingModule({
       imports: [VoiceRecorderComponent],
       providers: [
-        { provide: MediaService, useClass: MockMediaService },
+        { provide: UserService, useClass: MockUserService },
+        { provide: AudioCompressionService, useClass: MockAudioCompressionService },
       ],
     })
       .overrideComponent(VoiceRecorderComponent, {
@@ -68,7 +75,6 @@ describe('VoiceRecorderComponent', () => {
 
     fixture = TestBed.createComponent(VoiceRecorderComponent);
     component = fixture.componentInstance;
-    mediaService = TestBed.inject(MediaService) as unknown as MockMediaService;
     fixture.detectChanges();
   });
 
@@ -111,18 +117,5 @@ describe('VoiceRecorderComponent', () => {
     } finally {
       revokeSpy.mockRestore();
     }
-  });
-
-  it('should upload voice note via media service and emit result URL', async () => {
-    await component.startRecording();
-    component.stopRecording();
-
-    const emitted: string[] = [];
-    component.audioUploaded.subscribe((url: string) => emitted.push(url));
-
-    await component.uploadAndSend();
-
-    expect(mediaService.uploadVoiceNote).toHaveBeenCalled();
-    expect(emitted).toEqual(['https://media.url/voice.ogg']);
   });
 });

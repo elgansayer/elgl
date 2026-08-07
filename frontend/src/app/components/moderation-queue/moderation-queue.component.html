@@ -1,42 +1,41 @@
-<div class="mx-auto max-w-4xl p-4" role="main" aria-labelledby="moderation-queue-title">
+<div class="mx-auto max-w-4xl p-4">
   <div class="flex items-center justify-between mb-6">
-    <h2 id="moderation-queue-title" class="text-2xl font-bold text-text-primary">{{ 'moderation.title' | t }}</h2>
-    <div class="flex rounded-xl bg-surface-100 p-1" role="tablist" [attr.aria-label]="'moderation.filterAria' | t">
+    <h2 class="text-2xl font-bold text-text-primary">{{ 'moderation.title' | t }}</h2>
+    <div class="flex rounded-xl bg-surface-100 p-1" role="tablist">
       <button
-        [attr.aria-selected]="activeTab() === 'moment'"
+        [attr.aria-selected]="activeTab() === 'moment' ? true : false"
         [class.bg-surface-200]="activeTab() === 'moment'"
         [class.text-text-primary]="activeTab() === 'moment'"
         class="px-4 py-2 text-sm font-bold rounded-xl transition-colors text-text-secondary"
         (click)="setTab('moment')"
         role="tab"
-        [attr.aria-label]="'moderation.moment' | t">
+       [attr.aria-label]="'moderation.moment' | t">
         {{ 'moderation.moment' | t }}
       </button>
       <button
-        [attr.aria-selected]="activeTab() === 'profile'"
+        [attr.aria-selected]="activeTab() === 'profile' ? true : false"
         [class.bg-surface-200]="activeTab() === 'profile'"
         [class.text-text-primary]="activeTab() === 'profile'"
         class="px-4 py-2 text-sm font-bold rounded-xl transition-colors text-text-secondary"
         (click)="setTab('profile')"
         role="tab"
-        [attr.aria-label]="'moderation.profile' | t">
+       [attr.aria-label]="'moderation.profile' | t">
         {{ 'moderation.profile' | t }}
       </button>
     </div>
   </div>
 
   @if (error()) {
-    <div class="mb-4 rounded-xl bg-red-500/10 border border-red-500/30 p-3 text-red-700 text-sm" role="alert">
+    <div class="mb-4 rounded-xl bg-red-500/10 border border-red-500/30 p-3 text-red-700 text-sm">
       {{ error() }}
     </div>
   }
 
-  <div aria-live="polite">
   @if (activeTab() === 'moment') {
     @if (loadingMoments()) {
-      <div class="space-y-3" aria-busy="true">
+      <div class="space-y-3">
         @for (i of [1, 2, 3]; track i) {
-          <app-card customClass="p-4 space-y-3" aria-hidden="true">
+          <app-card customClass="p-4 space-y-3">
             <div class="flex items-center gap-2">
               <app-skeleton-loader [height]="'18px'" [width]="'70px'" [borderRadius]="'999px'" />
               <app-skeleton-loader [height]="'18px'" [width]="'90px'" [borderRadius]="'999px'" />
@@ -60,9 +59,8 @@
         [description]="'safety.moderation.emptyDesc' | t"
       />
     } @else {
-      <div role="tabpanel" [attr.aria-label]="'moderation.moment' | t">
       @for (item of itemsForTab(); track item.id) {
-        <div class="rounded-xl border border-slate-700 bg-surface p-4 mb-4 shadow-sm" [attr.aria-label]="'moderation.reportItemAria' | t: { id: item.id }">
+        <div class="rounded-xl border border-slate-700 bg-surface p-4 mb-4 shadow-sm">
           <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div class="flex-1">
               <div class="flex items-center gap-2 text-xs text-text-secondary mb-2">
@@ -73,9 +71,9 @@
                 <p class="text-sm text-text-primary mb-2 line-clamp-3">{{ item.moment_content }}</p>
               }
               <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-secondary">
-                <span><span class="sr-only">{{ 'moderation.reporter' | t }}: </span><strong>{{ item.reporter.name }}</strong></span>
+                <span>{{ 'moderation.reporter' | t }}: <strong>{{ item.reporter.name }}</strong></span>
                 @if (item.reported_user) {
-                  <span><span class="sr-only">{{ 'moderation.reported_user' | t }}: </span><strong>{{ item.reported_user.name }}</strong></span>
+                  <span>{{ 'moderation.reported_user' | t }}: <strong>{{ item.reported_user.name }}</strong></span>
                 }
                 <span>{{ item.created_at | date: 'medium' }}</span>
               </div>
@@ -85,29 +83,28 @@
                 class="inline-flex items-center justify-center rounded-lg bg-green-600 text-white px-3 py-2 text-sm font-bold hover:bg-green-700 transition-colors"
                 (click)="approveItem(item)"
                 [disabled]="item.status !== 'pending'"
-                [attr.aria-label]="'moderation.approveAria' | t: { id: item.id }">
+               [attr.aria-label]="'moderation.approve' | t">
                 {{ 'moderation.approve' | t }}
               </button>
               <button
                 class="inline-flex items-center justify-center rounded-lg bg-red-600 text-white px-3 py-2 text-sm font-bold hover:bg-red-700 transition-colors"
                 (click)="rejectItem(item)"
                 [disabled]="item.status !== 'pending'"
-                [attr.aria-label]="'moderation.rejectAria' | t: { id: item.id }">
+               [attr.aria-label]="'moderation.reject' | t">
                 {{ 'moderation.reject' | t }}
               </button>
             </div>
           </div>
         </div>
       }
-      </div>
     }
   }
 
   @if (activeTab() === 'profile') {
     @if (loadingProfiles()) {
-      <div class="space-y-3" aria-busy="true">
+      <div class="space-y-3">
         @for (i of [1, 2, 3]; track i) {
-          <app-card customClass="p-4 space-y-3" aria-hidden="true">
+          <app-card customClass="p-4 space-y-3">
             <div class="flex items-center gap-2">
               <app-skeleton-loader [height]="'18px'" [width]="'70px'" [borderRadius]="'999px'" />
               <app-skeleton-loader [height]="'18px'" [width]="'90px'" [borderRadius]="'999px'" />
@@ -130,9 +127,8 @@
         [description]="'safety.moderation.emptyDesc' | t"
       />
     } @else {
-      <div role="tabpanel" [attr.aria-label]="'moderation.profile' | t">
       @for (item of itemsForTab(); track item.id) {
-        <div class="rounded-xl border border-slate-700 bg-surface p-4 mb-4 shadow-sm" [attr.aria-label]="'moderation.reportItemAria' | t: { id: item.id }">
+        <div class="rounded-xl border border-slate-700 bg-surface p-4 mb-4 shadow-sm">
           <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div class="flex-1">
               <div class="flex items-center gap-2 text-xs text-text-secondary mb-2">
@@ -140,8 +136,8 @@
                 <span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary">{{ item.reason }}</span>
               </div>
               <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-secondary">
-                <span><span class="sr-only">{{ 'moderation.reported_user' | t }}: </span><strong>{{ item.reported_user?.name }}</strong></span>
-                <span><span class="sr-only">{{ 'moderation.reporter' | t }}: </span><strong>{{ item.reporter.name }}</strong></span>
+                <span>{{ 'moderation.reported_user' | t }}: <strong>{{ item.reported_user?.name }}</strong></span>
+                <span>{{ 'moderation.reporter' | t }}: <strong>{{ item.reporter.name }}</strong></span>
                 <span>{{ item.created_at | date: 'medium' }}</span>
               </div>
             </div>
@@ -150,22 +146,20 @@
                 class="inline-flex items-center justify-center rounded-lg bg-green-600 text-white px-3 py-2 text-sm font-bold hover:bg-green-700 transition-colors"
                 (click)="approveItem(item)"
                 [disabled]="item.status !== 'pending'"
-                [attr.aria-label]="'moderation.approveAria' | t: { id: item.id }">
+               [attr.aria-label]="'moderation.approve' | t">
                 {{ 'moderation.approve' | t }}
               </button>
               <button
                 class="inline-flex items-center justify-center rounded-lg bg-red-600 text-white px-3 py-2 text-sm font-bold hover:bg-red-700 transition-colors"
                 (click)="rejectItem(item)"
                 [disabled]="item.status !== 'pending'"
-                [attr.aria-label]="'moderation.rejectAria' | t: { id: item.id }">
+               [attr.aria-label]="'moderation.reject' | t">
                 {{ 'moderation.reject' | t }}
               </button>
             </div>
           </div>
         </div>
       }
-      </div>
     }
   }
-  </div>
 </div>

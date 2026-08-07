@@ -1,10 +1,9 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { SafetyModule } from '../safety/safety.module';
 import { LinkPreviewModule } from '../link-preview/link-preview.module';
 import { SpamDetectionModule } from '../spam-detection/spam-detection.module';
 import { XpModule } from '../xp/xp.module';
 import { LlmProxyModule } from '../llm-proxy/llm-proxy.module';
-import { UsersModule } from '../users/users.module';
 import { CentrifugoService } from './centrifugo.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
@@ -28,7 +27,6 @@ import { QuickRepliesService } from './quick-replies/quick-replies.service';
     SpamDetectionModule,
     XpModule,
     LlmProxyModule,
-    forwardRef(() => UsersModule),
   ],
   controllers: [
     ChatController,

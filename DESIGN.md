@@ -46,11 +46,11 @@
 
 ## Guidelines
 
-1. **Dark mode only** -- all designs MUST use #121212 background
-2. **Neon accents** -- use accent colours (#00C8A0 / #00E6B4) for interactive elements
-3. **Mobile-first** -- design for 390px width, then scale up
-4. **Logical properties** -- use `ps`/`pe`/`ms`/`me`/`border-s`/`border-e` for RTL support
-5. **Gradient buttons** -- primary CTAs use accent gradient backgrounds
-6. **Flag indicators** -- language pairs show flag emoji badges
-7. **No em dashes** -- use hyphens or colons instead
-8. **Dual currency** -- prices show both UKP and USD (e.g., "8 UKP / $10 USD")
+1. **Dark mode only** — all designs MUST use #121212 background
+2. **Neon accents** — use accent colours (#00C8A0 / #00E6B4) for interactive elements
+3. **Mobile-first** — design for 390px width, then scale up
+4. **Logical properties** — use `ps`/`pe`/`ms`/`me`/`border-s`/`border-e` for RTL support
+5. **Gradient buttons** — primary CTAs use accent gradient backgrounds
+6. **Flag indicators** — language pairs show flag emoji badges
+7. **No em dashes** — use hyphens or colons instead
+8. **Dual currency** — prices show both UKP and USD (e.g., "8 UKP / $10 USD")

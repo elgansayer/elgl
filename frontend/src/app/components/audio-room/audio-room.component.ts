@@ -22,8 +22,6 @@ import { QuickPollFormComponent } from './quick-poll-form.component';
 import { QuickPollDisplayComponent } from './quick-poll-display.component';
 import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component';
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
-import { TipHostModalComponent } from '../tip-host-modal/tip-host-modal.component';
-import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.component';
 
 @Component({
   selector: 'app-audio-room',
@@ -39,8 +37,6 @@ import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.comp
     QuickPollFormComponent,
     QuickPollDisplayComponent,
     LiveChatOverlayComponent,
-    TipHostModalComponent,
-    VoiceroomNotesComponent,
   ],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],
@@ -53,7 +49,6 @@ export class AudioRoomComponent implements OnInit {
 
   readonly showCreateModal = signal<boolean>(false);
   readonly showGiftModal = signal<boolean>(false);
-  readonly showTipModal = signal<boolean>(false);
   readonly showSafetyModal = signal<boolean>(false);
   readonly showApprovalModal = signal<boolean>(false);
   readonly showPollFormModal = signal<boolean>(false);
@@ -75,7 +70,6 @@ export class AudioRoomComponent implements OnInit {
 
   readonly exclusiveEmojis = signal<{emojiId:string;name:string;animationUrl:string}[]>([]);
   readonly showExclusivePicker = signal<boolean>(false);
-  readonly showNotesPanel = signal<boolean>(false);
 
   /** Toggle between flat list view and language-grouped view */
   readonly viewMode = signal<'flat' | 'grouped'>('grouped');
