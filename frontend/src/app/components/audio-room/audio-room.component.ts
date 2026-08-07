@@ -23,6 +23,7 @@ import { QuickPollDisplayComponent } from './quick-poll-display.component';
 import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component';
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 import { TipHostModalComponent } from '../tip-host-modal/tip-host-modal.component';
+import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.component';
 
 @Component({
   selector: 'app-audio-room',
@@ -39,6 +40,7 @@ import { TipHostModalComponent } from '../tip-host-modal/tip-host-modal.componen
     QuickPollDisplayComponent,
     LiveChatOverlayComponent,
     TipHostModalComponent,
+    VoiceroomNotesComponent,
   ],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],
