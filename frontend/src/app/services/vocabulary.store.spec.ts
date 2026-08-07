@@ -11,6 +11,14 @@ describe('VocabularyStore', () => {
   let store: VocabularyStore;
   let httpMock: HttpTestingController;
   let authSpy: { getAccessToken: ReturnType<typeof vi.fn> };
+  let srsOfflineSpy: {
+    cacheFlashcards: ReturnType<typeof vi.fn>;
+    getCachedFlashcards: ReturnType<typeof vi.fn>;
+    cacheDueReviews: ReturnType<typeof vi.fn>;
+    getCachedDueReviews: ReturnType<typeof vi.fn>;
+    queueSrsReview: ReturnType<typeof vi.fn>;
+    syncQueuedReviews: ReturnType<typeof vi.fn>;
+  };
 
   const mockFlashcard: Flashcard = {
     id: '1',
@@ -25,21 +33,20 @@ describe('VocabularyStore', () => {
     created_at: new Date().toISOString(),
   };
 
-  beforeEach(async () => {
+  beforeEach(() => {
     TestBed.resetTestingModule();
 
     authSpy = {
       getAccessToken: vi.fn().mockReturnValue('mock-token'),
     };
 
-    const srsOfflineMock = {
+    srsOfflineSpy = {
       cacheFlashcards: vi.fn().mockResolvedValue(undefined),
       getCachedFlashcards: vi.fn().mockResolvedValue([]),
       cacheDueReviews: vi.fn().mockResolvedValue(undefined),
       getCachedDueReviews: vi.fn().mockResolvedValue([]),
       queueSrsReview: vi.fn().mockResolvedValue(undefined),
       syncQueuedReviews: vi.fn().mockResolvedValue({ synced: 0, failed: 0 }),
-      queuedReviewCount: vi.fn().mockReturnValue(0),
     };
 
     TestBed.configureTestingModule({
@@ -48,7 +55,7 @@ describe('VocabularyStore', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: AuthService, useValue: authSpy },
-        { provide: SrsOfflineService, useValue: srsOfflineMock },
+        { provide: SrsOfflineService, useValue: srsOfflineSpy },
       ],
     });
 
