@@ -987,13 +987,9 @@ export class EconomyService {
     const senderProfile = await this.usersService.getProfile(senderId);
     const receiverProfile = await this.usersService.getProfile(dto.receiver_id);
 
-<<<<<<< HEAD
-    const giftEvent: GiftEventPayload = sanitiseEconomyData<GiftEventPayload>({
-=======
     // Trim payload to only essential fields for real-time broadcast.
     // animation_url can be hundreds of bytes; send it only when populated.
-    const giftEvent: GiftEventPayload = {
->>>>>>> origin/main
+    const giftEvent: GiftEventPayload = sanitiseEconomyData<GiftEventPayload>({
       type: 'virtual_gift',
       gift_id: gift.id,
       gift_name: gift.name,
@@ -1118,17 +1114,9 @@ export class EconomyService {
     if (packs.length === 0) {
       return sanitiseEconomyData({
         packs: this.getDefaultStickerPacks(),
-<<<<<<< HEAD
-        owned_pack_ids:
-          ownedResponse.data?.map((r) => r.pack_id) ?? [],
-        user_coins:
-          balanceResponse.data?.coins_balance ?? 0,
-      });
-=======
         owned_pack_ids: ownedResponse.data?.map((r) => r.pack_id) ?? [],
         user_coins: balanceResponse.data?.coins_balance ?? 0,
-      };
->>>>>>> origin/main
+      });
     }
 
     return sanitiseEconomyData({
