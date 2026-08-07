@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-import { Component, inject, signal, computed } from '@angular/core';
-=======
 import { Component, inject, signal, computed, resource, afterNextRender, effect } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
->>>>>>> origin/main
 import { firstValueFrom } from 'rxjs';
 import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
@@ -28,25 +24,7 @@ interface StatusFilterItem {
   imports: [DatePipe, TranslatePipe],
   templateUrl: './escrow-payments.component.html',
 })
-<<<<<<< HEAD
-export class EscrowPaymentsComponent {
-  private readonly i18n = inject(I18nService);
-  private readonly router = inject(Router);
-  private readonly escrowService = inject(EscrowService);
-  private readonly network = inject(NetworkStatusService);
-  private readonly onboardingService = inject(EscrowOnboardingService);
-
-  readonly isOnline = this.network.isOnline;
-  readonly escrows = this.escrowService.escrows;
-  readonly loading = this.escrowService.loading;
-  readonly pendingOperationCount = this.escrowService.pendingOperationCount;
-
-=======
-<<<<<<< HEAD
-export class EscrowPaymentsComponent {
-=======
 export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
->>>>>>> origin/main
   private http = inject(HttpClient);
   private auth = inject(AuthService);
   private i18n = inject(I18nService);
@@ -58,7 +36,6 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
 
   readonly transactions = signal<EscrowRow[]>([]);
   readonly loading = signal(false);
->>>>>>> origin/main
   readonly error = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly selectedStatus = signal<StatusFilter>('all');
@@ -80,10 +57,6 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
     return txs.filter((tx) => tx.status === filter);
   });
 
-<<<<<<< HEAD
-  async loadEscrows(): Promise<void> {
-    await this.escrowService.listUserEscrows();
-=======
   readonly disputeReason = signal('');
   readonly disputeEvidence = signal('');
   readonly refundReason = signal('');
@@ -250,7 +223,6 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
     } finally {
       this.loading.set(false);
     }
->>>>>>> origin/main
   }
 
   setStatusFilter(filter: StatusFilter): void {
@@ -316,8 +288,6 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
     this.error.set(null);
     this.successMessage.set(null);
   }
-<<<<<<< HEAD
-=======
 
   /** Start onboarding tour using firstValueFrom to avoid unmanaged subscription. */
   private maybeStartTour(): void {
@@ -348,5 +318,4 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
         this.onboardingService.isTourInProgress.set(false);
       });
   }
->>>>>>> origin/main
 }
