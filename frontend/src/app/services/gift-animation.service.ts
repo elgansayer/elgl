@@ -44,6 +44,9 @@ const PARTICLE_COLOURS = [
   '#3b82f6',
 ];
 
+/** Maximum living particles in the DOM to prevent GPU thrashing. */
+const MAX_PARTICLES = 90;
+
 function generateParticles(count: number): SvgParticle[] {
   const particles: SvgParticle[] = [];
   const shapes: SvgParticle['shape'][] = ['circle', 'star', 'heart', 'diamond'];
@@ -71,7 +74,9 @@ export class GiftAnimationService {
   private autoHideSub: { unsubscribe: () => void } | null = null;
   private animationFrameId: ReturnType<typeof requestAnimationFrame> | null = null;
   private startTime = 0;
-  private particleCount = 0;
+
+  /** Prevent overlapping animations from piling up rAF callbacks. */
+  private isPlaying = false;
 
   readonly currentAnimation = signal<GiftAnimationOverlay | null>(null);
   readonly isVisible = signal<boolean>(false);
@@ -81,6 +86,7 @@ export class GiftAnimationService {
 
   playAnimation(overlay: GiftAnimationOverlay): void {
     this.cleanup();
+
     this.currentAnimation.set({
       ...overlay,
       id: crypto.randomUUID?.() || Math.random().toString(36).slice(2),
@@ -89,11 +95,12 @@ export class GiftAnimationService {
 
     // Start SVG particle system
     this.particles.set(generateParticles(60));
-    this.particleCount = 60;
     this.elapsed.set(0);
     this.startTime = performance.now();
+    this.isPlaying = true;
     this.animationFrameId = requestAnimationFrame(this.tick);
 
+    // Hide after 5 seconds, then clear the overlay after a short fade-out.
     const hideSub = interval(5000)
       .pipe(take(1))
       .subscribe(() => {
@@ -103,48 +110,58 @@ export class GiftAnimationService {
           .subscribe(() => {
             this.currentAnimation.set(null);
             this.cancelParticles();
+            this.isPlaying = false;
           });
         this.autoHideSub = cleanupSub;
       });
     this.autoHideSub = hideSub;
 
-    this.destroyRef.onDestroy(() => this.clearTimer());
+    this.destroyRef.onDestroy(() => this.cleanup());
   }
 
   dismiss(): void {
-    this.clearTimer();
+    this.cleanup();
     this.isVisible.set(false);
     const cleanupSub = interval(600)
       .pipe(take(1))
       .subscribe(() => {
         this.currentAnimation.set(null);
         this.cancelParticles();
+        this.isPlaying = false;
       });
     this.autoHideSub = cleanupSub;
   }
 
   private tick = (): void => {
-    const elapsed = performance.now() - this.startTime;
-    this.elapsed.set(elapsed);
+    const elapsedMs = performance.now() - this.startTime;
+    this.elapsed.set(elapsedMs);
 
-    if (elapsed >= 5000 || !this.currentAnimation()) {
+    if (elapsedMs >= 5000 || !this.currentAnimation()) {
       this.cancelParticles();
+      this.isPlaying = false;
       return;
     }
 
-    this.particles.update((pts) =>
-      pts.map((p) => ({
-        ...p,
-        x: p.x + p.speedX * 0.04,
-        y: p.y + p.speedY * 0.04,
-        opacity: Math.max(0, p.opacity - 0.002),
-        rotation: p.rotation + p.rotationSpeed * 0.016,
-      })),
-    );
+    this.particles.update((pts) => {
+      // Cull dead (fully transparent) particles.
+      const alive = pts
+        .filter((p) => p.opacity > 0)
+        .map((p) => ({
+          ...p,
+          x: p.x + p.speedX * 0.04,
+          y: p.y + p.speedY * 0.04,
+          opacity: Math.max(0, p.opacity - 0.002),
+          rotation: p.rotation + p.rotationSpeed * 0.016,
+        }));
 
-    if (elapsed < 3000 && Math.random() < 0.4) {
-      this.particles.update((pts) => [...pts, ...generateParticles(3)]);
-    }
+      // Top up to keep visual density without ballooning memory.
+      if (elapsedMs < 3000 && alive.length < MAX_PARTICLES && Math.random() < 0.4) {
+        const needed = Math.min(3, MAX_PARTICLES - alive.length);
+        alive.push(...generateParticles(needed));
+      }
+
+      return alive;
+    });
 
     this.animationFrameId = requestAnimationFrame(this.tick);
   };
@@ -159,14 +176,12 @@ export class GiftAnimationService {
   }
 
   private cleanup(): void {
-    this.clearTimer();
-    this.cancelParticles();
-  }
-
-  private clearTimer(): void {
+    // Stop timers & subscriptions.
     if (this.autoHideSub !== null) {
       this.autoHideSub.unsubscribe();
       this.autoHideSub = null;
     }
+    this.cancelParticles();
+    this.isPlaying = false;
   }
 }

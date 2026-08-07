@@ -985,16 +985,18 @@ export class EconomyService {
     const senderProfile = await this.usersService.getProfile(senderId);
     const receiverProfile = await this.usersService.getProfile(dto.receiver_id);
 
+    // Trim payload to only essential fields for real-time broadcast.
+    // animation_url can be hundreds of bytes; send it only when populated.
     const giftEvent: GiftEventPayload = {
       type: 'virtual_gift',
       gift_id: gift.id,
       gift_name: gift.name,
       icon: gift.icon,
-      animation_url: gift.animation_url ?? '',
+      animation_url: gift.animation_url?.slice(0, 512) ?? '',
       animation_type: gift.animation_type,
       coin_value: gift.cost_coins,
-      sender_name: senderProfile?.display_name ?? null,
-      receiver_name: receiverProfile?.display_name ?? null,
+      sender_name: (senderProfile?.display_name ?? null),
+      receiver_name: (receiverProfile?.display_name ?? null),
       room_id: dto.room_id,
     };
 
