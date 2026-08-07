@@ -103,7 +103,7 @@
 
       <!-- Submit -->
       <div class="flex justify-end">
-        <button type="submit" class="btn btn-primary" [disabled]="form.invalid || loading()" [attr.aria-label]="'profile.saveChangesBtn' | t">
+        <button type="submit" class="btn btn-primary" [disabled]="form.invalid || loading()">
           @if (loading()) {
             <span class="loading loading-spinner"></span>
           }

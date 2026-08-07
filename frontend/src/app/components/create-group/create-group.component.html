@@ -35,7 +35,7 @@
             class="search-input"
             [placeholder]="'group.searchPlaceholder' | t"
             [disabled]="!canAddMore()"
-           [attr.aria-label]="'text input'"/>
+          />
           @if (isSearching()) {
             <span class="search-spinner"></span>
           }
@@ -53,7 +53,7 @@
               class="search-result-item"
               (click)="addMember(user)"
               [disabled]="selectedMemberIds().includes(user.id)"
-             [attr.aria-label]="(user.display_name || user.id)">
+            >
               <div class="user-avatar">
                 @if (user.avatar_url) {
                   <img [src]="user.avatar_url" alt="" class="avatar-img" />
@@ -125,7 +125,7 @@
       class="create-btn"
       (click)="createGroup()"
       [disabled]="isCreating() || !groupName.trim() || selectedMembers().length === 0"
-     [attr.aria-label]="'group.creatingBtn' | t">
+    >
       @if (isCreating()) {
         <span class="btn-spinner"></span>
         {{ 'group.creatingBtn' | t }}

@@ -13,7 +13,7 @@
         type="button"
         class="visitor-toggle-btn"
         (click)="toggleHideBlurred()"
-       [attr.aria-label]="'visitors.showAllBtn' | t">
+      >
         @if (hideBlurred()) {
           {{ 'visitors.showAllBtn' | t }}
         } @else {
@@ -35,7 +35,7 @@
         <p class="vip-banner-desc">{{ 'visitors.vipBannerDesc' | t }}</p>
         <p class="vip-banner-price">{{ 'visitors.vipPrice' | t }}</p>
       </div>
-      <a class="vip-banner-cta" routerLink="/vip" [attr.aria-label]="'vip.seePlans' | t">
+      <a class="vip-banner-cta" routerLink="/vip">
         {{ 'vip.seePlans' | t }}
       </a>
     </section>

@@ -59,7 +59,7 @@
             [value]="shareUrl()" 
             readonly 
             class="flex-1 bg-transparent text-sm text-text-primary px-2 outline-none"
-           [attr.aria-label]="'text input'">
+          >
           <button 
             class="px-4 py-2 rounded-md text-sm font-bold transition-colors"
             [class.bg-primary]="!isCopying()"
@@ -67,7 +67,7 @@
             [class.bg-green-500]="isCopying()"
             [class.text-white]="isCopying()"
             (click)="copyLink()"
-           [attr.aria-label]="'share.copied' | t">
+          >
             {{ isCopying() ? ('share.copied' | t) : ('share.copy' | t) }}
           </button>
         </div>

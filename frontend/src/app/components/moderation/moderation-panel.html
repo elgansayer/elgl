@@ -9,7 +9,7 @@
       [class.bg-surface-100]="currentFilter() !== 'moment'"
       [class.text-text-secondary]="currentFilter() !== 'moment'"
       (click)="filterByType('moment')"
-     [attr.aria-label]="'moderation.moment' | t">
+    >
       {{ 'moderation.moment' | t }}
     </button>
     <button
@@ -19,7 +19,7 @@
       [class.bg-surface-100]="currentFilter() !== 'profile'"
       [class.text-text-secondary]="currentFilter() !== 'profile'"
       (click)="filterByType('profile')"
-     [attr.aria-label]="'moderation.profile' | t">
+    >
       {{ 'moderation.profile' | t }}
     </button>
   </div>
@@ -69,20 +69,20 @@
             <button
               class="bg-green-600 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:bg-green-700 transition-colors"
               (click)="approve(item)"
-             [attr.aria-label]="'moderation.approve' | t">
+            >
               {{ 'moderation.approve' | t }}
             </button>
             <button
               class="bg-red-600 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:bg-red-700 transition-colors"
               (click)="reject(item)"
-             [attr.aria-label]="'moderation.reject' | t">
+            >
               {{ 'moderation.reject' | t }}
             </button>
             <button
               class="bg-yellow-600 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:bg-yellow-700 transition-colors disabled:opacity-50"
               (click)="analyseUserProfile(item.reported_user?.id ?? '')"
               [disabled]="analysing()"
-             [attr.aria-label]="'common.loading' | t">
+            >
               {{ analysing() ? ('common.loading' | t) : ('moderation.analyse' | t) }}
             </button>
           </div>

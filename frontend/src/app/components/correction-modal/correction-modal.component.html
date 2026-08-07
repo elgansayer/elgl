@@ -32,7 +32,7 @@
           <label class="text-xs font-bold text-text-secondary uppercase tracking-wider">
             {{ 'moments.ghostOriginal' | t }}
           </label>
-          <button (click)="onOriginalClick()" class="text-[11px] text-neon-blue hover:underline" [attr.aria-label]="'moments.resetGhost' | t">
+          <button (click)="onOriginalClick()" class="text-[11px] text-neon-blue hover:underline">
             {{ 'moments.resetGhost' | t }}
           </button>
         </div>
@@ -58,7 +58,7 @@
           rows="3"
           placeholder="Edit sentence to correct grammar, spelling, or natural phrasing..."
           class="w-full bg-surface-300 border border-neon-blue/40 rounded-2xl p-3 text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-neon-blue resize-none"
-         [attr.aria-label]="'Edit sentence to correct grammar, spelling, or natural phrasing...'">
+        >
         </textarea>
       </div>
 
@@ -84,7 +84,7 @@
           (ngModelChange)="explanation.set($event)"
           placeholder="Explain grammar rule, nuance, or native alternative..."
           class="w-full bg-surface-300 border border-surface-100 rounded-2xl px-4 py-2.5 text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-1 focus:ring-surface-100"
-         [attr.aria-label]="'Explain grammar rule, nuance, or native alternative...'"/>
+        />
       </div>
     </div>
 
@@ -102,7 +102,7 @@
         (click)="submitCorrection()"
         [disabled]="!correctedText().trim() || correctedText().trim() === originalText().trim()"
         class="px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-full hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md"
-       [attr.aria-label]="'moments.sendCorrection' | t">
+      >
         {{ 'moments.sendCorrection' | t }}
       </button>
     </footer>

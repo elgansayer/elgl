@@ -11,7 +11,7 @@
           [class.text-white]="!topic.isFollowing"
           [class.bg-surface-100]="topic.isFollowing"
           [class.text-text-secondary]="topic.isFollowing"
-         [attr.aria-label]="'topics.following' | t">
+        >
           {{ topic.isFollowing ? ('topics.following' | t) : ('topics.follow' | t) }}
         </button>
       </div>

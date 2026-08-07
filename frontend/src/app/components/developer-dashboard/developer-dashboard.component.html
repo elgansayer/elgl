@@ -27,7 +27,7 @@
           <button
             (click)="upgrade('developer')"
             class="rounded-app bg-amber-500 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-black text-amber-950"
-           [attr.aria-label]="'developer.upgradeDevBtn' | t">
+          >
             {{ 'developer.upgradeDevBtn' | t }}
           </button>
         }
@@ -35,7 +35,7 @@
           <button
             (click)="upgrade('consumer')"
             class="rounded-app border border-slate-500 bg-surface-800 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold text-text-primary"
-           [attr.aria-label]="'developer.upgradeConsumerBtn' | t">
+          >
             {{ 'developer.upgradeConsumerBtn' | t }}
           </button>
         }
@@ -52,7 +52,7 @@
       [class.bg-surface-100]="activeTab() !== 'overview'"
       [class.text-text-primary]="activeTab() !== 'overview'"
       class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors"
-     [attr.aria-label]="'developer.tabOverview' | t">
+    >
       {{ 'developer.tabOverview' | t }}
     </button>
     <button
@@ -62,7 +62,7 @@
       [class.bg-surface-100]="activeTab() !== 'postgis'"
       [class.text-text-primary]="activeTab() !== 'postgis'"
       class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors"
-     [attr.aria-label]="'developer.tabPostgis' | t">
+    >
       {{ 'developer.tabPostgis' | t }}
     </button>
     <button
@@ -72,7 +72,7 @@
       [class.bg-surface-100]="activeTab() !== 'centrifugo'"
       [class.text-text-primary]="activeTab() !== 'centrifugo'"
       class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors"
-     [attr.aria-label]="'developer.tabCentrifugo' | t">
+    >
       {{ 'developer.tabCentrifugo' | t }}
     </button>
     <button
@@ -82,7 +82,7 @@
       [class.bg-surface-100]="activeTab() !== 'livekit'"
       [class.text-text-primary]="activeTab() !== 'livekit'"
       class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors"
-     [attr.aria-label]="'developer.tabLivekit' | t">
+    >
       {{ 'developer.tabLivekit' | t }}
     </button>
   </nav>
@@ -103,7 +103,7 @@
           <button
             (click)="generateKey()"
             class="app-button-primary ps-4 pe-4 pt-2.5 pb-2.5 text-xs"
-           [attr.aria-label]="'developer.generateBtn' | t">
+          >
             {{ 'developer.generateBtn' | t }}
           </button>
         </div>
@@ -216,7 +216,7 @@
           (click)="runPostGisSearch()"
           [disabled]="isSearching()"
           class="app-button-primary ps-5 pe-5 pt-2 pb-2 text-xs"
-         [attr.aria-label]="'developer.executingBtn' | t">
+        >
           {{ isSearching() ? ('developer.executingBtn' | t) : ('developer.executeBtn' | t) }}
         </button>
       </div>
@@ -288,7 +288,7 @@
           <button
             (click)="toggleCentrifugo()"
             class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs"
-           [attr.aria-label]="'developer.disconnectBtn' | t">
+          >
             {{
               centrifugeService.isConnected()
                 ? ('developer.disconnectBtn' | t)
@@ -308,7 +308,7 @@
         <button
           (click)="simulateRedisTimelineFanout()"
           class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs"
-         [attr.aria-label]="'developer.triggerRedisBtn' | t">
+        >
           {{ 'developer.triggerRedisBtn' | t }}
         </button>
       </div>
@@ -350,14 +350,14 @@
               <button
                 (click)="simulateStageHandRaise()"
                 class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs"
-               [attr.aria-label]="'developer.simApproveBtn' | t">
+              >
                 {{ 'developer.simApproveBtn' | t }}
               </button>
             } @else {
               <button
                 (click)="simulateStageDemote()"
                 class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs"
-               [attr.aria-label]="'developer.simDemoteBtn' | t">
+              >
                 {{ 'developer.simDemoteBtn' | t }}
               </button>
             }
@@ -393,7 +393,7 @@
             [class.bg-surface-200]="isRecordingActive()"
             [class.text-white]="isRecordingActive()"
             class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors"
-           [attr.aria-label]="'developer.stopRecordingBtn' | t">
+          >
             {{
               isRecordingActive()
                 ? ('developer.stopRecordingBtn' | t)

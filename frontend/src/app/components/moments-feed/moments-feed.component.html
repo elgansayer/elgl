@@ -108,8 +108,8 @@
               [(ngModel)]="tempImageUrlInput"
               [placeholder]="'moments.imageUrlPlaceholder' | t"
               class="bg-transparent border-none text-xs w-24 text-text-primary outline-none px-2"
-             [attr.aria-label]="'text input'"/>
-            <button (click)="addTempImageUrl()" class="text-[10px] font-bold text-purple-400" [attr.aria-label]="'moments.addImageBtn' | t">
+            />
+            <button (click)="addTempImageUrl()" class="text-[10px] font-bold text-purple-400">
               {{ 'moments.addImageBtn' | t | uppercase }}
             </button>
           </div>
@@ -118,7 +118,7 @@
           [disabled]="isCreating() || (!newText().trim() && newMediaUrls().length === 0)"
           (click)="submitMoment(); showComposeForm.set(false)"
           class="bg-gradient-to-r from-orange-400 to-yellow-400 text-slate-900 font-bold text-xs px-4 py-1.5 rounded-full shadow-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
-         [attr.aria-label]="'moments.postingBtn' | t">
+        >
           {{ isCreating() ? ('moments.postingBtn' | t) : ('moments.postBtn' | t) }}
         </button>
       </div>
@@ -193,7 +193,7 @@
                 <button
                   (click)="momentsStore.togglePin(moment.id)"
                   class="text-xs text-text-muted hover:text-text-primary"
-                 [attr.aria-label]="'moments.unpinBtn' | t">
+                >
                   {{ moment.is_pinned ? ('moments.unpinBtn' | t) : ('moments.pinBtn' | t) }}
                 </button>
               }
@@ -211,7 +211,7 @@
                   <button
                     (click)="toggleMomentExpansion(moment.id)"
                     class="text-xs font-bold text-purple-400 block mt-1"
-                   [attr.aria-label]="'moments.showLess' | t">
+                  >
                     {{
                       expandedMomentIds().has(moment.id)
                         ? ('moments.showLess' | t)
@@ -258,14 +258,14 @@
                 (click)="momentsStore.toggleLike(moment.id)"
                 class="flex items-center gap-1.5 transition-colors"
                 [class.text-red-500]="moment.is_liked_by_me"
-               [attr.aria-label]="'moments.likeBtn' | t">
+              >
                 <span class="text-lg leading-none">{{ moment.is_liked_by_me ? '❤️' : '🤍' }}</span>
                 <span class="font-bold">{{ moment.likes_count || ('moments.likeBtn' | t) }}</span>
               </button>
               <button
                 (click)="toggleComments(moment)"
                 class="flex items-center gap-1.5 hover:text-text-primary transition-colors"
-               [attr.aria-label]="'moments.commentBtn' | t">
+              >
                 <span class="text-lg leading-none">💬</span>
                 <span class="font-bold">{{
                   moment.comments_count || ('moments.commentBtn' | t)
@@ -279,19 +279,19 @@
                 <button
                   (click)="openGhostCorrection(moment)"
                   class="flex items-center gap-1.5 text-amber-400 hover:opacity-80 font-bold transition-opacity"
-                 [attr.aria-label]="'moments.correctBtn' | t">
+                >
                   <span>✏️</span> <span>{{ 'moments.correctBtn' | t }}</span>
                 </button>
                 <button
                   (click)="quoteTextToComment(moment, moment.text_content)"
                   class="flex items-center gap-1 hover:text-text-primary font-bold transition-colors"
-                 [attr.aria-label]="'moments.quoteBtn' | t">
+                >
                   <span>💬</span> <span>{{ 'moments.quoteBtn' | t }}</span>
                 </button>
                 <button
                   (click)="toggleInlineTranslation(moment)"
                   class="flex items-center gap-1 hover:text-purple-400 transition-colors ms-auto font-bold"
-                 [attr.aria-label]="'moments.hideTranslation' | t">
+                >
                   {{
                     moment.translatedText
                       ? ('moments.hideTranslation' | t)
@@ -318,14 +318,14 @@
                           <button
                             (click)="openGhostCorrection(moment, comment.text_content)"
                             class="text-[10px] text-amber-400 font-bold hover:underline"
-                           [attr.aria-label]="'moments.correctBtn' | t">
+                          >
                             ✏️ {{ 'moments.correctBtn' | t }}
                           </button>
                         }
                         <button
                           (click)="startReply(moment.id, comment)"
                           class="text-[10px] text-purple-400 font-bold hover:underline"
-                         [attr.aria-label]="'moments.replyBtn' | t">
+                        >
                           {{ 'moments.replyBtn' | t }}
                         </button>
                         <span class="text-[10px] text-text-muted">{{
@@ -370,7 +370,7 @@
                     (keyup.enter)="submitComment(moment)"
                     [placeholder]="replyingToMap[moment.id] ? ('moments.commentReplyPlaceholder' | t) : ('moments.commentPlaceholder' | t)"
                     class="flex-1 bg-surface-200 border-none rounded-full px-4 py-2 text-xs text-text-primary focus:ring-1 focus:ring-purple-500 outline-none"
-                   [attr.aria-label]="'text input'"/>
+                  />
                   <button aria-label="Submit comment"
                     (click)="submitComment(moment)"
                     class="bg-purple-600 text-white rounded-full p-2 h-8 w-8 flex items-center justify-center shrink-0"
