@@ -148,7 +148,10 @@ export class MetricsService {
     sourceLanguage: string = 'unknown',
     targetLanguage: string = 'unknown',
   ): void {
-    this.srsFlashcardsCreated.inc({ source_language: sourceLanguage, target_language: targetLanguage });
+    this.srsFlashcardsCreated.inc({
+      source_language: sourceLanguage,
+      target_language: targetLanguage,
+    });
   }
 
   recordSrsReviewCompleted(

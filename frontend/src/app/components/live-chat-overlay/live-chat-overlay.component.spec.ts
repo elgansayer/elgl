@@ -75,11 +75,7 @@ describe('LiveChatOverlayComponent', () => {
     expect(el.querySelector('.animate-fade-in')).toBeTruthy();
   });
 
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/main
-  it('should cap messages at 50 via the messages signal cap', async () => {
+it('should cap messages at 50 via the messages signal cap', async () => {
     await setup('test-room');
     // Push 60 messages, shifting the oldest off when > 50
     for (let i = 0; i < 60; i++) {
@@ -87,10 +83,6 @@ describe('LiveChatOverlayComponent', () => {
         const next = [...msgs, { id: `msg-${i}`, senderName: 'Test', text: `Text ${i}`, timestamp: Date.now() }];
         while (next.length > 50) next.shift();
         return next;
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/main
       });
     }
 
