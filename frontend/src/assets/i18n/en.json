@@ -1154,6 +1154,7 @@
   "discovery.filterNearMe": "Near Me (Radius)",
   "discovery.filterPaidPractice": "Paid Practice",
   "discovery.filterSerious": "Serious Learners Only",
+  "discovery.filterVoiceRoom": "Voice Room Active",
   "discovery.genderAny": "Gender Any",
   "discovery.genderFemale": "Gender Female",
   "discovery.genderLabel": "Gender Label",

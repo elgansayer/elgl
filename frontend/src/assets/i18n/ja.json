@@ -73,6 +73,7 @@
   "discovery.filterAll": "\u5168\u30e6\u30fc\u30b6\u30fc",
   "discovery.filterNearMe": "\u8fd1\u304f\uff08\u8ddd\u96e2\uff09",
   "discovery.filterSerious": "\u771f\u5263\u306a\u5b66\u7fd2\u8005\u306e\u307f",
+  "discovery.filterVoiceRoom": "u30e9u30a4u30d6u914du4fe1u4e2d",
   "discovery.radiusLabel": "\u6700\u5927\u8ddd\u96e2: {{radius}} km",
   "discovery.vipRadiusNote": "VIP\uff088 UKP / $10 USD\uff09\u306f\u4e16\u754c\u4e2d\u306e\u30c7\u30a3\u30b9\u30ab\u30d0\u30ea\u30fc\u3068\u4f4d\u7f6e\u507d\u88c5\u3092\u5229\u7528\u3067\u304d\u307e\u3059\u3002",
   "discovery.searchPlaceholder": "\u540d\u524d\u30fb\u8a00\u8a9e\u30fb\u81ea\u5df1\u7d39\u4ecb\u3067\u691c\u7d22...",

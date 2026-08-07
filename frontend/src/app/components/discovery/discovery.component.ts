@@ -67,6 +67,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly selectedGender = signal<string>('');
   readonly seriousLearnerOnly = signal<boolean>(false);
   readonly seriousLearnerMode = signal<boolean>(false);
+  readonly voiceRoomActive = signal<boolean>(false);
   readonly availableTimeStart = signal<string>('');
   readonly availableTimeEnd = signal<string>('');
   private readonly authService = inject(AuthService);
@@ -80,6 +81,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       { id: 'nearby', label: this.i18n.translate('discovery.filterNearMe') },
       { id: 'city', label: this.i18n.translate('discovery.filterCity') },
       { id: 'paid', label: this.i18n.translate('discovery.filterPaidPractice') },
+      { id: 'voice-room', label: this.i18n.translate('discovery.filterVoiceRoom') },
     ];
   });
   readonly selectedFilter = signal<string>('all');
@@ -118,6 +120,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   onFilterSelect(id: string) {
     this.selectedFilter.set(id);
     this.seriousLearnerOnly.set(id === 'serious');
+    this.voiceRoomActive.set(id === 'voice-room');
     if (id === 'nearby') {
       this.selectedDistanceKm.set(10); // 10km for nearby
     } else if (id === 'city') {
@@ -193,6 +196,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
         available_time_end:
           this.availableTimeEnd() || undefined,
         sort: this.selectedSort(),
+        voice_room_active: this.voiceRoomActive() || undefined,
       });
       // Filter out blocked users
       const blocked = this.blockedUserIds();
@@ -319,6 +323,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.selectedGender.set('');
     this.seriousLearnerOnly.set(false);
     this.seriousLearnerMode.set(false);
+    this.voiceRoomActive.set(false);
     this.ageRangeMin.set(18);
     this.ageRangeMax.set(100);
     this.availableTimeStart.set('');
