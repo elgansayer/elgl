@@ -718,7 +718,10 @@ export class DiscoveryService {
         city: query.city,
       };
       let mock = this.getMockDiscoveryData(mockSearch, blockedIds);
-      mock = await this.filterByVoiceRoomActive(mock, query.voice_room_active === true);
+      mock = await this.filterByVoiceRoomActive(
+        mock,
+        query.voice_room_active === true,
+      );
       return mock.slice(offset, offset + limit);
     }
 

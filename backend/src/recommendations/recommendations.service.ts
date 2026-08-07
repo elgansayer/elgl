@@ -48,11 +48,16 @@ export class RecommendationsService {
     try {
       const { data: users, error } = await supabase
         .from('users')
+<<<<<<< HEAD
         .select(
           'id, native_language, target_languages',
         )
         .eq('privacy_hide_from_search', false)
         .neq('profile_visibility', 'hidden');
+=======
+        .select('id, native_language, target_languages')
+        .eq('privacy_hide_from_search', false);
+>>>>>>> origin/main
 
       if (error || !users) {
         throw new Error(`Failed to fetch users: ${error?.message}`);
@@ -74,10 +79,7 @@ export class RecommendationsService {
           .eq('privacy_hide_from_search', false)
           .neq('profile_visibility', 'hidden')
           .in('native_language', targetLanguages)
-          .contains(
-            'target_languages',
-            nativeLang ? [nativeLang] : [],
-          )
+          .contains('target_languages', nativeLang ? [nativeLang] : [])
           .order('is_serious_learner', { ascending: false })
           .limit(DAILY_LIMIT);
 
@@ -115,9 +117,7 @@ export class RecommendationsService {
   }
 
   /** Returns cached top 10 language partner recommendations for a user. */
-  async getDailyRecommendations(
-    userId: string,
-  ): Promise<RecommendedUserDto[]> {
+  async getDailyRecommendations(userId: string): Promise<RecommendedUserDto[]> {
     const redis = this.supabaseService.getRedisClient();
     const cached = await redis.get(`recommendations:daily:${userId}`);
     if (!cached) return [];
