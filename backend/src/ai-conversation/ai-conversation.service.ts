@@ -186,14 +186,10 @@ The user's role: Someone practising casual English.
     conversationHistory?: { role: 'user' | 'assistant'; content: string }[],
   ): Promise<string> {
     const scenario = this.scenarios.find((s) => s.id === scenarioId);
-    const systemPrompt =
-      scenario?.systemPrompt ?? this.getDefaultSystemPrompt();
+    const systemPrompt = scenario?.systemPrompt ?? this.getDefaultSystemPrompt();
     const scenarioName = scenario?.name ?? 'free conversation';
 
-    const messages: {
-      role: 'system' | 'user' | 'assistant';
-      content: string;
-    }[] = [
+    const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
       { role: 'system', content: systemPrompt },
       ...(conversationHistory ?? []),
       { role: 'user', content: userMessage },
@@ -221,7 +217,10 @@ The user's role: Someone practising casual English.
 - Keep replies 1-3 sentences.`;
   }
 
-  private getFallbackReply(userMessage: string, scenarioId?: string): string {
+  private getFallbackReply(
+    userMessage: string,
+    scenarioId?: string,
+  ): string {
     const scenarioReplies: Record<string, string[]> = {
       'ordering-coffee': [
         'Would you like a latte, cappuccino, or something else?',

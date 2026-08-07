@@ -334,4 +334,3 @@ export class GiftAnimationOverlayComponent {
     return coords.join(' ');
   }
 }
-// SVG gift animation implementation for issue #423

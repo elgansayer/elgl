@@ -12,8 +12,7 @@ export class AiConversationController {
 
   @Post('message')
   async handleMessage(
-    @Body()
-    dto: {
+    @Body() dto: {
       message: string;
       scenarioId?: string;
       conversationHistory?: { role: 'user' | 'assistant'; content: string }[];

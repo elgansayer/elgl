@@ -51,38 +51,9 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('HelloTalk Clone API')
-    .setDescription(
-      `The HelloTalk Clone API provides endpoints for language exchange, social networking, real-time messaging, and administrative operations.
-
-## Admin Moderation Dashboard
-The Admin Moderation Dashboard exposes REST endpoints under \`/api/admin\` and \`/api/moderation\` for managing users, blocks, reports, and content moderation workflows. All admin endpoints require **Bearer** authentication with an admin role.
-
-### Key Capabilities
-- **User Management**: List, search, ban, warn users; manage VIP status; view login history.
-- **Block Management**: List and remove user blocks across the platform.
-- **Moderation Queue**: Fetch pending reports (moment and profile types), approve or reject flagged content.
-- **Behaviour Analysis**: Analyse user profiles and moment content for dating-behaviour risk scoring.
-
-### Authentication
-Include a Supabase-issued JWT in the \`Authorization\` header:
-\`\`\`
-Authorization: Bearer <your-token>
-\`\`\`
-
-### Pagination
-Paginated endpoints accept \`page\` (default 1) and \`pageSize\` (default 20, max 100) query parameters.
-
-### Rate Limiting
-All endpoints are rate-limited via \`@nestjs/throttler\`. Check individual endpoint documentation for specific limits.`,
-    )
+    .setDescription('The HelloTalk Clone API description')
     .setVersion('1.0')
-    .addBearerAuth(
-      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-      'bearer',
-    )
-    .addTag('Admin - Users', 'Administrative user management operations')
-    .addTag('Admin - Blocks', 'Administrative block management operations')
-    .addTag('Moderation', 'Content moderation and reporting operations')
+    .addBearerAuth()
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, documentFactory);

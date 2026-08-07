@@ -1,37 +1,3 @@
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation((_html: string) => ({
-    window: {
-      document: {
-        createElement: jest.fn(),
-        createDocumentFragment: jest.fn(),
-      },
-      Node: {
-        ELEMENT_NODE: 1,
-        TEXT_NODE: 3,
-        DOCUMENT_FRAGMENT_NODE: 11,
-      },
-      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
-    },
-  })),
-}));
-
-jest.mock('dompurify', () => ({
-  __esModule: true,
-  default: jest.fn(() => ({
-    sanitize: (dirty: string): string => {
-      if (typeof dirty !== 'string') return dirty;
-      return dirty
-        .replace(/<[^>]*>/g, '')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&amp;/g, '&')
-        .replace(/&quot;/g, '"')
-        .replace(/&#x27;/g, "'");
-    },
-    setConfig: jest.fn(),
-  })),
-}));
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EconomyService } from './economy.service';
@@ -77,12 +43,7 @@ describe('EconomyService', () => {
         EconomyService,
         {
           provide: 'PinoLogger:EconomyService',
-          useValue: {
-            info: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn(),
-          },
+          useValue: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
         },
         {
           provide: SupabaseService,
@@ -624,20 +585,8 @@ describe('EconomyService', () => {
   describe('getStickerPacks', () => {
     it('should return packs with ownership information', async () => {
       const mockPacks = [
-        {
-          id: 'stk_pack_1',
-          name: 'Happy Corgi Pack',
-          cost_coins: 50,
-          is_animated: false,
-          sticker_urls: ['sticker1.png'],
-        },
-        {
-          id: 'stk_pack_2',
-          name: 'Rainbow Unicorns',
-          cost_coins: 200,
-          is_animated: true,
-          sticker_urls: ['unicorn1.webm'],
-        },
+        { id: 'stk_pack_1', name: 'Happy Corgi Pack', cost_coins: 50, is_animated: false, sticker_urls: ['sticker1.png'] },
+        { id: 'stk_pack_2', name: 'Rainbow Unicorns', cost_coins: 200, is_animated: true, sticker_urls: ['unicorn1.webm'] },
       ];
       const mockOwned = [{ pack_id: 'stk_pack_1' }];
       const mockBalance = { id: 'user-1', coins_balance: 300 };
@@ -712,21 +661,12 @@ describe('EconomyService', () => {
 
   describe('unlockStickerPack', () => {
     it('should unlock a sticker pack and deduct coins', async () => {
-      const pack = {
-        id: 'stk_pack_1',
-        name: 'Happy Corgi Pack',
-        cost_coins: 50,
-      };
+      const pack = { id: 'stk_pack_1', name: 'Happy Corgi Pack', cost_coins: 50 };
       mockQueryBuilder.single
         .mockResolvedValueOnce({ data: pack, error: null }) // pack lookup
-        .mockResolvedValueOnce({
-          data: { id: 'user-1', coins_balance: 200 },
-          error: null,
-        }); // balance check
+        .mockResolvedValueOnce({ data: { id: 'user-1', coins_balance: 200 }, error: null }); // balance check
 
-      const result = await service.unlockStickerPack('user-1', {
-        pack_id: 'stk_pack_1',
-      });
+      const result = await service.unlockStickerPack('user-1', { pack_id: 'stk_pack_1' });
 
       expect(result.success).toBe(true);
       expect(result.coins_remaining).toBe(150);
@@ -738,10 +678,7 @@ describe('EconomyService', () => {
     });
 
     it('should throw NotFoundException when pack does not exist', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: null,
-        error: null,
-      });
+      mockQueryBuilder.single.mockResolvedValueOnce({ data: null, error: null });
 
       await expect(
         service.unlockStickerPack('user-1', { pack_id: 'nonexistent' }),
@@ -749,17 +686,10 @@ describe('EconomyService', () => {
     });
 
     it('should throw BadRequestException when insufficient coins', async () => {
-      const pack = {
-        id: 'stk_pack_4',
-        name: 'Golden Dragons',
-        cost_coins: 500,
-      };
+      const pack = { id: 'stk_pack_4', name: 'Golden Dragons', cost_coins: 500 };
       mockQueryBuilder.single
         .mockResolvedValueOnce({ data: pack, error: null }) // pack lookup
-        .mockResolvedValueOnce({
-          data: { id: 'user-1', coins_balance: 100 },
-          error: null,
-        }); // balance
+        .mockResolvedValueOnce({ data: { id: 'user-1', coins_balance: 100 }, error: null }); // balance
 
       await expect(
         service.unlockStickerPack('user-1', { pack_id: 'stk_pack_4' }),

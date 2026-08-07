@@ -204,12 +204,18 @@ export class ChatService {
     if (filters.age_min !== undefined || filters.age_max !== undefined) {
       const senderAge = sender.age;
       if (senderAge !== undefined && senderAge !== null) {
-        if (filters.age_min !== undefined && senderAge < filters.age_min) {
+        if (
+          filters.age_min !== undefined &&
+          senderAge < filters.age_min
+        ) {
           throw new BadRequestException(
             'You cannot send the first message to this user due to their age filter settings.',
           );
         }
-        if (filters.age_max !== undefined && senderAge > filters.age_max) {
+        if (
+          filters.age_max !== undefined &&
+          senderAge > filters.age_max
+        ) {
           throw new BadRequestException(
             'You cannot send the first message to this user due to their age filter settings.',
           );
@@ -218,9 +224,15 @@ export class ChatService {
     }
 
     // Check gender filter
-    if (filters.allowed_genders && filters.allowed_genders.length > 0) {
+    if (
+      filters.allowed_genders &&
+      filters.allowed_genders.length > 0
+    ) {
       const senderGender = sender.gender ?? '';
-      if (senderGender && !filters.allowed_genders.includes(senderGender)) {
+      if (
+        senderGender &&
+        !filters.allowed_genders.includes(senderGender)
+      ) {
         throw new BadRequestException(
           'You cannot send the first message to this user due to their gender filter settings.',
         );
@@ -765,8 +777,8 @@ export class ChatService {
     name: string,
     memberIds: string[],
   ): Promise<ChatRoomRecord> {
-    if (memberIds.length > 50) {
-      throw new Error('Group cannot exceed 51 members (50 selected + creator)');
+    if (memberIds.length > 49) {
+      throw new Error('Group cannot exceed 50 members');
     }
 
     const supabase = this.supabaseService.getClient();
@@ -844,12 +856,12 @@ export class ChatService {
       if (senderAge !== undefined && senderAge !== null) {
         if (filters.age_min !== undefined && senderAge < filters.age_min) {
           throw new ForbiddenException(
-            "Your age does not meet the recipient's minimum age requirement.",
+            'Your age does not meet the recipient\'s minimum age requirement.',
           );
         }
         if (filters.age_max !== undefined && senderAge > filters.age_max) {
           throw new ForbiddenException(
-            "Your age exceeds the recipient's maximum age requirement.",
+            'Your age exceeds the recipient\'s maximum age requirement.',
           );
         }
       }
@@ -866,17 +878,20 @@ export class ChatService {
       );
       if (!hasAllowedLanguage) {
         throw new ForbiddenException(
-          "Your native language is not allowed by the recipient's message filters.",
+          'Your native language is not allowed by the recipient\'s message filters.',
         );
       }
     }
 
     // Check gender filter
-    if (filters.allowed_genders && filters.allowed_genders.length > 0) {
+    if (
+      filters.allowed_genders &&
+      filters.allowed_genders.length > 0
+    ) {
       const senderGender = senderProfile.gender;
       if (!senderGender || !filters.allowed_genders.includes(senderGender)) {
         throw new ForbiddenException(
-          "Your gender is not allowed by the recipient's message filters.",
+          'Your gender is not allowed by the recipient\'s message filters.',
         );
       }
     }
@@ -1614,9 +1629,7 @@ export class ChatService {
       .eq('id', messageId);
 
     if (updateError) {
-      throw new Error(
-        `Failed to update message status: ${updateError.message}`,
-      );
+      throw new Error(`Failed to update message status: ${updateError.message}`);
     }
 
     // Publish status update via Centrifugo so the sender can see it
@@ -2113,9 +2126,8 @@ export class ChatService {
 
     if (receiverError || !receiverData) return;
 
-    const filters = (
-      receiverData as { message_filters?: Record<string, unknown> }
-    )?.message_filters;
+    const filters = (receiverData as { message_filters?: Record<string, unknown> })
+      ?.message_filters;
 
     if (!filters) return;
 
@@ -2135,10 +2147,8 @@ export class ChatService {
     };
 
     // Check age filter
-    const ageMin =
-      typeof filters.age_min === 'number' ? filters.age_min : undefined;
-    const ageMax =
-      typeof filters.age_max === 'number' ? filters.age_max : undefined;
+    const ageMin = typeof filters.age_min === 'number' ? filters.age_min : undefined;
+    const ageMax = typeof filters.age_max === 'number' ? filters.age_max : undefined;
 
     if (ageMin !== undefined || ageMax !== undefined) {
       const senderAge = senderProfileTyped.age;

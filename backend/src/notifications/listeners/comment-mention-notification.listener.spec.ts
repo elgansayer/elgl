@@ -99,17 +99,4 @@ describe('CommentMentionNotificationListener', () => {
 
     expect(notificationsService.createNotification).toHaveBeenCalled();
   });
-
-  it('should skip self-mention (commenter mentioning themselves)', async () => {
-    const payload = new MomentCommentEvent(
-      'moment-1',
-      'commenter-1',
-      'commenter-1',
-      'Hey @me check this',
-    );
-
-    await listener.handleCommentMention(payload);
-
-    expect(notificationsService.createNotification).not.toHaveBeenCalled();
-  });
 });

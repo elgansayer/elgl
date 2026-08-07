@@ -27,7 +27,6 @@ export const routes: Routes = [
     path: 'discovery',
     loadComponent: () =>
       import('./components/discovery/discovery.component').then((m) => m.DiscoveryComponent),
-    title: 'Discovery - HelloTalk',
   },
   {
     path: 'proficiency',

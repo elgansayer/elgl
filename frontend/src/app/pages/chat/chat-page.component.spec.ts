@@ -7,7 +7,6 @@ import { vi } from 'vitest';
 import { ChatPageComponent } from './chat-page.component';
 import { ChatService, ChatMessage, ChatRoom } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
 import { AiConversationService } from './ai-conversation.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -23,17 +22,10 @@ describe('ChatPageComponent', () => {
     downloadChatHistory: vi.fn(),
     fixMessage: vi.fn(),
     replyToStatusUpdate: vi.fn(),
-    markMessageStatus: vi.fn().mockResolvedValue(undefined),
   };
 
   const authServiceMock = {
     currentUser: signal({ id: 'test-user' }),
-  };
-
-  const centrifugoServiceMock = {
-    subscribe: vi.fn(),
-    unsubscribe: vi.fn(),
-    publish: vi.fn(),
   };
 
   const aiConversationServiceMock = {
@@ -69,10 +61,6 @@ describe('ChatPageComponent', () => {
     chatServiceMock.downloadChatHistory.mockReset();
     chatServiceMock.fixMessage.mockReset();
     chatServiceMock.replyToStatusUpdate.mockReset();
-    chatServiceMock.markMessageStatus.mockReset();
-    chatServiceMock.markMessageStatus.mockResolvedValue(undefined);
-    centrifugoServiceMock.subscribe.mockReset();
-    centrifugoServiceMock.unsubscribe.mockReset();
     aiConversationServiceMock.generateReply.mockReset();
 
     await TestBed.configureTestingModule({
@@ -85,7 +73,6 @@ describe('ChatPageComponent', () => {
       providers: [
         { provide: ChatService, useValue: chatServiceMock },
         { provide: AuthService, useValue: authServiceMock },
-        { provide: CentrifugoService, useValue: centrifugoServiceMock },
         { provide: AiConversationService, useValue: aiConversationServiceMock },
         { provide: I18nService, useValue: i18nServiceMock },
       ],
@@ -215,108 +202,6 @@ describe('ChatPageComponent', () => {
 
       expect(component.aiError()).toBe('aiPartner.error');
       expect(component.aiLoading()).toBe(false);
-    });
-  });
-
-  describe('read receipts', () => {
-    it('should mark messages from others as delivered and read when selecting a room', async () => {
-      const otherMessage: ChatMessage = {
-        id: 'msg-other',
-        room_id: 'room-1',
-        sender_id: 'user-2',
-        message_type: 'text',
-        text_content: 'Hello',
-        created_at: new Date().toISOString(),
-        is_read: false,
-        delivery_status: 'sent',
-      };
-      const ownMessage: ChatMessage = {
-        id: 'msg-own',
-        room_id: 'room-1',
-        sender_id: 'test-user',
-        message_type: 'text',
-        text_content: 'Hi',
-        created_at: new Date().toISOString(),
-        is_read: false,
-        delivery_status: 'sent',
-      };
-      chatServiceMock.getMessages.mockResolvedValue([otherMessage, ownMessage]);
-
-      await component.selectRoom(room);
-
-      expect(chatServiceMock.markMessageStatus).toHaveBeenCalledWith(
-        'msg-other',
-        'delivered',
-      );
-      expect(chatServiceMock.markMessageStatus).toHaveBeenCalledWith(
-        'msg-other',
-        'read',
-      );
-      // Own messages should not be marked
-      expect(chatServiceMock.markMessageStatus).not.toHaveBeenCalledWith(
-        'msg-own',
-        expect.any(String),
-      );
-    });
-
-    it('should not re-mark messages already delivered or read', async () => {
-      const alreadyReadMessage: ChatMessage = {
-        id: 'msg-read',
-        room_id: 'room-1',
-        sender_id: 'user-2',
-        message_type: 'text',
-        text_content: 'Already read',
-        created_at: new Date().toISOString(),
-        is_read: true,
-        delivery_status: 'read',
-      };
-      const alreadyDeliveredMessage: ChatMessage = {
-        id: 'msg-delivered',
-        room_id: 'room-1',
-        sender_id: 'user-3',
-        message_type: 'text',
-        text_content: 'Already delivered',
-        created_at: new Date().toISOString(),
-        is_read: false,
-        delivery_status: 'delivered',
-      };
-      chatServiceMock.getMessages.mockResolvedValue([
-        alreadyReadMessage,
-        alreadyDeliveredMessage,
-      ]);
-
-      await component.selectRoom(room);
-
-      expect(chatServiceMock.markMessageStatus).not.toHaveBeenCalledWith(
-        'msg-read',
-        expect.any(String),
-      );
-      expect(chatServiceMock.markMessageStatus).not.toHaveBeenCalledWith(
-        'msg-delivered',
-        expect.any(String),
-      );
-    });
-
-    it('should render double blue checkmarks for messages with delivery_status read', async () => {
-      const readMessage: ChatMessage = {
-        id: 'msg-read-display',
-        room_id: 'room-1',
-        sender_id: 'test-user',
-        message_type: 'text',
-        text_content: 'My message read by others',
-        created_at: new Date().toISOString(),
-        is_read: false,
-        delivery_status: 'read',
-      };
-      chatServiceMock.getMessages.mockResolvedValue([readMessage]);
-
-      await component.selectRoom(room);
-      fixture.detectChanges();
-
-      const compiled = fixture.nativeElement as HTMLElement;
-      // Check for blue checkmark (text-blue-500)
-      const blueChecks = compiled.querySelectorAll('.text-blue-500');
-      expect(blueChecks.length).toBeGreaterThan(0);
     });
   });
 

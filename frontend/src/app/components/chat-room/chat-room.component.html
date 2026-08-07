@@ -233,27 +233,21 @@
                 ></app-visual-diff>
               }
               @if (msg.message_type === 'doodle' && msg.media_url) {
-                <img loading="lazy"
+                <img
                   [src]="msg.media_url ?? ''"
                   alt="doodle"
                   class="max-h-52 rounded-xl border border-surface-100"
                 />
               }
               @if (msg.message_type === 'sticker' && msg.media_url) {
-                <img loading="lazy"
+                <img
                   [src]="msg.media_url ?? ''"
                   alt="sticker"
                   class="max-h-32 w-auto object-contain drop-shadow-md"
                 />
               }
               @if (msg.message_type === 'voice' && msg.media_url) {
-                <audio
-                  [attr.id]="'audio-' + msg.id"
-                  [src]="msg.media_url ?? ''"
-                  controls
-                  class="w-full min-w-52"
-                  (ended)="playNextVoiceNote(msg.id)"
-                ></audio>
+                <audio [src]="msg.media_url ?? ''" controls class="w-full min-w-52"></audio>
                 <div class="mt-2 flex items-center gap-2">
                   <button
                     (click)="onTranscribeVoice(msg)"

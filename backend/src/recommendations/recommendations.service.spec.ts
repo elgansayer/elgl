@@ -32,24 +32,12 @@ const makeQueryChain = (): QueryChainMock => {
     },
   } as Partial<QueryChainMock>;
 
-  const methodNames = [
-    'select',
-    'eq',
-    'neq',
-    'in',
-    'contains',
-    'order',
-    'limit',
-    'single',
-    'maybeSingle',
-  ];
+  const methodNames = ['select', 'eq', 'neq', 'in', 'contains', 'order', 'limit', 'single', 'maybeSingle'];
   methodNames.forEach((m) => {
     (chain as Record<string, unknown>)[m] = jest.fn().mockReturnValue(chain);
   });
 
-  (chain as Record<string, unknown>)['then'] = (
-    resolve: (value: unknown) => void,
-  ) => {
+  (chain as Record<string, unknown>)['then'] = (resolve: (value: unknown) => void) => {
     resolve(resolveHolder);
     return undefined;
   };
@@ -131,20 +119,14 @@ describe('RecommendationsService', () => {
         },
       ]);
 
-      mockFrom
-        .mockReturnValueOnce(usersChain)
-        .mockReturnValueOnce(matchesChain);
+      mockFrom.mockReturnValueOnce(usersChain).mockReturnValueOnce(matchesChain);
 
       await service.calculateDailyRecommendations();
 
       expect(mockRedis.set).toHaveBeenCalledTimes(1);
-      expect(mockRedis.set.mock.calls[0][0]).toBe(
-        'recommendations:daily:user-a',
-      );
+      expect(mockRedis.set.mock.calls[0][0]).toBe('recommendations:daily:user-a');
 
-      const parsed: RecommendedUserDto[] = JSON.parse(
-        mockRedis.set.mock.calls[0][1],
-      );
+      const parsed: RecommendedUserDto[] = JSON.parse(mockRedis.set.mock.calls[0][1]);
       expect(parsed).toHaveLength(2);
       expect(parsed[0].id).toBe('partner-1');
       expect(parsed[0].displayName).toBe('Partner 1');
@@ -241,9 +223,7 @@ describe('RecommendationsService', () => {
       chain._setResolve(null, { message: 'tags error' });
       mockFrom.mockReturnValueOnce(chain);
 
-      await expect(service.getRecommendations('user-123')).rejects.toThrow(
-        'tags error',
-      );
+      await expect(service.getRecommendations('user-123')).rejects.toThrow('tags error');
     });
   });
 });

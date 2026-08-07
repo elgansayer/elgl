@@ -21,20 +21,8 @@ describe('DiscoveryService', () => {
   function createMockQueryBuilder() {
     const builder: any = {};
     const chainableMethods = [
-      'select',
-      'neq',
-      'eq',
-      'contains',
-      'gt',
-      'gte',
-      'lt',
-      'lte',
-      'not',
-      'in',
-      'range',
-      'order',
-      'ilike',
-      'overlaps',
+      'select', 'neq', 'eq', 'contains', 'gt', 'gte', 'lt', 'lte',
+      'not', 'in', 'range', 'order', 'ilike', 'overlaps',
     ];
     for (const method of chainableMethods) {
       builder[method] = jest.fn().mockReturnValue(builder);
@@ -267,14 +255,9 @@ describe('DiscoveryService', () => {
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
       expect(mockQueryBuilder.neq).toHaveBeenCalledWith('id', 'user-1');
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
-        'privacy_hide_from_search',
-        false,
-      );
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('privacy_hide_from_search', false);
       expect(mockQueryBuilder.limit).toHaveBeenCalledWith(50);
-      expect(result).toEqual(
-        partners.map((p) => ({ ...p, is_partner_of_week: false })),
-      );
+      expect(result).toEqual(partners.map((p) => ({ ...p, is_partner_of_week: false })));
     });
 
     it('should apply native language, target language, and serious learner filters', async () => {
@@ -287,22 +270,11 @@ describe('DiscoveryService', () => {
         serious_learner_only: true,
       });
 
-      expect(mockQueryBuilder.contains).toHaveBeenCalledWith(
-        'native_languages',
-        ['ES'],
-      );
-      expect(mockQueryBuilder.contains).toHaveBeenCalledWith(
-        'target_languages',
-        ['EN'],
-      );
+      expect(mockQueryBuilder.contains).toHaveBeenCalledWith('native_languages', ['ES']);
+      expect(mockQueryBuilder.contains).toHaveBeenCalledWith('target_languages', ['EN']);
       expect(mockQueryBuilder.gt).toHaveBeenCalledWith('study_streak_days', 7);
-      expect(mockQueryBuilder.gte).toHaveBeenCalledWith(
-        'correction_ratio',
-        0.8,
-      );
-      expect(result).toEqual(
-        partners.map((p) => ({ ...p, is_partner_of_week: false })),
-      );
+      expect(mockQueryBuilder.gte).toHaveBeenCalledWith('correction_ratio', 0.8);
+      expect(result).toEqual(partners.map((p) => ({ ...p, is_partner_of_week: false })));
     });
 
     it('should enforce serious_learner_mode from user profile', async () => {
@@ -310,51 +282,31 @@ describe('DiscoveryService', () => {
       // which comes AFTER the serious_learner_only filter check at line 223.
       // The queryBuilder still has the filter applied via query modification
       // for the RPC path (serious_only flag), but gt/gte on queryBuilder won't be called.
-      const partners = [
-        { id: 'p1', study_streak_days: 10, correction_ratio: 0.9 },
-      ];
+      const partners = [{ id: 'p1', study_streak_days: 10, correction_ratio: 0.9 }];
       stubLimitResponse(partners);
 
-      const result = await service.searchPartners(
-        'user-1',
-        { is_serious_learner: true } as any,
-        {
-          serious_learner_mode: true,
-        },
-      );
+      const result = await service.searchPartners('user-1', { is_serious_learner: true } as any, {
+        serious_learner_mode: true,
+      });
 
       // serious_learner_only is set on the query object for downstream use (enrich/RPC)
-      expect(result).toEqual(
-        partners.map((p) => ({ ...p, is_partner_of_week: false })),
-      );
+      expect(result).toEqual(partners.map((p) => ({ ...p, is_partner_of_week: false })));
     });
 
     it('should apply proficiency level filter', async () => {
-      const partners = [
-        { id: 'partner-3', display_name: 'Proficient Partner' },
-      ];
+      const partners = [{ id: 'partner-3', display_name: 'Proficient Partner' }];
       stubLimitResponse(partners);
 
-      const result = await service.searchPartners('user-1', null, {
-        level: 'B2',
-      });
+      const result = await service.searchPartners('user-1', null, { level: 'B2' });
 
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
-        'proficiency_level',
-        'B2',
-      );
-      expect(result).toEqual(
-        partners.map((p) => ({ ...p, is_partner_of_week: false })),
-      );
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('proficiency_level', 'B2');
+      expect(result).toEqual(partners.map((p) => ({ ...p, is_partner_of_week: false })));
     });
 
     it('should apply age range filters', async () => {
       stubLimitResponse([{ id: 'p1', age: 25 }]);
 
-      await service.searchPartners('user-1', null, {
-        age_min: 20,
-        age_max: 30,
-      });
+      await service.searchPartners('user-1', null, { age_min: 20, age_max: 30 });
 
       expect(mockQueryBuilder.gte).toHaveBeenCalledWith('age', 20);
       expect(mockQueryBuilder.lte).toHaveBeenCalledWith('age', 30);
@@ -363,10 +315,7 @@ describe('DiscoveryService', () => {
     it('should apply country and city ilike filters', async () => {
       stubLimitResponse([{ id: 'p1' }]);
 
-      await service.searchPartners('user-1', null, {
-        country: 'Japan',
-        city: 'Tokyo',
-      });
+      await service.searchPartners('user-1', null, { country: 'Japan', city: 'Tokyo' });
 
       expect(mockQueryBuilder.ilike).toHaveBeenCalledWith('country', '%Japan%');
       expect(mockQueryBuilder.ilike).toHaveBeenCalledWith('city', '%Tokyo%');
@@ -377,9 +326,7 @@ describe('DiscoveryService', () => {
 
       await service.searchPartners('user-1', null, { interests: 'music' });
 
-      expect(mockQueryBuilder.overlaps).toHaveBeenCalledWith('interests', [
-        'music',
-      ]);
+      expect(mockQueryBuilder.overlaps).toHaveBeenCalledWith('interests', ['music']);
     });
 
     it('should add not-null audio_intro filter when has_audio_intro is true', async () => {
@@ -388,17 +335,11 @@ describe('DiscoveryService', () => {
       await service.searchPartners('user-1', null, { has_audio_intro: true });
 
       const calls = (mockQueryBuilder.not as jest.Mock).mock.calls;
-      expect(
-        calls.some(
-          (c: string[]) => c[0] === 'audio_intro_url' && c[1] === 'is',
-        ),
-      ).toBe(true);
+      expect(calls.some((c: string[]) => c[0] === 'audio_intro_url' && c[1] === 'is')).toBe(true);
     });
 
     it('should filter out blocked users on non-RPC path', async () => {
-      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValue([
-        'blocked-1',
-      ]);
+      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValue(['blocked-1']);
       stubLimitResponse([{ id: 'blocked-1' }, { id: 'ok-1' }]);
 
       const result = await service.searchPartners('user-1', null, {});
@@ -407,10 +348,7 @@ describe('DiscoveryService', () => {
     });
 
     it('should return empty array when standard query returns error', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({
-        data: null,
-        error: { message: 'Query error' },
-      });
+      mockQueryBuilder.limit.mockResolvedValue({ data: null, error: { message: 'Query error' } });
 
       const result = await service.searchPartners('user-1', null, {});
       expect(result).toHaveLength(0);
@@ -428,30 +366,22 @@ describe('DiscoveryService', () => {
         native_languages: 'FR',
       });
 
-      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
-        'search_nearby_users',
-        {
-          search_lat: 51.5074,
-          search_lon: -0.1278,
-          radius_m: 10000,
-          exclude_user_id: 'user-1',
-          filter_native: ['FR'],
-          filter_target: null,
-          serious_only: false,
-        },
-      );
-      expect(result).toEqual(
-        nearbyPartners.map((p) => ({ ...p, is_partner_of_week: false })),
-      );
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith('search_nearby_users', {
+        search_lat: 51.5074,
+        search_lon: -0.1278,
+        radius_m: 10000,
+        exclude_user_id: 'user-1',
+        filter_native: ['FR'],
+        filter_target: null,
+        serious_only: false,
+      });
+      expect(result).toEqual(nearbyPartners.map((p) => ({ ...p, is_partner_of_week: false })));
     });
 
     it('should use default radius_metres 50000 when not provided', async () => {
       stubRpcResponse([{ id: 'p1' }]);
 
-      await service.searchPartners('user-1', null, {
-        latitude: 1,
-        longitude: 2,
-      });
+      await service.searchPartners('user-1', null, { latitude: 1, longitude: 2 });
 
       expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
         'search_nearby_users',
@@ -463,9 +393,7 @@ describe('DiscoveryService', () => {
       stubRpcResponse([{ id: 'p1', distance: 1200 }]);
 
       const result = await service.searchPartners('user-1', null, {
-        latitude: 1,
-        longitude: 2,
-        sort: 'nearest',
+        latitude: 1, longitude: 2, sort: 'nearest',
       });
 
       expect(result[0].distance_metres).toBe(1200);
@@ -475,8 +403,7 @@ describe('DiscoveryService', () => {
       stubRpcResponse([{ id: 'p1', distance: 999, distance_metres: 555 }]);
 
       const result = await service.searchPartners('user-1', null, {
-        latitude: 1,
-        longitude: 2,
+        latitude: 1, longitude: 2,
       });
 
       expect(result[0].distance_metres).toBe(555);
@@ -497,18 +424,15 @@ describe('DiscoveryService', () => {
         radius_metres: 10000,
       });
 
-      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
-        'search_nearby_users',
-        {
-          search_lat: 40.7128,
-          search_lon: -74.006,
-          radius_m: 10000,
-          exclude_user_id: 'user-1',
-          filter_native: null,
-          filter_target: null,
-          serious_only: false,
-        },
-      );
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith('search_nearby_users', {
+        search_lat: 40.7128,
+        search_lon: -74.006,
+        radius_m: 10000,
+        exclude_user_id: 'user-1',
+        filter_native: null,
+        filter_target: null,
+        serious_only: false,
+      });
     });
 
     it('should apply VIP country/city spoofing to query object', async () => {
@@ -522,8 +446,7 @@ describe('DiscoveryService', () => {
       };
 
       await service.searchPartners('user-1', mockUser, {
-        latitude: 35.6895,
-        longitude: 139.6917,
+        latitude: 35.6895, longitude: 139.6917,
       });
 
       expect(mockQueryBuilder.ilike).toHaveBeenCalledWith('country', '%JP%');
@@ -540,8 +463,7 @@ describe('DiscoveryService', () => {
       };
 
       await service.searchPartners('user-1', mockUser, {
-        latitude: 51,
-        longitude: -0.1,
+        latitude: 51, longitude: -0.1,
       });
 
       expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
@@ -554,9 +476,7 @@ describe('DiscoveryService', () => {
       stubRpcResponse([{ id: 'p1' }]);
 
       await service.searchPartners('user-1', null, {
-        latitude: 51,
-        longitude: -0.1,
-        serious_learner_only: true,
+        latitude: 51, longitude: -0.1, serious_learner_only: true,
       });
 
       expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
@@ -570,8 +490,7 @@ describe('DiscoveryService', () => {
       // does a follow-up DB query to fetch proficiency levels.
       // The fallback path applies level filtering directly on in-memory data.
       mockSupabaseClient.rpc.mockResolvedValue({
-        data: null,
-        error: { message: 'PostGIS not ready' },
+        data: null, error: { message: 'PostGIS not ready' },
       });
       stubLimitResponse([
         { id: 'p1', proficiency_level: 'B2' },
@@ -580,9 +499,7 @@ describe('DiscoveryService', () => {
       ]);
 
       const result = await service.searchPartners('user-1', null, {
-        latitude: 1,
-        longitude: 2,
-        level: 'B2',
+        latitude: 1, longitude: 2, level: 'B2',
       });
 
       expect(result.map((u) => u.id)).toEqual(['p1', 'p3']);
@@ -597,9 +514,7 @@ describe('DiscoveryService', () => {
         interests: 'music',
       });
 
-      expect(mockQueryBuilder.overlaps).toHaveBeenCalledWith('interests', [
-        'music',
-      ]);
+      expect(mockQueryBuilder.overlaps).toHaveBeenCalledWith('interests', ['music']);
     });
 
     it('should apply VIP gender filter on RPC results', async () => {
@@ -625,10 +540,7 @@ describe('DiscoveryService', () => {
       ]);
 
       const result = await service.searchPartners('user-1', null, {
-        latitude: 1,
-        longitude: 2,
-        age_min: 20,
-        age_max: 40,
+        latitude: 1, longitude: 2, age_min: 20, age_max: 40,
       });
 
       expect(result.map((u) => u.id)).toEqual(['p2']);
@@ -642,9 +554,7 @@ describe('DiscoveryService', () => {
       ]);
 
       const result = await service.searchPartners('user-1', null, {
-        latitude: 1,
-        longitude: 2,
-        has_audio_intro: true,
+        latitude: 1, longitude: 2, has_audio_intro: true,
       });
 
       expect(result.map((u) => u.id)).toEqual(['p1']);
@@ -655,8 +565,7 @@ describe('DiscoveryService', () => {
       stubRpcResponse([{ id: 'p1' }, { id: 'p2' }, { id: 'p3' }]);
 
       const result = await service.searchPartners('user-1', null, {
-        latitude: 1,
-        longitude: 2,
+        latitude: 1, longitude: 2,
       });
 
       expect(result.map((u) => u.id)).toEqual(['p1', 'p3']);
@@ -667,9 +576,7 @@ describe('DiscoveryService', () => {
       stubRpcResponse([{ id: 'p1' }, { id: 'p2' }, { id: 'p3' }]);
 
       const result = await service.searchPartners('user-1', null, {
-        latitude: 1,
-        longitude: 2,
-        voice_room_active: true,
+        latitude: 1, longitude: 2, voice_room_active: true,
       });
 
       expect(result.map((u) => u.id)).toEqual(['p1', 'p3']);
@@ -678,14 +585,12 @@ describe('DiscoveryService', () => {
     // -- RPC fallback chain --------------------------------------------------
     it('should fall back to standard query when RPC returns error', async () => {
       mockSupabaseClient.rpc.mockResolvedValue({
-        data: null,
-        error: { message: 'PostGIS not ready' },
+        data: null, error: { message: 'PostGIS not ready' },
       });
       stubLimitResponse([{ id: 'fallback-1' }]);
 
       const result = await service.searchPartners('user-1', null, {
-        latitude: 35.6895,
-        longitude: 139.6917,
+        latitude: 35.6895, longitude: 139.6917,
       });
 
       expect(mockQueryBuilder.limit).toHaveBeenCalledWith(50);
@@ -697,8 +602,7 @@ describe('DiscoveryService', () => {
       stubLimitResponse([{ id: 'fb-empty' }]);
 
       const result = await service.searchPartners('user-1', null, {
-        latitude: 35.6895,
-        longitude: 139.6917,
+        latitude: 35.6895, longitude: 139.6917,
       });
 
       expect(mockQueryBuilder.limit).toHaveBeenCalledWith(50);
@@ -707,8 +611,7 @@ describe('DiscoveryService', () => {
 
     it('should apply extra filters on RPC fallback results (level, age)', async () => {
       mockSupabaseClient.rpc.mockResolvedValue({
-        data: null,
-        error: { message: 'PostGIS unavailable' },
+        data: null, error: { message: 'PostGIS unavailable' },
       });
       stubLimitResponse([
         { id: 'fb1', proficiency_level: 'B2', age: 25 },
@@ -717,10 +620,7 @@ describe('DiscoveryService', () => {
       ]);
 
       const result = await service.searchPartners('user-1', null, {
-        latitude: 1,
-        longitude: 2,
-        level: 'B2',
-        age_min: 20,
+        latitude: 1, longitude: 2, level: 'B2', age_min: 20,
       });
 
       expect(result.map((u) => u.id)).toEqual(['fb1']);
@@ -728,17 +628,12 @@ describe('DiscoveryService', () => {
 
     it('should return empty when both RPC and fallback query fail', async () => {
       mockSupabaseClient.rpc.mockResolvedValue({
-        data: null,
-        error: { message: 'RPC failure' },
+        data: null, error: { message: 'RPC failure' },
       });
-      mockQueryBuilder.limit.mockResolvedValue({
-        data: null,
-        error: { message: 'DB error' },
-      });
+      mockQueryBuilder.limit.mockResolvedValue({ data: null, error: { message: 'DB error' } });
 
       const result = await service.searchPartners('user-1', null, {
-        latitude: 35.6895,
-        longitude: 139.6917,
+        latitude: 35.6895, longitude: 139.6917,
       });
 
       expect(result).toHaveLength(0);
@@ -778,16 +673,8 @@ describe('DiscoveryService', () => {
       // Adding availability_morning: false triggers the gate so the time overlap
       // filter inside applyAdvancedFilters executes.
       stubLimitResponse([
-        {
-          id: 'p1',
-          available_time_start: '08:00',
-          available_time_end: '12:00',
-        },
-        {
-          id: 'p2',
-          available_time_start: '18:00',
-          available_time_end: '22:00',
-        },
+        { id: 'p1', available_time_start: '08:00', available_time_end: '12:00' },
+        { id: 'p2', available_time_start: '18:00', available_time_end: '22:00' },
         { id: 'p3' },
       ]);
 
@@ -807,9 +694,7 @@ describe('DiscoveryService', () => {
         { id: 'p3', proficiency_level: 'A1' },
       ]);
 
-      const result = await service.searchPartners('user-1', null, {
-        level: 'B2',
-      });
+      const result = await service.searchPartners('user-1', null, { level: 'B2' });
 
       expect(result.map((u) => u.id).sort()).toEqual(['p1', 'p2']);
     });
@@ -828,15 +713,9 @@ describe('DiscoveryService', () => {
       ];
       stubLimitResponse(partners);
 
-      const result = await service.searchPartners('user-1', null, {
-        sort: 'best_match',
-      });
+      const result = await service.searchPartners('user-1', null, { sort: 'best_match' });
 
-      expect(result.map((u) => u.id)).toEqual([
-        'partner-c',
-        'partner-b',
-        'partner-a',
-      ]);
+      expect(result.map((u) => u.id)).toEqual(['partner-c', 'partner-b', 'partner-a']);
     });
 
     it('online_now: orders by most recent last_active_at first', async () => {
@@ -847,9 +726,7 @@ describe('DiscoveryService', () => {
       ];
       stubLimitResponse(partners);
 
-      const result = await service.searchPartners('user-1', null, {
-        sort: 'online_now',
-      });
+      const result = await service.searchPartners('user-1', null, { sort: 'online_now' });
 
       expect(result.map((u) => u.id)).toEqual(['b', 'a', 'c']);
     });
@@ -862,9 +739,7 @@ describe('DiscoveryService', () => {
       ];
       stubLimitResponse(partners);
 
-      const result = await service.searchPartners('user-1', null, {
-        sort: 'newest',
-      });
+      const result = await service.searchPartners('user-1', null, { sort: 'newest' });
 
       expect(result.map((u) => u.id)).toEqual(['b', 'c', 'a']);
     });
@@ -877,9 +752,7 @@ describe('DiscoveryService', () => {
       ]);
 
       const result = await service.searchPartners('user-1', null, {
-        latitude: 51.5074,
-        longitude: -0.1278,
-        sort: 'nearest',
+        latitude: 51.5074, longitude: -0.1278, sort: 'nearest',
       });
 
       expect(result.map((u) => u.id)).toEqual(['near', 'mid', 'far']);
@@ -893,9 +766,7 @@ describe('DiscoveryService', () => {
       ]);
 
       const result = await service.searchPartners('user-1', null, {
-        latitude: 1,
-        longitude: 2,
-        sort: 'nearest',
+        latitude: 1, longitude: 2, sort: 'nearest',
       });
 
       expect(result.map((u) => u.id)).toEqual(['close', 'mid', 'no-dist']);
@@ -913,9 +784,7 @@ describe('DiscoveryService', () => {
 
       expect(result).toHaveLength(1);
       const notCalls = (mockQueryBuilder.not as jest.Mock).mock.calls;
-      expect(notCalls.some((c: string[]) => c[0] === 'audio_intro_url')).toBe(
-        true,
-      );
+      expect(notCalls.some((c: string[]) => c[0] === 'audio_intro_url')).toBe(true);
     });
 
     it('should apply VIP country/city spoofing', async () => {
@@ -932,10 +801,7 @@ describe('DiscoveryService', () => {
     });
 
     it('should return empty when query errors', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({
-        data: null,
-        error: { message: 'fail' },
-      });
+      mockQueryBuilder.limit.mockResolvedValue({ data: null, error: { message: 'fail' } });
 
       const result = await service.getAudioIntros('user-1', null, {});
       expect(result).toEqual([]);
@@ -970,10 +836,7 @@ describe('DiscoveryService', () => {
     });
 
     it('should return empty when query errors', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({
-        data: null,
-        error: { message: 'err' },
-      });
+      mockQueryBuilder.limit.mockResolvedValue({ data: null, error: { message: 'err' } });
 
       const result = await service.getRecentNativeSpeakers('user-1');
       expect(result).toEqual([]);
@@ -995,10 +858,7 @@ describe('DiscoveryService', () => {
     });
 
     it('should return empty when query errors', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({
-        data: null,
-        error: { message: 'err' },
-      });
+      mockQueryBuilder.limit.mockResolvedValue({ data: null, error: { message: 'err' } });
 
       const result = await service.getSpotlightUsers('user-1');
       expect(result).toEqual([]);
@@ -1011,97 +871,73 @@ describe('DiscoveryService', () => {
   describe('findByLanguagePair', () => {
     it('should cross-match native and target languages', async () => {
       mockQueryBuilder.range = jest.fn().mockResolvedValue({
-        data: [{ id: 'lp1' }],
-        error: null,
+        data: [{ id: 'lp1' }], error: null,
       });
 
       await service.findByLanguagePair('user-1', {
-        native_language: 'EN',
-        target_language: 'JA',
-      });
+        native_language: 'EN', target_language: 'JA',
+      } as any);
 
-      expect(mockQueryBuilder.contains).toHaveBeenCalledWith(
-        'native_languages',
-        ['JA'],
-      );
-      expect(mockQueryBuilder.contains).toHaveBeenCalledWith(
-        'target_languages',
-        ['EN'],
-      );
+      expect(mockQueryBuilder.contains).toHaveBeenCalledWith('native_languages', ['JA']);
+      expect(mockQueryBuilder.contains).toHaveBeenCalledWith('target_languages', ['EN']);
     });
 
     it('should handle native_language only', async () => {
       mockQueryBuilder.range = jest.fn().mockResolvedValue({
-        data: [{ id: 'lp1' }],
-        error: null,
+        data: [{ id: 'lp1' }], error: null,
       });
 
       await service.findByLanguagePair('user-1', {
         native_language: 'FR',
-      });
+      } as any);
 
-      expect(mockQueryBuilder.contains).toHaveBeenCalledWith(
-        'native_languages',
-        ['FR'],
-      );
+      expect(mockQueryBuilder.contains).toHaveBeenCalledWith('native_languages', ['FR']);
     });
 
     it('should handle target_language only', async () => {
       mockQueryBuilder.range = jest.fn().mockResolvedValue({
-        data: [{ id: 'lp1' }],
-        error: null,
+        data: [{ id: 'lp1' }], error: null,
       });
 
       await service.findByLanguagePair('user-1', {
         target_language: 'DE',
-      });
+      } as any);
 
-      expect(mockQueryBuilder.contains).toHaveBeenCalledWith(
-        'target_languages',
-        ['DE'],
-      );
+      expect(mockQueryBuilder.contains).toHaveBeenCalledWith('target_languages', ['DE']);
     });
 
     it('should fallback to mock data when query errors', async () => {
       mockQueryBuilder.range = jest.fn().mockResolvedValue({
-        data: null,
-        error: { message: 'fail' },
+        data: null, error: { message: 'fail' },
       });
 
       const result = await service.findByLanguagePair('user-1', {
         native_language: 'EN',
-      });
+      } as any);
 
       expect(result).toEqual([]);
     });
 
     it('should apply sort=newest ordering', async () => {
       mockQueryBuilder.range = jest.fn().mockResolvedValue({
-        data: [{ id: 'lp1' }],
-        error: null,
+        data: [{ id: 'lp1' }], error: null,
       });
 
       await service.findByLanguagePair('user-1', {
-        native_language: 'EN',
-        sort: 'newest',
-      });
+        native_language: 'EN', sort: 'newest',
+      } as any);
 
-      expect(mockQueryBuilder.order).toHaveBeenCalledWith('created_at', {
-        ascending: false,
-      });
+      expect(mockQueryBuilder.order).toHaveBeenCalledWith('created_at', { ascending: false });
     });
 
     it('should apply pagination via range', async () => {
       mockQueryBuilder.range = jest.fn().mockResolvedValue({
-        data: [{ id: 'lp1' }],
-        error: null,
+        data: [{ id: 'lp1' }], error: null,
       });
 
       await service.findByLanguagePair('user-1', {
-        native_language: 'EN',
-        page: 2,
-        limit: 20,
-      });
+        native_language: 'EN', page: 2, limit: 20,
+      } as any);
 
       expect(mockQueryBuilder.range).toHaveBeenCalledWith(40, 59);
     });
@@ -1124,7 +960,7 @@ describe('DiscoveryService', () => {
 
       const result = await service.findByLanguagePair('user-1', {
         native_language: 'EN',
-      });
+      } as any);
 
       expect(result).toHaveLength(2);
       // Verify the PoW flag is processed: lp2 is in the partner set, lp1 is not
@@ -1143,8 +979,7 @@ describe('DiscoveryService', () => {
       stubLimitResponse([{ id: 'p1', country: 'JP', city: 'Tokyo' }]);
 
       const result = await service.searchByCountryCity('user-1', {
-        country: 'Japan',
-        city: 'Tokyo',
+        country: 'Japan', city: 'Tokyo',
       });
 
       expect(mockQueryBuilder.ilike).toHaveBeenCalledWith('country', '%Japan%');
@@ -1153,10 +988,7 @@ describe('DiscoveryService', () => {
     });
 
     it('should return empty on DB error', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({
-        data: null,
-        error: { message: 'err' },
-      });
+      mockQueryBuilder.limit.mockResolvedValue({ data: null, error: { message: 'err' } });
 
       const result = await service.searchByCountryCity('user-1', {});
       expect(result).toEqual([]);

@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ConfigService } from '@nestjs/config';
 import { SuggestFlashcardsDto } from './dto/suggest-flashcards.dto';
@@ -7,8 +6,6 @@ import { SuggestFlashcardsDto } from './dto/suggest-flashcards.dto';
 @Injectable()
 export class SuggestFlashcardsService {
   constructor(
-    @InjectPinoLogger(SuggestFlashcardsService.name)
-    private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
   ) {}
@@ -45,16 +42,6 @@ export class SuggestFlashcardsService {
     }
 
     const filteredWords = uniqueWords.filter((w) => !knownWords.has(w));
-
-    this.logger.debug(
-      {
-        totalSegments: segments.length,
-        uniqueWords: uniqueWords.length,
-        knownWords: knownWords.size,
-        suggestions: filteredWords.length,
-      },
-      'Flashcard suggestions generated from message',
-    );
 
     return { suggestions: filteredWords };
   }
