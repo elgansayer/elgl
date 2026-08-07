@@ -56,6 +56,8 @@ export default tseslint.config(
     files: [
       'src/economy/**/*.ts',
       'src/monetisation/**/*.ts',
+      'src/admin/**/*.ts',
+      'src/moderation/**/*.ts',
     ],
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
@@ -67,6 +69,8 @@ export default tseslint.config(
       'src/monetisation/**/*.spec.ts',
       'src/economy/**/*.e2e-spec.ts',
       'src/monetisation/**/*.e2e-spec.ts',
+      'src/admin/**/*.spec.ts',
+      'src/moderation/**/*.spec.ts',
     ],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',

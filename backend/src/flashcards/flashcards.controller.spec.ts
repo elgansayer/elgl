@@ -59,7 +59,17 @@ describe('FlashcardsController', () => {
       providers: [
         {
           provide: FlashcardsService,
+<<<<<<< HEAD
           useValue: flashcardsService,
+=======
+          useValue: {
+            createOrUpdateFlashcard: jest.fn(),
+            updateSrsLevel: jest.fn(),
+            getFlashcards: jest.fn(),
+            getDueReviews: jest.fn(),
+            purgeSrsCache: jest.fn(),
+          },
+>>>>>>> origin/main
         },
       ],
     })
@@ -129,6 +139,7 @@ describe('FlashcardsController', () => {
         'user-1',
         dto,
       );
+      expect(flashcardsService.purgeSrsCache).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(card);
       expect(res.header).not.toHaveBeenCalledWith('X-SRS-Degraded', 'true');
     });

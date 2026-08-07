@@ -3,8 +3,14 @@ import { FlashcardsService } from './flashcards.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { XpService } from '../xp/xp.service';
 import { MetricsService } from '../metrics/metrics.service';
+<<<<<<< HEAD
 import { Flashcard, SrsHealthStatus } from './interfaces/flashcard.interface';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
+=======
+import { CloudflareCacheService } from '../cloudflare/cache.service';
+import { Flashcard } from './interfaces/flashcard.interface';
+import { CreateFlashcardDto } from './dto/flashcard.dto';
+>>>>>>> origin/main
 
 jest.mock('../common/retry', () => ({
   withRetry: jest.fn((fn: () => unknown) => fn()),
@@ -128,6 +134,10 @@ describe('FlashcardsService', () => {
         {
           provide: MetricsService,
           useValue: mockMetricsService,
+        },
+        {
+          provide: CloudflareCacheService,
+          useValue: { purgeByCacheTags: jest.fn().mockResolvedValue(true) },
         },
       ],
     }).compile();

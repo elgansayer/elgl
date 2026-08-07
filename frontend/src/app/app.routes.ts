@@ -673,4 +673,12 @@ export const routes: Routes = [
       ),
     title: 'Change Password - HelloTalk',
   },
-  ];
+  {
+    path: 'coin-economy',
+    loadComponent: () =>
+      import('./components/coin-economy-dashboard/coin-economy-dashboard.component').then(
+        (m) => m.CoinEconomyDashboardComponent,
+      ),
+    title: 'Virtual Coin Economy - HelloTalk',
+  },
+];
