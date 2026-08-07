@@ -296,7 +296,11 @@ export class GiftAnimationOverlayComponent {
     const anim = this.animationService.currentAnimation();
     const animId = anim?.id ?? 'default';
     return Array.from({ length: 5 }, (_, i) => ({
+<<<<<<< HEAD
       id: `${animId}-prem-ring-${i}`,
+=======
+      id: `${animId}-ring-${i}`,
+>>>>>>> origin/main
       cx: 300,
       cy: 400,
       r: 40 + i * 25,

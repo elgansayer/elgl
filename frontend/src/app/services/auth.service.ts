@@ -12,7 +12,11 @@ export interface AppUser extends User {
   is_serious_learner?: boolean;
   developer_api_key?: string | null;
   display_name?: string;
+<<<<<<< HEAD
   avatar_url?: string | null;
+=======
+  avatar_url?: string;
+>>>>>>> origin/main
 }
 
 @Injectable({
