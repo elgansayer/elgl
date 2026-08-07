@@ -102,24 +102,27 @@
             </div>
           </div>
           @if (isCardFlipped()) {
-            <div class="grid grid-cols-3 gap-2">
+            <div class="grid grid-cols-3 gap-2 animate-fadeIn">
               <button
                 (click)="gradeReview(1)"
-                class="rounded-app bg-rose-100 ps-3 pe-3 pt-2.5 pb-2.5 text-xs font-bold text-rose-800"
+                class="btn-grade btn-grade-again"
                [attr.aria-label]="'vocabulary.againBtn' | t">
-                {{ 'vocabulary.againBtn' | t }}
+                <span class="block text-lg">&#8634;</span>
+                <span class="text-xs font-bold">{{ 'vocabulary.againBtn' | t }}</span>
               </button>
               <button
                 (click)="gradeReview(card.srs_level < 3 ? card.srs_level + 1 : 3)"
-                class="rounded-app bg-amber-400 ps-3 pe-3 pt-2.5 pb-2.5 text-xs font-bold text-amber-950"
+                class="btn-grade btn-grade-good"
                [attr.aria-label]="'vocabulary.goodBtn' | t">
-                {{ 'vocabulary.goodBtn' | t }}
+                <span class="block text-lg">&#10003;</span>
+                <span class="text-xs font-bold">{{ 'vocabulary.goodBtn' | t }}</span>
               </button>
               <button
                 (click)="gradeReview(4)"
-                class="rounded-app bg-emerald-600 ps-3 pe-3 pt-2.5 pb-2.5 text-xs font-bold text-white"
+                class="btn-grade btn-grade-known"
                [attr.aria-label]="'vocabulary.knownBtn' | t">
-                {{ 'vocabulary.knownBtn' | t }}
+                <span class="block text-lg">&#9733;</span>
+                <span class="text-xs font-bold">{{ 'vocabulary.knownBtn' | t }}</span>
               </button>
             </div>
           }
