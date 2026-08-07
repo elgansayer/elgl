@@ -298,18 +298,28 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.stopAudioIntro();
 
     const audio = new Audio(audioIntroUrl);
-    audio.addEventListener('ended', () => this.stopAudioIntro());
-    audio.addEventListener('error', () => this.stopAudioIntro());
+    audio.addEventListener('ended', this.onAudioEnded);
+    audio.addEventListener('error', this.onAudioError);
     this.currentAudio = audio;
     this.playingPartnerId.set(partnerId);
 
     void audio.play().catch(() => this.stopAudioIntro());
   }
 
+  private onAudioEnded = (): void => {
+    this.stopAudioIntro();
+  };
+
+  private onAudioError = (): void => {
+    this.stopAudioIntro();
+  };
+
   private stopAudioIntro(): void {
     if (this.currentAudio) {
       this.currentAudio.pause();
       this.currentAudio.currentTime = 0;
+      this.currentAudio.removeEventListener('ended', this.onAudioEnded);
+      this.currentAudio.removeEventListener('error', this.onAudioError);
       this.currentAudio = null;
     }
     this.playingPartnerId.set(null);

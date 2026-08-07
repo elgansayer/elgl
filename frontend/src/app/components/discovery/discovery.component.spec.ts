@@ -24,6 +24,12 @@ class MockAudio {
   addEventListener(event: string, cb: () => void): void {
     (this.listeners[event] ??= []).push(cb);
   }
+  removeEventListener(event: string, cb: () => void): void {
+    const stack = this.listeners[event];
+    if (stack) {
+      this.listeners[event] = stack.filter((f) => f !== cb);
+    }
+  }
   emit(event: string): void {
     this.listeners[event]?.forEach((cb) => cb());
   }
@@ -667,6 +673,21 @@ describe('DiscoveryComponent', () => {
 
       expect(audio.pause).toHaveBeenCalled();
       expect(component.playingPartnerId()).toBeNull();
+    });
+
+    it('should remove event listeners when stopping audio to prevent memory leaks', async () => {
+      await init();
+
+      component.toggleAudioIntro('partner-1', 'https://example.com/intro.mp3', new Event('click'));
+      const audio = audioInstances[0];
+      expect(audio['listeners']['ended']).toHaveLength(1);
+      expect(audio['listeners']['error']).toHaveLength(1);
+
+      // Simulate stop via toggle with same partner
+      component.toggleAudioIntro('partner-1', 'https://example.com/intro.mp3', new Event('click'));
+
+      expect(audio['listeners']['ended']).toHaveLength(0);
+      expect(audio['listeners']['error']).toHaveLength(0);
     });
   });
 
