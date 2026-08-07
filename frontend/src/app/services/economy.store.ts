@@ -1,5 +1,5 @@
 import { showToast } from './toast.service';
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -44,9 +44,6 @@ export interface StickerPack {
   name: string;
   cost_coins: number;
   owned?: boolean;
-  is_animated?: boolean;
-  sticker_urls?: string[];
-  animation_url?: string;
 }
 
 export interface DiagnosticLog {
@@ -288,15 +285,10 @@ export class EconomyStore {
     message: string;
   }): Promise<void> {
     try {
-      // Cap message size to prevent unbounded memory from long diagnostic strings.
-      const safePayload = {
-        ...payload,
-        message: payload.message.slice(0, 500),
-      };
       const created = await firstValueFrom(
         this.http.post<DiagnosticLogApiRecord>(
           `${this.monetisationUrl}/diagnostics/logs`,
-          safePayload,
+          payload,
           {
             headers: this.getHeaders(),
           },
@@ -476,23 +468,6 @@ export class EconomyStore {
       return false;
     }
   }
-
-  readonly unlockedStickerUrls = computed(() => {
-    return this.stickerPacks()
-      .filter((pack) => pack.owned && pack.sticker_urls && pack.sticker_urls.length > 0)
-      .flatMap((pack) =>
-        pack.sticker_urls.map((url) => ({
-          id: `${pack.id}_${url.split('/').pop() ?? url}`,
-          url,
-          pack_name: pack.name,
-          is_animated: pack.is_animated ?? (url.endsWith('.webm') || url.endsWith('.json')),
-        })),
-      );
-  });
-
-  readonly unlockedStickerPacks = computed(() => {
-    return this.stickerPacks().filter((pack) => pack.owned);
-  });
 
   private mapDiagnosticLog(log: DiagnosticLogApiRecord): DiagnosticLog {
     return {

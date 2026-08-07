@@ -113,17 +113,14 @@ export class MonetisationService {
   }
 
   /**
-   * Restore previous purchases (Apple App Store / Google Play / Stripe).
+   * Restore previous purchases (Apple App Store / Google Play).
    * Calls the backend endpoint that validates receipts and restores VIP status.
    */
-  restorePurchases(
-    platform: 'ios' | 'android' | 'stripe' = 'stripe',
-    receiptData?: string,
-  ): Promise<{ received: boolean; status: string }> {
+  restorePurchases(): Promise<{ received: boolean; status: string }> {
     return firstValueFrom(
       this.http.post<{ received: boolean; status: string }>(
         `${this.baseUrl}/restore-purchases`,
-        { platform, receipt_data: receiptData },
+        {},
       ),
     );
   }

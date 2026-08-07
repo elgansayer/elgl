@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { FlashcardsController } from './flashcards.controller';
 import { FlashcardsService } from './flashcards.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { SrsRateLimiterGuard } from './srs-rate-limiter.guard';
 
 describe('FlashcardsController', () => {
   let controller: FlashcardsController;
@@ -25,8 +24,6 @@ describe('FlashcardsController', () => {
     })
       .overrideGuard(SupabaseAuthGuard)
       .useValue({ canActivate: jest.fn().mockReturnValue(true) })
-      .overrideGuard(SrsRateLimiterGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<FlashcardsController>(FlashcardsController);
@@ -43,28 +40,19 @@ describe('FlashcardsController', () => {
 
   describe('createFlashcard', () => {
     it('should return null if user is not provided', async () => {
-      const dto = {
-        word_token: 'bonjour',
-        translation: 'hello',
-      };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await controller.createFlashcard(null, dto as any);
+      const result = await controller.createFlashcard(null, {} as any);
       expect(result).toBeNull();
       expect(flashcardsService.createOrUpdateFlashcard).not.toHaveBeenCalled();
     });
 
     it('should call service createOrUpdateFlashcard when user is provided', async () => {
-      const dto = {
-        word_token: 'bonjour',
-        translation: 'hello',
-      };
-      const card = { id: 'card-1', ...dto };
-      (flashcardsService.createOrUpdateFlashcard as jest.Mock).mockResolvedValue(
-        card,
-      );
+      const dto: any = { word_token: 'bonjour', translation: 'hello' };
+      const card: any = { id: 'card-1', ...dto };
+      (
+        flashcardsService.createOrUpdateFlashcard as jest.Mock
+      ).mockResolvedValue(card);
 
       const result = await controller.createFlashcard(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         { id: 'user-1' } as any,
         dto,
       );
@@ -78,19 +66,17 @@ describe('FlashcardsController', () => {
 
   describe('updateSrs', () => {
     it('should return null if user is not provided', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await controller.updateSrs(null, 'card-1', {} as any);
       expect(result).toBeNull();
       expect(flashcardsService.updateSrsLevel).not.toHaveBeenCalled();
     });
 
     it('should call service updateSrsLevel when user is provided', async () => {
-      const dto = { quality: 4 };
-      const card = { id: 'card-1', srs_level: 2 };
+      const dto: any = { srs_level: 2 };
+      const card: any = { id: 'card-1', srs_level: 2 };
       (flashcardsService.updateSrsLevel as jest.Mock).mockResolvedValue(card);
 
       const result = await controller.updateSrs(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         { id: 'user-1' } as any,
         'card-1',
         dto,
@@ -112,11 +98,10 @@ describe('FlashcardsController', () => {
     });
 
     it('should call service getFlashcards with parsed integer level', async () => {
-      const cards = [{ id: 'card-1' }];
+      const cards: any[] = [{ id: 'card-1' }];
       (flashcardsService.getFlashcards as jest.Mock).mockResolvedValue(cards);
 
       const result = await controller.getFlashcards(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         { id: 'user-1' } as any,
         '3',
       );
@@ -125,13 +110,10 @@ describe('FlashcardsController', () => {
     });
 
     it('should call service getFlashcards with undefined level when not provided', async () => {
-      const cards = [{ id: 'card-1' }];
+      const cards: any[] = [{ id: 'card-1' }];
       (flashcardsService.getFlashcards as jest.Mock).mockResolvedValue(cards);
 
-      const result = await controller.getFlashcards(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        { id: 'user-1' } as any,
-      );
+      const result = await controller.getFlashcards({ id: 'user-1' } as any);
       expect(flashcardsService.getFlashcards).toHaveBeenCalledWith(
         'user-1',
         undefined,
@@ -148,13 +130,10 @@ describe('FlashcardsController', () => {
     });
 
     it('should call service getDueReviews when user is provided', async () => {
-      const cards = [{ id: 'card-due' }];
+      const cards: any[] = [{ id: 'card-due' }];
       (flashcardsService.getDueReviews as jest.Mock).mockResolvedValue(cards);
 
-      const result = await controller.getDueReviews(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        { id: 'user-1' } as any,
-      );
+      const result = await controller.getDueReviews({ id: 'user-1' } as any);
       expect(flashcardsService.getDueReviews).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(cards);
     });

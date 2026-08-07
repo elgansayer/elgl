@@ -93,5 +93,5 @@ export class HandleSubscriptionNotificationDto {
   signedPayload?: string;
 
   @IsOptional()
-  message?: unknown;
+  message?: any;
 }

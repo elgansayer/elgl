@@ -28,8 +28,8 @@
       </div>
 
       <div class="flex justify-end space-x-2 rtl:space-x-reverse">
-        <button class="px-4 py-2 text-gray-300 hover:text-white" (click)="closeModal.emit()" [attr.aria-label]="'common.cancel' | t">{{ 'common.cancel' | t }}</button>
-        <button class="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-500" (click)="submit()" [attr.aria-label]="'common.save' | t">{{ 'common.save' | t }}</button>
+        <button class="px-4 py-2 text-gray-300 hover:text-white" (click)="closeModal.emit()">{{ 'common.cancel' | t }}</button>
+        <button class="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-500" (click)="submit()">{{ 'common.save' | t }}</button>
       </div>
     </div>
   </div>

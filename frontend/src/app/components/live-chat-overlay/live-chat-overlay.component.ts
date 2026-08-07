@@ -30,58 +30,11 @@ interface CentrifugoMessageData {
 @Component({
   selector: 'app-live-chat-overlay',
   imports: [TranslatePipe],
-  template: `
-    <!-- Overlay container positioned at the bottom of the video stream -->
-    <div
-      class="absolute bottom-0 start-0 w-full h-72 p-4 flex flex-col justify-end pointer-events-none bg-gradient-to-t from-black/80 via-black/30 to-transparent z-50"
-    >
-      <!-- Scrollable message list with top-fade mask -->
-      <div
-        #scrollContainer
-        class="overflow-y-auto flex flex-col gap-3 max-h-full pointer-events-auto scrollbar-hide mask-image-fade-top pb-2"
-      >
-        @for (msg of messages(); track msg.id) {
-          <div
-            class="flex flex-col bg-black/40 rounded-xl p-2.5 max-w-[85%] backdrop-blur-md animate-fade-in border border-white/10 shadow-sm"
-          >
-            <span class="text-white/70 text-xs font-semibold mb-0.5">{{ msg.senderName }}</span>
-            <span class="text-white text-sm leading-snug break-words">{{ msg.text }}</span>
-          </div>
-        }
-      </div>
-    </div>
-  `,
-  styles: [
-    `
-      .scrollbar-hide::-webkit-scrollbar {
-        display: none;
-      }
-      .scrollbar-hide {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
-      .mask-image-fade-top {
-        mask-image: linear-gradient(to bottom, transparent, black 25%);
-        -webkit-mask-image: linear-gradient(to bottom, transparent, black 25%);
-      }
-      @keyframes fadeInSlideUp {
-        from {
-          opacity: 0;
-          transform: translateY(12px) scale(0.98);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0) scale(1);
-        }
-      }
-      .animate-fade-in {
-        animation: fadeInSlideUp 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-      }
-    `,
-  ],
+  templateUrl: './live-chat-overlay.component.html',
+  styleUrl: './live-chat-overlay.component.scss',
 })
 export class LiveChatOverlayComponent implements OnInit {
-  roomId = input<string>('');
+  roomId = input.required<string>();
 
   private centrifugo = inject(CentrifugoService);
   private i18n = inject(I18nService);
@@ -92,14 +45,21 @@ export class LiveChatOverlayComponent implements OnInit {
   private channelName = '';
   private subscription: unknown = null;
 
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.channelName) {
+        this.centrifugo.unsubscribe(this.channelName);
+      }
+    });
+  }
+
   // Integration with Centrifugo requires imperative setup; exception permitted per AGENTS.md 5.3
   ngOnInit() {
-    const id = this.roomId();
-    if (!id) return;
+    this.channelName = `room_${this.roomId()}`;
 
-    this.channelName = `room_${id}`;
-
+    // Subscribe directly to the channel and listen for publications
     this.subscription = this.centrifugo.subscribe(this.channelName, (data: unknown) => {
+      // Type guard to verify the payload shape
       const isCentrifugoMessageData = (value: unknown): value is CentrifugoMessageData => {
         if (typeof value !== 'object' || value === null) return false;
         if (!('type' in value) || !('content' in value)) return false;
@@ -119,14 +79,6 @@ export class LiveChatOverlayComponent implements OnInit {
           text: event.content,
           timestamp: Date.now(),
         });
-      }
-    });
-  }
-
-  constructor() {
-    this.destroyRef.onDestroy(() => {
-      if (this.channelName) {
-        this.centrifugo.unsubscribe(this.channelName);
       }
     });
   }

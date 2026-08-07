@@ -10,32 +10,24 @@ import { TranslatePipe } from '../../services/translate.pipe';
   imports: [FormsModule, CoverPhotoCropperComponent, TranslatePipe],
   template: `
     <div class="max-w-2xl mx-auto p-6">
-<<<<<<< HEAD
       <h2 class="text-2xl font-bold text-white mb-6">{{ 'components.profile-edit.editProfile' | t }}</h2>
 
       <!-- Cover Photo Section -->
       <div class="mb-8">
         <span class="block text-sm font-medium text-text-secondary mb-2">{{ 'components.profile-edit.coverPhoto' | t }}</span>
-=======
-      <h2 class="text-2xl font-bold text-white mb-6">{{ 'profileEdit.title' | t }}</h2>
-
-      <!-- Cover Photo Section -->
-      <div class="mb-8">
-        <span class="block text-sm font-medium text-text-secondary mb-2">{{ 'profileEdit.coverPhoto' | t }}</span>
->>>>>>> origin/main
         <div class="relative h-48 bg-surface-200 rounded-xl overflow-hidden">
           @if (coverPhotoPreview()) {
             <img
               [src]="coverPhotoPreview()"
               alt="Cover preview"
               class="w-full h-full object-cover"
-             loading="lazy" />
+            />
           } @else if (profile()?.cover_photo_url) {
             <img
               [src]="profile()?.cover_photo_url"
               alt="Cover"
               class="w-full h-full object-cover"
-             loading="lazy" />
+            />
           } @else {
             <div class="flex items-center justify-center h-full text-text-muted">
               <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -53,11 +45,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             (click)="fileInput.click()"
             class="absolute bottom-3 end-3 px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
           >
-<<<<<<< HEAD
             {{ 'components.profile-edit.changeCover' | t }}
-=======
-            {{ 'profileEdit.changeCover' | t }}
->>>>>>> origin/main
           </button>
           <input
             #fileInput
@@ -73,11 +61,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
       <div class="space-y-4">
         <div>
           <label for="displayNameInput" class="block text-sm font-medium text-text-secondary mb-1"
-<<<<<<< HEAD
             >{{ 'components.profile-edit.displayName' | t }}</label
-=======
-            >{{ 'profileEdit.displayName' | t }}</label
->>>>>>> origin/main
           >
           <input
             id="displayNameInput"
@@ -87,39 +71,24 @@ import { TranslatePipe } from '../../services/translate.pipe';
         </div>
         <div>
           <label for="genderSelect" class="block text-sm font-medium text-text-secondary mb-1"
-<<<<<<< HEAD
             >{{ 'components.profile-edit.gender' | t }}</label
-=======
-            >{{ 'profileEdit.gender' | t }}</label
->>>>>>> origin/main
           >
           <select
             id="genderSelect"
             [(ngModel)]="gender"
             class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           >
-<<<<<<< HEAD
             <option value="">{{ 'components.profile-edit.preferNotToSay' | t }}</option>
             <option value="male">{{ 'components.profile-edit.male' | t }}</option>
             <option value="female">{{ 'components.profile-edit.female' | t }}</option>
             <option value="other">{{ 'components.profile-edit.other' | t }}</option>
-=======
-            <option value="">{{ 'profileEdit.genderNone' | t }}</option>
-            <option value="male">{{ 'profileEdit.genderMale' | t }}</option>
-            <option value="female">{{ 'profileEdit.genderFemale' | t }}</option>
-            <option value="other">{{ 'profileEdit.genderOther' | t }}</option>
->>>>>>> origin/main
           </select>
         </div>
 
         <!-- Business profile fields -->
         <div>
           <label for="businessNameInput" class="block text-sm font-medium text-text-secondary mb-1"
-<<<<<<< HEAD
             >{{ 'components.profile-edit.businessName' | t }}</label
-=======
-            >{{ 'profileEdit.businessName' | t }}</label
->>>>>>> origin/main
           >
           <input
             id="businessNameInput"
@@ -129,11 +98,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         </div>
         <div>
           <label for="businessHoursInput" class="block text-sm font-medium text-text-secondary mb-1"
-<<<<<<< HEAD
             >{{ 'components.profile-edit.businessHours' | t }}</label
-=======
-            >{{ 'profileEdit.businessHours' | t }}</label
->>>>>>> origin/main
           >
           <input
             id="businessHoursInput"
@@ -143,11 +108,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         </div>
         <div>
           <label for="websiteUrlInput" class="block text-sm font-medium text-text-secondary mb-1"
-<<<<<<< HEAD
             >{{ 'components.profile-edit.websiteUrl' | t }}</label
-=======
-            >{{ 'profileEdit.websiteUrl' | t }}</label
->>>>>>> origin/main
           >
           <input
             id="websiteUrlInput"
@@ -161,11 +122,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         (click)="saveProfile()"
         class="mt-6 w-full py-3 text-white bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition-colors"
       >
-<<<<<<< HEAD
         {{ 'components.profile-edit.saveProfile' | t }}
-=======
-        {{ 'profileEdit.save' | t }}
->>>>>>> origin/main
       </button>
     </div>
 

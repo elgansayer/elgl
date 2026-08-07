@@ -90,29 +90,6 @@ describe('SafetyService', () => {
       logSpy.mockRestore();
     });
 
-    it('should throw when reporting self', async () => {
-      await expect(
-        service.reportUser('user-1', {
-          reported_id: 'user-1',
-          reason_category: 'harassment',
-        }),
-      ).rejects.toThrow('Cannot report yourself');
-    });
-
-    it('should throw when reported user does not exist', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: null,
-        error: { message: 'not found' },
-      });
-
-      await expect(
-        service.reportUser('user-1', {
-          reported_id: 'missing-user',
-          reason_category: 'spam',
-        }),
-      ).rejects.toThrow('Reported user not found');
-    });
-
     it('should throw when report insertion fails', async () => {
       const dto = {
         reported_id: 'reported-1',
@@ -139,25 +116,6 @@ describe('SafetyService', () => {
       await expect(service.reportUser('user-1', dto)).rejects.toThrow(
         'Failed to submit report',
       );
-    });
-
-    it('should throw when report insertion returns null data', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { id: 'reported-1' },
-        error: null,
-      });
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: null,
-        error: null,
-      });
-      mockQueryBuilder._response = { data: null, error: null };
-
-      await expect(
-        service.reportUser('user-1', {
-          reported_id: 'reported-1',
-          reason_category: 'other',
-        }),
-      ).rejects.toThrow('Failed to submit report: no data returned');
     });
   });
 
@@ -201,23 +159,6 @@ describe('SafetyService', () => {
       logSpy.mockRestore();
     });
 
-    it('should throw when blocking self', async () => {
-      await expect(
-        service.blockUser('user-1', { blocked_id: 'user-1' }),
-      ).rejects.toThrow('You cannot block yourself');
-    });
-
-    it('should throw when target user does not exist', async () => {
-      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
-        data: null,
-        error: { message: 'not found' },
-      });
-
-      await expect(
-        service.blockUser('user-1', { blocked_id: 'missing-user' }),
-      ).rejects.toThrow('User to block not found');
-    });
-
     it('should throw when the user is already blocked', async () => {
       // user existence check
       mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
@@ -233,22 +174,6 @@ describe('SafetyService', () => {
       await expect(
         service.blockUser('user-1', { blocked_id: 'blocked-user' }),
       ).rejects.toThrow('User is already blocked');
-    });
-
-    it('should throw when insert fails', async () => {
-      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
-        data: { id: 'blocked-user' },
-        error: null,
-      });
-      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
-        data: null,
-        error: null,
-      });
-      mockQueryBuilder._response = { error: { message: 'db error' } };
-
-      await expect(
-        service.blockUser('user-1', { blocked_id: 'blocked-user' }),
-      ).rejects.toThrow('Failed to block user: db error');
     });
   });
 
@@ -266,60 +191,6 @@ describe('SafetyService', () => {
         'blocked-user',
       );
       expect(result).toEqual({ success: true });
-    });
-
-    it('should throw when delete fails', async () => {
-      mockQueryBuilder._response = { error: { message: 'db error' } };
-
-      await expect(
-        service.unblockUser('user-1', 'blocked-user'),
-      ).rejects.toThrow('Failed to unblock user: db error');
-    });
-  });
-
-  describe('isBlocked', () => {
-    it('should return true when block exists', async () => {
-      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
-        data: { id: 'block-1' },
-        error: null,
-      });
-
-      const result = await service.isBlocked('user-1', 'blocked-user');
-      expect(result).toBe(true);
-      expect(mockQueryBuilder.maybeSingle).toHaveBeenCalled();
-    });
-
-    it('should return false when block does not exist', async () => {
-      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
-        data: null,
-        error: null,
-      });
-
-      const result = await service.isBlocked('user-1', 'blocked-user');
-      expect(result).toBe(false);
-    });
-
-    it('should return false on query error', async () => {
-      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
-        data: null,
-        error: { message: 'db error' },
-      });
-
-      const result = await service.isBlocked('user-1', 'blocked-user');
-      expect(result).toBe(false);
-    });
-  });
-
-  describe('getCategories', () => {
-    it('should return safety categories', () => {
-      const result = service.getCategories();
-      expect(result).toBeDefined();
-      expect(Array.isArray(result)).toBe(true);
-      expect(result.length).toBeGreaterThan(0);
-      expect(result[0]).toHaveProperty('value');
-      expect(result[0]).toHaveProperty('label');
-      expect(result[0]).toHaveProperty('icon');
-      expect(result[0]).toHaveProperty('description');
     });
   });
 
@@ -352,219 +223,6 @@ describe('SafetyService', () => {
       mockQueryBuilder._response = { data: null, error: null };
 
       const result = await service.getBlockedUserIds('user-1');
-      expect(result).toEqual([]);
-    });
-
-    it('should return empty array when query results in error', async () => {
-      mockQueryBuilder.then = jest.fn((resolve: any) =>
-        resolve({ data: null, error: { message: 'error' } }),
-      );
-      mockQueryBuilder._response = { data: null, error: { message: 'error' } };
-
-      const result = await service.getBlockedUserIds('user-1');
-      expect(result).toEqual([]);
-    });
-  });
-
-  describe('getBlockerUserIds', () => {
-    it('should return list of blocker user IDs for a user', async () => {
-      mockQueryBuilder.then = jest.fn((resolve: any) =>
-        resolve({
-          data: [{ blocker_id: 'blocker-1' }, { blocker_id: 'blocker-2' }],
-          error: null,
-        }),
-      );
-      mockQueryBuilder._response = {
-        data: [{ blocker_id: 'blocker-1' }, { blocker_id: 'blocker-2' }],
-        error: null,
-      };
-
-      const result = await service.getBlockerUserIds('user-1');
-
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
-      expect(mockQueryBuilder.select).toHaveBeenCalledWith('blocker_id');
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('blocked_id', 'user-1');
-      expect(result).toEqual(['blocker-1', 'blocker-2']);
-    });
-
-    it('should return empty array when query returns no data', async () => {
-      mockQueryBuilder.then = jest.fn((resolve: any) =>
-        resolve({ data: null, error: null }),
-      );
-      mockQueryBuilder._response = { data: null, error: null };
-
-      const result = await service.getBlockerUserIds('user-1');
-      expect(result).toEqual([]);
-    });
-
-    it('should return empty array when query results in error', async () => {
-      mockQueryBuilder.then = jest.fn((resolve: any) =>
-        resolve({ data: null, error: { message: 'error' } }),
-      );
-      mockQueryBuilder._response = { data: null, error: { message: 'error' } };
-
-      const result = await service.getBlockerUserIds('user-1');
-      expect(result).toEqual([]);
-    });
-  });
-
-  describe('getBlockedAndBlockerIds', () => {
-    it('should return union of blocked and blocker IDs', async () => {
-      // First call: getBlockedUserIds
-      mockQueryBuilder.then = jest
-        .fn()
-        .mockImplementationOnce((resolve: any) =>
-          resolve({
-            data: [{ blocked_id: 'blocked-1' }, { blocked_id: 'blocked-2' }],
-            error: null,
-          }),
-        )
-        .mockImplementationOnce((resolve: any) =>
-          resolve({
-            data: [{ blocker_id: 'blocker-1' }, { blocker_id: 'blocker-2' }],
-            error: null,
-          }),
-        );
-
-      const result = await service.getBlockedAndBlockerIds('user-1');
-
-      expect(result).toHaveLength(4);
-      expect(result).toContain('blocked-1');
-      expect(result).toContain('blocked-2');
-      expect(result).toContain('blocker-1');
-      expect(result).toContain('blocker-2');
-    });
-
-    it('should deduplicate overlapping IDs', async () => {
-      mockQueryBuilder.then = jest
-        .fn()
-        .mockImplementationOnce((resolve: any) =>
-          resolve({
-            data: [{ blocked_id: 'shared' }, { blocked_id: 'blocked-1' }],
-            error: null,
-          }),
-        )
-        .mockImplementationOnce((resolve: any) =>
-          resolve({
-            data: [{ blocker_id: 'shared' }, { blocker_id: 'blocker-1' }],
-            error: null,
-          }),
-        );
-
-      const result = await service.getBlockedAndBlockerIds('user-1');
-
-      // shared should only appear once
-      expect(result.filter((id) => id === 'shared')).toHaveLength(1);
-      expect(result).toContain('blocked-1');
-      expect(result).toContain('blocker-1');
-    });
-  });
-
-  describe('getBlockedUserDetails', () => {
-    it('should return empty array when no blocked users', async () => {
-      mockQueryBuilder.then = jest.fn((resolve: any) =>
-        resolve({ data: [], error: null }),
-      );
-      mockQueryBuilder._response = { data: [], error: null };
-
-      const result = await service.getBlockedUserDetails('user-1');
-      expect(result).toEqual([]);
-    });
-
-    it('should return blocked user details', async () => {
-      const mockBlocksBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        then: jest.fn(),
-      };
-      mockBlocksBuilder.then.mockImplementation((resolve: any) =>
-        resolve({
-          data: [{ blocked_id: 'blocked-1' }, { blocked_id: 'blocked-2' }],
-          error: null,
-        }),
-      );
-
-      const mockUsersBuilder = {
-        select: jest.fn().mockReturnThis(),
-        in: jest.fn().mockReturnThis(),
-        then: jest.fn(),
-      };
-      mockUsersBuilder.then.mockImplementation((resolve: any) =>
-        resolve({
-          data: [
-            {
-              id: 'blocked-1',
-              display_name: 'Blocked One',
-              avatar_url: '/avatar1.png',
-              native_language: 'en',
-              target_languages: ['es'],
-            },
-            {
-              id: 'blocked-2',
-              display_name: 'Blocked Two',
-              avatar_url: null,
-              native_language: 'fr',
-              target_languages: ['de', 'it'],
-            },
-          ],
-          error: null,
-        }),
-      );
-
-      mockSupabaseClient.from.mockImplementation((table: string) => {
-        if (table === 'blocks') return mockBlocksBuilder;
-        if (table === 'users') return mockUsersBuilder;
-        return mockQueryBuilder;
-      });
-
-      const result = await service.getBlockedUserDetails('user-1');
-
-      expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({
-        id: 'blocked-1',
-        display_name: 'Blocked One',
-        avatar_url: '/avatar1.png',
-        native_language: 'en',
-        target_language: 'es',
-      });
-      expect(result[1]).toEqual({
-        id: 'blocked-2',
-        display_name: 'Blocked Two',
-        avatar_url: null,
-        native_language: 'fr',
-        target_language: 'de',
-      });
-    });
-
-    it('should return empty array when user details query fails', async () => {
-      const mockBlocksBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        then: jest.fn(),
-      };
-      mockBlocksBuilder.then.mockImplementation((resolve: any) =>
-        resolve({
-          data: [{ blocked_id: 'blocked-1' }],
-          error: null,
-        }),
-      );
-
-      const mockUsersBuilder = {
-        select: jest.fn().mockReturnThis(),
-        in: jest.fn().mockReturnThis(),
-        then: jest.fn(),
-      };
-      mockUsersBuilder.then.mockImplementation((resolve: any) =>
-        resolve({ data: null, error: { message: 'error' } }),
-      );
-
-      mockSupabaseClient.from.mockImplementation((table: string) => {
-        if (table === 'blocks') return mockBlocksBuilder;
-        if (table === 'users') return mockUsersBuilder;
-        return mockQueryBuilder;
-      });
-
-      const result = await service.getBlockedUserDetails('user-1');
       expect(result).toEqual([]);
     });
   });

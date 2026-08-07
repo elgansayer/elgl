@@ -206,10 +206,7 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^(everyone|vips_only|hidden)$/, {
-    message: 'profile_visibility must be one of: everyone, vips_only, hidden',
-  })
-  profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
+  profile_visibility?: string;
 
   @IsOptional()
   @IsString()

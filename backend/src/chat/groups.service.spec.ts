@@ -286,14 +286,7 @@ describe('GroupsService', () => {
       const members = [
         {
           user_id: 'user-2',
-          user: {
-            id: 'user-2',
-            display_name: 'Ana',
-            avatar_url: null,
-            native_language: 'English',
-            target_languages: ['Spanish'],
-            is_vip: false,
-          },
+          user: { id: 'user-2', display_name: 'Ana', avatar_url: null },
         },
       ];
       tables.chat_room_members.then = jest.fn(
@@ -327,11 +320,11 @@ describe('GroupsService', () => {
       });
     });
 
-    it('rejects when more than 50 additional members are given', async () => {
-      const memberIds = Array.from({ length: 51 }, (_, i) => `user-${i}`);
+    it('rejects when more than 49 additional members are given', async () => {
+      const memberIds = Array.from({ length: 50 }, (_, i) => `user-${i}`);
       await expect(
         service.createGroup(ADMIN_ID, 'Big Group', memberIds),
-      ).rejects.toThrow('Group cannot exceed 51 members (50 selected + creator)');
+      ).rejects.toThrow('Group cannot exceed 50 members');
     });
   });
 

@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { GiftAnimationService, GiftAnimationOverlay } from './gift-animation.service';
 
 describe('GiftAnimationService', () => {
+  let service: GiftAnimationService;
+
   const mockOverlay: GiftAnimationOverlay = {
     id: 'gift-1',
     giftName: 'Rose',
@@ -13,22 +14,23 @@ describe('GiftAnimationService', () => {
     coinValue: 10,
   };
 
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [GiftAnimationService],
+    });
+    service = TestBed.inject(GiftAnimationService);
+  });
+
   it('should be created', () => {
-    TestBed.configureTestingModule({});
-    const s = TestBed.inject(GiftAnimationService);
-    expect(s).toBeTruthy();
+    expect(service).toBeTruthy();
   });
 
   it('should have null initial animation', () => {
-    const service = TestBed.inject(GiftAnimationService);
     expect(service.currentAnimation()).toBeNull();
     expect(service.isVisible()).toBe(false);
-    expect(service.particles()).toEqual([]);
-    expect(service.elapsed()).toBe(0);
   });
 
   it('should set animation and visibility when playAnimation is called', () => {
-    const service = TestBed.inject(GiftAnimationService);
     service.playAnimation(mockOverlay);
 
     expect(service.isVisible()).toBe(true);
@@ -39,11 +41,9 @@ describe('GiftAnimationService', () => {
     expect(anim?.receiverName).toBe('Bob');
     expect(anim?.coinValue).toBe(10);
     expect(anim?.animationType).toBe('float');
-    expect(service.particles().length).toBeGreaterThan(0);
   });
 
   it('should generate a unique ID for each animation', () => {
-    const service = TestBed.inject(GiftAnimationService);
     service.playAnimation(mockOverlay);
     const firstId = service.currentAnimation()?.id;
 
@@ -56,7 +56,6 @@ describe('GiftAnimationService', () => {
   });
 
   it('should dismiss animation immediately (isVisible set to false)', () => {
-    const service = TestBed.inject(GiftAnimationService);
     service.playAnimation(mockOverlay);
     expect(service.isVisible()).toBe(true);
 
@@ -65,17 +64,16 @@ describe('GiftAnimationService', () => {
   });
 
   it('should set currentAnimation to null after dismiss cleanup timer', async () => {
-    const service = TestBed.inject(GiftAnimationService);
     service.playAnimation(mockOverlay);
     service.dismiss();
     expect(service.currentAnimation()).not.toBeNull();
 
+    // Wait for the 600ms cleanup timer
     await new Promise((resolve) => setTimeout(resolve, 700));
     expect(service.currentAnimation()).toBeNull();
   });
 
   it('should clear previous timer when new animation is played', () => {
-    const service = TestBed.inject(GiftAnimationService);
     service.playAnimation(mockOverlay);
 
     const secondOverlay: GiftAnimationOverlay = { ...mockOverlay, giftName: 'Heart' };
@@ -83,11 +81,5 @@ describe('GiftAnimationService', () => {
 
     expect(service.isVisible()).toBe(true);
     expect(service.currentAnimation()?.giftName).toBe('Heart');
-  });
-
-  it('should track elapsed time during animation', () => {
-    const service = TestBed.inject(GiftAnimationService);
-    service.playAnimation(mockOverlay);
-    expect(service.elapsed()).toBeGreaterThanOrEqual(0);
   });
 });

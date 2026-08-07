@@ -12,7 +12,7 @@
       class="text-sm text-white/60 hover:text-white cursor-pointer"
       [class.opacity-30]="unreadCount() === 0"
       (click)="markAllAsRead()"
-     [attr.aria-label]="'notifications.markAllRead' | t">
+    >
       {{ 'notifications.markAllRead' | t }}
     </button>
   </div>
@@ -46,7 +46,7 @@
           <!-- Avatar -->
           <div class="relative shrink-0 size-10 rounded-full overflow-hidden bg-white/10">
             @if (notif.actor?.avatar_url) {
-              <img loading="lazy"
+              <img
                 [src]="notif.actor!.avatar_url"
                 [alt]="notif.actor?.display_name ?? 'user'"
                 class="size-full object-cover"

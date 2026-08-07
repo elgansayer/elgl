@@ -1,13 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class StudyStreakService {
-  constructor(
-    private readonly supabaseService: SupabaseService,
-    private readonly eventEmitter: EventEmitter2,
-  ) {}
+  constructor(private readonly supabaseService: SupabaseService) {}
 
   async getStreak(userId: string): Promise<number> {
     const client = this.supabaseService.getClient();
@@ -55,7 +51,6 @@ export class StudyStreakService {
             `Failed to create initial streak entry: ${upsertError.message}`,
           );
         }
-        this.eventEmitter.emit('achievements.evaluate', { userId });
         return 1;
       }
       throw new Error(
@@ -98,7 +93,6 @@ export class StudyStreakService {
       throw new Error(`Failed to update streak: ${updateError.message}`);
     }
 
-    this.eventEmitter.emit('achievements.evaluate', { userId });
     return newStreak;
   }
 }

@@ -262,36 +262,8 @@ export class UsersController {
   }
 
   @Get(':id')
-  async getUserProfile(
-    @Param('id') id: string,
-    @CurrentUser() currentUser: User | null,
-  ): Promise<UserProfile> {
-    const profile = await this.usersService.getProfile(id);
-
-    // Enforce profile visibility
-    if (id !== (currentUser?.id ?? '')) {
-      const profileRecord = profile as unknown as Record<string, unknown>;
-      const visibility =
-        (profileRecord.profile_visibility as string) ?? 'everyone';
-      if (visibility === 'hidden') {
-        throw new UnauthorizedException('This profile is not visible');
-      }
-      if (visibility === 'vips_only') {
-        const isRequestingVip = Boolean(
-          currentUser
-            ? ((await this.usersService.getProfile(currentUser.id))?.is_vip ??
-                false)
-            : false,
-        );
-        if (!isRequestingVip) {
-          throw new UnauthorizedException(
-            'This profile is visible to VIP members only',
-          );
-        }
-      }
-    }
-
-    return profile;
+  async getUserProfile(@Param('id') id: string): Promise<UserProfile> {
+    return this.usersService.getProfile(id);
   }
 
   @Get(':id/stats')
@@ -400,7 +372,6 @@ export class UsersController {
     privacy_about_info?: string;
     privacy_status?: string;
     incognito_visits?: boolean;
-    profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
   }> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.getPrivacySettings(user.id);

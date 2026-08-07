@@ -3,13 +3,6 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-export interface QuizResultPayload {
-  score: number;
-  suggestedCefr: string;
-  percentage: number;
-  skillBreakdown: Record<string, { score: number; max: number }>;
-}
-
 /**
  * Centralises all onboarding state and navigation logic.
  * Components should read signals exposed here instead of keeping
@@ -26,13 +19,12 @@ export class OnboardingService {
     { label: 'onboarding.step1' },
     { label: 'onboarding.step2' },
     { label: 'onboarding.step3' },
-    { label: 'onboarding.step4' },
   ];
 
-  /** Current wizard step index (0-based). */
+  /** Current wizard step index (0‑based). */
   readonly currentStep = signal(0);
 
-  /** User's native language code (ISO 639-1). */
+  /** User’s native language code (ISO 639‑1). */
   readonly nativeLanguage = signal<string>('');
 
   /** Set of target language codes the user has selected. */
@@ -41,11 +33,8 @@ export class OnboardingService {
   /** The display name the user chose. */
   readonly displayName = signal<string>('');
 
-  /** Diagnostic quiz result, populated after step 3. */
-  readonly quizResult = signal<QuizResultPayload | null>(null);
-
   /**
-   * Derived boolean that determines whether the "Next" button should be enabled.
+   * Derived boolean that determines whether the “Next” button should be enabled.
    * Respects the requirements of each wizard step.
    */
   readonly canGoNext = computed(() => {
@@ -56,15 +45,11 @@ export class OnboardingService {
     if (step === 1) {
       return this.targetLanguages().size > 0;
     }
-    if (step === 2) {
-      // Quiz step is always allowed to proceed - user can skip
-      return true;
-    }
-    // final step - a non-empty display name is required
+    // final step – a non‑empty display name is required
     return this.displayName().trim().length > 0;
   });
 
-  // ---- Mutation helpers -----------------------------------------
+  // ── Mutation helpers ─────────────────────────────────────────
 
   setNativeLanguage(code: string): void {
     this.nativeLanguage.set(code);
@@ -84,10 +69,6 @@ export class OnboardingService {
 
   setDisplayName(name: string): void {
     this.displayName.set(name);
-  }
-
-  setQuizResult(result: QuizResultPayload): void {
-    this.quizResult.set(result);
   }
 
   /** Advance to the next step; if already on the last step, call `finish()`. */
@@ -121,15 +102,14 @@ export class OnboardingService {
           nativeLanguage: this.nativeLanguage(),
           targetLanguages: Array.from(this.targetLanguages()),
           displayName: this.displayName(),
-          quizResult: this.quizResult(),
         }),
       );
     } catch {
-      // API call is optional - silently ignore failures
+      // API call is optional – silently ignore failures
     }
   }
 
-  // Legacy alias - preserve existing callers.
+  // Legacy alias – preserve existing callers.
   completeOnboarding(): void {
     this.finish();
   }

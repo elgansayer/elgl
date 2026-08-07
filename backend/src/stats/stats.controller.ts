@@ -1,6 +1,6 @@
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { StatsService, MyStatsResponse } from './stats.service';
+import { StatsService } from './stats.service';
 
 @Controller('stats')
 export class StatsController {
@@ -8,9 +8,7 @@ export class StatsController {
 
   @UseGuards(SupabaseAuthGuard)
   @Get('me')
-  async getMyStats(
-    @Req() req: { user: { sub: string } },
-  ): Promise<MyStatsResponse> {
+  async getMyStats(@Req() req: { user: { sub: string } }) {
     const userId = req.user.sub;
     return this.statsService.getStats(userId);
   }

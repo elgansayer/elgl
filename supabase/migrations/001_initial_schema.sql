@@ -23,7 +23,6 @@ CREATE TABLE IF NOT EXISTS public.users (
     privacy_hide_age BOOLEAN NOT NULL DEFAULT false,
     privacy_hide_location BOOLEAN NOT NULL DEFAULT false,
     privacy_hide_from_search BOOLEAN NOT NULL DEFAULT false,
-    proficiency_level VARCHAR(2) CHECK (proficiency_level IN ('A1', 'A2', 'B1', 'B2', 'C1', 'C2')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

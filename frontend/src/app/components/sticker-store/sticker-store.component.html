@@ -24,7 +24,7 @@
           [class.bg-neutral-800]="selectedCategory() !== pill.id"
           [class.text-neutral-300]="selectedCategory() !== pill.id"
           (click)="selectedCategory.set(pill.id)"
-         [attr.aria-label]="pill.label">
+        >
           {{ pill.label }}
         </button>
       }
@@ -92,7 +92,7 @@
                 class="flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 py-2 text-sm font-semibold text-white transition-all disabled:opacity-50"
                 [disabled]="userCoins() < pack.cost_coins || purchasingId() === pack.id"
                 (click)="purchasePack(pack)"
-               [attr.aria-label]="pack.name + ' - ' + pack.cost_coins + ' coins'">
+              >
                 @if (purchasingId() === pack.id) {
                   <div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                 } @else {

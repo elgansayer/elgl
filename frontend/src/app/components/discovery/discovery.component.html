@@ -24,7 +24,7 @@
           [class.bg-surface-200]="selectedTargetLanguage() === lang.code"
           [class.bg-surface-300]="selectedTargetLanguage() !== lang.code"
           class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-primary text-sm font-bold border border-surface-100 whitespace-nowrap"
-         [attr.aria-label]=\"lang.labelKey | t\">
+        >
           <span>{{ lang.flag }}</span> {{ lang.labelKey | t }}
         </button>
       }
@@ -81,7 +81,7 @@
           id="genderVipNote"
           routerLink="/vip"
           class="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded-md whitespace-nowrap"
-         [attr.aria-label]="'discovery.genderVipRequired' | t">
+        >
           {{ 'discovery.genderVipRequired' | t }}
         </a>
       }
@@ -107,7 +107,7 @@
             id="distanceVipNote"
             routerLink="/vip"
             class="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded-md whitespace-nowrap"
-           [attr.aria-label]="'discovery.vipRadiusNote' | t">
+          >
             {{ 'discovery.vipRadiusNote' | t }}
           </a>
         }
@@ -176,7 +176,7 @@
           <button
             [routerLink]="['/vip']"
             class="bg-white text-purple-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider hover:bg-gray-100 transition-colors shadow-md mt-2"
-           [attr.aria-label]="'discovery.bannerView' | t">
+          >
             {{ 'discovery.bannerView' | t }}
           </button>
         </div>
@@ -192,16 +192,14 @@
   <!-- Content States -->
   <main class="p-0">
     @if (isLoading()) {
-      <app-empty-state
-        [title]="'discovery.searching' | t"
-        [customClass]="'py-16'">
-      </app-empty-state>
+      <div class="p-8 text-center text-text-secondary font-bold">
+        {{ 'discovery.searching' | t }}
+      </div>
     } @else if (partners().length === 0) {
-      <app-empty-state
-        [illustration]="'/assets/illustrations/no-users-nearby.svg'"
-        [title]="'discovery.noUsersNearby' | t"
-        [description]="'discovery.noUsersHint' | t">
-      </app-empty-state>
+      <div class="p-8 text-center">
+        <p class="font-bold text-text-primary text-lg">{{ 'discovery.noMatches' | t }}</p>
+        <p class="mt-2 text-text-secondary text-sm">{{ 'discovery.tryBroadening' | t }}</p>
+      </div>
     } @else {
       <!-- User List -->
       <div class="divide-y divide-surface-200">
@@ -213,7 +211,7 @@
             <div class="flex items-center gap-3 min-w-0">
               <!-- Avatar -->
               <div class="relative shrink-0" [routerLink]="['/profile/user', partner.id]">
-                <img loading="lazy"
+                <img
                   [src]="partner.avatar_url || 'https://i.pravatar.cc/150?u=' + partner.id"
                   alt="avatar"
                   class="h-14 w-14 rounded-full object-cover"

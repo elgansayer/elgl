@@ -1,15 +1,10 @@
 {
   "$schema": "./node_modules/@angular/service-worker/config/schema.json",
   "index": "/index.html",
-  "appData": {
-    "name": "HelloTalk",
-    "description": "Language exchange and learning community"
-  },
   "assetGroups": [
     {
       "name": "app",
       "installMode": "prefetch",
-      "updateMode": "prefetch",
       "resources": {
         "files": [
           "/favicon.ico",
@@ -26,93 +21,20 @@
       "installMode": "lazy",
       "updateMode": "prefetch",
       "resources": {
-        "files": [
-          "/assets/**",
-          "/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"
-        ],
-        "urls": [
-          "https://fonts.googleapis.com/**",
-          "https://fonts.gstatic.com/**"
-        ]
-      }
-    },
-    {
-      "name": "media",
-      "installMode": "lazy",
-      "updateMode": "lazy",
-      "cacheQueryParams": false,
-      "resources": {
-        "urls": [
-          "https://**.cloudflare.com/**",
-          "https://**.r2.cloudflarestorage.com/**"
-        ]
+        "files": ["/assets/**", "/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"],
+        "urls": ["https://fonts.googleapis.com/**", "https://fonts.gstatic.com/**"]
       }
     }
   ],
   "dataGroups": [
     {
-      "name": "api-srs",
-      "urls": [
-        "/api/flashcards",
-        "/api/flashcards/due"
-      ],
-      "cacheConfig": {
-        "strategy": "performance",
-        "maxSize": 50,
-        "maxAge": "7d",
-        "timeout": "5s"
-      }
-    },
-    {
       "name": "api-performance",
-      "urls": [
-        "/api/discovery/**",
-        "/api/moments/feed**",
-        "/api/users/profile/**",
-        "/api/languages/**"
-      ],
+      "urls": ["/api/discovery/**", "/api/moments/feed**"],
       "cacheConfig": {
         "strategy": "performance",
         "maxSize": 100,
-        "maxAge": "1h",
-        "timeout": "5s"
-      }
-    },
-    {
-      "name": "api-freshness",
-      "urls": [
-        "/api/messages/**",
-        "/api/notifications/**",
-        "/api/moments/**"
-      ],
-      "cacheConfig": {
-        "strategy": "freshness",
-        "maxSize": 50,
-        "maxAge": "30s",
-        "timeout": "3s"
-      }
-    },
-    {
-      "name": "translations",
-      "urls": [
-        "/assets/i18n/**"
-      ],
-      "cacheConfig": {
-        "strategy": "performance",
-        "maxSize": 20,
-        "maxAge": "24h",
-        "timeout": "5s"
+        "maxAge": "1h"
       }
     }
-  ],
-  "navigationUrls": [
-    "/",
-    "/discovery",
-    "/moments",
-    "/chat/**",
-    "/profile/**",
-    "/settings/**",
-    "/admin/**"
-  ],
-  "navigationRequestStrategy": "performance"
+  ]
 }

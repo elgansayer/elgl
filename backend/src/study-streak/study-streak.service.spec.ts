@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { StudyStreakService } from './study-streak.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -57,14 +56,10 @@ const createQueryChain = (): QueryChainMock => {
 describe('StudyStreakService', () => {
   let service: StudyStreakService;
   let supabaseMock: { from: jest.Mock };
-  let eventEmitterMock: { emit: jest.Mock };
 
   beforeEach(async () => {
     supabaseMock = {
       from: jest.fn(() => createQueryChain()),
-    };
-    eventEmitterMock = {
-      emit: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -75,10 +70,6 @@ describe('StudyStreakService', () => {
           useValue: {
             getClient: jest.fn().mockReturnValue(supabaseMock),
           },
-        },
-        {
-          provide: EventEmitter2,
-          useValue: eventEmitterMock,
         },
       ],
     }).compile();
@@ -152,10 +143,6 @@ describe('StudyStreakService', () => {
         expect.objectContaining({ id: 'user-1', study_streak_days: 1 }),
         { onConflict: 'id' },
       );
-      expect(eventEmitterMock.emit).toHaveBeenCalledWith(
-        'achievements.evaluate',
-        { userId: 'user-1' },
-      );
     });
 
     it('keeps the streak unchanged when already checked in today', async () => {
@@ -175,10 +162,6 @@ describe('StudyStreakService', () => {
         .mockImplementationOnce(() => updateChain);
 
       await expect(service.updateStreak('user-1')).resolves.toBe(4);
-      expect(eventEmitterMock.emit).toHaveBeenCalledWith(
-        'achievements.evaluate',
-        { userId: 'user-1' },
-      );
     });
 
     it('increments the streak when the last check-in was yesterday', async () => {
@@ -196,10 +179,6 @@ describe('StudyStreakService', () => {
         .mockImplementationOnce(() => updateChain);
 
       await expect(service.updateStreak('user-1')).resolves.toBe(5);
-      expect(eventEmitterMock.emit).toHaveBeenCalledWith(
-        'achievements.evaluate',
-        { userId: 'user-1' },
-      );
     });
 
     it('resets the streak to 1 after a gap of more than one day', async () => {
@@ -217,10 +196,6 @@ describe('StudyStreakService', () => {
         .mockImplementationOnce(() => updateChain);
 
       await expect(service.updateStreak('user-1')).resolves.toBe(1);
-      expect(eventEmitterMock.emit).toHaveBeenCalledWith(
-        'achievements.evaluate',
-        { userId: 'user-1' },
-      );
     });
 
     it('throws when the update fails', async () => {

@@ -37,7 +37,6 @@ export const MOCK_USER_PROFILE: UserProfile = {
   privacy_hide_location: false,
   privacy_hide_from_search: false,
   privacy_hide_gender: false,
-  profile_visibility: 'everyone',
   auto_play_voice_notes: false,
   is_admin: true,
   learning_goals: 'conversation,vocabulary',

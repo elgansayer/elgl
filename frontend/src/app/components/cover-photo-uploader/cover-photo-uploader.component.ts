@@ -1,7 +1,6 @@
 import { Component, signal, output, input, inject } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
-import { ImageCompressionService } from '../../services/image-compression.service';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -31,7 +30,7 @@ interface CropBox {
       @if (!imageSource()) {
         <div class="relative w-full h-48 md:h-64 rounded-xl overflow-hidden group">
           @if (currentCoverUrl()) {
-            <img [src]="currentCoverUrl()" alt="{{ 'coverPhoto.previewAlt' | t }}" class="w-full h-full object-cover"  loading="lazy" />
+            <img [src]="currentCoverUrl()" alt="Cover photo" class="w-full h-full object-cover" />
           } @else {
             <div class="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900"></div>
           }
@@ -57,7 +56,7 @@ interface CropBox {
                 />
               </svg>
               <span class="text-sm font-medium">{{
-                currentCoverUrl() ? ('coverPhoto.changeCover' | t) : ('coverPhoto.addCover' | t)
+                currentCoverUrl() ? 'Change Cover Photo' : 'Add Cover Photo'
               }}</span>
             </div>
           </div>
@@ -75,7 +74,7 @@ interface CropBox {
               class="w-full select-none"
               draggable="false"
               #imageElement
-             loading="lazy" />
+            />
 
             @if (isCropping()) {
               <div class="absolute inset-0">
@@ -143,22 +142,14 @@ interface CropBox {
                 (click)="startCropping()"
                 class="px-4 py-2 bg-surface-200 text-white rounded-lg hover:bg-surface-100 transition-colors text-sm"
               >
-<<<<<<< HEAD
                 {{ 'components.cover-photo-uploader.crop' | t }}
-=======
-                {{ 'common.crop' | t }}
->>>>>>> origin/main
               </button>
             } @else {
               <button
                 (click)="applyCrop()"
                 class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors text-sm"
               >
-<<<<<<< HEAD
                 {{ 'components.cover-photo-uploader.applyCrop' | t }}
-=======
-                {{ 'common.applyCrop' | t }}
->>>>>>> origin/main
               </button>
               <button
                 (click)="cancelCrop()"
@@ -172,7 +163,7 @@ interface CropBox {
               [disabled]="isUploading()"
               class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors text-sm disabled:opacity-50"
             >
-              {{ isUploading() ? ('common.uploading' | t) : ('common.upload' | t) }}
+              {{ isUploading() ? 'Uploading...' : 'Upload' }}
             </button>
             <button
               (click)="reset()"
@@ -185,8 +176,8 @@ interface CropBox {
           <!-- Preview -->
           @if (croppedPreviewUrl()) {
             <div class="mt-4">
-              <p class="text-sm text-text-muted mb-2">{{ 'common.preview' | t }}</p>
-              <img [src]="croppedPreviewUrl()" alt="Cropped preview" class="w-full rounded-lg"  loading="lazy" />
+              <p class="text-sm text-text-muted mb-2">Preview:</p>
+              <img [src]="croppedPreviewUrl()" alt="Cropped preview" class="w-full rounded-lg" />
             </div>
           }
         </div>
@@ -196,7 +187,6 @@ interface CropBox {
 })
 export class CoverPhotoUploaderComponent {
   private http = inject(HttpClient);
-  private imageCompression = inject(ImageCompressionService);
 
   readonly currentCoverUrl = input<string>('');
   readonly coverPhotoUploaded = output<string>();

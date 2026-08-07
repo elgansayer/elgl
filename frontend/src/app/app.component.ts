@@ -30,7 +30,6 @@ import { DailyLoginModalComponent } from './components/daily-login-modal/daily-l
 import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dialog.component';
 import { UnreadCounterService } from './services/unread-counter.service';
 import { VersionCheckService } from './services/version-check.service';
-import { ForcedUpdateModalComponent } from './components/forced-update-modal/forced-update-modal.component';
 import { ThemeSelectorComponent } from './components/theme-selector/theme-selector.component';
 import { FontScaleSliderComponent } from './components/font-scale-slider/font-scale-slider.component';
 import { FontScaleService } from './services/font-scale.service';
@@ -38,8 +37,6 @@ import { I18nService } from './services/i18n.service';
 import { AppLanguageSelectorComponent } from './components/app-language-selector/app-language-selector.component';
 import { AppLockService } from './services/app-lock.service';
 import { GiftAnimationOverlayComponent } from './components/gift-animation-overlay/gift-animation-overlay.component';
-import { NoNetworkBannerComponent } from './components/primitives/no-network-banner/no-network-banner.component';
-import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-sidebar.component';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
@@ -61,9 +58,6 @@ function isRecord(v: unknown): v is Record<string, unknown> {
     FontScaleSliderComponent,
     AppLanguageSelectorComponent,
     GiftAnimationOverlayComponent,
-    ForcedUpdateModalComponent,
-    NoNetworkBannerComponent,
-    DesktopSidebarComponent,
   ],
   templateUrl: './app.component.html',
   host: {
@@ -85,7 +79,7 @@ export class AppComponent implements OnInit {
   private safetyService = inject(SafetyService);
   reportModalService = inject(ReportUserModalService);
   readonly unreadCounter = inject(UnreadCounterService);
-  readonly versionCheckService = inject(VersionCheckService);
+  private versionCheckService = inject(VersionCheckService);
   private fontScaleService = inject(FontScaleService);
   readonly i18n = inject(I18nService);
   private document = inject(DOCUMENT);
@@ -233,23 +227,6 @@ export class AppComponent implements OnInit {
             isVideoCall,
           });
         }
-
-        // Update unread counters for real-time chat messages
-        if (eventType === 'new_message') {
-          this.unreadCounter.incrementChatUnread();
-        }
-
-        // Update unread counters for real-time notifications
-        if (
-          eventType === 'follow' ||
-          eventType === 'like_profile' ||
-          eventType === 'like_moment' ||
-          eventType === 'comment_moment' ||
-          eventType === 'profile_visit' ||
-          eventType === 'system'
-        ) {
-          this.unreadCounter.incrementNotificationUnread();
-        }
       });
 
       // Request notification permission after user is authenticated
@@ -318,15 +295,9 @@ export class AppComponent implements OnInit {
     }
   }
 
-  onDeclineCall(callData: IncomingCallData): void {
+  onDeclineCall(_callData: IncomingCallData): void {
     this.incomingCallData.set(null);
-    this.centrifugeService.publish(`user_${callData.callerId}`, {
-      type: 'call_rejected',
-      data: {
-        userId: this.authService.currentUser()?.id,
-        roomName: callData.roomName,
-      },
-    });
+    // TODO: Send decline notification via Centrifugo
   }
 
   async toggleBiometricLock(): Promise<void> {

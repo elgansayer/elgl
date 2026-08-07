@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Query } from '@nestjs/common';
-import { QuizService, QuizResults } from './quiz.service';
+import { QuizService, QuizResultRequest, QuizResultResponse } from './quiz.service';
 
 @Controller('quiz')
 export class QuizController {
@@ -10,8 +10,8 @@ export class QuizController {
     return this.quizService.getQuestions(language || 'en');
   }
 
-  @Post('results')
-  submitResults(@Body() results: QuizResults) {
-    return this.quizService.submitResults(results);
+  @Post('evaluate')
+  evaluateResults(@Body() body: QuizResultRequest): QuizResultResponse {
+    return this.quizService.evaluateResults(body.language, body.answers);
   }
 }

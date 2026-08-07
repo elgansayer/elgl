@@ -1,16 +1,9 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Centrifuge, Subscription } from 'centrifuge';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
-
-/** Maximum number of reconnection attempts before giving up */
-const MAX_RECONNECT_ATTEMPTS = 8;
-/** Base delay in milliseconds for exponential backoff */
-const BASE_RECONNECT_DELAY_MS = 500;
-/** Maximum delay cap in milliseconds */
-const MAX_RECONNECT_DELAY_MS = 30_000;
 
 @Injectable({
   providedIn: 'root',
@@ -20,47 +13,9 @@ export class CentrifugeService {
   private authService = inject(AuthService);
   private centrifuge: Centrifuge | null = null;
   private subscriptions = new Map<string, Subscription>();
-  private reconnectAttempts = 0;
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly isConnected = signal<boolean>(false);
   readonly connectionStatus = signal<string>('disconnected');
-
-  /**
-   * Calculates exponential backoff delay with jitter.
-   * Uses the formula: min(cap, base * 2^attempt) with ±25% jitter.
-   */
-  private calculateBackoffDelay(): number {
-    const exponentialDelay = Math.min(
-      MAX_RECONNECT_DELAY_MS,
-      BASE_RECONNECT_DELAY_MS * Math.pow(2, this.reconnectAttempts),
-    );
-    const jitter = exponentialDelay * 0.25 * (Math.random() * 2 - 1);
-    return Math.max(0, Math.round(exponentialDelay + jitter));
-  }
-
-  private scheduleReconnect(): void {
-    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      this.connectionStatus.set('error: max reconnection attempts reached');
-      console.error('Max Centrifugo reconnection attempts reached. Giving up.');
-      return;
-    }
-
-    const delay = this.calculateBackoffDelay();
-    this.reconnectAttempts += 1;
-
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-    }
-
-    // Exception allowed by AGENTS.md Section 5.3:
-    // `setTimeout` is permitted for imperative third-party library integration
-    // (Centrifugo reconnection backoff is a non-reactive real-time concern).
-    this.reconnectTimer = setTimeout(() => {
-      this.reconnectTimer = null;
-      void this.connect();
-    }, delay);
-  }
 
   async connect(): Promise<void> {
     if (
@@ -83,8 +38,7 @@ export class CentrifugeService {
       );
 
       if (!tokenObj?.token) {
-        this.connectionStatus.set('error: rate limited or missing token');
-        this.scheduleReconnect();
+        this.connectionStatus.set('error: missing token');
         return;
       }
 
@@ -93,18 +47,13 @@ export class CentrifugeService {
       });
 
       this.centrifuge.on('connected', () => {
-        this.reconnectAttempts = 0;
         this.isConnected.set(true);
         this.connectionStatus.set('connected');
       });
 
-      this.centrifuge.on('disconnected', (ctx) => {
+      this.centrifuge.on('disconnected', () => {
         this.isConnected.set(false);
         this.connectionStatus.set('disconnected');
-        // Automatically reconnect on unexpected disconnects
-        if (!ctx?.reason || ctx.reason === 'connect error' || ctx.reason === 'disconnect') {
-          this.scheduleReconnect();
-        }
       });
 
       this.centrifuge.on('error', (ctx) => {
@@ -114,14 +63,8 @@ export class CentrifugeService {
 
       this.centrifuge.connect();
     } catch (e) {
-      // Check for 429 Too Many Requests from rate-limited token endpoint
-      if (e instanceof HttpErrorResponse && e.status === 429) {
-        this.connectionStatus.set('error: rate limited');
-      } else {
-        console.error('Failed to initialize Centrifugo:', e);
-        this.connectionStatus.set('error');
-      }
-      this.scheduleReconnect();
+      console.error('Failed to initialize Centrifugo:', e);
+      this.connectionStatus.set('error');
     }
   }
 
@@ -170,11 +113,6 @@ export class CentrifugeService {
   }
 
   disconnect(): void {
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
-    this.reconnectAttempts = 0;
     if (this.centrifuge) {
       this.centrifuge.disconnect();
       this.centrifuge = null;

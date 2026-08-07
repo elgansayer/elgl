@@ -50,15 +50,9 @@ services:
   sfu:
     image: livekit/livekit-server:latest
     command: --config /livekit/config.yaml
-    environment:
-      - LIVEKIT_TURN_DOMAIN=${LIVEKIT_TURN_DOMAIN:-turn.example.com}
-      - LIVEKIT_TURN_CERT_FILE=${LIVEKIT_TURN_CERT_FILE:-}
-      - LIVEKIT_TURN_KEY_FILE=${LIVEKIT_TURN_KEY_FILE:-}
     ports:
       - '7880:7880'
       - '7881:7881'
-      - '3478:3478/udp'
-      - '5349:5349'
       - '50000-50100:50000-50100/udp'
     volumes:
       - ./config/livekit:/livekit

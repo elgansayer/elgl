@@ -52,14 +52,13 @@
       @for (w of [2, 4, 8, 14]; track w) {
         <button
           (click)="setBrushWidth(w)"
-          [attr.aria-label]="'doodle.brushSizeAria' | t: { size: w }"
           [class]="
             'px-2.5 py-1 rounded-lg text-xs font-bold transition-all ' +
             (brushWidth === w
               ? 'bg-primary text-white shadow'
               : 'bg-surface-100 text-text-primary hover:bg-surface-100')
           "
-         [attr.aria-label]="w + \'px stroke width\'">
+        >
           {{ w }}px
         </button>
       }
@@ -70,15 +69,15 @@
     <button
       (click)="clearCanvas()"
       class="app-button-secondary bg-red-500/20 text-red-400 px-4 py-2 text-sm hover:bg-red-500/30"
-     [attr.aria-label]="'doodle.clearBtn' | t">
+    >
       {{ 'doodle.clearBtn' | t }}
     </button>
 
     <div class="flex gap-3">
-      <button (click)="cancel()" class="app-button-secondary px-5 py-2 text-sm" [attr.aria-label]="'doodle.cancelBtn' | t">
+      <button (click)="cancel()" class="app-button-secondary px-5 py-2 text-sm">
         {{ 'doodle.cancelBtn' | t }}
       </button>
-      <button (click)="save()" class="app-button-primary px-6 py-2 text-sm flex items-center gap-2" [attr.aria-label]="'doodle.sendBtn' | t">
+      <button (click)="save()" class="app-button-primary px-6 py-2 text-sm flex items-center gap-2">
         <span>{{ 'doodle.sendBtn' | t }}</span>
       </button>
     </div>

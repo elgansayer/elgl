@@ -1,5 +1,4 @@
 import { Component, effect, inject, resource, signal } from '@angular/core';
-import { RouterModule } from '@angular/router';
 
 import { AuthService } from '../../services/auth.service';
 import { StudyStreakWidgetComponent } from '../../components/study-streak-widget/study-streak-widget.component';
@@ -13,7 +12,6 @@ import { StreakCelebrationOverlayComponent } from '../../components/streak-celeb
 @Component({
   selector: 'app-home',
   imports: [
-    RouterModule,
     StudyStreakWidgetComponent,
     WordOfTheDayComponent,
     DailyLearningTipComponent,
@@ -25,13 +23,6 @@ import { StreakCelebrationOverlayComponent } from '../../components/streak-celeb
       <header class="py-4 ps-4 pe-4 border-b border-gray-700 flex items-center justify-between">
         <h1 class="text-xl font-bold">{{ 'home.title' | t }}</h1>
         <div class="flex items-center gap-4">
-          <a
-            routerLink="/leaderboard"
-            class="text-sm text-primary hover:text-primary-hover transition-colors"
-            [attr.aria-label]="'nav.leaderboard' | t"
-          >
-            {{ 'nav.leaderboard' | t }}
-          </a>
           <span class="text-sm text-gray-400">
             {{ authService.currentUser()?.email }}
           </span>

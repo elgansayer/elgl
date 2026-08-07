@@ -4,7 +4,6 @@ import { ChatMessageComponent } from '../chat-message/chat-message.component';
 import { ChatService, ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 import { SafetyService } from '../../services/safety.service';
-import { DraftService } from '../../services/draft.service';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -24,8 +23,7 @@ import { FormsModule } from '@angular/forms';
       <div class="border-t p-4">
         <input
           type="text"
-          [ngModel]="newMessageText"
-          (ngModelChange)="onMessageTextChange($event)"
+          [(ngModel)]="newMessageText"
           placeholder="Type a message..."
           class="w-full border rounded px-3 py-2"
           (keyup.enter)="sendTextMessage()"
@@ -49,7 +47,6 @@ export class ChatViewComponent implements OnInit {
   private chatService = inject(ChatService);
   private authService = inject(AuthService);
   private safetyService = inject(SafetyService);
-  private draftService = inject(DraftService);
 
   messages: ChatMessage[] = [];
   newMessageText = '';
@@ -69,17 +66,6 @@ export class ChatViewComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     await this.loadMessages();
     await this.loadBlockedUsers();
-
-    // Restore chat draft for this room
-    const draft = this.draftService.loadChatDraft(this.roomId());
-    if (draft) {
-      this.newMessageText = draft;
-    }
-  }
-
-  onMessageTextChange(value: string): void {
-    this.newMessageText = value;
-    this.draftService.saveChatDraft(this.roomId(), value);
   }
 
   private async loadMessages(): Promise<void> {
@@ -125,7 +111,6 @@ export class ChatViewComponent implements OnInit {
       });
       this.messages.push(sent);
       this.newMessageText = '';
-      this.draftService.clearChatDraft(this.roomId());
     } catch (err) {
       console.error('Failed to send message', err);
     }

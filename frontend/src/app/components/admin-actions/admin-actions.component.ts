@@ -1,5 +1,4 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
-import { TranslatePipe } from '../../services/translate.pipe';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
 import { I18nService } from '../../services/i18n.service';
 import { showToast, showErrorToast } from '../../services/toast.service';
@@ -8,9 +7,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 @Component({
   imports: [TranslatePipe],
   selector: 'app-admin-actions',
-  imports: [TranslatePipe],
   template: `
-<<<<<<< HEAD
     <div class="admin-actions">
       <h2>{{ 'components.admin-actions.oneclickModeration' | t }}</h2>
       <ul>
@@ -19,24 +16,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <span>{{ user.display_name ?? user.id }}</span>
             <button (click)="ban(user.id)">{{ 'components.admin-actions.ban' | t }}</button>
             <button (click)="warn(user.id)">{{ 'components.admin-actions.warn' | t }}</button>
-=======
-    <div class="admin-actions" role="region" [attr.aria-label]="'admin.quickModerationAria' | t">
-      <h2>{{ 'admin.quickModeration' | t }}</h2>
-      <ul role="list">
-        @for (user of users(); track user.id) {
-          <li>
-            <span>{{ user.display_name ?? user.id }}</span>
-            <button
-              type="button"
-              [attr.aria-label]="'admin.banUserAria' | t: { name: user.display_name ?? user.id }"
-              (click)="ban(user.id)"
-            >{{ 'admin.banBtn' | t }}</button>
-            <button
-              type="button"
-              [attr.aria-label]="'admin.warnUserAria' | t: { name: user.display_name ?? user.id }"
-              (click)="warn(user.id)"
-            >{{ 'admin.warnBtn' | t }}</button>
->>>>>>> origin/main
           </li>
         }
       </ul>

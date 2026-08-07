@@ -6,10 +6,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 interface LikedUser {
   id: string;
-  avatar_url: string | null;
+  avatar_url?: string;
   display_name: string;
-  native_languages?: string[];
-  target_languages: string[];
+  native_language: string;
+  target_languages?: string[];
 }
 
 function flushRequest(httpTesting: HttpTestingController): void {
@@ -59,14 +59,14 @@ describe('LikedByModalComponent', () => {
       {
         id: 'user-1',
         display_name: 'Alice',
-        native_languages: ['en'],
+        native_language: 'en',
         target_languages: ['es', 'fr'],
       },
       {
         id: 'user-2',
         avatar_url: 'https://example.com/avatar.jpg',
         display_name: 'Bob',
-        native_languages: ['fr'],
+        native_language: 'fr',
         target_languages: ['en'],
       },
     ];
@@ -173,7 +173,7 @@ describe('LikedByModalComponent', () => {
       {
         id: 'user-1',
         display_name: 'Alice',
-        native_languages: ['en'],
+        native_language: 'en',
         target_languages: ['es'],
       },
     ];
@@ -195,8 +195,7 @@ describe('LikedByModalComponent', () => {
       {
         id: 'user-1',
         display_name: 'Alice',
-        native_languages: ['en'],
-        target_languages: ['es'],
+        native_language: 'en',
       },
     ]);
     await fixture.whenStable();
@@ -219,7 +218,7 @@ describe('LikedByModalComponent', () => {
       {
         id: 'user-2',
         display_name: 'Bob',
-        native_languages: ['fr'],
+        native_language: 'fr',
         target_languages: ['en'],
       },
     ]);

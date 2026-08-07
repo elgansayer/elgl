@@ -1,18 +1,19 @@
 import { Injectable, signal, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { SupabaseService } from './supabase.service';
 import { showToast } from './toast.service';
-import { environment } from '../../environments/environment';
+
+interface SubscriptionRow {
+  id: string;
+  user_id: string;
+  plan_id: string;
+  status: string;
+  created_at: string;
+}
 
 export interface RestoreResult {
   success: boolean;
   restoredPlans: string[];
   message: string;
-}
-
-export interface RestorePurchasesApiResponse {
-  received: boolean;
-  status: string;
 }
 
 @Injectable({
@@ -22,29 +23,68 @@ export class RestorePurchasesService {
   readonly isRestoring = signal<boolean>(false);
   readonly lastRestoreResult = signal<RestoreResult | null>(null);
 
-  private http = inject(HttpClient);
+  private supabaseService = inject(SupabaseService);
 
-  async restorePurchases(platform: 'ios' | 'android' | 'stripe' = 'stripe', receiptData?: string): Promise<RestoreResult> {
+  async restorePurchases(): Promise<RestoreResult> {
     this.isRestoring.set(true);
     this.lastRestoreResult.set(null);
 
     try {
-      const response = await firstValueFrom(
-        this.http.post<RestorePurchasesApiResponse>(
-          `${environment.apiUrl}/monetisation/restore-purchases`,
-          { platform, receipt_data: receiptData },
-        ),
-      );
+      const supabase = this.supabaseService.getClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      const success = response.status === 'restored';
+      if (!user) {
+        const result: RestoreResult = {
+          success: false,
+          restoredPlans: [],
+          message: 'You must be logged in to restore purchases.',
+        };
+        this.lastRestoreResult.set(result);
+        return result;
+      }
+
+      // Query the subscriptions table for any active or past subscriptions
+      const { data: subscriptions, error } = await supabase
+        .from('subscriptions')
+        .select('id, user_id, plan_id, status, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .returns<SubscriptionRow[]>();
+
+      if (error) {
+        throw error;
+      }
+
+      const restoredPlans: string[] = [];
+      if (subscriptions && subscriptions.length > 0) {
+        for (const sub of subscriptions) {
+          // Check if subscription is still valid (not expired)
+          if (sub.status === 'active' || sub.status === 'trialing') {
+            // Reactivate the subscription in the user's profile
+            const { error: updateError } = await supabase
+              .from('users')
+              .update({
+                is_vip: true,
+                vip_tier: sub.plan_id,
+              })
+              .eq('id', user.id);
+
+            if (!updateError) {
+              restoredPlans.push(sub.plan_id);
+            }
+          }
+        }
+      }
+
       const result: RestoreResult = {
-        success,
-        restoredPlans: success ? [response.status] : [],
-        message: success
-          ? 'Successfully restored your purchase(s).'
-          : response.status === 'no_valid_subscription'
-            ? 'No previous purchases found to restore.'
-            : 'Failed to restore purchases. Please try again later.',
+        success: restoredPlans.length > 0,
+        restoredPlans,
+        message:
+          restoredPlans.length > 0
+            ? `Successfully restored ${restoredPlans.length} purchase(s).`
+            : 'No previous purchases found to restore.',
       };
 
       this.lastRestoreResult.set(result);
@@ -63,7 +103,9 @@ export class RestorePurchasesService {
         message: 'Failed to restore purchases. Please try again later.',
       };
       this.lastRestoreResult.set(result);
+
       showToast(result.message, 'error', 5000);
+
       return result;
     } finally {
       this.isRestoring.set(false);

@@ -524,11 +524,6 @@ export class DiscoveryService {
     if (blockedIds.length > 0) {
       results = results.filter((u) => !blockedIds.includes(u.id));
     }
-    // Apply voice room active filter
-    results = await this.filterByVoiceRoomActive(
-      results,
-      query.voice_room_active === true,
-    );
     return results;
   }
 
@@ -700,15 +695,11 @@ export class DiscoveryService {
         longitude: undefined,
         radius_metres: undefined,
         sort: sort,
-        voice_room_active: query.voice_room_active,
+        voice_room_active: undefined,
         country: query.country,
         city: query.city,
       };
-      let mock = this.getMockDiscoveryData(mockSearch, blockedIds);
-      mock = await this.filterByVoiceRoomActive(
-        mock,
-        query.voice_room_active === true,
-      );
+      const mock = this.getMockDiscoveryData(mockSearch, blockedIds);
       return mock.slice(offset, offset + limit);
     }
 
@@ -741,19 +732,13 @@ export class DiscoveryService {
       });
     }
 
-    // Apply voice room active filter
-    results = await this.filterByVoiceRoomActive(
-      results,
-      query.voice_room_active === true,
-    );
-
     return results;
   }
 
-  private async filterByVoiceRoomActive<T extends UserProfile>(
-    users: T[],
+  private async filterByVoiceRoomActive(
+    users: UserProfile[],
     voiceRoomActive: boolean,
-  ): Promise<T[]> {
+  ): Promise<UserProfile[]> {
     if (!voiceRoomActive) return users;
     const activeHostIds = await this.audioRoomsService.getActiveHostIds();
     return users.filter((u) => activeHostIds.includes(u.id));

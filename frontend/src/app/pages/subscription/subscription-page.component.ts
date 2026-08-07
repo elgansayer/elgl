@@ -1,12 +1,9 @@
 import { Component, inject, signal, resource } from '@angular/core';
-import { TranslatePipe } from '../../services/translate.pipe';
 
 import { AppCardComponent } from '../../components/primitives/card/card.component';
 import { AppButtonPrimaryComponent } from '../../components/primitives/button-primary/button-primary.component';
-import { AppButtonSecondaryComponent } from '../../components/primitives/button-secondary/button-secondary.component';
 import { AppPillComponent } from '../../components/primitives/pill/pill.component';
 import { AppGradientButtonComponent } from '../../components/primitives/gradient-button/gradient-button.component';
-import { RestorePurchasesButtonComponent } from '../../components/restore-purchases-button/restore-purchases-button.component';
 import { MonetisationService } from '../../services/monetisation.service';
 import {
   SubscriptionPlansService,
@@ -17,13 +14,10 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
 @Component({
   selector: 'app-subscription-page',
   imports: [
-    TranslatePipe,
     AppCardComponent,
     AppButtonPrimaryComponent,
-    AppButtonSecondaryComponent,
     AppPillComponent,
     AppGradientButtonComponent,
-    RestorePurchasesButtonComponent,
   ],
   template: `
     <div class="min-h-screen bg-surface-600 py-12 px-4">
@@ -113,13 +107,6 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
                 </div>
               </app-card>
             }
-          </div>
-
-          <div class="mt-8 text-center">
-            <p class="text-xs text-text-secondary mb-2">
-              {{ 'restore_purchases_description' | t }}
-            </p>
-            <app-restore-purchases-button />
           </div>
         }
       </div>

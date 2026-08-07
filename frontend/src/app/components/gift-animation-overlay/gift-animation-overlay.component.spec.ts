@@ -1,5 +1,5 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { ComponentFixture, TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { GiftAnimationOverlayComponent } from './gift-animation-overlay.component';
 import { GiftAnimationService, GiftAnimationOverlay } from '../../services/gift-animation.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -145,6 +145,9 @@ describe('GiftAnimationOverlayComponent', () => {
   it('should regenerate particles for new animations', () => {
     animationService.playAnimation(mockOverlay);
     fixture.detectChanges();
+
+    const firstFloatId = fixture.nativeElement.querySelector('.float-particle')?.closest('g')
+      ?.querySelector('text')?.textContent;
 
     animationService.playAnimation({ ...mockOverlay, giftName: 'Heart' });
     fixture.detectChanges();

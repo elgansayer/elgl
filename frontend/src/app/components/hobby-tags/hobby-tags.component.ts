@@ -1,4 +1,4 @@
-import { Component, computed, signal, inject, resource, input } from '@angular/core';
+import { Component, computed, signal, inject, resource } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { FormsModule } from '@angular/forms';
@@ -161,8 +161,6 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
   `,
 })
 export class HobbyTagsComponent {
-  readonly targetLanguage = input('en');
-
   readonly showAddPanel = signal(false);
   readonly searchQuery = signal('');
   readonly selectedTagForProficiency = signal<string | null>(null);
@@ -184,12 +182,11 @@ export class HobbyTagsComponent {
   public readonly i18n = inject(I18nService);
 
   private dataLoader = resource({
-    request: () => ({ lang: this.targetLanguage() }),
-    loader: async ({ request }) => {
+    loader: async () => {
       const [allTags, userTags, vocab] = await Promise.all([
         this.hobbyTagsService.getAllTags(),
         this.hobbyTagsService.getMyTags(),
-        this.hobbyTagsService.getVocabulary(request.lang),
+        this.hobbyTagsService.getVocabulary('en'),
       ]);
       this.allTags.set(allTags);
       this.userTags.set(userTags);

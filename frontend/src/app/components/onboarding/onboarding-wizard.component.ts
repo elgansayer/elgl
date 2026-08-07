@@ -2,20 +2,20 @@ import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { OnboardingService, QuizResultPayload } from '../../services/onboarding.service';
+import { OnboardingService } from '../../services/onboarding.service';
 import { I18nService } from '../../services/i18n.service';
-import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.component';
 
 @Component({
   selector: 'app-onboarding-wizard',
-  imports: [CommonModule, TranslatePipe, DiagnosticQuizComponent],
+  standalone: true,
+  imports: [CommonModule, TranslatePipe],
   template: `
     <div class="onboarding-wizard surface text-on-surface ps-4 pe-4 pt-6 pb-6">
       <h1 class="text-xl font-bold">{{ 'onboarding.title' | t }}</h1>
       <p class="text-sm opacity-80">{{ 'onboarding.subtitle' | t }}</p>
 
       <!-- step progress indicators -->
-      <div class="mt-4 flex flex-wrap gap-2">
+      <div class="mt-4 flex gap-2">
         @for (step of onboardingService.steps; track $index) {
           <div
             class="flex items-center gap-2 p-2 rounded"
@@ -29,7 +29,7 @@ import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.comp
         }
       </div>
 
-      <!-- step 0: native language -->
+      <!-- step content -->
       @if (onboardingService.currentStep() === 0) {
         <div class="mt-4">
           <label class="block text-sm mb-1" for="native-lang">{{ 'onboarding.step1.label' | t }}</label>
@@ -47,7 +47,6 @@ import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.comp
         </div>
       }
 
-      <!-- step 1: target languages -->
       @if (onboardingService.currentStep() === 1) {
         <div class="mt-4">
           <span class="block text-sm mb-1">{{ 'onboarding.step2.label' | t }}</span>
@@ -66,26 +65,15 @@ import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.comp
         </div>
       }
 
-      <!-- step 2: diagnostic quiz -->
       @if (onboardingService.currentStep() === 2) {
         <div class="mt-4">
-          <app-diagnostic-quiz
-            [targetLanguage]="firstTargetLanguage()"
-            (quizCompleted)="onQuizComplete($event)"
-          />
-        </div>
-      }
-
-      <!-- step 3: display name -->
-      @if (onboardingService.currentStep() === 3) {
-        <div class="mt-4">
-          <label class="block text-sm mb-1" for="display-name">{{ 'onboarding.step4.label' | t }}</label>
+          <label class="block text-sm mb-1" for="display-name">{{ 'onboarding.step3.label' | t }}</label>
           <input
             id="display-name"
             class="w-full bg-surface-variant text-on-surface p-2 rounded"
             [value]="onboardingService.displayName()"
             (input)="onDisplayNameInput($event)"
-            placeholder="{{ 'onboarding.step4.placeholder' | t }}"
+            placeholder="{{ 'onboarding.step3.placeholder' | t }}"
           />
         </div>
       }
@@ -122,14 +110,8 @@ export class OnboardingWizardComponent {
   readonly onboardingService = inject(OnboardingService);
   readonly i18n = inject(I18nService);
 
-  /** First selected target language code, used for the diagnostic quiz. */
-  readonly firstTargetLanguage = computed(() => {
-    const targets = this.onboardingService.targetLanguages();
-    if (targets.size > 0) {
-      return [...targets][0];
-    }
-    return 'en';
-  });
+  /** Local computed to decide navigation – delegating to service. */
+  readonly canGoNext = computed(() => this.onboardingService.canGoNext());
 
   onNativeLanguageChange(event: Event): void {
     if (!(event.target instanceof HTMLSelectElement)) {
@@ -143,10 +125,6 @@ export class OnboardingWizardComponent {
       return;
     }
     this.onboardingService.setDisplayName(event.target.value);
-  }
-
-  onQuizComplete(result: QuizResultPayload): void {
-    this.onboardingService.setQuizResult(result);
   }
 
   handleNext(): void {

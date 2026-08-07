@@ -17,7 +17,7 @@ describe('AiConversationController', () => {
 
   describe('getScenarios', () => {
     it('should call service.getScenarios and return its result', () => {
-      const scenarios = [{ id: 'coffee', name: 'Ordering Coffee', icon: '☕' }];
+      const scenarios = ['ordering food', 'asking directions'];
       service.getScenarios.mockReturnValue(scenarios);
 
       const result = controller.getScenarios();
@@ -28,50 +28,44 @@ describe('AiConversationController', () => {
   });
 
   describe('handleMessage', () => {
-    it('should return a hint when message is empty', async () => {
-      const result = await controller.handleMessage({ message: '' });
+    it('should return a hint when message is empty', () => {
+      const result = controller.handleMessage({ message: '' });
 
       expect(result).toEqual({ reply: 'Please say something first!' });
       expect(service.generateReply).not.toHaveBeenCalled();
     });
 
-    it('should return a hint when message is only whitespace', async () => {
-      const result = await controller.handleMessage({ message: '   ' });
+    it('should return a hint when message is only whitespace', () => {
+      const result = controller.handleMessage({ message: '   ' });
 
       expect(result).toEqual({ reply: 'Please say something first!' });
       expect(service.generateReply).not.toHaveBeenCalled();
     });
 
-    it('should call generateReply with message, scenarioId, and conversationHistory', async () => {
-      const reply = 'Would you like a latte or cappuccino?';
-      service.generateReply.mockResolvedValue(reply);
-      const history = [{ role: 'user' as const, content: 'Hello' }];
+    it('should call generateReply with message and scenarioId and return its reply', () => {
+      const reply =
+        'In Japan, it is polite to say “itadakimasu” before eating.';
+      service.generateReply.mockReturnValue(reply);
 
-      const result = await controller.handleMessage({
-        message: 'I would like a coffee please.',
-        scenarioId: 'ordering-coffee',
-        conversationHistory: history,
+      const result = controller.handleMessage({
+        message: 'How do I order ramen?',
+        scenarioId: 'japan-restaurant',
       });
 
       expect(service.generateReply).toHaveBeenCalledWith(
-        'I would like a coffee please.',
-        'ordering-coffee',
-        history,
+        'How do I order ramen?',
+        'japan-restaurant',
       );
       expect(result).toEqual({ reply });
     });
 
-    it('should call generateReply with message and undefined scenarioId and undefined history', async () => {
+    it('should call generateReply with message and undefined scenarioId', () => {
       const reply = 'Cultural tip.';
-      service.generateReply.mockResolvedValue(reply);
+      service.generateReply.mockReturnValue(reply);
 
-      const result = await controller.handleMessage({ message: 'help' });
+      const result = controller.handleMessage({ message: 'help' });
 
-      expect(service.generateReply).toHaveBeenCalledWith(
-        'help',
-        undefined,
-        undefined,
-      );
+      expect(service.generateReply).toHaveBeenCalledWith('help', undefined);
       expect(result).toEqual({ reply });
     });
   });
