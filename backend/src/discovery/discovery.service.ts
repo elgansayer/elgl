@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
@@ -36,6 +37,7 @@ export class DiscoveryService {
     private readonly audioRoomsService: AudioRoomsService,
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   // Weekly computation of Partner of the Week (every Sunday at midnight)
@@ -69,6 +71,7 @@ export class DiscoveryService {
         'EX',
         604800,
       );
+      this.eventEmitter.emit('discovery.partner_of_week_updated');
       this.logger.log(`Partner of the Week set for ${partnerIds.length} users`);
     } catch (err) {
       this.logger.error('Error calculating Partner of the Week', err);
@@ -129,6 +132,7 @@ export class DiscoveryService {
               'EX',
               86400,
             );
+            this.eventEmitter.emit('discovery.recommendations_updated', { userId: user.id });
           }
         }
       }

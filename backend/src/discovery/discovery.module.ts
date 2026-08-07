@@ -6,11 +6,12 @@ import { DiscoveryController } from './discovery.controller';
 import { DiscoveryService } from './discovery.service';
 import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { DiscoveryCacheInvalidationService } from './discovery-cache-invalidation.service';
 
 @Module({
   imports: [AudioRoomsModule, UsersModule, SafetyModule, SupabaseModule],
   controllers: [DiscoveryController],
-  providers: [DiscoveryService, DiscoveryRateLimiterGuard],
-  exports: [DiscoveryService],
+  providers: [DiscoveryService, DiscoveryRateLimiterGuard, DiscoveryCacheInvalidationService],
+  exports: [DiscoveryService, DiscoveryCacheInvalidationService],
 })
 export class DiscoveryModule {}

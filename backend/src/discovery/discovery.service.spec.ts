@@ -1,5 +1,6 @@
 /// <reference types="jest" />
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DiscoveryService } from './discovery.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
@@ -17,6 +18,7 @@ describe('DiscoveryService', () => {
   let mockRedisSet: jest.Mock;
   let mockSafetyService: any;
   let mockAudioRoomsService: any;
+  let mockEventEmitter: { emit: jest.Mock };
 
   function createMockQueryBuilder() {
     const builder: any = {};
@@ -73,6 +75,10 @@ describe('DiscoveryService', () => {
       getActiveHostIds: jest.fn().mockResolvedValue([]),
     };
 
+    mockEventEmitter = {
+      emit: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DiscoveryService,
@@ -90,6 +96,10 @@ describe('DiscoveryService', () => {
         {
           provide: AudioRoomsService,
           useValue: mockAudioRoomsService,
+        },
+        {
+          provide: EventEmitter2,
+          useValue: mockEventEmitter,
         },
       ],
     }).compile();
@@ -138,7 +148,7 @@ describe('DiscoveryService', () => {
   // calculatePartnerOfWeek
   // ---------------------------------------------------------------------------
   describe('calculatePartnerOfWeek', () => {
-    it('should store partner IDs in redis when users qualify', async () => {
+    it('should store partner IDs in redis and emit event when users qualify', async () => {
       mockQueryBuilder.gt = jest.fn().mockReturnThis();
       mockQueryBuilder.order = jest.fn().mockReturnThis();
       mockQueryBuilder.limit = jest.fn().mockResolvedValue({
@@ -155,6 +165,7 @@ describe('DiscoveryService', () => {
         'EX',
         604800,
       );
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith('discovery.partner_of_week_updated');
     });
 
     it('should not set redis key when no users qualify', async () => {
@@ -168,6 +179,7 @@ describe('DiscoveryService', () => {
       await service.calculatePartnerOfWeek();
 
       expect(mockRedisSet).not.toHaveBeenCalled();
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
 
     it('should not set redis key when query returns error', async () => {
@@ -181,6 +193,7 @@ describe('DiscoveryService', () => {
       await service.calculatePartnerOfWeek();
 
       expect(mockRedisSet).not.toHaveBeenCalled();
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
   });
 
@@ -188,7 +201,7 @@ describe('DiscoveryService', () => {
   // calculateDailyRecommendations
   // ---------------------------------------------------------------------------
   describe('calculateDailyRecommendations', () => {
-    it('should store daily recommendations for matching users', async () => {
+    it('should store daily recommendations and emit event for matching users', async () => {
       const allUsers = [
         { id: 'u1', native_languages: ['en'], target_languages: ['ja'] },
       ];
@@ -203,6 +216,10 @@ describe('DiscoveryService', () => {
         '["u2"]',
         'EX',
         86400,
+      );
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'discovery.recommendations_updated',
+        { userId: 'u1' },
       );
     });
 
@@ -219,9 +236,10 @@ describe('DiscoveryService', () => {
 
       expect(mockQueryBuilder.limit).toHaveBeenCalledTimes(1);
       expect(mockRedisSet).not.toHaveBeenCalled();
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
 
-    it('should filter out blocked users from recommendations', async () => {
+    it('should filter out blocked users and emit event for recommendations', async () => {
       mockSafetyService.getBlockedAndBlockerIds.mockResolvedValue(['u2']);
       const allUsers = [
         { id: 'u1', native_languages: ['en'], target_languages: ['ja'] },
@@ -241,6 +259,10 @@ describe('DiscoveryService', () => {
         'EX',
         86400,
       );
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'discovery.recommendations_updated',
+        { userId: 'u1' },
+      );
     });
 
     it('should handle fetch error gracefully', async () => {
@@ -252,6 +274,7 @@ describe('DiscoveryService', () => {
       await service.calculateDailyRecommendations();
 
       expect(mockRedisSet).not.toHaveBeenCalled();
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
   });
 
