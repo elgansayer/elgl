@@ -455,6 +455,12 @@
     </div>
   </div>
   }
+
+  <app-group-participant-drawer
+    [isOpen]="showParticipantDrawer()"
+    [participants]="groupParticipants()"
+    (closed)="showParticipantDrawer.set(false)"
+  ></app-group-participant-drawer>
 </div>
 
 <app-group-participant-drawer

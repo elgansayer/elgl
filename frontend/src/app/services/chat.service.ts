@@ -113,6 +113,9 @@ export interface GroupMember {
     id: string;
     display_name?: string;
     avatar_url?: string | null;
+    native_language?: string | null;
+    target_languages?: string[] | null;
+    is_vip?: boolean | null;
   };
 }
 
