@@ -22,9 +22,6 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:spam-detec
 
 # Run the Escrow Payments load test
 API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:escrow-payments
-
-# Run the LingQ Reading Engine load test
-API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:reading-engine
 ```
 
 ## Test Scripts
@@ -45,8 +42,6 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:reading-en
 | `test:video-classrooms:report` | (output + HTML) | Runs the Video Classrooms test and generates an HTML report |
 | `test:discovery-map` | `discovery-map.load.yml` | Load tests all Discovery Map endpoints including partner search, language pair matching, location search, audio intros, partner of the week, recent native speakers, and spotlight users |
 | `test:discovery-map:report` | (output + HTML) | Runs the Discovery Map test and generates an HTML report |
-| `test:reading-engine` | `reading-engine.load.yml` | Load tests the LingQ Reading Engine: resource CRUD, tokenisation, reading progress, and cache admin |
-| `test:reading-engine:report` | (output + HTML) | Runs the Reading Engine test and generates an HTML report |
 
 ## Configuration
 
@@ -150,14 +145,3 @@ Both test scripts include the following phases:
 - `GET /discovery/spotlight` - Spotlight user profiles
 - `GET /discovery/language-pair` - Language pair matching with pagination and sorting
 - `GET /discovery/search-by-location` - Location-based user search by country and city
-
-### LingQ Reading Engine (`/reading`)
-- `POST /reading/resources` - Create a new reading resource
-- `GET /reading/resources` - List reading resources with filters (language, difficulty, topic)
-- `GET /reading/resources/:id` - Get a single reading resource
-- `PUT /reading/resources/:id` - Update a reading resource
-- `DELETE /reading/resources/:id` - Delete a reading resource
-- `GET /reading/resources/:id/tokenise` - Tokenise a resource using Intl.Segmenter
-- `GET /reading/progress` - Get authenticated user's reading progress
-- `POST /reading/progress/session` - Record a completed reading session
-- `DELETE /reading/cache/user` - Clear reading-engine caches for authenticated user
