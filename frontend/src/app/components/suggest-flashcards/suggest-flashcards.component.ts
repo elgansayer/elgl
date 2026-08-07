@@ -7,11 +7,13 @@ import {
 } from '../../services/suggest-flashcards.service';
 import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-suggest-flashcards',
   standalone: true,
-  imports: [FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe, AppSkeletonLoaderComponent, AppEmptyStateComponent],
   template: `
     <div class="mx-auto max-w-2xl space-y-4 pb-20 pt-4">
       <section class="app-card app-padded space-y-4">
@@ -25,12 +27,16 @@ import { AuthService } from '../../services/auth.service';
         <button
           (click)="manualSuggest()"
           class="app-button-primary ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold disabled:opacity-60"
-          [disabled]="!messageInput()"
+          [disabled]="!messageInput() || loading()"
         >
           {{ 'suggest_flashcards.suggest_button' | t }}
         </button>
         @if (loading()) {
-          <p class="app-muted">{{ 'suggest_flashcards.loading' | t }}</p>
+          <div class="space-y-2" role="status" aria-busy="true">
+            <app-skeleton-loader [height]="'14px'" [width]="'60%'" [variant]="'text'" />
+            <app-skeleton-loader [height]="'14px'" [width]="'45%'" [variant]="'text'" />
+            <app-skeleton-loader [height]="'14px'" [width]="'55%'" [variant]="'text'" />
+          </div>
         }
         @if (suggestions().length > 0) {
           <ul class="mt-4 list-disc ps-5">
@@ -41,6 +47,13 @@ import { AuthService } from '../../services/auth.service';
         }
         @if (error()) {
           <p class="mt-2 text-xs font-bold text-rose-400">{{ error() }}</p>
+        }
+        @if (!loading() && !suggestions().length && !error() && hasSearched()) {
+          <app-empty-state
+            [icon]="'📝'"
+            [description]="'suggest_flashcards.noWordsFound' | t"
+            [customClass]="'py-4 border-0'"
+          />
         }
       </section>
     </div>
@@ -60,6 +73,7 @@ export class SuggestFlashcardsComponent {
   suggestions = signal<string[]>([]);
   loading = signal<boolean>(false);
   error = signal<string | null>(null);
+  hasSearched = signal<boolean>(false);
 
   constructor() {
     effect(() => {
@@ -86,6 +100,7 @@ export class SuggestFlashcardsComponent {
     this.loading.set(true);
     this.error.set(null);
     this.suggestions.set([]);
+    this.hasSearched.set(true);
     try {
       const result: SuggestResult = await this.suggestService.suggestFromMessage(
         message,
