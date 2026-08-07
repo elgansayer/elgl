@@ -675,7 +675,7 @@ export class EconomyService {
     }
 
     this.logger.info(
-      `User ${userId} received ${coinPackage.coins} coins (transaction ${transactionId})`,
+      `User ${userId} received ${coinPackage.coins} coins (transaction ${(transactionId ?? '').slice(-8) || '[unknown]'})`,
     );
 
     this.invalidateUserEconomyCaches(userId);
