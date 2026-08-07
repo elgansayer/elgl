@@ -815,6 +815,105 @@ describe('Discovery Map - Graceful Degradation', () => {
     cy.contains('Maria Garcia').should('be.visible');
     cy.get('body').should('exist');
   });
+
+  it('should show partner list even when partner-of-week returns 500', () => {
+    cy.intercept('GET', '**/api/chat/rooms', { body: [] }).as('getRooms');
+    cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
+    cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
+    cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
+    cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
+    cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
+    cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] }).as(
+      'getBlockedAndBlockerIds',
+    );
+    cy.intercept('GET', '**/api/economy/catalog', { body: [] }).as('getCatalog');
+    cy.intercept('GET', '**/api/economy/balance', { body: { coins_balance: 0 } }).as('getBalance');
+    cy.intercept('GET', '**/api/users/me', { body: mockUserProfile() }).as('getUserProfile');
+
+    // Partners succeed
+    cy.intercept('GET', `${DISCOVERY_BASE}/partners*`, {
+      statusCode: 200,
+      body: createMockPartners(),
+    }).as('getPartners');
+
+    // Partner-of-week returns 500 (simulating Redis failure)
+    cy.intercept('GET', `${DISCOVERY_BASE}/partner-of-week`, {
+      statusCode: 500,
+      body: { error: 'Redis unavailable' },
+    }).as('getPartnerOfWeekError');
+
+    cy.visit('/discovery');
+    cy.wait('@getPartners');
+
+    // Partners should still render even without PoW badges
+    cy.contains('Maria Garcia').should('be.visible');
+    cy.get('article').should('have.length', 5);
+  });
+
+  it('should handle safety blocked-ids endpoint failure gracefully', () => {
+    cy.intercept('GET', '**/api/chat/rooms', { body: [] }).as('getRooms');
+    cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
+    cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
+    cy.intercept('GET', '**/api/economy/catalog', { body: [] }).as('getCatalog');
+    cy.intercept('GET', '**/api/economy/balance', { body: { coins_balance: 0 } }).as('getBalance');
+    cy.intercept('GET', '**/api/users/me', { body: mockUserProfile() }).as('getUserProfile');
+
+    // Safety blocked-ids endpoint fails
+    cy.intercept('GET', '**/api/safety/blocked-ids', {
+      statusCode: 500,
+      body: {},
+    }).as('getBlockedIdsError');
+
+    cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
+    cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
+    cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] }).as(
+      'getBlockedAndBlockerIds',
+    );
+
+    cy.intercept('GET', `${DISCOVERY_BASE}/partners*`, {
+      statusCode: 200,
+      body: createMockPartners(),
+    }).as('getPartners');
+
+    cy.intercept('GET', `${DISCOVERY_BASE}/partner-of-week`, { body: [] }).as('getPartnerOfWeek');
+
+    cy.visit('/discovery');
+    cy.wait('@getPartners');
+
+    // Partners should still render even when safety endpoint fails
+    cy.contains('Maria Garcia').should('be.visible');
+    cy.get('article').should('have.length', 5);
+  });
+
+  it('should fall back to mock data when partners endpoint returns 500', () => {
+    cy.intercept('GET', '**/api/chat/rooms', { body: [] }).as('getRooms');
+    cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
+    cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
+    cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
+    cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
+    cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
+    cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] }).as(
+      'getBlockedAndBlockerIds',
+    );
+    cy.intercept('GET', '**/api/economy/catalog', { body: [] }).as('getCatalog');
+    cy.intercept('GET', '**/api/economy/balance', { body: { coins_balance: 0 } }).as('getBalance');
+    cy.intercept('GET', '**/api/users/me', { body: mockUserProfile() }).as('getUserProfile');
+
+    // Partners endpoint returns 500
+    cy.intercept('GET', `${DISCOVERY_BASE}/partners*`, {
+      statusCode: 500,
+      body: { error: 'Internal Server Error' },
+    }).as('getPartnersError');
+
+    cy.intercept('GET', `${DISCOVERY_BASE}/partner-of-week`, { body: [] }).as('getPartnerOfWeek');
+
+    cy.visit('/discovery');
+    cy.wait('@getPartnersError');
+
+    // Should still show mock data fallback (at least some content appears)
+    cy.get('article').should('exist');
+    cy.get('body').should('exist');
+  });
 });
 
 // -----------------------------------------------------------------

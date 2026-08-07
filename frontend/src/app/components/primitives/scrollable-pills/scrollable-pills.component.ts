@@ -1,10 +1,13 @@
-import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 
 @Component({
   selector: 'app-scrollable-pills',
-  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex overflow-x-auto hide-scrollbar gap-2 px-4 py-2 bg-surface-500">
+    <div
+      class="flex overflow-x-auto hide-scrollbar gap-2 px-4 py-2 bg-surface-500"
+      role="radiogroup"
+      [attr.aria-label]="ariaLabel() || null"
+    >
       @for (pill of pills(); track pill.id) {
         <button
           (click)="pillPicked.emit(pill.id)"
@@ -15,6 +18,9 @@ import { Component, input, output, ChangeDetectionStrategy } from '@angular/core
           [class.text-text-secondary]="selected() !== pill.id"
           [class.border]="selected() !== pill.id"
           [class.border-surface-200]="selected() !== pill.id"
+          role="radio"
+          [attr.aria-checked]="selected() === pill.id"
+          [attr.aria-label]="pill.label"
         >
           {{ pill.label }}
         </button>
@@ -34,8 +40,9 @@ import { Component, input, output, ChangeDetectionStrategy } from '@angular/core
   ],
 })
 export class ScrollablePillsComponent {
-  pills = input.required<{ id: string; label: string }[]>();
-  selected = input.required<string>();
+  readonly pills = input.required<{ id: string; label: string }[]>();
+  readonly selected = input.required<string>();
+  readonly ariaLabel = input<string>('');
   // Renamed to avoid collision with native DOM events (e.g. 'select')
-  pillPicked = output<string>();
+  readonly pillPicked = output<string>();
 }
