@@ -2,6 +2,8 @@ import { Component, inject, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { JoyrideDirective } from 'ngx-joyride';
+import { SrsTourTriggerComponent } from '../srs-tour-trigger/srs-tour-trigger.component';
 import { DeckService, Deck, CreateDeckDto } from '../../services/deck.service';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
@@ -14,7 +16,7 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
 @Component({
   selector: 'app-flashcard-deck',
   standalone: true,
-  imports: [FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe, JoyrideDirective, SrsTourTriggerComponent],
   template: `
     <div class="mx-auto max-w-4xl space-y-6 pb-20">
       <!-- Header -->
@@ -24,13 +26,16 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
             <h2 class="app-section-title">{{ 'deck.title' | t }}</h2>
             <p class="app-muted">{{ 'deck.subtitle' | t }}</p>
           </div>
-          <button
-            type="button"
-            (click)="activeView.set('list')"
-            class="rounded-app border ps-3 pe-3 pt-2 pb-2 text-xs font-bold bg-surface-200 text-text-secondary border-surface-100"
-          >
-            {{ 'deck.browseBtn' | t }}
-          </button>
+          <div class="flex items-center gap-2">
+            <app-srs-tour-trigger />
+            <button
+              type="button"
+              (click)="activeView.set('list')"
+              class="rounded-app border ps-3 pe-3 pt-2 pb-2 text-xs font-bold bg-surface-200 text-text-secondary border-surface-100"
+            >
+              {{ 'deck.browseBtn' | t }}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -131,7 +136,13 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
               <p class="app-muted text-xs mt-1">{{ 'deck.emptyDesc' | t }}</p>
             </div>
           } @else {
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+              joyrideStep="srsTourFlashcardDecks"
+              [title]="'srsTour.flashcardDecksTitle' | t"
+              [text]="'srsTour.flashcardDecksText' | t"
+              stepPosition="bottom"
+            >
               @for (deck of decks(); track deck.id) {
                 <article
                   class="rounded-card border border-surface-100 p-4 group transition-shadow cursor-pointer relative overflow-hidden"

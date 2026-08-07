@@ -1,18 +1,21 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { JoyrideDirective } from 'ngx-joyride';
+import { SrsTourTriggerComponent } from '../srs-tour-trigger/srs-tour-trigger.component';
 import { VocabCard, VOCABULARY_MOCK_DECK } from './vocab-mock-data';
 
 type ReviewGrade = 'again' | 'good' | 'known';
 
 @Component({
   selector: 'app-vocabulary-dashboard',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, JoyrideDirective, SrsTourTriggerComponent],
   template: `
     <div class="mx-auto w-full max-w-md ps-6 pe-6 sm:max-w-lg">
       <h2 class="text-2xl font-bold text-slate-100">{{ 'vocabulary.title' | t }}</h2>
       <p class="mt-1 text-sm text-slate-400">{{ 'vocabulary.subtitle' | t }}</p>
 
-      <div class="mt-8 flex items-center justify-between">
+      <div class="mt-4 flex items-center justify-between">
+        <app-srs-tour-trigger />
         <span class="text-sm text-slate-300">{{
           'vocabulary.cardCounter' | t: { current: currentIndex() + 1, total: cardCount() }
         }}</span>
@@ -40,6 +43,10 @@ type ReviewGrade = 'again' | 'good' | 'known';
               role="button"
               tabindex="0"
               [attr.aria-pressed]="isFlipped()"
+              joyrideStep="srsTourVocabularyDashboard"
+              [title]="'srsTour.vocabDashboardTitle' | t"
+              [text]="'srsTour.vocabDashboardText' | t"
+              stepPosition="bottom"
             >
               <div class="flashcard-inner">
                 <div class="flashcard-face flashcard-front">

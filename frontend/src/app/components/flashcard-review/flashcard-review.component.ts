@@ -1,5 +1,7 @@
 import { Component, inject, signal, computed, input } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { JoyrideDirective } from 'ngx-joyride';
+import { SrsTourTriggerComponent } from '../srs-tour-trigger/srs-tour-trigger.component';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 
@@ -8,7 +10,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
 @Component({
   selector: 'app-flashcard-review',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, JoyrideDirective, SrsTourTriggerComponent],
   template: `
     <div class="mx-auto max-w-md space-y-6 pb-20 pt-4">
       <!-- Header with progress -->
@@ -19,6 +21,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
             {{ 'review.progress' | t: { current: currentIndex() + 1, total: reviewCards().length } }}
           </span>
         </div>
+        <app-srs-tour-trigger />
         <!-- Progress bar -->
         <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-200">
           <div
@@ -80,6 +83,10 @@ type ReviewGrade = 'again' | 'good' | 'known';
               tabindex="0"
               [attr.aria-label]="'review.flipAriaLabel' | t"
               [attr.aria-pressed]="isFlipped()"
+              joyrideStep="srsTourFlashcardReview"
+              [title]="'srsTour.flashcardReviewTitle' | t"
+              [text]="'srsTour.flashcardReviewText' | t"
+              stepPosition="bottom"
             >
               <div class="flip-card-inner">
                 <!-- Front -->

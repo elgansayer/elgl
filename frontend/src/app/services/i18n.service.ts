@@ -835,6 +835,21 @@ export class I18nService {
     'review.completeTitle': 'Review Complete!',
     'review.completeDesc': 'Great job! Come back regularly to keep your vocabulary fresh.',
     'review.restart': 'Start Again',
+
+    // SRS Tour (ngx-joyride onboarding tooltips)
+    'srsTour.startBtn': '🎓 Take the tour',
+    'srsTour.startAriaLabel': 'Start the SRS feature tour',
+    'srsTour.prevBtn': 'Previous',
+    'srsTour.nextBtn': 'Next',
+    'srsTour.doneBtn': 'Got it!',
+    'srsTour.closeBtn': 'Close',
+    'srsTour.vocabDashboardTitle': 'Vocabulary Studio',
+    'srsTour.vocabDashboardText': 'This is your flashcards home. Practise vocabulary with spaced repetition. Flip cards, rate your recall, and track progress.',
+    'srsTour.flashcardDecksTitle': 'Flashcard Decks',
+    'srsTour.flashcardDecksText': 'Organise saved words into custom decks. Create themed collections, colour-code them, and start focused review sessions.',
+    'srsTour.flashcardReviewTitle': 'Flashcard Review',
+    'srsTour.flashcardReviewText': 'Review cards using the SRS algorithm. Tap to flip, then rate your recall. Cards are automatically scheduled based on your performance.',
+
     'profile.playAudioIntro': 'Play Introduction',
 
     // User Detail Component
