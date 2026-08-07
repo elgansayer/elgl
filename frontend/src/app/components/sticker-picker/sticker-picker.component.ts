@@ -192,7 +192,7 @@ export class StickerPickerComponent {
     return pack.sticker_urls.map((url, i) => ({
       id: `${pack.id}_${i}`,
       url,
-      is_animated: pack.is_animated ?? url.endsWith('.webm') || url.endsWith('.json'),
+      is_animated: pack.is_animated ?? (url.endsWith('.webm') || url.endsWith('.json')),
     }));
   }
 
