@@ -98,14 +98,6 @@ function isHttp429Error(error: unknown): boolean {
     return true;
   }
 
-  // AxiosError with status field (some versions)
-  if (
-    typeof err.status === 'number' &&
-    (err.status as number) === 429
-  ) {
-    return true;
-  }
-
   return false;
 }
 
