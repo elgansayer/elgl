@@ -32,45 +32,55 @@ export class ModerationService {
   ): ResourceRef<ModerationItem[] | undefined> {
     return resource({
       params: () => ({ type: type() }),
-      loader: ({ params }) => firstValueFrom(this.getItems(params.type)),
+      loader: ({ params }) => this.getItems(params.type),
     });
   }
 
-  getItems(type: 'moment' | 'profile', status?: string) {
+  async getItems(type: 'moment' | 'profile', status?: string): Promise<ModerationItem[]> {
     let params = new HttpParams().set('type', type);
     if (status) {
       params = params.set('status', status);
     }
-    return this.http.get<ModerationItem[]>(
-      `${environment.apiUrl}/moderation/items`,
-      { params },
+    return firstValueFrom(
+      this.http.get<ModerationItem[]>(
+        `${environment.apiUrl}/moderation/items`,
+        { params },
+      ),
     );
   }
 
-  reportUser(reportedUserId: string, reasonCategory: string, description?: string) {
-    return this.http.post<{ success: boolean }>(
-      `${environment.apiUrl}/moderation/report`,
-      { reportedUserId, reasonCategory, description },
+  async reportUser(reportedUserId: string, reasonCategory: string, description?: string): Promise<{ success: boolean }> {
+    return firstValueFrom(
+      this.http.post<{ success: boolean }>(
+        `${environment.apiUrl}/moderation/report`,
+        { reportedUserId, reasonCategory, description },
+      ),
     );
   }
 
-  approveItem(itemId: string, type: 'moment' | 'profile') {
-    return this.http.post<ModerationActionResponse>(
-      `${environment.apiUrl}/moderation/approve`,
-      { itemId, type },
+  async approveItem(itemId: string, type: 'moment' | 'profile'): Promise<ModerationActionResponse> {
+    return firstValueFrom(
+      this.http.post<ModerationActionResponse>(
+        `${environment.apiUrl}/moderation/approve`,
+        { itemId, type },
+      ),
     );
   }
 
-  rejectItem(itemId: string, type: 'moment' | 'profile', reason?: string) {
-    return this.http.post<ModerationActionResponse>(
-      `${environment.apiUrl}/moderation/reject`,
-      { itemId, type, reason },
+  async rejectItem(itemId: string, type: 'moment' | 'profile', reason?: string): Promise<ModerationActionResponse> {
+    return firstValueFrom(
+      this.http.post<ModerationActionResponse>(
+        `${environment.apiUrl}/moderation/reject`,
+        { itemId, type, reason },
+      ),
     );
   }
 
-  analyseUser(userId: string) {
-    return this.http.get<ModerationAnalysis>(
-      `${environment.apiUrl}/moderation/analyse/${userId}`,
+  async analyseUser(userId: string): Promise<ModerationAnalysis> {
+    return firstValueFrom(
+      this.http.get<ModerationAnalysis>(
+        `${environment.apiUrl}/moderation/analyse/${userId}`,
+      ),
     );
   }
 }

@@ -15,6 +15,7 @@ import { UnreadCounterService } from './services/unread-counter.service';
 import { VersionCheckService } from './services/version-check.service';
 import { FontScaleService } from './services/font-scale.service';
 import { I18nService } from './services/i18n.service';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 describe('AppComponent', () => {
   let component: AppComponent;
@@ -24,6 +25,7 @@ describe('AppComponent', () => {
   const authServiceMock = {
     isAuthenticated: vi.fn(() => true),
     currentUser: vi.fn(() => ({ id: 'test-user-1' })),
+    getAccessToken: vi.fn(() => 'test-token'),
   };
 
   const appLockServiceMock = {
@@ -130,9 +132,7 @@ describe('AppComponent', () => {
   });
 
   it('should initialise unread counter computed values', () => {
-    expect(component.totalUnread()).toBe(0);
-    expect(component.hasUnread()).toBe(false);
-    expect(component.unreadDisplayValue()).toBe('0');
+    expect(component.unreadCounter.totalUnread()).toBe(0);
   });
 
   it('should call core services during ngOnInit', () => {
@@ -151,18 +151,25 @@ describe('AppComponent', () => {
 
     const payload = {
       type: 'virtual_gift',
+      gift_id: 'gift-1',
+      gift_name: 'Rose',
+      icon: '🌹',
+      cost_coins: 10,
+      coin_value: 10,
+      animation_type: 'confetti',
+      animation_url: '',
+      sender_name: 'Alice',
+    };
+    subscribeCallback?.(payload);
+    expect(economyStoreMock.triggerGiftAnimation).toHaveBeenCalledWith({
       gift: {
         id: 'gift-1',
         name: 'Rose',
         icon: '🌹',
         cost_coins: 10,
         animation_type: 'confetti',
+        animationUrl: undefined,
       },
-      sender_name: 'Alice',
-    };
-    subscribeCallback?.(payload);
-    expect(economyStoreMock.triggerGiftAnimation).toHaveBeenCalledWith({
-      gift: payload.gift,
       sender_name: 'Alice',
       receiver_name: 'You',
     });

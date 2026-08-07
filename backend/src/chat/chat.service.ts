@@ -1375,6 +1375,60 @@ export class ChatService {
     });
   }
 
+  async updateMessageStatus(
+    userId: string,
+    messageId: string,
+    status: 'delivered' | 'read',
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: message, error: fetchError } = await supabase
+      .from('chat_messages')
+      .select('id, room_id, delivery_status')
+      .eq('id', messageId)
+      .single();
+
+    if (fetchError || !message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    // Only allow upgrading status (sent -> delivered -> read)
+    const order: Record<string, number> = { sent: 0, delivered: 1, read: 2 };
+    const current = message.delivery_status ?? 'sent';
+    if (order[status] <= order[current]) {
+      return;
+    }
+
+    // Verify user is a member of the room
+    const { data: membership } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', message.room_id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!membership) {
+      throw new ForbiddenException('Not a member of this room');
+    }
+
+    const { error: updateError } = await supabase
+      .from('chat_messages')
+      .update({ delivery_status: status })
+      .eq('id', messageId);
+
+    if (updateError) {
+      throw new Error(`Failed to update message status: ${updateError.message}`);
+    }
+
+    // Publish status update via Centrifugo so the sender can see it
+    await this.centrifugoService.publish(`chat:${message.room_id}`, {
+      status_update: {
+        message_id: messageId,
+        delivery_status: status,
+      },
+    });
+  }
+
   async viewMessageMedia(userId: string, messageId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
 

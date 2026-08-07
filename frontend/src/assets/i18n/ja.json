@@ -55,6 +55,8 @@
   "discovery.nativeLang": "\u6bcd\u8a9e",
   "discovery.targetLang": "\u5b66\u7fd2\u8a00\u8a9e",
   "discovery.seriousOnly": "\u771f\u5263\u306a\u5b66\u7fd2\u8005\u306e\u307f",
+  "discovery.voiceRoomActiveDesc": "\u73fe\u5728\u30dc\u30a4\u30b9\u30eb\u30fc\u30e0\u3092\u914d\u4fe1\u3057\u3066\u3044\u308b\u30e6\u30fc\u30b6\u30fc\u306e\u307f\u8868\u793a",
+  "discovery.voiceRoomActiveToggle": "\u30dc\u30a4\u30b9\u30eb\u30fc\u30e0\u914d\u4fe1\u4e2d",
   "discovery.on": "\u30aa\u30f3",
   "discovery.off": "\u30aa\u30d5",
   "discovery.resetFilters": "\u30d5\u30a3\u30eb\u30bf\u30fc\u3092\u30ea\u30bb\u30c3\u30c8",

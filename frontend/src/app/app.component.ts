@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { AuthService } from './services/auth.service';
-import { EconomyStore, VirtualGift } from './services/economy.store';
+import { EconomyStore } from './services/economy.store';
 import { CentrifugeService } from './services/centrifuge.service';
 import { FcmService } from './services/fcm.service';
 import { SafetyService } from './services/safety.service';
@@ -36,13 +36,10 @@ import { FontScaleService } from './services/font-scale.service';
 import { I18nService } from './services/i18n.service';
 import { AppLanguageSelectorComponent } from './components/app-language-selector/app-language-selector.component';
 import { AppLockService } from './services/app-lock.service';
+import { GiftAnimationOverlayComponent } from './components/gift-animation-overlay/gift-animation-overlay.component';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
-}
-
-function isVirtualGift(v: unknown): v is VirtualGift {
-  return isRecord(v) && 'id' in v && 'name' in v && 'icon' in v;
 }
 
 @Component({
@@ -60,6 +57,7 @@ function isVirtualGift(v: unknown): v is VirtualGift {
     ThemeSelectorComponent,
     FontScaleSliderComponent,
     AppLanguageSelectorComponent,
+    GiftAnimationOverlayComponent,
   ],
   templateUrl: './app.component.html',
   host: {
@@ -142,13 +140,8 @@ export class AppComponent implements OnInit {
       );
     });
 
-    // Apply font scale to the root rem unit
-    effect(() => {
-      const scale = this.fontScaleService.scaleFactor();
-      if (this.document && this.document.documentElement) {
-        this.document.documentElement.style.fontSize = `${(scale * 16).toFixed(2)}px`;
-      }
-    });
+    // Font scale is applied globally by FontScaleService via effect()
+    // which sets document.documentElement.style.fontSize, adjusting base rem CSS rules.
 
     // Redirect to the lock screen when the app is locked
     effect(() => {
@@ -189,11 +182,30 @@ export class AppComponent implements OnInit {
         if (!isRecord(data)) return;
         const eventType = typeof data['type'] === 'string' ? data['type'] : null;
 
-        if (eventType === 'virtual_gift' && isVirtualGift(data['gift'])) {
+        if (eventType === 'virtual_gift') {
+          const giftName = typeof data['gift_name'] === 'string' ? data['gift_name'] : 'Gift';
+          const giftIcon = typeof data['icon'] === 'string' ? data['icon'] : '🎁';
+          const giftId = typeof data['gift_id'] === 'string' ? data['gift_id'] : 'unknown';
+          const costCoins = typeof data['coin_value'] === 'number' ? data['coin_value'] : 0;
+          const animationType =
+            typeof data['animation_type'] === 'string' ? data['animation_type'] : 'float';
+          const animationUrl =
+            typeof data['animation_url'] === 'string' && data['animation_url'].length > 0
+              ? data['animation_url']
+              : undefined;
+          const senderName =
+            typeof data['sender_name'] === 'string' ? data['sender_name'] : 'Language Partner';
+
           this.economyStore.triggerGiftAnimation({
-            gift: data['gift'],
-            sender_name:
-              typeof data['sender_name'] === 'string' ? data['sender_name'] : 'Language Partner',
+            gift: {
+              id: giftId,
+              name: giftName,
+              icon: giftIcon,
+              cost_coins: costCoins,
+              animation_type: animationType,
+              animationUrl,
+            },
+            sender_name: senderName,
             receiver_name: 'You',
           });
         }
@@ -229,7 +241,6 @@ export class AppComponent implements OnInit {
 
   private isValidPayload(data: unknown): data is {
     type: string;
-    gift?: VirtualGift;
     sender_name?: string;
     callerId?: string;
     callerName?: string;
