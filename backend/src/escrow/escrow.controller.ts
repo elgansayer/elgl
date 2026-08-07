@@ -1,86 +1,116 @@
 import {
-  Body,
   Controller,
-  Get,
-  Param,
   Post,
+  Get,
+  Body,
+  Param,
   Query,
   UseGuards,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { User } from '@supabase/supabase-js';
-import { CurrentUser } from '../auth/current-user.decorator';
-import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import {
-  CreateEscrowDto,
-  DisputeEscrowDto,
-  RefundEscrowDto,
-  ReleaseEscrowDto,
-  ResolveDisputeDto,
-} from './dto/escrow.dto';
+import { Throttle } from '@nestjs/throttler';
+import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { EscrowService } from './escrow.service';
+import { CreateEscrowDto, ReleaseEscrowDto, RefundEscrowDto } from './dto/escrow.dto';
 
 @Controller('escrow')
 @UseGuards(SupabaseAuthGuard)
 export class EscrowController {
   constructor(private readonly escrowService: EscrowService) {}
 
+  /**
+   * POST /escrow/create
+   * Create a new escrow transaction, holding coins from the payer.
+   * Rate limited to 5 requests per minute.
+   */
   @Post('create')
-  async createEscrow(
-    @CurrentUser() user: User | null,
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  async create(
+    @Req() req: { user?: { id?: string } },
     @Body() dto: CreateEscrowDto,
   ) {
-    if (!user) return null;
-    return this.escrowService.createEscrow(user.id, dto);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException();
+    }
+    return this.escrowService.createEscrow(userId, dto);
   }
 
+  /**
+   * POST /escrow/release
+   * Release escrowed coins to the payee.
+   * Rate limited to 5 requests per minute.
+   */
   @Post('release')
-  async releaseEscrow(
-    @CurrentUser() user: User | null,
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  async release(
+    @Req() req: { user?: { id?: string } },
     @Body() dto: ReleaseEscrowDto,
   ) {
-    if (!user) return null;
-    return this.escrowService.releaseEscrow(user.id, dto);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException();
+    }
+    return this.escrowService.releaseEscrow(userId, dto.escrow_id);
   }
 
+  /**
+   * POST /escrow/refund
+   * Refund escrowed coins back to the payer.
+   * Rate limited to 5 requests per minute.
+   */
   @Post('refund')
-  async refundEscrow(
-    @CurrentUser() user: User | null,
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  async refund(
+    @Req() req: { user?: { id?: string } },
     @Body() dto: RefundEscrowDto,
   ) {
-    if (!user) return null;
-    return this.escrowService.refundEscrow(user.id, dto);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException();
+    }
+    return this.escrowService.refundEscrow(userId, dto.escrow_id);
   }
 
-  @Post('dispute')
-  async disputeEscrow(
-    @CurrentUser() user: User | null,
-    @Body() dto: DisputeEscrowDto,
+  /**
+   * GET /escrow/list
+   * List escrow transactions for the authenticated user.
+   * Rate limited to 20 requests per minute.
+   */
+  @Get('list')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  async list(
+    @Req() req: { user?: { id?: string } },
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ) {
-    if (!user) return null;
-    return this.escrowService.disputeEscrow(user.id, dto);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException();
+    }
+    return this.escrowService.listEscrows(
+      userId,
+      limit ? parseInt(limit, 10) : 20,
+      offset ? parseInt(offset, 10) : 0,
+    );
   }
 
-  @Post('resolve-dispute')
-  async resolveDispute(
-    @CurrentUser() user: User | null,
-    @Body() dto: ResolveDisputeDto,
-  ) {
-    if (!user) return null;
-    return this.escrowService.resolveDispute(user.id, dto);
-  }
-
+  /**
+   * GET /escrow/:id
+   * Get a single escrow transaction by ID.
+   * Rate limited to 30 requests per minute.
+   */
   @Get(':id')
-  async getEscrow(@CurrentUser() user: User | null, @Param('id') id: string) {
-    if (!user) return null;
-    return this.escrowService.getEscrow(id);
-  }
-
-  @Get()
-  async listEscrows(
-    @CurrentUser() user: User | null,
-    @Query('status') status?: string,
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  async getById(
+    @Req() req: { user?: { id?: string } },
+    @Param('id') id: string,
   ) {
-    if (!user) return null;
-    return this.escrowService.listUserEscrows(user.id, status);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException();
+    }
+    return this.escrowService.getEscrow(userId, id);
   }
 }

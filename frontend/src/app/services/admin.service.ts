@@ -201,21 +201,33 @@ export class AdminService {
 
   async banUser(userId: string): Promise<{ message: string }> {
     return firstValueFrom(
-      this.http.post<{ message: string }>(
-        `${this.baseUrl}/users/${userId}/ban`,
-        {},
-        { headers: this.getHeaders() },
-      ),
+      this.http
+        .post<{ message: string }>(
+          `${this.baseUrl}/users/${userId}/ban`,
+          {},
+          { headers: this.getHeaders() },
+        )
+        .pipe(
+          catchError(() =>
+            of({ message: 'Failed to ban user - service temporarily unavailable' }),
+          ),
+        ),
     );
   }
 
   async warnUser(userId: string): Promise<{ message: string }> {
     return firstValueFrom(
-      this.http.post<{ message: string }>(
-        `${this.baseUrl}/users/${userId}/warn`,
-        {},
-        { headers: this.getHeaders() },
-      ),
+      this.http
+        .post<{ message: string }>(
+          `${this.baseUrl}/users/${userId}/warn`,
+          {},
+          { headers: this.getHeaders() },
+        )
+        .pipe(
+          catchError(() =>
+            of({ message: 'Failed to warn user - service temporarily unavailable' }),
+          ),
+        ),
     );
   }
 
@@ -240,10 +252,12 @@ export class AdminService {
 
   async removeBlock(blockId: string): Promise<{ success: boolean }> {
     return firstValueFrom(
-      this.http.delete<{ success: boolean }>(
-        `${this.baseUrl}/blocks/${blockId}`,
-        { headers: this.getHeaders() },
-      ),
+      this.http
+        .delete<{ success: boolean }>(
+          `${this.baseUrl}/blocks/${blockId}`,
+          { headers: this.getHeaders() },
+        )
+        .pipe(catchError(() => of({ success: false }))),
     );
   }
 }
