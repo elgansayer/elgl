@@ -156,6 +156,25 @@ export class PrivacyService {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
+    // 5b) Decks created by the user (SRS organisation)
+    const { data: userDecks } = await supabase
+      .from('decks')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    // 5c) Deck-flashcard junction records for the user's decks
+    let userDeckFlashcards: unknown[] = [];
+    if (userDecks && userDecks.length > 0) {
+      const deckIds = userDecks.map((d: { id: string }) => d.id);
+      const { data: junctionData } = await supabase
+        .from('deck_flashcards')
+        .select('*')
+        .in('deck_id', deckIds)
+        .order('added_at', { ascending: false });
+      userDeckFlashcards = junctionData ?? [];
+    }
+
     // 6) Favourites bookmarked by the user
     const { data: userFavourites } = await supabase
       .from('favourites')
@@ -170,6 +189,8 @@ export class PrivacyService {
       moment_comments: userMomentComments ?? [],
       chat_messages: userChatMessages ?? [],
       flashcards: userFlashcards ?? [],
+      decks: userDecks ?? [],
+      deck_flashcards: userDeckFlashcards,
       favourites: userFavourites ?? [],
     };
   }
