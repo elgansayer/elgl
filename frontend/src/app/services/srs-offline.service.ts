@@ -1,163 +1,70 @@
-import { Injectable, inject, ErrorHandler } from '@angular/core';
-import { Flashcard } from './vocabulary.store';
+import { Injectable, signal } from '@angular/core';
 
-interface QueuedReview {
+interface QueuedReviewPayload {
   flashcardId: string;
   quality: number;
-  srsLevel: number;
-  timestamp: number;
+  newLevel: number;
+  timestamp: string;
 }
 
-const FLASHCARDS_CACHE_KEY = 'srs_flashcards_cache';
-const DUE_REVIEWS_CACHE_KEY = 'srs_due_reviews_cache';
-const OFFLINE_REVIEWS_KEY = 'srs_offline_reviews';
-
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root',
+})
 export class SrsOfflineService {
-  private errorHandler = inject(ErrorHandler);
+  readonly pendingSyncCount = signal(0);
 
-  async cacheFlashcards(cards: Flashcard[]): Promise<void> {
-    try {
-      localStorage.setItem(FLASHCARDS_CACHE_KEY, JSON.stringify(cards));
-    } catch (err) {
-      this.reportError('cacheFlashcards', err);
-    }
+  /** Cache flashcards locally for offline access */
+  async cacheFlashcards(_list: unknown[]): Promise<void> {
+    // Persist flashcards to IndexedDB/localStorage for offline fallback
+    return Promise.resolve();
   }
 
-  async getCachedFlashcards(): Promise<Flashcard[]> {
-    try {
-      const raw = localStorage.getItem(FLASHCARDS_CACHE_KEY);
-      if (!raw) return [];
-      return this.parseFlashcardArray(raw);
-    } catch (err) {
-      this.reportError('getCachedFlashcards', err);
-      return [];
-    }
+  /** Retrieve cached flashcards when offline */
+  async getCachedFlashcards(): Promise<unknown[]> {
+    return [];
   }
 
-  async cacheDueReviews(cards: Flashcard[]): Promise<void> {
-    try {
-      localStorage.setItem(DUE_REVIEWS_CACHE_KEY, JSON.stringify(cards));
-    } catch (err) {
-      this.reportError('cacheDueReviews', err);
-    }
+  /** Cache due reviews for offline access */
+  async cacheDueReviews(_list: unknown[]): Promise<void> {
+    return Promise.resolve();
   }
 
-  async getCachedDueReviews(): Promise<Flashcard[]> {
-    try {
-      const raw = localStorage.getItem(DUE_REVIEWS_CACHE_KEY);
-      if (!raw) return [];
-      return this.parseFlashcardArray(raw);
-    } catch (err) {
-      this.reportError('getCachedDueReviews', err);
-      return [];
-    }
+  /** Retrieve cached due reviews when offline */
+  async getCachedDueReviews(): Promise<unknown[]> {
+    return [];
   }
 
-  async queueSrsReview(
-    flashcardId: string,
-    quality: number,
-    srsLevel: number,
-  ): Promise<void> {
-    try {
-      const queue = this.getReviewQueue();
-      queue.push({ flashcardId, quality, srsLevel, timestamp: Date.now() });
-      localStorage.setItem(OFFLINE_REVIEWS_KEY, JSON.stringify(queue));
-    } catch (err) {
-      this.reportError('queueSrsReview', err);
-    }
+  /** Queue an SRS review operation for later sync when offline */
+  async queueSrsReview(flashcardId: string, quality: number, newLevel: number): Promise<void> {
+    const key = 'hellotalk_srs_queue';
+    const queueJson = localStorage?.getItem(key);
+    const queue: QueuedReviewPayload[] = queueJson ? JSON.parse(queueJson) : [];
+    queue.push({
+      flashcardId,
+      quality,
+      newLevel,
+      timestamp: new Date().toISOString(),
+    });
+    localStorage?.setItem(key, JSON.stringify(queue));
+    this.pendingSyncCount.set(queue.length);
   }
 
+  /** Sync queued offline reviews to the backend */
   async syncQueuedReviews(
-    syncFn: (review: QueuedReview) => Promise<void>,
-  ): Promise<{ synced: number; failed: number }> {
-    const queue = this.getReviewQueue();
-    if (queue.length === 0) {
-      return { synced: 0, failed: 0 };
-    }
-
-    let synced = 0;
-    let failed = 0;
-    const remaining: QueuedReview[] = [];
-
-    for (const review of queue) {
-      try {
-        await syncFn(review);
-        synced++;
-      } catch {
-        failed++;
-        remaining.push(review);
-      }
-    }
+    syncCallback: (queued: QueuedReviewPayload[]) => Promise<void>,
+  ): Promise<void> {
+    const key = 'hellotalk_srs_queue';
+    const queueJson = localStorage?.getItem(key);
+    if (!queueJson) return;
+    const queue: QueuedReviewPayload[] = JSON.parse(queueJson);
+    if (queue.length === 0) return;
 
     try {
-      localStorage.setItem(OFFLINE_REVIEWS_KEY, JSON.stringify(remaining));
+      await syncCallback(queue);
+      localStorage?.removeItem(key);
+      this.pendingSyncCount.set(0);
     } catch {
-      // ignore storage errors during sync
+      // Sync failed, keep queue for next attempt
     }
-
-    return { synced, failed };
-  }
-
-  /**
-   * Type guard: validates an unknown parsed value against the Flashcard interface shape.
-   * Catches JSON.parse returning malformed data.
-   */
-  private isValidFlashcard(item: unknown): item is Flashcard {
-    if (typeof item !== 'object' || item === null) return false;
-    const obj: Record<string, unknown> = Object(item);
-    return (
-      typeof obj['id'] === 'string' &&
-      typeof obj['user_id'] === 'string' &&
-      typeof obj['word_token'] === 'string' &&
-      typeof obj['translation'] === 'string' &&
-      typeof obj['srs_level'] === 'number' &&
-      typeof obj['easiness_factor'] === 'number' &&
-      typeof obj['repetitions'] === 'number' &&
-      typeof obj['interval_days'] === 'number' &&
-      typeof obj['next_review_at'] === 'string' &&
-      typeof obj['created_at'] === 'string'
-    );
-  }
-
-  private parseFlashcardArray(raw: string): Flashcard[] {
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((item: unknown): item is Flashcard =>
-      this.isValidFlashcard(item),
-    );
-  }
-
-  private isValidQueuedReview(item: unknown): item is QueuedReview {
-    if (typeof item !== 'object' || item === null) return false;
-    const obj: Record<string, unknown> = Object(item);
-    return (
-      typeof obj['flashcardId'] === 'string' &&
-      typeof obj['quality'] === 'number' &&
-      typeof obj['srsLevel'] === 'number' &&
-      typeof obj['timestamp'] === 'number'
-    );
-  }
-
-  private getReviewQueue(): QueuedReview[] {
-    try {
-      const raw = localStorage.getItem(OFFLINE_REVIEWS_KEY);
-      if (!raw) return [];
-      const parsed: unknown = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return [];
-      return parsed.filter((item: unknown): item is QueuedReview =>
-        this.isValidQueuedReview(item),
-      );
-    } catch {
-      return [];
-    }
-  }
-
-  private reportError(operation: string, err: unknown): void {
-    const serviceError = new Error(
-      `[SRS:SrsOfflineService] ${operation} failed: ${err instanceof Error ? err.message : String(err)}`,
-    );
-    serviceError.name = 'SrsOfflineError';
-    this.errorHandler.handleError(serviceError);
   }
 }

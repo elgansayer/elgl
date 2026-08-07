@@ -1,13 +1,14 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
 import { AdminOfflineBannerComponent } from '../../components/admin-offline-banner/admin-offline-banner.component';
 import { OfflineAdminStorageService } from '../../services/offline-admin-storage.service';
 
 @Component({
   selector: 'app-admin-users',
-  imports: [CommonModule, TranslatePipe, AdminOfflineBannerComponent],
+imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AdminOfflineBannerComponent],
   templateUrl: './admin-users.component.html',
 })
 export class AdminUsersComponent {

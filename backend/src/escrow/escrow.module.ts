@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 <<<<<<< HEAD
 import { SupabaseModule } from '../supabase/supabase.module';
 import { EscrowController } from './escrow.controller';
+import { EscrowExceptionFilter } from './escrow-exception.filter';
 import { EscrowService } from './escrow.service';
 
 @Module({

@@ -124,9 +124,11 @@ export class GlobalErrorHandler implements ErrorHandler {
 
     if (typeof err === 'object' && err !== null) {
       const obj = err as Record<string, unknown>;
-      const toStringFn = obj['toString'] as (() => string) | undefined;
-      message = String(obj['message'] ?? (typeof toStringFn === 'function' ? toStringFn.call(obj) : undefined) ?? 'Unknown error object');
-      metadata = { rawType: (obj.constructor as { name?: string })?.name ?? typeof err };
+      const objStr = obj['toString'];
+      message = String(
+        obj['message'] ?? (typeof objStr === 'function' ? objStr() : 'Unknown error object'),
+      );
+      metadata = { rawType: obj.constructor?.name ?? typeof err };
     } else {
       message = String(err);
     }
@@ -141,10 +143,7 @@ export class GlobalErrorHandler implements ErrorHandler {
     });
   }
 
-  private sendPayload(
-    payload: Omit<ClientErrorPayload, 'stackFrames'>,
-    rawStack?: string,
-  ): void {
+  private sendPayload(payload: Omit<ClientErrorPayload, 'stackFrames'>, rawStack?: string): void {
     const fullPayload: ClientErrorPayload = {
       ...payload,
       stackFrames: rawStack ? parseStackFrames(rawStack) : undefined,
