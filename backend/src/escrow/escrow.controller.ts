@@ -30,13 +30,13 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CrashReportService } from './crash-report.service';
 import { EscrowExceptionFilter } from './escrow-exception.filter';
 import { EscrowService } from './escrow.service';
-import { CrashReportService } from './crash-report.service';
 import {
   AcknowledgeCrashReportDto,
   CreateEscrowHoldDto,
   ReleaseEscrowDto,
   RefundEscrowDto,
   CancelEscrowDto,
+  DisputeEscrowDto,
   EscrowTransactionResponse,
   CircuitBreakerStatusResponse,
 } from './dto/escrow.dto';
@@ -180,6 +180,39 @@ export class EscrowController {
     @Body() dto: CancelEscrowDto,
   ) {
     return this.escrowService.cancelEscrow(dto.transaction_id, req.user.sub);
+  }
+
+  @Post('dispute')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'File a dispute against an escrow transaction',
+    description:
+      'Files a dispute against a held escrow transaction. Either the payer or payee can initiate the dispute. The escrow must be in "held" status. The transaction status is updated to "disputed" and the dispute reason is recorded.',
+  })
+  @ApiBody({ type: DisputeEscrowDto })
+  @ApiOkResponse({
+    description: 'Dispute filed successfully',
+    schema: {
+      properties: {
+        id: { type: 'string', description: 'Escrow transaction ID (UUID)' },
+        status: { type: 'string', enum: ['disputed'], description: 'Updated transaction status' },
+        reason: { type: 'string', description: 'Updated reason including dispute details' },
+      },
+    },
+  })
+  @ApiBadRequestResponse({ description: 'Invalid payload or user not a participant' })
+  @ApiNotFoundResponse({ description: 'Escrow transaction not found' })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+  async disputeEscrow(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: DisputeEscrowDto,
+  ) {
+    return this.escrowService.disputeEscrow(
+      dto.transaction_id,
+      req.user.sub,
+      dto.reason,
+      dto.evidence,
+    );
   }
 
   @Get('transactions')

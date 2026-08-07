@@ -2,7 +2,7 @@
   <!-- Offline banner -->
   @if (!isOnline()) {
     <div
-      class="flex items-center justify-center gap-2 bg-amber-600 text-white px-4 py-2 text-sm font-semibold"
+      class="flex items-center justify-center gap-2 bg-amber-600 text-white ps-3 pe-3 py-2 text-xs sm:text-sm font-semibold"
       role="alert"
       aria-live="assertive"
     >
@@ -13,11 +13,11 @@
 
   <!-- Sync pending operations button -->
   @if (pendingOperationCount() > 0 && isOnline()) {
-    <div class="px-4 pt-3">
+    <div class="ps-3 pe-3 sm:ps-4 sm:pe-4 pt-3">
       <button
         (click)="handleSync()"
         [disabled]="actionInProgress()"
-        class="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-semibold py-2 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
+        class="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-semibold py-2 sm:py-2.5 ps-3 pe-3 sm:ps-4 sm:pe-4 rounded-xl flex items-center justify-center gap-2 transition-colors text-xs sm:text-sm"
       >
         <span>{{ 'escrow.syncPending' | t: { count: pendingOperationCount() } }}</span>
       </button>
@@ -26,7 +26,7 @@
 
   <!-- Header -->
   <div
-    class="flex items-center gap-3 px-4 py-4"
+    class="flex items-center gap-3 ps-3 pe-3 sm:ps-4 sm:pe-4 py-3 sm:py-4"
     joyrideStep="escrowStepTitle"
     [title]="'escrow.onboarding.stepTitleTitle' | t"
     [text]="'escrow.onboarding.stepTitleText' | t"
@@ -41,7 +41,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
       </svg>
     </button>
-    <h1 class="text-xl font-bold">{{ 'escrow.title' | t }}</h1>
+    <h1 class="text-lg sm:text-xl lg:text-2xl font-bold">{{ 'escrow.title' | t }}</h1>
     <button
       (click)="startOnboardingTour()"
       class="ms-auto flex items-center justify-center w-10 h-10 rounded-xl bg-purple-600 hover:bg-purple-700 transition-colors text-sm"
@@ -54,7 +54,7 @@
 
   <!-- Status filter pills -->
   <div
-    class="px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide"
+    class="ps-3 pe-3 sm:ps-4 sm:pe-4 pb-3 flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide"
     joyrideStep="escrowStepFilters"
     [title]="'escrow.onboarding.stepFiltersTitle' | t"
     [text]="'escrow.onboarding.stepFiltersText' | t"
@@ -63,7 +63,7 @@
     @for (filter of statusFilters; track filter.value) {
       <button
         (click)="setStatusFilter(filter.value)"
-        class="whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors"
+        class="whitespace-nowrap ps-3 pe-3 sm:ps-4 sm:pe-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors"
         [class.bg-purple-600]="selectedStatus() === filter.value"
         [class.text-white]="selectedStatus() === filter.value"
         [class.bg-slate-800]="selectedStatus() !== filter.value"
@@ -83,13 +83,13 @@
       </div>
     </div>
   } @else if (escrows().length === 0) {
-    <div class="flex flex-col items-center justify-center py-20 px-4 text-center">
+    <div class="flex flex-col items-center justify-center py-20 ps-4 pe-4 text-center">
       <div class="text-5xl mb-4" aria-hidden="true">💳</div>
-      <p class="text-slate-400 text-lg">{{ 'escrow.emptyState' | t }}</p>
+      <p class="text-slate-400 text-base sm:text-lg">{{ 'escrow.emptyState' | t }}</p>
     </div>
   } @else {
     <div
-      class="px-4 space-y-3 pb-8"
+      class="ps-3 pe-3 sm:ps-4 sm:pe-4 space-y-3 pb-8"
       joyrideStep="escrowStepTransactions"
       [title]="'escrow.onboarding.stepTransactionsTitle' | t"
       [text]="'escrow.onboarding.stepTransactionsText' | t"
@@ -97,53 +97,53 @@
     >
       @for (escrow of escrows(); track escrow.id) {
         <div
-          class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50 hover:border-slate-600/50 transition-colors"
+          class="bg-slate-800/60 rounded-2xl p-3 sm:p-4 border border-slate-700/50 hover:border-slate-600/50 transition-colors"
         >
           <div class="flex items-start justify-between mb-2">
             <span
-              class="px-3 py-1 rounded-full text-xs font-semibold capitalize"
+              class="ps-2.5 pe-2.5 sm:ps-3 sm:pe-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold capitalize"
               [class]="statusBadgeClass(escrow.status)"
             >
               {{ ('escrow.status.' + escrow.status) | t }}
             </span>
-            <span class="text-purple-400 font-bold text-lg">
+            <span class="text-purple-400 font-bold text-base sm:text-lg">
               🪙 {{ escrow.amount }}
             </span>
           </div>
 
           <p class="text-slate-200 text-sm mb-2">{{ escrow.description }}</p>
 
-          <div class="flex items-center gap-2 text-xs text-slate-500 mb-3">
+          <div class="flex flex-wrap items-center gap-x-1.5 sm:gap-x-2 gap-y-0.5 text-[11px] sm:text-xs text-slate-500 mb-3">
             <span>{{ escrow.service_type }}</span>
-            <span>•</span>
+            <span aria-hidden="true">•</span>
             <span>{{ escrow.created_at | date: 'mediumDate' }}</span>
             @if (escrow.dispute_reason) {
-              <span>•</span>
+              <span aria-hidden="true">•</span>
               <span class="text-rose-400">{{ 'escrow.disputed' | t }}</span>
             }
           </div>
 
           <!-- Action buttons -->
           @if (escrow.status === 'pending') {
-            <div class="flex gap-2">
+            <div class="flex flex-col sm:flex-row gap-2">
               <button
                 (click)="handleRelease(escrow.id)"
                 [disabled]="actionInProgress()"
-                class="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold py-2 px-4 rounded-xl text-sm transition-colors"
+                class="w-full sm:w-auto sm:flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold py-2 sm:py-2.5 ps-3 pe-3 sm:ps-4 sm:pe-4 rounded-xl text-xs sm:text-sm transition-colors"
               >
                 {{ 'escrow.releaseAction' | t }}
               </button>
               <button
                 (click)="handleRefund(escrow.id)"
                 [disabled]="actionInProgress()"
-                class="flex-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-200 font-semibold py-2 px-4 rounded-xl text-sm transition-colors"
+                class="w-full sm:w-auto sm:flex-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-200 font-semibold py-2 sm:py-2.5 ps-3 pe-3 sm:ps-4 sm:pe-4 rounded-xl text-xs sm:text-sm transition-colors"
               >
                 {{ 'escrow.refundAction' | t }}
               </button>
               <button
                 (click)="handleDispute(escrow.id)"
                 [disabled]="actionInProgress()"
-                class="flex-1 bg-rose-600/80 hover:bg-rose-600 disabled:opacity-50 text-white font-semibold py-2 px-4 rounded-xl text-sm transition-colors"
+                class="w-full sm:w-auto sm:flex-1 bg-rose-600/80 hover:bg-rose-600 disabled:opacity-50 text-white font-semibold py-2 sm:py-2.5 ps-3 pe-3 sm:ps-4 sm:pe-4 rounded-xl text-xs sm:text-sm transition-colors"
               >
                 {{ 'escrow.disputeAction' | t }}
               </button>
