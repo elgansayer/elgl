@@ -2,18 +2,55 @@
   <app-admin-offline-banner />
   <h2 class="text-2xl font-bold mb-4">{{ 'admin.blocks.title' | t }}</h2>
 
-  @if (resourceError()) {
-    <p role="alert" class="text-rose-500 text-sm mb-4">{{ 'admin.blocks.loadError' | t }}</p>
-  }
-
   @if (actionError()) {
     <p role="alert" class="text-rose-500 text-sm mb-4">{{ actionError() }}</p>
   }
 
-  @if (isLoading()) {
-    <p class="text-text-secondary">{{ 'admin.blocks.loading' | t }}</p>
+  @if (resourceError()) {
+    <app-empty-state
+      icon="⚠️"
+      [title]="'admin.blocks.loadError' | t"
+      [description]="'admin.blocks.loadErrorDesc' | t"
+      [actionLabel]="'common.retry' | t"
+      (actionClicked)="retry()"
+    />
+  } @else if (isLoading()) {
+    <div class="space-y-3">
+      @for (i of [1, 2, 3, 4, 5]; track i) {
+        <div class="border border-slate-200 rounded-lg p-4 flex items-center gap-3">
+          <app-skeleton-loader
+            [height]="'40px'"
+            [width]="'40px'"
+            [variant]="'circle'"
+          />
+          <div class="flex-1 space-y-2">
+            <app-skeleton-loader
+              [height]="'14px'"
+              [width]="'50%'"
+              [variant]="'text'"
+            />
+            <app-skeleton-loader
+              [height]="'12px'"
+              [width]="'35%'"
+              [variant]="'text'"
+            />
+          </div>
+          <div class="flex gap-2">
+            <app-skeleton-loader
+              [height]="'28px'"
+              [width]="'70px'"
+              [borderRadius]="'6px'"
+            />
+          </div>
+        </div>
+      }
+    </div>
   } @else if (blocks().length === 0) {
-    <p class="text-text-secondary">{{ 'admin.blocks.empty' | t }}</p>
+    <app-empty-state
+      icon="🛡️"
+      [title]="'admin.blocks.emptyTitle' | t"
+      [description]="'admin.blocks.emptyDesc' | t"
+    />
   } @else {
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-slate-200">

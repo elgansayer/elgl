@@ -6,7 +6,11 @@ import {
   Body,
   Param,
   Request,
+<<<<<<< HEAD
   UseGuards,
+=======
+  UseInterceptors,
+>>>>>>> origin/main
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -19,6 +23,13 @@ import { CallsService } from './calls.service';
 import { CreateGroupCallDto } from './dto/create-group-call.dto';
 import { InitiateCallDto } from './dto/initiate-call.dto';
 import { SwitchCallDto } from './dto/switch-call.dto';
+import {
+  CacheControlInterceptor,
+  CACHE_EDGE_SHORT,
+  CACHE_EDGE_MEDIUM,
+  CACHE_NO_STORE,
+  CACHE_TAG_CALLS,
+} from '../common/cache.interceptor';
 
 interface RequestWithUser {
   user?: {
@@ -34,6 +45,7 @@ export class CallsController {
   constructor(private readonly callsService: CallsService) {}
 
   @Post('initiate')
+<<<<<<< HEAD
   @ApiOperation({
     summary: 'Initiate a 1-on-1 call',
     description:
@@ -60,6 +72,9 @@ export class CallsController {
   })
   @ApiResponse({ status: 400, description: 'Invalid request body.' })
   @ApiResponse({ status: 401, description: 'Unauthorised.' })
+=======
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+>>>>>>> origin/main
   async initiateCall(
     @Request() req: RequestWithUser,
     @Body() dto: InitiateCallDto,
@@ -73,6 +88,7 @@ export class CallsController {
   }
 
   @Post('group')
+<<<<<<< HEAD
   @ApiOperation({
     summary: 'Create a group video call',
     description:
@@ -97,6 +113,9 @@ export class CallsController {
   })
   @ApiResponse({ status: 400, description: 'Participant limit exceeded or invalid count.' })
   @ApiResponse({ status: 401, description: 'Unauthorised.' })
+=======
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+>>>>>>> origin/main
   async createGroupCall(
     @Request() req: RequestWithUser,
     @Body() dto: CreateGroupCallDto,
@@ -108,6 +127,7 @@ export class CallsController {
   }
 
   @Get('active')
+<<<<<<< HEAD
   @ApiOperation({
     summary: 'List active calls for the current user',
     description:
@@ -133,12 +153,16 @@ export class CallsController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorised.' })
+=======
+  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_CALLS]))
+>>>>>>> origin/main
   getActiveCalls(@Request() req: RequestWithUser) {
     const userId = req.user?.id || 'dummy_caller_id';
     return this.callsService.getActiveCalls(userId);
   }
 
   @Get('active/:room_name')
+<<<<<<< HEAD
   @ApiOperation({
     summary: 'Get details of a specific active call',
     description: 'Returns detailed information about a specific active call by room name.',
@@ -161,6 +185,9 @@ export class CallsController {
   })
   @ApiResponse({ status: 400, description: 'Call not found.' })
   @ApiResponse({ status: 401, description: 'Unauthorised.' })
+=======
+  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_CALLS]))
+>>>>>>> origin/main
   getActiveCall(
     @Request() req: RequestWithUser,
     @Param('room_name') roomName: string,
@@ -170,6 +197,7 @@ export class CallsController {
   }
 
   @Get('waiting')
+<<<<<<< HEAD
   @ApiOperation({
     summary: 'List waiting calls for the current user',
     description:
@@ -193,12 +221,16 @@ export class CallsController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorised.' })
+=======
+  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_CALLS]))
+>>>>>>> origin/main
   getWaitingCalls(@Request() req: RequestWithUser) {
     const userId = req.user?.id || 'dummy_caller_id';
     return this.callsService.getWaitingCalls(userId);
   }
 
   @Put('switch')
+<<<<<<< HEAD
   @ApiOperation({
     summary: 'Switch between calls',
     description:
@@ -222,6 +254,9 @@ export class CallsController {
   })
   @ApiResponse({ status: 400, description: 'Call not found or cannot switch.' })
   @ApiResponse({ status: 401, description: 'Unauthorised.' })
+=======
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+>>>>>>> origin/main
   switchCall(@Request() req: RequestWithUser, @Body() dto: SwitchCallDto) {
     const userId = req.user?.id || 'dummy_caller_id';
     return this.callsService.switchCall(
@@ -232,6 +267,7 @@ export class CallsController {
   }
 
   @Put(':room_name/accept-waiting')
+<<<<<<< HEAD
   @ApiOperation({
     summary: 'Accept a waiting call',
     description:
@@ -249,6 +285,9 @@ export class CallsController {
   })
   @ApiResponse({ status: 400, description: 'No waiting calls or call not found.' })
   @ApiResponse({ status: 401, description: 'Unauthorised.' })
+=======
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+>>>>>>> origin/main
   acceptWaitingCall(
     @Request() req: RequestWithUser,
     @Param('room_name') roomName: string,
@@ -259,6 +298,7 @@ export class CallsController {
   }
 
   @Put(':room_name/hold')
+<<<<<<< HEAD
   @ApiOperation({
     summary: 'Put a call on hold',
     description: 'Places an active call on hold without disconnecting.',
@@ -275,6 +315,9 @@ export class CallsController {
   })
   @ApiResponse({ status: 400, description: 'Call not found.' })
   @ApiResponse({ status: 401, description: 'Unauthorised.' })
+=======
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+>>>>>>> origin/main
   holdCall(
     @Request() req: RequestWithUser,
     @Param('room_name') roomName: string,
@@ -285,6 +328,7 @@ export class CallsController {
   }
 
   @Put(':room_name/resume')
+<<<<<<< HEAD
   @ApiOperation({
     summary: 'Resume a held call',
     description: 'Resumes a call that was previously placed on hold.',
@@ -301,6 +345,9 @@ export class CallsController {
   })
   @ApiResponse({ status: 400, description: 'Call not found.' })
   @ApiResponse({ status: 401, description: 'Unauthorised.' })
+=======
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+>>>>>>> origin/main
   resumeCall(
     @Request() req: RequestWithUser,
     @Param('room_name') roomName: string,
@@ -311,6 +358,7 @@ export class CallsController {
   }
 
   @Put(':room_name/leave')
+<<<<<<< HEAD
   @ApiOperation({
     summary: 'Leave a call',
     description: 'Leaves an active call, removing the user from the room.',
@@ -327,6 +375,9 @@ export class CallsController {
   })
   @ApiResponse({ status: 400, description: 'Call not found.' })
   @ApiResponse({ status: 401, description: 'Unauthorised.' })
+=======
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+>>>>>>> origin/main
   leaveCall(
     @Request() req: RequestWithUser,
     @Param('room_name') roomName: string,

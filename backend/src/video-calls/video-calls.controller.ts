@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import {
   Controller,
   Post,
@@ -11,16 +12,26 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+=======
+import { Controller, Post, Body, UseGuards, UseInterceptors, Req } from '@nestjs/common';
+>>>>>>> origin/main
 import { VideoCallsService } from './video-calls.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { sanitiseVideoCallsData } from './sanitise-video-calls.helper';
 import { Request } from 'express';
 import { User } from '@supabase/supabase-js';
 import {
+<<<<<<< HEAD
   StartVideoCallDto,
   JoinVideoCallDto,
   EndVideoCallDto,
   ListActiveRoomsQueryDto,
 } from './dto/video-call.dto';
+=======
+  CacheControlInterceptor,
+  CACHE_NO_STORE,
+} from '../common/cache.interceptor';
+>>>>>>> origin/main
 
 interface AuthenticatedRequest extends Request {
   user?: User;
@@ -34,6 +45,7 @@ export class VideoCallsController {
   constructor(private readonly videoCallsService: VideoCallsService) {}
 
   @Post('start')
+<<<<<<< HEAD
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Start a video classroom or direct call',
@@ -84,10 +96,24 @@ export class VideoCallsController {
   @ApiResponse({ status: 401, description: 'Unauthorised.' })
   @ApiResponse({ status: 404, description: 'Room not found.' })
   async joinCall(
+=======
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  async startCall(@Req() req: AuthenticatedRequest) {
+    const userId = req.user!.id;
+    return sanitiseVideoCallsData(
+      await this.videoCallsService.createRoom(userId),
+    );
+  }
+
+  @Post('accept')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  acceptCall(
+>>>>>>> origin/main
     @Req() req: AuthenticatedRequest,
     @Body() dto: JoinVideoCallDto,
   ) {
     const userId = req.user!.id;
+<<<<<<< HEAD
     return this.videoCallsService.joinRoom(userId, dto.room_name);
   }
 
@@ -190,5 +216,11 @@ export class VideoCallsController {
   ) {
     const userId = req.user!.id;
     return this.videoCallsService.getActiveRoom(userId, roomName);
+=======
+    const sanitisedRoomName = sanitiseVideoCallsData(roomName);
+    return sanitiseVideoCallsData(
+      this.videoCallsService.joinRoom(userId, sanitisedRoomName),
+    );
+>>>>>>> origin/main
   }
 }

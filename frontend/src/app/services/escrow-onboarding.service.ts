@@ -87,6 +87,15 @@ export class EscrowOnboardingService {
     }
   }
 
+  resetTour(): void {
+    this.isTourInProgress.set(false);
+    try {
+      window.localStorage.removeItem(this.storageKey);
+    } catch {
+      // storage unavailable, ignore
+    }
+  }
+
   isCompleted(): boolean {
     try {
       return window.localStorage.getItem(this.storageKey) === 'true';

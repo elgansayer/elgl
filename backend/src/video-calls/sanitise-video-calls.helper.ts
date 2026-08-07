@@ -4,14 +4,12 @@ import { JSDOM } from 'jsdom';
 const window = new JSDOM('').window;
 
 /**
- * Strict DOMPurify instance for Escrow Payments (Shopping module).
+ * Strict DOMPurify instance for Video Classrooms.
  *
  * ALLOWED_TAGS and ALLOWED_ATTR are empty so that only plain-text content
- * survives sanitisation. Shopping data (catalog item names, descriptions,
- * etc.) comes from a server-controlled database and should never contain
- * user-authored rich HTML. Stripping everything ensures that even if a
- * row is poisoned via a compromised admin panel or SQL injection, the
- * client receives only clean values.
+ * survives sanitisation. Video classroom data (room names, titles, metadata)
+ * is user-authored and must never contain rich HTML. Stripping everything
+ * ensures XSS cannot be introduced through classroom content.
  */
 const strictPurify = DOMPurify(window);
 strictPurify.setConfig({
@@ -28,7 +26,7 @@ strictPurify.setConfig({
 });
 
 /**
- * Deeply sanitise a value using the strict shopping DOMPurify config.
+ * Deeply sanitise a value using the strict video-calls DOMPurify config.
  *
  * Rules:
  * - Strings are run through DOMPurify (stripping all HTML).
@@ -39,13 +37,13 @@ strictPurify.setConfig({
  * The generic signature preserves the caller's type without requiring
  * type assertions at the call site.
  */
-export function sanitiseShoppingData<T>(value: T): T {
+export function sanitiseVideoCallsData<T>(value: T): T {
   if (typeof value === 'string') {
     return strictPurify.sanitize(value) as unknown as T;
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) => sanitiseShoppingData(item)) as unknown as T;
+    return value.map((item) => sanitiseVideoCallsData(item)) as unknown as T;
   }
 
   if (value !== null && typeof value === 'object') {
@@ -59,7 +57,7 @@ export function sanitiseShoppingData<T>(value: T): T {
     for (const [key, val] of Object.entries(
       value as unknown as Record<string, unknown>,
     )) {
-      sanitised[key] = sanitiseShoppingData(val);
+      sanitised[key] = sanitiseVideoCallsData(val);
     }
     return sanitised as unknown as T;
   }
