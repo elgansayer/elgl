@@ -20,26 +20,26 @@ interface ReadingArticle {
   selector: 'app-reading-engine',
   standalone: true,
   imports: [TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
-  template: `<div class="reading-engine mx-auto max-w-4xl space-y-6 pb-20 pt-4">
+  template: `<div class="reading-engine mx-auto max-w-4xl space-y-4 sm:space-y-6 pb-20 pt-2 sm:pt-4">
   <!-- Header & Tab Navigation -->
-  <header class="app-card app-padded space-y-4">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h1 class="app-section-title">{{ 'readingEngine.title' | t }}</h1>
-        <p class="app-muted">{{ 'readingEngine.subtitle' | t }}</p>
+  <header class="app-card app-padded space-y-3 sm:space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+      <div class="min-w-0 flex-1">
+        <h1 class="app-section-title text-base sm:text-lg">{{ 'readingEngine.title' | t }}</h1>
+        <p class="app-muted text-[11px] sm:text-xs">{{ 'readingEngine.subtitle' | t }}</p>
       </div>
-      <span class="app-chip bg-primary/20 text-primary font-bold text-xs">
+      <span class="app-chip bg-primary/20 text-primary font-bold text-[10px] sm:text-xs shrink-0">
         {{ 'readingEngine.vocabularyCount' | t: { count: vocabularyCount() } }}
       </span>
     </div>
 
-    <nav class="flex gap-2 border-b border-surface-100 pb-2" role="tablist" [attr.aria-label]="'readingEngine.tabNavAriaLabel' | t">
+    <nav class="app-filter-scroll border-b border-surface-100 pb-2" role="tablist" [attr.aria-label]="'readingEngine.tabNavAriaLabel' | t">
       <button type="button" role="tab"
         [attr.aria-selected]="activeTab() === 'articles'"
         (click)="activeTab.set('articles')"
         [class.bg-primary]="activeTab() === 'articles'" [class.text-white]="activeTab() === 'articles'"
         [class.bg-surface-300]="activeTab() !== 'articles'" [class.text-text-secondary]="activeTab() !== 'articles'"
-        class="rounded-app px-4 py-2 text-xs font-bold transition-colors">
+        class="rounded-app px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold transition-colors shrink-0">
         {{ 'readingEngine.tab.articles' | t }}
       </button>
       <button type="button" role="tab"
@@ -47,7 +47,7 @@ interface ReadingArticle {
         (click)="activeTab.set('vocabulary')"
         [class.bg-primary]="activeTab() === 'vocabulary'" [class.text-white]="activeTab() === 'vocabulary'"
         [class.bg-surface-300]="activeTab() !== 'vocabulary'" [class.text-text-secondary]="activeTab() !== 'vocabulary'"
-        class="rounded-app px-4 py-2 text-xs font-bold transition-colors">
+        class="rounded-app px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold transition-colors shrink-0">
         {{ 'readingEngine.tab.vocabulary' | t }}
       </button>
       <button type="button" role="tab"
@@ -55,7 +55,7 @@ interface ReadingArticle {
         (click)="activeTab.set('history')"
         [class.bg-primary]="activeTab() === 'history'" [class.text-white]="activeTab() === 'history'"
         [class.bg-surface-300]="activeTab() !== 'history'" [class.text-text-secondary]="activeTab() !== 'history'"
-        class="rounded-app px-4 py-2 text-xs font-bold transition-colors">
+        class="rounded-app px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold transition-colors shrink-0">
         {{ 'readingEngine.tab.history' | t }}
       </button>
     </nav>
@@ -63,16 +63,16 @@ interface ReadingArticle {
 
   @if (activeTab() === 'articles') {
     @if (selectedArticle(); as article) {
-      <div class="space-y-4">
+      <div class="space-y-3 sm:space-y-4">
         <button type="button" (click)="backToList()"
-          class="app-button-secondary text-xs font-bold flex items-center gap-1.5"
+          class="app-button-secondary text-[11px] sm:text-xs font-bold flex items-center gap-1.5"
           [attr.aria-label]="'readingEngine.backToList' | t">
           <span aria-hidden="true">&larr;</span>
           {{ 'readingEngine.backToList' | t }}
         </button>
 
         <div class="app-card app-padded space-y-2">
-          <div class="flex flex-wrap items-center gap-2">
+          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <span
               [class.bg-emerald-500/20]="article.difficulty === 'beginner'"
               [class.text-emerald-400]="article.difficulty === 'beginner'"
@@ -80,29 +80,29 @@ interface ReadingArticle {
               [class.text-amber-400]="article.difficulty === 'intermediate'"
               [class.bg-rose-500/20]="article.difficulty === 'advanced'"
               [class.text-rose-400]="article.difficulty === 'advanced'"
-              class="rounded-app px-2 py-0.5 text-[11px] font-bold">
+              class="rounded-app px-2 py-0.5 text-[10px] sm:text-[11px] font-bold">
               {{ 'readingEngine.difficulty.' + article.difficulty | t }}
             </span>
-            <span class="rounded-app bg-surface-300 px-2 py-0.5 text-[11px] font-bold text-text-secondary">
+            <span class="rounded-app bg-surface-300 px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-text-secondary">
               {{ 'readingEngine.topic.' + article.topic | t }}
             </span>
-            <span class="text-[11px] text-text-muted">
+            <span class="text-[10px] sm:text-[11px] text-text-muted">
               {{ 'readingEngine.wordCount' | t: { count: article.wordCount } }}
             </span>
           </div>
-          <h2 class="text-lg font-black text-text-primary">{{ article.title }}</h2>
+          <h2 class="text-base sm:text-lg font-black text-text-primary">{{ article.title }}</h2>
         </div>
 
         <div class="app-card app-padded space-y-3">
-          <p class="text-base leading-relaxed text-text-primary whitespace-pre-line">{{ article.content }}</p>
+          <p class="text-sm sm:text-base leading-relaxed text-text-primary whitespace-pre-line">{{ article.content }}</p>
         </div>
 
         <div class="flex flex-wrap gap-2">
-          <button type="button" class="app-button-secondary text-xs font-bold"
+          <button type="button" class="app-button-secondary text-[11px] sm:text-xs font-bold"
             [attr.aria-label]="'readingEngine.saveArticle' | t">
             {{ 'readingEngine.saveArticle' | t }}
           </button>
-          <button type="button" (click)="backToList()" class="app-button-secondary text-xs font-bold"
+          <button type="button" (click)="backToList()" class="app-button-secondary text-[11px] sm:text-xs font-bold"
             [attr.aria-label]="'readingEngine.nextArticle' | t">
             {{ 'readingEngine.nextArticle' | t }}
           </button>
@@ -111,7 +111,7 @@ interface ReadingArticle {
     } @else {
       <!-- Loading skeleton state -->
       @if (isLoading() && !hasError()) {
-        <section class="space-y-4" role="status" [attr.aria-label]="'readingEngine.loadingArticles' | t">
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4" role="status" [attr.aria-label]="'readingEngine.loadingArticles' | t">
           @for (i of [1, 2, 3]; track i) {
             <div class="app-card app-padded space-y-3">
               <app-skeleton-loader [height]="'20px'" [width]="'60%'" [borderRadius]="'6px'"></app-skeleton-loader>
@@ -139,38 +139,38 @@ interface ReadingArticle {
 
       <!-- Filter controls -->
       @if (!isLoading() && !hasError() && articlesResource.value()) {
-        <div class="flex flex-wrap items-center gap-3" role="group" [attr.aria-label]="'readingEngine.filterControlsAriaLabel' | t">
-          <div class="flex items-center gap-1.5">
-            <span class="text-[11px] font-bold text-text-muted">{{ 'readingEngine.filterDifficulty' | t }}</span>
+        <div class="space-y-2 sm:space-y-3" role="group" [attr.aria-label]="'readingEngine.filterControlsAriaLabel' | t">
+          <div class="app-filter-scroll">
+            <span class="text-[10px] sm:text-[11px] font-bold text-text-muted me-1.5 shrink-0 self-center">{{ 'readingEngine.filterDifficulty' | t }}</span>
             <button type="button" (click)="setFilter(null)"
               [class.bg-primary]="!filterDifficulty()" [class.text-white]="!filterDifficulty()"
               [class.bg-surface-300]="filterDifficulty()"
-              class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors">
+              class="rounded-app px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-bold transition-colors shrink-0">
               {{ 'readingEngine.filterAll' | t }}
             </button>
             @for (diff of ['beginner', 'intermediate', 'advanced']; track diff) {
               <button type="button" (click)="setFilter(diff)"
                 [class.bg-primary]="filterDifficulty() === diff" [class.text-white]="filterDifficulty() === diff"
                 [class.bg-surface-300]="filterDifficulty() !== diff"
-                class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors">
+                class="rounded-app px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-bold transition-colors shrink-0">
                 {{ 'readingEngine.difficulty.' + diff | t }}
               </button>
             }
           </div>
 
-          <div class="flex items-center gap-1.5">
-            <span class="text-[11px] font-bold text-text-muted">{{ 'readingEngine.filterTopic' | t }}</span>
+          <div class="app-filter-scroll">
+            <span class="text-[10px] sm:text-[11px] font-bold text-text-muted me-1.5 shrink-0 self-center">{{ 'readingEngine.filterTopic' | t }}</span>
             <button type="button" (click)="setTopicFilter(null)"
               [class.bg-primary]="!filterTopic()" [class.text-white]="!filterTopic()"
               [class.bg-surface-300]="filterTopic()"
-              class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors">
+              class="rounded-app px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-bold transition-colors shrink-0">
               {{ 'readingEngine.filterAll' | t }}
             </button>
             @for (topic of distinctTopics(); track topic) {
               <button type="button" (click)="setTopicFilter(topic)"
                 [class.bg-primary]="filterTopic() === topic" [class.text-white]="filterTopic() === topic"
                 [class.bg-surface-300]="filterTopic() !== topic"
-                class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors">
+                class="rounded-app px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-bold transition-colors shrink-0">
                 {{ 'readingEngine.topic.' + topic | t }}
               </button>
             }
@@ -178,7 +178,7 @@ interface ReadingArticle {
 
           @if (filterDifficulty() || filterTopic()) {
             <button type="button" (click)="clearFilters()"
-              class="text-[11px] font-bold text-primary hover:underline">
+              class="text-[10px] sm:text-[11px] font-bold text-primary hover:underline">
               {{ 'readingEngine.clearFilters' | t }}
             </button>
           }
@@ -198,13 +198,13 @@ interface ReadingArticle {
 
       <!-- Article list -->
       @if (!isLoading() && !hasError() && filteredArticles().length > 0) {
-        <div class="space-y-3" role="list" [attr.aria-label]="'readingEngine.articleListAriaLabel' | t">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4" role="list" [attr.aria-label]="'readingEngine.articleListAriaLabel' | t">
           @for (article of filteredArticles(); track article.id) {
             <button type="button" role="listitem"
               (click)="selectArticle(article.id)"
               class="app-card app-padded w-full text-start space-y-2 hover:bg-surface-300 transition-colors cursor-pointer border border-transparent hover:border-surface-100"
               [attr.aria-label]="'readingEngine.openArticleAriaLabel' | t: { title: article.title }">
-              <div class="flex flex-wrap items-center gap-2">
+              <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <span
                   [class.bg-emerald-500/20]="article.difficulty === 'beginner'"
                   [class.text-emerald-400]="article.difficulty === 'beginner'"
@@ -212,13 +212,13 @@ interface ReadingArticle {
                   [class.text-amber-400]="article.difficulty === 'intermediate'"
                   [class.bg-rose-500/20]="article.difficulty === 'advanced'"
                   [class.text-rose-400]="article.difficulty === 'advanced'"
-                  class="rounded-app px-2 py-0.5 text-[11px] font-bold">
+                  class="rounded-app px-2 py-0.5 text-[10px] sm:text-[11px] font-bold">
                   {{ 'readingEngine.difficulty.' + article.difficulty | t }}
                 </span>
-                <span class="rounded-app bg-surface-300 px-2 py-0.5 text-[11px] font-bold text-text-secondary">
+                <span class="rounded-app bg-surface-300 px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-text-secondary">
                   {{ 'readingEngine.topic.' + article.topic | t }}
                 </span>
-                <span class="ms-auto text-[11px] text-text-muted">
+                <span class="ms-auto text-[10px] sm:text-[11px] text-text-muted">
                   {{ 'readingEngine.wordCountShort' | t: { count: article.wordCount } }}
                 </span>
               </div>
