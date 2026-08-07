@@ -37,6 +37,7 @@ import { I18nService } from './services/i18n.service';
 import { AppLanguageSelectorComponent } from './components/app-language-selector/app-language-selector.component';
 import { AppLockService } from './services/app-lock.service';
 import { GiftAnimationOverlayComponent } from './components/gift-animation-overlay/gift-animation-overlay.component';
+import { NotificationService } from './services/notification.service';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
@@ -72,6 +73,16 @@ export class AppComponent implements OnInit {
   public startProductTour(): void {
     // Placeholder method for the interactive product tour feature.
   }
+
+  async syncGlobalUnreadCounts(): Promise<void> {
+    try {
+      const unread = await this.notificationService.getUnreadCount();
+      this.unreadCounter.setNotificationUnread(unread);
+    } catch {
+      // Fallback: keep existing count
+    }
+  }
+
   authService = inject(AuthService);
   economyStore = inject(EconomyStore);
   centrifugeService = inject(CentrifugeService);
@@ -79,6 +90,7 @@ export class AppComponent implements OnInit {
   private safetyService = inject(SafetyService);
   reportModalService = inject(ReportUserModalService);
   readonly unreadCounter = inject(UnreadCounterService);
+  private notificationService = inject(NotificationService);
   private versionCheckService = inject(VersionCheckService);
   private fontScaleService = inject(FontScaleService);
   readonly i18n = inject(I18nService);
@@ -87,6 +99,14 @@ export class AppComponent implements OnInit {
   readonly appLockService = inject(AppLockService);
   private readonly router = inject(Router);
   private platformId = inject(PLATFORM_ID);
+
+  readonly totalUnread = computed(() => this.unreadCounter.totalUnread());
+  readonly hasUnread = computed(() => this.totalUnread() > 0);
+  readonly unreadDisplayValue = computed(() => {
+    const count = this.totalUnread();
+    if (count <= 0) return '0';
+    return count > 99 ? '99+' : String(count);
+  });
 
   private routerOutlet = viewChild.required(RouterOutlet);
 
@@ -176,6 +196,9 @@ export class AppComponent implements OnInit {
         this.dailyRewardCoins.set(checkIn.coins_rewarded);
         this.showDailyRewardModal.set(true);
       }
+
+      // Sync global unread counts
+      this.syncGlobalUnreadCounts();
 
       await this.centrifugeService.connect();
       this.centrifugeService.subscribe(`user_${user.id}`, (data: unknown) => {

@@ -15,7 +15,8 @@ import { UnreadCounterService } from './services/unread-counter.service';
 import { VersionCheckService } from './services/version-check.service';
 import { FontScaleService } from './services/font-scale.service';
 import { I18nService } from './services/i18n.service';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { NotificationService } from './services/notification.service';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 describe('AppComponent', () => {
   let component: AppComponent;
@@ -43,6 +44,7 @@ describe('AppComponent', () => {
       Promise.resolve({ claimed: true, coins_rewarded: 123 }),
     ),
     triggerGiftAnimation: vi.fn(),
+    activeGiftAnimation: vi.fn(() => null),
   };
 
   const centrifugeServiceMock = {
@@ -67,6 +69,14 @@ describe('AppComponent', () => {
 
   const unreadCounterMock = {
     totalUnread: vi.fn(() => 0),
+    chatUnread: vi.fn(() => 0),
+    notificationUnread: vi.fn(() => 0),
+    setNotificationUnread: vi.fn(),
+    setChatUnread: vi.fn(),
+  };
+
+  const notificationServiceMock = {
+    getUnreadCount: vi.fn(() => Promise.resolve(0)),
   };
 
   const versionCheckServiceMock = {
@@ -79,15 +89,17 @@ describe('AppComponent', () => {
 
   const i18nServiceMock = {
     translate: vi.fn(() => ''),
+    translations: vi.fn(() => ({})),
   };
 
   beforeEach(async () => {
     vi.clearAllMocks();
     subscribeCallback = undefined;
 
-    // Default resetts that keep the component in a known state
+    // Default resets that keep the component in a known state
     authServiceMock.isAuthenticated.mockReturnValue(true);
     authServiceMock.currentUser.mockReturnValue({ id: 'test-user-1' });
+    authServiceMock.getAccessToken.mockReturnValue('test-token');
     appLockServiceMock.biometricEnabled.mockReturnValue(false);
 
     await TestBed.configureTestingModule({
@@ -103,6 +115,7 @@ describe('AppComponent', () => {
         { provide: SafetyService, useValue: safetyServiceMock },
         { provide: ReportUserModalService, useValue: reportModalServiceMock },
         { provide: UnreadCounterService, useValue: unreadCounterMock },
+        { provide: NotificationService, useValue: notificationServiceMock },
         { provide: VersionCheckService, useValue: versionCheckServiceMock },
         { provide: FontScaleService, useValue: fontScaleServiceMock },
         { provide: I18nService, useValue: i18nServiceMock as unknown as I18nService },
@@ -132,7 +145,16 @@ describe('AppComponent', () => {
   });
 
   it('should initialise unread counter computed values', () => {
-    expect(component.unreadCounter.totalUnread()).toBe(0);
+    expect(component.totalUnread()).toBe(0);
+    expect(component.hasUnread()).toBe(false);
+    expect(component.unreadDisplayValue()).toBe('0');
+  });
+
+  it('should return 99+ for unread display when count exceeds 99', () => {
+    unreadCounterMock.totalUnread.mockReturnValue(150);
+    expect(component.totalUnread()).toBe(150);
+    expect(component.hasUnread()).toBe(true);
+    expect(component.unreadDisplayValue()).toBe('99+');
   });
 
   it('should call core services during ngOnInit', () => {
@@ -140,6 +162,7 @@ describe('AppComponent', () => {
     expect(economyStoreMock.loadInitialData).toHaveBeenCalledTimes(1);
     expect(safetyServiceMock.loadBlockedUsers).toHaveBeenCalledTimes(1);
     expect(economyStoreMock.claimDailyCheckIn).toHaveBeenCalledTimes(1);
+    expect(notificationServiceMock.getUnreadCount).toHaveBeenCalledTimes(1);
     expect(centrifugeServiceMock.connect).toHaveBeenCalledTimes(1);
     expect(centrifugeServiceMock.subscribe).toHaveBeenCalledTimes(1);
     expect(fcmServiceMock.requestPermission).toHaveBeenCalledTimes(1);

@@ -75,11 +75,11 @@
       >
         <div class="relative">
           <span class="text-2xl leading-none">💬</span>
-          @if (unreadCounter.totalUnread() > 0) {
+          @if (unreadCounter.chatUnread() > 0) {
             <span
               class="absolute -top-1 -end-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
             >
-              {{ unreadCounter.totalUnread() > 99 ? '99+' : unreadCounter.totalUnread() }}
+              {{ unreadCounter.chatUnread() > 99 ? '99+' : unreadCounter.chatUnread() }}
             </span>
           }
         </div>
