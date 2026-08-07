@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, UseInterceptors } from '@nestjs/common';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -7,6 +7,12 @@ import { UsersService } from '../users/users.service';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
 import { DiscoveryService } from './discovery.service';
+import {
+  DiscoveryCacheInterceptor,
+  DISCOVERY_CACHE_PUBLIC_LONG,
+  DISCOVERY_CACHE_PUBLIC_SHORT,
+  DISCOVERY_CACHE_PRIVATE_SHORT,
+} from './cache.interceptor';
 
 @Controller('discovery')
 @UseGuards(SupabaseAuthGuard)
@@ -16,7 +22,11 @@ export class DiscoveryController {
     private readonly usersService: UsersService,
   ) {}
 
+  /**
+   * Personalised partner search: user-specific filters, private short cache.
+   */
   @Get('partners')
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
   async findPartners(
     @CurrentUser() user: User | null,
     @Query() query: SearchQueryDto,
@@ -31,12 +41,20 @@ export class DiscoveryController {
     return this.discoveryService.searchPartners(user.id, profile, query);
   }
 
+  /**
+   * Partner of the Week: refreshed weekly by cron, public long-lived CDN cache.
+   */
   @Get('partner-of-week')
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_LONG))
   async getPartnerOfWeek(): Promise<string[]> {
     return this.discoveryService.getPartnerOfWeekIds();
   }
 
+  /**
+   * Audio intro discovery: user-specific filters, private short cache.
+   */
   @Get('audio-intros')
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
   async getAudioIntros(
     @CurrentUser() user: User | null,
     @Query() query: SearchQueryDto,
@@ -46,7 +64,11 @@ export class DiscoveryController {
     return this.discoveryService.getAudioIntros(user.id, profile, query);
   }
 
+  /**
+   * Recently joined native speakers: shared list, public short-lived CDN cache.
+   */
   @Get('recent-native-speakers')
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_SHORT))
   async getRecentNativeSpeakers(
     @CurrentUser() user: User | null,
   ): Promise<UserProfile[]> {
@@ -54,13 +76,21 @@ export class DiscoveryController {
     return this.discoveryService.getRecentNativeSpeakers(user.id);
   }
 
+  /**
+   * Spotlight users: shared list, public short-lived CDN cache.
+   */
   @Get('spotlight')
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_SHORT))
   async getSpotlight(@CurrentUser() user: User | null): Promise<UserProfile[]> {
     if (!user) return [];
     return this.discoveryService.getSpotlightUsers(user.id);
   }
 
+  /**
+   * Language pair matching: user-specific, private short cache.
+   */
   @Get('language-pair')
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
   async findByLanguagePair(
     @CurrentUser() user: User | null,
     @Query() query: LanguagePairQueryDto,
@@ -69,7 +99,11 @@ export class DiscoveryController {
     return this.discoveryService.findByLanguagePair(user.id, query);
   }
 
+  /**
+   * Location-based search: user-specific, private short cache.
+   */
   @Get('search-by-location')
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
   async searchByLocation(
     @CurrentUser() user: User | null,
     @Query('country') country?: string,

@@ -7,11 +7,12 @@ import { OfflineAdminStorageService } from '../../services/offline-admin-storage
 import { AdminOfflineBannerComponent } from '../admin-offline-banner/admin-offline-banner.component';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppPillComponent } from '../primitives/pill/pill.component';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-portal',
-  imports: [CommonModule, TranslatePipe, AppCardComponent, AppPillComponent, AdminOfflineBannerComponent],
+  imports: [CommonModule, TranslatePipe, AppCardComponent, AppPillComponent, SanitiseHtmlPipe, AdminOfflineBannerComponent],
   templateUrl: './admin-portal.component.html',
   styleUrls: ['./admin-portal.component.scss'],
 })

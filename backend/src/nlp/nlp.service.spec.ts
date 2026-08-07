@@ -140,9 +140,6 @@ describe('NlpService', () => {
             Promise.resolve({ translations: [{ text: 'Hello / Welcome' }] }), // translation
         })
         .mockResolvedValueOnce({
-          ok: true, // glossary check
-        })
-        .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ translations: [{ text: 'Hello' }] }), // transliteration
         });

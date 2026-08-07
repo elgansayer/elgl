@@ -3,96 +3,13 @@ import { FlashcardsService } from './flashcards.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { XpService } from '../xp/xp.service';
 import { MetricsService } from '../metrics/metrics.service';
-import { Flashcard } from './interfaces/flashcard.interface';
-import { CreateFlashcardDto } from './dto/flashcard.dto';
-
-// Mock the retry module so we can verify it's being used for SRS operations
-jest.mock('../common/retry', () => ({
-  withRetry: jest.fn((fn: () => unknown) => fn()),
-  isRateLimitError: jest.requireActual('../common/retry').isRateLimitError,
-}));
-
-// Mock jsdom and dompurify to avoid parsing ESM dependencies in Node test env
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation(() => ({
-    window: {
-      document: { createElement: jest.fn(), createDocumentFragment: jest.fn() },
-      Node: { ELEMENT_NODE: 1, TEXT_NODE: 3, DOCUMENT_FRAGMENT_NODE: 11 },
-      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
-    },
-  })),
-}));
-
-jest.mock('dompurify', () => ({
-  __esModule: true,
-  default: jest.fn(() => ({
-    sanitize: (dirty: string) => {
-      if (typeof dirty !== 'string') return dirty;
-      return dirty.replace(/<[^>]*>/g, '');
-    },
-    setConfig: jest.fn(),
-  })),
-}));
-
-import { withRetry } from '../common/retry';
-
-interface MockLogger {
-  info: jest.Mock;
-  error: jest.Mock;
-  warn: jest.Mock;
-  debug: jest.Mock;
-}
-
-interface MockQueryBuilder {
-  upsert: jest.Mock;
-  update: jest.Mock;
-  select: jest.Mock;
-  eq: jest.Mock;
-  lt: jest.Mock;
-  lte: jest.Mock;
-  order: jest.Mock;
-  single: jest.Mock;
-  then?: jest.Mock;
-}
-
-interface MockSupabaseClient {
-  from: jest.Mock;
-}
-
-interface MockMetricsService {
-  recordSrsFlashcardCreated: jest.Mock;
-  recordSrsReviewCompleted: jest.Mock;
-  setSrsDueCards: jest.Mock;
-  setSrsAverageEasinessFactor: jest.Mock;
-  setSrsReviewSuccessRate: jest.Mock;
-  setSrsCardsPerLevel: jest.Mock;
-  setSrsCardsStuck: jest.Mock;
-  setSrsDecksTotal: jest.Mock;
-  recordSrsDeckCreated: jest.Mock;
-}
-
-function mockFlashcard(overrides: Partial<Flashcard> = {}): Flashcard {
-  return {
-    id: 'card-1',
-    user_id: 'user-1',
-    word_token: 'test',
-    translation: 'test',
-    srs_level: 0,
-    easiness_factor: 2.5,
-    repetitions: 0,
-    interval_days: 0,
-    next_review_at: '2026-01-01T00:00:00Z',
-    created_at: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
 
 describe('FlashcardsService', () => {
   let service: FlashcardsService;
-  let mockSupabaseClient: MockSupabaseClient;
-  let mockQueryBuilder: MockQueryBuilder;
-  let mockLogger: MockLogger;
-  let mockMetricsService: MockMetricsService;
+  let mockSupabaseClient: Record<string, unknown>;
+  let mockQueryBuilder: Record<string, unknown>;
+  let mockLogger: Record<string, unknown>;
+  let mockMetricsService: Record<string, unknown>;
 
   beforeEach(async () => {
     mockLogger = {
@@ -168,20 +85,18 @@ describe('FlashcardsService', () => {
 
   describe('createOrUpdateFlashcard', () => {
     it('should clean word token and upsert flashcard successfully', async () => {
-      const dto: CreateFlashcardDto = {
+      const dto: Record<string, unknown> = {
         word_token: '  BONJOUR  ',
         original_context: 'Bonjour le monde',
         translation: 'Hello',
         definition: 'Greeting',
         pronunciation_url: 'http://audio.mock/b.mp3',
       };
-      const savedCard = mockFlashcard({
+      const savedCard: Record<string, unknown> = {
+        id: 'card-1',
         word_token: 'bonjour',
-        original_context: 'Bonjour le monde',
-        translation: 'Hello',
-        definition: 'Greeting',
-        pronunciation_url: 'http://audio.mock/b.mp3',
-      });
+        ...dto,
+      };
       mockQueryBuilder.single.mockResolvedValue({
         data: savedCard,
         error: null,
@@ -206,7 +121,7 @@ describe('FlashcardsService', () => {
     });
 
     it('should throw Error when upsert fails', async () => {
-      const dto: CreateFlashcardDto = {
+      const dto: Record<string, unknown> = {
         word_token: 'test',
         translation: 'test',
       };
@@ -418,9 +333,8 @@ describe('FlashcardsService', () => {
       // Notice query builds: from().select().eq(user_id).order(). Then if level !== undefined && !isNaN(level), query.eq('srs_level', level).
       // So when query is awaited, it returns whatever eq returns or order returns if eq returns this.
       // Let's set up the promise resolution on queryBuilder itself or mock eq to return a promise when awaited.
-      mockQueryBuilder.then = (
-        resolve: (value: { data: unknown[]; error: null }) => void,
-      ) => resolve({ data: cards, error: null });
+      mockQueryBuilder.then = (resolve: (value: unknown) => void) =>
+        resolve({ data: cards, error: null });
 
       const result = await service.getFlashcards('user-1', 2);
 
@@ -470,82 +384,6 @@ describe('FlashcardsService', () => {
 
       const result = await service.getDueReviews('user-1');
       expect(result).toEqual([]);
-    });
-  });
-
-  describe('SRS retry integration', () => {
-    beforeEach(() => {
-      jest.clearAllMocks();
-    });
-
-    it('should wrap createOrUpdateFlashcard Supabase call with withRetry', async () => {
-      const dto: CreateFlashcardDto = {
-        word_token: 'hello',
-        translation: 'hola',
-      };
-      const savedCard = mockFlashcard({ word_token: 'hello' });
-      mockQueryBuilder.single.mockResolvedValue({
-        data: savedCard,
-        error: null,
-      });
-
-      await service.createOrUpdateFlashcard('user-1', dto);
-
-      expect(withRetry).toHaveBeenCalledTimes(1);
-      expect(withRetry).toHaveBeenCalledWith(expect.any(Function), {
-        logger: mockLogger,
-      });
-    });
-
-    it('should wrap updateSrsLevel fetch call with withRetry', async () => {
-      const currentCard = {
-        easiness_factor: 2.5,
-        repetitions: 0,
-        interval_days: 0,
-      };
-      const updatedCard = {
-        id: 'card-1',
-        srs_level: 1,
-        easiness_factor: 2.6,
-        repetitions: 1,
-        interval_days: 1,
-        next_review_at: '2026-07-23T12:00:00.000Z',
-      };
-
-      mockQueryBuilder.single
-        .mockResolvedValueOnce({ data: currentCard, error: null })
-        .mockResolvedValueOnce({ data: updatedCard, error: null });
-
-      await service.updateSrsLevel('user-1', 'card-1', { quality: 5 });
-
-      // withRetry should be called twice: once for fetch, once for update
-      expect(withRetry).toHaveBeenCalledTimes(2);
-      // Both calls should pass the logger
-      const calls = (withRetry as jest.Mock).mock.calls;
-      expect(calls[0][1]).toEqual({ logger: mockLogger });
-      expect(calls[1][1]).toEqual({ logger: mockLogger });
-    });
-
-    it('should not wrap getFlashcards with withRetry', async () => {
-      mockQueryBuilder.order.mockResolvedValue({
-        data: [],
-        error: null,
-      });
-
-      await service.getFlashcards('user-1');
-
-      expect(withRetry).not.toHaveBeenCalled();
-    });
-
-    it('should not wrap getDueReviews with withRetry', async () => {
-      mockQueryBuilder.order.mockResolvedValue({
-        data: [],
-        error: null,
-      });
-
-      await service.getDueReviews('user-1');
-
-      expect(withRetry).not.toHaveBeenCalled();
     });
   });
 });

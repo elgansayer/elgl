@@ -49,7 +49,7 @@
                       {{ (block.blocker_name ?? '?').charAt(0) }}
                     </span>
                   }
-                  <span>{{ block.blocker_name ?? ('admin.blocks.unknown' | t) }}</span>
+                  <span>{{ (block.blocker_name ?? ('admin.blocks.unknown' | t)) | sanitiseHtml }}</span>
                 </div>
               </td>
               <td class="px-3 py-2">
@@ -65,7 +65,7 @@
                       {{ (block.blocked_name ?? '?').charAt(0) }}
                     </span>
                   }
-                  <span>{{ block.blocked_name ?? ('admin.blocks.unknown' | t) }}</span>
+                  <span>{{ (block.blocked_name ?? ('admin.blocks.unknown' | t)) | sanitiseHtml }}</span>
                 </div>
               </td>
               <td class="px-3 py-2 text-sm text-slate-500">
