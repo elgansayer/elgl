@@ -123,82 +123,6 @@ describe('MetricsService', () => {
     });
   });
 
-<<<<<<< HEAD
-  describe('Escrow metrics', () => {
-    it('should record escrow created', () => {
-      expect(() => service.recordEscrowCreated('lesson')).not.toThrow();
-    });
-
-    it('should record escrow created with default service type', () => {
-      expect(() => service.recordEscrowCreated()).not.toThrow();
-    });
-
-    it('should record escrow released', () => {
-      expect(() => service.recordEscrowReleased()).not.toThrow();
-    });
-
-    it('should record escrow refunded', () => {
-      expect(() => service.recordEscrowRefunded()).not.toThrow();
-    });
-
-    it('should record escrow disputed', () => {
-      expect(() => service.recordEscrowDisputed()).not.toThrow();
-    });
-
-    it('should set escrows by status', () => {
-      expect(() => service.setEscrowsByStatus('pending', 10)).not.toThrow();
-    });
-
-    it('should set escrows value held', () => {
-      expect(() => service.setEscrowsValueHeld(5000)).not.toThrow();
-    });
-
-    it('should set escrows stuck pending', () => {
-      expect(() => service.setEscrowsStuckPending(25)).not.toThrow();
-    });
-
-    it('should set escrow dispute rate', () => {
-      expect(() => service.setEscrowDisputeRate(0.05)).not.toThrow();
-    });
-
-    it('should record escrow resolution duration', () => {
-      expect(() =>
-        service.recordEscrowResolutionDuration(3600),
-      ).not.toThrow();
-    });
-
-    it('should expose escrow gauge metrics correctly', () => {
-      service.setEscrowsByStatus('pending', 5);
-      service.setEscrowsByStatus('disputed', 2);
-      service.setEscrowsValueHeld(1000);
-      service.setEscrowsStuckPending(3);
-      service.setEscrowDisputeRate(0.12);
-      expect(true).toBe(true);
-    });
-
-    it('should expose escrow counter metrics correctly', () => {
-      service.recordEscrowCreated('lesson');
-      service.recordEscrowReleased();
-      service.recordEscrowRefunded();
-      service.recordEscrowDisputed();
-      expect(true).toBe(true);
-    });
-
-    it('should include escrow metrics in getMetrics output', async () => {
-      service.recordEscrowCreated('lesson');
-      service.recordEscrowReleased();
-      service.setEscrowsValueHeld(500);
-      const metrics = await service.getMetrics();
-      expect(metrics).toContain('hellotalk_escrow_created_total');
-      expect(metrics).toContain('hellotalk_escrow_released_total');
-      expect(metrics).toContain('hellotalk_escrow_refunded_total');
-      expect(metrics).toContain('hellotalk_escrow_disputed_total');
-      expect(metrics).toContain('hellotalk_escrows_by_status');
-      expect(metrics).toContain('hellotalk_escrows_value_held');
-      expect(metrics).toContain('hellotalk_escrows_stuck_pending');
-      expect(metrics).toContain('hellotalk_escrow_dispute_rate');
-      expect(metrics).toContain('hellotalk_escrow_resolution_duration_seconds');
-=======
   describe('Trust & Safety metrics', () => {
     it('should record report submitted', () => {
       expect(() => service.recordTsReportSubmitted('harassment')).not.toThrow();
@@ -259,7 +183,6 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_ts_dating_risk_score');
       expect(metrics).toContain('hellotalk_ts_reports_by_category_total');
       expect(metrics).toContain('hellotalk_ts_moderation_queue_latency_seconds');
->>>>>>> origin/main
     });
   });
 
