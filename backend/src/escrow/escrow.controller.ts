@@ -17,6 +17,7 @@ import {
   CreateEscrowDto,
   ReleaseEscrowDto,
   RefundEscrowDto,
+  ReconcileEscrowDto,
 } from './dto/escrow.dto';
 import {
   EscrowCacheInterceptor,
@@ -87,6 +88,27 @@ export class EscrowController {
       throw new UnauthorizedException();
     }
     return this.escrowService.refundEscrow(userId, dto.escrow_id);
+  }
+
+  /**
+   * POST /escrow/reconcile
+   * Reconcile an escrow stuck in a degraded state (release_pending
+   * or refund_pending) by retrying the failed coin operation.
+   * Rate limited to 10 requests per minute.
+   * Caching: no-store. This is a mutation.
+   */
+  @Post('reconcile')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @UseInterceptors(new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_NO_STORE))
+  async reconcile(
+    @Req() req: { user?: { id?: string } },
+    @Body() dto: ReconcileEscrowDto,
+  ) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException();
+    }
+    return this.escrowService.reconcileEscrow(userId, dto.escrow_id);
   }
 
   /**

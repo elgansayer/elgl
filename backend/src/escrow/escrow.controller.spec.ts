@@ -18,6 +18,7 @@ describe('EscrowController', () => {
             createEscrow: jest.fn(),
             releaseEscrow: jest.fn(),
             refundEscrow: jest.fn(),
+            reconcileEscrow: jest.fn(),
             getEscrow: jest.fn(),
             listEscrows: jest.fn(),
           },
@@ -136,6 +137,36 @@ describe('EscrowController', () => {
       );
 
       expect(escrowService.refundEscrow).toHaveBeenCalledWith(
+        'payer-1',
+        'escrow-1',
+      );
+      expect(response).toEqual(result);
+    });
+  });
+
+  describe('reconcile', () => {
+    it('should throw UnauthorizedException if no user', async () => {
+      await expect(
+        controller.reconcile({ user: undefined }, { escrow_id: 'escrow-1' }),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should call service reconcileEscrow with user ID and escrow ID', async () => {
+      const dto = { escrow_id: 'escrow-1' };
+      const result = {
+        id: 'escrow-1',
+        status: 'released',
+        amount_coins: 100,
+        reconciliation: 'completed' as const,
+      };
+      (escrowService.reconcileEscrow as jest.Mock).mockResolvedValue(result);
+
+      const response = await controller.reconcile(
+        { user: { id: 'payer-1' } },
+        dto,
+      );
+
+      expect(escrowService.reconcileEscrow).toHaveBeenCalledWith(
         'payer-1',
         'escrow-1',
       );

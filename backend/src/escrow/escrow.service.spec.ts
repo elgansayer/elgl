@@ -8,12 +8,24 @@ import {
 import { EscrowService } from './escrow.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MonetisationService } from '../monetisation/monetisation.service';
+import { RetryService } from '../common/retry/retry.service';
 
 describe('EscrowService', () => {
   let service: EscrowService;
   let monetisationService: MonetisationService;
   let mockQueryBuilder: any;
   let module: TestingModule;
+
+  /** Build a mock retry service that passes through the operation directly. */
+  const mockRetryService = {
+    withRetry: jest.fn((operation: () => Promise<unknown>) => {
+      return operation().then((result: unknown) => ({
+        result,
+        attempts: 1,
+        totalTimeMs: 0,
+      }));
+    }),
+  };
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -22,10 +34,13 @@ describe('EscrowService', () => {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       or: jest.fn().mockReturnThis(),
+      in: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       range: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
+      lt: jest.fn().mockReturnThis(),
       single: jest.fn(),
+      maybeSingle: jest.fn(),
     };
 
     const mockSupabaseClient = {
@@ -46,7 +61,12 @@ describe('EscrowService', () => {
           useValue: {
             deductCoins: jest.fn(),
             addCoins: jest.fn(),
+            getCoinsBalance: jest.fn(),
           },
+        },
+        {
+          provide: RetryService,
+          useValue: mockRetryService,
         },
       ],
     }).compile();
@@ -118,7 +138,37 @@ describe('EscrowService', () => {
       });
     });
 
-    it('should refund coins if escrow insert fails', async () => {
+    it('should return existing escrow when idempotency key matches', async () => {
+      const existing = {
+        id: 'escrow-existing',
+        payer_id: payerId,
+        payee_id: dto.payee_id,
+        amount_coins: 100,
+        status: 'held',
+        created_at: '2026-08-07T00:00:00Z',
+        updated_at: '2026-08-07T00:00:00Z',
+      };
+      mockQueryBuilder.maybeSingle.mockResolvedValue({
+        data: existing,
+        error: null,
+      });
+      (monetisationService.getCoinsBalance as jest.Mock).mockResolvedValue(50);
+
+      const result = await service.createEscrow(payerId, {
+        ...dto,
+        idempotency_key: '123e4567-e89b-12d3-a456-426614174000',
+      });
+
+      expect(monetisationService.deductCoins).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        id: 'escrow-existing',
+        status: 'held',
+        amount_coins: 100,
+        payer_balance: 50,
+      });
+    });
+
+    it('should refund coins with retry if escrow insert fails', async () => {
       mockQueryBuilder.single
         .mockResolvedValueOnce({ data: { id: 'payee-1' }, error: null })
         .mockResolvedValueOnce({
@@ -133,6 +183,7 @@ describe('EscrowService', () => {
         BadRequestException,
       );
       expect(monetisationService.addCoins).toHaveBeenCalledWith(payerId, 100);
+      expect(mockRetryService.withRetry).toHaveBeenCalled();
     });
   });
 
@@ -144,7 +195,7 @@ describe('EscrowService', () => {
       payer_id: userId,
       payee_id: 'payee-1',
       amount_coins: 100,
-      status: 'held',
+      status: 'held' as const,
       description: null,
       reference_id: null,
       created_at: '2026-08-07T00:00:00Z',
@@ -183,21 +234,63 @@ describe('EscrowService', () => {
       );
     });
 
-    it('should release escrow successfully', async () => {
+    it('should release escrow successfully via release_pending', async () => {
       mockQueryBuilder.single.mockResolvedValue({
-        data: heldEscrow,
+        data: { ...heldEscrow },
         error: null,
       });
+      // Phase 1: transition to release_pending succeeds
+      mockQueryBuilder.update
+        .mockReturnValueOnce({
+          eq: jest.fn().mockReturnThis(),
+          select: jest.fn(),
+        } as any)
+        .mockReturnValueOnce({
+          eq: jest.fn().mockReturnThis(),
+          select: jest.fn(),
+        } as any);
+      // Simulate the eq().eq() chain for transition to release_pending
+      const eqMockForPending = jest.fn().mockResolvedValue({ error: null });
+      const eqMockForReleased = jest.fn().mockResolvedValue({ error: null });
+      mockQueryBuilder.update
+        .mockReturnValueOnce({
+          eq: jest.fn().mockReturnValue({ eq: eqMockForPending }),
+        })
+        .mockReturnValueOnce({
+          eq: jest.fn().mockReturnValue({ eq: eqMockForReleased }),
+        });
+
       (monetisationService.addCoins as jest.Mock).mockResolvedValue(200);
 
       const result = await service.releaseEscrow(userId, escrowId);
 
-      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+      expect(result).toEqual({
+        id: escrowId,
         status: 'released',
-        released_at: expect.any(String) as string,
-        updated_at: expect.any(String) as string,
+        amount_coins: 100,
+        payee_balance: 200,
       });
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', escrowId);
+    });
+
+    it('should finalise release_pending escrow', async () => {
+      const pendingEscrow = {
+        ...heldEscrow,
+        status: 'release_pending' as const,
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { ...pendingEscrow },
+        error: null,
+      });
+
+      const eqMockForReleased = jest.fn().mockResolvedValue({ error: null });
+      mockQueryBuilder.update.mockReturnValueOnce({
+        eq: jest.fn().mockReturnValue({ eq: eqMockForReleased }),
+      });
+
+      (monetisationService.addCoins as jest.Mock).mockResolvedValue(200);
+
+      const result = await service.releaseEscrow(userId, escrowId);
+
       expect(result).toEqual({
         id: escrowId,
         status: 'released',
@@ -215,7 +308,7 @@ describe('EscrowService', () => {
       payer_id: userId,
       payee_id: 'payee-1',
       amount_coins: 100,
-      status: 'held',
+      status: 'held' as const,
       description: null,
       reference_id: null,
       created_at: '2026-08-07T00:00:00Z',
@@ -254,25 +347,201 @@ describe('EscrowService', () => {
       );
     });
 
-    it('should refund escrow successfully', async () => {
+    it('should refund escrow successfully via refund_pending', async () => {
       mockQueryBuilder.single.mockResolvedValue({
-        data: heldEscrow,
+        data: { ...heldEscrow },
         error: null,
       });
+
+      const eqMockForPending = jest.fn().mockResolvedValue({ error: null });
+      const eqMockForRefunded = jest.fn().mockResolvedValue({ error: null });
+      mockQueryBuilder.update
+        .mockReturnValueOnce({
+          eq: jest.fn().mockReturnValue({ eq: eqMockForPending }),
+        })
+        .mockReturnValueOnce({
+          eq: jest.fn().mockReturnValue({ eq: eqMockForRefunded }),
+        });
+
       (monetisationService.addCoins as jest.Mock).mockResolvedValue(150);
 
       const result = await service.refundEscrow(userId, escrowId);
 
-      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
-        status: 'refunded',
-        refunded_at: expect.any(String) as string,
-        updated_at: expect.any(String) as string,
-      });
       expect(result).toEqual({
         id: escrowId,
         status: 'refunded',
         amount_coins: 100,
         payer_balance: 150,
+      });
+    });
+
+    it('should finalise refund_pending escrow', async () => {
+      const pendingEscrow = {
+        ...heldEscrow,
+        status: 'refund_pending' as const,
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { ...pendingEscrow },
+        error: null,
+      });
+
+      const eqMockForRefunded = jest.fn().mockResolvedValue({ error: null });
+      mockQueryBuilder.update.mockReturnValueOnce({
+        eq: jest.fn().mockReturnValue({ eq: eqMockForRefunded }),
+      });
+
+      (monetisationService.addCoins as jest.Mock).mockResolvedValue(150);
+
+      const result = await service.refundEscrow(userId, escrowId);
+
+      expect(result).toEqual({
+        id: escrowId,
+        status: 'refunded',
+        amount_coins: 100,
+        payer_balance: 150,
+      });
+    });
+  });
+
+  describe('reconcileEscrow', () => {
+    const escrowId = 'escrow-1';
+    const userId = 'payer-1';
+
+    it('should throw if user is not a participant', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: {
+          id: escrowId,
+          payer_id: 'other-1',
+          payee_id: 'other-2',
+          status: 'release_pending',
+          amount_coins: 100,
+        },
+        error: null,
+      });
+      await expect(service.reconcileEscrow(userId, escrowId)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should return already_consistent for non-degraded escrow', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: {
+          id: escrowId,
+          payer_id: userId,
+          payee_id: 'payee-1',
+          amount_coins: 100,
+          status: 'held',
+          created_at: '2026-08-07T00:00:00Z',
+        },
+        error: null,
+      });
+
+      const result = await service.reconcileEscrow(userId, escrowId);
+      expect(result).toEqual({
+        id: escrowId,
+        status: 'held',
+        amount_coins: 100,
+        reconciliation: 'already_consistent',
+      });
+    });
+
+    it('should reconcile release_pending escrow', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: {
+          id: escrowId,
+          payer_id: userId,
+          payee_id: 'payee-1',
+          amount_coins: 100,
+          status: 'release_pending',
+          created_at: '2026-08-07T00:00:00Z',
+          updated_at: '2026-08-07T00:00:00Z',
+          released_at: null,
+          refunded_at: null,
+        },
+        error: null,
+      });
+
+      const eqMockForReleased = jest.fn().mockResolvedValue({ error: null });
+      mockQueryBuilder.update.mockReturnValueOnce({
+        eq: jest.fn().mockReturnValue({ eq: eqMockForReleased }),
+      });
+
+      (monetisationService.addCoins as jest.Mock).mockResolvedValue(200);
+
+      const result = await service.reconcileEscrow(userId, escrowId);
+
+      expect(result).toEqual({
+        id: escrowId,
+        status: 'released',
+        amount_coins: 100,
+        reconciliation: 'completed',
+      });
+    });
+
+    it('should reconcile refund_pending escrow', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: {
+          id: escrowId,
+          payer_id: userId,
+          payee_id: 'payee-1',
+          amount_coins: 100,
+          status: 'refund_pending',
+          created_at: '2026-08-07T00:00:00Z',
+          updated_at: '2026-08-07T00:00:00Z',
+          released_at: null,
+          refunded_at: null,
+        },
+        error: null,
+      });
+
+      const eqMockForRefunded = jest.fn().mockResolvedValue({ error: null });
+      mockQueryBuilder.update.mockReturnValueOnce({
+        eq: jest.fn().mockReturnValue({ eq: eqMockForRefunded }),
+      });
+
+      (monetisationService.addCoins as jest.Mock).mockResolvedValue(150);
+
+      const result = await service.reconcileEscrow(userId, escrowId);
+
+      expect(result).toEqual({
+        id: escrowId,
+        status: 'refunded',
+        amount_coins: 100,
+        reconciliation: 'completed',
+      });
+    });
+
+    it('should allow payee to reconcile release_pending', async () => {
+      const payeeId = 'payee-1';
+      mockQueryBuilder.single.mockResolvedValue({
+        data: {
+          id: escrowId,
+          payer_id: userId,
+          payee_id: payeeId,
+          amount_coins: 100,
+          status: 'release_pending',
+          created_at: '2026-08-07T00:00:00Z',
+          updated_at: '2026-08-07T00:00:00Z',
+          released_at: null,
+          refunded_at: null,
+        },
+        error: null,
+      });
+
+      const eqMockForReleased = jest.fn().mockResolvedValue({ error: null });
+      mockQueryBuilder.update.mockReturnValueOnce({
+        eq: jest.fn().mockReturnValue({ eq: eqMockForReleased }),
+      });
+
+      (monetisationService.addCoins as jest.Mock).mockResolvedValue(200);
+
+      const result = await service.reconcileEscrow(payeeId, escrowId);
+
+      expect(result).toEqual({
+        id: escrowId,
+        status: 'released',
+        amount_coins: 100,
+        reconciliation: 'completed',
       });
     });
   });
