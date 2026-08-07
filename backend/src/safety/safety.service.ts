@@ -9,6 +9,11 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
 import { BlockedUserResponseDto } from './dto/blocked-user.dto';
 
+const SAFETY_CACHE_KEYS = [
+  'daily_recommendations',
+  'recommendations:daily',
+] as const;
+
 export const SAFETY_CATEGORIES = [
   {
     value: 'harassment',
@@ -47,6 +52,27 @@ export class SafetyService {
   private readonly logger = new Logger(SafetyService.name);
 
   constructor(private readonly supabaseService: SupabaseService) {}
+
+  /**
+   * Invalidates any Redis caches that may contain blocked/reported user data
+   * so that stale blocked-user IDs are not served from cached recommendations.
+   */
+  private async invalidateSafetyCaches(userId: string): Promise<void> {
+    const redis = this.supabaseService.getRedisClient();
+    const keys: string[] = [];
+    for (const prefix of SAFETY_CACHE_KEYS) {
+      keys.push(`${prefix}:${userId}`);
+    }
+    try {
+      if (keys.length > 0) {
+        await redis.del(...keys);
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Failed to invalidate safety-related caches for user ${userId}: ${(err as Error).message}`,
+      );
+    }
+  }
 
   getCategories() {
     return SAFETY_CATEGORIES;
@@ -106,6 +132,10 @@ export class SafetyService {
       `Report submitted: reporter=${reporterId}, reported=${dto.reported_id}, category=${dto.reason_category}`,
     );
 
+    // Invalidate cached recommendations for both parties after a report.
+    await this.invalidateSafetyCaches(reporterId);
+    await this.invalidateSafetyCaches(dto.reported_id);
+
     return { id: data.id };
   }
 
@@ -152,6 +182,11 @@ export class SafetyService {
     }
 
     this.logger.log(`User ${blockerId} blocked ${dto.blocked_id}`);
+
+    // Invalidate cached recommendations for both parties after a block.
+    await this.invalidateSafetyCaches(blockerId);
+    await this.invalidateSafetyCaches(dto.blocked_id);
+
     return { success: true, blocked_id: dto.blocked_id };
   }
 
@@ -171,6 +206,11 @@ export class SafetyService {
     }
 
     this.logger.log(`User ${blockerId} unblocked ${blockedId}`);
+
+    // Invalidate cached recommendations for both parties after an unblock.
+    await this.invalidateSafetyCaches(blockerId);
+    await this.invalidateSafetyCaches(blockedId);
+
     return { success: true };
   }
 

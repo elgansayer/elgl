@@ -7,9 +7,15 @@ describe('SafetyService', () => {
   let service: SafetyService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let mockRedisClient: { del: jest.Mock };
 
   beforeEach(async () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+
+    mockRedisClient = {
+      del: jest.fn().mockResolvedValue(1),
+    };
 
     mockQueryBuilder = {
       insert: jest.fn().mockReturnThis(),
@@ -32,6 +38,7 @@ describe('SafetyService', () => {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
           },
         },
       ],
@@ -159,6 +166,36 @@ describe('SafetyService', () => {
         }),
       ).rejects.toThrow('Failed to submit report: no data returned');
     });
+
+    it('should invalidate caches for both reporter and reported user', async () => {
+      const dto = {
+        reported_id: 'reported-1',
+        reason_category: 'harassment',
+      };
+
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { id: 'reported-1' },
+        error: null,
+      });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { id: 'report-id' },
+        error: null,
+      });
+      mockQueryBuilder._response = { error: null, data: { id: 'report-id' } };
+
+      jest.spyOn((service as any).logger, 'log').mockImplementation(() => {});
+
+      await service.reportUser('user-1', dto);
+
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'daily_recommendations:user-1',
+        'recommendations:daily:user-1',
+      );
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'daily_recommendations:reported-1',
+        'recommendations:daily:reported-1',
+      );
+    });
   });
 
   describe('blockUser', () => {
@@ -250,6 +287,31 @@ describe('SafetyService', () => {
         service.blockUser('user-1', { blocked_id: 'blocked-user' }),
       ).rejects.toThrow('Failed to block user: db error');
     });
+
+    it('should invalidate caches for both blocker and blocked user', async () => {
+      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
+        data: { id: 'blocked-user' },
+        error: null,
+      });
+      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+      mockQueryBuilder._response = { error: null };
+
+      jest.spyOn((service as any).logger, 'log').mockImplementation(() => {});
+
+      await service.blockUser('user-1', { blocked_id: 'blocked-user' });
+
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'daily_recommendations:user-1',
+        'recommendations:daily:user-1',
+      );
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'daily_recommendations:blocked-user',
+        'recommendations:daily:blocked-user',
+      );
+    });
   });
 
   describe('unblockUser', () => {
@@ -274,6 +336,23 @@ describe('SafetyService', () => {
       await expect(
         service.unblockUser('user-1', 'blocked-user'),
       ).rejects.toThrow('Failed to unblock user: db error');
+    });
+
+    it('should invalidate caches for both users after unblock', async () => {
+      mockQueryBuilder._response = { error: null };
+
+      jest.spyOn((service as any).logger, 'log').mockImplementation(() => {});
+
+      await service.unblockUser('user-1', 'blocked-user');
+
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'daily_recommendations:user-1',
+        'recommendations:daily:user-1',
+      );
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'daily_recommendations:blocked-user',
+        'recommendations:daily:blocked-user',
+      );
     });
   });
 
