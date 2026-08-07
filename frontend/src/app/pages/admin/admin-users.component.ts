@@ -2,15 +2,18 @@ import { Component, computed, inject, resource, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
+import { AdminOfflineBannerComponent } from '../../components/admin-offline-banner/admin-offline-banner.component';
+import { OfflineAdminStorageService } from '../../services/offline-admin-storage.service';
 
 @Component({
   selector: 'app-admin-users',
-  standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, AdminOfflineBannerComponent],
   templateUrl: './admin-users.component.html',
 })
 export class AdminUsersComponent {
   private adminService = inject(AdminService);
+  private offlineStorage = inject(OfflineAdminStorageService);
+  readonly isOnline = this.offlineStorage.isOnline;
 
   readonly searchTerm = signal('');
   readonly page = signal(1);
