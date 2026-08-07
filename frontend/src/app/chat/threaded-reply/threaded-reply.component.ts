@@ -13,7 +13,7 @@ import { ChatMessage } from '../../services/chat.service';
             [src]="parentMessage().sender?.avatar_url"
             [alt]="parentMessage().sender?.display_name"
             class="w-6 h-6 rounded-full object-cover"
-          />
+           loading="lazy" />
           <span class="font-semibold text-sm"
             >{{ parentMessage().sender?.display_name || ('chat.unknown_user' | t) }}</span
           >
