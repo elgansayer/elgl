@@ -41,7 +41,7 @@ import { GiftAnimationOverlayComponent } from './components/gift-animation-overl
 import { NoNetworkBannerComponent } from './components/primitives/no-network-banner/no-network-banner.component';
 import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-sidebar.component';
 import { TourService } from './services/tour.service';
-import { JoyrideDirective } from 'ngx-joyride';
+
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
@@ -54,7 +54,6 @@ function isRecord(v: unknown): v is Record<string, unknown> {
     RouterLink,
     RouterLinkActive,
     TranslatePipe,
-    JoyrideDirective,
     IncomingCallModalComponent,
     ToastComponent,
     ReportUserModalComponent,
