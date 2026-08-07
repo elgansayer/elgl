@@ -31,7 +31,6 @@ import {
   CreateAudioRoomDto,
   DemoteSpeakerDto,
   InviteCoHostDto,
-  KickSpeakerDto,
   RaiseHandDto,
   RemoveCoHostDto,
   SendCaptionDto,
@@ -804,84 +803,9 @@ export class AudioRoomsService implements OnModuleInit {
       throw new ForbiddenException('Only the host can mute a speaker.');
     }
 
-    if (!room.speakers.includes(dto.target_user_id)) {
-      throw new NotFoundException('Target user is not on the stage.');
-    }
-
     // Notify user via Centrifugo to mute their microphone locally
     void this.centrifugoService.publish(`room_${room.id}`, {
       type: 'force_mute',
-      target_user_id: dto.target_user_id,
-      room_id: room.id,
-    });
-
-    return this.getRoom(room.id);
-  }
-
-  async unmuteSpeaker(
-    hostId: string,
-    dto: DemoteSpeakerDto,
-  ): Promise<AudioRoomRecord> {
-    const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('audio_rooms')
-      .select('*')
-      .eq('id', dto.room_id)
-      .single();
-    if (!response.data) throw new NotFoundException('Room not found');
-    const room = response.data as AudioRoomRow;
-
-    if (room.host_id !== hostId) {
-      throw new ForbiddenException('Only the host can unmute a speaker.');
-    }
-
-    if (!room.speakers.includes(dto.target_user_id)) {
-      throw new NotFoundException('Target user is not on the stage.');
-    }
-
-    // Notify user via Centrifugo to unmute their microphone
-    void this.centrifugoService.publish(`room_${room.id}`, {
-      type: 'force_unmute',
-      target_user_id: dto.target_user_id,
-      room_id: room.id,
-    });
-
-    return this.getRoom(room.id);
-  }
-
-  async kickSpeaker(
-    hostId: string,
-    dto: KickSpeakerDto,
-  ): Promise<AudioRoomRecord> {
-    const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('audio_rooms')
-      .select('*')
-      .eq('id', dto.room_id)
-      .single();
-    if (!response.data) throw new NotFoundException('Room not found');
-    const room = response.data as AudioRoomRow;
-
-    if (room.host_id !== hostId) {
-      throw new ForbiddenException('Only the host can kick a speaker off stage.');
-    }
-
-    if (room.host_id === dto.target_user_id) {
-      throw new ForbiddenException('The host cannot be kicked.');
-    }
-
-    const updatedSpeakers = room.speakers.filter(
-      (id) => id !== dto.target_user_id,
-    );
-
-    await supabase
-      .from('audio_rooms')
-      .update({ speakers: updatedSpeakers })
-      .eq('id', room.id);
-
-    // Notify user via Centrifugo that they have been kicked off the stage
-    void this.centrifugoService.publish(`room_${room.id}`, {
-      type: 'speaker_kicked',
       target_user_id: dto.target_user_id,
       room_id: room.id,
     });

@@ -164,12 +164,9 @@ export class AudioRoomComponent implements OnInit {
     await this.store.muteSpeaker(targetUserId);
   }
 
-  async unmute(targetUserId: string): Promise<void> {
-    await this.store.unmuteSpeaker(targetUserId);
-  }
-
   async kick(targetUserId: string): Promise<void> {
-    await this.store.kickSpeaker(targetUserId);
+    // Kicking off stage is functionally demoting them back to a listener
+    await this.store.demoteSpeaker(targetUserId);
   }
 
   async archive(): Promise<void> {
