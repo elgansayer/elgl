@@ -73,7 +73,7 @@ describe('DataExportWorker', () => {
           };
         }
 
-        // Dispatch data for moments, comments, messages, flashcards, favourites
+        // Dispatch data for all remaining tables
         const tableDataMap: Record<string, unknown[]> = {
           moments: mockMoments,
           moment_comments: mockComments,
@@ -94,13 +94,34 @@ describe('DataExportWorker', () => {
 
       expect(result.profile).toEqual(mockProfile);
       expect(result.moments).toEqual(mockMoments);
-      expect(result.comments).toEqual(mockComments);
-      expect(result.messages).toEqual(mockMessages);
+      expect(result.moment_comments).toEqual(mockComments);
+      expect(result.chat_messages).toEqual(mockMessages);
       expect(result.flashcards).toEqual(mockFlashcards);
       expect(result.decks).toEqual(mockDecks);
       expect(result.deck_flashcards).toEqual(mockDeckFlashcards);
       expect(result.favourites).toEqual(mockFavourites);
-      expect(result.exported_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      // Verify new fields exist
+      expect(result.export_generated_at).toBeDefined();
+      expect(result.user_achievements).toEqual([]);
+      expect(result.milestones).toEqual([]);
+      expect(result.study_buddy_requests).toEqual([]);
+      expect(result.hobby_tags).toEqual([]);
+      expect(result.chat_room_memberships).toEqual([]);
+      expect(result.chat_group_memberships).toEqual([]);
+      expect(result.message_reactions).toEqual([]);
+      expect(result.audio_room_notes).toEqual([]);
+      expect(result.following).toEqual([]);
+      expect(result.followers).toEqual([]);
+      expect(result.profile_likes_given).toEqual([]);
+      expect(result.profile_visits).toEqual([]);
+      expect(result.blocks).toEqual([]);
+      expect(result.login_history).toEqual([]);
+      expect(result.coin_purchases).toEqual([]);
+      expect(result.gift_transactions).toEqual([]);
+      expect(result.user_sticker_packs).toEqual([]);
+      expect(result.apple_subscriptions).toEqual([]);
+      expect(result.google_play_purchases).toEqual([]);
+      expect(result.export_generated_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
 
     it('should handle profile fetch error and throw', async () => {

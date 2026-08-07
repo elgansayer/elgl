@@ -114,6 +114,8 @@ export class PrivacyService {
 
   // -----------------------------------------------------------------------
   //  Private helper that gathers all user data for the GDPR archive export
+  //  Covers the full LingQ Reading Engine: SRS flashcards, decks, curated
+  //  content progress, and all social/economic/game data.
   // -----------------------------------------------------------------------
   private async collectUserData(
     userId: string,
@@ -143,14 +145,14 @@ export class PrivacyService {
       .eq('author_id', userId)
       .order('created_at', { ascending: false });
 
-    // 4) Chat messages sent by the user
+    // 4) Chat messages sent by the user (PII-scrubbed)
     const { data: userChatMessages } = await supabase
       .from('chat_messages')
       .select('*')
       .eq('sender_id', userId)
       .order('created_at', { ascending: false });
 
-    // 5) Flashcards saved by the user
+    // 5) Flashcards saved by the user (LingQ SRS engine)
     const { data: userFlashcards } = await supabase
       .from('flashcards')
       .select('*')
@@ -221,19 +223,245 @@ export class PrivacyService {
       .eq('user_id', userId)
       .order('unlocked_at', { ascending: false });
 
+    // --- LingQ Reading Engine + GDPR: additional user-data tables ---
+
+    // 10) User achievements (gamification)
+    const { data: userAchievements } = await supabase
+      .from('user_achievements')
+      .select('*')
+      .eq('user_id', userId)
+      .order('unlocked_at', { ascending: false });
+
+    // 11) Milestones (language learning progress)
+    const { data: userMilestones } = await supabase
+      .from('milestones')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    // 12) Study buddy requests (sent and received)
+    const { data: sentBuddyRequests } = await supabase
+      .from('study_buddy_requests')
+      .select('*')
+      .eq('requester_id', userId)
+      .order('created_at', { ascending: false });
+
+    const { data: receivedBuddyRequests } = await supabase
+      .from('study_buddy_requests')
+      .select('*')
+      .eq('partner_id', userId)
+      .order('created_at', { ascending: false });
+
+    // 13) Hobby tags assigned by the user
+    const { data: userHobbyTags } = await supabase
+      .from('user_hobby_tags')
+      .select('*')
+      .eq('user_id', userId);
+
+    // 14) Chat room memberships
+    const { data: chatRoomMemberships } = await supabase
+      .from('chat_room_members')
+      .select('*')
+      .eq('user_id', userId);
+
+    // 15) Chat group memberships
+    const { data: chatGroupMemberships } = await supabase
+      .from('chat_group_members')
+      .select('*')
+      .eq('user_id', userId);
+
+    // 16) Message reactions by the user
+    const { data: messageReactions } = await supabase
+      .from('message_reactions')
+      .select('*')
+      .eq('user_id', userId);
+
+    // 17) Audio room notes written by the user
+    const { data: audioRoomNotes } = await supabase
+      .from('audio_room_notes')
+      .select('*')
+      .eq('author_id', userId);
+
+    // 18) Follows (following and followers)
+    const { data: userFollowing } = await supabase
+      .from('user_follows')
+      .select('*')
+      .eq('follower_id', userId)
+      .order('created_at', { ascending: false });
+
+    const { data: userFollowers } = await supabase
+      .from('user_follows')
+      .select('*')
+      .eq('following_id', userId)
+      .order('created_at', { ascending: false });
+
+    // 19) Profile likes (given and received)
+    const { data: profileLikesGiven } = await supabase
+      .from('user_profile_likes')
+      .select('*')
+      .eq('liker_id', userId);
+
+    // 20) Profile visits
+    const { data: profileVisits } = await supabase
+      .from('profile_visits')
+      .select('*')
+      .eq('visitor_id', userId);
+
+    // 21) Block records
+    const { data: userBlocks } = await supabase
+      .from('blocks')
+      .select('*')
+      .eq('blocker_id', userId);
+
+    // 22) Login history
+    const { data: loginHistory } = await supabase
+      .from('login_history')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    // 23) Apple subscriptions (scrub receipt tokens)
+    const { data: appleSubscriptions } = await supabase
+      .from('apple_subscriptions')
+      .select('*')
+      .eq('user_id', userId);
+
+    // 24) Google Play purchases (scrub receipt tokens)
+    const { data: googlePlayPurchases } = await supabase
+      .from('google_play_purchases')
+      .select('*')
+      .eq('user_id', userId);
+
+    // Scrub PII from user-generated content in the archive
+    const scrubContentText = (text: string | null | undefined): string | null => {
+      if (!text) return text as null;
+      return text
+        .replace(
+          /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
+          '[EMAIL_REDACTED]',
+        )
+        .replace(
+          /(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{2,4}[-.\s]?\d{4,10}/g,
+          '[PHONE_REDACTED]',
+        );
+    };
+
+    // Scrub PII from flashcard original_context fields
+    const scrubbedFlashcards = (userFlashcards ?? []).map(
+      (card: Record<string, unknown>) => {
+        if (card.original_context && typeof card.original_context === 'string') {
+          return {
+            ...card,
+            original_context: scrubContentText(card.original_context),
+          };
+        }
+        return card;
+      },
+    );
+
+    // Scrub PII from chat messages
+    const scrubbedChatMessages = (userChatMessages ?? []).map(
+      (msg: Record<string, unknown>) => {
+        const scrubbed = { ...msg };
+        if (msg.text && typeof msg.text === 'string') {
+          scrubbed.text = scrubContentText(msg.text);
+        }
+        return scrubbed;
+      },
+    );
+
+    // Scrub PII from moments
+    const scrubbedMoments = (userMoments ?? []).map(
+      (m: Record<string, unknown>) => {
+        const scrubbed = { ...m };
+        if (m.text && typeof m.text === 'string') {
+          scrubbed.text = scrubContentText(m.text);
+        }
+        return scrubbed;
+      },
+    );
+
+    // Scrub PII from moment comments
+    const scrubbedMomentComments = (userMomentComments ?? []).map(
+      (c: Record<string, unknown>) => {
+        const scrubbed = { ...c };
+        if (c.text && typeof c.text === 'string') {
+          scrubbed.text = scrubContentText(c.text);
+        }
+        return scrubbed;
+      },
+    );
+
+    // Scrub receipt tokens from subscription records
+    const scrubSubscriptionReceipt = (
+      records: unknown[] | null | undefined,
+    ): unknown[] => {
+      if (!records || !Array.isArray(records)) return records ?? [];
+      return records.map((record: unknown) => {
+        if (record !== null && typeof record === 'object') {
+          const r = record as Record<string, unknown>;
+          const scrubbed = { ...r };
+          for (const key of ['receipt_token', 'transaction_id', 'original_transaction_id']) {
+            if (typeof scrubbed[key] === 'string') {
+              const val = scrubbed[key] as string;
+              scrubbed[key] =
+                val.length < 8
+                  ? '[REDACTED-SHORT-TOKEN]'
+                  : '***...' + val.slice(-4);
+            }
+          }
+          return scrubbed;
+        }
+        return record;
+      });
+    };
+
     return {
       export_generated_at: new Date().toISOString(),
       user_profile: userProfile ?? null,
-      moments: userMoments ?? [],
-      moment_comments: userMomentComments ?? [],
-      chat_messages: userChatMessages ?? [],
-      flashcards: userFlashcards ?? [],
+      // Content: PII-scrubbed
+      moments: scrubbedMoments ?? [],
+      moment_comments: scrubbedMomentComments ?? [],
+      chat_messages: scrubbedChatMessages ?? [],
+      // LingQ Reading Engine / SRS
+      flashcards: scrubbedFlashcards ?? [],
       decks: userDecks ?? [],
       deck_flashcards: userDeckFlashcards,
+      // Social & economy
       favourites: userFavourites ?? [],
       coin_purchases: scrubCoinPurchasesForArchive(coinPurchases ?? []),
       gift_transactions: giftTransactions ?? [],
       user_sticker_packs: userStickerPacks ?? [],
+      // Gamification & learning
+      user_achievements: userAchievements ?? [],
+      milestones: userMilestones ?? [],
+      study_buddy_requests: [
+        ...(sentBuddyRequests ?? []).map((r: Record<string, unknown>) => ({
+          ...r,
+          direction: 'sent',
+        })),
+        ...(receivedBuddyRequests ?? []).map((r: Record<string, unknown>) => ({
+          ...r,
+          direction: 'received',
+        })),
+      ],
+      hobby_tags: userHobbyTags ?? [],
+      // Chat & rooms
+      chat_room_memberships: chatRoomMemberships ?? [],
+      chat_group_memberships: chatGroupMemberships ?? [],
+      message_reactions: messageReactions ?? [],
+      audio_room_notes: audioRoomNotes ?? [],
+      // Social graph
+      following: userFollowing ?? [],
+      followers: userFollowers ?? [],
+      profile_likes_given: profileLikesGiven ?? [],
+      profile_visits: profileVisits ?? [],
+      blocks: userBlocks ?? [],
+      // Security
+      login_history: loginHistory ?? [],
+      // Monetisation (scrubbed receipt tokens)
+      apple_subscriptions: scrubSubscriptionReceipt(appleSubscriptions),
+      google_play_purchases: scrubSubscriptionReceipt(googlePlayPurchases),
     };
   }
 }

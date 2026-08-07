@@ -106,9 +106,16 @@ describe('DataRetentionService', () => {
         error: null,
       });
       // Setup sub-queries for data wiping
+      // wipeUserData now calls .from('decks').select('id').eq('user_id', userId)
+      // before calling delete/eq on each table.
+      const mockSelectChain = {
+        eq: jest.fn().mockResolvedValue({ data: [], error: null }),
+      };
       const mockDeleteBuilder = {
+        select: jest.fn().mockReturnValue(mockSelectChain),
         delete: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockResolvedValue({ error: null }),
+        eq: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({ error: null }),
       };
       // Override from for subsequent calls within wipeUserData
       mockSupabaseClient.from.mockImplementation((table: string) => {
