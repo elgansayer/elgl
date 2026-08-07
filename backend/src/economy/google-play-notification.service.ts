@@ -124,7 +124,9 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.info(`User ${userId} subscription recovered: ${subscriptionId}`);
+    this.logger.info(
+      `User ${userId} subscription recovered: ${subscriptionId}`,
+    );
 
     this.updateSubscriptionStatus(
       userId,
@@ -190,7 +192,9 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.info(`User ${userId} purchased subscription: ${subscriptionId}`);
+    this.logger.info(
+      `User ${userId} purchased subscription: ${subscriptionId}`,
+    );
 
     this.updateSubscriptionStatus(
       userId,
@@ -258,7 +262,9 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.info(`User ${userId} subscription restarted: ${subscriptionId}`);
+    this.logger.info(
+      `User ${userId} subscription restarted: ${subscriptionId}`,
+    );
 
     this.updateSubscriptionStatus(
       userId,

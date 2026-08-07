@@ -56,7 +56,7 @@ describe('StatsController', () => {
       jest.spyOn(statsService, 'getStats').mockResolvedValue(mockStats);
 
       const req = { user: { sub: 'user-1' } };
-      const result = await controller.getMyStats(req as any);
+      const result = await controller.getMyStats(req);
 
       expect(statsService.getStats).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(mockStats);
