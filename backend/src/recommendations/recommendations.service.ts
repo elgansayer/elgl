@@ -1,15 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
-<<<<<<< HEAD
-import { withRetry } from '../common/retry';
-=======
 import { MetricsService } from '../metrics/metrics.service';
 import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
->>>>>>> origin/main
 import { MOCK_USERS } from '../mock-data';
 import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
+
+/** Hard cap on recommendation payload size to prevent runaway responses. */
+const MAX_PAYLOAD_LIMIT = 50;
 
 export interface RecommendedUserDto {
   id: string;
@@ -64,26 +62,25 @@ interface UserRow {
 }
 
 @Injectable()
-export class RecommendationsService {
-<<<<<<< HEAD
-  constructor(
-    @InjectPinoLogger(RecommendationsService.name)
-    private readonly logger: PinoLogger,
-    private readonly supabaseService: SupabaseService,
-=======
+export class RecommendationsService implements OnModuleDestroy {
   private readonly logger = new Logger(RecommendationsService.name);
+  private shuttingDown = false;
 
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly metricsService: MetricsService,
     private readonly circuitBreakerService: CircuitBreakerService,
     private readonly crashReportService: MatchmakingCrashReportService,
->>>>>>> origin/main
   ) {}
+
+  onModuleDestroy(): void {
+    this.shuttingDown = true;
+    this.logger.log('RecommendationsService shutting down, in-flight cron work will abort.');
+  }
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async calculateDailyRecommendations(): Promise<void> {
-    this.logger.info('Starting daily recommendation calculations...');
+    this.logger.log('Starting daily recommendation calculations...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
@@ -100,26 +97,12 @@ export class RecommendationsService {
     };
 
     try {
-<<<<<<< HEAD
-      const { data: users, error } = await withRetry(
-        () =>
-          supabase
-            .from('users')
-            .select('id, native_language, target_languages')
-            .eq('privacy_hide_from_search', false),
-      );
-=======
       const { data: users, error } = await supabase
         .from('users')
         .select('id, native_language, target_languages')
-<<<<<<< HEAD
-        .match(GDPR_MATCHMAKING_FILTERS);
->>>>>>> origin/main
-=======
         .match(GDPR_MATCHMAKING_FILTERS)
         .not('target_languages', 'is', null)
         .limit(CRON_USERS_LIMIT);
->>>>>>> origin/main
 
       if (error || !users) {
         throw new Error(`Failed to fetch users: ${error?.message}`);
@@ -133,26 +116,7 @@ export class RecommendationsService {
 
         const nativeLang = user.native_language as string | null;
 
-<<<<<<< HEAD
-        // Find language exchange partners: native in user's target AND learning user's native
-<<<<<<< HEAD
-        const { data: matches } = await withRetry(
-          () =>
-            supabase
-              .from('users')
-              .select(
-                'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
-              )
-              .neq('id', user.id)
-              .eq('privacy_hide_from_search', false)
-              .in('native_language', targetLanguages)
-              .contains('target_languages', nativeLang ? [nativeLang] : [])
-              .order('is_serious_learner', { ascending: false })
-              .limit(DAILY_LIMIT),
-        );
-=======
-=======
->>>>>>> origin/main
+        // Find language exchange partners
         const { data: matches } = await supabase
           .from('users')
           .select(
@@ -164,7 +128,6 @@ export class RecommendationsService {
           .contains('target_languages', nativeLang ? [nativeLang] : [])
           .order('is_serious_learner', { ascending: false })
           .limit(DAILY_LIMIT);
->>>>>>> origin/main
 
         if (matches && matches.length > 0) {
           const dtos: RecommendedUserDto[] = (matches as UserRow[]).map(
@@ -196,14 +159,9 @@ export class RecommendationsService {
         }
       }
 
-<<<<<<< HEAD
-      this.logger.info(
-        'Successfully calculated and cached daily recommendations.',
-=======
       await flushPipeline();
       this.logger.log(
         `Successfully calculated and cached ${totalCached} daily recommendation sets.`,
->>>>>>> origin/main
       );
     } catch (error) {
       await flushPipeline();
@@ -556,18 +514,6 @@ export class RecommendationsService {
 
     const candidateIds = Array.from(sharedCount.keys());
 
-<<<<<<< HEAD
-    const { data: users, error: usersError } = await withRetry(
-      () =>
-        supabase
-          .from('users')
-          .select(
-            'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
-          )
-          .in('id', candidateIds)
-          .eq('privacy_hide_from_search', false),
-    );
-=======
     const { data: users, error: usersError } = await supabase
       .from('users')
       .select(
@@ -575,7 +521,6 @@ export class RecommendationsService {
       )
       .in('id', candidateIds)
       .match(GDPR_MATCHMAKING_FILTERS);
->>>>>>> origin/main
 
     if (usersError) {
       throw new Error(usersError.message);
@@ -633,22 +578,6 @@ export class RecommendationsService {
       return [];
     }
 
-<<<<<<< HEAD
-    const { data: matches, error: matchError } = await withRetry(
-      () =>
-        supabase
-          .from('users')
-          .select(
-            'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
-          )
-          .neq('id', userId)
-          .eq('privacy_hide_from_search', false)
-          .in('native_language', targetLanguages)
-          .contains('target_languages', [nativeLang])
-          .order('is_serious_learner', { ascending: false })
-          .limit(FALLBACK_LIMIT),
-    );
-=======
     const { data: matches, error: matchError } = await supabase
       .from('users')
       .select(
@@ -660,7 +589,6 @@ export class RecommendationsService {
       .contains('target_languages', [nativeLang])
       .order('is_serious_learner', { ascending: false })
       .limit(FALLBACK_LIMIT);
->>>>>>> origin/main
 
     if (matchError) {
       throw new Error(matchError.message);
@@ -689,20 +617,6 @@ export class RecommendationsService {
   ): Promise<RecommendedUserDto[]> {
     const supabase = this.supabaseService.getClient();
 
-<<<<<<< HEAD
-    const { data: users, error } = await withRetry(
-      () =>
-        supabase
-          .from('users')
-          .select(
-            'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
-          )
-          .neq('id', userId)
-          .eq('privacy_hide_from_search', false)
-          .order('study_streak_days', { ascending: false })
-          .limit(FALLBACK_LIMIT),
-    );
-=======
     const { data: users, error } = await supabase
       .from('users')
       .select(
@@ -712,7 +626,6 @@ export class RecommendationsService {
       .match(GDPR_MATCHMAKING_FILTERS)
       .order('study_streak_days', { ascending: false })
       .limit(FALLBACK_LIMIT);
->>>>>>> origin/main
 
     if (error) {
       throw new Error(error.message);
@@ -736,17 +649,8 @@ export class RecommendationsService {
   }
 
   /** Tier 4: Ultimate fallback using in-memory mock data. */
-<<<<<<< HEAD
-  private recommendationsFromMock(
-    userId: string,
-  ): RecommendedUserDto[] {
-    this.logger.info(
-      `Using mock data as ultimate fallback for user ${userId}`,
-    );
-=======
   private recommendationsFromMock(userId: string): RecommendedUserDto[] {
     this.logger.log(`Using mock data as ultimate fallback for user ${userId}`);
->>>>>>> origin/main
 
     const mockUsers = MOCK_USERS as Array<{
       id: string;

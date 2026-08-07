@@ -2,10 +2,11 @@ import {
   CallHandler,
   ExecutionContext,
   Injectable,
+  Logger,
   NestInterceptor,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import { tap } from 'rxjs';
+import { catchError } from 'rxjs';
 import { Response } from 'express';
 
 /**
@@ -122,6 +123,8 @@ export const DISCOVERY_CACHE_TAG_PRIVATE = 'discovery:private';
 
 @Injectable()
 export class DiscoveryCacheInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(DiscoveryCacheInterceptor.name);
+
   constructor(
     private readonly directive: Record<string, string>,
     private readonly cacheTags?: string[],
@@ -141,12 +144,19 @@ export class DiscoveryCacheInterceptor implements NestInterceptor {
     }
 
     return next.handle().pipe(
-      tap({
-        error: () => {
+      catchError((err) => {
+        // Guard against ERR_HTTP_HEADERS_SENT: only mutate cache headers
+        // if the response hasn't already started streaming to the client.
+        if (!response.headersSent) {
           response.setHeader('Cache-Control', 'private, no-store');
           response.setHeader('CDN-Cache-Control', 'private, no-store');
           response.removeHeader('Cache-Tag');
-        },
+        } else {
+          this.logger.warn(
+            'Cannot set error cache headers - response headers already sent; client may cache a partial error body.',
+          );
+        }
+        throw err;
       }),
     );
   }

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -8,6 +8,9 @@ import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
 import { MOCK_USERS } from '../mock-data';
 import { sanitiseDiscoveryData } from './sanitise-discovery.helper';
+
+/** Hard cap on discovery endpoint response payloads to prevent runaway reads. */
+const MAX_DISCOVERY_PAYLOAD = 50;
 
 type DiscoveryUser = UserProfile & {
   distance?: number;
@@ -30,14 +33,20 @@ type DiscoveryUser = UserProfile & {
 };
 
 @Injectable()
-export class DiscoveryService {
+export class DiscoveryService implements OnModuleDestroy {
   private readonly logger = new Logger(DiscoveryService.name);
+  private shuttingDown = false;
 
   constructor(
     private readonly audioRoomsService: AudioRoomsService,
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
   ) {}
+
+  onModuleDestroy(): void {
+    this.shuttingDown = true;
+    this.logger.log('DiscoveryService shutting down, in-flight cron work will abort.');
+  }
 
   // Weekly computation of Partner of the Week (every Sunday at midnight)
   @Cron('0 0 * * 0')
@@ -79,7 +88,7 @@ export class DiscoveryService {
   // Daily calculation (existing functionality)
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async calculateDailyRecommendations() {
-    this.logger.info('Starting daily partner recommendations calculation...');
+    this.logger.log('Starting daily partner recommendations calculation...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
@@ -203,7 +212,7 @@ export class DiscoveryService {
       }
 
       await flushPipeline();
-      this.logger.info(
+      this.logger.log(
         `Finished daily partner recommendations calculation. Cached ${totalCached} sets.`,
       );
     } catch (err) {
