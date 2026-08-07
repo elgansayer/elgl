@@ -1,4 +1,5 @@
 <div class="p-4">
+  <app-admin-offline-banner />
   <h2 class="text-2xl font-bold mb-4">{{ 'admin.users.title' | t }}</h2>
 
   <div class="flex flex-wrap items-center mb-4 gap-2">
@@ -206,9 +207,9 @@
                   <span class="text-slate-400">{{ 'admin.users.noAvatar' | t }}</span>
                 }
               </td>
-              <td class="px-3 py-2">{{ user.display_name ?? '-' }}</td>
-              <td class="px-3 py-2">{{ user.native_languages.join(', ') }}</td>
-              <td class="px-3 py-2">{{ user.target_languages.join(', ') }}</td>
+              <td class="px-3 py-2">{{ (user.display_name ?? '-') | sanitiseHtml }}</td>
+              <td class="px-3 py-2">{{ (user.native_languages?.join(', ') ?? '') | sanitiseHtml }}</td>
+              <td class="px-3 py-2">{{ (user.target_languages?.join(', ') ?? '') | sanitiseHtml }}</td>
               <td class="px-3 py-2">
                 <span
                   [class.text-green-600]="user.is_vip"
@@ -235,25 +236,28 @@
                   <button
                     type="button"
                     (click)="toggleVip(user)"
-                    [disabled]="isVipUpdating() === user.id"
+                    [disabled]="isVipUpdating() === user.id || !isOnline()"
                     class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100 disabled:opacity-50 whitespace-nowrap"
                     [attr.aria-label]="'admin.users.disableVip' | t"
+                    [attr.title]="!isOnline() ? ('admin.offline.actionsDisabled' | t) : null"
                   >
                     {{ user.is_vip ? ('admin.users.disableVip' | t) : ('admin.users.enableVip' | t) }}
                   </button>
                   <button
                     type="button"
                     (click)="warnUser(user)"
-                    [disabled]="isWarning() !== null"
+                    [disabled]="isWarning() !== null || !isOnline()"
                     class="btn btn-sm rounded border border-amber-500 text-amber-600 px-3 py-1 hover:bg-amber-50 disabled:opacity-50 whitespace-nowrap"
+                    [attr.title]="!isOnline() ? ('admin.offline.actionsDisabled' | t) : null"
                   >
                     {{ 'admin.users.warn' | t }}
                   </button>
                   <button
                     type="button"
                     (click)="banUser(user)"
-                    [disabled]="isBanning() !== null"
+                    [disabled]="isBanning() !== null || !isOnline()"
                     class="btn btn-sm rounded border border-red-500 text-red-600 px-3 py-1 hover:bg-red-50 disabled:opacity-50 whitespace-nowrap"
+                    [attr.title]="!isOnline() ? ('admin.offline.actionsDisabled' | t) : null"
                   >
                     {{ 'admin.users.ban' | t }}
                   </button>
@@ -303,8 +307,8 @@
               @for (entry of loginHistory(); track entry.id) {
                 <tr>
                   <td class="px-3 py-2">{{ entry.created_at | date: 'medium' }}</td>
-                  <td class="px-3 py-2">{{ entry.ip_address ?? '-' }}</td>
-                  <td class="px-3 py-2">{{ entry.user_agent ?? '-' }}</td>
+                  <td class="px-3 py-2">{{ (entry.ip_address ?? '-') | sanitiseHtml }}</td>
+                  <td class="px-3 py-2">{{ (entry.user_agent ?? '-') | sanitiseHtml }}</td>
                 </tr>
               }
             </tbody>

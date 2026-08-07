@@ -1,7 +1,9 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
+<<<<<<< HEAD
 import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
 
@@ -9,10 +11,20 @@ import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton
   selector: 'app-admin-users',
   standalone: true,
   imports: [CommonModule, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+=======
+import { AdminOfflineBannerComponent } from '../../components/admin-offline-banner/admin-offline-banner.component';
+import { OfflineAdminStorageService } from '../../services/offline-admin-storage.service';
+
+@Component({
+  selector: 'app-admin-users',
+imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AdminOfflineBannerComponent],
+>>>>>>> origin/main
   templateUrl: './admin-users.component.html',
 })
 export class AdminUsersComponent {
   private adminService = inject(AdminService);
+  private offlineStorage = inject(OfflineAdminStorageService);
+  readonly isOnline = this.offlineStorage.isOnline;
 
   readonly searchTerm = signal('');
   readonly page = signal(1);

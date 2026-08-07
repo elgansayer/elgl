@@ -1,17 +1,29 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { AdminService, AdminBlockEntry } from '../../services/admin.service';
+<<<<<<< HEAD
 import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-admin-blocks',
   imports: [CommonModule, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+=======
+import { AdminOfflineBannerComponent } from '../../components/admin-offline-banner/admin-offline-banner.component';
+import { OfflineAdminStorageService } from '../../services/offline-admin-storage.service';
+
+@Component({
+  selector: 'app-admin-blocks',
+imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AdminOfflineBannerComponent],
+>>>>>>> origin/main
   templateUrl: './admin-blocks.component.html',
 })
 export class AdminBlocksComponent {
   private readonly adminService = inject(AdminService);
+  private readonly offlineStorage = inject(OfflineAdminStorageService);
+  readonly isOnline = this.offlineStorage.isOnline;
 
   readonly page = signal(1);
   readonly pageSize = signal(20);

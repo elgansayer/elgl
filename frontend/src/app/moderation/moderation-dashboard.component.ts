@@ -1,14 +1,21 @@
-import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../services/translate.pipe';
+<<<<<<< HEAD
 import { ModerationItem, ModerationService } from './moderation.service';
 import { AppEmptyStateComponent } from '../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../components/primitives/skeleton-loader/skeleton-loader.component';
 import { AppCardComponent } from '../components/primitives/card/card.component';
+=======
+import { AppEmptyStateComponent } from '../components/primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../components/primitives/skeleton-loader/skeleton-loader.component';
+import { AppCardComponent } from '../components/primitives/card/card.component';
+import { ModerationItem, ModerationService } from '../services/moderation.service';
+>>>>>>> origin/main
 
 @Component({
   selector: 'app-moderation-dashboard',
   standalone: true,
+<<<<<<< HEAD
   imports: [CommonModule, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
   template: `
     <div class="ps-4 pe-4 pt-4 pb-4" role="main" aria-labelledby="moderation-title">
@@ -150,6 +157,10 @@ import { AppCardComponent } from '../components/primitives/card/card.component';
       </div>
     </div>
   `,
+=======
+  imports: [TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
+  templateUrl: './moderation-dashboard.component.html',
+>>>>>>> origin/main
 })
 export class ModerationDashboardComponent {
   private moderationService = inject(ModerationService);
@@ -207,7 +218,7 @@ export class ModerationDashboardComponent {
     this.actionInProgress.set(item.id);
     this.actionError.set(null);
     try {
-      const result = await this.moderationService.analyseUser(userId);
+      const result = await this.moderationService.getUserRiskAnalysis(userId);
       this.analysis.set({
         riskScore: result.riskScore,
         flags: result.flags,

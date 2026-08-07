@@ -6,25 +6,31 @@ import {
   ModerationActionResponse,
   UserAnalysisResult,
 } from '../services/moderation.service';
+import { OfflineAdminStorageService } from '../services/offline-admin-storage.service';
+import { AdminOfflineBannerComponent } from '../components/admin-offline-banner/admin-offline-banner.component';
 import { TranslatePipe } from '../services/translate.pipe';
+import { SanitiseHtmlPipe } from '../pipes/sanitise-html.pipe';
 import { AppEmptyStateComponent } from '../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../components/primitives/skeleton-loader/skeleton-loader.component';
 import { AppCardComponent } from '../components/primitives/card/card.component';
 
 @Component({
   selector: 'app-moderation-queue',
-  standalone: true,
   imports: [
     DatePipe,
     TranslatePipe,
+    SanitiseHtmlPipe,
     AppEmptyStateComponent,
     AppSkeletonLoaderComponent,
     AppCardComponent,
+    AdminOfflineBannerComponent,
   ],
   templateUrl: './moderation-queue.component.html',
 })
 export class ModerationQueueComponent {
   private moderationService = inject(ModerationService);
+  private offlineStorage = inject(OfflineAdminStorageService);
+  readonly isOnline = this.offlineStorage.isOnline;
 
   readonly type = signal<'moment' | 'profile'>('profile');
   readonly status = signal<string | undefined>(undefined);
@@ -53,8 +59,10 @@ export class ModerationQueueComponent {
     this.analysisResult.set(null);
   }
 
-  setStatus(status: string): void {
-    this.status.set(status || undefined);
+  setStatus(newStatus: string): void {
+    this.status.set(newStatus || undefined);
+    // Clear analysis when switching status filter
+    this.analysisResult.set(null);
   }
 
   async approve(item: ModerationItem): Promise<void> {
@@ -105,9 +113,8 @@ export class ModerationQueueComponent {
     this.analysisLoading.set(true);
     this.analysisResult.set(null);
     try {
-      this.analysisResult.set(
-        await this.moderationService.getUserRiskAnalysis(userId),
-      );
+      const result = await this.moderationService.getUserRiskAnalysis(userId);
+      this.analysisResult.set(result);
     } catch {
       this.actionError.set('Failed to analyse user');
     } finally {

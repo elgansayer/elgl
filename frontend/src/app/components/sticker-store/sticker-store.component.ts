@@ -1,4 +1,5 @@
 import { Component, inject, signal, computed, resource } from '@angular/core';
+import { JoyrideDirective } from 'ngx-joyride';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { EconomyStore, StickerPack } from '../../services/economy.store';
@@ -10,6 +11,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 @Component({
   selector: 'app-sticker-store',
   imports: [
+    JoyrideDirective,
     TranslatePipe,
     AppCardComponent,
     AppPillComponent,
@@ -19,14 +21,18 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
   <!-- Header -->
   <div class="flex items-center justify-between px-4 pt-4 pb-2">
     <div>
-      <h1 class="text-2xl font-bold text-white">{{ 'stickerStore.title' | t }}</h1>
+      <span joyrideStep="economyTour@stickerStore" [text]="'tour.stickerStoreDesc' | t" stepPosition="bottom">
+        <h1 class="text-2xl font-bold text-white">{{ 'stickerStore.title' | t }}</h1>
+      </span>
       <p class="text-sm text-neutral-400 mt-1">{{ 'stickerStore.subtitle' | t }}</p>
     </div>
-    <app-pill colour="warning" size="md">
-      <span class="flex items-center gap-1 font-semibold">
-        <span class="text-lg">&#x1FA99;</span> {{ userCoins() }}
-      </span>
-    </app-pill>
+    <span joyrideStep="economyTour@coinsBalance" [text]="'tour.coinsBalanceDesc' | t" stepPosition="bottom">
+      <app-pill colour="warning" size="md">
+        <span class="flex items-center gap-1 font-semibold">
+          <span class="text-lg">&#x1FA99;</span> {{ userCoins() }}
+        </span>
+      </app-pill>
+    </span>
   </div>
 
   <!-- Category filters -->
