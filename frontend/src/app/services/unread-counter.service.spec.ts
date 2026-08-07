@@ -1,13 +1,35 @@
 import { TestBed } from '@angular/core/testing';
 import { UnreadCounterService, NavTab } from './unread-counter.service';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 describe('UnreadCounterService', () => {
   let service: UnreadCounterService;
+  let setAppBadgeSpy: ReturnType<typeof vi.fn>;
+  let clearAppBadgeSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    setAppBadgeSpy = vi.fn(() => Promise.resolve());
+    clearAppBadgeSpy = vi.fn(() => Promise.resolve());
+
+    Object.defineProperty(navigator, 'setAppBadge', {
+      value: setAppBadgeSpy,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(navigator, 'clearAppBadge', {
+      value: clearAppBadgeSpy,
+      writable: true,
+      configurable: true,
+    });
+
+    TestBed.configureTestingModule({
+      providers: [UnreadCounterService],
+    });
     service = TestBed.inject(UnreadCounterService);
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
   });
 
   it('should initialise all unread counts to zero', () => {
@@ -95,5 +117,32 @@ describe('UnreadCounterService', () => {
   it('should not allow negative counts via decrement', () => {
     service.decrement('chat');
     expect(service.chatUnread()).toBe(0);
+  });
+
+  it('should call setAppBadge when totalUnread is positive', async () => {
+    service.set('chat', 1);
+    await vi.waitFor(() => {
+      expect(setAppBadgeSpy).toHaveBeenCalledWith(1);
+    }, { timeout: 100 });
+  });
+
+  it('should call clearAppBadge when totalUnread becomes zero', async () => {
+    service.set('profile', 5);
+    await vi.waitFor(() => {
+      expect(setAppBadgeSpy).toHaveBeenCalledWith(5);
+    }, { timeout: 100 });
+
+    service.set('profile', 0);
+    await vi.waitFor(() => {
+      expect(clearAppBadgeSpy).toHaveBeenCalled();
+    }, { timeout: 100 });
+  });
+
+  it('should handle badge update errors gracefully', async () => {
+    setAppBadgeSpy.mockRejectedValueOnce(new Error('badge failed'));
+    service.set('chat', 3);
+    await vi.waitFor(() => {
+      expect(setAppBadgeSpy).toHaveBeenCalled();
+    }, { timeout: 100 });
   });
 });
