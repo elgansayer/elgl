@@ -66,7 +66,7 @@ interface LikedUser {
                     [src]="user.avatar_url || 'assets/default-avatar.png'"
                     class="w-12 h-12 rounded-full object-cover border border-slate-700"
                     [alt]="user.display_name"
-                  />
+                   loading="lazy" />
                   <div>
                     <div class="font-bold text-slate-200">{{ user.display_name }}</div>
                     <div class="text-xs font-medium text-slate-400 mt-0.5">
