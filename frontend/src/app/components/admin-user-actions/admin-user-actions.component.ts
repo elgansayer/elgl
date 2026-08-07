@@ -1,6 +1,7 @@
 import { Component, input, inject } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AdminService } from '../../services/admin.service';
+import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-user-actions',
@@ -27,8 +28,10 @@ export class AdminUserActionsComponent {
     if (!this.userId()) return;
     try {
       await this.adminService.banUser(this.userId());
-    } catch (error) {
-      console.error('Ban failed', error);
+      showToast('User banned successfully', 'success');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Ban failed';
+      showErrorToast(message);
     }
   }
 
@@ -36,8 +39,10 @@ export class AdminUserActionsComponent {
     if (!this.userId()) return;
     try {
       await this.adminService.warnUser(this.userId());
-    } catch (error) {
-      console.error('Warn failed', error);
+      showToast('Warning issued successfully', 'success');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Warn failed';
+      showErrorToast(message);
     }
   }
 }
