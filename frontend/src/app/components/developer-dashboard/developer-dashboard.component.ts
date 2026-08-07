@@ -1,5 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, signal, resource } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { EconomyStore } from '../../services/economy.store';
 import { AuthService } from '../../services/auth.service';
@@ -10,11 +9,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-developer-dashboard',
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe],
   templateUrl: './developer-dashboard.component.html',
   styleUrls: ['./developer-dashboard.component.scss'],
 })
-export class DeveloperDashboardComponent implements OnInit {
+export class DeveloperDashboardComponent {
   readonly store = inject(EconomyStore);
   readonly authService = inject(AuthService);
   readonly discoveryService = inject(DiscoveryService);
@@ -37,9 +36,12 @@ export class DeveloperDashboardComponent implements OnInit {
   readonly simulatedCanPublish = signal<boolean>(false);
   readonly isRecordingActive = signal<boolean>(false);
 
-  async ngOnInit(): Promise<void> {
-    await Promise.all([this.store.loadDeveloperAnalytics(), this.store.loadDiagnosticLogs()]);
-  }
+  // Use resource() for initial data loading instead of ngOnInit()
+  private dashboardData = resource({
+    loader: async () => {
+      await Promise.all([this.store.loadDeveloperAnalytics(), this.store.loadDiagnosticLogs()]);
+    },
+  });
 
   setTab(tab: 'overview' | 'postgis' | 'centrifugo' | 'livekit'): void {
     this.activeTab.set(tab);

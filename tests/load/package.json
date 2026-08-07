@@ -8,7 +8,11 @@
     "test:trust-safety:report": "artillery run --output ./reports/trust-safety-report.json trust-and-safety.load.yml && artillery report ./reports/trust-safety-report.json",
     "test:spam-detection": "artillery run spam-detection.load.yml",
     "test:spam-detection:report": "artillery run --output ./reports/spam-detection-report.json spam-detection.load.yml && artillery report ./reports/spam-detection-report.json",
-    "test:all": "npm run test:trust-safety && npm run test:spam-detection"
+"test:srs-flashcards": "artillery run srs-flashcards.load.yml",
+    "test:srs-flashcards:report": "artillery run --output ./reports/srs-flashcards-report.json srs-flashcards.load.yml && artillery report ./reports/srs-flashcards-report.json",
+    "test:escrow-payments": "artillery run escrow-payments.load.yml",
+    "test:escrow-payments:report": "artillery run --output ./reports/escrow-payments-report.json escrow-payments.load.yml && artillery report ./reports/escrow-payments-report.json",
+    "test:all": "npm run test:trust-safety && npm run test:spam-detection && npm run test:srs-flashcards && npm run test:escrow-payments"
   },
   "devDependencies": {
     "artillery": "^2.0.0"
