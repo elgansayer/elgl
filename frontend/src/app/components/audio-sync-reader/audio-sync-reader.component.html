@@ -1,9 +1,6 @@
 <div class="app-card app-padded space-y-4">
   <div class="flex flex-wrap items-center justify-between gap-3 border-b border-surface-100 pb-3">
-    <div
-      joyrideStep="lingqStepTitle"
-      [title]="'LingQ Interactive Reader'"
-      [text]="'Welcome to the LingQ Interactive Reader. Immerse yourself in real content with synchronised audio and interactive word definitions.'">
+    <div>
       <h3 class="text-base font-black text-text-primary">{{ title() | t }}</h3>
       <p class="text-xs text-text-secondary">
         {{ 'audioSync.immersionDescription' | t }}
@@ -16,9 +13,6 @@
         }}</span>
       }
       <button
-        joyrideStep="lingqStepPlayback"
-        [title]="'Audio Playback'"
-        [text]="'Tap here to play or pause the synchronised audio. Words will highlight in real time as they are spoken, helping you follow along naturally.'"
         (click)="togglePlay()"
         [class.bg-emerald-600]="!isPlaying()"
         [class.text-white]="!isPlaying()"
@@ -36,9 +30,6 @@
   </div>
 
   <div
-    joyrideStep="lingqStepTokens"
-    [title]="'Interactive Text'"
-    [text]="'Tap any word to see its definition, save it to your SRS flashcard deck, and track your vocabulary progress with colour-coded highlighting.'"
     class="ps-4 pe-4 pt-3 pb-3 rounded-card bg-surface-300 border border-surface-100 leading-relaxed text-base select-text font-medium"
   >
     @for (token of tokens(); track token.index) {
