@@ -24,7 +24,7 @@
   } @else if (profile()) {
     <div class="relative w-full h-48 bg-surface-300">
       @if (profile()?.cover_photo_url) {
-        <img [src]="profile()?.cover_photo_url" class="w-full h-full object-cover" />
+        <img loading="lazy" [src]="profile()?.cover_photo_url" class="w-full h-full object-cover" />
       }
       <div class="absolute inset-0 bg-gradient-to-t from-surface-500 to-transparent"></div>
     </div>
@@ -35,7 +35,7 @@
           class="relative h-24 w-24 rounded-full border-4 border-surface-500 bg-surface-300 flex items-center justify-center overflow-hidden"
         >
           @if (profile()?.avatar_url) {
-            <img [src]="profile()?.avatar_url" alt="avatar" class="h-full w-full object-cover" />
+            <img loading="lazy" [src]="profile()?.avatar_url" alt="avatar" class="h-full w-full object-cover" />
           } @else {
             <span class="text-3xl font-bold text-text-secondary">{{
               profile()?.display_name?.charAt(0) || '?'
