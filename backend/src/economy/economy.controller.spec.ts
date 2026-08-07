@@ -183,11 +183,23 @@ describe('EconomyController', () => {
   describe('unlockStickerPack', () => {
     it('should call service unlockStickerPack when user is provided', async () => {
       const dto = { pack_id: 'stk_pack_1' };
-      const response = { success: true, coins_remaining: 150, pack: { id: 'stk_pack_1', name: 'Happy Corgi Pack', cost_coins: 50 } };
-      (economyService.unlockStickerPack as jest.Mock).mockResolvedValue(response);
+      const response = {
+        success: true,
+        coins_remaining: 150,
+        pack: { id: 'stk_pack_1', name: 'Happy Corgi Pack', cost_coins: 50 },
+      };
+      (economyService.unlockStickerPack as jest.Mock).mockResolvedValue(
+        response,
+      );
 
-      const result = await controller.unlockStickerPack({ id: 'user-1' } as any, dto);
-      expect(economyService.unlockStickerPack).toHaveBeenCalledWith('user-1', dto);
+      const result = await controller.unlockStickerPack(
+        { id: 'user-1' } as any,
+        dto,
+      );
+      expect(economyService.unlockStickerPack).toHaveBeenCalledWith(
+        'user-1',
+        dto,
+      );
       expect(result).toEqual(response);
     });
   });
