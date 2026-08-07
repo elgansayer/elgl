@@ -26,7 +26,10 @@
   "admin.badgeAdmin": "Badge Admin",
   "admin.badgeFree": "Badge Free",
   "admin.badgeVip": "Badge Vip",
+  "admin.banBtn": "Ban",
+  "admin.banConfirm": "Are you sure you want to ban {{name}}?",
   "admin.banFailed": "Ban Failed",
+  "admin.banUserAria": "Ban {{name}}",
   "admin.coinsBadge": "Coins Badge",
   "admin.empty": "Empty",
   "admin.joined": "Joined",
@@ -110,6 +113,9 @@
   "admin.users.yes": "Yes",
   "admin.viewLoginHistory": "View Login History",
   "admin.vipUpdateError": "Vip Update Error",
+  "admin.warnBtn": "Warn",
+  "admin.warnConfirm": "Are you sure you want to warn {{name}}?",
+  "admin.warnUserAria": "Warn {{name}}",
   "admin.warningFailed": "Warning Failed",
   "admin.warningIssued": "Warning Issued",
   "age_max": "Age max",
@@ -1647,7 +1653,6 @@
   "quiz.skill.listening": "Listening",
   "quiz.skill.grammar": "Grammar",
   "quiz.skill.vocabulary": "Vocabulary",
-<<<<<<< HEAD
 "profile.audioIntroCardTitle": "Audio Introduction",
   "profile.audioIntroHint": "Record a short 30-second intro to let partners hear your voice.",
   "profile.audioIntroRecord": "Record Intro",
@@ -1655,8 +1660,7 @@
   "profile.audioIntroStop": "Stop Recording",
   "profile.audioIntroSave": "Save Intro",
   "profile.audioIntroSaved": "Audio introduction saved!",
-=======
-  "audioRoom.languagePair.en-es": "English ↔ Spanish",
+"audioRoom.languagePair.en-es": "English ↔ Spanish",
   "audioRoom.languagePair.en-fr": "English ↔ French",
   "audioRoom.languagePair.en-ja": "English ↔ Japanese",
   "audioRoom.languagePair.ar-en": "Arabic ↔ English",
@@ -1680,7 +1684,6 @@
   "audioRoom.languagePair.ar-fr": "Arabic ↔ French",
   "audioRoom.languagePair.fr-ar": "French ↔ Arabic",
   "audioRoom.languagePairOptions": "en-es,en-fr,en-ja,ar-en,en-ko,en-zh,en-pt,en-ru,en-de,en-it,en-hi,en-tr,ja-en,ko-en,zh-en,fr-en,es-en,de-en,pt-en,it-en,ru-en,ar-fr,fr-ar",
->>>>>>> origin/main
   "voip.accept": "Accept",
   "voip.decline": "Decline"
 }

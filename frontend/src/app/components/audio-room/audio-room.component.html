@@ -181,7 +181,14 @@
                     room.host_id === authService.currentUser()?.id && participant.user_id !== room.host_id
                   ) {
                     <div class="mt-2 flex flex-col gap-1">
-                      @if (!participant.isMuted) {
+                      @if (participant.isMuted) {
+                        <button
+                          (click)="unmute(participant.user_id)"
+                          class="rounded-app bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-text-primary hover:bg-emerald-500/20"
+                        >
+                          {{ 'audioRoom.unmuteBtn' | t }}
+                        </button>
+                      } @else {
                         <button
                           (click)="mute(participant.user_id)"
                           class="rounded-app bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-text-primary hover:bg-amber-500/20"
@@ -190,10 +197,10 @@
                         </button>
                       }
                       <button
-                        (click)="demote(participant.user_id)"
+                        (click)="kick(participant.user_id)"
                         class="rounded-app bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-text-primary hover:bg-red-500/20"
                       >
-                        {{ 'audioRoom.demoteBtn' | t }}
+                        {{ 'audioRoom.kickBtn' | t }}
                       </button>
                     </div>
                   }

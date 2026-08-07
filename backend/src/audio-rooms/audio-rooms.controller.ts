@@ -27,6 +27,7 @@ import {
   CreateAudioRoomDto,
   DemoteSpeakerDto,
   InviteCoHostDto,
+  KickSpeakerDto,
   RaiseHandDto,
   RemoveCoHostDto,
   SendCaptionDto,
@@ -224,6 +225,15 @@ export class AudioRoomsController {
     return await this.audioRoomsService.muteSpeaker(user.id, dto);
   }
 
+  @Post('unmute-speaker')
+  async unmuteSpeaker(
+    @CurrentUser() user: AuthUser | null,
+    @Body() dto: DemoteSpeakerDto,
+  ): Promise<AudioRoomRecord | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.unmuteSpeaker(user.id, dto);
+  }
+
   @Post('demote-speaker')
   async demoteSpeaker(
     @CurrentUser() user: AuthUser | null,
@@ -231,6 +241,15 @@ export class AudioRoomsController {
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
     return await this.audioRoomsService.demoteSpeaker(user.id, dto);
+  }
+
+  @Post('kick-speaker')
+  async kickSpeaker(
+    @CurrentUser() user: AuthUser | null,
+    @Body() dto: KickSpeakerDto,
+  ): Promise<AudioRoomRecord | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.kickSpeaker(user.id, dto);
   }
 
   @Post('invite-co-host')

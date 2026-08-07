@@ -505,16 +505,14 @@
   "auth.resetPassword.backToHome": "العودة إلى الصفحة الرئيسية",
   "common.pleaseWait": "يرجى الانتظار...",
   "common.submit": "إرسال",
-<<<<<<< HEAD
-  "profile.audioIntroCardTitle": "مقدمة صوتية",
+"profile.audioIntroCardTitle": "مقدمة صوتية",
   "profile.audioIntroHint": "سجل مقدمة قصيرة مدتها 30 ثانية ليدع الشركاء يستمعون إلى صوتك.",
   "profile.audioIntroRecord": "تسجيل المقدمة",
   "profile.audioIntroRerecord": "إعادة التسجيل",
   "profile.audioIntroStop": "إيقاف التسجيل",
   "profile.audioIntroSave": "حفظ المقدمة",
-  "profile.audioIntroSaved": "تم حفظ المقدمة الصوتية!"
-=======
-  "audioRoom.languagePair.en-es": "الإنجليزية ↔ الإسبانية",
+  "profile.audioIntroSaved": "تم حفظ المقدمة الصوتية!",
+"audioRoom.languagePair.en-es": "الإنجليزية ↔ الإسبانية",
   "audioRoom.languagePair.en-fr": "الإنجليزية ↔ الفرنسية",
   "audioRoom.languagePair.en-ja": "الإنجليزية ↔ اليابانية",
   "audioRoom.languagePair.ar-en": "العربية ↔ الإنجليزية",
@@ -537,6 +535,7 @@
   "audioRoom.languagePair.ru-en": "الروسية ↔ الإنجليزية",
   "audioRoom.languagePair.ar-fr": "العربية ↔ الفرنسية",
   "audioRoom.languagePair.fr-ar": "الفرنسية ↔ العربية",
-  "audioRoom.languagePairOptions": "en-es,en-fr,en-ja,ar-en,en-ko,en-zh,en-pt,en-ru,en-de,en-it,en-hi,en-tr,ja-en,ko-en,zh-en,fr-en,es-en,de-en,pt-en,it-en,ru-en,ar-fr,fr-ar"
->>>>>>> origin/main
+  "audioRoom.languagePairOptions": "en-es,en-fr,en-ja,ar-en,en-ko,en-zh,en-pt,en-ru,en-de,en-it,en-hi,en-tr,ja-en,ko-en,zh-en,fr-en,es-en,de-en,pt-en,it-en,ru-en,ar-fr,fr-ar",
+"restore_purchases": "استعادة المشتريات",
+  "restoring": "جارٍ الاستعادة..."
 }

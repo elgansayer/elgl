@@ -598,16 +598,14 @@
   "auth.resetPassword.backToHome": "ホームに戻る",
   "common.pleaseWait": "お待ちください...",
   "common.submit": "送信",
-<<<<<<< HEAD
-  "profile.audioIntroCardTitle": "音声自己紹介",
+"profile.audioIntroCardTitle": "音声自己紹介",
   "profile.audioIntroHint": "30秒の音声で自己紹介を録音して、パートナーにあなたの声を聞かせましょう。",
   "profile.audioIntroRecord": "録音する",
   "profile.audioIntroRerecord": "再録音",
   "profile.audioIntroStop": "録音停止",
   "profile.audioIntroSave": "保存する",
-  "profile.audioIntroSaved": "音声紹介を保存しました！"
-=======
-  "audioRoom.languagePair.en-es": "英語 ↔ スペイン語",
+  "profile.audioIntroSaved": "音声紹介を保存しました！",
+"audioRoom.languagePair.en-es": "英語 ↔ スペイン語",
   "audioRoom.languagePair.en-fr": "英語 ↔ フランス語",
   "audioRoom.languagePair.en-ja": "英語 ↔ 日本語",
   "audioRoom.languagePair.ar-en": "アラビア語 ↔ 英語",
@@ -630,6 +628,7 @@
   "audioRoom.languagePair.ru-en": "ロシア語 ↔ 英語",
   "audioRoom.languagePair.ar-fr": "アラビア語 ↔ フランス語",
   "audioRoom.languagePair.fr-ar": "フランス語 ↔ アラビア語",
-  "audioRoom.languagePairOptions": "en-es,en-fr,en-ja,ar-en,en-ko,en-zh,en-pt,en-ru,en-de,en-it,en-hi,en-tr,ja-en,ko-en,zh-en,fr-en,es-en,de-en,pt-en,it-en,ru-en,ar-fr,fr-ar"
->>>>>>> origin/main
+  "audioRoom.languagePairOptions": "en-es,en-fr,en-ja,ar-en,en-ko,en-zh,en-pt,en-ru,en-de,en-it,en-hi,en-tr,ja-en,ko-en,zh-en,fr-en,es-en,de-en,pt-en,it-en,ru-en,ar-fr,fr-ar",
+"restore_purchases": "購入を復元",
+  "restoring": "復元中..."
 }

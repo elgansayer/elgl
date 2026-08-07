@@ -584,8 +584,30 @@ export class MonetisationService {
       }
 
       return { received: true, status: 'no_valid_subscription' };
+    } else {
+      // Stripe/web platform: look up active Stripe subscription and sync VIP status
+      const subscription = await this.findActiveStripeSubscription(userId);
+      if (!subscription) {
+        return { received: true, status: 'no_valid_subscription' };
+      }
+
+      // Determine VIP tier from the subscription metadata or price lookup
+      const item = subscription.items.data[0];
+      const priceId = item?.price?.id;
+      let tier: string | null = null;
+      if (priceId) {
+        tier = this.subscriptionPlansService.getTierByProductId(priceId);
+      }
+
+      if (tier) {
+        await this.updateVipStatusFromWebhook(userId, true, tier);
+        return { received: true, status: 'restored' };
+      }
+
+      // No matching tier but active subscription exists -- restore as consumer VIP
+      await this.updateVipStatusFromWebhook(userId, true, 'consumer_8_ukp_10_usd');
+      return { received: true, status: 'restored' };
     }
-    throw new BadRequestException('Invalid platform');
   }
 
   /**

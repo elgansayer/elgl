@@ -30,7 +30,9 @@ describe('AudioRoomsController', () => {
             raiseHand: jest.fn(),
             approveSpeaker: jest.fn(),
             muteSpeaker: jest.fn(),
+            unmuteSpeaker: jest.fn(),
             demoteSpeaker: jest.fn(),
+            kickSpeaker: jest.fn(),
             inviteCoHost: jest.fn(),
             removeCoHost: jest.fn(),
             sendCaption: jest.fn(),
@@ -187,6 +189,60 @@ describe('AudioRoomsController', () => {
         'user-1',
         dto,
       );
+      expect(result).toEqual(room);
+    });
+  });
+
+  describe('muteSpeaker', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.muteSpeaker(null, {} as any);
+      expect(result).toBeNull();
+      expect(audioRoomsService.muteSpeaker).not.toHaveBeenCalled();
+    });
+
+    it('should call service muteSpeaker when user is provided', async () => {
+      const dto: any = { room_id: 'room-1', target_user_id: 'user-2' };
+      const room: any = { id: 'room-1' };
+      (audioRoomsService.muteSpeaker as jest.Mock).mockResolvedValue(room);
+
+      const result = await controller.muteSpeaker({ id: 'user-1' }, dto);
+      expect(audioRoomsService.muteSpeaker).toHaveBeenCalledWith('user-1', dto);
+      expect(result).toEqual(room);
+    });
+  });
+
+  describe('unmuteSpeaker', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.unmuteSpeaker(null, {} as any);
+      expect(result).toBeNull();
+      expect(audioRoomsService.unmuteSpeaker).not.toHaveBeenCalled();
+    });
+
+    it('should call service unmuteSpeaker when user is provided', async () => {
+      const dto: any = { room_id: 'room-1', target_user_id: 'user-2' };
+      const room: any = { id: 'room-1' };
+      (audioRoomsService.unmuteSpeaker as jest.Mock).mockResolvedValue(room);
+
+      const result = await controller.unmuteSpeaker({ id: 'user-1' }, dto);
+      expect(audioRoomsService.unmuteSpeaker).toHaveBeenCalledWith('user-1', dto);
+      expect(result).toEqual(room);
+    });
+  });
+
+  describe('kickSpeaker', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.kickSpeaker(null, {} as any);
+      expect(result).toBeNull();
+      expect(audioRoomsService.kickSpeaker).not.toHaveBeenCalled();
+    });
+
+    it('should call service kickSpeaker when user is provided', async () => {
+      const dto: any = { room_id: 'room-1', target_user_id: 'user-2' };
+      const room: any = { id: 'room-1' };
+      (audioRoomsService.kickSpeaker as jest.Mock).mockResolvedValue(room);
+
+      const result = await controller.kickSpeaker({ id: 'user-1' }, dto);
+      expect(audioRoomsService.kickSpeaker).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual(room);
     });
   });
