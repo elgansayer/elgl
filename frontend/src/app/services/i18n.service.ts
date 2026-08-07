@@ -358,6 +358,17 @@ export class I18nService {
     'discovery.genderMale': 'Male',
     'discovery.genderFemale': 'Female',
     'discovery.genderVipRequired': 'VIP required to filter by gender',
+    'discovery.startTour': 'Tour',
+    'discovery.tour.filterPillsText': 'Use these filter pills to quickly switch between All Users, Serious Learners, Nearby partners, and Paid Practice.',
+    'discovery.tour.languagePillsText': 'Tap a language chip to filter partners by target language, or use the language picker to search for more languages.',
+    'discovery.tour.sortGenderText': 'Sort results by best match, online status, or distance. VIP users can also filter by gender.',
+    'discovery.tour.ageDistanceText': 'Adjust the age range and distance radius to narrow down your partner search. VIP users can fine-tune distance control.',
+    'discovery.tour.globalSearchText': 'Use the global search bar to search partners by name, native language, target language, or proficiency level.',
+    'discovery.tour.partnerCardsText': 'Browse partner cards showing display names, VIP badges, personality types, fluency indicators, and shared interests. Tap a card to start a chat.',
+    'tour.prev': 'Previous',
+    'tour.next': 'Next',
+    'tour.done': 'Done',
+    'tour.close': 'Close',
     'discovery.offlineBanner': 'You are offline',
     'discovery.offlineCachedData': '\u2013 viewing cached data',
 
@@ -609,6 +620,7 @@ export class I18nService {
     'videoRoom.inviteCoHostCollapsed': 'Invite co-host picker collapsed',
     'videoRoom.speakerPickerAria': 'Select speaker to invite as co-host',
     'videoRoom.speakerOptionAria': 'Invite {{id}} as co-host',
+    'videoRoom.connectingToRoom': 'Connecting to room...',
 
     // Video Classrooms Marketplace
     'classroomsMarketplace.title': '&#127979;&#65039; Video Classrooms',

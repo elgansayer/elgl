@@ -1,4 +1,4 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import Redis from 'ioredis';
@@ -32,6 +32,7 @@ export type UsersRow = {
   /** @deprecated superseded by native_languages (see migration 013); retained for legacy callers */
   native_language?: string | null;
   privacy_hide_from_search?: boolean | null;
+  matchmaking_consent?: boolean | null;
   incognito_visits?: boolean | null;
   age?: number | null;
   is_deleted?: boolean | null;
@@ -2114,6 +2115,7 @@ export interface Database {
 @Injectable()
 export class SupabaseService implements OnModuleDestroy {
   private readonly client: SupabaseClient<Database>;
+  private readonly logger = new Logger(SupabaseService.name);
   private readonly redisClient: Redis;
 
   constructor(private readonly configService: ConfigService) {
@@ -2135,7 +2137,7 @@ export class SupabaseService implements OnModuleDestroy {
       lazyConnect: true,
     });
     this.redisClient.on('error', (err) => {
-      console.error('Redis connection error in SupabaseService:', err.message);
+      this.logger.error(`Redis connection error in SupabaseService: ${err.message}`);
     });
   }
 

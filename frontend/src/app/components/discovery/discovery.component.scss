@@ -10,9 +10,16 @@
   display: none;
 }
 
-/* Responsive partner card minimum height on desktop grid */
+/* Responsive partner card on desktop grid */
 @media (min-width: 1024px) {
   .discovery-grid article {
     min-height: 120px;
+  }
+}
+
+/* Responsive header: reduce padding-top on larger screens since desktop-sidebar takes nav space */
+@media (min-width: 1024px) {
+  .discovery-header {
+    padding-top: 1rem;
   }
 }
