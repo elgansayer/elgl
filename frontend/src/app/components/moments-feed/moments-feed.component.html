@@ -138,13 +138,21 @@
 
   <main class="divide-y divide-surface-200 p-0">
     @if (momentsStore.isLoading()) {
-      <div class="p-8 text-center font-bold text-text-secondary">{{ 'moments.loading' | t }}</div>
+      <app-empty-state
+        [title]="'moments.loading' | t"
+        [customClass]="'py-16'">
+      </app-empty-state>
     }
 
     @if (!momentsStore.isLoading() && momentsStore.feed().length === 0) {
-      <div class="p-8 text-center">
-        <p class="font-bold text-text-primary text-lg">{{ 'moments.empty' | t }}</p>
-      </div>
+      <app-empty-state
+        [illustration]="'/assets/illustrations/no-moments.svg'"
+        [title]="'moments.noMomentsFound' | t"
+        [description]="'moments.noMomentsHint' | t"
+        [actionLabel]="'moments.createFirstBtn' | t"
+        (actionClicked)="showComposeForm.set(true)"
+        [customClass]="'py-16'">
+      </app-empty-state>
     }
 
     <!-- Moments Feed List -->

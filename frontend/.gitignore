@@ -42,11 +42,3 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
-frontend/cypress/screenshots/
-frontend/cypress/videos/
-frontend/cypress/downloads/
-
-# Cypress
-cypress/screenshots/
-cypress/videos/
-cypress/downloads/

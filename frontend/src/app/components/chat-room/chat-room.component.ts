@@ -25,6 +25,7 @@ import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { GroupParticipantDrawerComponent, GroupParticipant } from '../group-participant-drawer/group-participant-drawer.component';
+import { DraftService } from '../../services/draft.service';
 
 @Component({
   selector: 'app-chat-room',
@@ -59,12 +60,17 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
   private readonly tts = inject(TextToSpeechService);
+  private readonly draftService = inject(DraftService);
 
   id = input.required<string>();
 
   constructor() {
     effect(() => {
       const roomId = this.id();
+      // Save draft for the previous room before switching
+      if (this.roomId && this.roomId !== roomId) {
+        this.draftService.saveChatDraft(this.roomId, this.textInput);
+      }
       this.roomId = roomId;
       void this.initializeRoom();
     });
@@ -181,6 +187,7 @@ export class ChatRoomComponent implements OnDestroy {
   private async finishLoadingRoom(): Promise<void> {
     await this.loadBlockedUsers();
     await this.loadMessages();
+    this.restoreDraft();
     await this.setupRealTime();
     await this.loadParticipants();
     await this.resolvePartnerLanguage();
@@ -262,6 +269,14 @@ export class ChatRoomComponent implements OnDestroy {
       this.centrifugeService.unsubscribe(`chat:${this.roomId}`);
     }
     this.typingService.disconnect();
+    this.draftService.saveChatDraft(this.roomId, this.textInput);
+  }
+
+  private restoreDraft(): void {
+    const draft = this.draftService.loadChatDraft(this.roomId);
+    if (draft) {
+      this.textInput = draft;
+    }
   }
 
   async loadMessages(): Promise<void> {
@@ -315,6 +330,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.mentionQuery.set(null);
     }
     this.typingService.sendTyping(target.value.length > 0);
+    this.draftService.saveChatDraft(this.roomId, target.value);
   }
 
   onComposerKeydown(event: KeyboardEvent): void {
@@ -357,6 +373,7 @@ export class ChatRoomComponent implements OnDestroy {
       mentionText +
       this.textInput.slice(this.mentionRangeEnd);
     this.mentionQuery.set(null);
+    this.draftService.saveChatDraft(this.roomId, this.textInput);
   }
 
   async sendTextMessage(): Promise<void> {
@@ -366,6 +383,7 @@ export class ChatRoomComponent implements OnDestroy {
     this.textInput = '';
     this.mentionQuery.set(null);
     this.typingService.sendTyping(false);
+    this.draftService.clearChatDraft(this.roomId);
 
     try {
       const sent = await this.chatService.sendMessage({
