@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { firstValueFrom, catchError, of } from 'rxjs';
+import { firstValueFrom, catchError, of, Subject } from 'rxjs';
+import { takeUntil } from 'rxjs';
 import { MOCK_PARTNERS } from './mock-data';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
@@ -73,7 +74,10 @@ export class DiscoveryService {
     }
   }
 
-  async findPartners(filters: SearchFilterParams & { serious_learner_mode?: boolean }): Promise<UserProfile[]> {
+  async findPartners(
+    filters: SearchFilterParams & { serious_learner_mode?: boolean },
+    abortSignal?: AbortSignal,
+  ): Promise<UserProfile[]> {
     const filtersKey = this.offlineCache.buildFiltersKey(filters);
     const isOnline = this.offlineCache.isOnline();
 
@@ -151,10 +155,22 @@ export class DiscoveryService {
       return MOCK_PARTNERS;
     }
 
+    // Build cancellation notifier from AbortSignal
+    const cancel$ = new Subject<void>();
+    if (abortSignal) {
+      if (abortSignal.aborted) {
+        return MOCK_PARTNERS;
+      }
+      abortSignal.addEventListener('abort', () => cancel$.next(), { once: true });
+    }
+
     const users = await firstValueFrom(
       this.http
         .get<UserProfile[]>(`${this.baseUrl}/partners`, { headers: this.getHeaders(), params })
-        .pipe(catchError(() => of<UserProfile[]>(MOCK_PARTNERS))),
+        .pipe(
+          takeUntil(cancel$),
+          catchError(() => of<UserProfile[]>(MOCK_PARTNERS)),
+        ),
     );
 
     // Cache the fresh results for offline use

@@ -16,6 +16,9 @@ class MockAudio {
   src: string;
   play = vi.fn().mockResolvedValue(undefined);
   pause = vi.fn();
+  load = vi.fn();
+  onended: (() => void) | null = null;
+  onerror: (() => void) | null = null;
   private listeners: Record<string, (() => void)[]> = {};
   constructor(src: string) {
     this.src = src;
@@ -32,6 +35,11 @@ class MockAudio {
   }
   emit(event: string): void {
     this.listeners[event]?.forEach((cb) => cb());
+  }
+  clearListeners(): void {
+    this.listeners = {};
+    this.onended = null;
+    this.onerror = null;
   }
 }
 
@@ -689,6 +697,69 @@ describe('DiscoveryComponent', () => {
 
       expect(audio['listeners']['ended']).toHaveLength(0);
       expect(audio['listeners']['error']).toHaveLength(0);
+    });
+  });
+
+  describe('memory leak & request management', () => {
+    it('should clean up audio event listeners on stop', async () => {
+      await init();
+
+      component.toggleAudioIntro('partner-1', 'https://example.com/intro.mp3', new Event('click'));
+      const audio = audioInstances[0];
+      // Verify listeners were registered
+      expect(Object.keys(audio['listeners']).length).toBeGreaterThan(0);
+
+      component.toggleAudioIntro('partner-1', 'https://example.com/intro.mp3', new Event('click'));
+      // After toggling off, src should be cleared and load() called to release resources
+      expect(audio.src).toBe('');
+      expect(audio.load).toHaveBeenCalled();
+      expect(audio.onended).toBeNull();
+      expect(audio.onerror).toBeNull();
+    });
+
+    it('should cancel in-flight search when searchPartners is called again', async () => {
+      await init();
+      // AbortController should be created by searchPartners
+      expect(component['searchAbortController']).toBeDefined();
+      const firstController = component['searchAbortController'];
+
+      // Call searchPartners again; should abort the first controller
+      await component.searchPartners();
+      // Previous controller should have been replaced
+      expect(component['searchAbortController']).not.toBe(firstController);
+    });
+
+    it('should enable debouncing on distance changes', async () => {
+      vi.useFakeTimers();
+      await init();
+      mockDiscoveryService.findPartners.mockClear();
+
+      // Rapid distance changes should only result in one search after debounce
+      component.onDistanceChanged(25);
+      component.onDistanceChanged(50);
+      component.onDistanceChanged(75);
+
+      expect(mockDiscoveryService.findPartners).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(300);
+      expect(mockDiscoveryService.findPartners).toHaveBeenCalledTimes(1);
+
+      vi.useRealTimers();
+    });
+
+    it('should clear debounce timer on destroy', async () => {
+      vi.useFakeTimers();
+      await init();
+      mockDiscoveryService.findPartners.mockClear();
+
+      component.onDistanceChanged(25);
+      expect(mockDiscoveryService.findPartners).not.toHaveBeenCalled();
+
+      component.ngOnDestroy();
+      vi.advanceTimersByTime(300);
+      expect(mockDiscoveryService.findPartners).not.toHaveBeenCalled();
+
+      vi.useRealTimers();
     });
   });
 

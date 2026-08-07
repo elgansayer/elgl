@@ -1,14 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
-import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
-import { DISCOVERY_CACHE_TAG_POTW } from './cache.interceptor';
 import { MOCK_USERS } from '../mock-data';
 
 type DiscoveryUser = UserProfile & {
@@ -33,11 +30,10 @@ type DiscoveryUser = UserProfile & {
 
 @Injectable()
 export class DiscoveryService {
+  private readonly logger = new Logger(DiscoveryService.name);
+
   constructor(
-    @InjectPinoLogger(DiscoveryService.name)
-    private readonly logger: PinoLogger,
     private readonly audioRoomsService: AudioRoomsService,
-    private readonly cloudflareCacheService: CloudflareCacheService,
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
   ) {}
@@ -45,7 +41,7 @@ export class DiscoveryService {
   // Weekly computation of Partner of the Week (every Sunday at midnight)
   @Cron('0 0 * * 0')
   async calculatePartnerOfWeek(): Promise<void> {
-    this.logger.info('Starting Partner of the Week calculation...');
+    this.logger.log('Starting Partner of the Week calculation...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
@@ -53,7 +49,6 @@ export class DiscoveryService {
       const { data: topUsers, error } = await supabase
         .from('users')
         .select('id')
-        .eq('is_deletion_pending', false)
         .gt('correction_ratio', 0.5)
         .order('correction_ratio', { ascending: false })
         .order('study_streak_days', { ascending: false })
@@ -74,12 +69,7 @@ export class DiscoveryService {
         'EX',
         604800,
       );
-      this.logger.info(`Partner of the Week set for ${partnerIds.length} users`);
-
-      // Purge Cloudflare edge cache for the old POTW list across all PoPs
-      await this.cloudflareCacheService.purgeByCacheTags([
-        DISCOVERY_CACHE_TAG_POTW,
-      ]);
+      this.logger.log(`Partner of the Week set for ${partnerIds.length} users`);
     } catch (err) {
       this.logger.error('Error calculating Partner of the Week', err);
     }
@@ -124,47 +114,94 @@ export class DiscoveryService {
         target_languages: string[];
       }>;
 
+      // Collect unique language pairs to batch query, avoiding N+1 queries
+      const pairSet = new Set<string>();
+      const pairIndex = new Map<
+        string,
+        Array<{ userId: string; nativeLang: string; targetLang: string }>
+      >();
+
       for (const user of typedUsers) {
         if (!user.native_languages?.length || !user.target_languages?.length) {
           continue;
         }
+        const native = user.native_languages[0];
+        const target = user.target_languages[0];
+        const key = `${target}:${native}`; // matches speak user's target natively AND are learning user's native
+        pairSet.add(key);
+        const bucket = pairIndex.get(key) ?? [];
+        bucket.push({ userId: user.id, nativeLang: native, targetLang: target });
+        pairIndex.set(key, bucket);
+      }
 
-        const { data: matches } = await supabase
-          .from('users')
-          .select('id')
-          .neq('id', user.id)
-          .eq('privacy_hide_from_search', false)
-          .eq('is_deletion_pending', false)
-          .contains('native_languages', [user.target_languages[0]])
-          .contains('target_languages', [user.native_languages[0]])
-          .order('study_streak_days', { ascending: false })
-          .limit(10);
+      // Batch-fetch matches for each unique language pair (up to 20 queries in parallel)
+      const MAX_PAIR_BATCH = 20;
+      const pairs = Array.from(pairSet);
+      const batches: string[][] = [];
+      for (let i = 0; i < pairs.length; i += MAX_PAIR_BATCH) {
+        batches.push(pairs.slice(i, i + MAX_PAIR_BATCH));
+      }
 
-        if (matches && matches.length > 0) {
-          let matchIds = (matches as Array<{ id: string }>).map((m) => m.id);
-          const blockedIds = await this.safetyService.getBlockedAndBlockerIds(
-            user.id,
-          );
-          if (blockedIds.length > 0) {
-            matchIds = matchIds.filter((id) => !blockedIds.includes(id));
+      for (const batchPairs of batches) {
+        const queries = batchPairs.map((pairKey) => {
+          const [targetCode, nativeCode] = pairKey.split(':');
+          return supabase
+            .from('users')
+            .select('id')
+            .eq('privacy_hide_from_search', false)
+            .eq('is_deletion_pending', false)
+            .contains('native_languages', [targetCode])
+            .contains('target_languages', [nativeCode])
+            .order('study_streak_days', { ascending: false })
+            .limit(10);
+        });
+
+        const results = await Promise.all(queries);
+
+        for (let i = 0; i < batchPairs.length; i++) {
+          const pairKey = batchPairs[i];
+          const matchesData = results[i];
+          if (
+            matchesData.error ||
+            !matchesData.data ||
+            matchesData.data.length === 0
+          ) {
+            continue;
           }
-          if (matchIds.length > 0) {
-            pipeline.set(
-              `daily_recommendations:${user.id}`,
-              JSON.stringify(matchIds),
-              'EX',
-              86400,
-            );
-            pipelineOps++;
-            totalCached++;
 
-            if (pipelineOps >= 200) {
-              await flushPipeline();
+          const userEntries = pairIndex.get(pairKey) ?? [];
+          const matchIds = (matchesData.data as Array<{ id: string }>).map(
+            (m) => m.id,
+          );
+
+          // Cache the same match list for every user in this pair bucket
+          for (const entry of userEntries) {
+            let filtered = matchIds.filter((id) => id !== entry.userId);
+            const blockedIds =
+              await this.safetyService.getBlockedAndBlockerIds(entry.userId);
+            if (blockedIds.length > 0) {
+              filtered = filtered.filter((id) => !blockedIds.includes(id));
+            }
+            const topN = filtered.slice(0, 10);
+            if (topN.length > 0) {
+              pipeline.set(
+                `daily_recommendations:${entry.userId}`,
+                JSON.stringify(topN),
+                'EX',
+                86400,
+              );
+              pipelineOps++;
+              totalCached++;
+
+              if (pipelineOps >= 200) {
+                await flushPipeline();
+              }
             }
           }
         }
       }
-await flushPipeline();
+
+      await flushPipeline();
       this.logger.info(
         `Finished daily partner recommendations calculation. Cached ${totalCached} sets.`,
       );
@@ -187,20 +224,6 @@ await flushPipeline();
     query: SearchQueryDto,
   ): Promise<UserProfile[]> {
     const supabase = this.supabaseService.getClient();
-
-    // GDPR audit log: record location-based searches for compliance
-    if (
-      query.latitude !== undefined ||
-      query.longitude !== undefined ||
-      query.country ||
-      query.city
-    ) {
-      this.logger.info(
-        `Discovery location search by user ${currentUserId}: ` +
-          `lat=${query.latitude ?? 'none'}, lon=${query.longitude ?? 'none'}, ` +
-          `country=${query.country ?? 'none'}, city=${query.city ?? 'none'}`,
-      );
-    }
 
     const blockedIds =
       await this.safetyService.getBlockedAndBlockerIds(currentUserId);
@@ -246,8 +269,7 @@ await flushPipeline();
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false)
-      .eq('is_deletion_pending', false);
+      .eq('privacy_hide_from_search', false);
 
     if (query.has_audio_intro) {
       queryBuilder = queryBuilder
@@ -478,8 +500,7 @@ await flushPipeline();
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false)
-      .eq('is_deletion_pending', false);
+      .eq('privacy_hide_from_search', false);
 
     queryBuilder = queryBuilder
       .not('audio_intro_url', 'is', null)
@@ -557,7 +578,6 @@ await flushPipeline();
       .gt('created_at', sevenDaysAgo.toISOString())
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
-      .eq('is_deletion_pending', false)
       .not('native_languages', 'is', null)
       .order('created_at', { ascending: false })
       .limit(10);
@@ -596,7 +616,6 @@ await flushPipeline();
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
-      .eq('is_deletion_pending', false)
       .not('native_languages', 'is', null)
       .order('created_at', { ascending: false })
       .limit(5);
@@ -648,8 +667,7 @@ await flushPipeline();
         { count: 'exact', head: false },
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false)
-      .eq('is_deletion_pending', false);
+      .eq('privacy_hide_from_search', false);
 
     if (blockedIds.length > 0) {
       queryBuilder = queryBuilder.not('id', 'in', blockedIds);
@@ -944,12 +962,6 @@ await flushPipeline();
     currentUserId: string,
     query: { country?: string; city?: string },
   ): Promise<UserProfile[]> {
-    // GDPR audit log: record location search for compliance
-    this.logger.info(
-      `Discovery country/city search by user ${currentUserId}: ` +
-        `country=${query.country ?? 'none'}, city=${query.city ?? 'none'}`,
-    );
-
     const supabase = this.supabaseService.getClient();
     const blockedIds =
       await this.safetyService.getBlockedAndBlockerIds(currentUserId);
@@ -959,8 +971,7 @@ await flushPipeline();
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false)
-      .eq('is_deletion_pending', false);
+      .eq('privacy_hide_from_search', false);
     if (blockedIds.length > 0) {
       qb = qb.not('id', 'in', blockedIds);
     }

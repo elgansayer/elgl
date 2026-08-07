@@ -23,6 +23,9 @@ import { DistanceSliderComponent } from '../distance-slider/distance-slider.comp
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { DiscoverySkeletonCardComponent } from './discovery-skeleton-card.component';
 
+/** Milliseconds to debounce partner search calls triggered by interaction changes. */
+const SEARCH_DEBOUNCE_MS = 300;
+
 @Component({
   selector: 'app-discovery',
   imports: [
@@ -85,6 +88,11 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   readonly isVip = computed(() => this.authService.currentUser()?.is_vip ?? false);
 
+  /** Debounce timer handle for throttling rapid search calls. */
+  private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Abort controller for cancelling in-flight partner search. */
+  private searchAbortController: AbortController | null = null;
+
   readonly filterPills = computed(() => {
     this.i18n.translations();
     return [
@@ -120,13 +128,13 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   onAgeRangeChanged(range: AgeRange): void {
     this.ageRangeMin.set(range.min);
     this.ageRangeMax.set(range.max);
-    void this.searchPartners();
+    this.scheduleSearch();
   }
 
   onDistanceChanged(km: number): void {
     if (this.selectedDistanceKm() === km) return;
     this.selectedDistanceKm.set(km);
-    void this.searchPartners();
+    this.scheduleSearch();
   }
 
   onFilterSelect(id: string) {
@@ -188,6 +196,13 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   }
 
   async searchPartners(): Promise<void> {
+    // Cancel any in-flight request to prevent stale responses and reduce server load
+    if (this.searchAbortController) {
+      this.searchAbortController.abort();
+    }
+    this.searchAbortController = new AbortController();
+    const signal = this.searchAbortController.signal;
+
     this.isLoading.set(true);
     this.hasError.set(false);
     try {
@@ -209,7 +224,10 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
           this.availableTimeEnd() || undefined,
         sort: this.selectedSort(),
         voice_room_active: this.voiceRoomActive() || undefined,
-      });
+      }, signal);
+      // If request was aborted, don't update the UI with stale results
+      if (signal.aborted) return;
+
       // Filter out blocked users
       const blocked = this.blockedUserIds();
       const filtered =
@@ -227,11 +245,25 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
 
       this.partners.set(mapped);
     } catch (e) {
-      console.error('Partner search failed:', e);
-      this.hasError.set(true);
+      // Don't log aborted request errors - they are expected
+      if (!(e instanceof DOMException && e.name === 'AbortError')) {
+        console.error('Partner search failed:', e);
+        this.hasError.set(true);
+      }
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  /** Schedules a debounced search; cancels any prior pending timer. */
+  private scheduleSearch(): void {
+    if (this.searchDebounceTimer !== null) {
+      clearTimeout(this.searchDebounceTimer);
+    }
+    this.searchDebounceTimer = setTimeout(() => {
+      this.searchDebounceTimer = null;
+      void this.searchPartners();
+    }, SEARCH_DEBOUNCE_MS);
   }
 
   toggleVoiceRoomActive(): void {
@@ -276,8 +308,10 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.stopAudioIntro();
 
     const audio = new Audio(audioIntroUrl);
-    audio.addEventListener('ended', () => this.stopAudioIntro());
-    audio.addEventListener('error', () => this.stopAudioIntro());
+    const onEnded = () => this.stopAudioIntro();
+    const onError = () => this.stopAudioIntro();
+    audio.addEventListener('ended', onEnded);
+    audio.addEventListener('error', onError);
     this.currentAudio = audio;
     this.playingPartnerId.set(partnerId);
 
@@ -288,6 +322,12 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     if (this.currentAudio) {
       this.currentAudio.pause();
       this.currentAudio.currentTime = 0;
+      // Remove event listeners to prevent memory leaks
+      this.currentAudio.onended = null;
+      this.currentAudio.onerror = null;
+      // Force load a short empty source to release the audio resource
+      this.currentAudio.src = '';
+      this.currentAudio.load();
       this.currentAudio = null;
     }
     this.playingPartnerId.set(null);
@@ -313,6 +353,16 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // Cancel any in-flight search
+    if (this.searchAbortController) {
+      this.searchAbortController.abort();
+      this.searchAbortController = null;
+    }
+    // Clear debounce timer
+    if (this.searchDebounceTimer !== null) {
+      clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = null;
+    }
     this.stopAudioIntro();
   }
 
