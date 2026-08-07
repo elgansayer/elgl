@@ -592,6 +592,29 @@ export class I18nService {
     'videoRoom.speakerPickerAria': 'Select speaker to invite as co-host',
     'videoRoom.speakerOptionAria': 'Invite {{id}} as co-host',
 
+    // Video Classrooms Marketplace
+    'classroomsMarketplace.title': '&#127979;&#65039; Video Classrooms',
+    'classroomsMarketplace.subtitle': 'Join live video language-learning sessions hosted by the community',
+    'classroomsMarketplace.hostingBadge': 'You are hosting',
+    'classroomsMarketplace.filterAll': 'All Languages',
+    'classroomsMarketplace.liveBadge': 'LIVE',
+    'classroomsMarketplace.watching': 'watching',
+    'classroomsMarketplace.speakersLabel': '{{count}} speakers',
+    'classroomsMarketplace.createdAt': 'Started {{date}}',
+    'classroomsMarketplace.joinBtn': 'Join Classroom',
+    'classroomsMarketplace.loadErrorTitle': 'Failed to load classrooms',
+    'classroomsMarketplace.loadErrorDescription': 'We could not load the classroom list. Please check your connection and try again.',
+    'classroomsMarketplace.retryLoadBtn': 'Try Again',
+    'classroomsMarketplace.emptyTitle': 'No Video Classrooms Available',
+    'classroomsMarketplace.emptyDescription': 'No live video classrooms match your filters. Start one or check back later!',
+
+    // Video Classroom Error Boundary
+    'videoClassroomErrorBoundary.title': 'Video Classroom Error',
+    'videoClassroomErrorBoundary.description': 'An unexpected error occurred while loading this video classroom. Your connection has been preserved.',
+    'videoClassroomErrorBoundary.retryBtn': 'Try Again',
+    'videoClassroomErrorBoundary.reportBtn': 'Report Crash',
+    'videoClassroomErrorBoundary.reportedMessage': 'Crash reported. Thank you for helping us improve!',
+
     // 1:1 Video Call Component
     'video_call.waiting_for': 'Waiting for {{name}}...',
     'video_call.you_are_presenting': "You're sharing your screen",
